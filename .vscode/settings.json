@@ -1,0 +1,25 @@
+{
+    "files.autoGuessEncoding": true,
+    "files.encoding": "utf8",
+    "java.home": "C:\\Program Files\\Java\\jdk1.8.0_241",
+    "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dfile.encoding=UTF-8 -Dsun.zip.disableMemoryMapping=true -Xmx2G -Xms100m",
+    "maven.executable.path": "mvn",
+    "files.exclude": {
+        "**/.classpath": true,
+        "**/.project": true,
+        "**/.settings": true,
+        "**/.factorypath": true
+    },
+    "[makefile]": {
+    
+    },
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "maven.excludedFolders": [
+
+
+        "**/.*",
+        "**/node_modules",
+        "**/target",
+        "**/bin"
+    ]
+}

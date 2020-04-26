@@ -1,0 +1,11 @@
+main: unprotesting.com.github.Main
+name: Auto-Tune
+version: 0.1.1
+author: Unprotesting
+description: Automatic Economy Plugin
+softdepend: [Vault]
+
+
+
+
+

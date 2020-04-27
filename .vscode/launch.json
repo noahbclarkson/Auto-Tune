@@ -6,11 +6,31 @@
     "configurations": [
         {
             "type": "java",
+            "name": "CodeLens (Launch) - AutoTuneServer",
+            "request": "launch",
+            "mainClass": "unprotesting.com.github.AutoTuneServer",
+            "projectName": "Auto-Tune"
+        },
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - ThreadSleep",
+            "request": "launch",
+            "mainClass": "unprotesting.com.github.ThreadSleep",
+            "projectName": "Auto-Tune"
+        },
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - AutoTuneCommand",
+            "request": "launch",
+            "mainClass": "unprotesting.com.github.AutoTuneCommand",
+            "projectName": "Auto-Tune"
+        },
+        {
+            "type": "java",
             "name": "Debug (Attach) - Remote",
             "request": "attach",
             "hostName": "localhost",
             "port": 5005
-        },
-
+        }
     ]
 }

@@ -1,41 +1,78 @@
 package unprotesting.com.github;
 
 import java.util.logging.Logger;
-import net.milkbowl.vault.economy.Economy;
-import net.milkbowl.vault.economy.EconomyResponse;
-import org.bukkit.entity.Player;
 
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.milkbowl.vault.economy.Economy;
+
+import java.io.BufferedReader;
 import java.io.File;
 
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.URL;
 
-public class Main extends JavaPlugin {
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
+
+public class Main extends JavaPlugin implements Listener {
 
     private static final Logger log = Logger.getLogger("Minecraft");
     private static Economy econ;
 
-    FileConfiguration config;
     File cfile;
+    FileConfiguration config = this.getConfig();
 
     @Override
     public void onDisable() {
+        cancelAllTasks(this);
         log.info(String.format("[%s] Disabled Version %s", getDescription().getName(), getDescription().getVersion()));
+    }
+
+    private void cancelAllTasks(Main main) {
     }
 
     @Override
     public void onEnable() {
+        config.addDefault("Port", 8321);
+        config.options().copyDefaults(true);
+        saveConfig();
+        int PORT = getConfig().getInt("Port");
+        HttpServer server;
+        try {
+            server = HttpServer.create(new InetSocketAddress(PORT), 0);
+            server.createContext("/trade", new MyHandler());
+            server.setExecutor(null); // creates a default executor
+            server.start();
+            log.info("[Auto Tune] Web server has started on port " + PORT);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        this.getCommand("autotune").setExecutor(new AutoTuneCommand());
         if (!setupEconomy() ) {
-            log.severe(String.format("[%s] - Disabled due to no Vault dependency found!", getDescription().getName()));
+            log.severe(String.format("Disabled Auto-Tune due to no Vault dependency found!", getDescription().getName()));
             getServer().getPluginManager().disablePlugin(this);
             return;
+        
         }
     }
-    
+
     private boolean setupEconomy() {
         if (getServer().getPluginManager().getPlugin("Vault") == null) {
             return false;
@@ -49,34 +86,53 @@ public class Main extends JavaPlugin {
         return econ != null;
     }
     
-
-    public boolean onCommand(CommandSender sender, Command command, String commandLabel, String[] args) {
-        if(!(sender instanceof Player)) {
-            log.info("Only players are supported for this Example Plugin, but you should not do this!!!");
-            return true;
-        }
-        
-        OfflinePlayer player = (Player) sender;
-        
-        if(command.getLabel().equals("test-economy")) {
-            // Lets give the player 1.05 currency (note that SOME economic plugins require rounding!)
-            sender.sendMessage(String.format("You have %s", econ.format(econ.getBalance(player))));
-            EconomyResponse r = econ.depositPlayer(player, 1.05);
-            if(r.transactionSuccess()) {
-                sender.sendMessage(String.format("You were given %s and now have %s", econ.format(r.amount), econ.format(r.balance)));
-            } else {
-                sender.sendMessage(String.format("An error occured: %s", r.errorMessage));
-            }
-            return true;
-        }   else {
-                return false;
-        }
-    }
-    
     public static Economy getEconomy() {
         return econ;
     }
+
+ 
+
+    static class MyHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange t) throws IOException {
+            String response = "Auto-Tune Web Server";
+            t.sendResponseHeaders(200, response.length());
+            OutputStream os = t.getResponseBody();
+            os.write(response.getBytes());
+            os.close();
+        }
     
-    
+    }
+    public boolean onCommand(CommandSender sender, Command testcmd, String trade, String[] help) {
+        if (sender instanceof Player) {
+            Player player = (Player) sender;
+            String hostIP = "";
+            try
+        { 
+            URL url_name = new URL("http://bot.whatismyipaddress.com"); 
+  
+            BufferedReader sc = 
+            new BufferedReader(new InputStreamReader(url_name.openStream())); 
+  
+            // reads system IPAddress 
+            hostIP = sc.readLine().trim(); 
+
+            int PORT = getConfig().getInt("Port");
+            InetAddress address = InetAddress.getLocalHost();
+            String hostName = address.getHostName();
+            TextComponent message = new TextComponent(ChatColor.YELLOW + "" + ChatColor.BOLD + player.getDisplayName() + ", go to http://" + hostIP + ":" + PORT + "/trade");
+            message.setHoverEvent( new HoverEvent( HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click to begin trading online").create() ) );
+            message.setClickEvent( new ClickEvent( ClickEvent.Action.OPEN_URL, "http://" + hostIP + ":" + PORT + "/trade") );
+            player.spigot().sendMessage(message);
+            player.sendMessage(ChatColor.ITALIC + "Hostname : "+ hostName);
+        } 
+        catch (Exception e) 
+        { 
+            hostIP = "Cannot Execute Properly"; 
+        } 
+            return true;
+        }
+        return false;
+    }
 
 }

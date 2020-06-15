@@ -6,11 +6,11 @@
 
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune</artifactId>
-  <version>1.15.2</version>
+  <version>0.0.3</version>
 
   <name>Auto-Tune</name>
   <!-- FIXME change it to the project's website -->
-  <url>https://github.com/Unprotesting</url>
+  <url>https://github.com/Unprotesting/Auto-Tune</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -29,20 +29,31 @@
     </repository>
 </repositories>
 
-  <dependencies>
+ <dependencies>
     <dependency>
       <groupId>org.spigotmc</groupId>
       <artifactId>spigot-api</artifactId>
       <version>1.15.2-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
+  <dependency>
+    <groupId>commons-io</groupId>
+    <artifactId>commons-io</artifactId>
+    <version>2.6</version>
+  </dependency>
     <dependency>
       <groupId>com.github.MilkBowl</groupId>
       <artifactId>VaultAPI</artifactId>
       <version>1.7</version>
       <scope>provided</scope>
-  </dependency>
-  </dependencies>
+    </dependency>
+    <dependency>  
+      <groupId>javax.servlet</groupId>
+      <artifactId>servlet-api</artifactId>
+      <version>2.5</version>
+      <scope>compile</scope>
+    </dependency>
+</dependencies>
 
   <build>
     <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
@@ -54,5 +65,28 @@
         </includes>
       </resource>
     </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.2.3</version>
+        <configuration>
+          <artifactSet>
+            <includes>
+              javax.servlet:servlet-api
+            </includes>
+          </artifactSet>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
 </project>
+

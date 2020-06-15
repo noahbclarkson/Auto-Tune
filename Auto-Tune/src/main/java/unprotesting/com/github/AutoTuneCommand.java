@@ -9,7 +9,7 @@ import net.md_5.bungee.api.ChatColor;
 
 
 public class AutoTuneCommand implements CommandExecutor{
-
+    
     @Override
     public boolean onCommand(CommandSender sender, Command testcmd, String autotune, String[] help) {
         if (sender instanceof Player) {

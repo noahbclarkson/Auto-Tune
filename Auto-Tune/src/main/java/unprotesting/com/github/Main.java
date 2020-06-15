@@ -1,5 +1,6 @@
 package unprotesting.com.github;
 
+import java.util.Map;
 import java.util.logging.Logger;
 
 import net.md_5.bungee.api.ChatColor;
@@ -9,23 +10,37 @@ import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.milkbowl.vault.economy.Economy;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Set;
+import java.io.FileOutputStream;
+
+
+
 import java.io.BufferedReader;
 import java.io.File;
 
+import java.io.InputStreamReader;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.InetAddress;
 import java.net.URL;
+import org.apache.commons.io.IOUtils;
 
+import com.google.common.net.HttpHeaders;
+import com.sun.net.httpserver.Headers;
+import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -34,9 +49,13 @@ public class Main extends JavaPlugin implements Listener {
 
     private static final Logger log = Logger.getLogger("Minecraft");
     private static Economy econ;
-
+    private static JavaPlugin plugin;
+    File resources = new File("plugins/Auto-Tune/", "resources.yml");
+    FileConfiguration resourcesconfig = YamlConfiguration.loadConfiguration(resources);
     File cfile;
     FileConfiguration config = this.getConfig();
+    private static final String BASEDIR = "plugins/Auto-Tune/Auto-TuneOfficalWebsite";
+    
 
     @Override
     public void onDisable() {
@@ -52,24 +71,30 @@ public class Main extends JavaPlugin implements Listener {
         config.addDefault("Port", 8321);
         config.options().copyDefaults(true);
         saveConfig();
+        try {
+            resourcesconfig.save(resources);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         int PORT = getConfig().getInt("Port");
         HttpServer server;
         try {
             server = HttpServer.create(new InetSocketAddress(PORT), 0);
-            server.createContext("/trade", new MyHandler());
-            server.setExecutor(null); // creates a default executor
+            server.createContext("/Home.html", new StaticFileHandler(BASEDIR));
             server.start();
             log.info("[Auto Tune] Web server has started on port " + PORT);
+
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+
         this.getCommand("autotune").setExecutor(new AutoTuneCommand());
-        if (!setupEconomy() ) {
-            log.severe(String.format("Disabled Auto-Tune due to no Vault dependency found!", getDescription().getName()));
+        if (!setupEconomy()) {
+            log.severe(
+                    String.format("Disabled Auto-Tune due to no Vault dependency found!", getDescription().getName()));
             getServer().getPluginManager().disablePlugin(this);
             return;
-        
         }
     }
 
@@ -77,7 +102,6 @@ public class Main extends JavaPlugin implements Listener {
         if (getServer().getPluginManager().getPlugin("Vault") == null) {
             return false;
         }
-
         RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
         if (rsp == null) {
             return false;
@@ -85,24 +109,12 @@ public class Main extends JavaPlugin implements Listener {
         econ = rsp.getProvider();
         return econ != null;
     }
-    
+
     public static Economy getEconomy() {
         return econ;
     }
 
- 
 
-    static class MyHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange t) throws IOException {
-            String response = "Auto-Tune Web Server";
-            t.sendResponseHeaders(200, response.length());
-            OutputStream os = t.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
-        }
-    
-    }
     public boolean onCommand(CommandSender sender, Command testcmd, String trade, String[] help) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
@@ -134,5 +146,5 @@ public class Main extends JavaPlugin implements Listener {
         }
         return false;
     }
-
 }
+

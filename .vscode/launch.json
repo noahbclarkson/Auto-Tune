@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "CodeLens (Launch) - Main",
+            "request": "launch",
+            "mainClass": "unprotesting.com.github.Main",
+            "projectName": "Auto-Tune"
+        },
+        {
+            "type": "java",
             "name": "CodeLens (Launch) - AutoTuneServer",
             "request": "launch",
             "mainClass": "unprotesting.com.github.AutoTuneServer",

@@ -26,8 +26,6 @@ public class StaticFileHandler implements HttpHandler {
         File path = new File(baseDir, name);
 
         Headers h = ex.getResponseHeaders();
-        // Could be more clever about the content type based on the filename here.
-        h.add("Content-Type", "application/ld+json");
 
         OutputStream out = ex.getResponseBody();
 

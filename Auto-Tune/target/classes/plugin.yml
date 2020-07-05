@@ -5,12 +5,12 @@ author: Unprotesting
 description: Automatic Economy Plugin
 softdepend: [Vault]
 commands:
-    autotune:
+    at:
       description: Auto-Tune Command
-      usage: /<autotune>
+      usage: /<at> <login>
     trade:
       description: Trade Online with other players
-      usage: /<trade>
+      usage: /<trade> 
 
 
 

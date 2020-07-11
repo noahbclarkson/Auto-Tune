@@ -4,22 +4,48 @@
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune</artifactId>
   <name>Auto-Tune</name>
-  <version>0.1.2</version>
-  <url>https://github.com/Unprotesting/Auto-Tune</url>
+  <version>0.2.0</version>
+  <description>This plugin is the ultimate solution to all the signs, the chests, the glitches.</description>
+  <url>https://www.spigotmc.org/resources/guishop.2451/</url>
+  <issueManagement>
+    <system>GitHub</system>
+    <url>https://github.com/Unprotesting/Auto-Tune/issues</url>
+  </issueManagement>
+  <scm>
+    <connection>scm:git:git://github.com:pablo67340/GUIShop.git</connection>
+    <developerConnection>scm:git:git@github.com:pablo67340/GUIShop.git</developerConnection>
+    <url>https://github.com/Unprotesting/Auto-Tune</url>
+  </scm>
+  <organization>
+    <name>Unprotesting</name>
+    <url>https://github.com/Unprotesting</url>
+  </organization>
   <build>
     <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
+    <defaultGoal>clean install</defaultGoal>
     <resources>
       <resource>
+        <filtering>true</filtering>
         <directory>${project.basedir}/src/main/resources</directory>
         <includes>
           <include>plugin.yml</include>
+          <include>config.yml</include>
+          <include>shops.yml</include>
         </includes>
       </resource>
     </resources>
     <plugins>
       <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.0.2</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.3</version>
+        <version>2.3</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -29,8 +55,24 @@
           </execution>
         </executions>
         <configuration>
+          <filters>
+            <filter>
+              <artifact>*:*</artifact>
+              <excludes>
+                <exclude>META-INF/*.SF</exclude>
+                <exclude>META-INF/*.DSA</exclude>
+                <exclude>META-INF/*.RSA</exclude>
+              </excludes>
+            </filter>
+          </filters>
           <artifactSet>
-            <includes>javax.servlet:servlet-api</includes>
+            <includes>
+              <include>unprotesting.com.github</include>
+              <include>com.github.stefvanschie.inventoryframework:IF:jar:</include>
+              <include>space.arim:legacyitemconstructor</include>
+              <include>org.mapdb:mapdb:jar:</include>
+              <include>**</include>
+            </includes>
           </artifactSet>
         </configuration>
       </plugin>
@@ -42,22 +84,62 @@
       <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
     </repository>
     <repository>
+      <id>arim-repo</id>
+      <url>https://dl.cloudsmith.io/public/anand-beh/arim-repo/maven/</url>
+    </repository>
+    <repository>
       <id>jitpack.io</id>
       <url>https://jitpack.io</url>
+    </repository>
+    <repository>
+      <id>bukkit-repo</id>
+      <url>http://repo.bukkit.org/content/groups/public/</url>
     </repository>
   </repositories>
   <dependencies>
     <dependency>
       <groupId>org.spigotmc</groupId>
       <artifactId>spigot-api</artifactId>
-      <version>1.15.2-R0.1-SNAPSHOT</version>
+      <version>1.16.1-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>commons-lang</artifactId>
+          <groupId>commons-lang</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>gson</artifactId>
+          <groupId>com.google.code.gson</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>bungeecord-chat</artifactId>
+          <groupId>net.md-5</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>snakeyaml</artifactId>
+          <groupId>org.yaml</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.6</version>
-      <scope>compile</scope>
+      <groupId>org.bukkit</groupId>
+      <artifactId>bukkit</artifactId>
+      <version>1.14.4-R0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>commons-lang</artifactId>
+          <groupId>commons-lang</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>gson</artifactId>
+          <groupId>com.google.code.gson</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>snakeyaml</artifactId>
+          <groupId>org.yaml</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.github.MilkBowl</groupId>
@@ -65,15 +147,23 @@
       <version>1.7</version>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.mapdb</groupId>
-      <artifactId>mapdb</artifactId>
-      <version>3.0.8</version>
-    </dependency>
   </dependencies>
+  <distributionManagement>
+    <repository>
+      <id>pub-repo</id>
+      <name>Public Releases</name>
+      <url>http://nexus.theyeticave.net/content/repositories/pub_releases/</url>
+    </repository>
+    <snapshotRepository>
+      <id>pub-repo</id>
+      <name>Public Snapshots</name>
+      <url>http://nexus.theyeticave.net/content/repositories/pub_snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
   <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
+    <mainClass>${project.groupId}.${project.artifactId}</mainClass>
+    <api.version>1.6</api.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
 </project>
+

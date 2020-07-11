@@ -1,9 +1,17 @@
+##################################################
+###                                            ###
+##########       <-- Auto-Tune -->       #########
+###                                            ###
+##################################################
+
+
 main: unprotesting.com.github.Main
 name: Auto-Tune
-version: 0.1.2
+version: 0.2.0
 author: Unprotesting
 description: Automatic Economy Plugin
 softdepend: [Vault]
+api-version: 1.15
 commands:
     at:
       description: Auto-Tune Command
@@ -11,6 +19,11 @@ commands:
     trade:
       description: Trade Online with other players
       usage: /<trade> 
+    shop:
+      description: GUIShop alias for buy and sell commands.
+      usage: /<shop> 
+
+
 
 
 

@@ -1,89 +1,176 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
-  <groupId>unprotesting.com.github</groupId>
-  <artifactId>Auto-Tune</artifactId>
-  <version>0.1.2</version>
-
-  <name>Auto-Tune</name>
-  <!-- FIXME change it to the project's website -->
-  <url>https://github.com/Unprotesting/Auto-Tune</url>
-
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <mainClass>${project.groupId}.${project.artifactId}</mainClass>
+    <api.version>1.6</api.version>
   </properties>
-
+  <!-- Project information -->
+  <groupId>unprotesting.com.github</groupId>
+  <artifactId>Auto-Tune</artifactId>
+  <version>0.2.0</version>
+  <name>Auto-Tune</name>
+  <url>https://www.spigotmc.org/resources/guishop.2451/</url>
+  <description>This plugin is the ultimate solution to all the signs, the chests, the glitches.</description>
+  <!-- Organization -->
+  <organization>
+    <name>Unprotesting</name>
+    <url>https://github.com/Unprotesting</url>
+  </organization>
+  <scm>
+    <url>https://github.com/Unprotesting/Auto-Tune</url>
+    <connection>scm:git:git://github.com:pablo67340/GUIShop.git</connection>
+    <developerConnection>scm:git:git@github.com:pablo67340/GUIShop.git</developerConnection>
+  </scm>
+  <issueManagement>
+    <system>GitHub</system>
+    <url>https://github.com/Unprotesting/Auto-Tune/issues</url>
+  </issueManagement>
+  <distributionManagement>
+    <repository>
+      <id>pub-repo</id>
+      <name>Public Releases</name>
+      <url>http://nexus.theyeticave.net/content/repositories/pub_releases/</url>
+    </repository>
+    <snapshotRepository>
+      <id>pub-repo</id>
+      <name>Public Snapshots</name>
+      <url>http://nexus.theyeticave.net/content/repositories/pub_snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
   <repositories>
     <repository>
-        <id>spigot-repo</id>
-        <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+      <id>spigot-repo</id>
+      <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+    </repository>
+    <repository>
+      <id>arim-repo</id>
+      <url>https://dl.cloudsmith.io/public/anand-beh/arim-repo/maven/</url>
     </repository>
     <repository>
       <id>jitpack.io</id>
       <url>https://jitpack.io</url>
     </repository>
     <repository>
-      <id>sonatype-snapshots</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <id>bukkit-repo</id>
+      <url>http://repo.bukkit.org/content/groups/public/</url>
     </repository>
-</repositories>
+  </repositories>
+  <dependencies>
 
- <dependencies>
+    <dependency>
+      <groupId>org.mapdb</groupId>
+      <artifactId>mapdb</artifactId>
+      <version>3.0.8</version>
+    </dependency>
     <dependency>
       <groupId>org.spigotmc</groupId>
       <artifactId>spigot-api</artifactId>
-      <version>1.15.2-R0.1-SNAPSHOT</version>
+      <version>1.16.1-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
-  <dependency>
-    <groupId>commons-io</groupId>
-    <artifactId>commons-io</artifactId>
-    <version>2.6</version>
-    <scope>compile</scope>
-  </dependency>
+    <!--Bukkit API -->
+    <dependency>
+      <groupId>org.bukkit</groupId>
+      <artifactId>bukkit</artifactId>
+      <version>1.14.4-R0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>com.github.MilkBowl</groupId>
       <artifactId>VaultAPI</artifactId>
       <version>1.7</version>
       <scope>provided</scope>
     </dependency>
-  <dependency>
-    <groupId>org.mapdb</groupId>
-    <artifactId>mapdb</artifactId>
-    <version>3.0.8</version>
-  </dependency>
-  <dependency>
-    <groupId>org.scala-lang</groupId>
-    <artifactId>scala-library</artifactId>
-    <version>2.13.2</version>
-  </dependency>
-  <dependency>
-    <groupId>org.apache.tinkerpop</groupId>
-    <artifactId>spark-gremlin</artifactId>
-    <version>3.4.7</version>
-  </dependency>
-</dependencies>
-
+    <dependency>
+      <groupId>com.github.stefvanschie.inventoryframework</groupId>
+      <artifactId>IF</artifactId>
+      <version>0.6.1</version>
+    </dependency>
+    <dependency>
+      <groupId>space.arim</groupId>
+      <artifactId>legacyitemconstructor</artifactId>
+      <version>0.1.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>3.0.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-stdlib</artifactId>
+      <version>1.2.71</version>
+    </dependency>
+      <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>1.18.8</version>
+        <scope>compile</scope>
+      </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-stdlib-common</artifactId>
+      <version>1.2.71</version>
+    </dependency>
+  </dependencies>
   <build>
+    <defaultGoal>clean install</defaultGoal>
     <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
     <resources>
       <resource>
         <directory>${project.basedir}/src/main/resources</directory>
+        <filtering>true</filtering>
         <includes>
           <include>plugin.yml</include>
+          <include>config.yml</include>
+          <include>shops.yml</include>
         </includes>
       </resource>
     </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.0.2</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.3</version>
+        <version>2.3</version>
+        <configuration>
+          <filters>
+            <filter>
+              <artifact>*:*</artifact>
+              <excludes>
+                <exclude>META-INF/*.SF</exclude>
+                <exclude>META-INF/*.DSA</exclude>
+                <exclude>META-INF/*.RSA</exclude>
+              </excludes>
+            </filter>
+          </filters>
+          <artifactSet>
+            <includes>
+              <include>unprotesting.com.github</include>
+              <include>com.github.stefvanschie.inventoryframework:IF:jar:</include>
+              <include>space.arim:legacyitemconstructor</include>
+              <include>org.mapdb:mapdb:jar:</include>
+              <include>**</include>
+            </includes>
+          </artifactSet>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

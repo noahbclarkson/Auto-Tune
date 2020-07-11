@@ -1,4 +1,6 @@
-package unprotesting.com.github;
+package unprotesting.com.github.util;
+
+import unprotesting.com.github.Main;
 
 import java.io.File;
 import java.io.IOException;

@@ -1,7 +1,9 @@
-package unprotesting.com.github;
+package unprotesting.com.github.Commands;
 
 import java.util.UUID;
 import java.util.logging.Logger;
+
+import unprotesting.com.github.Main;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;

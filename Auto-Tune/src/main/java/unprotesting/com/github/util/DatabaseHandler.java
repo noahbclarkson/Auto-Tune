@@ -1,4 +1,4 @@
-package unprotesting.com.github;
+package unprotesting.com.github.util;
 
 import org.mapdb.DB;
 import org.mapdb.DBMaker;

@@ -1,4 +1,4 @@
-package unprotesting.com.github;
+package unprotesting.com.github.util;
 
 public class MathHandler {
     

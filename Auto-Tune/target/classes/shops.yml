@@ -11,7 +11,7 @@
 ##  Info: Make sure you put a decimal point and two digits to create a double for the shop algorithim to accept and parse to a price-value
 ##  Info: These values will be useless once the economy has started, to use these values again delete the data.db file
 shops:
-  'APPLE':
+  APPLE:
     price: 100.00
-  'STICK':
+  STICK:
     price: 50.00

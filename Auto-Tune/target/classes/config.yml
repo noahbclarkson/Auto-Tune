@@ -31,10 +31,13 @@ no-permission: 'You do not have permission to perform this command'
 
 ##  -- Basic Pricing Model Settings --
 
-##Volatility Calulation Algorithim
-##Info: A fixed rate locks the maxiumum change to a certain price
-##Info: A variable rate changes the maxiumum price-change based on current price calculations
+##  Volatility Calulation Algorithim
+##  Info: A fixed rate locks the maxiumum change to a certain price
+##  Info: A variable rate changes the maxiumum price-change based on current price calculations
 Basic-Volatility-Algorithim: 'Fixed'
+
+##  Percentage difference is sell price to buy price
+sell-price-difference: 2.5
 
 ##  Maximum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Basic-Fixed-Max-Volatility: 2.00

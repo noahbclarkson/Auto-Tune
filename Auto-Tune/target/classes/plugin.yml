@@ -7,11 +7,11 @@
 
 main: unprotesting.com.github.Main
 name: Auto-Tune
-version: 0.2.0
+version: 0.2.1
 author: Unprotesting
 description: Automatic Economy Plugin
 softdepend: [Vault]
-api-version: 1.15
+api-version: 1.16
 commands:
     at:
       description: Auto-Tune Command

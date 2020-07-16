@@ -8,9 +8,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -46,6 +48,8 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
+import org.mapdb.HTreeMap;
+import org.mapdb.Serializer;
 
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ClickEvent;
@@ -64,7 +68,7 @@ public final class Main extends JavaPlugin implements Listener {
     public static Main INSTANCE;
 
     private static final Logger log = Logger.getLogger("Minecraft");
-    private static Economy econ;
+    public static Economy econ;
     private static JavaPlugin plugin;
     File playerdata = new File("plugins/Auto-Tune/", "playerdata.yml");
     public static final String BASEDIR = "plugins/Auto-Tune/Trade";
@@ -72,9 +76,11 @@ public final class Main extends JavaPlugin implements Listener {
     public FileConfiguration playerDataConfig;
     public final String playerdatafilename = "playerdata.yml";
 
-    public static DB db;
+    public static DB db, memDB;
 
     public static ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>> map;
+
+    public static HTreeMap<Integer, String> memMap;
 
     public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, Double[]>> tempmap;
 
@@ -127,12 +133,15 @@ public final class Main extends JavaPlugin implements Listener {
                 e.printStackTrace();
             }
         }
-        DB db = DBMaker.fileDB("data.db").checksumStoreEnable().closeOnJvmShutdown().make();
+        DB db = DBMaker.fileDB("data.db").closeOnJvmShutdown().make();
         map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
         playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
+        DB memDb = DBMaker.memoryDB().closeOnJvmShutdown().make();
+        memMap = db.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
         saveplayerdata();
         loadShopsFile();
-        setMaterialListSize(map.size());
+        loadShopData();
+        materialListSize = memMap.size();
         this.getCommand("at").setExecutor(new AutoTuneCommand());
         this.getCommand("shop").setExecutor(new AutoTuneGUIShopUserCommand());
 
@@ -252,6 +261,7 @@ public final class Main extends JavaPlugin implements Listener {
         Config.setBasicMaxVariableVolatility(getMainConfig().getDouble("Basic-Variable-Max-Volatility", 2.00));
         Config.setBasicMinFixedVolatility(getMainConfig().getDouble("Basic-Fixed-Min-Volatility", 0.05));
         Config.setBasicMinVariableVolatility(getMainConfig().getDouble("Basic-Variable-Min-Volatility", 0.05));
+        Config.setSellPriceDifference(getMainConfig().getDouble("sell-price-difference", 2.5));
     }
 
     public void saveplayerdata() {
@@ -276,9 +286,18 @@ public final class Main extends JavaPlugin implements Listener {
         }
     }
 
+
     @Getter
     @Setter
     public static Gui gui;
+
+    public ArrayList<String> itemStringArray;
+
+    @Getter
+    public static Set<String> testset = null;
+
+    @Getter
+    public static ArrayList<String> publicItemStringArray;
 
     public static ConcurrentHashMap<Integer, OutlinePane> pageArray = new ConcurrentHashMap<Integer, OutlinePane>();
 
@@ -287,13 +306,27 @@ public final class Main extends JavaPlugin implements Listener {
         commandSender.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
     }
 
+    public void loadShopData(){
+        Integer i = 0;
+        if (testset.isEmpty() != true && testset != null){
+            for (String key : Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getKeys(false)){
+                debugLog("Data from shops.yml file found: " + key);
+                String str = key;
+                memMap.put(i, str);
+                i++;
+            }
+        }
+    }
+
     @Getter
     public static Set<String> tempCollection;
 
+
     public void loadShopsFile(){
-        Set<String> testset = map.keySet();
+        testset = map.keySet();
         if (testset.isEmpty() == true){
             log("No data-file/usable-data found!");
+            Integer i = 0;
             for (String key : Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getKeys(false)){
                 ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection(key);
                 if (config == null){
@@ -305,8 +338,10 @@ public final class Main extends JavaPlugin implements Listener {
                 Double[] x = { temp_a, 0.0, 0.0 };
                 ConcurrentHashMap<Integer, Double[]> start = (new ConcurrentHashMap<Integer, Double[]>());
                 start.put(0, x);
+                String str = key;
                 map.put(key, start);
                 debugLog("Loaded shop: " + key + " at price: " + Double.toString(temp_a));
+                i++;
                 }
             log("Default shops loaded from shop file");
         

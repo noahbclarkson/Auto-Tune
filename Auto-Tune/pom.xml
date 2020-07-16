@@ -8,7 +8,7 @@
   <!-- Project information -->
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune</artifactId>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
   <name>Auto-Tune</name>
   <url>https://www.spigotmc.org/resources/guishop.2451/</url>
   <description>This plugin is the ultimate solution to all the signs, the chests, the glitches.</description>
@@ -26,18 +26,6 @@
     <system>GitHub</system>
     <url>https://github.com/Unprotesting/Auto-Tune/issues</url>
   </issueManagement>
-  <distributionManagement>
-    <repository>
-      <id>pub-repo</id>
-      <name>Public Releases</name>
-      <url>http://nexus.theyeticave.net/content/repositories/pub_releases/</url>
-    </repository>
-    <snapshotRepository>
-      <id>pub-repo</id>
-      <name>Public Snapshots</name>
-      <url>http://nexus.theyeticave.net/content/repositories/pub_snapshots/</url>
-    </snapshotRepository>
-  </distributionManagement>
   <repositories>
     <repository>
       <id>spigot-repo</id>
@@ -51,13 +39,9 @@
       <id>jitpack.io</id>
       <url>https://jitpack.io</url>
     </repository>
-    <repository>
-      <id>bukkit-repo</id>
-      <url>http://repo.bukkit.org/content/groups/public/</url>
-    </repository>
   </repositories>
-  <dependencies>
 
+  <dependencies>
     <dependency>
       <groupId>org.mapdb</groupId>
       <artifactId>mapdb</artifactId>
@@ -70,12 +54,6 @@
       <scope>provided</scope>
     </dependency>
     <!--Bukkit API -->
-    <dependency>
-      <groupId>org.bukkit</groupId>
-      <artifactId>bukkit</artifactId>
-      <version>1.14.4-R0.1-SNAPSHOT</version>
-      <scope>provided</scope>
-    </dependency>
     <dependency>
       <groupId>com.github.MilkBowl</groupId>
       <artifactId>VaultAPI</artifactId>
@@ -105,7 +83,7 @@
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
-        <version>1.18.8</version>
+        <version>1.18.12</version>
         <scope>compile</scope>
       </dependency>
     <dependency>
@@ -116,10 +94,10 @@
   </dependencies>
   <build>
     <defaultGoal>clean install</defaultGoal>
-    <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
+    <sourceDirectory>${project.basedir}/src/</sourceDirectory>
     <resources>
       <resource>
-        <directory>${project.basedir}/src/main/resources</directory>
+        <directory>${project.basedir}/src/resources</directory>
         <filtering>true</filtering>
         <includes>
           <include>plugin.yml</include>

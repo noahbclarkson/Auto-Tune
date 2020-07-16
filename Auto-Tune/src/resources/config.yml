@@ -43,13 +43,13 @@ sell-price-difference: 2.5
 Basic-Fixed-Max-Volatility: 2.00
 
 ##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
-Basic-Variable-Max-Volatility: 2.00
+Basic-Variable-Max-Volatility: 6.00
 
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Basic-Fixed-Min-Volatility: 0.05
 
 ##  Minimum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
-Basic-Variable-Min-Volatility: 0.05
+Basic-Variable-Min-Volatility: 0.15
 
 ##  -- Other settings --
 debug-enabled: false

@@ -158,6 +158,12 @@ public final class Main extends JavaPlugin implements Listener {
         priceModel = Config.getPricingModel().toString();
         if (priceModel.contains("Basic") == true){
             log("Loaded Basic Price Algorithim");
+            if (basicVolatilityAlgorithim.contains("Variable") == true){
+                log("Loaded Algorithim under Variable Configuration");
+        }
+                if (basicVolatilityAlgorithim.contains("fixed") == true){
+                log("Loaded Algorithim under Variable Configuration");
+                }
         }
         runnable();
     }
@@ -199,6 +205,9 @@ public final class Main extends JavaPlugin implements Listener {
     public Double buys = 0.0;
     public Double sells = 0.0;
 
+    public double tempbuys = 0.0;
+    public double tempsells = 0.0;
+
     public void runnable(){
         new BukkitRunnable(){
             @Override
@@ -207,32 +216,42 @@ public final class Main extends JavaPlugin implements Listener {
                 debugLog("Price algorithim settings: ");
                 debugLog("BasicMaxFixedVolatility: " + Config.getBasicMaxFixedVolatility());
                 debugLog("BasicMinFixedVolatility: " + Config.getBasicMinFixedVolatility());
+                tempbuys = 0.0;
+                tempsells = 0.0;
+                buys = 0.0;
+                sells = 0.0;
                 Set<String> strSet = map.keySet();
                 for (String str : strSet){
                     ConcurrentHashMap<Integer,Double[]> tempMap = map.get(str);
                     for (Integer key1 : tempMap.keySet()){
                         Double[] key = tempMap.get(key1);
-                        Double tempbuys = key[1];
+                        tempbuys = key[1];
                         buys = buys + tempbuys;
-                        Double tempsells = key[2];
+                        tempsells = key[2];
                         sells = sells + tempsells;
                     }
-                    Double avBuy = buys/tempMap.size();
-                    Double avSells = sells/tempMap.size();
-                    sells = 0.0;
-                    buys = 0.0;
+
+                    Double avBuy = buys/(tempMap.size());
+                    Double avSells = sells/(tempMap.size());
                     if (avBuy > avSells){
                         debugLog("AvBuy > AvSells for " + str);
                         Double[] temp2 = tempMap.get(tempMap.size()-1);
                         Double temp3 = temp2[0];
                         Integer tsize = tempMap.size();
-                        if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed")){
+                        if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed") == true){
                             Double newSpotPrice = (temp3)+(((1-(avSells / avBuy)) * Config.getBasicMaxFixedVolatility() + Config.getBasicMinFixedVolatility()));
-                            Double[] temporary = { newSpotPrice, avBuy, avSells};
+                            Double[] temporary = { newSpotPrice, 0.0, 0.0};
                             debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
                             tempMap.put(tsize, temporary);
                             map.put(str, tempMap);
                         
+                        }
+                        if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Variable") == true){
+                            Double newSpotPrice = (temp3)+(temp3*((1-(avSells / avBuy))* Config.getBasicMaxVariableVolatility()*0.01)) + Config.getBasicMinVariableVolatility()*0.01*temp3;
+                            Double[] temporary = { newSpotPrice, 0.0, 0.0};
+                            debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " because Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                            tempMap.put(tsize, temporary);
+                            map.put(str, tempMap);
                         }
                     }
                     
@@ -243,10 +262,17 @@ public final class Main extends JavaPlugin implements Listener {
                         Integer tsize = tempMap.size();
                         if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed")){
                             Double newSpotPrice = (temp3)-(((1-(avBuy / avSells)) * Config.getBasicMaxFixedVolatility() + Config.getBasicMinFixedVolatility()));
-                            Double[] temporary = { newSpotPrice, avBuy, avSells};
+                            Double[] temporary = { newSpotPrice, 0.0, 0.0};
                             debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
                             tempMap.put(tsize, temporary);
                             map.put(str, tempMap);
+                    }
+                    if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Variable") == true){
+                        Double newSpotPrice = (temp3)-(temp3*((1-(avBuy / avSells))* Config.getBasicMaxVariableVolatility()*0.01)) - Config.getBasicMinVariableVolatility()*0.01*temp3;
+                        Double[] temporary = { newSpotPrice, 0.0, 0.0};
+                        debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " because Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                        tempMap.put(tsize, temporary);
+                        map.put(str, tempMap);
                     }
 
 
@@ -257,9 +283,9 @@ public final class Main extends JavaPlugin implements Listener {
                     Double[] temp2 = tempMap.get(tempMap.size()-1);
                     Double temp3 = temp2[0];
                     Integer tsize = tempMap.size();
-                    if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed")){
+                    if (priceModel.contains("Basic") == true){
                         Double newSpotPrice = temp3;
-                        Double[] temporary = { newSpotPrice, avBuy, avSells};
+                        Double[] temporary = { newSpotPrice, 0.0, 0.0};
                         debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
                         tempMap.put(tsize, temporary);
                         map.put(str, tempMap);
@@ -268,6 +294,10 @@ public final class Main extends JavaPlugin implements Listener {
 
             }
             }
+            tempbuys = 0.0;
+            tempsells = 0.0;
+            buys = 0.0;
+            sells = 0.0;
             Date date = Calendar.getInstance().getTime();
             Date newDate = addMinutesToJavaUtilDate(date, Config.getTimePeriod());
             DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");

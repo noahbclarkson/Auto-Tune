@@ -7,9 +7,13 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -46,6 +50,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitScheduler;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
@@ -89,6 +95,10 @@ public final class Main extends JavaPlugin implements Listener {
     @Getter
     private File configf, shopf;
 
+    public String basicVolatilityAlgorithim;
+    public String priceModel;
+
+
     @Getter
     @Setter
     private FileConfiguration mainConfig, shopConfig;
@@ -129,7 +139,7 @@ public final class Main extends JavaPlugin implements Listener {
                 log.info("[Auto Tune] Web server has started on port " + Config.getPort());
 
             } catch (IOException e) {
-                // TODO Auto-generated catch block
+                debugLog("Error Creating Server on port: " + Config.getPort() + ". Please try restarting or changing your port.");
                 e.printStackTrace();
             }
         }
@@ -144,7 +154,12 @@ public final class Main extends JavaPlugin implements Listener {
         materialListSize = memMap.size();
         this.getCommand("at").setExecutor(new AutoTuneCommand());
         this.getCommand("shop").setExecutor(new AutoTuneGUIShopUserCommand());
-
+        basicVolatilityAlgorithim = Config.getBasicVolatilityAlgorithim();
+        priceModel = Config.getPricingModel().toString();
+        if (priceModel.contains("Basic") == true){
+            log("Loaded Basic Price Algorithim");
+        }
+        runnable();
     }
 
 
@@ -179,6 +194,94 @@ public final class Main extends JavaPlugin implements Listener {
 
         // return the formed String[]
         return arrayOfString;
+    }
+
+    public Double buys = 0.0;
+    public Double sells = 0.0;
+
+    public void runnable(){
+        new BukkitRunnable(){
+            @Override
+            public void run(){
+                debugLog("Starting price calculation task... ");
+                debugLog("Price algorithim settings: ");
+                debugLog("BasicMaxFixedVolatility: " + Config.getBasicMaxFixedVolatility());
+                debugLog("BasicMinFixedVolatility: " + Config.getBasicMinFixedVolatility());
+                Set<String> strSet = map.keySet();
+                for (String str : strSet){
+                    ConcurrentHashMap<Integer,Double[]> tempMap = map.get(str);
+                    for (Integer key1 : tempMap.keySet()){
+                        Double[] key = tempMap.get(key1);
+                        Double tempbuys = key[1];
+                        buys = buys + tempbuys;
+                        Double tempsells = key[2];
+                        sells = sells + tempsells;
+                    }
+                    Double avBuy = buys/tempMap.size();
+                    Double avSells = sells/tempMap.size();
+                    sells = 0.0;
+                    buys = 0.0;
+                    if (avBuy > avSells){
+                        debugLog("AvBuy > AvSells for " + str);
+                        Double[] temp2 = tempMap.get(tempMap.size()-1);
+                        Double temp3 = temp2[0];
+                        Integer tsize = tempMap.size();
+                        if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed")){
+                            Double newSpotPrice = (temp3)+(((1-(avSells / avBuy)) * Config.getBasicMaxFixedVolatility() + Config.getBasicMinFixedVolatility()));
+                            Double[] temporary = { newSpotPrice, avBuy, avSells};
+                            debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                            tempMap.put(tsize, temporary);
+                            map.put(str, tempMap);
+                        
+                        }
+                    }
+                    
+                    if (avBuy < avSells){
+                        debugLog("AvBuy < AvSells for " + str);
+                        Double[] temp2 = tempMap.get(tempMap.size()-1);
+                        Double temp3 = temp2[0];
+                        Integer tsize = tempMap.size();
+                        if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed")){
+                            Double newSpotPrice = (temp3)-(((1-(avBuy / avSells)) * Config.getBasicMaxFixedVolatility() + Config.getBasicMinFixedVolatility()));
+                            Double[] temporary = { newSpotPrice, avBuy, avSells};
+                            debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                            tempMap.put(tsize, temporary);
+                            map.put(str, tempMap);
+                    }
+
+
+                }
+
+                if (avBuy == avSells){
+                    debugLog("AvBuy = AvSells for " + str);
+                    Double[] temp2 = tempMap.get(tempMap.size()-1);
+                    Double temp3 = temp2[0];
+                    Integer tsize = tempMap.size();
+                    if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed")){
+                        Double newSpotPrice = temp3;
+                        Double[] temporary = { newSpotPrice, avBuy, avSells};
+                        debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                        tempMap.put(tsize, temporary);
+                        map.put(str, tempMap);
+                }
+
+
+            }
+            }
+            Date date = Calendar.getInstance().getTime();
+            Date newDate = addMinutesToJavaUtilDate(date, Config.getTimePeriod());
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
+            String strDate = dateFormat.format(newDate);
+            debugLog("Done running price Algorithim, a new check will occur at: " + strDate);
+
+
+            }
+
+            
+        }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getTimePeriod()*20*60, Config.getTimePeriod()*20*60+1);
+        
+
+        
     }
 
     public void createFiles() {
@@ -241,11 +344,18 @@ public final class Main extends JavaPlugin implements Listener {
         return false;
     }
 
+    public Date addMinutesToJavaUtilDate(Date date, int minutes) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.add(Calendar.MINUTE, minutes);
+        return calendar.getTime();
+    }
+
     public void loadDefaults() {
         Config.setWebServer(getMainConfig().getBoolean("web-server-enabled", false));
         Config.setDebugEnabled(getMainConfig().getBoolean("debug-enabled", false));
         Config.setPort(getMainConfig().getInt("port", 8321));
-        Config.setTimePeriod(getMainConfig().getInt("time-period", 8321));
+        Config.setTimePeriod(getMainConfig().getInt("time-period", 10));
         Config.setMenuRows(getMainConfig().getInt("menu-rows", 3));
         Config.setServerName(ChatColor.translateAlternateColorCodes('&',
                 getMainConfig().getString("server-name", "Survival Server - (Change this in Config)")));
@@ -313,6 +423,14 @@ public final class Main extends JavaPlugin implements Listener {
                 debugLog("Data from shops.yml file found: " + key);
                 String str = key;
                 memMap.put(i, str);
+                if (map.containsKey(str) == false){
+                    ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection(key);
+                    Double temp_a = config.getDouble("price");
+                    Double[] tempDArray = {temp_a, 0.0, 0.0};
+                    ConcurrentHashMap<Integer,Double[]> tempMap3 = new ConcurrentHashMap<Integer,Double[]>();
+                    tempMap3.put(0, tempDArray);
+                    map.put(str, tempMap3);
+                }
                 i++;
             }
         }

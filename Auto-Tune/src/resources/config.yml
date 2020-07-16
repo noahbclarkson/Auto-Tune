@@ -18,7 +18,7 @@ server-name: 'Auto-Tune Test Server'
 pricing-model: 'Basic'
 
 ##  Time Period in minutes
-time-period: 60
+time-period: 10
 
 ##  The amount of menu rows in the GUI shop, minimum is 3
 menu-rows: 6
@@ -36,7 +36,7 @@ no-permission: 'You do not have permission to perform this command'
 ##  Info: A variable rate changes the maxiumum price-change based on current price calculations
 Basic-Volatility-Algorithim: 'Fixed'
 
-##  Percentage difference is sell price to buy price
+##  Percentage difference in sell price to buy price
 sell-price-difference: 2.5
 
 ##  Maximum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units

@@ -208,14 +208,24 @@ public final class Main extends JavaPlugin implements Listener {
     public double tempbuys = 0.0;
     public double tempsells = 0.0;
 
+    public Boolean locked = null;
+
+    public Boolean falseBool = false;
+
     public void runnable(){
         new BukkitRunnable(){
             @Override
             public void run(){
                 debugLog("Starting price calculation task... ");
                 debugLog("Price algorithim settings: ");
-                debugLog("BasicMaxFixedVolatility: " + Config.getBasicMaxFixedVolatility());
-                debugLog("BasicMinFixedVolatility: " + Config.getBasicMinFixedVolatility());
+                if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed") == true){
+                debugLog("Basic Max Fixed Volatility: " + Config.getBasicMaxFixedVolatility());
+                debugLog("Basic Min Fixed Volatility: " + Config.getBasicMinFixedVolatility());
+                }
+                if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Variable") == true){
+                    debugLog("Basic Max Variable Volatility: " + Config.getBasicMaxVariableVolatility());
+                    debugLog("Basic Min Variable Volatility: " + Config.getBasicMinVariableVolatility());
+                }
                 tempbuys = 0.0;
                 tempsells = 0.0;
                 buys = 0.0;
@@ -223,6 +233,17 @@ public final class Main extends JavaPlugin implements Listener {
                 Set<String> strSet = map.keySet();
                 for (String str : strSet){
                     ConcurrentHashMap<Integer,Double[]> tempMap = map.get(str);
+                    ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection(str);
+                    locked = null;
+                    if (config.getBoolean("locked", false) && config.getBoolean("locked", false) == true){
+                        locked = falseBool;
+                        debugLog("Locked item found: " + str);
+                    }
+                    tempbuys = 0.0;
+                    tempsells = 0.0;
+                    buys = 0.0;
+                    sells = 0.0;
+                    
                     for (Integer key1 : tempMap.keySet()){
                         Double[] key = tempMap.get(key1);
                         tempbuys = key[1];
@@ -230,10 +251,20 @@ public final class Main extends JavaPlugin implements Listener {
                         tempsells = key[2];
                         sells = sells + tempsells;
                     }
+                    if (locked == falseBool){
+                        Double[] temp2 = tempMap.get(tempMap.size()-1);
+                        Double temp3 = temp2[0];
+                        Integer tsize = tempMap.size();
+                        Double newSpotPrice = temp3;
+                        Double[] temporary = { newSpotPrice, 0.0, 0.0};
+                        tempMap.put(tsize, temporary);
+                        map.put(str, tempMap);
+                        debugLog("Loading item, " + str + " with price " + Double.toString(temp3) +" as price is locked");
+                    }
 
                     Double avBuy = buys/(tempMap.size());
                     Double avSells = sells/(tempMap.size());
-                    if (avBuy > avSells){
+                    if (avBuy > avSells && locked == null){
                         debugLog("AvBuy > AvSells for " + str);
                         Double[] temp2 = tempMap.get(tempMap.size()-1);
                         Double temp3 = temp2[0];
@@ -255,7 +286,7 @@ public final class Main extends JavaPlugin implements Listener {
                         }
                     }
                     
-                    if (avBuy < avSells){
+                    if (avBuy < avSells && locked == null){
                         debugLog("AvBuy < AvSells for " + str);
                         Double[] temp2 = tempMap.get(tempMap.size()-1);
                         Double temp3 = temp2[0];
@@ -278,7 +309,7 @@ public final class Main extends JavaPlugin implements Listener {
 
                 }
 
-                if (avBuy == avSells){
+                if (avBuy == avSells && locked == null){
                     debugLog("AvBuy = AvSells for " + str);
                     Double[] temp2 = tempMap.get(tempMap.size()-1);
                     Double temp3 = temp2[0];
@@ -290,7 +321,7 @@ public final class Main extends JavaPlugin implements Listener {
                         tempMap.put(tsize, temporary);
                         map.put(str, tempMap);
                 }
-
+                locked = null;
 
             }
             }

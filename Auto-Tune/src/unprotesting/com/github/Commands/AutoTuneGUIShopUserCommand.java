@@ -90,7 +90,6 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                     for(int i = 0; i<size;){
                             if (Main.memMap.isEmpty() == false){
                             b = (Material.matchMaterial(Main.memMap.get(i)));
-                            Main.debugLog("Retrieved from memory: "+ Main.memMap.get(i));
                             is = new ItemStack(b);
                             a = new GuiItem(is, event -> {if (event.getClick() == ClickType.LEFT)
                                 {
@@ -114,7 +113,10 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                                     player.setItemOnCursor(null);
                                     event.setCancelled(true);
                                 }
-                            } );
+                            if (event.getClick() != ClickType.LEFT){
+                                event.setCancelled(true);
+                                player.setItemOnCursor(null);
+                            }});
                             ItemMeta im = is.getItemMeta();
                             im.setDisplayName(ChatColor.AQUA + Main.memMap.get(i));
                             ConcurrentHashMap<Integer, Double[]> tempmap = Main.map.get(Main.memMap.get(i));
@@ -132,7 +134,6 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                                 pageOne.addItem(a, i-7, 1);
                             }
 
-                            Main.debugLog("Loaded Item: " + Main.memMap.get(i));
                             i++;
                     }
                    
@@ -232,107 +233,121 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
         GuiItem isa = new GuiItem(is1, event -> {
             player.setItemOnCursor(null);
             if ((Player) event.getWhoClicked() == player){
+                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+                Integer tempMap2Size = tempMap2.size();
+                Double[] tempDArray = {price, buyAmount+1, sellAmount};
+                tempMap2.put(tempMap2Size-1, tempDArray);
+                Main.map.put(matClickedString, tempMap2);
             Main.econ.withdrawPlayer(player, price);
             player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 1));
             player.sendMessage(ChatColor.GOLD + "Purchased 1x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*1));
             player.setItemOnCursor(null);
                 SBPane.clear();
                 createTradingPanel();
-            ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount+1, sellAmount};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                player.setItemOnCursor(null);
+                event.setCancelled(true);
             }});
         GuiItem isa2 = new GuiItem(is2, event -> {
             player.setItemOnCursor(null);
             if ((Player) event.getWhoClicked() == player){
+                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount+2, sellAmount};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
             Main.econ.withdrawPlayer(player, price*2);
             player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 2));
             player.sendMessage(ChatColor.GOLD + "Purchased 2x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*2));
                 player.setItemOnCursor(null);
                 SBPane.clear();
                 createTradingPanel();
-                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount+2, sellAmount};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                player.setItemOnCursor(null);
+                event.setCancelled(true);
             }});
         GuiItem isa4 = new GuiItem(is4, event -> {
             player.setItemOnCursor(null);
             if ((Player) event.getWhoClicked() == player){
+                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount+4, sellAmount};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
             Main.econ.withdrawPlayer(player, price*4);
             player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 4));
             player.sendMessage(ChatColor.GOLD + "Purchased 4x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*4));
                 player.setItemOnCursor(null);
                 SBPane.clear();
                 createTradingPanel();
-                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount+4, sellAmount};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                player.setItemOnCursor(null);
+                event.setCancelled(true);
             }});
         GuiItem isa8 = new GuiItem(is8, event -> {
             player.setItemOnCursor(null);
             if ((Player) event.getWhoClicked() == player){
+                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount+8, sellAmount};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
             Main.econ.withdrawPlayer(player, price*8);
             player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 8));
             player.sendMessage(ChatColor.GOLD + "Purchased 8x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*8));
                 player.setItemOnCursor(null);
                 SBPane.clear();
                 createTradingPanel();
-                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount+8, sellAmount};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                player.setItemOnCursor(null);
+                event.setCancelled(true);
             }});
         GuiItem isa16 = new GuiItem(is16, event -> {
             player.setItemOnCursor(null);
             if ((Player) event.getWhoClicked() == player){
+                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount+16, sellAmount};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
             Main.econ.withdrawPlayer(player, price*16);
             player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 16));
             player.sendMessage(ChatColor.GOLD + "Purchased 16x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*16));
                 player.setItemOnCursor(null);
                 SBPane.clear();
                 createTradingPanel();
-                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount+16, sellAmount};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                player.setItemOnCursor(null);
+                event.setCancelled(true);
             }});
         GuiItem isa32 = new GuiItem(is32, event -> {
             player.setItemOnCursor(null);
             if ((Player) event.getWhoClicked() == player){
+                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount+32, sellAmount};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
             Main.econ.withdrawPlayer(player, price*32);
             player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 32));
             player.sendMessage(ChatColor.GOLD + "Purchased 32x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*32));
                 player.setItemOnCursor(null);
                 SBPane.clear();
                 createTradingPanel();
-                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount+32, sellAmount};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                player.setItemOnCursor(null);
+                event.setCancelled(true);
             }});
         GuiItem isa64 = new GuiItem(is64, event -> {
             player.setItemOnCursor(null);
             if ((Player) event.getWhoClicked() == player){
+                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount+64, sellAmount};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
             Main.econ.withdrawPlayer(player, price*64);
             player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 64));
             player.sendMessage(ChatColor.GOLD + "Purchased 64x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*64));
                 player.setItemOnCursor(null);
                 SBPane.clear();
                 createTradingPanel();
-                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount+64, sellAmount};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                player.setItemOnCursor(null);
+                event.setCancelled(true);
             }});
             ItemStack iss1 = new ItemStack(Material.matchMaterial(matClickedString), 1);
             ItemMeta iss1im = iss1.getItemMeta();
@@ -379,7 +394,15 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                 catch(IllegalArgumentException e){
                     player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
                 }
+                if (sellable != true){
+                    event.setCancelled(true);
+                }
                 if (sellable == true){
+                ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount, sellAmount+1};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
                 player.sendMessage(ChatColor.GOLD + "Sold 1x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*1));
                 Main.econ.depositPlayer(player, (price-price*0.01*Config.getSellPriceDifference()));
                 sellable = false;
@@ -387,11 +410,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                 player.setItemOnCursor(null);
                     SBPane.clear();
                     createTradingPanel();
-                    ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount, sellAmount+1};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                    event.setCancelled(true);
                 }});
             GuiItem issa2 = new GuiItem(iss2, event -> {
                 player.setItemOnCursor(null);
@@ -403,7 +422,16 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                     catch(IllegalArgumentException e){
                         player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
                     }
+                    if (sellable != true){
+                        player.setItemOnCursor(null);
+                        event.setCancelled(true);
+                    }
                     if (sellable == true){
+                        ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount, sellAmount+2};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
                     player.sendMessage(ChatColor.GOLD + "Sold 2x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*2));
                     Main.econ.depositPlayer(player, ((price-price*0.01*Config.getSellPriceDifference())*2));
                     sellable = false;
@@ -411,11 +439,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                     player.setItemOnCursor(null);
                         SBPane.clear();
                         createTradingPanel();
-                        ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount, sellAmount+2};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                        event.setCancelled(true);
                     }});
             GuiItem issa4 = new GuiItem(iss4, event -> {
                 player.setItemOnCursor(null);
@@ -427,7 +451,16 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                     catch(IllegalArgumentException e){
                         player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
                     }
+                    if (sellable != true){
+                        player.setItemOnCursor(null);
+                        event.setCancelled(true);
+                    }
                     if (sellable == true){
+                        ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount, sellAmount+4};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
                     player.sendMessage(ChatColor.GOLD + "Sold 4x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*4));
                     Main.econ.depositPlayer(player, ((price-price*0.01*Config.getSellPriceDifference())*4));
                     sellable = false;
@@ -435,11 +468,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                     player.setItemOnCursor(null);
                         SBPane.clear();
                         createTradingPanel();
-                        ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount, sellAmount+4};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                        event.setCancelled(true);
                     }});
             GuiItem issa8 = new GuiItem(iss8, event -> {
                 player.setItemOnCursor(null);
@@ -451,7 +480,16 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                     catch(IllegalArgumentException e){
                         player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
                     }
+                    if (sellable != true){
+                        player.setItemOnCursor(null);
+                        event.setCancelled(true);
+                    }
                     if (sellable == true){
+                        ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount, sellAmount+8};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
                     player.sendMessage(ChatColor.GOLD + "Sold 8x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*8));
                     Main.econ.depositPlayer(player, ((price-price*0.01*Config.getSellPriceDifference())*8));
                     sellable = false;
@@ -459,11 +497,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                     player.setItemOnCursor(null);
                         SBPane.clear();
                         createTradingPanel();
-                        ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount, sellAmount+8};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                        event.setCancelled(true);
                     }});
             GuiItem issa16 = new GuiItem(iss16, event -> {
                 player.setItemOnCursor(null);
@@ -475,7 +509,16 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                     catch(IllegalArgumentException e){
                         player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
                     }
+                    if (sellable != true){
+                        player.setItemOnCursor(null);
+                        event.setCancelled(true);
+                    }
                     if (sellable == true){
+                        ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount, sellAmount+16};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
                     player.sendMessage(ChatColor.GOLD + "Sold 16x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*16));
                     Main.econ.depositPlayer(player, ((price-price*0.01*Config.getSellPriceDifference())*16));
                     sellable = false;
@@ -483,11 +526,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                     player.setItemOnCursor(null);
                         SBPane.clear();
                         createTradingPanel();
-                        ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount, sellAmount+16};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                        event.setCancelled(true);
                     }});
             GuiItem issa32 = new GuiItem(iss32, event -> {
                 if ((Player) event.getWhoClicked() == player && player.getInventory().contains(Material.matchMaterial(matClickedString), 32)){
@@ -499,7 +538,16 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                     catch(IllegalArgumentException e){
                         player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
                     }
+                    if (sellable != true){
+                        player.setItemOnCursor(null);
+                        event.setCancelled(true);
+                    }
                     if (sellable == true){
+                        ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount, sellAmount+32};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
                     player.sendMessage(ChatColor.GOLD + "Sold 32x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*32));
                     Main.econ.depositPlayer(player, ((price-price*0.01*Config.getSellPriceDifference()))*32);
                     sellable = false;
@@ -507,23 +555,28 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                     player.setItemOnCursor(null);
                         SBPane.clear();
                         createTradingPanel();
-                        ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount, sellAmount+32};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                        event.setCancelled(true);
                     }});
             GuiItem issa64 = new GuiItem(iss64, event -> {
                 player.setItemOnCursor(null);
                 if ((Player) event.getWhoClicked() == player && player.getInventory().contains(Material.matchMaterial(matClickedString), 64)){
                     try{
-                    player.getInventory().removeItem(new ItemStack(Material.matchMaterial(matClickedString), 32));
+                    player.getInventory().removeItem(new ItemStack(Material.matchMaterial(matClickedString), 64));
                     sellable = true;
                     }
                     catch(IllegalArgumentException e){
                         player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
                     }
+                    if (sellable != true){
+                        player.setItemOnCursor(null);
+                        event.setCancelled(true);
+                    }
                     if (sellable == true){
+                        ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
+            Integer tempMap2Size = tempMap2.size();
+            Double[] tempDArray = {price, buyAmount, sellAmount+64};
+            tempMap2.put(tempMap2Size-1, tempDArray);
+            Main.map.put(matClickedString, tempMap2);
                     player.sendMessage(ChatColor.GOLD + "Sold 64x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*64));
                     Main.econ.depositPlayer(player, ((price-price*0.01*Config.getSellPriceDifference()))*64);
                     sellable = false;
@@ -531,11 +584,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                     player.setItemOnCursor(null);
                         SBPane.clear();
                         createTradingPanel();
-                        ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
-            Integer tempMap2Size = tempMap2.size();
-            Double[] tempDArray = {price, buyAmount, sellAmount+64};
-            tempMap2.put(tempMap2Size-1, tempDArray);
-            Main.map.put(matClickedString, tempMap2);
+                        event.setCancelled(true);
                     }});
         SBPane.addItem(isa);
         SBPane.addItem(isa2);

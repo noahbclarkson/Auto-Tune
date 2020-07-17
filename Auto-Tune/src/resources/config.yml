@@ -5,6 +5,8 @@
 ##################################################
 
 
+##  -- General Settings --  ##
+
 ##  Enable//Disable integrated Web Server.
 web-server-enabled: true
 
@@ -29,7 +31,7 @@ menu-title: 'Auto-Tune Shop'
 ##  Message sent for players with no permission
 no-permission: 'You do not have permission to perform this command'
 
-##  -- Basic Pricing Model Settings --
+##  -- Basic Pricing Model Settings --  ##
 
 ##  Volatility Calulation Algorithim
 ##  Info: A fixed rate locks the maxiumum change to a certain price

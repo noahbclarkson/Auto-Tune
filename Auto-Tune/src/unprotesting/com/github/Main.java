@@ -235,7 +235,8 @@ public final class Main extends JavaPlugin implements Listener {
                     ConcurrentHashMap<Integer,Double[]> tempMap = map.get(str);
                     ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection(str);
                     locked = null;
-                    if (config.getBoolean("locked", false) && config.getBoolean("locked", false) == true){
+                    Boolean lk = config.getBoolean("locked", false);
+                    if (lk == true){
                         locked = falseBool;
                         debugLog("Locked item found: " + str);
                     }

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.github.stefvanschie.inventoryframework.Gui;
@@ -18,6 +19,7 @@ import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -67,6 +69,8 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
     public Gui gui;
     public PaginatedPane pane;
     public String matClickedString = "";
+    public UUID playername1;
+    public Player send2;
 
     @Override
 	public boolean onCommand(CommandSender sender, Command command, String shop, String[] args) {
@@ -77,7 +81,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             return true;
             }
 
+            send2 = (Player) sender;
+            playername1 = send2.getUniqueId();
+
             player = (Player) sender;
+            playername1 = player.getUniqueId();
                 
                 gui = new Gui(menuRows, Config.getMenuTitle());
                 Integer size = Main.getMaterialListSize();
@@ -189,10 +197,20 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
     }
 
     
-    
+    public Double sellpricedif;
+    public Double sellpricedif2;
+
 
     public void createTradingPanel(){
-        
+        sellpricedif2 = null;
+        sellpricedif = null;
+        if(player == (Player) sender || player == sender || playername1 == send2.getUniqueId()){
+        sellpricedif = Config.getSellPriceDifference();
+        ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection((matClickedString));
+        sellpricedif2 = config.getDouble("sell-difference", sellpricedif);
+        if (sellpricedif2 != null){
+            sellpricedif = sellpricedif2;
+        }
         SBPane.clear();
         ItemStack is1 = new ItemStack(Material.matchMaterial(matClickedString), 1);
         ItemMeta is1im = is1.getItemMeta();
@@ -351,37 +369,37 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             ItemStack iss1 = new ItemStack(Material.matchMaterial(matClickedString), 1);
             ItemMeta iss1im = iss1.getItemMeta();
             iss1im.setDisplayName(ChatColor.GOLD + "Sell 1x " + ChatColor.AQUA + matClickedString);
-            iss1im.setLore(Arrays.asList(ChatColor.GREEN + df2.format((price-price*0.01*Config.getSellPriceDifference()))));
+            iss1im.setLore(Arrays.asList(ChatColor.GREEN + df2.format((price-price*0.01*sellpricedif))));
             iss1.setItemMeta(iss1im);
             ItemStack iss2 = new ItemStack(Material.matchMaterial(matClickedString), 2);
             ItemMeta iss2im = iss2.getItemMeta();
             iss2im.setDisplayName(ChatColor.GOLD + "Sell 2x " + ChatColor.AQUA + matClickedString);
-            iss2im.setLore(Arrays.asList(ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*2)));
+            iss2im.setLore(Arrays.asList(ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif)*2)));
             iss2.setItemMeta(iss2im);
             ItemStack iss4 = new ItemStack(Material.matchMaterial(matClickedString), 4);
             ItemMeta iss4im = iss4.getItemMeta();
             iss4im.setDisplayName(ChatColor.GOLD + "Sell 4x " + ChatColor.AQUA + matClickedString);
-            iss4im.setLore(Arrays.asList(ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference()) * 4)));
+            iss4im.setLore(Arrays.asList(ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif) * 4)));
             iss4.setItemMeta(iss4im);
             ItemStack iss8 = new ItemStack(Material.matchMaterial(matClickedString), 8);
             ItemMeta iss8im = iss8.getItemMeta();
             iss8im.setDisplayName(ChatColor.GOLD + "Sell 8x " + ChatColor.AQUA + matClickedString);
-            iss8im.setLore(Arrays.asList(ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference()) * 8)));
+            iss8im.setLore(Arrays.asList(ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif) * 8)));
             iss8.setItemMeta(iss8im);
             ItemStack iss16 = new ItemStack(Material.matchMaterial(matClickedString), 16);
             ItemMeta iss16im = iss16.getItemMeta();
             iss16im.setDisplayName(ChatColor.GOLD + "Sell 16x " + ChatColor.AQUA + matClickedString);
-            iss16im.setLore(Arrays.asList(ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference()) * 16)));
+            iss16im.setLore(Arrays.asList(ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif) * 16)));
             iss16.setItemMeta(iss16im);
             ItemStack iss32 = new ItemStack(Material.matchMaterial(matClickedString), 32);
             ItemMeta iss32im = iss32.getItemMeta();
             iss32im.setDisplayName(ChatColor.GOLD + "Sell 32x " + ChatColor.AQUA + matClickedString);
-            iss32im.setLore(Arrays.asList(ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference()) * 32)));
+            iss32im.setLore(Arrays.asList(ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif) * 32)));
             iss32.setItemMeta(iss32im);
             ItemStack iss64 = new ItemStack(Material.matchMaterial(matClickedString), 64);
             ItemMeta iss64im = iss64.getItemMeta();
             iss64im.setDisplayName(ChatColor.GOLD + "Sell 64x " + ChatColor.AQUA + matClickedString);
-            iss64im.setLore(Arrays.asList(ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference()) * 64)));
+            iss64im.setLore(Arrays.asList(ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif) * 64)));
             iss64.setItemMeta(iss64im);
             GuiItem issa = new GuiItem(iss1, event -> {
                 player.setItemOnCursor(null);
@@ -402,8 +420,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             Double[] tempDArray = {price, buyAmount, sellAmount+1};
             tempMap2.put(tempMap2Size-1, tempDArray);
             Main.map.put(matClickedString, tempMap2);
-                player.sendMessage(ChatColor.GOLD + "Sold 1x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*1));
-                Main.econ.depositPlayer(player, (price-price*0.01*Config.getSellPriceDifference()));
+            
+                player.sendMessage(ChatColor.GOLD + "Sold 1x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif)*1));
+                Main.econ.depositPlayer(player, (price-price*0.01*sellpricedif));
                 sellable = false;
                 }
                 player.setItemOnCursor(null);
@@ -431,8 +450,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             Double[] tempDArray = {price, buyAmount, sellAmount+2};
             tempMap2.put(tempMap2Size-1, tempDArray);
             Main.map.put(matClickedString, tempMap2);
-                    player.sendMessage(ChatColor.GOLD + "Sold 2x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*2));
-                    Main.econ.depositPlayer(player, ((price-price*0.01*Config.getSellPriceDifference())*2));
+            
+                    player.sendMessage(ChatColor.GOLD + "Sold 2x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif)*2));
+                    Main.econ.depositPlayer(player, ((price-price*0.01*sellpricedif)*2));
                     sellable = false;
                     }
                     player.setItemOnCursor(null);
@@ -460,8 +480,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             Double[] tempDArray = {price, buyAmount, sellAmount+4};
             tempMap2.put(tempMap2Size-1, tempDArray);
             Main.map.put(matClickedString, tempMap2);
-                    player.sendMessage(ChatColor.GOLD + "Sold 4x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*4));
-                    Main.econ.depositPlayer(player, ((price-price*0.01*Config.getSellPriceDifference())*4));
+            
+                    player.sendMessage(ChatColor.GOLD + "Sold 4x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif)*4));
+                    Main.econ.depositPlayer(player, ((price-price*0.01*sellpricedif)*4));
                     sellable = false;
                     }
                     player.setItemOnCursor(null);
@@ -489,8 +510,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             Double[] tempDArray = {price, buyAmount, sellAmount+8};
             tempMap2.put(tempMap2Size-1, tempDArray);
             Main.map.put(matClickedString, tempMap2);
-                    player.sendMessage(ChatColor.GOLD + "Sold 8x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*8));
-                    Main.econ.depositPlayer(player, ((price-price*0.01*Config.getSellPriceDifference())*8));
+            
+                    player.sendMessage(ChatColor.GOLD + "Sold 8x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif)*8));
+                    Main.econ.depositPlayer(player, ((price-price*0.01*sellpricedif)*8));
                     sellable = false;
                     }
                     player.setItemOnCursor(null);
@@ -518,8 +540,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             Double[] tempDArray = {price, buyAmount, sellAmount+16};
             tempMap2.put(tempMap2Size-1, tempDArray);
             Main.map.put(matClickedString, tempMap2);
-                    player.sendMessage(ChatColor.GOLD + "Sold 16x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*16));
-                    Main.econ.depositPlayer(player, ((price-price*0.01*Config.getSellPriceDifference())*16));
+            
+                    player.sendMessage(ChatColor.GOLD + "Sold 16x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif)*16));
+                    Main.econ.depositPlayer(player, ((price-price*0.01*sellpricedif)*16));
                     sellable = false;
                     }
                     player.setItemOnCursor(null);
@@ -547,8 +570,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             Double[] tempDArray = {price, buyAmount, sellAmount+32};
             tempMap2.put(tempMap2Size-1, tempDArray);
             Main.map.put(matClickedString, tempMap2);
-                    player.sendMessage(ChatColor.GOLD + "Sold 32x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*32));
-                    Main.econ.depositPlayer(player, ((price-price*0.01*Config.getSellPriceDifference()))*32);
+            
+                    player.sendMessage(ChatColor.GOLD + "Sold 32x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif)*32));
+                    Main.econ.depositPlayer(player, ((price-price*0.01*sellpricedif))*32);
                     sellable = false;
                     }
                     player.setItemOnCursor(null);
@@ -576,8 +600,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             Double[] tempDArray = {price, buyAmount, sellAmount+64};
             tempMap2.put(tempMap2Size-1, tempDArray);
             Main.map.put(matClickedString, tempMap2);
-                    player.sendMessage(ChatColor.GOLD + "Sold 64x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*Config.getSellPriceDifference())*64));
-                    Main.econ.depositPlayer(player, ((price-price*0.01*Config.getSellPriceDifference()))*64);
+            
+                    player.sendMessage(ChatColor.GOLD + "Sold 64x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format((price-price*0.01*sellpricedif)*64));
+                    Main.econ.depositPlayer(player, ((price-price*0.01*sellpricedif))*64);
                     sellable = false;
                     }
                     player.setItemOnCursor(null);
@@ -600,8 +625,16 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
         SBPane.addItem(issa32);
         SBPane.addItem(issa64);
         gui.update();
+        sellpricedif2 = null;
 
         }
+        else{
+            player.closeInventory();
+            
+        }
+
+
+    }
 }
 
     

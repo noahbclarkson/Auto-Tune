@@ -44,7 +44,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
     @Getter
     public Material b;
 
-    private static DecimalFormat df2 = new DecimalFormat("###,###,###,###.00");
+    private static DecimalFormat df2 = new DecimalFormat("###,###,###,##0.00");
 
     @Setter
     @Getter
@@ -105,7 +105,6 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                                     buyAmount = buyValueD;
                                     Double sellValueD = tempDoublearray[2];
                                     sellAmount = sellValueD;
-                                    Main.debugLog(matClickedString);
                                     createTradingPanel();
                                     pane.setPage(pane.getPage() + 1);
                                     back.setVisible(true);

@@ -4,7 +4,7 @@
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune</artifactId>
   <name>Auto-Tune</name>
-  <version>0.3.2</version>
+  <version>0.3.3</version>
   <description>This plugin is the ultimate solution to all the signs, the chests, the glitches.</description>
   <url>https://www.spigotmc.org/resources/guishop.2451/</url>
   <issueManagement>
@@ -68,9 +68,6 @@
           <artifactSet>
             <includes>
               <include>unprotesting.com.github</include>
-              <include>com.github.stefvanschie.inventoryframework:IF:jar:</include>
-              <include>space.arim:legacyitemconstructor</include>
-              <include>org.mapdb:mapdb:jar:</include>
               <include>**</include>
             </includes>
           </artifactSet>

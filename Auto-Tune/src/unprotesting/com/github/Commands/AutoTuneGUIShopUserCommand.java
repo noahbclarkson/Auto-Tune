@@ -69,7 +69,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             } 
 
                 Player p = (Player) sender;
-                loadGUIMAIN(p ,sender);
+                loadGUIMAIN(p, sender);
 
 
             return true;
@@ -220,30 +220,6 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                             pageOne.addItem(a, i-35, 5);
                                 }
                         }
-                        if(Config.getMenuRows() == 9){
-                            if (i < 7){
-                            pageOne.addItem(a, i, 0);
-                            }
-                            if (i >= 7 && i < 14){
-                            pageOne.addItem(a, i-7, 1);
-                            }
-                            if (i >= 14 && i < 21){
-                            pageOne.addItem(a, i-14, 2);
-                            }
-                            if (i >= 21 && i < 28){
-                            pageOne.addItem(a, i-21, 3);
-                            }
-                            if (i >= 28 && i < 35){
-                            pageOne.addItem(a, i-28, 4);
-                            }
-                            if (i >= 35 && i < 42){
-                            pageOne.addItem(a, i-35, 5);
-                                }
-                            if (i >= 42 && i < 49){
-                            pageOne.addItem(a, i-42, 6);
-                                }
-                        }
-
 
                         i++;
                 }

@@ -2,6 +2,7 @@ package unprotesting.com.github;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
@@ -335,15 +336,66 @@ public final class Main extends JavaPlugin implements Listener {
             DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
             String strDate = dateFormat.format(newDate);
             debugLog("Done running price Algorithim, a new check will occur at: " + strDate);
-
-
+            try{
+            debugLog("Saving data to data.csv file");
+            writeCSV();
+            debugLog("Saved data to data.csv file");
             }
+            catch(InterruptedException | IOException e){
+                e.printStackTrace();
+            }
+        }
 
             
         }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getTimePeriod()*20*60, Config.getTimePeriod()*20*60+1);
         
 
         
+    }
+
+    public static void writeCSV() throws InterruptedException, IOException {
+        FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/data.csv");
+        
+        Set<String> strSet = map.keySet();
+        for (String str : strSet){
+        ConcurrentHashMap<Integer, Double[]> item = map.get(str);
+
+        csvWriter.append("\n");
+        csvWriter.append("*" + str + "*");
+        csvWriter.append(",");
+        csvWriter.append("\n");
+           
+            for(int i=0; i>-100;i++){
+                String k = String.valueOf(i);
+                csvWriter.append(k);
+                Double[] l = (item.get(i));
+                if (l == null){
+                    break;
+                }
+                double SP = l[0];
+                String parsedSP = String.valueOf(SP);
+                csvWriter.append(",");
+                csvWriter.append(parsedSP);
+                double Buy = l[1];
+                String parsedBuy = String.valueOf(Buy);
+                csvWriter.append(",");
+                csvWriter.append(parsedBuy);
+                double Sell = l[2];
+                String parsedSell = String.valueOf(Sell);
+                csvWriter.append(",");
+                csvWriter.append(parsedSell);
+                csvWriter.append("\n");
+            }
+            csvWriter.append("\n");
+        }
+            // for (List<String> rowData : rows) {
+            //     csvWriter.append(String.join(",", rowData));
+            //     csvWriter.append("\n");
+            // }
+            
+            csvWriter.flush();
+            csvWriter.close();
+
     }
 
     public void createFiles() {

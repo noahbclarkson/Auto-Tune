@@ -122,6 +122,8 @@ public final class Main extends JavaPlugin implements Listener {
     public void onEnable() {
         Bukkit.getServer().getPluginManager().registerEvents(new JoinEventHandler(), this);
         createFiles();
+        File folderfile = new File("plugins/Auto-Tune/web/");
+        folderfile.mkdirs();
         INSTANCE = this;
         if (!setupEconomy()) {
             log.severe(
@@ -354,14 +356,14 @@ public final class Main extends JavaPlugin implements Listener {
     }
 
     public static void writeCSV() throws InterruptedException, IOException {
-        FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/data.csv");
+        FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/web/sample.csv");
         
         Set<String> strSet = map.keySet();
         for (String str : strSet){
         ConcurrentHashMap<Integer, Double[]> item = map.get(str);
 
         csvWriter.append("\n");
-        csvWriter.append("*" + str + "*");
+        csvWriter.append("%" + str);
         csvWriter.append(",");
         csvWriter.append("\n");
            

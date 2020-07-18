@@ -145,12 +145,105 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                         String fullprice = "Price: " + "$" + priceString;
                         im.setLore(Arrays.asList(ChatColor.GOLD + fullprice));
                         is.setItemMeta(im);
-                        if (i < 7){
-                        pageOne.addItem(a, i, 0);
+                        if (Config.getMenuRows() == 3){
+                            if (i < 7){
+                            pageOne.addItem(a, i, 0);
+                            }
                         }
-                        if (i >= 7 && i < 13){
+                        if (Config.getMenuRows() == 4){
+                            if (i < 7){
+                            pageOne.addItem(a, i, 0);
+                            }
+                            if (i >= 7 && i < 14){
+                                pageOne.addItem(a, i-7, 1);
+                            }
+                        }
+                        if(Config.getMenuRows() == 5){
+                            if (i < 7){
+                            pageOne.addItem(a, i, 0);
+                            }
+                            if (i >= 7 && i < 14){
                             pageOne.addItem(a, i-7, 1);
+                            }
+                            if (i >= 14 && i < 21){
+                            pageOne.addItem(a, i-14, 2);
+                            }
                         }
+                        if(Config.getMenuRows() == 6){
+                            if (i < 7){
+                            pageOne.addItem(a, i, 0);
+                            }
+                            if (i >= 7 && i < 14){
+                            pageOne.addItem(a, i-7, 1);
+                            }
+                            if (i >= 14 && i < 21){
+                            pageOne.addItem(a, i-14, 2);
+                            }
+                            if (i >= 21 && i < 28){
+                                pageOne.addItem(a, i-21, 3);
+                                }
+                        }
+                        if(Config.getMenuRows() == 7){
+                            if (i < 7){
+                            pageOne.addItem(a, i, 0);
+                            }
+                            if (i >= 7 && i < 14){
+                            pageOne.addItem(a, i-7, 1);
+                            }
+                            if (i >= 14 && i < 21){
+                            pageOne.addItem(a, i-14, 2);
+                            }
+                            if (i >= 21 && i < 28){
+                            pageOne.addItem(a, i-21, 3);
+                            }
+                            if (i >= 28 && i < 35){
+                                pageOne.addItem(a, i-28, 4);
+                                }
+                        }
+                        if(Config.getMenuRows() == 8){
+                            if (i < 7){
+                            pageOne.addItem(a, i, 0);
+                            }
+                            if (i >= 7 && i < 14){
+                            pageOne.addItem(a, i-7, 1);
+                            }
+                            if (i >= 14 && i < 21){
+                            pageOne.addItem(a, i-14, 2);
+                            }
+                            if (i >= 21 && i < 28){
+                            pageOne.addItem(a, i-21, 3);
+                            }
+                            if (i >= 28 && i < 35){
+                            pageOne.addItem(a, i-28, 4);
+                            }
+                            if (i >= 35 && i < 42){
+                            pageOne.addItem(a, i-35, 5);
+                                }
+                        }
+                        if(Config.getMenuRows() == 9){
+                            if (i < 7){
+                            pageOne.addItem(a, i, 0);
+                            }
+                            if (i >= 7 && i < 14){
+                            pageOne.addItem(a, i-7, 1);
+                            }
+                            if (i >= 14 && i < 21){
+                            pageOne.addItem(a, i-14, 2);
+                            }
+                            if (i >= 21 && i < 28){
+                            pageOne.addItem(a, i-21, 3);
+                            }
+                            if (i >= 28 && i < 35){
+                            pageOne.addItem(a, i-28, 4);
+                            }
+                            if (i >= 35 && i < 42){
+                            pageOne.addItem(a, i-35, 5);
+                                }
+                            if (i >= 42 && i < 49){
+                            pageOne.addItem(a, i-42, 6);
+                                }
+                        }
+
 
                         i++;
                 }

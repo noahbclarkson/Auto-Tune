@@ -9,7 +9,7 @@ public final class Config {
 
     @Getter
     @Setter
-    private static boolean webServer, debugEnabled;
+    private static boolean webServer, debugEnabled, checksumHeaderBypass;
 
     @Getter
     @Setter

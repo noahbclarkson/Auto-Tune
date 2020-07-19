@@ -146,11 +146,22 @@ public final class Main extends JavaPlugin implements Listener {
                 e.printStackTrace();
             }
         }
-        DB db = DBMaker.fileDB("data.db").closeOnJvmShutdown().make();
-        map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
-        playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
-        DB memDb = DBMaker.memoryDB().closeOnJvmShutdown().make();
-        memMap = db.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
+        if (Config.isChecksumHeaderBypass()){
+            debugLog("Enabling checksum-header-bypass");
+            DB db = DBMaker.fileDB("data.db").checksumHeaderBypass().closeOnJvmShutdown().make();
+            map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
+            playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
+            DB memDb = DBMaker.memoryDB().checksumHeaderBypass().closeOnJvmShutdown().make();
+            memMap = db.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
+        }
+        else{
+            DB db = DBMaker.fileDB("data.db").checksumHeaderBypass().closeOnJvmShutdown().make();
+            map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
+            playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
+            DB memDb = DBMaker.memoryDB().closeOnJvmShutdown().make();
+            memMap = db.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
+        }
+        
         saveplayerdata();
         loadShopsFile();
         loadShopData();
@@ -238,94 +249,101 @@ public final class Main extends JavaPlugin implements Listener {
                     ConcurrentHashMap<Integer,Double[]> tempMap = map.get(str);
                     ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection(str);
                     locked = null;
-                    Boolean lk = config.getBoolean("locked", false);
-                    if (lk == true){
-                        locked = falseBool;
-                        debugLog("Locked item found: " + str);
-                    }
-                    tempbuys = 0.0;
-                    tempsells = 0.0;
-                    buys = 0.0;
-                    sells = 0.0;
-                    
-                    for (Integer key1 : tempMap.keySet()){
-                        Double[] key = tempMap.get(key1);
-                        tempbuys = key[1];
-                        buys = buys + tempbuys;
-                        tempsells = key[2];
-                        sells = sells + tempsells;
-                    }
-                    if (locked == falseBool){
-                        Double[] temp2 = tempMap.get(tempMap.size()-1);
-                        Double temp3 = temp2[0];
-                        Integer tsize = tempMap.size();
-                        Double newSpotPrice = temp3;
-                        Double[] temporary = { newSpotPrice, 0.0, 0.0};
-                        tempMap.put(tsize, temporary);
-                        map.put(str, tempMap);
-                        debugLog("Loading item, " + str + " with price " + Double.toString(temp3) +" as price is locked");
-                    }
-
-                    Double avBuy = buys/(tempMap.size());
-                    Double avSells = sells/(tempMap.size());
-                    if (avBuy > avSells && locked == null){
-                        debugLog("AvBuy > AvSells for " + str);
-                        Double[] temp2 = tempMap.get(tempMap.size()-1);
-                        Double temp3 = temp2[0];
-                        Integer tsize = tempMap.size();
-                        if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed") == true){
-                            Double newSpotPrice = (temp3)+(((1-(avSells / avBuy)) * Config.getBasicMaxFixedVolatility() + Config.getBasicMinFixedVolatility()));
+                    if (config != null){
+                        Boolean lk = config.getBoolean("locked", false);
+                        if (lk == true){
+                            locked = falseBool;
+                            debugLog("Locked item found: " + str);
+                        }
+                        tempbuys = 0.0;
+                        tempsells = 0.0;
+                        buys = 0.0;
+                        sells = 0.0;
+                        
+                        for (Integer key1 : tempMap.keySet()){
+                            Double[] key = tempMap.get(key1);
+                            tempbuys = key[1];
+                            buys = buys + tempbuys;
+                            tempsells = key[2];
+                            sells = sells + tempsells;
+                        }
+                        if (locked == falseBool){
+                            Double[] temp2 = tempMap.get(tempMap.size()-1);
+                            Double temp3 = temp2[0];
+                            Integer tsize = tempMap.size();
+                            Double newSpotPrice = temp3;
                             Double[] temporary = { newSpotPrice, 0.0, 0.0};
-                            debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
                             tempMap.put(tsize, temporary);
                             map.put(str, tempMap);
+                            debugLog("Loading item, " + str + " with price " + Double.toString(temp3) +" as price is locked");
+                        }
+
+                        Double avBuy = buys/(tempMap.size());
+                        Double avSells = sells/(tempMap.size());
+                        if (avBuy > avSells && locked == null){
+                            debugLog("AvBuy > AvSells for " + str);
+                            Double[] temp2 = tempMap.get(tempMap.size()-1);
+                            Double temp3 = temp2[0];
+                            Integer tsize = tempMap.size();
+                            if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed") == true){
+                                Double newSpotPrice = (temp3)+(((1-(avSells / avBuy)) * Config.getBasicMaxFixedVolatility() + Config.getBasicMinFixedVolatility()));
+                                Double[] temporary = { newSpotPrice, 0.0, 0.0};
+                                debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                                tempMap.put(tsize, temporary);
+                                map.put(str, tempMap);
+                            
+                            }
+                            if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Variable") == true){
+                                Double newSpotPrice = (temp3)+(temp3*((1-(avSells / avBuy))* Config.getBasicMaxVariableVolatility()*0.01)) + Config.getBasicMinVariableVolatility()*0.01*temp3;
+                                Double[] temporary = { newSpotPrice, 0.0, 0.0};
+                                debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " because Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                                tempMap.put(tsize, temporary);
+                                map.put(str, tempMap);
+                            }
+                        }
                         
+                        if (avBuy < avSells && locked == null){
+                            debugLog("AvBuy < AvSells for " + str);
+                            Double[] temp2 = tempMap.get(tempMap.size()-1);
+                            Double temp3 = temp2[0];
+                            Integer tsize = tempMap.size();
+                            if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed")){
+                                Double newSpotPrice = (temp3)-(((1-(avBuy / avSells)) * Config.getBasicMaxFixedVolatility() + Config.getBasicMinFixedVolatility()));
+                                Double[] temporary = { newSpotPrice, 0.0, 0.0};
+                                debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                                tempMap.put(tsize, temporary);
+                                map.put(str, tempMap);
                         }
                         if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Variable") == true){
-                            Double newSpotPrice = (temp3)+(temp3*((1-(avSells / avBuy))* Config.getBasicMaxVariableVolatility()*0.01)) + Config.getBasicMinVariableVolatility()*0.01*temp3;
+                            Double newSpotPrice = (temp3)-(temp3*((1-(avBuy / avSells))* Config.getBasicMaxVariableVolatility()*0.01)) - Config.getBasicMinVariableVolatility()*0.01*temp3;
                             Double[] temporary = { newSpotPrice, 0.0, 0.0};
                             debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " because Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
                             tempMap.put(tsize, temporary);
                             map.put(str, tempMap);
                         }
+
+
                     }
-                    
-                    if (avBuy < avSells && locked == null){
-                        debugLog("AvBuy < AvSells for " + str);
+
+                    if (avBuy == avSells && locked == null){
+                        debugLog("AvBuy = AvSells for " + str);
                         Double[] temp2 = tempMap.get(tempMap.size()-1);
                         Double temp3 = temp2[0];
                         Integer tsize = tempMap.size();
-                        if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed")){
-                            Double newSpotPrice = (temp3)-(((1-(avBuy / avSells)) * Config.getBasicMaxFixedVolatility() + Config.getBasicMinFixedVolatility()));
+                        if (priceModel.contains("Basic") == true){
+                            Double newSpotPrice = temp3;
                             Double[] temporary = { newSpotPrice, 0.0, 0.0};
                             debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
                             tempMap.put(tsize, temporary);
                             map.put(str, tempMap);
                     }
-                    if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Variable") == true){
-                        Double newSpotPrice = (temp3)-(temp3*((1-(avBuy / avSells))* Config.getBasicMaxVariableVolatility()*0.01)) - Config.getBasicMinVariableVolatility()*0.01*temp3;
-                        Double[] temporary = { newSpotPrice, 0.0, 0.0};
-                        debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " because Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
-                        tempMap.put(tsize, temporary);
-                        map.put(str, tempMap);
-                    }
-
-
-                }
-
-                if (avBuy == avSells && locked == null){
-                    debugLog("AvBuy = AvSells for " + str);
-                    Double[] temp2 = tempMap.get(tempMap.size()-1);
-                    Double temp3 = temp2[0];
-                    Integer tsize = tempMap.size();
-                    if (priceModel.contains("Basic") == true){
-                        Double newSpotPrice = temp3;
-                        Double[] temporary = { newSpotPrice, 0.0, 0.0};
-                        debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
-                        tempMap.put(tsize, temporary);
-                        map.put(str, tempMap);
-                }
-                locked = null;
+                    locked = null;
+                    
+            }
+            else if (config == null){
+                debugLog(str + " is empty enable automatic deletion of items not in the shop file to be deleted to remove this error");
+            
+            }
 
             }
             }
@@ -469,6 +487,7 @@ public final class Main extends JavaPlugin implements Listener {
 
     public void loadDefaults() {
         Config.setWebServer(getMainConfig().getBoolean("web-server-enabled", false));
+        Config.setChecksumHeaderBypass(getMainConfig().getBoolean("checksum-header-bypass", false));
         Config.setDebugEnabled(getMainConfig().getBoolean("debug-enabled", false));
         Config.setPort(getMainConfig().getInt("port", 8321));
         Config.setTimePeriod(getMainConfig().getInt("time-period", 10));

@@ -54,7 +54,13 @@ Basic-Fixed-Min-Volatility: 0.05
 Basic-Variable-Min-Volatility: 0.15
 
 ##  -- Other settings --
+
+##  Enable debug mode for more info on price calculations
 debug-enabled: false
+
+##  Enable ChecksumHeaderBypass if you have issues with data retrival or corruption
+checksum-header-bypass: false
+
 
 
 

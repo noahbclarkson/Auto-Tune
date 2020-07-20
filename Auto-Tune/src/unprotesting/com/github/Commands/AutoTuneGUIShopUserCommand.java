@@ -254,15 +254,28 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             imforward.setLore(Arrays.asList(ChatColor.BOLD + "Click to go to the next page"));
             isforward.setItemMeta(imforward);
 
-            back.addItem(new GuiItem(new ItemStack(isback), event -> {
-            pane.setPage(0);
-
-            if (pane.getPage() == 0) {
+            if (pane.getPage() == 0 && finalPageAmount == 3) {
                 back.setVisible(false);
                 forward.setVisible(true);
             }
 
-            forward.setVisible(true);
+            if (pane.getPage() == 0 && finalPageAmount == 2) {
+                forward.setVisible(false);
+            }
+
+            back.addItem(new GuiItem(new ItemStack(isback), event -> {
+            pane.setPage(0);
+
+            if (pane.getPage() == 0 && finalPageAmount == 3) {
+                back.setVisible(false);
+                forward.setVisible(true);
+            }
+
+            if (pane.getPage() == 0 && finalPageAmount == 2) {
+                forward.setVisible(false);
+            }
+
+            
             gui1.update();
             }), 0, 0);
 
@@ -270,7 +283,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
             forward.addItem(new GuiItem(new ItemStack(isforward), event -> {
             pane.setPage(1);
-
+            forward.setVisible(false);
             if (pane.getPage() == 1) {
                 forward.setVisible(false);
             }

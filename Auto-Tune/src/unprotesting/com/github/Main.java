@@ -78,7 +78,7 @@ public final class Main extends JavaPlugin implements Listener {
     public static Economy econ;
     private static JavaPlugin plugin;
     File playerdata = new File("plugins/Auto-Tune/", "playerdata.yml");
-    public static final String BASEDIR = "plugins/Auto-Tune/Trade";
+    public static final String BASEDIR = "plugins/Auto-Tune/web";
     public static final String BASEDIRMAIN = "plugins/Auto-Tune/data.csv";
     public FileConfiguration playerDataConfig;
     public final String playerdatafilename = "playerdata.yml";
@@ -136,7 +136,7 @@ public final class Main extends JavaPlugin implements Listener {
             HttpServer server;
             try {
                 server = HttpServer.create(new InetSocketAddress(Config.getPort()), 0);
-                server.createContext("/static", new StaticFileHandler(BASEDIR));
+                server.createContext("/", new StaticFileHandler(BASEDIR));
                 server.setExecutor(null);
                 server.start();
                 log.info("[Auto Tune] Web server has started on port " + Config.getPort());
@@ -365,8 +365,7 @@ public final class Main extends JavaPlugin implements Listener {
                 e.printStackTrace();
             }
         }
-
-            
+          
         }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getTimePeriod()*20*60, Config.getTimePeriod()*20*60+1);
         
 

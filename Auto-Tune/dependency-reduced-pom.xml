@@ -4,9 +4,9 @@
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune</artifactId>
   <name>Auto-Tune</name>
-  <version>0.3.9</version>
-  <description>This plugin is the ultimate solution to all the signs, the chests, the glitches.</description>
-  <url>https://www.spigotmc.org/resources/guishop.2451/</url>
+  <version>0.4.0</version>
+  <description>The automatic pricing plugin for minecraft</description>
+  <url>https://github.com/Unprotesting/Auto-Tune</url>
   <issueManagement>
     <system>GitHub</system>
     <url>https://github.com/Unprotesting/Auto-Tune/issues</url>

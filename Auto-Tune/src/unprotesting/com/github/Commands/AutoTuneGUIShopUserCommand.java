@@ -55,6 +55,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
     public Economy economy = Main.getINSTANCE().getEconomy();
 
+    public Integer SBPanePos = 1;
+
+ 
 
 
 
@@ -69,6 +72,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             } 
 
                 Player p = (Player) sender;
+                if (Config.getMenuRows() == 6){
+                    SBPanePos = 2;
+                }
                 loadGUIMAIN(p, sender);
 
 
@@ -80,8 +86,8 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
     }
 
     public void loadGUIMAIN(Player player, CommandSender senderpub) {
-        StaticPane back = new StaticPane(2, 5, 1, 1);
-        OutlinePane SBPane = new OutlinePane(1, 2, 7, 2);
+        Integer menuRows = Config.getMenuRows();
+        OutlinePane SBPane = new OutlinePane(1, SBPanePos, 7, 2);
         ItemStack is;
         GuiItem a;
         final Player playerpub = player;
@@ -89,13 +95,23 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
         Material b;
         Double price1;
         Gui gui1;
-        Integer menuRows = Config.getMenuRows();
+        StaticPane pageTwo = new StaticPane(1, 1, 7, menuRows - 2);
+        StaticPane back = new StaticPane(0, menuRows-1, 1, 1);
+        StaticPane forward = new StaticPane(8, menuRows-1, 1, 1);
+        
 
         player = (Player) senderpub;
             gui1 = new Gui(menuRows, Config.getMenuTitle());
             Integer size = Main.getMaterialListSize();
             PaginatedPane pane = new PaginatedPane(0, 0, 9, menuRows);
             Integer paneSize = (menuRows-2)*7;
+            Integer pageAmount = 2;
+            if (size > paneSize){
+                pageTwo = new StaticPane(1, 1, 7, menuRows - 2);
+                pageAmount = 3;
+                pane.addPane(1, pageTwo);
+            }
+            final Integer finalPageAmount = pageAmount;
 
 
             // page one
@@ -123,9 +139,13 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                                 buyAmount = buyValueD;
                                 Double sellValueD = tempDoublearray[2];
                                 sellAmount = sellValueD;
-                                createTradingPanel(gui, matClickedString, playernew, SBPane, price);
-                                pane.setPage(pane.getPage() + 1);
-                                back.setVisible(true);
+                                createTradingPanel(gui, matClickedString, playernew, SBPane, price, forward, back);
+                                if (finalPageAmount == 2){
+                                    pane.setPage(1);
+                                }
+                                if (finalPageAmount == 3){
+                                    pane.setPage(2);
+                                }
                                 gui.update();
                                 playernew.setItemOnCursor(null);
                                 event.setCancelled(true);
@@ -145,11 +165,6 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                         String fullprice = "Price: " + "$" + priceString;
                         im.setLore(Arrays.asList(ChatColor.GOLD + fullprice));
                         is.setItemMeta(im);
-                        if (Config.getMenuRows() == 3){
-                            if (i < 7){
-                            pageOne.addItem(a, i, 0);
-                            }
-                        }
                         if (Config.getMenuRows() == 4){
                             if (i < 7){
                             pageOne.addItem(a, i, 0);
@@ -157,6 +172,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                             if (i >= 7 && i < 14){
                                 pageOne.addItem(a, i-7, 1);
                             }
+                            if (i >= 14 && i < 21){
+                                pageTwo.addItem(a, i-14, 0);
+                                }
                         }
                         if(Config.getMenuRows() == 5){
                             if (i < 7){
@@ -167,6 +185,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                             }
                             if (i >= 14 && i < 21){
                             pageOne.addItem(a, i-14, 2);
+                            }
+                            if (i >= 21 && i < 28){
+                            pageTwo.addItem(a, i-21, 0);
                             }
                         }
                         if(Config.getMenuRows() == 6){
@@ -180,45 +201,12 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                             pageOne.addItem(a, i-14, 2);
                             }
                             if (i >= 21 && i < 28){
-                                pageOne.addItem(a, i-21, 3);
-                                }
-                        }
-                        if(Config.getMenuRows() == 7){
-                            if (i < 7){
-                            pageOne.addItem(a, i, 0);
-                            }
-                            if (i >= 7 && i < 14){
-                            pageOne.addItem(a, i-7, 1);
-                            }
-                            if (i >= 14 && i < 21){
-                            pageOne.addItem(a, i-14, 2);
-                            }
-                            if (i >= 21 && i < 28){
                             pageOne.addItem(a, i-21, 3);
                             }
                             if (i >= 28 && i < 35){
-                                pageOne.addItem(a, i-28, 4);
-                                }
-                        }
-                        if(Config.getMenuRows() == 8){
-                            if (i < 7){
-                            pageOne.addItem(a, i, 0);
+                            pageTwo.addItem(a, i-28, 0);
                             }
-                            if (i >= 7 && i < 14){
-                            pageOne.addItem(a, i-7, 1);
-                            }
-                            if (i >= 14 && i < 21){
-                            pageOne.addItem(a, i-14, 2);
-                            }
-                            if (i >= 21 && i < 28){
-                            pageOne.addItem(a, i-21, 3);
-                            }
-                            if (i >= 28 && i < 35){
-                            pageOne.addItem(a, i-28, 4);
-                            }
-                            if (i >= 35 && i < 42){
-                            pageOne.addItem(a, i-35, 5);
-                                }
+                        
                         }
 
                         i++;
@@ -226,7 +214,14 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                
             }
             pane.addPane(0, pageOne);
+            if (finalPageAmount == 3){
+                pane.addPane(1, pageTwo);
+                pane.addPane(2, SBPane);
+            }
+            else{
             pane.addPane(1, SBPane);
+            }
+            
 
 
 
@@ -253,21 +248,48 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             imback.setDisplayName(ChatColor.WHITE + "Back");
             imback.setLore(Arrays.asList(ChatColor.BOLD + "Click to return to Shop Menu"));
             isback.setItemMeta(imback);
-            GuiItem guiitemback = new GuiItem(isback, event -> {
-                pane.setPage(pane.getPage() - 1);
+            ItemStack isforward = new ItemStack(Material.ARROW);
+            ItemMeta imforward = isforward.getItemMeta();
+            imforward.setDisplayName(ChatColor.WHITE + "Next Page");
+            imforward.setLore(Arrays.asList(ChatColor.BOLD + "Click to go to the next page"));
+            isforward.setItemMeta(imforward);
 
-                if (pane.getPage() == 0) {
-                    back.setVisible(false);
-                }
+            back.addItem(new GuiItem(new ItemStack(isback), event -> {
+            pane.setPage(0);
 
-                gui1.update();
-            });
-            back.addItem(guiitemback, 0, 0);
+            if (pane.getPage() == 0) {
+                back.setVisible(false);
+                forward.setVisible(true);
+            }
+
+            forward.setVisible(true);
+            gui1.update();
+            }), 0, 0);
+
             back.setVisible(false);
+
+            forward.addItem(new GuiItem(new ItemStack(isforward), event -> {
+            pane.setPage(1);
+
+            if (pane.getPage() == 1) {
+                forward.setVisible(false);
+            }
+
+            if (pane.getPage() == 0 && finalPageAmount == 2) {
+                forward.setVisible(false);
+            }
+
+            back.setVisible(true);
+            gui1.update();
+            }), 0, 0);
+
+            gui1.addPane(back);
+            gui1.addPane(forward);
 
 
 
             gui1.addPane(back);
+            gui1.addPane(forward);
 
             gui1.show((HumanEntity) senderpub);
 
@@ -275,11 +297,12 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 }
 
 
+
 public Double sellpricedif;
 public Double sellpricedif2;
 
 
-public void createTradingPanel(Gui gui, String matClickedString, Player player, OutlinePane SBPane, Double price){
+public void createTradingPanel(Gui gui, String matClickedString, Player player, OutlinePane SBPane, Double price, StaticPane forward, StaticPane back){
     Double tempbuy = 0.0;
     Double tempsell = 0.0;
     sellpricedif2 = null;
@@ -293,8 +316,8 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
     SBPane.clear();
     ItemStack is1 = new ItemStack(Material.matchMaterial(matClickedString), 1);
     ItemMeta is1im = is1.getItemMeta();
-    is1im.setDisplayName(ChatColor.GOLD + "Buy 1x "+ "$" + ChatColor.AQUA + matClickedString);
-    is1im.setLore(Arrays.asList(ChatColor.GREEN + df2.format(price)));
+    is1im.setDisplayName(ChatColor.GOLD + "Buy 1x " + ChatColor.AQUA + matClickedString);
+    is1im.setLore(Arrays.asList(ChatColor.GREEN+  "$"+ df2.format(price)));
     is1.setItemMeta(is1im);
     ItemStack is2 = new ItemStack(Material.matchMaterial(matClickedString), 2);
     ItemMeta is2im = is2.getItemMeta();
@@ -342,7 +365,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
         player.sendMessage(ChatColor.GOLD + "Purchased 1x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*1));
         player.setItemOnCursor(null);
             SBPane.clear();
-            createTradingPanel(gui, matClickedString, player, SBPane, price);
+            createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
             player.setItemOnCursor(null);
             event.setCancelled(true);
         }});
@@ -362,7 +385,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
         player.sendMessage(ChatColor.GOLD + "Purchased 2x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*2));
             player.setItemOnCursor(null);
             SBPane.clear();
-            createTradingPanel(gui, matClickedString, player, SBPane, price);
+            createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
             player.setItemOnCursor(null);
             event.setCancelled(true);
         }});
@@ -382,7 +405,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
         player.sendMessage(ChatColor.GOLD + "Purchased 4x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*4));
             player.setItemOnCursor(null);
             SBPane.clear();
-            createTradingPanel(gui, matClickedString, player, SBPane, price);
+            createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
             player.setItemOnCursor(null);
             event.setCancelled(true);
         }});
@@ -402,7 +425,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
         player.sendMessage(ChatColor.GOLD + "Purchased 8x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*8));
             player.setItemOnCursor(null);
             SBPane.clear();
-            createTradingPanel(gui, matClickedString, player, SBPane, price);
+            createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
             player.setItemOnCursor(null);
             event.setCancelled(true);
         }});
@@ -422,7 +445,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
         player.sendMessage(ChatColor.GOLD + "Purchased 16x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*16));
             player.setItemOnCursor(null);
             SBPane.clear();
-            createTradingPanel(gui, matClickedString, player, SBPane, price);
+            createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
             player.setItemOnCursor(null);
             event.setCancelled(true);
         }});
@@ -442,7 +465,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
         player.sendMessage(ChatColor.GOLD + "Purchased 32x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*32));
             player.setItemOnCursor(null);
             SBPane.clear();
-            createTradingPanel(gui, matClickedString, player, SBPane, price);
+            createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
             player.setItemOnCursor(null);
             event.setCancelled(true);
         }});
@@ -462,14 +485,14 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
         player.sendMessage(ChatColor.GOLD + "Purchased 64x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*64));
             player.setItemOnCursor(null);
             SBPane.clear();
-            createTradingPanel(gui, matClickedString, player, SBPane, price);
+            createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
             player.setItemOnCursor(null);
             event.setCancelled(true);
         }});
         ItemStack iss1 = new ItemStack(Material.matchMaterial(matClickedString), 1);
         ItemMeta iss1im = iss1.getItemMeta();
-        iss1im.setDisplayName(ChatColor.GOLD + "Sell 1x " + "$" + ChatColor.AQUA + matClickedString);
-        iss1im.setLore(Arrays.asList(ChatColor.GREEN + df2.format((price-price*0.01*sellpricedif))));
+        iss1im.setDisplayName(ChatColor.GOLD + "Sell 1x " + ChatColor.AQUA + matClickedString);
+        iss1im.setLore(Arrays.asList(ChatColor.GREEN + "$"+ df2.format((price-price*0.01*sellpricedif))));
         iss1.setItemMeta(iss1im);
         ItemStack iss2 = new ItemStack(Material.matchMaterial(matClickedString), 2);
         ItemMeta iss2im = iss2.getItemMeta();
@@ -516,7 +539,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
             if (sellable != true){
                 event.setCancelled(true);
                 SBPane.clear();
-                createTradingPanel(gui, matClickedString, player, SBPane, price);
+                createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
             }
             if (sellable == true){
             ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
@@ -534,12 +557,12 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
             }
             player.setItemOnCursor(null);
                 SBPane.clear();
-                createTradingPanel(gui, matClickedString, player, SBPane, price);
+                createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                 event.setCancelled(true);
             }
             else{
                 SBPane.clear();
-                createTradingPanel(gui, matClickedString, player, SBPane, price);
+                createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                 event.setCancelled(true);
             }});
         GuiItem issa2 = new GuiItem(iss2, event -> {
@@ -558,7 +581,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
                     player.setItemOnCursor(null);
                     event.setCancelled(true);
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                 }
                 if (sellable == true){
                     ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
@@ -576,12 +599,12 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
                 }
                 player.setItemOnCursor(null);
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                     event.setCancelled(true);
                 }
                 else{
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                     event.setCancelled(true);
                 }});
         GuiItem issa4 = new GuiItem(iss4, event -> {
@@ -600,7 +623,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
                     player.setItemOnCursor(null);
                     event.setCancelled(true);
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                 }
                 if (sellable == true){
                     ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
@@ -618,12 +641,12 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
                 }
                 player.setItemOnCursor(null);
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                     event.setCancelled(true);
                 }
                 else{
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                     event.setCancelled(true);
                 }});
         GuiItem issa8 = new GuiItem(iss8, event -> {
@@ -642,7 +665,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
                     player.setItemOnCursor(null);
                     event.setCancelled(true);
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                 }
                 if (sellable == true){
                     ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
@@ -660,12 +683,12 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
                 }
                 player.setItemOnCursor(null);
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                     event.setCancelled(true);
                 }
                 else{
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                     event.setCancelled(true);
                 }});
         GuiItem issa16 = new GuiItem(iss16, event -> {
@@ -684,7 +707,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
                     player.setItemOnCursor(null);
                     event.setCancelled(true);
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                 }
                 if (sellable == true){
                     ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
@@ -702,12 +725,12 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
                 }
                 player.setItemOnCursor(null);
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                     event.setCancelled(true);
                 }
                 else{
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                     event.setCancelled(true);
                 }});
         GuiItem issa32 = new GuiItem(iss32, event -> {
@@ -726,7 +749,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
                     player.setItemOnCursor(null);
                     event.setCancelled(true);
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                 }
                 if (sellable == true){
                     ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
@@ -744,12 +767,12 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
                 }
                 player.setItemOnCursor(null);
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                     event.setCancelled(true);
                 }
                 else{
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                     event.setCancelled(true);
                 }
             });
@@ -768,7 +791,7 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
                     player.setItemOnCursor(null);
                     event.setCancelled(true);
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                 }
                 if (sellable == true){
                     ConcurrentHashMap<Integer,Double[]> tempMap2 = Main.map.get(matClickedString);
@@ -786,14 +809,16 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
                 }
                 player.setItemOnCursor(null);
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                     event.setCancelled(true);
                 }
                 else{
                     SBPane.clear();
-                    createTradingPanel(gui, matClickedString, player, SBPane, price);
+                    createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
                     event.setCancelled(true);
                 }});
+    forward.setVisible(false);
+    back.setVisible(true);
     SBPane.addItem(isa);
     SBPane.addItem(isa2);
     SBPane.addItem(isa4);

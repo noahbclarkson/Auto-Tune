@@ -22,7 +22,7 @@ pricing-model: 'Basic'
 ##  Time Period in minutes
 time-period: 10
 
-##  The amount of menu rows in the GUI shop, minimum is 3
+##  The amount of menu rows in the GUI shop, value of 4-6.
 menu-rows: 6
 
 ##  GUI Shop Menu title

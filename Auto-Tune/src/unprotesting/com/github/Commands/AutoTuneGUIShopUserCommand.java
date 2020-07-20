@@ -175,6 +175,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                             if (i >= 14 && i < 21){
                                 pageTwo.addItem(a, i-14, 0);
                                 }
+                            if (i >= 21 && i < 28){
+                                pageTwo.addItem(a, i-21, 1);
+                                 }
                         }
                         if(Config.getMenuRows() == 5){
                             if (i < 7){
@@ -189,6 +192,12 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                             if (i >= 21 && i < 28){
                             pageTwo.addItem(a, i-21, 0);
                             }
+                            if (i >= 28 && i < 35){
+                                pageTwo.addItem(a, i-28, 1);
+                                }
+                             if (i >= 35 && i < 42){
+                                pageTwo.addItem(a, i-35, 2);
+                                }
                         }
                         if(Config.getMenuRows() == 6){
                             if (i < 7){
@@ -205,6 +214,15 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                             }
                             if (i >= 28 && i < 35){
                             pageTwo.addItem(a, i-28, 0);
+                            }
+                            if (i >= 35 && i < 42){
+                                pageTwo.addItem(a, i-35, 1);
+                                }
+                            if (i >= 42 && i < 49){
+                                pageTwo.addItem(a, i-42, 2);
+                            }
+                            if (i >= 49 && i < 56){
+                                pageTwo.addItem(a, i-49, 3);
                             }
                         
                         }

@@ -9,6 +9,7 @@ import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -75,7 +76,10 @@ public class AutoTuneSellCommand implements CommandExecutor {
 			int quantity = item.getAmount();
             Integer tempMapSize = tempMap1.size();
             Double[] tempDoublearray = tempMap1.get(tempMapSize-1);
-            Double sellPrice = (tempDoublearray[0]) - (tempDoublearray[0]*0.01*Config.getSellPriceDifference());
+            Double sellpricedif = Config.getSellPriceDifference();
+            ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection((itemString));
+            Double sellpricedif2 = config.getDouble("sell-difference", sellpricedif);
+            Double sellPrice = (tempDoublearray[0]) - (tempDoublearray[0]*0.01*sellpricedif2);
 			moneyToGive += quantity * sellPrice;
 
 		}

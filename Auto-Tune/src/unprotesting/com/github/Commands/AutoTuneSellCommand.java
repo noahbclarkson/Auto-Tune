@@ -80,6 +80,12 @@ public class AutoTuneSellCommand implements CommandExecutor {
             ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection((itemString));
             Double sellpricedif2 = config.getDouble("sell-difference", sellpricedif);
             Double sellPrice = (tempDoublearray[0]) - (tempDoublearray[0]*0.01*sellpricedif2);
+            Double buyAmount = tempDoublearray[1];
+            Double sellAmount = tempDoublearray[2];
+            sellAmount += quantity;
+            Double[] tempPutDouble = {tempDoublearray[0], buyAmount, sellAmount};
+            tempMap1.put(tempMapSize-1, tempPutDouble);
+            Main.map.put(itemString, tempMap1);
 			moneyToGive += quantity * sellPrice;
 
 		}

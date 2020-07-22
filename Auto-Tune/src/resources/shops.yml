@@ -19,3 +19,4 @@ shops:
     price: 50.00
   ##locked: true      <- Example of a locked item
   ##sell-difference: 0.0
+  ##

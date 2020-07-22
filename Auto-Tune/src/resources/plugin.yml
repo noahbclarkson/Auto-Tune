@@ -14,14 +14,20 @@ softdepend: [Vault]
 api-version: 1.16
 commands:
     at:
-      description: Auto-Tune Command
+      description: Auto-Tune Command.
       usage: /<at> <login>
     trade:
-      description: Trade Online with other players
+      description: Trade Online with other players.
       usage: /<trade> 
     shop:
       description: GUIShop alias for buy and sell commands.
-      usage: /<shop> 
+      usage: /<shop>
+    sell:
+      description: Sell items quickly to the shop.
+      usage: /<sell>
+    atadmin:
+      description: Auto-Tune Admin Command.
+      usage: /<atadmin> <skip>
 
 
 

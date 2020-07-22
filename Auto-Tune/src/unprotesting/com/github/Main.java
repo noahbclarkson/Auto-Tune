@@ -36,6 +36,7 @@ import unprotesting.com.github.Commands.AutoTuneCommand;
 import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.JoinEventHandler;
 import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
+import unprotesting.com.github.Commands.AutoTuneSellCommand;
 import unprotesting.com.github.util.StaticFileHandler;
 
 import org.bukkit.Bukkit;
@@ -67,7 +68,7 @@ import net.milkbowl.vault.economy.Economy;
 import lombok.Getter;
 import lombok.Setter;
 
-public final class Main extends JavaPlugin implements Listener {
+public final class Main extends JavaPlugin implements Listener{
 
     JavaPlugin instance = this;
 
@@ -168,6 +169,7 @@ public final class Main extends JavaPlugin implements Listener {
         materialListSize = memMap.size();
         this.getCommand("at").setExecutor(new AutoTuneCommand());
         this.getCommand("shop").setExecutor(new AutoTuneGUIShopUserCommand());
+        this.getCommand("sell").setExecutor(new AutoTuneSellCommand());
         basicVolatilityAlgorithim = Config.getBasicVolatilityAlgorithim();
         priceModel = Config.getPricingModel().toString();
         if (priceModel.contains("Basic") == true){
@@ -230,7 +232,18 @@ public final class Main extends JavaPlugin implements Listener {
         new BukkitRunnable(){
             @Override
             public void run(){
-                debugLog("Starting price calculation task... ");
+                loadItemPricesAndCalculate();
+            }
+          
+        }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getTimePeriod()*20*60, Config.getTimePeriod()*20*60+1);
+        
+
+        
+    }
+
+
+    public void loadItemPricesAndCalculate(){
+        debugLog("Starting price calculation task... ");
                 debugLog("Price algorithim settings: ");
                 if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed") == true){
                 debugLog("Basic Max Fixed Volatility: " + Config.getBasicMaxFixedVolatility());
@@ -365,12 +378,6 @@ public final class Main extends JavaPlugin implements Listener {
                 e.printStackTrace();
             }
         }
-          
-        }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getTimePeriod()*20*60, Config.getTimePeriod()*20*60+1);
-        
-
-        
-    }
 
     public static void writeCSV() throws InterruptedException, IOException {
         FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/web/sample.csv");
@@ -444,6 +451,7 @@ public final class Main extends JavaPlugin implements Listener {
         }
 
     }
+
 
     public boolean onCommand(CommandSender sender, Command testcmd, String trade, String[] help) {
         if (sender instanceof Player) {

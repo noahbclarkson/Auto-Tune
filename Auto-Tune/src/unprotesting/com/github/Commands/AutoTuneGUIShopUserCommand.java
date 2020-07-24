@@ -96,6 +96,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
         Double price1;
         Gui gui1;
         StaticPane pageTwo = new StaticPane(1, 1, 7, menuRows - 2);
+        StaticPane pageThree = new StaticPane(1, 1, 7, menuRows - 2);
         StaticPane back = new StaticPane(0, menuRows-1, 1, 1);
         StaticPane forward = new StaticPane(8, menuRows-1, 1, 1);
         
@@ -111,6 +112,12 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                 pageAmount = 3;
                 pane.addPane(1, pageTwo);
             }
+            if (size > paneSize*2){
+                pageThree = new StaticPane(1, 1, 7, menuRows - 2);
+                pageAmount = 4;
+                pane.addPane(2, pageThree);
+            }
+
             final Integer finalPageAmount = pageAmount;
 
 
@@ -146,6 +153,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                                 if (finalPageAmount == 3){
                                     pane.setPage(2);
                                 }
+                                if (finalPageAmount == 4){
+                                    pane.setPage(3);
+                                }
                                 gui.update();
                                 playernew.setItemOnCursor(null);
                                 event.setCancelled(true);
@@ -177,7 +187,13 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                                 }
                             if (i >= 21 && i < 28){
                                 pageTwo.addItem(a, i-21, 1);
-                                 }
+                                }
+                            if (i >= 28 && i < 35){
+                                pageThree.addItem(a, i-28, 1);
+                                }
+                            if (i >= 35 && i < 42){
+                                pageThree.addItem(a, i-35, 2);
+                                }
                         }
                         if(Config.getMenuRows() == 5){
                             if (i < 7){
@@ -198,6 +214,15 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                              if (i >= 35 && i < 42){
                                 pageTwo.addItem(a, i-35, 2);
                                 }
+                            if (i >= 42 && i < 49){
+                                pageThree.addItem(a, i-42, 0);
+                            }
+                            if (i >= 49 && i < 56){
+                                pageThree.addItem(a, i-49, 1);
+                            }
+                            if (i >= 56 && i < 63){
+                                pageThree.addItem(a, i-56, 2);
+                            }
                         }
                         if(Config.getMenuRows() == 6){
                             if (i < 7){
@@ -224,6 +249,18 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                             if (i >= 49 && i < 56){
                                 pageTwo.addItem(a, i-49, 3);
                             }
+                            if (i >= 56 && i < 63){
+                                pageThree.addItem(a, i-56, 0);
+                            }
+                            if (i >= 63 && i < 70){
+                                pageThree.addItem(a, i-63, 1);
+                                }
+                            if (i >= 70 && i < 77){
+                                pageThree.addItem(a, i-70, 2);
+                            }
+                            if (i >= 77 && i < 84){
+                                pageThree.addItem(a, i-77, 3);
+                            }
                         
                         }
 
@@ -235,6 +272,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             if (finalPageAmount == 3){
                 pane.addPane(1, pageTwo);
                 pane.addPane(2, SBPane);
+            }
+            if (finalPageAmount == 4){
+                pane.addPane(1, pageTwo);
+                pane.addPane(2, pageThree);
+                pane.addPane(3, SBPane);
             }
             else{
             pane.addPane(1, SBPane);
@@ -272,6 +314,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             imforward.setLore(Arrays.asList(ChatColor.BOLD + "Click to go to the next page"));
             isforward.setItemMeta(imforward);
 
+            if (pane.getPage() == 0 && finalPageAmount == 4) {
+                back.setVisible(false);
+                forward.setVisible(true);
+            }
+
             if (pane.getPage() == 0 && finalPageAmount == 3) {
                 back.setVisible(false);
                 forward.setVisible(true);
@@ -282,7 +329,16 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             }
 
             back.addItem(new GuiItem(new ItemStack(isback), event -> {
-            pane.setPage(0);
+            if (pane.getPage() != 3){
+                pane.setPage(pane.getPage()-1);
+            }
+            if (pane.getPage() == 3){
+                pane.setPage(0);
+            }
+            if (pane.getPage() == 0 && finalPageAmount == 4) {
+                back.setVisible(false);
+                forward.setVisible(true);
+            }
 
             if (pane.getPage() == 0 && finalPageAmount == 3) {
                 back.setVisible(false);
@@ -300,9 +356,13 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
             back.setVisible(false);
 
             forward.addItem(new GuiItem(new ItemStack(isforward), event -> {
-            pane.setPage(1);
+            pane.setPage(pane.getPage()+1);
             forward.setVisible(false);
-            if (pane.getPage() == 1) {
+            if (pane.getPage() == 1 && finalPageAmount == 4) {
+                forward.setVisible(true);
+            }
+
+            if (pane.getPage() == 4 || pane.getPage() == 3){
                 forward.setVisible(false);
             }
 

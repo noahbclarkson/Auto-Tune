@@ -43,17 +43,29 @@ sell-price-difference: 2.5
 
 ##  Maximum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Basic-Fixed-Max-Volatility: 2.00
-
-##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
-Basic-Variable-Max-Volatility: 6.00
-
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Basic-Fixed-Min-Volatility: 0.05
 
+##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
+Basic-Variable-Max-Volatility: 6.00
 ##  Minimum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
 Basic-Variable-Min-Volatility: 0.15
 
-##  -- Other settings --
+##  -- Other Econonomy Settings --
+
+##  Enable sell price difference variation to ease out sell price varition
+sell-price-difference-variation-enabled: false
+##  Starting percententage sell price difference for sell price varition
+sell-price-differnence-variation-start: 25.0
+##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 7 days)
+sell-price-variation-time-period: 10080
+##  Time in minutes that the sell-price-difference updates
+##  Info: Must be a factor of sell-price-variation-time-period or it wont work!
+sell-price-variation-update-period: 30
+
+
+
+##  -- Other Settings --
 
 ##  Enable debug mode for more info on price calculations
 debug-enabled: false

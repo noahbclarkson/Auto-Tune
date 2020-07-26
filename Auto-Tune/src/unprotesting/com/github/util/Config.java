@@ -9,11 +9,11 @@ public final class Config {
 
     @Getter
     @Setter
-    private static boolean webServer, debugEnabled, checksumHeaderBypass;
+    private static boolean webServer, debugEnabled, checksumHeaderBypass, sellPriceDifferenceVariationEnabled;
 
     @Getter
     @Setter
-    private static Integer port, timePeriod, menuRows;
+    private static Integer port, timePeriod, menuRows, sellPriceVariationTimePeriod, sellPriceVariationUpdatePeriod;
 
     @Getter
     @Setter
@@ -21,7 +21,7 @@ public final class Config {
 
     @Getter
     @Setter
-    private static Double basicMaxFixedVolatility, basicMaxVariableVolatility, basicMinFixedVolatility, basicMinVariableVolatility, sellPriceDifference;
+    private static Double basicMaxFixedVolatility, basicMaxVariableVolatility, basicMinFixedVolatility, basicMinVariableVolatility, sellPriceDifference, sellPriceDifferenceVariationStart;
 
 
 }

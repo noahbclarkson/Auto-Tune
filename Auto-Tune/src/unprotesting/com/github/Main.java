@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -84,7 +85,9 @@ public final class Main extends JavaPlugin implements Listener{
     public FileConfiguration playerDataConfig;
     public final String playerdatafilename = "playerdata.yml";
 
-    public static DB db, memDB;
+    public static DB db, memDB, tempDB;
+
+    public static HTreeMap<String,Double> tempdatadata;
 
     public static ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>> map;
 
@@ -125,6 +128,8 @@ public final class Main extends JavaPlugin implements Listener{
         createFiles();
         File folderfile = new File("plugins/Auto-Tune/web/");
         folderfile.mkdirs();
+        File folderfileTemp = new File("plugins/Auto-Tune/temp/");
+        folderfileTemp.mkdirs();
         INSTANCE = this;
         if (!setupEconomy()) {
             log.severe(
@@ -153,16 +158,20 @@ public final class Main extends JavaPlugin implements Listener{
             map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
             playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
             DB memDb = DBMaker.memoryDB().checksumHeaderBypass().closeOnJvmShutdown().make();
-            memMap = db.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
+            memMap = memDb.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
         }
         else{
             DB db = DBMaker.fileDB("data.db").checksumHeaderBypass().closeOnJvmShutdown().make();
             map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
             playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
             DB memDb = DBMaker.memoryDB().closeOnJvmShutdown().make();
-            memMap = db.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
+            memMap = memDb.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
         }
-        
+        tempDB = DBMaker.fileDB("plugins/Auto-Tune/temp/tempdata.db").checksumHeaderBypass().closeOnJvmShutdown().make();
+        tempdatadata = tempDB.hashMap("tempdatadata", Serializer.STRING, Serializer.DOUBLE).createOrOpen();
+        if (tempdatadata.isEmpty() == true || tempdatadata.get("SellPriceDifferenceDifference") == null){
+            tempdataresetSPDifference();
+        }
         saveplayerdata();
         loadShopsFile();
         loadShopData();
@@ -182,7 +191,12 @@ public final class Main extends JavaPlugin implements Listener{
                 }
         }
         runnable();
+        if (Config.isSellPriceDifferenceVariationEnabled()){
+        Config.setSellPriceDifference(Config.getSellPriceDifferenceVariationStart()-tempdatadata.get("SellPriceDifferenceDifference"));
+        sellDifferenceRunnable();
+        }
     }
+
 
 
     private boolean setupEconomy() {
@@ -235,12 +249,41 @@ public final class Main extends JavaPlugin implements Listener{
                 loadItemPricesAndCalculate();
             }
           
-        }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getTimePeriod()*20*60, Config.getTimePeriod()*20*60+1);
+        }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getTimePeriod()*20*60, Config.getTimePeriod()*20*60);
         
 
         
     }
 
+    public void sellDifferenceRunnable(){
+        new BukkitRunnable(){
+            @Override
+            public void run(){
+                Integer sellPriceVariationInt = Config.getSellPriceVariationUpdatePeriod();
+                Double d = Double.valueOf(sellPriceVariationInt);
+                Double updates = (Config.getSellPriceVariationTimePeriod() / d);
+                Double variation = Config.getSellPriceDifferenceVariationStart() - (getMainConfig().getDouble("sell-price-difference", 2.5));
+                Double updateVariation = variation/updates;
+                tempdatadata.put("SellPriceDifferenceDifference", (tempdatadata.get("SellPriceDifferenceDifference"))+updateVariation);
+                Config.setSellPriceDifference(Config.getSellPriceDifferenceVariationStart()-tempdatadata.get("SellPriceDifferenceDifference"));
+                debugLog("Updates: "+ Double.toString(updates));
+                debugLog("Variation: "+ Double.toString(variation));
+                debugLog("Changed sell-price-difference by " + Double.toString(updateVariation) + " to " + Double.toString(Config.getSellPriceDifference()));
+                if (Config.getSellPriceDifference() <= getMainConfig().getDouble("sell-price-difference", 2.5)){
+                    Config.setSellPriceDifference(getMainConfig().getDouble("sell-price-difference", 2.5));
+                    cancel();
+                }
+            }
+          
+        }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getSellPriceVariationUpdatePeriod()*20*60, Config.getSellPriceVariationUpdatePeriod()*20*60);
+        
+
+        
+    }
+
+    public void tempdataresetSPDifference(){
+        tempdatadata.put("SellPriceDifferenceDifference", 0.0);
+    }
 
     public void loadItemPricesAndCalculate(){
         debugLog("Starting price calculation task... ");
@@ -493,12 +536,15 @@ public final class Main extends JavaPlugin implements Listener{
     }
 
     public void loadDefaults() {
+        Config.setSellPriceDifferenceVariationEnabled(getMainConfig().getBoolean("sell-price-difference-variation-enabled", false));
         Config.setWebServer(getMainConfig().getBoolean("web-server-enabled", false));
         Config.setChecksumHeaderBypass(getMainConfig().getBoolean("checksum-header-bypass", false));
         Config.setDebugEnabled(getMainConfig().getBoolean("debug-enabled", false));
         Config.setPort(getMainConfig().getInt("port", 8321));
         Config.setTimePeriod(getMainConfig().getInt("time-period", 10));
         Config.setMenuRows(getMainConfig().getInt("menu-rows", 3));
+        Config.setSellPriceVariationTimePeriod(getMainConfig().getInt("sell-price-variation-time-period", 10800));
+        Config.setSellPriceVariationUpdatePeriod(getMainConfig().getInt("sell-price-variation-update-period", 30));
         Config.setServerName(ChatColor.translateAlternateColorCodes('&',
                 getMainConfig().getString("server-name", "Survival Server - (Change this in Config)")));
         Config.setMenuTitle(
@@ -514,6 +560,7 @@ public final class Main extends JavaPlugin implements Listener{
         Config.setBasicMinFixedVolatility(getMainConfig().getDouble("Basic-Fixed-Min-Volatility", 0.05));
         Config.setBasicMinVariableVolatility(getMainConfig().getDouble("Basic-Variable-Min-Volatility", 0.05));
         Config.setSellPriceDifference(getMainConfig().getDouble("sell-price-difference", 2.5));
+        Config.setSellPriceDifferenceVariationStart(getMainConfig().getDouble("sell-price-differnence-variation-start", 25.0));
     }
 
     public void saveplayerdata() {

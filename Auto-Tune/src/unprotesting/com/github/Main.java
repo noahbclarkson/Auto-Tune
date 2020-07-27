@@ -319,14 +319,20 @@ public final class Main extends JavaPlugin implements Listener{
                     debugLog("Advanced Max Variable Volatility: " + Config.getBasicMaxVariableVolatility());
                     debugLog("Advanced Min Variable Volatility: " + Config.getBasicMinVariableVolatility());
                 }
+                if (priceModel.contains("Exponential") == true && basicVolatilityAlgorithim.contains("Variable") == true){
+                    debugLog("Exponential Max Variable Volatility: " + Config.getBasicMaxVariableVolatility());
+                    debugLog("Exponential Min Variable Volatility: " + Config.getBasicMinVariableVolatility());
+                    debugLog("Exponential data selection algorithim: y = " + Config.getDataSelectionM()+"(x^"+ Config.getDataSelectionZ() + ") + " + Config.getDataSelectionC());
+                }
                 tempbuys = 0.0;
                 tempsells = 0.0;
                 buys = 0.0;
                 sells = 0.0;
-                if (priceModel.contains("Basic")||priceModel.contains("Advanced")){
+                if (priceModel.contains("Basic")||priceModel.contains("Advanced")||  priceModel.contains("Exponential")){
                 Set<String> strSet = map.keySet();
                 for (String str : strSet){
                     ConcurrentHashMap<Integer,Double[]> tempMap = map.get(str);
+                    Integer expvalues = 0;
                     ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection(str);
                     locked = null;
                     if (config != null){
@@ -355,12 +361,45 @@ public final class Main extends JavaPlugin implements Listener{
                                 Double[] key = tempMap.get(key1);
                                 tempbuys = key[1];
                                 tempbuys = tempbuys*key[0];
+                                if (tempbuys==0){
+                                    tempbuys = key[0];
+                                }
                                 buys = buys + tempbuys;
                                 tempsells = key[2];
                                 tempsells = tempsells*key[0];
+                                if (tempsells==0){
+                                    tempsells = key[0];
+                                }
                                 sells = sells + tempsells;
                                 }
                             }
+                        if (priceModel.contains("Exponential")){
+                            Integer tempSize = tempMap.keySet().size();
+                            Integer x = 0;
+                            for (;x<100000;){
+                                Double y = Config.getDataSelectionM()*(Math.pow(x, Config.getDataSelectionZ()))+Config.getDataSelectionC();
+                                Integer inty = (int) Math.round(y)-1;
+                                if (inty>tempSize-1){
+                                    expvalues = inty+1;
+                                    break;
+                                }
+                                Double[] key = tempMap.get(inty);
+                                tempbuys = key[1];
+                                tempbuys = tempbuys*key[0];
+                                if (tempbuys==0){
+                                    tempbuys = key[0];
+                                }
+                                buys = buys + tempbuys;
+                                tempsells = key[2];
+                                tempsells = tempsells*key[0];
+                                if (tempsells==0){
+                                    tempsells = key[0];
+                                }
+                                sells = sells + tempsells;
+                                x++;
+                            }
+                        }
+    
 
 
                         if (locked == falseBool){
@@ -373,39 +412,46 @@ public final class Main extends JavaPlugin implements Listener{
                             map.put(str, tempMap);
                             debugLog("Loading item, " + str + " with price " + Double.toString(temp3) +" as price is locked");
                         }
-
                         Double avBuy = buys/(tempMap.size());
                         Double avSells = sells/(tempMap.size());
+                        if (priceModel.contains("Advanced") ||  priceModel.contains("Basic")){
+                        avBuy = buys/(tempMap.size());
+                        avSells = sells/(tempMap.size());
+                        }
+                        if (priceModel.contains("Exponential")){
+                            avBuy = buys/(expvalues);
+                            avSells = sells/(expvalues);
+                        }
                         if (avBuy > avSells && locked == null){
                             if (priceModel.contains("Basic")){
                             debugLog("AvBuy > AvSells for " + str);
                             }
-                            if (priceModel.contains("Advanced")){
+                            if (priceModel.contains("Advanced") ||  priceModel.contains("Exponential")){
                                 debugLog("AvBuyValue > AvSellValue for " + str);
                                 }
                             Double[] temp2 = tempMap.get(tempMap.size()-1);
                             Double temp3 = temp2[0];
                             Integer tsize = tempMap.size();
-                            if (priceModel.contains("Basic") == true ||  priceModel.contains("Advanced") && basicVolatilityAlgorithim.contains("Fixed") == true){
+                            if (priceModel.contains("Basic") == true ||  priceModel.contains("Advanced") ||  priceModel.contains("Exponential") && basicVolatilityAlgorithim.contains("Fixed") == true){
                                 Double newSpotPrice = (temp3)+(((1-(avSells / avBuy)) * Config.getBasicMaxFixedVolatility() + Config.getBasicMinFixedVolatility()));
                                 Double[] temporary = { newSpotPrice, 0.0, 0.0};
                                 if (priceModel.contains("Basic")){
                                     debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
                                 }
-                                if (priceModel.contains("Advanced")){
+                                if (priceModel.contains("Advanced") ||  priceModel.contains("Exponential")){
                                     debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = " + Double.toString(avSells));
                                 }
                                 tempMap.put(tsize, temporary);
                                 map.put(str, tempMap);
                             
                             }
-                            if (priceModel.contains("Basic") == true ||  priceModel.contains("Advanced") && basicVolatilityAlgorithim.contains("Variable") == true){
+                            if (priceModel.contains("Basic") == true ||  priceModel.contains("Advanced") ||  priceModel.contains("Exponential") && basicVolatilityAlgorithim.contains("Variable") == true){
                                 Double newSpotPrice = (temp3)+(temp3*((1-(avSells / avBuy))* Config.getBasicMaxVariableVolatility()*0.01)) + Config.getBasicMinVariableVolatility()*0.01*temp3;
                                 Double[] temporary = { newSpotPrice, 0.0, 0.0};
                                 if (priceModel.contains("Basic")){
                                     debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
                                 }
-                                if (priceModel.contains("Advanced")){
+                                if (priceModel.contains("Advanced")||  priceModel.contains("Exponential")){
                                     debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = " + Double.toString(avSells));
                                 }
                                 tempMap.put(tsize, temporary);
@@ -417,31 +463,31 @@ public final class Main extends JavaPlugin implements Listener{
                             if (priceModel.contains("Basic")){
                                 debugLog("AvBuy < AvSells for " + str);
                                 }
-                                if (priceModel.contains("Advanced")){
+                                if (priceModel.contains("Advanced")||  priceModel.contains("Exponential")){
                                     debugLog("AvBuyValue < AvSellValue for " + str);
                                     }
                             Double[] temp2 = tempMap.get(tempMap.size()-1);
                             Double temp3 = temp2[0];
                             Integer tsize = tempMap.size();
-                            if (priceModel.contains("Basic") == true ||  priceModel.contains("Advanced") && basicVolatilityAlgorithim.contains("Fixed")){
+                            if (priceModel.contains("Basic") == true ||  priceModel.contains("Advanced")||  priceModel.contains("Exponential") && basicVolatilityAlgorithim.contains("Fixed")){
                                 Double newSpotPrice = (temp3)-(((1-(avBuy / avSells)) * Config.getBasicMaxFixedVolatility() + Config.getBasicMinFixedVolatility()));
                                 Double[] temporary = { newSpotPrice, 0.0, 0.0};
                                 if (priceModel.contains("Basic")){
                                     debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
                                 }
-                                if (priceModel.contains("Advanced")){
+                                if (priceModel.contains("Advanced")||  priceModel.contains("Exponential")){
                                     debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = " + Double.toString(avSells));
                                 }
                                 tempMap.put(tsize, temporary);
                                 map.put(str, tempMap);
                         }
-                        if (priceModel.contains("Basic") == true ||  priceModel.contains("Advanced") && basicVolatilityAlgorithim.contains("Variable") == true){
+                        if (priceModel.contains("Basic") == true ||  priceModel.contains("Advanced")||  priceModel.contains("Exponential") && basicVolatilityAlgorithim.contains("Variable") == true){
                             Double newSpotPrice = (temp3)-(temp3*((1-(avBuy / avSells))* Config.getBasicMaxVariableVolatility()*0.01)) - Config.getBasicMinVariableVolatility()*0.01*temp3;
                             Double[] temporary = { newSpotPrice, 0.0, 0.0};
                             if (priceModel.contains("Basic")){
                                 debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
                             }
-                            if (priceModel.contains("Advanced")){
+                            if (priceModel.contains("Advanced")||  priceModel.contains("Exponential")){
                                 debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = " + Double.toString(avSells));
                             }
                             tempMap.put(tsize, temporary);
@@ -456,13 +502,13 @@ public final class Main extends JavaPlugin implements Listener{
                         Double[] temp2 = tempMap.get(tempMap.size()-1);
                         Double temp3 = temp2[0];
                         Integer tsize = tempMap.size();
-                        if (priceModel.contains("Basic") == true){
+                        if (priceModel.contains("Basic") == true || priceModel.contains("Advanced")||  priceModel.contains("Exponential")){
                             Double newSpotPrice = temp3;
                             Double[] temporary = { newSpotPrice, 0.0, 0.0};
                             if (priceModel.contains("Basic")){
                                 debugLog("Loading item, " + str + ", with the same price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
                             }
-                            if (priceModel.contains("Advanced")){
+                            if (priceModel.contains("Advanced")||  priceModel.contains("Exponential")){
                                 debugLog("Loading item, " + str + ", with the same price: " + Double.toString(newSpotPrice) + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = " + Double.toString(avSells));
                             }
                             tempMap.put(tsize, temporary);
@@ -635,6 +681,9 @@ public final class Main extends JavaPlugin implements Listener{
         Config.setBasicMaxVariableVolatility(getMainConfig().getDouble("Variable-Max-Volatility", 2.00));
         Config.setBasicMinFixedVolatility(getMainConfig().getDouble("Fixed-Min-Volatility", 0.05));
         Config.setBasicMinVariableVolatility(getMainConfig().getDouble("Variable-Min-Volatility", 0.05));
+        Config.setDataSelectionM(getMainConfig().getDouble("data-selection-m", 0.05));
+        Config.setDataSelectionC(getMainConfig().getDouble("data-selection-c", 1.25));
+        Config.setDataSelectionZ(getMainConfig().getDouble("data-selection-z", 1.6));
         Config.setSellPriceDifference(getMainConfig().getDouble("sell-price-difference", 2.5));
         Config.setSellPriceDifferenceVariationStart(getMainConfig().getDouble("sell-price-differnence-variation-start", 25.0));
     }

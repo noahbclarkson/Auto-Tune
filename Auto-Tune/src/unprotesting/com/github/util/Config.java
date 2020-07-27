@@ -21,7 +21,9 @@ public final class Config {
 
     @Getter
     @Setter
-    private static Double basicMaxFixedVolatility, basicMaxVariableVolatility, basicMinFixedVolatility, basicMinVariableVolatility, sellPriceDifference, sellPriceDifferenceVariationStart;
+    private static Double basicMaxFixedVolatility, basicMaxVariableVolatility, 
+    basicMinFixedVolatility, basicMinVariableVolatility, sellPriceDifference, 
+    sellPriceDifferenceVariationStart, dataSelectionM, dataSelectionC, dataSelectionZ;
 
 
 }

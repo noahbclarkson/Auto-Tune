@@ -49,7 +49,21 @@ Fixed-Max-Volatility: 2.00
 ##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
 Variable-Max-Volatility: 6.00
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
-Fixed-Min-Volatility: 0.05
+Variable-Min-Volatility: 0.05
+
+##  -- Exponential Pricing Model Settings --  ##
+
+##  Info: This algorithim uses settings from the Variable-Advanced Pricing Model Settings: sell-price-difference, Variable-Max-Volatility, Variable-Min-Volatility
+##  Info: When setting your data selection algorithim use a site such as https://www.desmos.com/calculator
+##  Info: Data selection uses the equation y=m(x^z)+c, for example the default is y=0.075(x^1.6)+1.25
+
+##  'm' in equation: y=m(x^z)+c
+data-selection-m: 0.05
+##  'z' in equation: y=m(x^z)+c
+data-selection-z: 1.6
+##  'c' in equation: y=m(x^z)+c
+data-selection-c: 1.25
+
 
 ##  -- Other Econonomy Settings --
 

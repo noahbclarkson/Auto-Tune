@@ -451,9 +451,15 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
             Double[] tempDArray = {price, buyAmount+1, sellAmount};
             tempMap2.put(tempMap2Size-1, tempDArray);
             Main.map.put(matClickedString, tempMap2);
-        Main.econ.withdrawPlayer(player, price);
-        player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 1));
-        player.sendMessage(ChatColor.GOLD + "Purchased 1x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*1));
+            if (hasAvaliableSlot(player)==true){
+                Main.econ.withdrawPlayer(player, price);
+                player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 1));
+                player.sendMessage(ChatColor.GOLD + "Purchased 1x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price));
+                }
+                else{
+                    player.sendMessage(ChatColor.GOLD + "Cannot purchased 1x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price));
+                    player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+                }
         player.setItemOnCursor(null);
             SBPane.clear();
             createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
@@ -471,9 +477,15 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
         Double[] tempDArray = {price, buyAmount+2, sellAmount};
         tempMap2.put(tempMap2Size-1, tempDArray);
         Main.map.put(matClickedString, tempMap2);
-        Main.econ.withdrawPlayer(player, price*2);
-        player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 2));
-        player.sendMessage(ChatColor.GOLD + "Purchased 2x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*2));
+        if (hasAvaliableSlot(player)==true){
+            Main.econ.withdrawPlayer(player, price*2);
+            player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 2));
+            player.sendMessage(ChatColor.GOLD + "Purchased 2x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*2));
+            }
+            else{
+                player.sendMessage(ChatColor.GOLD + "Cannot purchased 2x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*2));
+                player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+            }
             player.setItemOnCursor(null);
             SBPane.clear();
             createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
@@ -491,9 +503,15 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
         Double[] tempDArray = {price, buyAmount+4, sellAmount};
         tempMap2.put(tempMap2Size-1, tempDArray);
         Main.map.put(matClickedString, tempMap2);
-        Main.econ.withdrawPlayer(player, price*4);
-        player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 4));
-        player.sendMessage(ChatColor.GOLD + "Purchased 4x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*4));
+        if (hasAvaliableSlot(player)==true){
+            Main.econ.withdrawPlayer(player, price*4);
+            player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 4));
+            player.sendMessage(ChatColor.GOLD + "Purchased 4x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*4));
+            }
+            else{
+                player.sendMessage(ChatColor.GOLD + "Cannot purchased 4x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*4));
+                player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+            }
             player.setItemOnCursor(null);
             SBPane.clear();
             createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
@@ -510,10 +528,15 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
             Double sellAmount = tempDarray2[2];
         Double[] tempDArray = {price, buyAmount+8, sellAmount};
         tempMap2.put(tempMap2Size-1, tempDArray);
-        Main.map.put(matClickedString, tempMap2);
-        Main.econ.withdrawPlayer(player, price*8);
-        player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 8));
-        player.sendMessage(ChatColor.GOLD + "Purchased 8x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*8));
+        if (hasAvaliableSlot(player)==true){
+            Main.econ.withdrawPlayer(player, price*8);
+            player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 8));
+            player.sendMessage(ChatColor.GOLD + "Purchased 8x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*8));
+            }
+            else{
+                player.sendMessage(ChatColor.GOLD + "Cannot purchased 8x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*8));
+                player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+            }
             player.setItemOnCursor(null);
             SBPane.clear();
             createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
@@ -531,9 +554,15 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
         Double[] tempDArray = {price, buyAmount+16, sellAmount};
         tempMap2.put(tempMap2Size-1, tempDArray);
         Main.map.put(matClickedString, tempMap2);
-        Main.econ.withdrawPlayer(player, price*16);
-        player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 16));
-        player.sendMessage(ChatColor.GOLD + "Purchased 16x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*16));
+        if (hasAvaliableSlot(player)==true){
+            Main.econ.withdrawPlayer(player, price*16);
+            player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 16));
+            player.sendMessage(ChatColor.GOLD + "Purchased 16x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*16));
+            }
+            else{
+                player.sendMessage(ChatColor.GOLD + "Cannot purchased 16x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*16));
+                player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+            }
             player.setItemOnCursor(null);
             SBPane.clear();
             createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
@@ -551,9 +580,15 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
         Double[] tempDArray = {price, buyAmount+32, sellAmount};
         tempMap2.put(tempMap2Size-1, tempDArray);
         Main.map.put(matClickedString, tempMap2);
-        Main.econ.withdrawPlayer(player, price*32);
+        if (hasAvaliableSlot(player)==true){
+            Main.econ.withdrawPlayer(player, price*32);
         player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 32));
         player.sendMessage(ChatColor.GOLD + "Purchased 32x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*32));
+        }
+        else{
+            player.sendMessage(ChatColor.GOLD + "Cannot purchased 32x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*32));
+            player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+        }
             player.setItemOnCursor(null);
             SBPane.clear();
             createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
@@ -571,9 +606,15 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
         Double[] tempDArray = {price, buyAmount+64, sellAmount};
         tempMap2.put(tempMap2Size-1, tempDArray);
         Main.map.put(matClickedString, tempMap2);
+        if (hasAvaliableSlot(player)==true){
         Main.econ.withdrawPlayer(player, price*64);
         player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 64));
         player.sendMessage(ChatColor.GOLD + "Purchased 64x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*64));
+        }
+        else{
+            player.sendMessage(ChatColor.GOLD + "Cannot purchased 64x " + matClickedString + " for " + ChatColor.GREEN + "$" + df2.format(price*64));
+            player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+        }
             player.setItemOnCursor(null);
             SBPane.clear();
             createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
@@ -926,6 +967,18 @@ public void createTradingPanel(Gui gui, String matClickedString, Player player, 
     SBPane.addItem(issa64);
     gui.update();
     sellpricedif2 = null;
+    }
+
+    public boolean hasAvaliableSlot(Player player){
+        InventoryView invview = player.getOpenInventory();
+        Inventory inv = invview.getBottomInventory();
+        Boolean check=true;
+        int a = inv.firstEmpty();
+        if (a == -1){
+            check=false;
+            return check;
+        }
+        return check;
     }
 
 }

@@ -55,6 +55,7 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
+import org.bukkit.scheduler.BukkitTask;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
@@ -106,7 +107,7 @@ public final class Main extends JavaPlugin implements Listener{
 
     @Getter
     @Setter
-    private FileConfiguration mainConfig, shopConfig;
+    static private FileConfiguration mainConfig, shopConfig;
 
     @Getter
     @Setter
@@ -190,10 +191,19 @@ public final class Main extends JavaPlugin implements Listener{
                 log("Loaded Algorithim under Variable Configuration");
                 }
         }
+        if (priceModel.contains("Advanced") == true){
+            log("Loaded Advanced Price Algorithim");
+            if (basicVolatilityAlgorithim.contains("Variable") == true){
+                log("Loaded Advanced Algorithim under Variable Configuration");
+        }
+                if (basicVolatilityAlgorithim.contains("fixed") == true){
+                log("Loaded Advanced Algorithim under Variable Configuration");
+                }
+        }
         runnable();
         if (Config.isSellPriceDifferenceVariationEnabled()){
         Config.setSellPriceDifference(Config.getSellPriceDifferenceVariationStart()-tempdatadata.get("SellPriceDifferenceDifference"));
-        sellDifferenceRunnable();
+        SellDifrunnable();
         }
     }
 
@@ -255,35 +265,40 @@ public final class Main extends JavaPlugin implements Listener{
         
     }
 
-    public void sellDifferenceRunnable(){
-        new BukkitRunnable(){
-            @Override
-            public void run(){
-                Integer sellPriceVariationInt = Config.getSellPriceVariationUpdatePeriod();
-                Double d = Double.valueOf(sellPriceVariationInt);
-                Double updates = (Config.getSellPriceVariationTimePeriod() / d);
-                Double variation = Config.getSellPriceDifferenceVariationStart() - (getMainConfig().getDouble("sell-price-difference", 2.5));
-                Double updateVariation = variation/updates;
-                tempdatadata.put("SellPriceDifferenceDifference", (tempdatadata.get("SellPriceDifferenceDifference"))+updateVariation);
-                Config.setSellPriceDifference(Config.getSellPriceDifferenceVariationStart()-tempdatadata.get("SellPriceDifferenceDifference"));
-                debugLog("Updates: "+ Double.toString(updates));
-                debugLog("Variation: "+ Double.toString(variation));
-                debugLog("Changed sell-price-difference by " + Double.toString(updateVariation) + " to " + Double.toString(Config.getSellPriceDifference()));
-                if (Config.getSellPriceDifference() <= getMainConfig().getDouble("sell-price-difference", 2.5)){
-                    Config.setSellPriceDifference(getMainConfig().getDouble("sell-price-difference", 2.5));
-                    cancel();
-                }
-            }
-          
-        }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getSellPriceVariationUpdatePeriod()*20*60, Config.getSellPriceVariationUpdatePeriod()*20*60);
-        
-
-        
-    }
 
     public void tempdataresetSPDifference(){
         tempdatadata.put("SellPriceDifferenceDifference", 0.0);
     }
+
+    public void SellDifrunnable(){
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                
+                Integer sellPriceVariationInt = Config.getSellPriceVariationUpdatePeriod();
+                        Double d = Double.valueOf(sellPriceVariationInt);
+                        Double updates = (Config.getSellPriceVariationTimePeriod() / d);
+                        Double variation = Config.getSellPriceDifferenceVariationStart()
+                                - (getMainConfig().getDouble("sell-price-difference", 2.5));
+                        Double updateVariation = variation / updates;
+                        Main.tempdatadata.put("SellPriceDifferenceDifference",(Main.tempdatadata.get("SellPriceDifferenceDifference")) + updateVariation);
+                        Config.setSellPriceDifference(Config.getSellPriceDifferenceVariationStart()- Main.tempdatadata.get("SellPriceDifferenceDifference"));
+                        Main.debugLog("Updates: " + Double.toString(updates));
+                        Main.debugLog("Variation: " + Double.toString(variation));
+                        Main.debugLog("Changed sell-price-difference by " + Double.toString(updateVariation) + " to " + Double.toString(Config.getSellPriceDifference()));
+                        if (Config.getSellPriceDifference() <= Main.getMainConfig().getDouble("sell-price-difference",
+                                2.5)) {
+                            Config.setSellPriceDifference(Main.getMainConfig().getDouble("sell-price-difference", 2.5));
+                            debugLog("Finished sell difference change task as sell differnce has reached: " + Main.getMainConfig().getDouble("sell-price-difference", 2.5));
+                            cancel();
+                        }
+
+                    }
+             
+            }.runTaskTimer(Main.getINSTANCE(), Config.getSellPriceVariationUpdatePeriod()*20*60, Config.getSellPriceVariationUpdatePeriod()*20*60);
+        }
+
+                    
 
     public void loadItemPricesAndCalculate(){
         debugLog("Starting price calculation task... ");
@@ -296,10 +311,19 @@ public final class Main extends JavaPlugin implements Listener{
                     debugLog("Basic Max Variable Volatility: " + Config.getBasicMaxVariableVolatility());
                     debugLog("Basic Min Variable Volatility: " + Config.getBasicMinVariableVolatility());
                 }
+                if (priceModel.contains("Advanced") == true && basicVolatilityAlgorithim.contains("Fixed") == true){
+                    debugLog("Advanced Max Fixed Volatility: " + Config.getBasicMaxFixedVolatility());
+                    debugLog("Advanced Min Fixed Volatility: " + Config.getBasicMinFixedVolatility());
+                }
+                if (priceModel.contains("Advanced") == true && basicVolatilityAlgorithim.contains("Variable") == true){
+                    debugLog("Advanced Max Variable Volatility: " + Config.getBasicMaxVariableVolatility());
+                    debugLog("Advanced Min Variable Volatility: " + Config.getBasicMinVariableVolatility());
+                }
                 tempbuys = 0.0;
                 tempsells = 0.0;
                 buys = 0.0;
                 sells = 0.0;
+                if (priceModel.contains("Basic")||priceModel.contains("Advanced")){
                 Set<String> strSet = map.keySet();
                 for (String str : strSet){
                     ConcurrentHashMap<Integer,Double[]> tempMap = map.get(str);
@@ -316,13 +340,29 @@ public final class Main extends JavaPlugin implements Listener{
                         buys = 0.0;
                         sells = 0.0;
                         
+                        if (priceModel.contains("Basic")){
                         for (Integer key1 : tempMap.keySet()){
                             Double[] key = tempMap.get(key1);
                             tempbuys = key[1];
                             buys = buys + tempbuys;
                             tempsells = key[2];
                             sells = sells + tempsells;
+                            }
                         }
+
+                        if (priceModel.contains("Advanced")){
+                            for (Integer key1 : tempMap.keySet()){
+                                Double[] key = tempMap.get(key1);
+                                tempbuys = key[1];
+                                tempbuys = tempbuys*key[0];
+                                buys = buys + tempbuys;
+                                tempsells = key[2];
+                                tempsells = tempsells*key[0];
+                                sells = sells + tempsells;
+                                }
+                            }
+
+
                         if (locked == falseBool){
                             Double[] temp2 = tempMap.get(tempMap.size()-1);
                             Double temp3 = temp2[0];
@@ -337,43 +377,73 @@ public final class Main extends JavaPlugin implements Listener{
                         Double avBuy = buys/(tempMap.size());
                         Double avSells = sells/(tempMap.size());
                         if (avBuy > avSells && locked == null){
+                            if (priceModel.contains("Basic")){
                             debugLog("AvBuy > AvSells for " + str);
+                            }
+                            if (priceModel.contains("Advanced")){
+                                debugLog("AvBuyValue > AvSellValue for " + str);
+                                }
                             Double[] temp2 = tempMap.get(tempMap.size()-1);
                             Double temp3 = temp2[0];
                             Integer tsize = tempMap.size();
-                            if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed") == true){
+                            if (priceModel.contains("Basic") == true ||  priceModel.contains("Advanced") && basicVolatilityAlgorithim.contains("Fixed") == true){
                                 Double newSpotPrice = (temp3)+(((1-(avSells / avBuy)) * Config.getBasicMaxFixedVolatility() + Config.getBasicMinFixedVolatility()));
                                 Double[] temporary = { newSpotPrice, 0.0, 0.0};
-                                debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                                if (priceModel.contains("Basic")){
+                                    debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                                }
+                                if (priceModel.contains("Advanced")){
+                                    debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = " + Double.toString(avSells));
+                                }
                                 tempMap.put(tsize, temporary);
                                 map.put(str, tempMap);
                             
                             }
-                            if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Variable") == true){
+                            if (priceModel.contains("Basic") == true ||  priceModel.contains("Advanced") && basicVolatilityAlgorithim.contains("Variable") == true){
                                 Double newSpotPrice = (temp3)+(temp3*((1-(avSells / avBuy))* Config.getBasicMaxVariableVolatility()*0.01)) + Config.getBasicMinVariableVolatility()*0.01*temp3;
                                 Double[] temporary = { newSpotPrice, 0.0, 0.0};
-                                debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " because Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                                if (priceModel.contains("Basic")){
+                                    debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                                }
+                                if (priceModel.contains("Advanced")){
+                                    debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = " + Double.toString(avSells));
+                                }
                                 tempMap.put(tsize, temporary);
                                 map.put(str, tempMap);
                             }
                         }
                         
                         if (avBuy < avSells && locked == null){
-                            debugLog("AvBuy < AvSells for " + str);
+                            if (priceModel.contains("Basic")){
+                                debugLog("AvBuy < AvSells for " + str);
+                                }
+                                if (priceModel.contains("Advanced")){
+                                    debugLog("AvBuyValue < AvSellValue for " + str);
+                                    }
                             Double[] temp2 = tempMap.get(tempMap.size()-1);
                             Double temp3 = temp2[0];
                             Integer tsize = tempMap.size();
-                            if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed")){
+                            if (priceModel.contains("Basic") == true ||  priceModel.contains("Advanced") && basicVolatilityAlgorithim.contains("Fixed")){
                                 Double newSpotPrice = (temp3)-(((1-(avBuy / avSells)) * Config.getBasicMaxFixedVolatility() + Config.getBasicMinFixedVolatility()));
                                 Double[] temporary = { newSpotPrice, 0.0, 0.0};
-                                debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                                if (priceModel.contains("Basic")){
+                                    debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                                }
+                                if (priceModel.contains("Advanced")){
+                                    debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = " + Double.toString(avSells));
+                                }
                                 tempMap.put(tsize, temporary);
                                 map.put(str, tempMap);
                         }
-                        if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Variable") == true){
+                        if (priceModel.contains("Basic") == true ||  priceModel.contains("Advanced") && basicVolatilityAlgorithim.contains("Variable") == true){
                             Double newSpotPrice = (temp3)-(temp3*((1-(avBuy / avSells))* Config.getBasicMaxVariableVolatility()*0.01)) - Config.getBasicMinVariableVolatility()*0.01*temp3;
                             Double[] temporary = { newSpotPrice, 0.0, 0.0};
-                            debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " because Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                            if (priceModel.contains("Basic")){
+                                debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                            }
+                            if (priceModel.contains("Advanced")){
+                                debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = " + Double.toString(avSells));
+                            }
                             tempMap.put(tsize, temporary);
                             map.put(str, tempMap);
                         }
@@ -389,7 +459,12 @@ public final class Main extends JavaPlugin implements Listener{
                         if (priceModel.contains("Basic") == true){
                             Double newSpotPrice = temp3;
                             Double[] temporary = { newSpotPrice, 0.0, 0.0};
-                            debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                            if (priceModel.contains("Basic")){
+                                debugLog("Loading item, " + str + ", with the same price: " + Double.toString(newSpotPrice) + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = " + Double.toString(avSells));
+                            }
+                            if (priceModel.contains("Advanced")){
+                                debugLog("Loading item, " + str + ", with the same price: " + Double.toString(newSpotPrice) + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = " + Double.toString(avSells));
+                            }
                             tempMap.put(tsize, temporary);
                             map.put(str, tempMap);
                     }
@@ -419,6 +494,7 @@ public final class Main extends JavaPlugin implements Listener{
             }
             catch(InterruptedException | IOException e){
                 e.printStackTrace();
+            }
             }
         }
 
@@ -552,13 +628,13 @@ public final class Main extends JavaPlugin implements Listener{
         Config.setPricingModel(
                 ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("pricing-model", "Basic")));
         Config.setBasicVolatilityAlgorithim(ChatColor.translateAlternateColorCodes('&',
-                getMainConfig().getString("Basic-Volatility-Algorithim", "Fixed")));
+                getMainConfig().getString("Volatility-Algorithim", "Fixed")));
         Config.setNoPermission(ChatColor.translateAlternateColorCodes('&',
                 getMainConfig().getString("no-permission", "You do not have permission to perform this command")));
-        Config.setBasicMaxFixedVolatility(getMainConfig().getDouble("Basic-Fixed-Max-Volatility", 2.00));
-        Config.setBasicMaxVariableVolatility(getMainConfig().getDouble("Basic-Variable-Max-Volatility", 2.00));
-        Config.setBasicMinFixedVolatility(getMainConfig().getDouble("Basic-Fixed-Min-Volatility", 0.05));
-        Config.setBasicMinVariableVolatility(getMainConfig().getDouble("Basic-Variable-Min-Volatility", 0.05));
+        Config.setBasicMaxFixedVolatility(getMainConfig().getDouble("Fixed-Max-Volatility", 2.00));
+        Config.setBasicMaxVariableVolatility(getMainConfig().getDouble("Variable-Max-Volatility", 2.00));
+        Config.setBasicMinFixedVolatility(getMainConfig().getDouble("Fixed-Min-Volatility", 0.05));
+        Config.setBasicMinVariableVolatility(getMainConfig().getDouble("Variable-Min-Volatility", 0.05));
         Config.setSellPriceDifference(getMainConfig().getDouble("sell-price-difference", 2.5));
         Config.setSellPriceDifferenceVariationStart(getMainConfig().getDouble("sell-price-differnence-variation-start", 25.0));
     }

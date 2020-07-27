@@ -44,6 +44,8 @@ import unprotesting.com.github.util.Config;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 
+import lombok.Getter;
+
 public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
 

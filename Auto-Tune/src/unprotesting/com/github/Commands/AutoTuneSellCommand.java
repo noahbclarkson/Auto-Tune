@@ -19,6 +19,8 @@ import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
 
+import lombok.Getter;
+
 public class AutoTuneSellCommand implements CommandExecutor {
 
     public Integer menuRows = Config.getMenuRows();

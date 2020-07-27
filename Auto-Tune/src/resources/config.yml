@@ -17,7 +17,7 @@ port: 8123
 server-name: 'Auto-Tune Test Server'
 
 ##  Automatic Pricing Model
-pricing-model: 'Basic'
+pricing-model: 'Advanced'
 
 ##  Time Period in minutes
 time-period: 10
@@ -31,29 +31,55 @@ menu-title: 'Auto-Tune Shop'
 ##  Message sent for players with no permission
 no-permission: 'You do not have permission to perform this command'
 
-##  -- Basic Pricing Model Settings --  ##
+##  -- Basic/Advanced Pricing Model Settings --  ##
 
 ##  Volatility Calulation Algorithim
 ##  Info: A fixed rate locks the maxiumum change to a certain price
 ##  Info: A variable rate changes the maxiumum price-change based on current price calculations
-Basic-Volatility-Algorithim: 'Fixed'
+Volatility-Algorithim: 'Fixed'
 
 ##  Percentage difference in sell price to buy price
 sell-price-difference: 2.5
 
 ##  Maximum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
-Basic-Fixed-Max-Volatility: 2.00
+Fixed-Max-Volatility: 2.00
+##  Maximum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
+Fixed-Max-Volatility: 2.00
 
 ##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
-Basic-Variable-Max-Volatility: 6.00
-
+Variable-Max-Volatility: 6.00
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
-Basic-Fixed-Min-Volatility: 0.05
+Variable-Min-Volatility: 0.05
 
-##  Minimum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
-Basic-Variable-Min-Volatility: 0.15
+##  -- Exponential Pricing Model Settings --  ##
 
-##  -- Other settings --
+##  Info: This algorithim uses settings from the Variable-Advanced Pricing Model Settings: sell-price-difference, Variable-Max-Volatility, Variable-Min-Volatility
+##  Info: When setting your data selection algorithim use a site such as https://www.desmos.com/calculator
+##  Info: Data selection uses the equation y=m(x^z)+c, for example the default is y=0.075(x^1.6)+1.25
+
+##  'm' in equation: y=m(x^z)+c
+data-selection-m: 0.05
+##  'z' in equation: y=m(x^z)+c
+data-selection-z: 1.6
+##  'c' in equation: y=m(x^z)+c
+data-selection-c: 1.25
+
+
+##  -- Other Econonomy Settings --
+
+##  Enable sell price difference variation to ease out sell price varition
+sell-price-difference-variation-enabled: false
+##  Starting percententage sell price difference for sell price varition
+sell-price-differnence-variation-start: 25.0
+##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 7 days)
+sell-price-variation-time-period: 10080
+##  Time in minutes that the sell-price-difference updates
+##  Info: Must be a factor of sell-price-variation-time-period or it wont work!
+sell-price-variation-update-period: 30
+
+
+
+##  -- Other Settings --
 
 ##  Enable debug mode for more info on price calculations
 debug-enabled: false

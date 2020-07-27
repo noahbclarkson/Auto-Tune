@@ -7,8 +7,9 @@
   </properties>
   <!-- Project information -->
   <groupId>unprotesting.com.github</groupId>
-  <artifactId>Auto-Tune-Basic</artifactId>
+  <artifactId>Auto-Tune-Ultimate</artifactId>
   <version>0.5.3</version>
+
   <name>Auto-Tune</name>
   <url>https://github.com/Unprotesting/Auto-Tune</url>
   <description>The automatic pricing plugin for minecraft</description>

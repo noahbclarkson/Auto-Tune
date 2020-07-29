@@ -383,7 +383,7 @@ public final class Main extends JavaPlugin implements Listener{
                                     expvalues = inty+1;
                                     break;
                                 }
-                                Double[] key = tempMap.get(inty);
+                                Double[] key = tempMap.get((tempSize-1)-inty);
                                 tempbuys = key[1];
                                 tempbuys = tempbuys*key[0];
                                 if (tempbuys==0){

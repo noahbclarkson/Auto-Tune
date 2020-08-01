@@ -3,9 +3,6 @@ package unprotesting.com.github.Commands;
 import java.util.UUID;
 import java.util.logging.Logger;
 
-import unprotesting.com.github.Main;
-
-import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -13,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import net.md_5.bungee.api.ChatColor;
+import unprotesting.com.github.Main;
 
 public class AutoTuneCommand implements CommandExecutor {
 

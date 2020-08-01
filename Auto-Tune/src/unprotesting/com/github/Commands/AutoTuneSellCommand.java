@@ -1,5 +1,6 @@
 package unprotesting.com.github.Commands;
 
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.github.stefvanschie.inventoryframework.Gui;
@@ -14,6 +15,7 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
+import org.mapdb.HTreeMap;
 
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
@@ -46,7 +48,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
     }
 
     public void sell(Player player, Gui GUI) {
-		sellItems(player, GUI.getInventory().getContents());
+		sellItems(player, GUI.getInventory().getContents(), false);
 		GUI.getInventory().clear();
 	}
 
@@ -54,7 +56,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
 		return item.getType().toString().toUpperCase();
 	}
 
-    public static void sellItems(Player player, ItemStack[] items) {
+    public static void sellItems(Player player, ItemStack[] items, Boolean autoSell) {
 		double moneyToGive = 0;
 		boolean couldntSell = false;
         int countSell = 0;
@@ -84,7 +86,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
             Double sellPrice = (tempDoublearray[0]) - (tempDoublearray[0]*0.01*sellpricedif2);
             Double buyAmount = tempDoublearray[1];
             Double sellAmount = tempDoublearray[2];
-            sellAmount += quantity;
+            sellAmount = quantity + sellAmount;
             Double[] tempPutDouble = {tempDoublearray[0], buyAmount, sellAmount};
             tempMap1.put(tempMapSize-1, tempPutDouble);
             Main.map.put(itemString, tempMap1);
@@ -94,12 +96,17 @@ public class AutoTuneSellCommand implements CommandExecutor {
 
 		if (couldntSell == true) {
 			player.sendMessage("Cant sell " + Integer.toString(countSell) + "x of item");
-		}
-		roundAndGiveMoney(player, moneyToGive);
+        }
+        if (autoSell == true){
+            roundAndGiveMoney(player, moneyToGive, true);
+        }
+        if (autoSell == false){
+        roundAndGiveMoney(player, moneyToGive, false);
+        }
 	}
 
     public void sell(Player player) {
-		sellItems(player, GUI.getInventory().getContents());
+		sellItems(player, GUI.getInventory().getContents(), false);
 		GUI.getInventory().clear();
 	}
 
@@ -117,15 +124,24 @@ public class AutoTuneSellCommand implements CommandExecutor {
 		sell(player);
     }
     
-    public static void roundAndGiveMoney(Player player, double moneyToGive) {
+    public static void roundAndGiveMoney(Player player, double moneyToGive, Boolean autoSell) {
 		Double moneyToGiveRounded = (double) Math.round(moneyToGive * 100) / 100;
 
 		if (moneyToGiveRounded > 0) {
-			Main.econ.depositPlayer(player, moneyToGiveRounded);
-			
-			player.sendMessage(ChatColor.GOLD + "Your items were sold, and $" + moneyToGiveRounded + " was added to your account.");
+            
+            if (autoSell == false){
+            Main.econ.depositPlayer(player, moneyToGiveRounded);
+            player.sendMessage(ChatColor.GOLD + "Your items were sold, and $" + moneyToGiveRounded + " was added to your account.");
+            }
+            if (autoSell == true){
+                if (Main.tempdatadata.get(player.getUniqueId().toString()) == null){
+                    Main.tempdatadata.put(player.getUniqueId().toString(), 0.0);
+                }
+                Main.tempdatadata.put(player.getUniqueId().toString(), Main.tempdatadata.get(player.getUniqueId().toString())+moneyToGive);
+            }
 		}
 	}
 
     
 }
+

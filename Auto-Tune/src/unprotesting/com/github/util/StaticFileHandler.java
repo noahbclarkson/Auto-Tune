@@ -1,7 +1,5 @@
 package unprotesting.com.github.util;
 
-import unprotesting.com.github.Main;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;

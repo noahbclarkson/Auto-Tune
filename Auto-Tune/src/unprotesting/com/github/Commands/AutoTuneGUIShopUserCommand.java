@@ -1,11 +1,7 @@
 package unprotesting.com.github.Commands;
 
-import java.util.ArrayList;
+import java.text.DecimalFormat;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.github.stefvanschie.inventoryframework.Gui;
@@ -13,7 +9,6 @@ import com.github.stefvanschie.inventoryframework.GuiItem;
 import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
 import com.github.stefvanschie.inventoryframework.pane.StaticPane;
-import net.milkbowl.vault.economy.EconomyResponse;
 
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -22,29 +17,16 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import lombok.Getter;
-import lombok.Setter;
 import net.md_5.bungee.api.ChatColor;
 import net.milkbowl.vault.economy.Economy;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
-
-import java.math.RoundingMode;
-import java.text.DecimalFormat;
-
-import lombok.Getter;
 
 public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
@@ -53,11 +35,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
 
 
-    private static DecimalFormat df2 = new DecimalFormat("###,###,###,##0.00");
+    static DecimalFormat df2 = new DecimalFormat("###,###,###,##0.00");
 
     public Economy economy = Main.getINSTANCE().getEconomy();
 
-    public Integer SBPanePos = 1;
+    public static Integer SBPanePos = 1;
 
  
 
@@ -149,253 +131,245 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
                                 Double sellValueD = tempDoublearray[2];
                                 sellAmount = sellValueD;
                                 createTradingPanel(gui, matClickedString, playernew, SBPane, price, forward, back);
-                                if (finalPageAmount == 2){
+                                if (finalPageAmount == 2) {
                                     pane.setPage(1);
                                 }
-                                if (finalPageAmount == 3){
+                                if (finalPageAmount == 3) {
                                     pane.setPage(2);
                                 }
-                                if (finalPageAmount == 4){
+                                if (finalPageAmount == 4) {
                                     pane.setPage(3);
                                 }
                                 gui.update();
                                 playernew.setItemOnCursor(null);
                                 event.setCancelled(true);
                             }
-                        if (event.getClick() != ClickType.LEFT){
-                            final Player playernew = playerpub;
-                            event.setCancelled(true);
-                            playernew.setItemOnCursor(null);
-                        }});
+                            if (event.getClick() != ClickType.LEFT) {
+                                final Player playernew = playerpub;
+                                event.setCancelled(true);
+                                playernew.setItemOnCursor(null);
+                            }
+                        });
                         ItemMeta im = is.getItemMeta();
                         im.setDisplayName(ChatColor.AQUA + Main.memMap.get(i));
                         ConcurrentHashMap<Integer, Double[]> tempmap = Main.map.get(Main.memMap.get(i));
                         Integer tempMapSize = tempmap.size();
-                        Double[] tempDoublearray = tempmap.get(tempMapSize-1);
+                        Double[] tempDoublearray = tempmap.get(tempMapSize - 1);
                         price1 = tempDoublearray[0];
                         String priceString = df2.format(price1);
                         String fullprice = "Price: " + "$" + priceString;
                         im.setLore(Arrays.asList(ChatColor.GOLD + fullprice));
                         is.setItemMeta(im);
-                        if (Config.getMenuRows() == 4){
-                            if (i < 7){
-                            pageOne.addItem(a, i, 0);
+                        if (Config.getMenuRows() == 4) {
+                            if (i < 7) {
+                                pageOne.addItem(a, i, 0);
                             }
-                            if (i >= 7 && i < 14){
-                                pageOne.addItem(a, i-7, 1);
+                            if (i >= 7 && i < 14) {
+                                pageOne.addItem(a, i - 7, 1);
                             }
-                            if (i >= 14 && i < 21){
-                                pageTwo.addItem(a, i-14, 0);
-                                }
-                            if (i >= 21 && i < 28){
-                                pageTwo.addItem(a, i-21, 1);
-                                }
-                            if (i >= 28 && i < 35){
-                                pageThree.addItem(a, i-28, 1);
-                                }
-                            if (i >= 35 && i < 42){
-                                pageThree.addItem(a, i-35, 2);
-                                }
-                        }
-                        if(Config.getMenuRows() == 5){
-                            if (i < 7){
-                            pageOne.addItem(a, i, 0);
+                            if (i >= 14 && i < 21) {
+                                pageTwo.addItem(a, i - 14, 0);
                             }
-                            if (i >= 7 && i < 14){
-                            pageOne.addItem(a, i-7, 1);
+                            if (i >= 21 && i < 28) {
+                                pageTwo.addItem(a, i - 21, 1);
                             }
-                            if (i >= 14 && i < 21){
-                            pageOne.addItem(a, i-14, 2);
+                            if (i >= 28 && i < 35) {
+                                pageThree.addItem(a, i - 28, 1);
                             }
-                            if (i >= 21 && i < 28){
-                            pageTwo.addItem(a, i-21, 0);
-                            }
-                            if (i >= 28 && i < 35){
-                                pageTwo.addItem(a, i-28, 1);
-                                }
-                             if (i >= 35 && i < 42){
-                                pageTwo.addItem(a, i-35, 2);
-                                }
-                            if (i >= 42 && i < 49){
-                                pageThree.addItem(a, i-42, 0);
-                            }
-                            if (i >= 49 && i < 56){
-                                pageThree.addItem(a, i-49, 1);
-                            }
-                            if (i >= 56 && i < 63){
-                                pageThree.addItem(a, i-56, 2);
+                            if (i >= 35 && i < 42) {
+                                pageThree.addItem(a, i - 35, 2);
                             }
                         }
-                        if(Config.getMenuRows() == 6){
-                            if (i < 7){
-                            pageOne.addItem(a, i, 0);
+                        if (Config.getMenuRows() == 5) {
+                            if (i < 7) {
+                                pageOne.addItem(a, i, 0);
                             }
-                            if (i >= 7 && i < 14){
-                            pageOne.addItem(a, i-7, 1);
+                            if (i >= 7 && i < 14) {
+                                pageOne.addItem(a, i - 7, 1);
                             }
-                            if (i >= 14 && i < 21){
-                            pageOne.addItem(a, i-14, 2);
+                            if (i >= 14 && i < 21) {
+                                pageOne.addItem(a, i - 14, 2);
                             }
-                            if (i >= 21 && i < 28){
-                            pageOne.addItem(a, i-21, 3);
+                            if (i >= 21 && i < 28) {
+                                pageTwo.addItem(a, i - 21, 0);
                             }
-                            if (i >= 28 && i < 35){
-                            pageTwo.addItem(a, i-28, 0);
+                            if (i >= 28 && i < 35) {
+                                pageTwo.addItem(a, i - 28, 1);
                             }
-                            if (i >= 35 && i < 42){
-                                pageTwo.addItem(a, i-35, 1);
-                                }
-                            if (i >= 42 && i < 49){
-                                pageTwo.addItem(a, i-42, 2);
+                            if (i >= 35 && i < 42) {
+                                pageTwo.addItem(a, i - 35, 2);
                             }
-                            if (i >= 49 && i < 56){
-                                pageTwo.addItem(a, i-49, 3);
+                            if (i >= 42 && i < 49) {
+                                pageThree.addItem(a, i - 42, 0);
                             }
-                            if (i >= 56 && i < 63){
-                                pageThree.addItem(a, i-56, 0);
+                            if (i >= 49 && i < 56) {
+                                pageThree.addItem(a, i - 49, 1);
                             }
-                            if (i >= 63 && i < 70){
-                                pageThree.addItem(a, i-63, 1);
-                                }
-                            if (i >= 70 && i < 77){
-                                pageThree.addItem(a, i-70, 2);
+                            if (i >= 56 && i < 63) {
+                                pageThree.addItem(a, i - 56, 2);
                             }
-                            if (i >= 77 && i < 84){
-                                pageThree.addItem(a, i-77, 3);
+                        }
+                        if (Config.getMenuRows() == 6) {
+                            if (i < 7) {
+                                pageOne.addItem(a, i, 0);
                             }
-                        
+                            if (i >= 7 && i < 14) {
+                                pageOne.addItem(a, i - 7, 1);
+                            }
+                            if (i >= 14 && i < 21) {
+                                pageOne.addItem(a, i - 14, 2);
+                            }
+                            if (i >= 21 && i < 28) {
+                                pageOne.addItem(a, i - 21, 3);
+                            }
+                            if (i >= 28 && i < 35) {
+                                pageTwo.addItem(a, i - 28, 0);
+                            }
+                            if (i >= 35 && i < 42) {
+                                pageTwo.addItem(a, i - 35, 1);
+                            }
+                            if (i >= 42 && i < 49) {
+                                pageTwo.addItem(a, i - 42, 2);
+                            }
+                            if (i >= 49 && i < 56) {
+                                pageTwo.addItem(a, i - 49, 3);
+                            }
+                            if (i >= 56 && i < 63) {
+                                pageThree.addItem(a, i - 56, 0);
+                            }
+                            if (i >= 63 && i < 70) {
+                                pageThree.addItem(a, i - 63, 1);
+                            }
+                            if (i >= 70 && i < 77) {
+                                pageThree.addItem(a, i - 70, 2);
+                            }
+                            if (i >= 77 && i < 84) {
+                                pageThree.addItem(a, i - 77, 3);
+                            }
+
                         }
 
                         i++;
+                    }
+
                 }
-               
-            }
-            pane.addPane(0, pageOne);
-            if (finalPageAmount == 3){
-                pane.addPane(1, pageTwo);
-                pane.addPane(2, SBPane);
-            }
-            if (finalPageAmount == 4){
-                pane.addPane(1, pageTwo);
-                pane.addPane(2, pageThree);
-                pane.addPane(3, SBPane);
-            }
-            else{
-            pane.addPane(1, SBPane);
-            }
-            
+                pane.addPane(0, pageOne);
+                if (finalPageAmount == 3) {
+                    pane.addPane(1, pageTwo);
+                    pane.addPane(2, SBPane);
+                }
+                if (finalPageAmount == 4) {
+                    pane.addPane(1, pageTwo);
+                    pane.addPane(2, pageThree);
+                    pane.addPane(3, SBPane);
+                } else {
+                    pane.addPane(1, SBPane);
+                }
 
+                // page two
+                // **if (size > menuRows*7){
+                // OutlinePane pageTwo = new OutlinePane(1, 1, 7, menuRows-2);
+                // pageTwo.addItem(new GuiItem(new ItemStack(Material.GLASS), event ->
+                // event.getWhoClicked().sendMessage("Glass")));
+                // pane.addPane(1, pageTwo);
+                // }
 
+                // page three
+                // if (size > menuRows*14){
+                // OutlinePane pageThree = new OutlinePane(1, 1, 7, menuRows-2);
+                // pageThree.addItem(new GuiItem(new ItemStack(Material.BLAZE_ROD),event ->
+                // event.getWhoClicked().sendMessage("Blaze rod")));
+                // pane.addPane(2, pageThree);
+                // }
 
-            // page two
-            //**if (size > menuRows*7){
-               // OutlinePane pageTwo = new OutlinePane(1, 1, 7, menuRows-2);
-               // pageTwo.addItem(new GuiItem(new ItemStack(Material.GLASS), event -> event.getWhoClicked().sendMessage("Glass")));
-                //pane.addPane(1, pageTwo);
-           // }
-            
+                gui1.addPane(pane);
 
-            // page three
-           // if (size > menuRows*14){
-              //  OutlinePane pageThree = new OutlinePane(1, 1, 7, menuRows-2);
-            //    pageThree.addItem(new GuiItem(new ItemStack(Material.BLAZE_ROD),event -> event.getWhoClicked().sendMessage("Blaze rod")));
-            //    pane.addPane(2, pageThree);
-           // }
+                // page selection
+                ItemStack isback = new ItemStack(Material.ARROW);
+                ItemMeta imback = isback.getItemMeta();
+                imback.setDisplayName(ChatColor.WHITE + "Back");
+                imback.setLore(Arrays.asList(ChatColor.BOLD + "Click to return to Shop Menu"));
+                isback.setItemMeta(imback);
+                ItemStack isforward = new ItemStack(Material.ARROW);
+                ItemMeta imforward = isforward.getItemMeta();
+                imforward.setDisplayName(ChatColor.WHITE + "Next Page");
+                imforward.setLore(Arrays.asList(ChatColor.BOLD + "Click to go to the next page"));
+                isforward.setItemMeta(imforward);
 
-            gui1.addPane(pane);
+                if (pane.getPage() == 0 && finalPageAmount == 4) {
+                    back.setVisible(false);
+                    forward.setVisible(true);
+                }
 
-            // page selection
-            ItemStack isback = new ItemStack(Material.ARROW);
-            ItemMeta imback = isback.getItemMeta();
-            imback.setDisplayName(ChatColor.WHITE + "Back");
-            imback.setLore(Arrays.asList(ChatColor.BOLD + "Click to return to Shop Menu"));
-            isback.setItemMeta(imback);
-            ItemStack isforward = new ItemStack(Material.ARROW);
-            ItemMeta imforward = isforward.getItemMeta();
-            imforward.setDisplayName(ChatColor.WHITE + "Next Page");
-            imforward.setLore(Arrays.asList(ChatColor.BOLD + "Click to go to the next page"));
-            isforward.setItemMeta(imforward);
+                if (pane.getPage() == 0 && finalPageAmount == 3) {
+                    back.setVisible(false);
+                    forward.setVisible(true);
+                }
 
-            if (pane.getPage() == 0 && finalPageAmount == 4) {
+                if (pane.getPage() == 0 && finalPageAmount == 2) {
+                    forward.setVisible(false);
+                }
+
+                back.addItem(new GuiItem(new ItemStack(isback), event -> {
+                    if (pane.getPage() != 3) {
+                        pane.setPage(pane.getPage() - 1);
+                    }
+                    if (pane.getPage() == 3) {
+                        pane.setPage(0);
+                    }
+                    if (pane.getPage() == 0 && finalPageAmount == 4) {
+                        back.setVisible(false);
+                        forward.setVisible(true);
+                    }
+
+                    if (pane.getPage() == 0 && finalPageAmount == 3) {
+                        back.setVisible(false);
+                        forward.setVisible(true);
+                    }
+
+                    if (pane.getPage() == 0 && finalPageAmount == 2) {
+                        forward.setVisible(false);
+                    }
+
+                    gui1.update();
+                }), 0, 0);
+
                 back.setVisible(false);
-                forward.setVisible(true);
+
+                forward.addItem(new GuiItem(new ItemStack(isforward), event -> {
+                    pane.setPage(pane.getPage() + 1);
+                    forward.setVisible(false);
+                    if (pane.getPage() == 1 && finalPageAmount == 4) {
+                        forward.setVisible(true);
+                    }
+
+                    if (pane.getPage() == 4 || pane.getPage() == 3) {
+                        forward.setVisible(false);
+                    }
+
+                    if (pane.getPage() == 0 && finalPageAmount == 2) {
+                        forward.setVisible(false);
+                    }
+
+                    back.setVisible(true);
+                    gui1.update();
+                }), 0, 0);
+
+                gui1.addPane(back);
+                gui1.addPane(forward);
+
+                gui1.addPane(back);
+                gui1.addPane(forward);
+
+                gui1.show((HumanEntity) senderpub);
+
             }
 
-            if (pane.getPage() == 0 && finalPageAmount == 3) {
-                back.setVisible(false);
-                forward.setVisible(true);
-            }
+            public Double sellpricedif;
+            public Double sellpricedif2;
 
-            if (pane.getPage() == 0 && finalPageAmount == 2) {
-                forward.setVisible(false);
-            }
-
-            back.addItem(new GuiItem(new ItemStack(isback), event -> {
-            if (pane.getPage() != 3){
-                pane.setPage(pane.getPage()-1);
-            }
-            if (pane.getPage() == 3){
-                pane.setPage(0);
-            }
-            if (pane.getPage() == 0 && finalPageAmount == 4) {
-                back.setVisible(false);
-                forward.setVisible(true);
-            }
-
-            if (pane.getPage() == 0 && finalPageAmount == 3) {
-                back.setVisible(false);
-                forward.setVisible(true);
-            }
-
-            if (pane.getPage() == 0 && finalPageAmount == 2) {
-                forward.setVisible(false);
-            }
-
-            
-            gui1.update();
-            }), 0, 0);
-
-            back.setVisible(false);
-
-            forward.addItem(new GuiItem(new ItemStack(isforward), event -> {
-            pane.setPage(pane.getPage()+1);
-            forward.setVisible(false);
-            if (pane.getPage() == 1 && finalPageAmount == 4) {
-                forward.setVisible(true);
-            }
-
-            if (pane.getPage() == 4 || pane.getPage() == 3){
-                forward.setVisible(false);
-            }
-
-            if (pane.getPage() == 0 && finalPageAmount == 2) {
-                forward.setVisible(false);
-            }
-
-            back.setVisible(true);
-            gui1.update();
-            }), 0, 0);
-
-            gui1.addPane(back);
-            gui1.addPane(forward);
-
-
-
-            gui1.addPane(back);
-            gui1.addPane(forward);
-
-            gui1.show((HumanEntity) senderpub);
-
-
-}
-
-
-
-public Double sellpricedif;
-public Double sellpricedif2;
-
-
-public void createTradingPanel(Gui gui, String matClickedString, Player player, OutlinePane SBPane, Double price, StaticPane forward, StaticPane back){
+            public void createTradingPanel(Gui gui, String matClickedString, Player player, OutlinePane SBPane,
+                    Double price, StaticPane forward, StaticPane back) {
     Double tempbuy = 0.0;
     Double tempsell = 0.0;
     sellpricedif2 = null;

@@ -1,7 +1,5 @@
 package unprotesting.com.github.util;
 
-import unprotesting.com.github.Main;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,7 +11,7 @@ public final class Config {
 
     @Getter
     @Setter
-    private static Integer port, timePeriod, menuRows, sellPriceVariationTimePeriod, sellPriceVariationUpdatePeriod;
+    private static Integer port, timePeriod, menuRows, sellPriceVariationTimePeriod, sellPriceVariationUpdatePeriod, autoSellUpdatePeriod, autoSellProfitUpdatePeriod;
 
     @Getter
     @Setter

@@ -31,6 +31,12 @@ menu-title: 'Auto-Tune Shop'
 ##  Message sent for players with no permission
 no-permission: 'You do not have permission to perform this command'
 
+##  How often auto-sell updates in ticks
+auto-sell-update-period: 10
+
+##  How often players are shown their auto-sell profits in ticks
+auto-sell-profit-update-period: 1200
+
 ##  -- Basic/Advanced Pricing Model Settings --  ##
 
 ##  Volatility Calulation Algorithim

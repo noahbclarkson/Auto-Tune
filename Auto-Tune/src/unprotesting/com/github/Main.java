@@ -33,7 +33,11 @@ import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
 import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 import com.sun.net.httpserver.HttpServer;
+
+import unprotesting.com.github.Commands.AutoTuneAutoSellCommand;
 import unprotesting.com.github.Commands.AutoTuneCommand;
+import unprotesting.com.github.util.AutoSellEventHandler;
+import unprotesting.com.github.util.AutoTuneAutoSellEventHandler;
 import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.JoinEventHandler;
 import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
@@ -180,6 +184,7 @@ public final class Main extends JavaPlugin implements Listener{
         this.getCommand("at").setExecutor(new AutoTuneCommand());
         this.getCommand("shop").setExecutor(new AutoTuneGUIShopUserCommand());
         this.getCommand("sell").setExecutor(new AutoTuneSellCommand());
+        this.getCommand("autosell").setExecutor(new AutoTuneAutoSellCommand());
         basicVolatilityAlgorithim = Config.getBasicVolatilityAlgorithim();
         priceModel = Config.getPricingModel().toString();
         if (priceModel.contains("Basic") == true){
@@ -200,6 +205,9 @@ public final class Main extends JavaPlugin implements Listener{
                 log("Loaded Advanced Algorithim under Variable Configuration");
                 }
         }
+        BukkitScheduler scheduler = getServer().getScheduler();
+        scheduler.scheduleSyncRepeatingTask(this, new AutoSellEventHandler(), Config.getAutoSellUpdatePeriod()*5, Config.getAutoSellUpdatePeriod());
+        scheduler.scheduleSyncRepeatingTask(this, new AutoTuneAutoSellEventHandler(), Config.getAutoSellProfitUpdatePeriod()+20, Config.getAutoSellProfitUpdatePeriod());
         runnable();
         if (Config.isSellPriceDifferenceVariationEnabled()){
         Config.setSellPriceDifference(Config.getSellPriceDifferenceVariationStart()-tempdatadata.get("SellPriceDifferenceDifference"));
@@ -662,7 +670,9 @@ public final class Main extends JavaPlugin implements Listener{
         Config.setWebServer(getMainConfig().getBoolean("web-server-enabled", false));
         Config.setChecksumHeaderBypass(getMainConfig().getBoolean("checksum-header-bypass", false));
         Config.setDebugEnabled(getMainConfig().getBoolean("debug-enabled", false));
+        Config.setAutoSellProfitUpdatePeriod(getMainConfig().getInt("auto-sell-profit-update-period", 1200));
         Config.setPort(getMainConfig().getInt("port", 8321));
+        Config.setAutoSellUpdatePeriod(getMainConfig().getInt("auto-sell-update-period", 10));
         Config.setTimePeriod(getMainConfig().getInt("time-period", 10));
         Config.setMenuRows(getMainConfig().getInt("menu-rows", 3));
         Config.setSellPriceVariationTimePeriod(getMainConfig().getInt("sell-price-variation-time-period", 10800));

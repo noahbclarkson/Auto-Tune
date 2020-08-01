@@ -28,6 +28,9 @@ commands:
     atadmin:
       description: Auto-Tune Admin Command.
       usage: /<atadmin> <skip>
+    autosell:
+      description: Auto-Tune Auto Sell Command
+      usage: /<autosell>
 
 
 

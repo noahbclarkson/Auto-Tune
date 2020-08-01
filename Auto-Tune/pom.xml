@@ -104,6 +104,7 @@
           <include>plugin.yml</include>
           <include>config.yml</include>
           <include>shops.yml</include>
+          <include>Javascript/Main.js</include>
         </includes>
       </resource>
     </resources>
@@ -135,7 +136,7 @@
           <artifactSet>
             <includes>
               <include>unprotesting.com.github</include>
-              <include>**</include>    
+              <include>**</include>
             </includes>
           </artifactSet>
         </configuration>

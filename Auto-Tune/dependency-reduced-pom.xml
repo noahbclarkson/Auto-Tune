@@ -31,6 +31,7 @@
           <include>plugin.yml</include>
           <include>config.yml</include>
           <include>shops.yml</include>
+          <include>Javascript/Main.js</include>
         </includes>
       </resource>
     </resources>

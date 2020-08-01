@@ -39,6 +39,7 @@ import unprotesting.com.github.Commands.AutoTuneCommand;
 import unprotesting.com.github.util.AutoSellEventHandler;
 import unprotesting.com.github.util.AutoTuneAutoSellEventHandler;
 import unprotesting.com.github.util.Config;
+import unprotesting.com.github.util.JavaScriptManager;
 import unprotesting.com.github.util.JoinEventHandler;
 import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
 import unprotesting.com.github.Commands.AutoTuneSellCommand;
@@ -103,7 +104,7 @@ public final class Main extends JavaPlugin implements Listener{
     public static ConcurrentMap<Integer, Material> ItemMap;
 
     @Getter
-    private File configf, shopf;
+    private File configf, shopf, jsMain;
 
     public String basicVolatilityAlgorithim;
     public String priceModel;
@@ -135,6 +136,8 @@ public final class Main extends JavaPlugin implements Listener{
         folderfile.mkdirs();
         File folderfileTemp = new File("plugins/Auto-Tune/temp/");
         folderfileTemp.mkdirs();
+        File folderfileJS = new File("plugins/Auto-Tune/Javascript/");
+        folderfileJS.mkdirs();
         INSTANCE = this;
         if (!setupEconomy()) {
             log.severe(
@@ -209,10 +212,12 @@ public final class Main extends JavaPlugin implements Listener{
         scheduler.scheduleSyncRepeatingTask(this, new AutoSellEventHandler(), Config.getAutoSellUpdatePeriod()*5, Config.getAutoSellUpdatePeriod());
         scheduler.scheduleSyncRepeatingTask(this, new AutoTuneAutoSellEventHandler(), Config.getAutoSellProfitUpdatePeriod()+20, Config.getAutoSellProfitUpdatePeriod());
         runnable();
+
         if (Config.isSellPriceDifferenceVariationEnabled()){
         Config.setSellPriceDifference(Config.getSellPriceDifferenceVariationStart()-tempdatadata.get("SellPriceDifferenceDifference"));
         SellDifrunnable();
         }
+        JavaScriptManager.executeJSMain();
     }
 
 
@@ -601,10 +606,16 @@ public final class Main extends JavaPlugin implements Listener{
 
         configf = new File(getDataFolder(), "config.yml");
         shopf = new File(getDataFolder(), "shops.yml");
+        jsMain = new File("plugins/Auto-Tune/Javascript", "Main.js");
 
         if (!configf.exists()) {
             configf.getParentFile().mkdirs();
             saveResource("config.yml", false);
+        }
+
+        if (!jsMain.exists()) {
+            jsMain.getParentFile().mkdirs();
+            saveResource("Javascript/Main.js", false);
         }
 
         if (!shopf.exists()) {

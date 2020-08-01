@@ -29,3 +29,5 @@ dependency-reduced-pom.xml
 Auto-Tune/target/classes/config.yml
 Auto-Tune/target/classes/plugin.yml
 Auto-Tune/target/classes/shops.yml
+
+pom.properties

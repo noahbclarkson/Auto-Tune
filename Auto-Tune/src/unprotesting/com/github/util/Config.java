@@ -7,21 +7,39 @@ public final class Config {
 
     @Getter
     @Setter
-    private static boolean webServer, debugEnabled, checksumHeaderBypass, sellPriceDifferenceVariationEnabled;
+    private static boolean webServer, 
+                                debugEnabled, 
+                                    checksumHeaderBypass, 
+                                        sellPriceDifferenceVariationEnabled;
 
     @Getter
     @Setter
-    private static Integer port, timePeriod, menuRows, sellPriceVariationTimePeriod, sellPriceVariationUpdatePeriod, autoSellUpdatePeriod, autoSellProfitUpdatePeriod;
+    private static Integer port, 
+                            timePeriod, 
+                                menuRows, 
+                                    sellPriceVariationTimePeriod, 
+                                        sellPriceVariationUpdatePeriod, 
+                                            autoSellUpdatePeriod, 
+                                                autoSellProfitUpdatePeriod;
 
     @Getter
     @Setter
-    private static String serverName, pricingModel, basicVolatilityAlgorithim, menuTitle, noPermission;
+    private static String serverName, 
+                            pricingModel, 
+                                basicVolatilityAlgorithim, 
+                                    menuTitle, 
+                                        noPermission;
 
     @Getter
     @Setter
-    private static Double basicMaxFixedVolatility, basicMaxVariableVolatility, 
-    basicMinFixedVolatility, basicMinVariableVolatility, sellPriceDifference, 
-    sellPriceDifferenceVariationStart, dataSelectionM, dataSelectionC, dataSelectionZ;
-
+    private static Double basicMaxFixedVolatility, 
+                            basicMaxVariableVolatility, 
+                                basicMinFixedVolatility, 
+                                    basicMinVariableVolatility, 
+                                        sellPriceDifference, 
+                                            sellPriceDifferenceVariationStart, 
+                                                dataSelectionM, 
+                                                    dataSelectionC,
+                                                        dataSelectionZ;
 
 }

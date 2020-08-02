@@ -23,11 +23,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
-import unprotesting.com.github.Commands.*;
 
 public class AutoTuneAutoSellCommand implements CommandExecutor{
 
-    
     @Override
     public boolean onCommand(CommandSender sender, Command command, String autosell, String[] args) {
 
@@ -42,8 +40,6 @@ public class AutoTuneAutoSellCommand implements CommandExecutor{
                     AutoTuneGUIShopUserCommand.SBPanePos = 2;
                 }
                 loadGUIMAIN(p, sender);
-
-
             return true;
 
         }
@@ -91,7 +87,7 @@ public class AutoTuneAutoSellCommand implements CommandExecutor{
             // page one
                 StaticPane pageOne = new StaticPane(1, 1, 7, menuRows - 2);
                 for(i = 0; i<size;){
-                        if (Main.memMap.isEmpty() == false){
+                        if (!(Main.memMap.isEmpty())){
                         b = (Material.matchMaterial(Main.memMap.get(i)));
                         final String materialString = Main.memMap.get(i);
                         is = new ItemStack(b);

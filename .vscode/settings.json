@@ -32,5 +32,4 @@
         "org.mockito.ArgumentMatchers.*",
         "org.mockito.Answers.*"
     ],
-
 }

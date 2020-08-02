@@ -1,1 +1,1 @@
-print('Script from file!');
+print("Script from file!");

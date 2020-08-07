@@ -32,4 +32,5 @@
         "org.mockito.ArgumentMatchers.*",
         "org.mockito.Answers.*"
     ],
+    "powershell.codeFormatting.addWhitespaceAroundPipe": true,
 }

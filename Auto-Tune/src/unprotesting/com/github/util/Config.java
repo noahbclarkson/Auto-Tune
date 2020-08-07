@@ -28,7 +28,9 @@ public final class Config {
                             pricingModel, 
                                 basicVolatilityAlgorithim, 
                                     menuTitle, 
-                                        noPermission;
+                                        noPermission,
+                                            apiKey,
+                                                email;
 
     @Getter
     @Setter

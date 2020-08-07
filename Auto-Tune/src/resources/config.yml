@@ -7,6 +7,12 @@
 
 ##  -- General Settings --  ##
 
+##  API key given on purchase
+api-key: 'xyz'
+
+##  Email used on signup
+email: 'xyz@gmail.com'
+
 ##  Enable//Disable integrated Web Server.
 web-server-enabled: true
 

@@ -20,6 +20,7 @@ public class AutoSellEventHandler implements Runnable {
     @Override
     public void run() {
         for(Player player : Main.getINSTANCE().getServer().getOnlinePlayers()){
+            if (player.getInventory().getContents() != null){
             ConcurrentHashMap<Integer, ItemStack> itemstosell = new ConcurrentHashMap<Integer, ItemStack>();
 			UUID uuid = player.getUniqueId();
             ConfigurationSection config = main.playerDataConfig.getConfigurationSection(uuid + ".AutoSell");
@@ -55,6 +56,7 @@ public class AutoSellEventHandler implements Runnable {
                 player.getInventory().remove(is);
             }
             AutoTuneSellCommand.sellItems(player, tosellMain, true);
+            }
         }
     } 
 

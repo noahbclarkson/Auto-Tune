@@ -8,7 +8,7 @@
   <!-- Project information -->
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune-Ultimate</artifactId>
-  <version>0.5.5</version>
+  <version>0.6.0</version>
 
   <name>Auto-Tune</name>
   <url>https://github.com/Unprotesting/Auto-Tune</url>
@@ -77,10 +77,15 @@
       <version>3.0.2</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.5.12</version>
+  </dependency>  
+    <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
       <artifactId>kotlin-stdlib</artifactId>
       <version>1.2.71</version>
-    </dependency>
+    </dependency> 
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
@@ -92,6 +97,35 @@
       <artifactId>kotlin-stdlib-common</artifactId>
       <version>1.2.71</version>
     </dependency>
+    <dependency>
+    <groupId>com.googlecode.json-simple</groupId>
+    <artifactId>json-simple</artifactId>
+    <version>1.1.1</version>
+</dependency>
+<dependency>
+  <groupId>com.googlecode.json-simple</groupId>
+  <artifactId>json-simple</artifactId>
+  <version>1.1.1</version>
+</dependency>
+<dependency>
+  <groupId>junit</groupId>
+  <artifactId>junit</artifactId>
+  <version>4.13</version>
+  <scope>test</scope>
+</dependency>
+<dependency>
+  <groupId>org.hamcrest</groupId>
+  <artifactId>hamcrest</artifactId>
+  <version>2.2</version>
+  <scope>test</scope>
+</dependency>
+<dependency>
+  <groupId>org.hamcrest</groupId>
+  <artifactId>hamcrest-core</artifactId>
+  <version>2.2</version>
+  <scope>test</scope>
+</dependency>
+
   </dependencies>
   <build>
     <defaultGoal>clean install</defaultGoal>
@@ -104,7 +138,6 @@
           <include>plugin.yml</include>
           <include>config.yml</include>
           <include>shops.yml</include>
-          <include>Javascript/Main.js</include>
         </includes>
       </resource>
     </resources>

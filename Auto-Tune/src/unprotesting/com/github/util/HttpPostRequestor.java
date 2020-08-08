@@ -37,9 +37,9 @@ public class HttpPostRequestor {
         HttpPost httpPost = new HttpPost("https://safe-refuge-09383.herokuapp.com");
         JSONObject json = JSONManager.returnJSONFromParams(model, algorithm, price, averageBuy, averageSell,
                 maxVolatility, minVolatility);
-        Main.debugLog("Sending data to API for " + item + " : " + "model: " + model + ", price: " + price
+        Main.debugLog("Sending data to API for " + item + ": - " + "model: " + model + ", price: " + price
                 + ", averageBuy: " + averageBuy + ", averageSell: " + averageSell + ", maxVolatility: " + maxVolatility
-                + ", minVolatility: " + minVolatility);
+                + ", minVolatility: " + minVolatility + ", APIKey: " + apikey + ", Email: " + email);
         StringEntity entity = new StringEntity(json.toJSONString());
         httpPost.setEntity(entity);
         httpPost.setHeader("content-type", "application/json");
@@ -60,10 +60,13 @@ public class HttpPostRequestor {
         HttpEntity entityResponse = response.getEntity();
         if (entityResponse != null) {
             JsonParser parser = new JsonParser();
-            String result = EntityUtils.toString(entity);
-            JsonElement jsonElement = new JsonParser().parse(result);
+            String result = EntityUtils.toString(entityResponse);
+            Main.debugLog("Result: " + result);
+            JsonElement jsonElement = parser.parse(result);
             JsonObject jsonObject = jsonElement.getAsJsonObject();
-            String NewPrice = (jsonObject.get("newPrice")).toString();
+            Main.debugLog("JsonElement: " + jsonElement.toString());
+            JsonElement NewPriceElement = (jsonObject.get("newPrice"));
+            String NewPrice = NewPriceElement.getAsString();
             Main.debugLog("New price for " + item + " = $" + (NewPrice));
             newPrice = Double.parseDouble(NewPrice);
         }

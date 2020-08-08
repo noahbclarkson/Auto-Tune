@@ -450,7 +450,7 @@ public final class Main extends JavaPlugin implements Listener {
             Double[] temp2 = tempMap.get(tempMap.size() - 1);
             Double temp3 = temp2[0];
             Integer tsize = tempMap.size();
-            if (priceModel.contains("Basic") == true || priceModel.contains("Advanced") || priceModel.contains("Exponential") && basicVolatilityAlgorithim.contains("Fixed") == true) {
+            if ((priceModel.contains("Basic") == true || priceModel.contains("Advanced") || priceModel.contains("Exponential")) && basicVolatilityAlgorithim.contains("Fixed") == true) {
               Double newSpotPrice = HttpPostRequestor.sendRequestForPrice("Fixed", priceModel, Config.getApiKey(), Config.getEmail(), str, temp3, avBuy, avSells, Config.getBasicMaxFixedVolatility(), Config.getBasicMinFixedVolatility());
               Double[] temporary = {
                 newSpotPrice,
@@ -467,7 +467,7 @@ public final class Main extends JavaPlugin implements Listener {
               map.put(str, tempMap);
 
             }
-            if (priceModel.contains("Basic") == true || priceModel.contains("Advanced") || priceModel.contains("Exponential") && basicVolatilityAlgorithim.contains("Variable") == true) {
+            if ((priceModel.contains("Basic") == true || priceModel.contains("Advanced") || priceModel.contains("Exponential")) && basicVolatilityAlgorithim.contains("Variable") == true) {
               Double newSpotPrice = HttpPostRequestor.sendRequestForPrice("Variable", priceModel, Config.getApiKey(), Config.getEmail(), str, temp3, avBuy, avSells, Config.getBasicMaxVariableVolatility(), Config.getBasicMinVariableVolatility());
               Double[] temporary = {
                 newSpotPrice,
@@ -495,7 +495,7 @@ public final class Main extends JavaPlugin implements Listener {
             Double[] temp2 = tempMap.get(tempMap.size() - 1);
             Double temp3 = temp2[0];
             Integer tsize = tempMap.size();
-            if (priceModel.contains("Basic") == true || priceModel.contains("Advanced") || priceModel.contains("Exponential") && basicVolatilityAlgorithim.contains("Fixed")) {
+            if ((priceModel.contains("Basic") == true || priceModel.contains("Advanced") || priceModel.contains("Exponential")) && basicVolatilityAlgorithim.contains("Fixed")) {
               Double newSpotPrice = HttpPostRequestor.sendRequestForPrice("Fixed", priceModel, Config.getApiKey(), Config.getEmail(), str, temp3, avBuy, avSells, Config.getBasicMaxFixedVolatility(), Config.getBasicMinFixedVolatility());
               Double[] temporary = {
                 newSpotPrice,
@@ -511,7 +511,7 @@ public final class Main extends JavaPlugin implements Listener {
               tempMap.put(tsize, temporary);
               map.put(str, tempMap);
             }
-            if (priceModel.contains("Basic") == true || priceModel.contains("Advanced") || priceModel.contains("Exponential") && basicVolatilityAlgorithim.contains("Variable") == true) {
+            if ((priceModel.contains("Basic") == true || priceModel.contains("Advanced") || priceModel.contains("Exponential")) && basicVolatilityAlgorithim.contains("Variable") == true) {
               Double newSpotPrice = HttpPostRequestor.sendRequestForPrice("Variable", priceModel, Config.getApiKey(), Config.getEmail(), str, temp3, avBuy, avSells, Config.getBasicMaxVariableVolatility(), Config.getBasicMinVariableVolatility());
               Double[] temporary = {
                 newSpotPrice,
@@ -708,6 +708,8 @@ public final class Main extends JavaPlugin implements Listener {
     ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("menu-title", "Auto-Tune Shop")));
     Config.setPricingModel(
     ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("pricing-model", "Basic")));
+    Config.setApiKey(getMainConfig().getString("api-key", "xyz"));
+    Config.setEmail(getMainConfig().getString("email", "xyz@gmail.com"));
     Config.setBasicVolatilityAlgorithim(ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("Volatility-Algorithim", "Fixed")));
     Config.setNoPermission(ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("no-permission", "You do not have permission to perform this command")));
     Config.setBasicMaxFixedVolatility(getMainConfig().getDouble("Fixed-Max-Volatility", 2.00));
@@ -743,7 +745,8 @@ public final class Main extends JavaPlugin implements Listener {
     }
   }
 
-  @Getter@Setter
+  @Getter
+  @Setter
   public static Gui gui;
 
   public ArrayList < String > itemStringArray;

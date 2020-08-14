@@ -89,6 +89,20 @@ sell-price-variation-time-period: 10080
 ##  Info: Must be a factor of sell-price-variation-time-period or it wont work!
 sell-price-variation-update-period: 30
 
+##  Enable forced inflation in the economy
+inflation-enabled: true
+##  Inflation method can be Dynamic, Static or Mixed.
+##  Info: The dynamic method increases the prices of items in the economy by a percentage each time period
+##  Info: The static method adds extra values to buys
+##  Info: Mixed uses both methods
+inflation-method: 'Mixed'
+##  Time period in minutes between dynamic price increases
+dynamic-inflation-time-period: 15
+##  Percentage increase in prices per time-period.
+dynamic-inflation-value: 0.025
+##  Percentage increase for buy value per price calculation update period.
+static-inflation-value: 0.025
+
 
 
 ##  -- Other Settings --

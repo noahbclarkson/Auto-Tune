@@ -10,7 +10,8 @@ public final class Config {
     private static boolean webServer, 
                                 debugEnabled, 
                                     checksumHeaderBypass, 
-                                        sellPriceDifferenceVariationEnabled;
+                                        sellPriceDifferenceVariationEnabled,
+                                            inflationEnabled;
 
     @Getter
     @Setter
@@ -20,7 +21,8 @@ public final class Config {
                                     sellPriceVariationTimePeriod, 
                                         sellPriceVariationUpdatePeriod, 
                                             autoSellUpdatePeriod, 
-                                                autoSellProfitUpdatePeriod;
+                                                autoSellProfitUpdatePeriod,
+                                                    dynamicInflationUpdatePeriod;
 
     @Getter
     @Setter
@@ -30,7 +32,8 @@ public final class Config {
                                     menuTitle, 
                                         noPermission,
                                             apiKey,
-                                                email;
+                                                email,
+                                                    inflationMethod;
 
     @Getter
     @Setter
@@ -42,6 +45,8 @@ public final class Config {
                                             sellPriceDifferenceVariationStart, 
                                                 dataSelectionM, 
                                                     dataSelectionC,
-                                                        dataSelectionZ;
+                                                        dataSelectionZ,
+                                                            dynamicInflationValue,
+                                                                InflationValue;
 
 }

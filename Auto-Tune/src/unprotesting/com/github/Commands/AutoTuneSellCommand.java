@@ -127,7 +127,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
     public static void roundAndGiveMoney(Player player, double moneyToGive, Boolean autoSell) {
 		Double moneyToGiveRounded = (double) Math.round(moneyToGive * 100) / 100;
 
-		if (moneyToGiveRounded > 0) {
+		if (moneyToGiveRounded > 0 && moneyToGiveRounded != null) {
             
             if (autoSell == false){
             Main.econ.depositPlayer(player, moneyToGiveRounded);

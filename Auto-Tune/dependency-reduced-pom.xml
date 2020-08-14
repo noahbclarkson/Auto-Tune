@@ -4,7 +4,7 @@
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune-Ultimate</artifactId>
   <name>Auto-Tune</name>
-  <version>0.6.1</version>
+  <version>0.6.2</version>
   <description>The automatic pricing plugin for minecraft</description>
   <url>https://github.com/Unprotesting/Auto-Tune</url>
   <issueManagement>
@@ -125,24 +125,6 @@
           <groupId>org.bukkit</groupId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.13</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest</artifactId>
-      <version>2.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
-      <version>2.2</version>
-      <scope>test</scope>
     </dependency>
   </dependencies>
   <properties>

@@ -8,7 +8,7 @@
   <!-- Project information -->
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune-Ultimate</artifactId>
-  <version>0.6.1</version>
+  <version>0.6.2</version>
 
   <name>Auto-Tune</name>
   <url>https://github.com/Unprotesting/Auto-Tune</url>
@@ -54,7 +54,6 @@
       <version>1.16.1-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
-    <!--Bukkit API -->
     <dependency>
       <groupId>com.github.MilkBowl</groupId>
       <artifactId>VaultAPI</artifactId>
@@ -64,28 +63,13 @@
     <dependency>
       <groupId>com.github.stefvanschie.inventoryframework</groupId>
       <artifactId>IF</artifactId>
-      <version>0.6.1</version>
-    </dependency>
-    <dependency>
-      <groupId>space.arim</groupId>
-      <artifactId>legacyitemconstructor</artifactId>
-      <version>0.1.1-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>jsr305</artifactId>
-      <version>3.0.2</version>
+      <version>0.7.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <version>4.5.12</version>
   </dependency>  
-    <dependency>
-      <groupId>org.jetbrains.kotlin</groupId>
-      <artifactId>kotlin-stdlib</artifactId>
-      <version>1.2.71</version>
-    </dependency> 
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
@@ -93,39 +77,10 @@
         <scope>compile</scope>
       </dependency>
     <dependency>
-      <groupId>org.jetbrains.kotlin</groupId>
-      <artifactId>kotlin-stdlib-common</artifactId>
-      <version>1.2.71</version>
-    </dependency>
-    <dependency>
     <groupId>com.googlecode.json-simple</groupId>
     <artifactId>json-simple</artifactId>
     <version>1.1.1</version>
 </dependency>
-<dependency>
-  <groupId>com.googlecode.json-simple</groupId>
-  <artifactId>json-simple</artifactId>
-  <version>1.1.1</version>
-</dependency>
-<dependency>
-  <groupId>junit</groupId>
-  <artifactId>junit</artifactId>
-  <version>4.13</version>
-  <scope>test</scope>
-</dependency>
-<dependency>
-  <groupId>org.hamcrest</groupId>
-  <artifactId>hamcrest</artifactId>
-  <version>2.2</version>
-  <scope>test</scope>
-</dependency>
-<dependency>
-  <groupId>org.hamcrest</groupId>
-  <artifactId>hamcrest-core</artifactId>
-  <version>2.2</version>
-  <scope>test</scope>
-</dependency>
-
   </dependencies>
   <build>
     <defaultGoal>clean install</defaultGoal>

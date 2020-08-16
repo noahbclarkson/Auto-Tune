@@ -38,3 +38,6 @@ bin/
 .vscode/settings.json
 Auto-Tune/.idea/
 Auto-Tune/.settings/
+.idea
+idea/
+.settings

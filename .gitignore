@@ -34,3 +34,5 @@ pom.properties
 Auto-Tune/target/classes/Javascript/Main.js
 Auto-Tune/target/classes/Javascript/Main.js
 bin/
+.vscode/launch.json
+.vscode/settings.json

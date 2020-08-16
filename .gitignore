@@ -36,3 +36,5 @@ Auto-Tune/target/classes/Javascript/Main.js
 bin/
 .vscode/launch.json
 .vscode/settings.json
+Auto-Tune/.idea/
+Auto-Tune/.settings/

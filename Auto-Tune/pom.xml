@@ -7,9 +7,9 @@
   </properties>
   <!-- Project information -->
   <groupId>unprotesting.com.github</groupId>
-  <artifactId>Auto-Tune-Ultimate</artifactId>
-  <version>0.6.2</version>
-
+  <artifactId>Auto-Tune</artifactId>
+  <version>0.6.3</version>
+ <!-- Info -->
   <name>Auto-Tune</name>
   <url>https://github.com/Unprotesting/Auto-Tune</url>
   <description>The automatic pricing plugin for minecraft</description>
@@ -18,15 +18,12 @@
     <name>Unprotesting</name>
     <url>https://github.com/Unprotesting</url>
   </organization>
-  <scm>
-    <url>https://github.com/Unprotesting/Auto-Tune</url>
-    <connection>scm:git:git://github.com:pablo67340/GUIShop.git</connection>
-    <developerConnection>scm:git:git@github.com:pablo67340/GUIShop.git</developerConnection>
-  </scm>
+   <!-- Issue Management -->
   <issueManagement>
     <system>GitHub</system>
     <url>https://github.com/Unprotesting/Auto-Tune/issues</url>
   </issueManagement>
+   <!-- Repositories -->
   <repositories>
     <repository>
       <id>spigot-repo</id>
@@ -41,7 +38,7 @@
       <url>https://jitpack.io</url>
     </repository>
   </repositories>
-
+   <!-- Dependencies -->
   <dependencies>
     <dependency>
       <groupId>org.mapdb</groupId>
@@ -82,6 +79,7 @@
     <version>1.1.1</version>
 </dependency>
   </dependencies>
+  <!-- Build Configuration -->
   <build>
     <defaultGoal>clean install</defaultGoal>
     <sourceDirectory>${project.basedir}/src/</sourceDirectory>

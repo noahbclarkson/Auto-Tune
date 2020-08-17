@@ -23,7 +23,7 @@ port: 8123
 server-name: 'Auto-Tune Test Server'
 
 ##  Automatic Pricing Model
-pricing-model: 'Advanced'
+pricing-model: 'Basic'
 
 ##  Time Period in minutes
 time-period: 10
@@ -48,18 +48,18 @@ auto-sell-profit-update-period: 1200
 ##  Volatility Calulation Algorithim
 ##  Info: A fixed rate locks the maxiumum change to a certain price
 ##  Info: A variable rate changes the maxiumum price-change based on current price calculations
-Volatility-Algorithim: 'Fixed'
+Volatility-Algorithim: 'Variable'
 
 ##  Percentage difference in sell price to buy price
 sell-price-difference: 2.5
 
 ##  Maximum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Fixed-Max-Volatility: 2.00
-##  Maximum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
-Fixed-Max-Volatility: 2.00
+##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
+Fixed-Min-Volatility: 0.05
 
 ##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
-Variable-Max-Volatility: 6.00
+Variable-Max-Volatility: 3.00
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Variable-Min-Volatility: 0.05
 
@@ -75,7 +75,6 @@ data-selection-m: 0.05
 data-selection-z: 1.6
 ##  'c' in equation: y=m(x^z)+c
 data-selection-c: 1.25
-
 
 ##  -- Other Econonomy Settings --
 
@@ -96,14 +95,12 @@ inflation-enabled: true
 ##  Info: The static method adds extra values to buys
 ##  Info: Mixed uses both methods
 inflation-method: 'Mixed'
-##  Time period in minutes between dynamic price increases
-dynamic-inflation-time-period: 15
+##  Time period in ticks between dynamic price increases
+dynamic-inflation-time-period: 36000
 ##  Percentage increase in prices per time-period.
 dynamic-inflation-value: 0.025
 ##  Percentage increase for buy value per price calculation update period.
 static-inflation-value: 0.025
-
-
 
 ##  -- Other Settings --
 

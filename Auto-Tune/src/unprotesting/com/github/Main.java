@@ -11,16 +11,8 @@ import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -28,25 +20,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.github.stefvanschie.inventoryframework.Gui;
-import com.github.stefvanschie.inventoryframework.GuiItem;
 import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
-import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
-import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 import com.sun.net.httpserver.HttpServer;
 
-import unprotesting.com.github.Commands.AutoTuneAutoSellCommand;
-import unprotesting.com.github.Commands.AutoTuneCommand;
-import unprotesting.com.github.util.AutoSellEventHandler;
-import unprotesting.com.github.util.AutoTuneAutoSellEventHandler;
-import unprotesting.com.github.util.Config;
-import unprotesting.com.github.util.HttpPostRequestor;
-import unprotesting.com.github.util.JSONManager;
-import unprotesting.com.github.util.JoinEventHandler;
-import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
-import unprotesting.com.github.Commands.AutoTuneSellCommand;
-import unprotesting.com.github.util.StaticFileHandler;
-
-import org.apache.http.client.ClientProtocolException;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -57,26 +33,35 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
-import org.bukkit.scheduler.BukkitTask;
 import org.json.simple.parser.ParseException;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
 import org.mapdb.Serializer;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.milkbowl.vault.economy.Economy;
-import lombok.Getter;
-import lombok.Setter;
+import unprotesting.com.github.Commands.AutoTuneAutoSellCommand;
+import unprotesting.com.github.Commands.AutoTuneCommand;
+import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
+import unprotesting.com.github.Commands.AutoTuneSellCommand;
+import unprotesting.com.github.util.AutoSellEventHandler;
+import unprotesting.com.github.util.AutoTuneAutoSellEventHandler;
+import unprotesting.com.github.util.Config;
+import unprotesting.com.github.util.HttpPostRequestor;
+import unprotesting.com.github.util.InflationEventHandler;
+import unprotesting.com.github.util.JoinEventHandler;
+import unprotesting.com.github.util.StaticFileHandler;
 
 public final class Main extends JavaPlugin implements Listener {
 
@@ -94,39 +79,30 @@ public final class Main extends JavaPlugin implements Listener {
   public FileConfiguration playerDataConfig;
   public final String playerdatafilename = "playerdata.yml";
 
-  public static DB db,
-  memDB,
-  tempDB;
+  public static DB db, memDB, tempDB;
 
-  public static HTreeMap < String,
-  Double > tempdatadata;
+  public static HTreeMap<String, Double> tempdatadata;
 
-  public static ConcurrentMap < String,
-  ConcurrentHashMap < Integer,
-  Double[] >> map;
+  public static ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>> map;
 
-  public static HTreeMap < Integer,
-  String > memMap;
+  public static HTreeMap<Integer, String> memMap;
 
-  public static ConcurrentHashMap < String,
-  ConcurrentHashMap < Integer,
-  Double[] >> tempmap;
+  public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, Double[]>> tempmap;
 
-  public static ConcurrentMap < Integer,
-  Material > ItemMap;
+  public static ConcurrentMap<Integer, Material> ItemMap;
 
   @Getter
-  private File configf,
-  shopf;
+  private File configf, shopf;
 
   public String basicVolatilityAlgorithim;
   public static String priceModel;
 
-  @Getter@Setter
-  static private FileConfiguration mainConfig,
-  shopConfig;
+  @Getter
+  @Setter
+  static private FileConfiguration mainConfig, shopConfig;
 
-  @Getter@Setter
+  @Getter
+  @Setter
   public static Integer materialListSize;
 
   @Override
@@ -135,7 +111,8 @@ public final class Main extends JavaPlugin implements Listener {
     log.info(String.format("[%s] Disabled Version %s", getDescription().getName(), getDescription().getVersion()));
   }
 
-  private void cancelAllTasks(Main main) {}
+  private void cancelAllTasks(Main main) {
+  }
 
   @Override
   public void onEnable() {
@@ -221,7 +198,8 @@ public final class Main extends JavaPlugin implements Listener {
     scheduler.scheduleSyncRepeatingTask(this, new AutoSellEventHandler(), Config.getAutoSellUpdatePeriod() * 5, Config.getAutoSellUpdatePeriod());
     scheduler.scheduleSyncRepeatingTask(this, new AutoTuneAutoSellEventHandler(), Config.getAutoSellProfitUpdatePeriod() + 20, Config.getAutoSellProfitUpdatePeriod());
     runnable();
-
+    if ((Config.getInflationMethod().contains("Mixed") || Config.getInflationMethod().contains("Dynamic"))&&Config.isInflationEnabled()){
+    scheduler.scheduleAsyncRepeatingTask(this, new InflationEventHandler(), Config.getDynamicInflationUpdatePeriod() + 40,Config.getDynamicInflationUpdatePeriod());}
     if (Config.isSellPriceDifferenceVariationEnabled()) {
       Config.setSellPriceDifference(Config.getSellPriceDifferenceVariationStart() - tempdatadata.get("SellPriceDifferenceDifference"));
       SellDifrunnable();
@@ -349,7 +327,8 @@ public final class Main extends JavaPlugin implements Listener {
         ConcurrentHashMap < Integer,
         Double[] > tempMap = map.get(str);
         Integer expvalues = 0;
-        ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection(str);
+        Main.getINSTANCE();
+        ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops").getConfigurationSection(str);
         locked = null;
         if (config != null) {
           Boolean lk = config.getBoolean("locked", false);
@@ -414,6 +393,10 @@ public final class Main extends JavaPlugin implements Listener {
               sells = sells + tempsells;
               x++;
             }
+          }
+
+          if ((Config.getInflationMethod().contains("Static") || Config.getInflationMethod().contains("Mixed"))&&Config.isInflationEnabled()){
+            buys = buys+buys*0.01*Config.getInflationValue();
           }
 
           if (locked == falseBool) {
@@ -670,12 +653,12 @@ public final class Main extends JavaPlugin implements Listener {
         int PORT = Config.getPort();
         InetAddress address = InetAddress.getLocalHost();
         String hostName = address.getHostName();
-        this.getCommand("at").setExecutor(new AutoTuneCommand());
-        TextComponent message = new TextComponent(ChatColor.YELLOW + "" + ChatColor.BOLD + player.getDisplayName() + ", go to http://" + hostIP + ":" + PORT + "/static/index.html");
+        TextComponent message = new TextComponent(ChatColor.YELLOW + "" + ChatColor.BOLD + player.getDisplayName() + ", go to http://" + hostIP + ":" + PORT + "/trade.html");
         message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click to begin trading online").create()));
-        message.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "http://" + hostIP + ":" + PORT + "/static/index.html"));
+        message.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "http://" + hostIP + ":" + PORT + "/trade.html"));
         player.spigot().sendMessage(message);
-        player.sendMessage(ChatColor.ITALIC + "Hostname : " + hostName);
+        if (player.isOp()){
+        player.sendMessage(ChatColor.ITALIC + "Hostname : " + hostName);}
       } catch(Exception e) {
         hostIP = "Cannot Execute Properly";
       }

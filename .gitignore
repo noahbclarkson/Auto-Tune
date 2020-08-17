@@ -29,6 +29,9 @@ dependency-reduced-pom.xml
 Auto-Tune/target/classes/config.yml
 Auto-Tune/target/classes/plugin.yml
 Auto-Tune/target/classes/shops.yml
+Auto-Tune/target/classes/web/trade.html
+Auto-Tune/target/classes/web/trade-short.html
+
 
 pom.properties
 Auto-Tune/target/classes/Javascript/Main.js
@@ -41,3 +44,4 @@ Auto-Tune/.settings/
 .idea
 idea/
 .settings
+Auto-Tune/target/classes/web/trade.html

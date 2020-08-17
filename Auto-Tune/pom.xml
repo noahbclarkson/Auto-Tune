@@ -8,7 +8,7 @@
   <!-- Project information -->
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune</artifactId>
-  <version>0.6.3</version>
+  <version>0.6.4</version>
  <!-- Info -->
   <name>Auto-Tune</name>
   <url>https://github.com/Unprotesting/Auto-Tune</url>
@@ -91,6 +91,8 @@
           <include>plugin.yml</include>
           <include>config.yml</include>
           <include>shops.yml</include>
+          <include>web/trade.html</include>
+          <include>web/trade-short.html</include>
         </includes>
       </resource>
     </resources>

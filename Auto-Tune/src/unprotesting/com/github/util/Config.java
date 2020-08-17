@@ -22,7 +22,8 @@ public final class Config {
                                         sellPriceVariationUpdatePeriod, 
                                             autoSellUpdatePeriod, 
                                                 autoSellProfitUpdatePeriod,
-                                                    dynamicInflationUpdatePeriod;
+                                                    dynamicInflationUpdatePeriod,
+                                                        maximumShortTradeLength;
 
     @Getter
     @Setter

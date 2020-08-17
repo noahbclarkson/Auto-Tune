@@ -92,7 +92,7 @@ public final class Main extends JavaPlugin implements Listener {
   public static ConcurrentMap<Integer, Material> ItemMap;
 
   @Getter
-  private File configf, shopf;
+  private File configf, shopf, tradef, tradeShortf;
 
   public String basicVolatilityAlgorithim;
   public static String priceModel;
@@ -104,6 +104,8 @@ public final class Main extends JavaPlugin implements Listener {
   @Getter
   @Setter
   public static Integer materialListSize;
+
+  public File folderfile;
 
   @Override
   public void onDisable() {
@@ -117,9 +119,9 @@ public final class Main extends JavaPlugin implements Listener {
   @Override
   public void onEnable() {
     Bukkit.getServer().getPluginManager().registerEvents(new JoinEventHandler(), this);
-    createFiles();
-    File folderfile = new File("plugins/Auto-Tune/web/");
+    folderfile = new File("plugins/Auto-Tune/web/");
     folderfile.mkdirs();
+    createFiles();
     File folderfileTemp = new File("plugins/Auto-Tune/temp/");
     folderfileTemp.mkdirs();
     File folderfileJS = new File("plugins/Auto-Tune/Javascript/");
@@ -610,14 +612,75 @@ public final class Main extends JavaPlugin implements Listener {
 
   }
 
+  public static void writeShortCSV() throws InterruptedException,
+  IOException {
+    FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/web/sample.csv");
+
+    Set < String > strSet = map.keySet();
+    for (String str: strSet) {
+      ConcurrentHashMap < Integer,
+      Double[] > item = map.get(str);
+
+      csvWriter.append("\n");
+      csvWriter.append("%" + str);
+      csvWriter.append(",");
+      csvWriter.append("\n");
+
+      int size = item.size();
+
+      for (int i = size-Config.getMaximumShortTradeLength(); i > -100; i++) {
+        String k = String.valueOf(i);
+        csvWriter.append(k);
+        Double[] l = (item.get(i));
+        if (l == null) {
+          break;
+        }
+        double SP = l[0];
+        String parsedSP = String.valueOf(SP);
+        csvWriter.append(",");
+        csvWriter.append(parsedSP);
+        double Buy = l[1];
+        String parsedBuy = String.valueOf(Buy);
+        csvWriter.append(",");
+        csvWriter.append(parsedBuy);
+        double Sell = l[2];
+        String parsedSell = String.valueOf(Sell);
+        csvWriter.append(",");
+        csvWriter.append(parsedSell);
+        csvWriter.append("\n");
+      }
+      csvWriter.append("\n");
+    }
+    // for (List<String> rowData : rows) {
+    //     csvWriter.append(String.join(",", rowData));
+    //     csvWriter.append("\n");
+    // }
+    csvWriter.flush();
+    csvWriter.close();
+
+  }
+
+
   public void createFiles() {
 
     configf = new File(getDataFolder(), "config.yml");
     shopf = new File(getDataFolder(), "shops.yml");
+    tradef = new File("plugins/Auto-Tune/web/", "trade.html");
+    tradeShortf = new File("plugins/Auto-Tune/web/", "trade-short.html");
 
     if (!configf.exists()) {
       configf.getParentFile().mkdirs();
       saveResource("config.yml", false);
+    }
+
+    if (!tradef.exists()) {
+      tradef.getParentFile().mkdirs();
+      saveResource("web/trade.html", false);
+    }
+
+    if (!tradeShortf.exists()) {
+      tradeShortf.getParentFile().mkdirs();
+      saveResource("web/trade-short.html", false);
     }
 
     if (!shopf.exists()) {
@@ -654,9 +717,13 @@ public final class Main extends JavaPlugin implements Listener {
         InetAddress address = InetAddress.getLocalHost();
         String hostName = address.getHostName();
         TextComponent message = new TextComponent(ChatColor.YELLOW + "" + ChatColor.BOLD + player.getDisplayName() + ", go to http://" + hostIP + ":" + PORT + "/trade.html");
-        message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click to begin trading online").create()));
+        message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click view item prices").create()));
         message.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "http://" + hostIP + ":" + PORT + "/trade.html"));
         player.spigot().sendMessage(message);
+        TextComponent message2 = new TextComponent(ChatColor.YELLOW + "" + ChatColor.BOLD + player.getDisplayName() + ", go to http://" + hostIP + ":" + PORT + "/trade-short.html");
+        message2.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click to view recent item prices").create()));
+        message2.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "http://" + hostIP + ":" + PORT + "/trade-short.html"));
+        player.spigot().sendMessage(message2);
         if (player.isOp()){
         player.sendMessage(ChatColor.ITALIC + "Hostname : " + hostName);}
       } catch(Exception e) {
@@ -677,13 +744,16 @@ public final class Main extends JavaPlugin implements Listener {
   public void loadDefaults() {
     Config.setSellPriceDifferenceVariationEnabled(getMainConfig().getBoolean("sell-price-difference-variation-enabled", false));
     Config.setWebServer(getMainConfig().getBoolean("web-server-enabled", false));
+    Config.setInflationEnabled(getMainConfig().getBoolean("inflation-enabled", true));
     Config.setChecksumHeaderBypass(getMainConfig().getBoolean("checksum-header-bypass", false));
     Config.setDebugEnabled(getMainConfig().getBoolean("debug-enabled", false));
     Config.setAutoSellProfitUpdatePeriod(getMainConfig().getInt("auto-sell-profit-update-period", 1200));
     Config.setPort(getMainConfig().getInt("port", 8321));
+    Config.setMaximumShortTradeLength(getMainConfig().getInt("maximum-short-trade-length", 100));
     Config.setAutoSellUpdatePeriod(getMainConfig().getInt("auto-sell-update-period", 10));
     Config.setTimePeriod(getMainConfig().getInt("time-period", 10));
     Config.setMenuRows(getMainConfig().getInt("menu-rows", 3));
+    Config.setDynamicInflationUpdatePeriod(getMainConfig().getInt("dynamic-inflation-update-period", 3600));
     Config.setSellPriceVariationTimePeriod(getMainConfig().getInt("sell-price-variation-time-period", 10800));
     Config.setSellPriceVariationUpdatePeriod(getMainConfig().getInt("sell-price-variation-update-period", 30));
     Config.setServerName(ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("server-name", "Survival Server - (Change this in Config)")));
@@ -692,6 +762,7 @@ public final class Main extends JavaPlugin implements Listener {
     Config.setPricingModel(
     ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("pricing-model", "Basic")));
     Config.setApiKey(getMainConfig().getString("api-key", "xyz"));
+    Config.setInflationMethod(getMainConfig().getString("inflation-method", "Mixed"));
     Config.setEmail(getMainConfig().getString("email", "xyz@gmail.com"));
     Config.setBasicVolatilityAlgorithim(ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("Volatility-Algorithim", "Fixed")));
     Config.setNoPermission(ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("no-permission", "You do not have permission to perform this command")));
@@ -701,6 +772,8 @@ public final class Main extends JavaPlugin implements Listener {
     Config.setBasicMinVariableVolatility(getMainConfig().getDouble("Variable-Min-Volatility", 0.05));
     Config.setDataSelectionM(getMainConfig().getDouble("data-selection-m", 0.05));
     Config.setDataSelectionC(getMainConfig().getDouble("data-selection-c", 1.25));
+    Config.setDynamicInflationValue(getMainConfig().getDouble("dynamic-inflation-value", 0.02));
+    Config.setInflationValue(getMainConfig().getDouble("static-inflation-value", 0.05));
     Config.setDataSelectionZ(getMainConfig().getDouble("data-selection-z", 1.6));
     Config.setSellPriceDifference(getMainConfig().getDouble("sell-price-difference", 2.5));
     Config.setSellPriceDifferenceVariationStart(getMainConfig().getDouble("sell-price-differnence-variation-start", 25.0));

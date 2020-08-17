@@ -19,6 +19,9 @@ web-server-enabled: true
 ##  Port for integrated Web Server (If enabled and on correct plan)
 port: 8123
 
+##  The maximum length in data points that the trade-short.html will show (this doesn't affect data)
+maximum-short-trade-length: 100
+
 ##  Server name that will show up in commands and requests
 server-name: 'Auto-Tune Test Server'
 
@@ -38,7 +41,7 @@ menu-title: 'Auto-Tune Shop'
 no-permission: 'You do not have permission to perform this command'
 
 ##  How often auto-sell updates in ticks
-auto-sell-update-period: 10
+auto-sell-update-period: 15
 
 ##  How often players are shown their auto-sell profits in ticks
 auto-sell-profit-update-period: 1200
@@ -96,11 +99,11 @@ inflation-enabled: true
 ##  Info: Mixed uses both methods
 inflation-method: 'Mixed'
 ##  Time period in ticks between dynamic price increases
-dynamic-inflation-time-period: 36000
+dynamic-inflation-time-period: 3600
 ##  Percentage increase in prices per time-period.
-dynamic-inflation-value: 0.025
+dynamic-inflation-value: 0.02
 ##  Percentage increase for buy value per price calculation update period.
-static-inflation-value: 0.025
+static-inflation-value: 0.05
 
 ##  -- Other Settings --
 

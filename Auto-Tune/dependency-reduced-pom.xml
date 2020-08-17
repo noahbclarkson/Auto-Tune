@@ -4,7 +4,7 @@
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune</artifactId>
   <name>Auto-Tune</name>
-  <version>0.6.3</version>
+  <version>0.6.4</version>
   <description>The automatic pricing plugin for minecraft</description>
   <url>https://github.com/Unprotesting/Auto-Tune</url>
   <issueManagement>
@@ -26,6 +26,8 @@
           <include>plugin.yml</include>
           <include>config.yml</include>
           <include>shops.yml</include>
+          <include>web/trade.html</include>
+          <include>web/trade-short.html</include>
         </includes>
       </resource>
     </resources>

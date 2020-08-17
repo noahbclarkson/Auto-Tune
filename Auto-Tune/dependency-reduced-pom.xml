@@ -2,20 +2,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>unprotesting.com.github</groupId>
-  <artifactId>Auto-Tune-Ultimate</artifactId>
+  <artifactId>Auto-Tune</artifactId>
   <name>Auto-Tune</name>
-  <version>0.6.2</version>
+  <version>0.6.3</version>
   <description>The automatic pricing plugin for minecraft</description>
   <url>https://github.com/Unprotesting/Auto-Tune</url>
   <issueManagement>
     <system>GitHub</system>
     <url>https://github.com/Unprotesting/Auto-Tune/issues</url>
   </issueManagement>
-  <scm>
-    <connection>scm:git:git://github.com:pablo67340/GUIShop.git</connection>
-    <developerConnection>scm:git:git@github.com:pablo67340/GUIShop.git</developerConnection>
-    <url>https://github.com/Unprotesting/Auto-Tune</url>
-  </scm>
   <organization>
     <name>Unprotesting</name>
     <url>https://github.com/Unprotesting</url>
@@ -93,7 +88,7 @@
     <dependency>
       <groupId>org.spigotmc</groupId>
       <artifactId>spigot-api</artifactId>
-      <version>1.16.1-R0.1-SNAPSHOT</version>
+      <version>1.16.2-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
       <exclusions>
         <exclusion>

@@ -11,7 +11,7 @@ public class CSVHandler {
 
     public static void writeCSV() throws InterruptedException,
   IOException {
-    FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/web/sample.csv");
+    FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/web/trade.csv");
 
     Set < String > strSet = Main.map.keySet();
     for (String str: strSet) {
@@ -57,7 +57,7 @@ public class CSVHandler {
 
   public static void writeShortCSV() throws InterruptedException,
   IOException {
-    FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/web/sample.csv");
+    FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/web/trade-short.csv");
 
     Set < String > strSet = Main.map.keySet();
     for (String str: strSet) {

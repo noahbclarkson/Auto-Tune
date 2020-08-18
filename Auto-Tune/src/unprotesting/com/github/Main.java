@@ -624,7 +624,7 @@ public final class Main extends JavaPlugin implements Listener {
     Config.setAutoSellUpdatePeriod(getMainConfig().getInt("auto-sell-update-period", 10));
     Config.setTimePeriod(getMainConfig().getInt("time-period", 10));
     Config.setMenuRows(getMainConfig().getInt("menu-rows", 3));
-    Config.setDynamicInflationUpdatePeriod(getMainConfig().getInt("dynamic-inflation-update-period", 3600));
+    Config.setDynamicInflationUpdatePeriod(getMainConfig().getInt("dynamic-inflation-update-period", 5000));
     Config.setSellPriceVariationTimePeriod(getMainConfig().getInt("sell-price-variation-time-period", 10800));
     Config.setSellPriceVariationUpdatePeriod(getMainConfig().getInt("sell-price-variation-update-period", 30));
     Config.setServerName(ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("server-name", "Survival Server - (Change this in Config)")));
@@ -643,8 +643,8 @@ public final class Main extends JavaPlugin implements Listener {
     Config.setBasicMinVariableVolatility(getMainConfig().getDouble("Variable-Min-Volatility", 0.05));
     Config.setDataSelectionM(getMainConfig().getDouble("data-selection-m", 0.05));
     Config.setDataSelectionC(getMainConfig().getDouble("data-selection-c", 1.25));
-    Config.setDynamicInflationValue(getMainConfig().getDouble("dynamic-inflation-value", 0.02));
-    Config.setInflationValue(getMainConfig().getDouble("static-inflation-value", 0.05));
+    Config.setDynamicInflationValue(getMainConfig().getDouble("dynamic-inflation-value", 0.0025));
+    Config.setInflationValue(getMainConfig().getDouble("static-inflation-value", 0.1));
     Config.setDataSelectionZ(getMainConfig().getDouble("data-selection-z", 1.6));
     Config.setSellPriceDifference(getMainConfig().getDouble("sell-price-difference", 2.5));
     Config.setSellPriceDifferenceVariationStart(getMainConfig().getDouble("sell-price-differnence-variation-start", 25.0));

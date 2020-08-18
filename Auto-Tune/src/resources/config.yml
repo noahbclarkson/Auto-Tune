@@ -99,11 +99,11 @@ inflation-enabled: true
 ##  Info: Mixed uses both methods
 inflation-method: 'Mixed'
 ##  Time period in ticks between dynamic price increases
-dynamic-inflation-time-period: 3600
+dynamic-inflation-time-period: 5000
 ##  Percentage increase in prices per time-period.
-dynamic-inflation-value: 0.02
+dynamic-inflation-value: 0.0025
 ##  Percentage increase for buy value per price calculation update period.
-static-inflation-value: 0.05
+static-inflation-value: 0.1
 
 ##  -- Other Settings --
 

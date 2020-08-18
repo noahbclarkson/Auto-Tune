@@ -2,7 +2,6 @@ package unprotesting.com.github;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
@@ -56,12 +55,15 @@ import unprotesting.com.github.Commands.AutoTuneCommand;
 import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
 import unprotesting.com.github.Commands.AutoTuneSellCommand;
 import unprotesting.com.github.util.AutoSellEventHandler;
-import unprotesting.com.github.util.AutoTuneAutoSellEventHandler;
+import unprotesting.com.github.util.AutoTunePlayerAutoSellEventHandler;
+import unprotesting.com.github.util.CSVHandler;
 import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.HttpPostRequestor;
 import unprotesting.com.github.util.InflationEventHandler;
 import unprotesting.com.github.util.JoinEventHandler;
+import unprotesting.com.github.util.MathHandler;
 import unprotesting.com.github.util.StaticFileHandler;
+import unprotesting.com.github.util.TextHandler;
 
 public final class Main extends JavaPlugin implements Listener {
 
@@ -78,24 +80,40 @@ public final class Main extends JavaPlugin implements Listener {
   public static final String BASEDIRMAIN = "plugins/Auto-Tune/data.csv";
   public FileConfiguration playerDataConfig;
   public final String playerdatafilename = "playerdata.yml";
-
   public static DB db, memDB, tempDB;
-
   public static HTreeMap<String, Double> tempdatadata;
-
   public static ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>> map;
-
   public static HTreeMap<Integer, String> memMap;
-
   public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, Double[]>> tempmap;
-
   public static ConcurrentMap<Integer, Material> ItemMap;
+  BukkitScheduler scheduler;
+  public File folderfile;
+  public Double buys = 0.0;
+  public Double sells = 0.0;
+  public double tempbuys = 0.0;
+  public double tempsells = 0.0;
+  public Boolean locked = null;
+  public Boolean falseBool = false;
 
   @Getter
   private File configf, shopf, tradef, tradeShortf;
 
-  public String basicVolatilityAlgorithim;
+  public static String basicVolatilityAlgorithim;
   public static String priceModel;
+
+  @Getter
+  @Setter
+  public static Gui gui;
+
+  public ArrayList < String > itemStringArray;
+
+  @Getter
+  public static Set < String > testset = null;
+
+  @Getter
+  public static ArrayList < String > publicItemStringArray;
+
+  public static ConcurrentHashMap < Integer, OutlinePane > pageArray = new ConcurrentHashMap < Integer,OutlinePane > ();
 
   @Getter
   @Setter
@@ -105,8 +123,6 @@ public final class Main extends JavaPlugin implements Listener {
   @Setter
   public static Integer materialListSize;
 
-  public File folderfile;
-
   @Override
   public void onDisable() {
     cancelAllTasks(this);
@@ -114,6 +130,7 @@ public final class Main extends JavaPlugin implements Listener {
   }
 
   private void cancelAllTasks(Main main) {
+    scheduler.cancelTasks(this);
   }
 
   @Override
@@ -178,27 +195,10 @@ public final class Main extends JavaPlugin implements Listener {
     this.getCommand("autosell").setExecutor(new AutoTuneAutoSellCommand());
     basicVolatilityAlgorithim = Config.getBasicVolatilityAlgorithim();
     priceModel = Config.getPricingModel().toString();
-    if (priceModel.contains("Basic") == true) {
-      log("Loaded Basic Price Algorithim");
-      if (basicVolatilityAlgorithim.contains("Variable") == true) {
-        log("Loaded Algorithim under Variable Configuration");
-      }
-      if (basicVolatilityAlgorithim.contains("fixed") == true) {
-        log("Loaded Algorithim under Variable Configuration");
-      }
-    }
-    if (priceModel.contains("Advanced") == true) {
-      log("Loaded Advanced Price Algorithim");
-      if (basicVolatilityAlgorithim.contains("Variable") == true) {
-        log("Loaded Advanced Algorithim under Variable Configuration");
-      }
-      if (basicVolatilityAlgorithim.contains("fixed") == true) {
-        log("Loaded Advanced Algorithim under Variable Configuration");
-      }
-    }
-    BukkitScheduler scheduler = getServer().getScheduler();
+    TextHandler.sendPriceModelData(priceModel);
+    scheduler = getServer().getScheduler();
     scheduler.scheduleSyncRepeatingTask(this, new AutoSellEventHandler(), Config.getAutoSellUpdatePeriod() * 5, Config.getAutoSellUpdatePeriod());
-    scheduler.scheduleSyncRepeatingTask(this, new AutoTuneAutoSellEventHandler(), Config.getAutoSellProfitUpdatePeriod() + 20, Config.getAutoSellProfitUpdatePeriod());
+    scheduler.scheduleSyncRepeatingTask(this, new AutoTunePlayerAutoSellEventHandler(), Config.getAutoSellProfitUpdatePeriod() + 20, Config.getAutoSellProfitUpdatePeriod());
     runnable();
     if ((Config.getInflationMethod().contains("Mixed") || Config.getInflationMethod().contains("Dynamic"))&&Config.isInflationEnabled()){
     scheduler.scheduleAsyncRepeatingTask(this, new InflationEventHandler(), Config.getDynamicInflationUpdatePeriod() + 40,Config.getDynamicInflationUpdatePeriod());}
@@ -225,31 +225,9 @@ public final class Main extends JavaPlugin implements Listener {
   }
 
   public static String[] convert(Set < String > setOfString) {
-
-    // Create String[] from setOfString
-    String[] arrayOfString = setOfString
-
-    // Convert Set of String
-    // to Stream<String>
-    .stream()
-
-    // Convert Stream<String>
-    // to String[]
-    .toArray(String[]::new);
-
-    // return the formed String[]
+    String[] arrayOfString = setOfString.stream().toArray(String[]::new);
     return arrayOfString;
   }
-
-  public Double buys = 0.0;
-  public Double sells = 0.0;
-
-  public double tempbuys = 0.0;
-  public double tempsells = 0.0;
-
-  public Boolean locked = null;
-
-  public Boolean falseBool = false;
 
   public void runnable() {
     new BukkitRunnable() {@Override
@@ -537,13 +515,7 @@ public final class Main extends JavaPlugin implements Listener {
               map.put(str, tempMap);
             }
             locked = null;
-
           }
-          else if (config == null) {
-            debugLog(str + " is empty enable automatic deletion of items not in the shop file to be deleted to remove this error");
-
-          }
-
         }
       }
       tempbuys = 0.0;
@@ -551,13 +523,14 @@ public final class Main extends JavaPlugin implements Listener {
       buys = 0.0;
       sells = 0.0;
       Date date = Calendar.getInstance().getTime();
-      Date newDate = addMinutesToJavaUtilDate(date, Config.getTimePeriod());
+      Date newDate = MathHandler.addMinutesToJavaUtilDate(date, Config.getTimePeriod());
       DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
       String strDate = dateFormat.format(newDate);
       debugLog("Done running price Algorithim, a new check will occur at: " + strDate);
       try {
         debugLog("Saving data to data.csv file");
-        writeCSV();
+        CSVHandler.writeCSV();
+        CSVHandler.writeShortCSV();
         debugLog("Saved data to data.csv file");
       }
       catch(InterruptedException | IOException e) {
@@ -565,101 +538,6 @@ public final class Main extends JavaPlugin implements Listener {
       }
     }
   }
-
-  public static void writeCSV() throws InterruptedException,
-  IOException {
-    FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/web/sample.csv");
-
-    Set < String > strSet = map.keySet();
-    for (String str: strSet) {
-      ConcurrentHashMap < Integer,
-      Double[] > item = map.get(str);
-
-      csvWriter.append("\n");
-      csvWriter.append("%" + str);
-      csvWriter.append(",");
-      csvWriter.append("\n");
-
-      for (int i = 0; i > -100; i++) {
-        String k = String.valueOf(i);
-        csvWriter.append(k);
-        Double[] l = (item.get(i));
-        if (l == null) {
-          break;
-        }
-        double SP = l[0];
-        String parsedSP = String.valueOf(SP);
-        csvWriter.append(",");
-        csvWriter.append(parsedSP);
-        double Buy = l[1];
-        String parsedBuy = String.valueOf(Buy);
-        csvWriter.append(",");
-        csvWriter.append(parsedBuy);
-        double Sell = l[2];
-        String parsedSell = String.valueOf(Sell);
-        csvWriter.append(",");
-        csvWriter.append(parsedSell);
-        csvWriter.append("\n");
-      }
-      csvWriter.append("\n");
-    }
-    // for (List<String> rowData : rows) {
-    //     csvWriter.append(String.join(",", rowData));
-    //     csvWriter.append("\n");
-    // }
-    csvWriter.flush();
-    csvWriter.close();
-
-  }
-
-  public static void writeShortCSV() throws InterruptedException,
-  IOException {
-    FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/web/sample.csv");
-
-    Set < String > strSet = map.keySet();
-    for (String str: strSet) {
-      ConcurrentHashMap < Integer,
-      Double[] > item = map.get(str);
-
-      csvWriter.append("\n");
-      csvWriter.append("%" + str);
-      csvWriter.append(",");
-      csvWriter.append("\n");
-
-      int size = item.size();
-
-      for (int i = size-Config.getMaximumShortTradeLength(); i > -100; i++) {
-        String k = String.valueOf(i);
-        csvWriter.append(k);
-        Double[] l = (item.get(i));
-        if (l == null) {
-          break;
-        }
-        double SP = l[0];
-        String parsedSP = String.valueOf(SP);
-        csvWriter.append(",");
-        csvWriter.append(parsedSP);
-        double Buy = l[1];
-        String parsedBuy = String.valueOf(Buy);
-        csvWriter.append(",");
-        csvWriter.append(parsedBuy);
-        double Sell = l[2];
-        String parsedSell = String.valueOf(Sell);
-        csvWriter.append(",");
-        csvWriter.append(parsedSell);
-        csvWriter.append("\n");
-      }
-      csvWriter.append("\n");
-    }
-    // for (List<String> rowData : rows) {
-    //     csvWriter.append(String.join(",", rowData));
-    //     csvWriter.append("\n");
-    // }
-    csvWriter.flush();
-    csvWriter.close();
-
-  }
-
 
   public void createFiles() {
 
@@ -734,13 +612,6 @@ public final class Main extends JavaPlugin implements Listener {
     return false;
   }
 
-  public Date addMinutesToJavaUtilDate(Date date, int minutes) {
-    Calendar calendar = Calendar.getInstance();
-    calendar.setTime(date);
-    calendar.add(Calendar.MINUTE, minutes);
-    return calendar.getTime();
-  }
-
   public void loadDefaults() {
     Config.setSellPriceDifferenceVariationEnabled(getMainConfig().getBoolean("sell-price-difference-variation-enabled", false));
     Config.setWebServer(getMainConfig().getBoolean("web-server-enabled", false));
@@ -801,22 +672,6 @@ public final class Main extends JavaPlugin implements Listener {
     }
   }
 
-  @Getter
-  @Setter
-  public static Gui gui;
-
-  public ArrayList < String > itemStringArray;
-
-  @Getter
-  public static Set < String > testset = null;
-
-  @Getter
-  public static ArrayList < String > publicItemStringArray;
-
-  public static ConcurrentHashMap < Integer,
-  OutlinePane > pageArray = new ConcurrentHashMap < Integer,
-  OutlinePane > ();
-
   public static void sendMessage(CommandSender commandSender, String message) {
     commandSender.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
   }
@@ -824,12 +679,15 @@ public final class Main extends JavaPlugin implements Listener {
   public void loadShopData() {
     Integer i = 0;
     if (testset.isEmpty() != true && testset != null) {
-      for (String key: Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getKeys(false)) {
+      Main.getINSTANCE();
+      for (String key : Main.getShopConfig().getConfigurationSection("shops").getKeys(false)) {
         debugLog("Data from shops.yml file found: " + key);
         String str = key;
         memMap.put(i, str);
         if (map.containsKey(str) == false) {
-          ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection(key);
+          Main.getINSTANCE();
+          ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops")
+              .getConfigurationSection(key);
           Double temp_a = config.getDouble("price");
           Double[] tempDArray = {
             temp_a,
@@ -855,8 +713,9 @@ public final class Main extends JavaPlugin implements Listener {
     if (testset.isEmpty() == true) {
       log("No data-file/usable-data found!");
       Integer i = 0;
-      for (String key: Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getKeys(false)) {
-        ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection(key);
+      Main.getINSTANCE();
+      for (String key : getShopConfig().getConfigurationSection("shops").getKeys(false)) {
+        ConfigurationSection config = getShopConfig().getConfigurationSection("shops").getConfigurationSection(key);
         if (config == null) {
           log("Check the section for shop " + key + " in the shops.yml. It was not found.");
           continue;
@@ -871,7 +730,6 @@ public final class Main extends JavaPlugin implements Listener {
         ConcurrentHashMap < Integer,
         Double[] > start = (new ConcurrentHashMap < Integer, Double[] > ());
         start.put(0, x);
-        String str = key;
         map.put(key, start);
         debugLog("Loaded shop: " + key + " at price: " + Double.toString(temp_a));
         i++;

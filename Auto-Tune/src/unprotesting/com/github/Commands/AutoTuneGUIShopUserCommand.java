@@ -32,7 +32,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
 	static DecimalFormat df2 = new DecimalFormat("###,###,###,##0.00");
 
-	public Economy economy = Main.getINSTANCE().getEconomy();
+	public Economy economy = Main.getEconomy();
 
 	public static Integer SBPanePos = 1;
 
@@ -103,8 +103,6 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 						Gui gui = gui1;
 						final Player playernew = playerpub;
 						final Double price;
-						final Double buyAmount;
-						final Double sellAmount;
 						String matClickedString = "";
 						ItemStack tempis = event.getCurrentItem();
 						Material tempmat = tempis.getType();
@@ -114,10 +112,6 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 						Integer tempMapSize = tempmap.size();
 						Double[] tempDoublearray = tempmap.get(tempMapSize - 1);
 						price = tempDoublearray[0];
-						Double buyValueD = tempDoublearray[1];
-						buyAmount = buyValueD;
-						Double sellValueD = tempDoublearray[2];
-						sellAmount = sellValueD;
 						createTradingPanel(gui, matClickedString, playernew, SBPane, price, forward, back);
 						if (finalPageAmount == 2) {
 							pane.setPage(1);
@@ -358,12 +352,12 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 	public Double sellpricedif2;
 
 	public void createTradingPanel(Gui gui, String matClickedString, Player player, OutlinePane SBPane, Double price, StaticPane forward, StaticPane back) {
-		Double tempbuy = 0.0;
-		Double tempsell = 0.0;
 		sellpricedif2 = null;
 		sellpricedif = null;
 		sellpricedif = Config.getSellPriceDifference();
-		ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection((matClickedString));
+		Main.getINSTANCE();
+		ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops")
+				.getConfigurationSection((matClickedString));
 		sellpricedif2 = config.getDouble("sell-difference", sellpricedif);
 		if (sellpricedif2 != null) {
 			sellpricedif = sellpricedif2;

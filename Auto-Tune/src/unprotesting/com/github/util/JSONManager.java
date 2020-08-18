@@ -1,15 +1,6 @@
 package unprotesting.com.github.util;
 
-import javax.script.ScriptEngineManager;
-import javax.script.Invocable;
-import javax.script.ScriptEngine;
-import javax.script.ScriptException;
-
 import org.json.simple.JSONObject;
-
-import java.io.FileReader;
-import java.io.File;
-import java.io.FileNotFoundException;
 
 public class JSONManager {
 

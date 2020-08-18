@@ -1,6 +1,5 @@
 package unprotesting.com.github.Commands;
 
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.github.stefvanschie.inventoryframework.Gui;
@@ -15,13 +14,10 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
-import org.mapdb.HTreeMap;
 
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
-
-import lombok.Getter;
 
 public class AutoTuneSellCommand implements CommandExecutor {
 
@@ -81,7 +77,9 @@ public class AutoTuneSellCommand implements CommandExecutor {
             Integer tempMapSize = tempMap1.size();
             Double[] tempDoublearray = tempMap1.get(tempMapSize-1);
             Double sellpricedif = Config.getSellPriceDifference();
-            ConfigurationSection config = Main.getINSTANCE().getShopConfig().getConfigurationSection("shops").getConfigurationSection((itemString));
+            Main.getINSTANCE();
+            ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops")
+                    .getConfigurationSection((itemString));
             Double sellpricedif2 = config.getDouble("sell-difference", sellpricedif);
             Double sellPrice = (tempDoublearray[0]) - (tempDoublearray[0]*0.01*sellpricedif2);
             Double buyAmount = tempDoublearray[1];

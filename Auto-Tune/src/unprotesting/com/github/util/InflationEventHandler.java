@@ -17,7 +17,9 @@ public class InflationEventHandler implements Runnable {
             arr[0] = newPrice;
             retMap.put(size-1, arr);
             Main.map.put(str, retMap);
+            Main.debugLog("Increased item price of: " + str + " from " + price + " to " + newPrice);
         }
+        Main.debugLog("Dynamic Inflation Value: " + Config.getDynamicInflationValue());
     }
     
 }

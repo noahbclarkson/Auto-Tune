@@ -23,7 +23,6 @@ public class AutoTuneCommand implements CommandExecutor {
         if (command.getName().equalsIgnoreCase("at")){
             Player player = (Player) sender;
             UUID uuid = player.getUniqueId();
-            String playername = player.getDisplayName();
             if (args[0].equalsIgnoreCase("login")) {
                 String AutoTunePlayerID = UUID.randomUUID().toString();
                 String LoggedIn = main.playerDataConfig.getString(uuid + ".autotuneID");

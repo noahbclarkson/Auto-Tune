@@ -8,7 +8,7 @@ import org.bukkit.entity.Player;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.Commands.AutoTuneSellCommand;
 
-public class AutoTuneAutoSellEventHandler implements Runnable{
+public class AutoTunePlayerAutoSellEventHandler implements Runnable{
 
     @Override
     public void run() {

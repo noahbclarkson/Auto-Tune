@@ -18,6 +18,7 @@ import org.bukkit.inventory.ItemStack;
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
+import unprotesting.com.github.util.TextHandler;
 
 public class AutoTuneSellCommand implements CommandExecutor {
 
@@ -34,7 +35,8 @@ public class AutoTuneSellCommand implements CommandExecutor {
             }
             CommandSender sender2 = sender;
             Player p = (Player) sender;
-            loadSellGUI(p, sender2);
+            if (p.hasPermission("at.sell") || p.isOp()){loadSellGUI(p, sender2);}
+            else if (!(p.hasPermission("at.sell")) && !(p.isOp())){TextHandler.noPermssion(p);}
 
             return true;
 

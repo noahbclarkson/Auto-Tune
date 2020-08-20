@@ -125,12 +125,7 @@ public final class Main extends JavaPlugin implements Listener {
 
   @Override
   public void onDisable() {
-    cancelAllTasks(this);
     log.info(String.format("[%s] Disabled Version %s", getDescription().getName(), getDescription().getVersion()));
-  }
-
-  private void cancelAllTasks(Main main) {
-    scheduler.cancelTasks(this);
   }
 
   @Override
@@ -150,7 +145,7 @@ public final class Main extends JavaPlugin implements Listener {
       getServer().getPluginManager().disablePlugin(this);
       return;
     }
-    loadDefaults();
+    Config.loadDefaults();
     if (Config.isWebServer()) {
       HttpServer server;
       try {
@@ -165,23 +160,7 @@ public final class Main extends JavaPlugin implements Listener {
         e.printStackTrace();
       }
     }
-    if (Config.isChecksumHeaderBypass()) {
-      debugLog("Enabling checksum-header-bypass");
-      DB db = DBMaker.fileDB("data.db").checksumHeaderBypass().closeOnJvmShutdown().make();
-      map = (ConcurrentMap < String, ConcurrentHashMap < Integer, Double[] >> ) db.hashMap("map").createOrOpen();
-      playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
-      DB memDb = DBMaker.memoryDB().checksumHeaderBypass().closeOnJvmShutdown().make();
-      memMap = memDb.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
-    }
-    else {
-      DB db = DBMaker.fileDB("data.db").checksumHeaderBypass().closeOnJvmShutdown().make();
-      map = (ConcurrentMap < String, ConcurrentHashMap < Integer, Double[] >> ) db.hashMap("map").createOrOpen();
-      playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
-      DB memDb = DBMaker.memoryDB().closeOnJvmShutdown().make();
-      memMap = memDb.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
-    }
-    tempDB = DBMaker.fileDB("plugins/Auto-Tune/temp/tempdata.db").checksumHeaderBypass().closeOnJvmShutdown().make();
-    tempdatadata = tempDB.hashMap("tempdatadata", Serializer.STRING, Serializer.DOUBLE).createOrOpen();
+    setupDataFiles();
     if (tempdatadata.isEmpty() == true || tempdatadata.get("SellPriceDifferenceDifference") == null) {
       tempdataresetSPDifference();
     }
@@ -244,8 +223,8 @@ public final class Main extends JavaPlugin implements Listener {
 
   }
 
-  public void tempdataresetSPDifference() {
-    tempdatadata.put("SellPriceDifferenceDifference", 0.0);
+  public static void tempdataresetSPDifference() {
+    Main.tempdatadata.put("SellPriceDifferenceDifference", 0.0);
   }
 
   public void SellDifrunnable() {
@@ -274,34 +253,12 @@ public final class Main extends JavaPlugin implements Listener {
   }
 
   public void loadItemPricesAndCalculate() throws ParseException {
-    debugLog("Starting price calculation task... ");
-    debugLog("Price algorithim settings: ");
-    if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Fixed") == true) {
-      debugLog("Basic Max Fixed Volatility: " + Config.getBasicMaxFixedVolatility());
-      debugLog("Basic Min Fixed Volatility: " + Config.getBasicMinFixedVolatility());
-    }
-    if (priceModel.contains("Basic") == true && basicVolatilityAlgorithim.contains("Variable") == true) {
-      debugLog("Basic Max Variable Volatility: " + Config.getBasicMaxVariableVolatility());
-      debugLog("Basic Min Variable Volatility: " + Config.getBasicMinVariableVolatility());
-    }
-    if (priceModel.contains("Advanced") == true && basicVolatilityAlgorithim.contains("Fixed") == true) {
-      debugLog("Advanced Max Fixed Volatility: " + Config.getBasicMaxFixedVolatility());
-      debugLog("Advanced Min Fixed Volatility: " + Config.getBasicMinFixedVolatility());
-    }
-    if (priceModel.contains("Advanced") == true && basicVolatilityAlgorithim.contains("Variable") == true) {
-      debugLog("Advanced Max Variable Volatility: " + Config.getBasicMaxVariableVolatility());
-      debugLog("Advanced Min Variable Volatility: " + Config.getBasicMinVariableVolatility());
-    }
-    if (priceModel.contains("Exponential") == true && basicVolatilityAlgorithim.contains("Variable") == true) {
-      debugLog("Exponential Max Variable Volatility: " + Config.getBasicMaxVariableVolatility());
-      debugLog("Exponential Min Variable Volatility: " + Config.getBasicMinVariableVolatility());
-      debugLog("Exponential data selection algorithim: y = " + Config.getDataSelectionM() + "(x^" + Config.getDataSelectionZ() + ") + " + Config.getDataSelectionC());
-    }
     tempbuys = 0.0;
     tempsells = 0.0;
     buys = 0.0;
     sells = 0.0;
     if (priceModel.contains("Basic") || priceModel.contains("Advanced") || priceModel.contains("Exponential")) {
+      TextHandler.sendDataBeforePriceCalculation(priceModel, basicVolatilityAlgorithim);
       Set < String > strSet = map.keySet();
       for (String str: strSet) {
         ConcurrentHashMap < Integer,
@@ -579,10 +536,30 @@ public final class Main extends JavaPlugin implements Listener {
 
   }
 
+  public void setupDataFiles(){
+    if (Config.isChecksumHeaderBypass()) {
+        Main.debugLog("Enabling checksum-header-bypass");
+        db = DBMaker.fileDB("data.db").checksumHeaderBypass().closeOnJvmShutdown().make();
+        map = (ConcurrentMap < String, ConcurrentHashMap < Integer, Double[] >> ) db.hashMap("map").createOrOpen();
+        playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
+        memDB = DBMaker.memoryDB().checksumHeaderBypass().closeOnJvmShutdown().make();
+        memMap = memDB.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
+      } else {
+        db = DBMaker.fileDB("data.db").checksumHeaderBypass().closeOnJvmShutdown().make();
+        map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
+        playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
+        memDB = DBMaker.memoryDB().closeOnJvmShutdown().make();
+        memMap = memDB.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
+      }
+      tempDB = DBMaker.fileDB("plugins/Auto-Tune/temp/tempdata.db").checksumHeaderBypass().closeOnJvmShutdown().make();
+      tempdatadata = tempDB.hashMap("tempdatadata", Serializer.STRING, Serializer.DOUBLE).createOrOpen();
+}
+
   public boolean onCommand(CommandSender sender, Command testcmd, String trade, String[] help) {
     if (sender instanceof Player) {
       Player player = (Player) sender;
       String hostIP = "";
+      if (player.hasPermission("at.trade") || player.isOp()){
       try {
         URL url_name = new URL("http://bot.whatismyipaddress.com");
 
@@ -607,47 +584,11 @@ public final class Main extends JavaPlugin implements Listener {
       } catch(Exception e) {
         hostIP = "Cannot Execute Properly";
       }
+    }
+    else if (!(player.hasPermission("at.trade")) && !(player.isOp())){TextHandler.noPermssion(player);}
       return true;
     }
     return false;
-  }
-
-  public void loadDefaults() {
-    Config.setSellPriceDifferenceVariationEnabled(getMainConfig().getBoolean("sell-price-difference-variation-enabled", false));
-    Config.setWebServer(getMainConfig().getBoolean("web-server-enabled", false));
-    Config.setInflationEnabled(getMainConfig().getBoolean("inflation-enabled", true));
-    Config.setChecksumHeaderBypass(getMainConfig().getBoolean("checksum-header-bypass", false));
-    Config.setDebugEnabled(getMainConfig().getBoolean("debug-enabled", false));
-    Config.setAutoSellProfitUpdatePeriod(getMainConfig().getInt("auto-sell-profit-update-period", 1200));
-    Config.setPort(getMainConfig().getInt("port", 8321));
-    Config.setMaximumShortTradeLength(getMainConfig().getInt("maximum-short-trade-length", 100));
-    Config.setAutoSellUpdatePeriod(getMainConfig().getInt("auto-sell-update-period", 10));
-    Config.setTimePeriod(getMainConfig().getInt("time-period", 10));
-    Config.setMenuRows(getMainConfig().getInt("menu-rows", 3));
-    Config.setDynamicInflationUpdatePeriod(getMainConfig().getInt("dynamic-inflation-update-period", 5000));
-    Config.setSellPriceVariationTimePeriod(getMainConfig().getInt("sell-price-variation-time-period", 10800));
-    Config.setSellPriceVariationUpdatePeriod(getMainConfig().getInt("sell-price-variation-update-period", 30));
-    Config.setServerName(ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("server-name", "Survival Server - (Change this in Config)")));
-    Config.setMenuTitle(
-    ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("menu-title", "Auto-Tune Shop")));
-    Config.setPricingModel(
-    ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("pricing-model", "Basic")));
-    Config.setApiKey(getMainConfig().getString("api-key", "xyz"));
-    Config.setInflationMethod(getMainConfig().getString("inflation-method", "Mixed"));
-    Config.setEmail(getMainConfig().getString("email", "xyz@gmail.com"));
-    Config.setBasicVolatilityAlgorithim(ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("Volatility-Algorithim", "Fixed")));
-    Config.setNoPermission(ChatColor.translateAlternateColorCodes('&', getMainConfig().getString("no-permission", "You do not have permission to perform this command")));
-    Config.setBasicMaxFixedVolatility(getMainConfig().getDouble("Fixed-Max-Volatility", 2.00));
-    Config.setBasicMaxVariableVolatility(getMainConfig().getDouble("Variable-Max-Volatility", 2.00));
-    Config.setBasicMinFixedVolatility(getMainConfig().getDouble("Fixed-Min-Volatility", 0.05));
-    Config.setBasicMinVariableVolatility(getMainConfig().getDouble("Variable-Min-Volatility", 0.05));
-    Config.setDataSelectionM(getMainConfig().getDouble("data-selection-m", 0.05));
-    Config.setDataSelectionC(getMainConfig().getDouble("data-selection-c", 1.25));
-    Config.setDynamicInflationValue(getMainConfig().getDouble("dynamic-inflation-value", 0.0025));
-    Config.setInflationValue(getMainConfig().getDouble("static-inflation-value", 0.1));
-    Config.setDataSelectionZ(getMainConfig().getDouble("data-selection-z", 1.6));
-    Config.setSellPriceDifference(getMainConfig().getDouble("sell-price-difference", 2.5));
-    Config.setSellPriceDifferenceVariationStart(getMainConfig().getDouble("sell-price-differnence-variation-start", 25.0));
   }
 
   public void saveplayerdata() {

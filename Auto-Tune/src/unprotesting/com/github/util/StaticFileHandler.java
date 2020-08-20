@@ -6,7 +6,6 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.nio.file.Files;
 
-import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -24,8 +23,6 @@ public class StaticFileHandler implements HttpHandler {
         URI uri = ex.getRequestURI();
         String name = new File(uri.getPath()).getName();
         File path = new File(baseDir, name);
-
-        Headers h = ex.getResponseHeaders();
 
         OutputStream out = ex.getResponseBody();
 

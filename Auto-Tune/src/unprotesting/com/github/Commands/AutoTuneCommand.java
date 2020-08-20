@@ -11,6 +11,7 @@ import org.bukkit.plugin.Plugin;
 
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
+import unprotesting.com.github.util.TextHandler;
 
 public class AutoTuneCommand implements CommandExecutor {
 
@@ -24,23 +25,33 @@ public class AutoTuneCommand implements CommandExecutor {
             Player player = (Player) sender;
             UUID uuid = player.getUniqueId();
             if (args[0].equalsIgnoreCase("login")) {
-                String AutoTunePlayerID = UUID.randomUUID().toString();
-                String LoggedIn = main.playerDataConfig.getString(uuid + ".autotuneID");
-                if (LoggedIn == null){
-                    player.sendMessage(ChatColor.YELLOW + "No Auto-Tune Account found in Config");
-                    main.playerDataConfig.set(uuid + ".autotuneID", AutoTunePlayerID);
-                    main.saveplayerdata();
-                    player.sendMessage(ChatColor.YELLOW + "Creating one for you..");
-                    player.sendMessage(ChatColor.YELLOW + "Created Auto-Tune Account with Unique ID: " + AutoTunePlayerID);}
+                if (player.hasPermission("at.login") || player.isOp()){
+                    String AutoTunePlayerID = UUID.randomUUID().toString();
+                    String LoggedIn = main.playerDataConfig.getString(uuid + ".autotuneID");
+                    if (LoggedIn == null){
+                        player.sendMessage(ChatColor.YELLOW + "No Auto-Tune Account found in Config");
+                        main.playerDataConfig.set(uuid + ".autotuneID", AutoTunePlayerID);
+                        main.saveplayerdata();
+                        player.sendMessage(ChatColor.YELLOW + "Creating one for you..");
+                        player.sendMessage(ChatColor.YELLOW + "Created Auto-Tune Account with Unique ID: " + AutoTunePlayerID);}
 
-                        else if (LoggedIn != null){
-                        player.sendMessage(ChatColor.YELLOW + "Already Logged in!");
-                        player.sendMessage(ChatColor.YELLOW + "Your unique ID is " + main.playerDataConfig.getString(uuid + ".autotuneID"));}}
-
+                    else if (LoggedIn != null){
+                    player.sendMessage(ChatColor.YELLOW + "Already Logged in!");
+                    player.sendMessage(ChatColor.YELLOW + "Your unique ID is " + main.playerDataConfig.getString(uuid + ".autotuneID"));}
+                            }
+                else if (!(player.hasPermission("at.login")) && !(player.isOp())){
+                    TextHandler.noPermssion(player);
+                }
+                        }
                 else {
-                player.sendMessage(ChatColor.YELLOW + "\"/at\" command usage:");
-                player.sendMessage(ChatColor.YELLOW + "/at login | Login to trading plaform");
-                player.sendMessage(ChatColor.YELLOW + "/at Register | Register to trading plaform");
+                    if (player.hasPermission("at.help") || player.isOp()){
+                        player.sendMessage(ChatColor.YELLOW + "\"/at\" command usage:");
+                        player.sendMessage(ChatColor.YELLOW + "/at login | Login to trading plaform");
+                        player.sendMessage(ChatColor.YELLOW + "/at Register | Register to trading plaform");
+                    }
+                    else if (!(player.hasPermission("at.help")) && !(player.isOp())){
+                        TextHandler.noPermssion(player);
+                    }
                 } 
             }
                 

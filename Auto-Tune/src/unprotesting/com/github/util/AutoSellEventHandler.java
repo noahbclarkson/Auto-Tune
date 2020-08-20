@@ -20,6 +20,9 @@ public class AutoSellEventHandler implements Runnable {
     @Override
     public void run() {
         for(Player player : Main.getINSTANCE().getServer().getOnlinePlayers()){
+            if (!(player.hasPermission("at.autosell")) && !(player.isOp())){
+                continue;
+            }
             UUID uuid = player.getUniqueId();
             ConfigurationSection config = main.playerDataConfig.getConfigurationSection(uuid + ".AutoSell");
             if (player.getInventory().getContents() != null && config != null){

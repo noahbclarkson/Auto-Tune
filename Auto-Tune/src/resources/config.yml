@@ -38,7 +38,7 @@ menu-rows: 6
 menu-title: 'Auto-Tune Shop'
 
 ##  Message sent for players with no permission
-no-permission: 'You do not have permission to perform this command'
+no-permission: '&eYou do not have permission to perform this command'
 
 ##  How often auto-sell updates in ticks
 auto-sell-update-period: 15

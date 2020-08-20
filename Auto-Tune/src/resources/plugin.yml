@@ -31,6 +31,17 @@ commands:
     autosell:
       description: Auto-Tune Auto Sell Command
       usage: /<autosell>
+permssions:
+  at.help:
+    description: Displays Auto-Tune help information
+  at.login: 
+    description: Login to an Auto-Tune account |(active soon)|
+  at.shop:
+    description: Open the GUI shop
+  at.sell:
+    description: Open the sell GUI
+  at.autosell:
+    description: Open the Auto-Sell GUI and Auto-Sell
 
 
 

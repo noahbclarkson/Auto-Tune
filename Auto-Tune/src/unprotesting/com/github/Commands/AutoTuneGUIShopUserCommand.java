@@ -27,6 +27,7 @@ import net.md_5.bungee.api.ChatColor;
 import net.milkbowl.vault.economy.Economy;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
+import unprotesting.com.github.util.TextHandler;
 
 public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
@@ -49,7 +50,8 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			if (Config.getMenuRows() == 6) {
 				SBPanePos = 2;
 			}
-			loadGUIMAIN(p, sender);
+			if (p.hasPermission("at.shop") || p.isOp()){loadGUIMAIN(p, sender);}
+                else if (!(p.hasPermission("at.shop")) && !(p.isOp())){TextHandler.noPermssion(p);}
 
 			return true;
 

@@ -23,6 +23,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
+import unprotesting.com.github.util.TextHandler;
 
 public class AutoTuneAutoSellCommand implements CommandExecutor{
 
@@ -39,7 +40,8 @@ public class AutoTuneAutoSellCommand implements CommandExecutor{
                 if (Config.getMenuRows() == 6){
                     AutoTuneGUIShopUserCommand.SBPanePos = 2;
                 }
-                loadGUIMAIN(p, sender);
+                if (p.hasPermission("at.autosell") || p.isOp()){loadGUIMAIN(p, sender);}
+                else if (!(p.hasPermission("at.autosell")) && !(p.isOp())){TextHandler.noPermssion(p);}
             return true;
 
         }

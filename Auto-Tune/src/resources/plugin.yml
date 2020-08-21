@@ -31,6 +31,15 @@ commands:
     autosell:
       description: Auto-Tune Auto Sell Command
       usage: /<autosell>
+    loan:
+      description: Auto-Tune Auto Loan Command
+      usage: /<loan> <amount>
+    loans:
+      description: View all of your active loans
+      usage: <loans>
+    payloan:
+      description: Payback one of your loans
+      usage: <payloan> <loanNo.>
 permssions:
   at.help:
     description: Displays Auto-Tune help information
@@ -42,6 +51,8 @@ permssions:
     description: Open the sell GUI
   at.autosell:
     description: Open the Auto-Sell GUI and Auto-Sell
+  at.loan:
+    description: Loan money from the bank
 
 
 

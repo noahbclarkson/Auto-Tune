@@ -16,16 +16,14 @@ import org.bukkit.plugin.Plugin;
 
 public class JoinEventHandler implements Listener {
 
-    private Main main = Main.getPlugin(Main.class);
     static Logger log = Logger.getLogger("Minecraft");
-    Plugin plugin = Main.getPlugin(Main.class);
     
     @EventHandler
     public void onPlayerJoin(PlayerLoginEvent e) {
             Player p = e.getPlayer();
             UUID uuid = p.getUniqueId();
-            main.playerDataConfig.set(uuid + ".name", p.getName());
-            main.saveplayerdata();
+            Main.playerDataConfig.set(uuid + ".name", p.getName());
+            Main.saveplayerdata();
         }
 
     }

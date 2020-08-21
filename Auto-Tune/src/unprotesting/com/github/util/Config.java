@@ -26,7 +26,8 @@ public final class Config {
                                             autoSellUpdatePeriod, 
                                                 autoSellProfitUpdatePeriod,
                                                     dynamicInflationUpdatePeriod,
-                                                        maximumShortTradeLength;
+                                                        maximumShortTradeLength,
+                                                            intrestRateUpdateRate;
 
     @Getter
     @Setter
@@ -51,7 +52,10 @@ public final class Config {
                                                     dataSelectionC,
                                                         dataSelectionZ,
                                                             dynamicInflationValue,
-                                                                InflationValue;
+                                                                inflationValue,
+                                                                    intrestRate,
+                                                                        maxDebt;
+
     
     public static void loadDefaults() {
     Config.setSellPriceDifferenceVariationEnabled(Main.getMainConfig().getBoolean("sell-price-difference-variation-enabled", false));
@@ -65,6 +69,7 @@ public final class Config {
     Config.setAutoSellUpdatePeriod(Main.getMainConfig().getInt("auto-sell-update-period", 10));
     Config.setTimePeriod(Main.getMainConfig().getInt("time-period", 10));
     Config.setMenuRows(Main.getMainConfig().getInt("menu-rows", 3));
+    Config.setIntrestRateUpdateRate(Main.getMainConfig().getInt("intrest-rate-update-period", 1200));
     Config.setDynamicInflationUpdatePeriod(Main.getMainConfig().getInt("dynamic-inflation-update-period", 5000));
     Config.setSellPriceVariationTimePeriod(Main.getMainConfig().getInt("sell-price-variation-time-period", 10800));
     Config.setSellPriceVariationUpdatePeriod(Main.getMainConfig().getInt("sell-price-variation-update-period", 30));
@@ -88,6 +93,8 @@ public final class Config {
     Config.setInflationValue(Main.getMainConfig().getDouble("static-inflation-value", 0.1));
     Config.setDataSelectionZ(Main.getMainConfig().getDouble("data-selection-z", 1.6));
     Config.setSellPriceDifference(Main.getMainConfig().getDouble("sell-price-difference", 2.5));
+    Config.setIntrestRate(Main.getMainConfig().getDouble("intrest-rate", 0.01));
+    Config.setMaxDebt(Main.getMainConfig().getDouble("max-debt-value", -1000.00));
     Config.setSellPriceDifferenceVariationStart(Main.getMainConfig().getDouble("sell-price-differnence-variation-start", 25.0));
   }
 

@@ -105,6 +105,15 @@ dynamic-inflation-value: 0.0025
 ##  Percentage increase for buy value per price calculation update period.
 static-inflation-value: 0.1
 
+##  Intrest rate per intrest-rate-update-period
+##  Info: This is the increase in the current debt payment per-time period
+intrest-rate: 0.01
+##  Time period in ticks between updates of the intrest rate for users loans
+intrest-rate-update-period: 1200
+
+##  Maximum value in $ a player can go into debt
+max-debt-value: -1000.00
+
 ##  -- Other Settings --
 
 ##  Enable debug mode for more info on price calculations

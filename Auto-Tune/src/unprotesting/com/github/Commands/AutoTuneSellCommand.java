@@ -95,7 +95,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
 		}
 
 		if (couldntSell == true) {
-			player.sendMessage("Cant sell " + Integer.toString(countSell) + "x of item");
+			player.sendMessage(ChatColor.BOLD + "Cant sell " + Integer.toString(countSell) + "x of item");
         }
         if (autoSell == true){
             roundAndGiveMoney(player, moneyToGive, true);
@@ -125,7 +125,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
     }
     
     public static void roundAndGiveMoney(Player player, double moneyToGive, Boolean autoSell) {
-		Double moneyToGiveRounded = (double) Math.round(moneyToGive * 100) / 100;
+		Double moneyToGiveRounded = (double) Math.round(moneyToGive * 1000) / 1000;
 
 		if (moneyToGiveRounded > 0 && moneyToGiveRounded != null) {
             

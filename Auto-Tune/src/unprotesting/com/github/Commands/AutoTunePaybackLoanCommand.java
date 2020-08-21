@@ -24,9 +24,11 @@ public class AutoTunePaybackLoanCommand implements CommandExecutor {
             Player p = (Player) sender;
             if (p.hasPermission("at.loan") || p.isOp()){
                 paybackLoan(p, args[0]);
+                return true;
             }
             else if (!(p.hasPermission("at.loan")) && !(p.isOp())){
                 TextHandler.noPermssion(p);
+                return true;
             }
         }
         return false;

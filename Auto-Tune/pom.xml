@@ -8,7 +8,8 @@
   <!-- Project information -->
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune</artifactId>
-  <version>0.8.1</version>
+  <version>0.8.2</version>
+  <packaging>jar</packaging>
  <!-- Info -->
   <name>Auto-Tune</name>
   <url>https://github.com/Unprotesting/Auto-Tune</url>
@@ -78,6 +79,16 @@
     <artifactId>json-simple</artifactId>
     <version>1.1.1</version>
     </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>5.7.0-RC1</version>
+  </dependency>
+  <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.7.0-RC1</version>
+  </dependency>
   </dependencies>
   <!-- Build Configuration -->
   <build>
@@ -97,6 +108,11 @@
       </resource>
     </resources>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.0.0-M5</version>
+    </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>

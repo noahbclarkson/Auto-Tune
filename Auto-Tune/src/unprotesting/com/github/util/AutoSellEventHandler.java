@@ -15,7 +15,6 @@ import unprotesting.com.github.Commands.AutoTuneSellCommand;
 
 public class AutoSellEventHandler implements Runnable {
 
-    private Main main = Main.getPlugin(Main.class);
 
     @Override
     public void run() {
@@ -24,11 +23,11 @@ public class AutoSellEventHandler implements Runnable {
                 continue;
             }
             UUID uuid = player.getUniqueId();
-            ConfigurationSection config = main.playerDataConfig.getConfigurationSection(uuid + ".AutoSell");
+            ConfigurationSection config = Main.playerDataConfig.getConfigurationSection(uuid + ".AutoSell");
             if (player.getInventory().getContents() != null && config != null){
             ConcurrentHashMap<Integer, ItemStack> itemstosell = new ConcurrentHashMap<Integer, ItemStack>();
             for (String material : config.getKeys(false)){
-                if (player.getInventory().contains(Material.matchMaterial(material)) && main.playerDataConfig.getBoolean(uuid + ".AutoSell" + "." + material)==true){
+                if (player.getInventory().contains(Material.matchMaterial(material)) && Main.playerDataConfig.getBoolean(uuid + ".AutoSell" + "." + material)==true){
                     Integer amount = getAmount(player, Material.matchMaterial(material));
                 if (amount <= 64){
                     ItemStack tosell = new ItemStack(Material.matchMaterial(material), amount);

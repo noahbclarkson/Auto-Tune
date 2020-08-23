@@ -21,4 +21,4 @@ jobs:
       with:
         java-version: 1.8
     - name: Build with Maven
-      run: mvn -B package --file ./Auto-Tune/pom.xml
+      run: mvn -B clean test package -U --file ./Auto-Tune/pom.xml

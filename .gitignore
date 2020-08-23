@@ -45,3 +45,6 @@ Auto-Tune/.settings/
 idea/
 .settings
 Auto-Tune/target/classes/web/trade.html
+Auto-Tune/target/data.db
+Auto-Tune/target/surefire-reports/TEST-test.java.unprotesting.com.github.AutoTuneTest.xml
+Auto-Tune/target/surefire-reports/test.java.unprotesting.com.github.AutoTuneTest.txt

@@ -94,12 +94,12 @@ public final class Main extends JavaPlugin implements Listener {
   public static ConcurrentMap<Integer, Material> ItemMap;
   BukkitScheduler scheduler;
   public File folderfile;
-  public Double buys = 0.0;
-  public Double sells = 0.0;
-  public double tempbuys = 0.0;
-  public double tempsells = 0.0;
-  public Boolean locked = null;
-  public Boolean falseBool = false;
+  public static Double buys = 0.0;
+  public static Double sells = 0.0;
+  public static double tempbuys = 0.0;
+  public static double tempsells = 0.0;
+  public static Boolean locked = null;
+  public static Boolean falseBool = false;
 
   @Getter
   private File configf, shopf, tradef, tradeShortf;
@@ -277,14 +277,19 @@ public final class Main extends JavaPlugin implements Listener {
         Config.getSellPriceVariationUpdatePeriod() * 20 * 60);
   }
 
-  public void loadItemPricesAndCalculate() throws ParseException {
+  public static void loadItemPricesAndCalculate() throws ParseException {
+    System.out.println("Loading item prices");
     tempbuys = 0.0;
     tempsells = 0.0;
     buys = 0.0;
     sells = 0.0;
+    System.out.println("Loading item prices1");
     if (priceModel.contains("Basic") || priceModel.contains("Advanced") || priceModel.contains("Exponential")) {
+      System.out.println("Loading item prices2");
       TextHandler.sendDataBeforePriceCalculation(priceModel, basicVolatilityAlgorithim);
+      System.out.println("Loading item prices3");
       Set<String> strSet = map.keySet();
+      System.out.println("Loading item prices4");
       for (String str : strSet) {
         ConcurrentHashMap<Integer, Double[]> tempMap = map.get(str);
         Integer expvalues = 0;
@@ -572,7 +577,7 @@ public final class Main extends JavaPlugin implements Listener {
 
   }
 
-  public void setupDataFiles() {
+  public static void setupDataFiles() {
     if (Config.isChecksumHeaderBypass()) {
       Main.debugLog("Enabling checksum-header-bypass");
       db = DBMaker.fileDB("data.db").checksumHeaderBypass().closeOnJvmShutdown().make();

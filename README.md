@@ -310,4 +310,4 @@
     However, pricing will roughly be at around:
         Basic: £1.00 per 25,000 - 50,000 API requests
         Advanced: £1.00 per 20,000 - 40,000 API requests
-        Basic: £1.00 per 8,000 - 25,000 API requests
+        Exponential: £1.00 per 8,000 - 25,000 API requests

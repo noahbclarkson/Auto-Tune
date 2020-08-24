@@ -2,7 +2,7 @@
  
      A powerful Minecraft Automatic-Economy Plugin for 1.16.2 with lots of features
      
-   ![Auto-Tune Logo](https://raw.githubusercontent.com/Unprotesting/Auto-Tune/1.16.2/.github/AtLogo.png?token=APKKSMT7V3CZ47CZ2XWP2C27IO5OE)
+   ![Auto-Tune Logo](https://github.com/Unprotesting/Auto-Tune/blob/1.16.2/.github/AtLogo.png?raw=true)
 
 ## Features
 

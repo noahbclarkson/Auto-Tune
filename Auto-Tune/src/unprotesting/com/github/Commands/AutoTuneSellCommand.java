@@ -131,7 +131,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
             
             if (autoSell == false){
             Main.econ.depositPlayer(player, moneyToGiveRounded);
-            player.sendMessage(ChatColor.GOLD + "Your items were sold, and $" + moneyToGiveRounded + " was added to your account.");
+            player.sendMessage(ChatColor.GOLD + "Your items were sold, and "+ Config.getCurrencySymbol() + moneyToGiveRounded + " was added to your account.");
             }
             if (autoSell == true){
                 if (Main.tempdatadata.get(player.getUniqueId().toString()) == null){

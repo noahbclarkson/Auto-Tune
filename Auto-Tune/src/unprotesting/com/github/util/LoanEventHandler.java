@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.Player;
 
 import unprotesting.com.github.Main;
 import unprotesting.com.github.Commands.AutoTuneLoanCommand;

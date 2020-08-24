@@ -59,17 +59,20 @@ public class HttpPostRequestor {
             Main.debugLog("JsonElement: " + jsonElement.toString());
             JsonElement NewPriceElement = (jsonObject.get("newPrice"));
             String NewPrice = NewPriceElement.getAsString();
-            Main.debugLog("New price for " + item + " = $" + (NewPrice));
+            Main.debugLog("New price for " + item + " = " + Config.getCurrencySymbol() + (NewPrice));
             newPrice = Double.parseDouble(NewPrice);
         }
         Main.debugLog("Status code: " + Integer.toString(statusCode));
         return newPrice;
     }
 
-    public static Double sendRequestForPrice(String model, String algorithm, String apikey, String email, String item, Double price, Double averageBuy, Double averageSell, Double maxVolatility, Double minVolatility) throws ParseException {
+    public static Double sendRequestForPrice(String model, String algorithm, String apikey, String email, String item,
+            Double price, Double averageBuy, Double averageSell, Double maxVolatility, Double minVolatility)
+            throws ParseException {
         Double newPrice = price;
-        try{
-            newPrice = sendPostRequestUsingHttpClient(model, algorithm, apikey, email, item, price, averageBuy, averageSell, maxVolatility, minVolatility);
+        try {
+            newPrice = sendPostRequestUsingHttpClient(model, algorithm, apikey, email, item, price, averageBuy,
+                    averageSell, maxVolatility, minVolatility);
             return newPrice;
             }
             catch (IOException e){

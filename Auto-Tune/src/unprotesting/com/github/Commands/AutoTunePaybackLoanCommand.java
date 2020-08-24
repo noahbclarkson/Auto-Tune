@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
+import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.TextHandler;
 
 public class AutoTunePaybackLoanCommand implements CommandExecutor {
@@ -48,10 +49,10 @@ public class AutoTunePaybackLoanCommand implements CommandExecutor {
                             Main.getEconomy().withdrawPlayer(p, (Math.round(curVal*10000)/10000));
                             if (p.isOnline()){
                                 Player player = (Player)p;
-                                player.sendMessage(ChatColor.YELLOW + "Removed loan No: "+ ChatColor.GREEN + args + ChatColor.YELLOW + ". Withdrew " + ChatColor.GREEN + "$" + AutoTuneGUIShopUserCommand.df2.format(curVal) + ChatColor.YELLOW + " from your balance.");
+                                player.sendMessage(ChatColor.YELLOW + "Removed loan No: "+ ChatColor.GREEN + args + ChatColor.YELLOW + ". Withdrew " + ChatColor.GREEN + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(curVal) + ChatColor.YELLOW + " from your balance.");
                             }
                             if (!(p.isOnline())){
-                                Main.log("Removed loan No: "+ args + ". Withdrew " + "$" + AutoTuneGUIShopUserCommand.df2.format(curVal) + " from " + p.getName() +"'s balance.");
+                                Main.log("Removed loan No: "+ args + ". Withdrew " + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(curVal) + " from " + p.getName() +"'s balance.");
                             }
                             loaded = true;
                         }

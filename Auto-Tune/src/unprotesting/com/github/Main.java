@@ -177,7 +177,7 @@ public final class Main extends JavaPlugin implements Listener {
     this.getCommand("at").setExecutor(new AutoTuneCommand());
     this.getCommand("shop").setExecutor(new AutoTuneGUIShopUserCommand());
     this.getCommand("sell").setExecutor(new AutoTuneSellCommand());
-    this.getCommand("autosell").setExecutor(new AutoTuneAutoSellCommand());
+    if (Config.isAutoSellEnabled()){this.getCommand("autosell").setExecutor(new AutoTuneAutoSellCommand());}
     this.getCommand("loan").setExecutor(new AutoTuneLoanCommand());
     this.getCommand("loans").setExecutor(new AutoTuneLoansCommand());
     this.getCommand("payloan").setExecutor(new AutoTunePaybackLoanCommand());
@@ -185,10 +185,12 @@ public final class Main extends JavaPlugin implements Listener {
     priceModel = Config.getPricingModel().toString();
     TextHandler.sendPriceModelData(priceModel);
     scheduler = getServer().getScheduler();
+    if (Config.isAutoSellEnabled()){
     scheduler.scheduleSyncRepeatingTask(this, new AutoSellEventHandler(), Config.getAutoSellUpdatePeriod() * 5,
         Config.getAutoSellUpdatePeriod());
     scheduler.scheduleSyncRepeatingTask(this, new AutoTunePlayerAutoSellEventHandler(),
         Config.getAutoSellProfitUpdatePeriod() + 20, Config.getAutoSellProfitUpdatePeriod());
+    }
     scheduler.scheduleAsyncRepeatingTask(this, new LoanEventHandler(), Config.getIntrestRateUpdateRate(),
         Config.getIntrestRateUpdateRate());
     runnable();

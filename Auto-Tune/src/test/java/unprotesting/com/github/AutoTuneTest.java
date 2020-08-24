@@ -5,12 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.File;
 import java.util.Random;
 
-import org.json.simple.parser.ParseException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -20,9 +18,6 @@ import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
 import org.mapdb.Serializer;
-
-import unprotesting.com.github.Main;
-import unprotesting.com.github.util.Config;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Auto-Tune Tests")
@@ -110,17 +105,5 @@ class AutoTuneTest {
         for (int i = 0; i < 10000; i++) {
             int a = memoryDataTest.get(i);
         }
-    }
-
-    @Test
-    @Disabled
-    @Order(5)
-    @DisplayName("Basic Price Calculation Test")
-    void fithTest() throws ParseException {
-        Main.priceModel = "Basic";
-        Config.setChecksumHeaderBypass(true);
-        Main.basicVolatilityAlgorithim = "Variable";
-        startTime = System.nanoTime();
-        Main.loadItemPricesAndCalculate();
     }
 }

@@ -90,12 +90,12 @@ public class AutoTuneLoanCommand implements CommandExecutor {
             Double time  = Long.valueOf(millis).doubleValue();
             double[] input = {amount, Config.getIntrestRate(), amount, time};
             double updateperiod = Config.getIntrestRateUpdateRate()/1200;
-            p.sendMessage(ChatColor.GOLD + "Created loan of $" + amount + ". The current intrest rate is " + Config.getIntrestRate().toString() + "% per " + updateperiod + " min");
+            p.sendMessage(ChatColor.GOLD + "Created loan of " + Config.getCurrencySymbol() + amount + ". The current intrest rate is " + Config.getIntrestRate().toString() + "% per " + updateperiod + " min");
             Main.loanMap.put(uuid+integerString, input);
             Main.getEconomy().depositPlayer(p, amount);
         }
         else{
-            p.sendMessage(ChatColor.DARK_RED + "The maximum debt value is " + ChatColor.RED + "$" + Config.getMaxDebt() + ChatColor.DARK_RED + ". Your balance is " + ChatColor.RED + "$" + balance + ChatColor.DARK_RED + ". You can not take out a loan of "+ ChatColor.RED + "$" + amount);
+            p.sendMessage(ChatColor.DARK_RED + "The maximum debt value is " + ChatColor.RED + Config.getCurrencySymbol() + Config.getMaxDebt() + ChatColor.DARK_RED + ". Your balance is " + ChatColor.RED + Config.getCurrencySymbol() + balance + ChatColor.DARK_RED + ". You can not take out a loan of "+ ChatColor.RED + Config.getCurrencySymbol() + amount);
         }
     }
 

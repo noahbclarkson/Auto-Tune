@@ -14,7 +14,8 @@ public final class Config {
                                 debugEnabled, 
                                     checksumHeaderBypass, 
                                         sellPriceDifferenceVariationEnabled,
-                                            inflationEnabled;
+                                            inflationEnabled,
+                                                autoSellEnabled;
 
     @Getter
     @Setter
@@ -38,7 +39,8 @@ public final class Config {
                                         noPermission,
                                             apiKey,
                                                 email,
-                                                    inflationMethod;
+                                                    inflationMethod,
+                                                        currencySymbol;
 
     @Getter
     @Setter
@@ -60,6 +62,7 @@ public final class Config {
     public static void loadDefaults() {
     Config.setSellPriceDifferenceVariationEnabled(Main.getMainConfig().getBoolean("sell-price-difference-variation-enabled", false));
     Config.setWebServer(Main.getMainConfig().getBoolean("web-server-enabled", false));
+    Config.setAutoSellEnabled(Main.getMainConfig().getBoolean("auto-sell-enabled", true));
     Config.setInflationEnabled(Main.getMainConfig().getBoolean("inflation-enabled", true));
     Config.setChecksumHeaderBypass(Main.getMainConfig().getBoolean("checksum-header-bypass", false));
     Config.setDebugEnabled(Main.getMainConfig().getBoolean("debug-enabled", false));
@@ -74,6 +77,7 @@ public final class Config {
     Config.setSellPriceVariationTimePeriod(Main.getMainConfig().getInt("sell-price-variation-time-period", 10800));
     Config.setSellPriceVariationUpdatePeriod(Main.getMainConfig().getInt("sell-price-variation-update-period", 30));
     Config.setServerName(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("server-name", "Survival Server - (Change this in Config)")));
+    Config.setCurrencySymbol(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("currency-symbol", "$")));
     Config.setMenuTitle(
     ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("menu-title", "Auto-Tune Shop")));
     Config.setPricingModel(
@@ -81,7 +85,7 @@ public final class Config {
     Config.setApiKey(Main.getMainConfig().getString("api-key", "xyz"));
     Config.setInflationMethod(Main.getMainConfig().getString("inflation-method", "Mixed"));
     Config.setEmail(Main.getMainConfig().getString("email", "xyz@gmail.com"));
-    Config.setBasicVolatilityAlgorithim(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("Volatility-Algorithim", "Fixed")));
+    Config.setBasicVolatilityAlgorithim(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("Volatility-Algorithim", "Variable")));
     Config.setNoPermission(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("no-permission", "You do not have permission to perform this command")));
     Config.setBasicMaxFixedVolatility(Main.getMainConfig().getDouble("Fixed-Max-Volatility", 2.00));
     Config.setBasicMaxVariableVolatility(Main.getMainConfig().getDouble("Variable-Max-Volatility", 2.00));

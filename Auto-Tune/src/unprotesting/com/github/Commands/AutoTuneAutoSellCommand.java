@@ -112,7 +112,8 @@ public class AutoTuneAutoSellCommand implements CommandExecutor{
                         });
                         ItemMeta im = is.getItemMeta();
                         im.setDisplayName(ChatColor.AQUA + Main.memMap.get(i) + ChatColor.RED + " - Auto Sell Disabled");
-                        Boolean atonoff = main.playerDataConfig.getBoolean(uuid + ".AutoSell" + "." + Main.memMap.get(i));
+                        Boolean atonoff = Main.playerDataConfig
+                                .getBoolean(uuid + ".AutoSell" + "." + Main.memMap.get(i));
                         if (atonoff == true){
                             im.setDisplayName(ChatColor.AQUA + Main.memMap.get(i) + ChatColor.GREEN + " - Auto Sell Enabled");
                         }
@@ -121,7 +122,7 @@ public class AutoTuneAutoSellCommand implements CommandExecutor{
                         Double[] tempDoublearray = tempmap.get(tempMapSize - 1);
                         price1 = tempDoublearray[0];
                         String priceString = AutoTuneGUIShopUserCommand.df2.format(price1);
-                        String fullprice = "Price: " + "$" + priceString;
+                        String fullprice = "Price: " + Config.getCurrencySymbol() + priceString;
                         im.setLore(Arrays.asList(ChatColor.GOLD + fullprice));
                         is.setItemMeta(im);
                         if (Config.getMenuRows() == 4) {
@@ -329,27 +330,25 @@ public class AutoTuneAutoSellCommand implements CommandExecutor{
 
             }
 
-            private Main main = Main.getPlugin(Main.class);
-
             public void changePlayerAutoSellSettings(Player player, String material){
                 UUID uuid = player.getUniqueId();
                 Boolean autosellset = false;
-                main.playerDataConfig.contains(uuid + ".AutoSell");
+                Main.playerDataConfig.contains(uuid + ".AutoSell");
                 autosellset = true;
                 if (autosellset == false){
-                    main.playerDataConfig.createSection(uuid + ".AutoSell");
+                    Main.playerDataConfig.createSection(uuid + ".AutoSell");
                 }
-                Boolean atonoff = main.playerDataConfig.getBoolean(uuid + ".AutoSell" + "." + material);
-                if (!(main.playerDataConfig.contains(uuid + ".AutoSell" + "." + material))){
-                    main.playerDataConfig.createSection(uuid + ".AutoSell" + "." + material);
+                Boolean atonoff = Main.playerDataConfig.getBoolean(uuid + ".AutoSell" + "." + material);
+                if (!(Main.playerDataConfig.contains(uuid + ".AutoSell" + "." + material))) {
+                    Main.playerDataConfig.createSection(uuid + ".AutoSell" + "." + material);
                 }
                 if (atonoff == false){
-                    main.playerDataConfig.set(uuid + ".AutoSell" + "." + material, true);
+                    Main.playerDataConfig.set(uuid + ".AutoSell" + "." + material, true);
                 }
                 if (atonoff == true){
-                    main.playerDataConfig.set(uuid + ".AutoSell" + "." + material, false);
+                    Main.playerDataConfig.set(uuid + ".AutoSell" + "." + material, false);
                 }
-                main.saveplayerdata();
+                Main.saveplayerdata();
             }
 
     

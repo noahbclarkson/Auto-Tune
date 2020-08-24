@@ -40,6 +40,9 @@ menu-title: 'Auto-Tune Shop'
 ##  Message sent for players with no permission
 no-permission: '&eYou do not have permission to perform this command'
 
+##Enable player-automatic-selling
+auto-sell-enabled: true 
+
 ##  How often auto-sell updates in ticks
 auto-sell-update-period: 15
 
@@ -80,6 +83,9 @@ data-selection-z: 1.6
 data-selection-c: 1.25
 
 ##  -- Other Econonomy Settings --
+
+##  The symbol that appears before all currency
+currency-symbol: '$'
 
 ##  Enable sell price difference variation to ease out sell price varition
 sell-price-difference-variation-enabled: false

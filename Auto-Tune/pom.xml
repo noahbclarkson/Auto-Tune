@@ -3,12 +3,12 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <mainClass>${project.groupId}.${project.artifactId}</mainClass>
-    <api.version>1.6</api.version>
+    <maven.compiler.release>14</maven.compiler.release>
   </properties>
   <!-- Project information -->
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune</artifactId>
-  <version>0.8.2</version>
+  <version>0.8.3</version>
   <packaging>jar</packaging>
  <!-- Info -->
   <name>Auto-Tune</name>
@@ -61,7 +61,7 @@
     <dependency>
       <groupId>com.github.stefvanschie.inventoryframework</groupId>
       <artifactId>IF</artifactId>
-      <version>0.7.0</version>
+      <version>0.7.2</version>
     </dependency>
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
@@ -116,7 +116,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>2.0.2</version>
+        <version>3.8.1</version>
         <configuration>
           <source>1.8</source>
           <target>1.8</target>

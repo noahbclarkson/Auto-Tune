@@ -7,7 +7,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
@@ -15,9 +14,7 @@ import unprotesting.com.github.util.TextHandler;
 
 public class AutoTuneCommand implements CommandExecutor {
 
-    private Main main = Main.getPlugin(Main.class);
     static Logger log = Logger.getLogger("Minecraft");
-    Plugin plugin = Main.getPlugin(Main.class);
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String at, String[] args) {
@@ -27,17 +24,19 @@ public class AutoTuneCommand implements CommandExecutor {
             if (args[0].equalsIgnoreCase("login")) {
                 if (player.hasPermission("at.login") || player.isOp()){
                     String AutoTunePlayerID = UUID.randomUUID().toString();
-                    String LoggedIn = main.playerDataConfig.getString(uuid + ".autotuneID");
+                    String LoggedIn = Main.playerDataConfig.getString(uuid + ".autotuneID");
                     if (LoggedIn == null){
                         player.sendMessage(ChatColor.YELLOW + "No Auto-Tune Account found in Config");
-                        main.playerDataConfig.set(uuid + ".autotuneID", AutoTunePlayerID);
-                        main.saveplayerdata();
+                        Main.playerDataConfig.set(uuid + ".autotuneID", AutoTunePlayerID);
+                        Main.saveplayerdata();
                         player.sendMessage(ChatColor.YELLOW + "Creating one for you..");
                         player.sendMessage(ChatColor.YELLOW + "Created Auto-Tune Account with Unique ID: " + AutoTunePlayerID);}
 
                     else if (LoggedIn != null){
                     player.sendMessage(ChatColor.YELLOW + "Already Logged in!");
-                    player.sendMessage(ChatColor.YELLOW + "Your unique ID is " + main.playerDataConfig.getString(uuid + ".autotuneID"));}
+                    player.sendMessage(ChatColor.YELLOW + "Your unique ID is " + Main.playerDataConfig
+                            .getString(uuid + ".autotuneID"));
+                }
                             }
                 else if (!(player.hasPermission("at.login")) && !(player.isOp())){
                     TextHandler.noPermssion(player);

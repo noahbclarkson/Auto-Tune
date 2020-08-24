@@ -17,6 +17,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.chat.HoverEvent.Action;
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
+import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.TextHandler;
 
 public class AutoTuneLoansCommand implements CommandExecutor {
@@ -55,7 +56,7 @@ public class AutoTuneLoansCommand implements CommandExecutor {
         float sec = (((float)(Long.valueOf(Instant.now().toEpochMilli()).doubleValue() - initalTime))/1000);
         String lastChar = str.substring(str.length() - 1);
         String currentPrice = AutoTuneGUIShopUserCommand.df2.format(dArray[0]);
-        TextComponent loanMessage = new TextComponent(ChatColor.GOLD + "Loan No: " + lastChar + " - Current Value: $" + currentPrice + " - Intrest Rate: %" + dArray[1] + " - Initial Value: $" + dArray[2] + " - Creation Date: " + initialDateString + " - Elapsed Time: " + sec + "s");
+        TextComponent loanMessage = new TextComponent(ChatColor.GOLD + "Loan No: " + lastChar + " - Current Value: "+ Config.getCurrencySymbol() + currentPrice + " - Intrest Rate: %" + dArray[1] + " - Initial Value: "+ Config.getCurrencySymbol() + dArray[2] + " - Creation Date: " + initialDateString + " - Elapsed Time: " + sec + "s");
         loanMessage.setHoverEvent(new HoverEvent(Action.SHOW_TEXT, new ComponentBuilder("Click to payback loan").create()));
         loanMessage.setClickEvent(new ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/payloan " + lastChar));
         p.spigot().sendMessage(loanMessage);

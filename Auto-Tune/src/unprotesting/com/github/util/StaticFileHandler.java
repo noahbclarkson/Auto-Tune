@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
-@SuppressWarnings("restriction")
 public class StaticFileHandler implements HttpHandler {
 
     private final String baseDir;

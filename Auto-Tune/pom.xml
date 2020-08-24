@@ -3,7 +3,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <mainClass>${project.groupId}.${project.artifactId}</mainClass>
-    <maven.compiler.release>14</maven.compiler.release>
+    <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
   <!-- Project information -->
   <groupId>unprotesting.com.github</groupId>

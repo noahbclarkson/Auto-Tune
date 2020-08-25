@@ -1,3 +1,10 @@
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/Unprotesting/Auto-Tune/Java%20CI%20with%20Maven)
+![GitHub issues](https://img.shields.io/github/issues/Unprotesting/Auto-Tune)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/Unprotesting/Auto-Tune)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/Unprotesting/Auto-Tune)
+[![Discord](https://img.shields.io/discord/747442431594594355.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/WHv37xG)
+
+
 # Auto-Tune
  
      A powerful Minecraft Automatic-Economy Plugin for 1.16.2 with lots of features
@@ -302,7 +309,8 @@
 
   #### How to purchase an Auto-Tune API key
 
-    To get an Auto-Tune API key please contact [Unprotesting#0692] on Discord. 
+    To get an Auto-Tune API please open a ticket on our discord: 
+[![Discord](https://img.shields.io/discord/747442431594594355.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/WHv37xG)
 
   #### Auto-Tune API Pricing
 

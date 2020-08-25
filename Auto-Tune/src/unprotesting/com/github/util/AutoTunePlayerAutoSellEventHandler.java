@@ -23,8 +23,13 @@ public class AutoTunePlayerAutoSellEventHandler implements Runnable{
             catch (IllegalArgumentException e){
                 continue;
             }
-            AutoTuneSellCommand.roundAndGiveMoney(p, Main.tempdatadata.get(uuid), false);
-            Main.tempdatadata.remove(uuid);
+            if (p != null){
+                if (p.isOnline() && (p.hasPermission("at.autosell") || p.isOp())){
+                    AutoTuneSellCommand.roundAndGiveMoney(p, Main.tempdatadata.get(uuid), false);
+                    Main.tempdatadata.remove(uuid);
+                }
+                
+            }
         }
     }
 }

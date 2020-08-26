@@ -4,7 +4,7 @@
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune</artifactId>
   <name>Auto-Tune</name>
-  <version>0.8.4</version>
+  <version>0.8.5</version>
   <description>The automatic pricing plugin for minecraft</description>
   <url>https://github.com/Unprotesting/Auto-Tune</url>
   <issueManagement>
@@ -46,7 +46,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>2.3</version>
+        <version>3.2.4</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -96,42 +96,17 @@
       <artifactId>spigot-api</artifactId>
       <version>1.16.2-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
-      <exclusions>
-        <exclusion>
-          <artifactId>commons-lang</artifactId>
-          <groupId>commons-lang</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>gson</artifactId>
-          <groupId>com.google.code.gson</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>bungeecord-chat</artifactId>
-          <groupId>net.md-5</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>snakeyaml</artifactId>
-          <groupId>org.yaml</groupId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.github.MilkBowl</groupId>
       <artifactId>VaultAPI</artifactId>
       <version>1.7</version>
       <scope>provided</scope>
-      <exclusions>
-        <exclusion>
-          <artifactId>bukkit</artifactId>
-          <groupId>org.bukkit</groupId>
-        </exclusion>
-      </exclusions>
     </dependency>
   </dependencies>
   <properties>
+    <maven.compiler.target>1.8</maven.compiler.target>
     <mainClass>${project.groupId}.${project.artifactId}</mainClass>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
 </project>
-

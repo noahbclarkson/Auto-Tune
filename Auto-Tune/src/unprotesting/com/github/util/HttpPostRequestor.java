@@ -42,12 +42,10 @@ public class HttpPostRequestor {
         if (statusCode == 200) {
             client.close();
         }
-        ;
         if (statusCode != 200) {
             client.close();
             Main.log("Error on status code");
         }
-        ;
         Main.debugLog(response.getStatusLine().getReasonPhrase());
         HttpEntity entityResponse = response.getEntity();
         if (entityResponse != null) {
@@ -81,6 +79,59 @@ public class HttpPostRequestor {
             }
         return newPrice;
     }
-    
+
+
+    public static boolean ghostCheckAPIKey() throws ClientProtocolException, IOException {
+        if (Config.getApiKey() == "xyz"){
+            Main.log("Please change your API key in the config.yml file");
+            return false;
+        }
+        if (Config.getEmail() == "xyz@gmail.com"){
+            Main.log("Please change your Email in the config.yml file");
+            return false;
+        }
+        else{
+            Main.debugLog("Api-Key has been changed in config");
+            CloseableHttpClient client = HttpClients.createDefault();
+            HttpPost httpPost = new HttpPost("https://safe-refuge-09383.herokuapp.com");
+            httpPost.setHeader("content-type", "application/json");
+            httpPost.setHeader("apikey", Config.getApiKey());
+            httpPost.setHeader("email", Config.getEmail());
+            JSONObject json = new JSONObject();
+            json.put("apikey", Config.getApiKey());
+            StringEntity entity = new StringEntity(json.toJSONString());
+            httpPost.setEntity(entity);
+            CloseableHttpResponse response = client.execute(httpPost);
+            int statusCode = response.getStatusLine().getStatusCode();
+            if (statusCode == 200) {
+                client.close();
+                return true;
+            }
+            else if (statusCode != 200) {
+                client.close();
+                Main.log("Error on status code");
+                return false;
+            }
+        }
+        return false;
+        
+    }
+
+    public static boolean checkAPIKey(){
+        try {
+            boolean vaildKey = ghostCheckAPIKey();
+            if (vaildKey == true){
+                return true;
+            }
+            else if (vaildKey != true){
+                return false;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return false;
+    }
+
             
 }

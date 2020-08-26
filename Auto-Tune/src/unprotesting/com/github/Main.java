@@ -107,6 +107,8 @@ public final class Main extends JavaPlugin implements Listener {
   public static String basicVolatilityAlgorithim;
   public static String priceModel;
 
+  public Boolean vaildAPIKey = false;
+
   @Getter
   @Setter
   public static Gui gui;
@@ -174,6 +176,16 @@ public final class Main extends JavaPlugin implements Listener {
     loadShopsFile();
     loadShopData();
     materialListSize = memMap.size();
+    vaildAPIKey = HttpPostRequestor.checkAPIKey();
+    if (!vaildAPIKey){
+      log.severe(String.format("Disabled due to invalid API key", getDescription().getName()));
+      debugLog("Please check API key is vaild in config.yml");
+      getServer().getPluginManager().disablePlugin(this);
+      return;
+    }
+    if (vaildAPIKey) {
+      log("API-Key found in database. Continuing to load Auto-Tune..");
+    }
     this.getCommand("at").setExecutor(new AutoTuneCommand());
     this.getCommand("shop").setExecutor(new AutoTuneGUIShopUserCommand());
     this.getCommand("sell").setExecutor(new AutoTuneSellCommand());

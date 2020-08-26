@@ -15,4 +15,5 @@ public class JSONManager {
         obj.put("minVolatility", minVolatility);
         return obj;
     }
+
 }

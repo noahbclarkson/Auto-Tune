@@ -42,14 +42,14 @@ An example of a shop setup using Auto-Tune:
   - Configurable GUI with sizing and naming options [80+ supported item-slots]
   - Configurable shops with options to lock price and sell-price-differences [For more look at shops.yml configuration below]
   - Configurable sell-price-difference
-  - Sell price-differnence-variation algorithim options [Update period, total time, starting-difference, ending difference]
+  - Sell price-difference-variation algorithim options [Update period, total time, starting-difference, ending difference]
   - Player loaning [/loan, /loans, /payloan, easy to use]
   - Configurable interest rates [Update period, amount and more]
   - Debt settings
-  - Incredibly fast data-collection and creation [50000 data insertions and retrevals a second when in memory, 5000 data insertions and retrevals a second when in storage (in our tests)]
+  - Incredibly fast data-collection and creation [50000 data insertions and retrevals a second when in memory, 5000 data insertions and retrievals a second when in storage (in our tests)]
   - Data corruption protection
   - And more!
-  - Coming soon (Dynamic Intrest rates, Credit scoring, Lots more GUI-shop configuration, even faster data-retrival, updated web-server, and more (We're open to suggestions))
+  - Coming soon (Dynamic Intrest rates, Credit scoring, Lots more GUI-shop configuration, even faster data-retrieval, updated web-server, and more (We're open to suggestions))
 
 ## Usage
 

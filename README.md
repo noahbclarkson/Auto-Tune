@@ -44,7 +44,7 @@ An example of a shop setup using Auto-Tune:
   - Configurable sell-price-difference
   - Sell price-differnence-variation algorithim options [Update period, total time, starting-difference, ending difference]
   - Player loaning [/loan, /loans, /payloan, easy to use]
-  - Configurable intrest rates [Update period, amount and more]
+  - Configurable interest rates [Update period, amount and more]
   - Debt settings
   - Incredibly fast data-collection and creation [50000 data insertions and retrevals a second when in memory, 5000 data insertions and retrevals a second when in storage (in our tests)]
   - Data corruption protection

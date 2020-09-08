@@ -13,7 +13,7 @@ public class AutoTunePlayerAutoSellEventHandler implements Runnable{
     @Override
     public void run() {
         for (String uuid : Main.tempdatadata.keySet()){
-            if (uuid == "SellPriceDifferenceDifference"){
+            if (uuid.equals("SellPriceDifferenceDifference") || uuid.equals("GDP")){
                 continue;
             }
             Player p;

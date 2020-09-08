@@ -12,7 +12,7 @@ import unprotesting.com.github.Main;
 
 public class JoinEventHandler implements Listener {
 
-    static Logger log = Logger.getLogger("Minecraft");
+    public static Logger log = Logger.getLogger("Minecraft");
     
     @EventHandler
     public void onPlayerJoin(PlayerLoginEvent e) {
@@ -21,5 +21,6 @@ public class JoinEventHandler implements Listener {
             Main.playerDataConfig.set(uuid + ".name", p.getName());
             Main.saveplayerdata();
         }
-
     }
+
+  

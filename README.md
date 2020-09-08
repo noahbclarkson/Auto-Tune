@@ -46,6 +46,7 @@ An example of a shop setup using Auto-Tune:
   - Player loaning [/loan, /loans, /payloan, easy to use]
   - Configurable interest rates [Update period, amount and more]
   - Debt settings
+  - GDP and GDP per capita calculation [factors in buying/selling, debt, and loaning, using /gdp]
   - Incredibly fast data-collection and creation [50000 data insertions and retrevals a second when in memory, 5000 data insertions and retrievals a second when in storage (in our tests)]
   - Data corruption protection
   - And more!
@@ -76,7 +77,7 @@ An example of a shop setup using Auto-Tune:
   <details>
   <summary>Config.yml</summary>
   
-  Auto-Tune's config.yml file:
+  Auto-Tune's Config.yml file:
 
       -- General Settings --  
 
@@ -205,9 +206,9 @@ An example of a shop setup using Auto-Tune:
   #### Configuring shops.yml
   
   <details>
-  <summary>shops.yml</summary>
+  <summary>Shops.yml</summary>
     
-   Auto-Tune's shops.yml file:
+   Auto-Tune's Shops.yml file:
 
       Set the default / starting prices for the items you want available in the shop
       Info: Make sure you put a decimal point and two digits to create a double for the shop algorithim to accept and parse to a price-value
@@ -244,7 +245,7 @@ However, pricing will roughly be at around:
 - Advanced: £1.00 per 20,000 - 40,000 API requests
 - Exponential: £1.00 per 8,000 - 25,000 API requests
 
-  #### How to access the Auto-Tune API without the Auto-Tune plugin
+#### How to access the Auto-Tune API without the Auto-Tune plugin
 
 For Auto-Tune users this is not neccessary to worry about, however, those who want to access the API without the need for the Auto-Tune plugin can do so.
 

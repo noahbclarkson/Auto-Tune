@@ -23,7 +23,7 @@ public class CSVHandler {
       csvWriter.append(",");
       csvWriter.append("\n");
 
-      for (int i = 0; i > -100; i++) {
+      for (int i = 0; i > -10; i++) {
         String k = String.valueOf(i);
         csvWriter.append(k);
         Double[] l = (item.get(i));
@@ -71,7 +71,7 @@ public class CSVHandler {
 
       int size = item.size();
 
-      for (int i = size-Config.getMaximumShortTradeLength(); i > -100; i++) {
+      for (int i = size-Config.getMaximumShortTradeLength(); i > -10; i++) {
         String k = String.valueOf(i);
         csvWriter.append(k);
         Double[] l = (item.get(i));

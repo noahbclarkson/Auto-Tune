@@ -231,22 +231,6 @@ public class AutoTuneAutoSellCommand implements CommandExecutor{
                     pane.addPane(1, SBPane);
                 }
 
-                // page two
-                // **if (size > menuRows*7){
-                // OutlinePane pageTwo = new OutlinePane(1, 1, 7, menuRows-2);
-                // pageTwo.addItem(new GuiItem(new ItemStack(Material.GLASS), event ->
-                // event.getWhoClicked().sendMessage("Glass")));
-                // pane.addPane(1, pageTwo);
-                // }
-
-                // page three
-                // if (size > menuRows*14){
-                // OutlinePane pageThree = new OutlinePane(1, 1, 7, menuRows-2);
-                // pageThree.addItem(new GuiItem(new ItemStack(Material.BLAZE_ROD),event ->
-                // event.getWhoClicked().sendMessage("Blaze rod")));
-                // pane.addPane(2, pageThree);
-                // }
-
                 gui1.addPane(pane);
 
                 // page selection

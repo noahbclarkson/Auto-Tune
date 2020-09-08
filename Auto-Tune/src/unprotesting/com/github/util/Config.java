@@ -15,7 +15,8 @@ public final class Config {
                                     checksumHeaderBypass, 
                                         sellPriceDifferenceVariationEnabled,
                                             inflationEnabled,
-                                                autoSellEnabled;
+                                                autoSellEnabled,
+                                                    calculateGlobalGDP;
 
     @Getter
     @Setter
@@ -62,6 +63,7 @@ public final class Config {
     public static void loadDefaults() {
     Config.setSellPriceDifferenceVariationEnabled(Main.getMainConfig().getBoolean("sell-price-difference-variation-enabled", false));
     Config.setWebServer(Main.getMainConfig().getBoolean("web-server-enabled", false));
+    Config.setCalculateGlobalGDP(Main.getMainConfig().getBoolean("calculate-global-GDP", true));
     Config.setAutoSellEnabled(Main.getMainConfig().getBoolean("auto-sell-enabled", true));
     Config.setInflationEnabled(Main.getMainConfig().getBoolean("inflation-enabled", true));
     Config.setChecksumHeaderBypass(Main.getMainConfig().getBoolean("checksum-header-bypass", false));
@@ -97,9 +99,9 @@ public final class Config {
     Config.setInflationValue(Main.getMainConfig().getDouble("static-inflation-value", 0.1));
     Config.setDataSelectionZ(Main.getMainConfig().getDouble("data-selection-z", 1.6));
     Config.setSellPriceDifference(Main.getMainConfig().getDouble("sell-price-difference", 2.5));
-    Config.setIntrestRate(Main.getMainConfig().getDouble("intrest-rate", 0.01));
+    Config.setIntrestRate(Main.getMainConfig().getDouble("intrest-rate", 0.001));
     Config.setMaxDebt(Main.getMainConfig().getDouble("max-debt-value", -1000.00));
-    Config.setSellPriceDifferenceVariationStart(Main.getMainConfig().getDouble("sell-price-differnence-variation-start", 25.0));
+    Config.setSellPriceDifferenceVariationStart(Main.getMainConfig().getDouble("sell-price-difference-variation-start", 25.0));
   }
 
 }

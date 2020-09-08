@@ -19,7 +19,7 @@ public class AutoTunePaybackLoanCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String payloan, String[] args) {
         if (sender instanceof Player && command.getName().equalsIgnoreCase("payloan")){
-            if (args[0] == null || args[0] == " " || args[0] == ""){
+            if (args[0] == null || args[0].equals(" ") || args[0].equals("")) {
                 return false;
             }
             Player p = (Player) sender;
@@ -46,7 +46,7 @@ public class AutoTunePaybackLoanCommand implements CommandExecutor {
                             double[] arr = Main.loanMap.get(uuid.toString() + args);
                             double curVal = arr[0];
                             Main.loanMap.remove(uuid.toString() + args);
-                            Main.getEconomy().withdrawPlayer(p, (Math.round(curVal*10000)/10000));
+                            Main.getEconomy().withdrawPlayer(p, (Math.round(curVal*1000)/1000));
                             if (p.isOnline()){
                                 Player player = (Player)p;
                                 player.sendMessage(ChatColor.YELLOW + "Removed loan No: "+ ChatColor.GREEN + args + ChatColor.YELLOW + ". Withdrew " + ChatColor.GREEN + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(curVal) + ChatColor.YELLOW + " from your balance.");

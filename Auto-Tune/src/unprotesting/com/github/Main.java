@@ -50,6 +50,7 @@ import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.milkbowl.vault.economy.Economy;
+import unprotesting.com.github.Commands.AutoTuneGDPCommand;
 import unprotesting.com.github.Commands.AutoTuneAutoSellCommand;
 import unprotesting.com.github.Commands.AutoTuneCommand;
 import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
@@ -184,7 +185,7 @@ public final class Main extends JavaPlugin implements Listener {
       return;
     }
     if (vaildAPIKey) {
-      log("API-Key found in database. Continuing to load Auto-Tune..");
+      log("API-Key found in database. Continuing to load Auto-Tune on " + Config.getServerName());
     }
     this.getCommand("at").setExecutor(new AutoTuneCommand());
     this.getCommand("shop").setExecutor(new AutoTuneGUIShopUserCommand());
@@ -193,6 +194,7 @@ public final class Main extends JavaPlugin implements Listener {
     this.getCommand("loan").setExecutor(new AutoTuneLoanCommand());
     this.getCommand("loans").setExecutor(new AutoTuneLoansCommand());
     this.getCommand("payloan").setExecutor(new AutoTunePaybackLoanCommand());
+    this.getCommand("gdp").setExecutor(new AutoTuneGDPCommand());
     basicVolatilityAlgorithim = Config.getBasicVolatilityAlgorithim();
     priceModel = Config.getPricingModel().toString();
     TextHandler.sendPriceModelData(priceModel);
@@ -292,18 +294,13 @@ public final class Main extends JavaPlugin implements Listener {
   }
 
   public static void loadItemPricesAndCalculate() throws ParseException {
-    System.out.println("Loading item prices");
     tempbuys = 0.0;
     tempsells = 0.0;
     buys = 0.0;
     sells = 0.0;
-    System.out.println("Loading item prices1");
     if (priceModel.contains("Basic") || priceModel.contains("Advanced") || priceModel.contains("Exponential")) {
-      System.out.println("Loading item prices2");
       TextHandler.sendDataBeforePriceCalculation(priceModel, basicVolatilityAlgorithim);
-      System.out.println("Loading item prices3");
       Set<String> strSet = map.keySet();
-      System.out.println("Loading item prices4");
       for (String str : strSet) {
         ConcurrentHashMap<Integer, Double[]> tempMap = map.get(str);
         Integer expvalues = 0;
@@ -610,6 +607,9 @@ public final class Main extends JavaPlugin implements Listener {
     tempdatadata = tempDB.hashMap("tempdatadata", Serializer.STRING, Serializer.DOUBLE).createOrOpen();
     loanDB = DBMaker.fileDB("plugins/Auto-Tune/temp/loandata.db").checksumHeaderBypass().closeOnJvmShutdown().make();
     loanMap = loanDB.hashMap("loanMap", Serializer.STRING, Serializer.DOUBLE_ARRAY).createOrOpen();
+    if (tempdatadata.get("GDP")==null){
+      tempdatadata.put("GDP", 0.0);
+    }
   }
 
   public boolean onCommand(CommandSender sender, Command testcmd, String trade, String[] help) {

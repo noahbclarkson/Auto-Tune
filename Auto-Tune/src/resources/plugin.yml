@@ -15,7 +15,7 @@ api-version: 1.16
 commands:
     at:
       description: Auto-Tune Command.
-      usage: /<at> <login>
+      usage: /<at> <login|increase|decrease>
     trade:
       description: Trade Online with other players.
       usage: /<trade> 
@@ -40,9 +40,13 @@ commands:
     payloan:
       description: Payback one of your loans
       usage: <payloan> <loanNo.>
+    gdp:
+      description: View GDP info
+      usage: <GDP>
 permssions:
   at.help:
     description: Displays Auto-Tune help information
+    default: true
   at.login: 
     description: Login to an Auto-Tune account |(active soon)|
   at.shop:
@@ -53,6 +57,12 @@ permssions:
     description: Open the Auto-Sell GUI and Auto-Sell
   at.loan:
     description: Loan money from the bank
+  at.increase:
+    description: Increase price of an item
+  at.decrease:
+    description: Decrease price of an item
+  at.gdp:
+    description: View GDP info
 
 
 

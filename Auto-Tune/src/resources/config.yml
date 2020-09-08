@@ -16,7 +16,7 @@ email: 'xyz@gmail.com'
 ##  Enable//Disable integrated Web Server.
 web-server-enabled: true
 
-##  Port for integrated Web Server (If enabled and on correct plan)
+##  Port for integrated Web Server (If enabled)
 port: 8123
 
 ##  The maximum length in data points that the trade-short.html will show (this doesn't affect data)
@@ -90,7 +90,7 @@ currency-symbol: '$'
 ##  Enable sell price difference variation to ease out sell price varition
 sell-price-difference-variation-enabled: false
 ##  Starting percententage sell price difference for sell price varition
-sell-price-differnence-variation-start: 25.0
+sell-price-difference-variation-start: 25.0
 ##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 7 days)
 sell-price-variation-time-period: 10080
 ##  Time in minutes that the sell-price-difference updates
@@ -113,7 +113,7 @@ static-inflation-value: 0.1
 
 ##  Intrest rate per intrest-rate-update-period
 ##  Info: This is the increase in the current debt payment per-time period
-intrest-rate: 0.01
+intrest-rate: 0.001
 ##  Time period in ticks between updates of the intrest rate for users loans
 intrest-rate-update-period: 1200
 

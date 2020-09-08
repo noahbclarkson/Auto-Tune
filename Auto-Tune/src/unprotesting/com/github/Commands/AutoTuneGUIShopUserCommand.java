@@ -251,22 +251,6 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			pane.addPane(1, SBPane);
 		}
 
-		// page two
-		// **if (size > menuRows*7){
-		// OutlinePane pageTwo = new OutlinePane(1, 1, 7, menuRows-2);
-		// pageTwo.addItem(new GuiItem(new ItemStack(Material.GLASS), event ->
-		// event.getWhoClicked().sendMessage("Glass")));
-		// pane.addPane(1, pageTwo);
-		// }
-
-		// page three
-		// if (size > menuRows*14){
-		// OutlinePane pageThree = new OutlinePane(1, 1, 7, menuRows-2);
-		// pageThree.addItem(new GuiItem(new ItemStack(Material.BLAZE_ROD),event ->
-		// event.getWhoClicked().sendMessage("Blaze rod")));
-		// pane.addPane(2, pageThree);
-		// }
-
 		gui1.addPane(pane);
 
 		// page selection
@@ -419,7 +403,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				if (hasAvaliableSlot(player) == true) {
 					Main.econ.withdrawPlayer(player, price);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 1));
-					player.sendMessage(ChatColor.GOLD + "Purchased 1x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price));
+					sendPlayerShopMessageAndUpdateGDP(1, price, player, matClickedString, false);
 				} else {
 					player.sendMessage(ChatColor.GOLD + "Cannot purchased 1x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price));
 					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
@@ -450,7 +434,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				if (hasAvaliableSlot(player) == true) {
 					Main.econ.withdrawPlayer(player, price * 2);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 2));
-					player.sendMessage(ChatColor.GOLD + "Purchased 2x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 2));
+					sendPlayerShopMessageAndUpdateGDP(2, price, player, matClickedString, false);
 				} else {
 					player.sendMessage(ChatColor.GOLD + "Cannot purchased 2x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 2));
 					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
@@ -481,7 +465,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				if (hasAvaliableSlot(player) == true) {
 					Main.econ.withdrawPlayer(player, price * 4);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 4));
-					player.sendMessage(ChatColor.GOLD + "Purchased 4x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 4));
+					sendPlayerShopMessageAndUpdateGDP(4, price, player, matClickedString, false);
 				} else {
 					player.sendMessage(ChatColor.GOLD + "Cannot purchased 4x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 4));
 					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
@@ -511,7 +495,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				if (hasAvaliableSlot(player) == true) {
 					Main.econ.withdrawPlayer(player, price * 8);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 8));
-					player.sendMessage(ChatColor.GOLD + "Purchased 8x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 8));
+					sendPlayerShopMessageAndUpdateGDP(8, price, player, matClickedString, false);
 				} else {
 					player.sendMessage(ChatColor.GOLD + "Cannot purchased 8x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 8));
 					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
@@ -542,7 +526,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				if (hasAvaliableSlot(player) == true) {
 					Main.econ.withdrawPlayer(player, price * 16);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 16));
-					player.sendMessage(ChatColor.GOLD + "Purchased 16x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 16));
+					sendPlayerShopMessageAndUpdateGDP(16, price, player, matClickedString, false);
 				} else {
 					player.sendMessage(ChatColor.GOLD + "Cannot purchased 16x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 16));
 					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
@@ -573,7 +557,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				if (hasAvaliableSlot(player) == true) {
 					Main.econ.withdrawPlayer(player, price * 32);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 32));
-					player.sendMessage(ChatColor.GOLD + "Purchased 32x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 32));
+					sendPlayerShopMessageAndUpdateGDP(32, price, player, matClickedString, false);
 				} else {
 					player.sendMessage(ChatColor.GOLD + "Cannot purchased 32x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 32));
 					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
@@ -604,7 +588,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				if (hasAvaliableSlot(player) == true) {
 					Main.econ.withdrawPlayer(player, price * 64);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 64));
-					player.sendMessage(ChatColor.GOLD + "Purchased 64x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 64));
+					sendPlayerShopMessageAndUpdateGDP(64, price, player, matClickedString, false);
 				} else {
 					player.sendMessage(ChatColor.GOLD + "Cannot purchased 64x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 64));
 					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
@@ -682,7 +666,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					tempMap2.put(tempMap2Size - 1, tempDArray);
 					Main.map.put(matClickedString, tempMap2);
 
-					player.sendMessage(ChatColor.GOLD + "Sold 1x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format((price - price * 0.01 * sellpricedif) * 1));
+					sendPlayerShopMessageAndUpdateGDP(1, (price - price * 0.01 * sellpricedif), player, matClickedString, true);
 					Main.econ.depositPlayer(player, (price - price * 0.01 * sellpricedif));
 					sellable = false;
 				}
@@ -728,7 +712,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					tempMap2.put(tempMap2Size - 1, tempDArray);
 					Main.map.put(matClickedString, tempMap2);
 
-					player.sendMessage(ChatColor.GOLD + "Sold 2x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format((price - price * 0.01 * sellpricedif) * 2));
+					sendPlayerShopMessageAndUpdateGDP(2, (price - price * 0.01 * sellpricedif), player, matClickedString, true);
 					Main.econ.depositPlayer(player, ((price - price * 0.01 * sellpricedif) * 2));
 					sellable = false;
 				}
@@ -774,7 +758,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					tempMap2.put(tempMap2Size - 1, tempDArray);
 					Main.map.put(matClickedString, tempMap2);
 
-					player.sendMessage(ChatColor.GOLD + "Sold 4x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format((price - price * 0.01 * sellpricedif) * 4));
+					sendPlayerShopMessageAndUpdateGDP(4, (price - price * 0.01 * sellpricedif), player, matClickedString, true);
 					Main.econ.depositPlayer(player, ((price - price * 0.01 * sellpricedif) * 4));
 					sellable = false;
 				}
@@ -820,7 +804,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					tempMap2.put(tempMap2Size - 1, tempDArray);
 					Main.map.put(matClickedString, tempMap2);
 
-					player.sendMessage(ChatColor.GOLD + "Sold 8x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format((price - price * 0.01 * sellpricedif) * 8));
+					sendPlayerShopMessageAndUpdateGDP(8, (price - price * 0.01 * sellpricedif), player, matClickedString, true);
 					Main.econ.depositPlayer(player, ((price - price * 0.01 * sellpricedif) * 8));
 					sellable = false;
 				}
@@ -866,7 +850,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					tempMap2.put(tempMap2Size - 1, tempDArray);
 					Main.map.put(matClickedString, tempMap2);
 
-					player.sendMessage(ChatColor.GOLD + "Sold 16x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format((price - price * 0.01 * sellpricedif) * 16));
+					sendPlayerShopMessageAndUpdateGDP(16, (price - price * 0.01 * sellpricedif), player, matClickedString, true);
 					Main.econ.depositPlayer(player, ((price - price * 0.01 * sellpricedif) * 16));
 					sellable = false;
 				}
@@ -912,7 +896,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					tempMap2.put(tempMap2Size - 1, tempDArray);
 					Main.map.put(matClickedString, tempMap2);
 
-					player.sendMessage(ChatColor.GOLD + "Sold 32x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format((price - price * 0.01 * sellpricedif) * 32));
+					sendPlayerShopMessageAndUpdateGDP(32, (price - price * 0.01 * sellpricedif), player, matClickedString, true);
 					Main.econ.depositPlayer(player, ((price - price * 0.01 * sellpricedif)) * 32);
 					sellable = false;
 				}
@@ -957,7 +941,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					tempMap2.put(tempMap2Size - 1, tempDArray);
 					Main.map.put(matClickedString, tempMap2);
 
-					player.sendMessage(ChatColor.GOLD + "Sold 64x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format((price - price * 0.01 * sellpricedif) * 64));
+					sendPlayerShopMessageAndUpdateGDP(64, (price - price * 0.01 * sellpricedif), player, matClickedString, true);
 					Main.econ.depositPlayer(player, ((price - price * 0.01 * sellpricedif)) * 64);
 					sellable = false;
 				}
@@ -1001,6 +985,18 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			return check;
 		}
 		return check;
+	}
+
+	public static void sendPlayerShopMessageAndUpdateGDP(int amount, double price, Player player, String matClickedString, boolean sell){
+		if (!sell){
+			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+(price*amount)));
+			player.sendMessage(ChatColor.GOLD + "Purchased " + amount + "x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price*amount));
+			
+		}
+		else if (sell){
+			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")-(price*amount)));
+			player.sendMessage(ChatColor.GOLD + "Sold " + amount + "x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price*amount));
+		}
 	}
 
 }

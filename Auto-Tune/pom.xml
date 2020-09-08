@@ -8,7 +8,7 @@
   <!-- Project information -->
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune</artifactId>
-  <version>0.8.5</version>
+  <version>0.9.0</version>
   <packaging>jar</packaging>
  <!-- Info -->
   <name>Auto-Tune</name>

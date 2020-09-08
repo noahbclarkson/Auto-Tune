@@ -26,10 +26,10 @@ public class AutoTuneLoanCommand implements CommandExecutor {
         if (command.getName().equalsIgnoreCase("loan")){
             Player p = (Player) sender;
             if (p.hasPermission("at.loan") || p.isOp()){
-                if (args[0] == null || args[0] == " " || args[0] == ""){
+                if (args[0] == null || args[0] == " " || args[0] == "" || args[1]!=null){
                     return false;
                 }
-                else if (args[0] != null){
+                else{
                     try {
                         double amount = Double.parseDouble(args[0]);
                         UUID uuid = p.getUniqueId();

@@ -7,9 +7,9 @@
 
 # Auto-Tune
  
- ### A powerful Minecraft Automatic-Economy Plugin for 1.16.2 with lots of features
+ ### A powerful Minecraft Automatic-Economy Plugin for 1.14-1.16 with lots of features
    
-  <img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.2/.github/AtLogo.png?raw=true" width="185"/>
+  <img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.3/.github/AtLogo.png?raw=true" width="185"/>
   
 
 ## Features
@@ -26,11 +26,11 @@ Auto-Tune aims to fix the still present problems in both methods of economies by
 
 An example of a graph for an item created by the exponential algorithm displayed online:
 
-<img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.2/.github/graph.png?raw=true" width="550"/>
+<img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.3/.github/graph.png?raw=true" width="550"/>
 
 An example of a shop setup using Auto-Tune:
 
-<img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.2/.github/shop.png?raw=true" width="550"/>
+<img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.3/.github/shop.png?raw=true" width="550"/>
 
   #### Feature List
 

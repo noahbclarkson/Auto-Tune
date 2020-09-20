@@ -42,6 +42,13 @@
         <configuration>
           <source>1.8</source>
           <target>1.8</target>
+          <annotationProcessorPaths>
+            <dependency>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${lombok.version}</version>
+            </dependency>
+          </annotationProcessorPaths>
         </configuration>
       </plugin>
       <plugin>
@@ -89,6 +96,10 @@
       <id>jitpack.io</id>
       <url>https://jitpack.io</url>
     </repository>
+    <repository>
+      <id>projectlombok.org</id>
+      <url>https://projectlombok.org/edge-releases</url>
+    </repository>
   </repositories>
   <dependencies>
     <dependency>
@@ -101,6 +112,12 @@
       <groupId>com.github.MilkBowl</groupId>
       <artifactId>VaultAPI</artifactId>
       <version>1.7</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>edge-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -117,6 +134,7 @@
     </dependency>
   </dependencies>
   <properties>
+    <lombok.version>edge-SNAPSHOT</lombok.version>
     <maven.compiler.target>1.8</maven.compiler.target>
     <mainClass>${project.groupId}.${project.artifactId}</mainClass>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

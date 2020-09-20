@@ -4,6 +4,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <mainClass>${project.groupId}.${project.artifactId}</mainClass>
     <maven.compiler.target>1.8</maven.compiler.target>
+    <lombok.version>edge-SNAPSHOT</lombok.version>
   </properties>
   <!-- Project information -->
   <groupId>unprotesting.com.github</groupId>
@@ -38,6 +39,10 @@
       <id>jitpack.io</id>
       <url>https://jitpack.io</url>
     </repository>
+    <repository>
+      <id>projectlombok.org</id>
+      <url>https://projectlombok.org/edge-releases</url>
+    </repository>
   </repositories>
    <!-- Dependencies -->
   <dependencies>
@@ -71,8 +76,8 @@
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
-        <version>1.18.12</version>
-        <scope>compile</scope>
+        <version>${lombok.version}</version>
+        <scope>provided</scope>
       </dependency>
     <dependency>
     <groupId>com.googlecode.json-simple</groupId>
@@ -85,11 +90,6 @@
       <version>5.7.0-RC1</version>
       <scope>provided</scope>
   </dependency>
-  <dependency>
-    <groupId>org.mapstruct</groupId>
-    <artifactId>mapstruct-processor</artifactId>
-    <version>1.4.0.CR1</version>
-</dependency>
   <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
@@ -127,6 +127,13 @@
         <configuration>
           <source>1.8</source>
           <target>1.8</target>
+          <annotationProcessorPaths>
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+        </annotationProcessorPaths>
         </configuration>
       </plugin>
       <plugin>

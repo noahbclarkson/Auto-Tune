@@ -13,6 +13,7 @@
 ##  Options: "price: <double>" set the defualt starting price of the item
 ##  Options: "locked: <boolean>" set the price to be locked or variable (variable by default).
 ##  Options: "sell-difference: <double>" set a custom sell-price-difference (default set in config).
+
 shops:
   APPLE:
     price: 100.00   ## <- Example of a variable item

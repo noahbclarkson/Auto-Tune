@@ -52,6 +52,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 import net.milkbowl.vault.economy.Economy;
 import unprotesting.com.github.Commands.AutoTuneGDPCommand;
 import unprotesting.com.github.Commands.AutoTuneAutoSellCommand;
+import unprotesting.com.github.Commands.AutoTuneAutoTuneConfigCommand;
 import unprotesting.com.github.Commands.AutoTuneCommand;
 import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
 import unprotesting.com.github.Commands.AutoTuneLoanCommand;
@@ -61,6 +62,7 @@ import unprotesting.com.github.Commands.AutoTuneSellCommand;
 import unprotesting.com.github.util.AutoSellEventHandler;
 import unprotesting.com.github.util.AutoTunePlayerAutoSellEventHandler;
 import unprotesting.com.github.util.CSVHandler;
+import unprotesting.com.github.util.ChatHandler;
 import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.HttpPostRequestor;
 import unprotesting.com.github.util.InflationEventHandler;
@@ -79,7 +81,7 @@ public final class Main extends JavaPlugin implements Listener {
 
   private static final Logger log = Logger.getLogger("Minecraft");
   public static Economy econ;
-  private static JavaPlugin plugin;
+  public static JavaPlugin plugin;
   static File playerdata = new File("plugins/Auto-Tune/", "playerdata.yml");
   public static final String BASEDIR = "plugins/Auto-Tune/web";
   public static final String BASEDIRMAIN = "plugins/Auto-Tune/data.csv";
@@ -93,7 +95,7 @@ public final class Main extends JavaPlugin implements Listener {
   public static HTreeMap<String, double[]> loanMap;
   public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, Double[]>> tempmap;
   public static ConcurrentMap<Integer, Material> ItemMap;
-  BukkitScheduler scheduler;
+  public static BukkitScheduler scheduler;
   public File folderfile;
   public static Double buys = 0.0;
   public static Double sells = 0.0;
@@ -102,7 +104,7 @@ public final class Main extends JavaPlugin implements Listener {
   public static Boolean locked = null;
   public static Boolean falseBool = false;
 
-  @Getter
+  static @Getter
   private File configf, shopf, tradef, tradeShortf;
 
   public static String basicVolatilityAlgorithim;
@@ -140,6 +142,7 @@ public final class Main extends JavaPlugin implements Listener {
   @Override
   public void onEnable() {
     Bukkit.getServer().getPluginManager().registerEvents(new JoinEventHandler(), this);
+    Bukkit.getServer().getPluginManager().registerEvents(new ChatHandler(), this);
     folderfile = new File("plugins/Auto-Tune/web/");
     folderfile.mkdirs();
     createFiles();
@@ -148,6 +151,7 @@ public final class Main extends JavaPlugin implements Listener {
     File folderfileJS = new File("plugins/Auto-Tune/Javascript/");
     folderfileJS.mkdirs();
     INSTANCE = this;
+    plugin = this;
     if (!setupEconomy()) {
       log.severe(String.format("Disabled Auto-Tune due to no Vault dependency found!", getDescription().getName()));
       getServer().getPluginManager().disablePlugin(this);
@@ -173,6 +177,7 @@ public final class Main extends JavaPlugin implements Listener {
     if (tempdatadata.isEmpty() == true || tempdatadata.get("SellPriceDifferenceDifference") == null) {
       tempdataresetSPDifference();
     }
+    ChatHandler.message = null;
     saveplayerdata();
     loadShopsFile();
     loadShopData();
@@ -192,6 +197,7 @@ public final class Main extends JavaPlugin implements Listener {
     this.getCommand("sell").setExecutor(new AutoTuneSellCommand());
     if (Config.isAutoSellEnabled()){this.getCommand("autosell").setExecutor(new AutoTuneAutoSellCommand());}
     this.getCommand("loan").setExecutor(new AutoTuneLoanCommand());
+    this.getCommand("atconfig").setExecutor(new AutoTuneAutoTuneConfigCommand());
     this.getCommand("loans").setExecutor(new AutoTuneLoansCommand());
     this.getCommand("payloan").setExecutor(new AutoTunePaybackLoanCommand());
     this.getCommand("gdp").setExecutor(new AutoTuneGDPCommand());
@@ -265,7 +271,6 @@ public final class Main extends JavaPlugin implements Listener {
     new BukkitRunnable() {
       @Override
       public void run() {
-
         Integer sellPriceVariationInt = Config.getSellPriceVariationUpdatePeriod();
         Double d = Double.valueOf(sellPriceVariationInt);
         Double updates = (Config.getSellPriceVariationTimePeriod() / d);

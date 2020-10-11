@@ -40,6 +40,7 @@ An example of a shop setup using Auto-Tune:
   - 2 forced-inflation methods with individual options [Dynamic and Static Inflation, configurable update periods]
   - 2 integrated web-servers to display prices online in graphs [Server port settings and more]
   - Configurable GUI with sizing and naming options [80+ supported item-slots]
+  - Config settings can easily be modified with an in-built GUI editor
   - Configurable shops with options to lock price and sell-price-differences [For more look at shops.yml configuration below]
   - Configurable sell-price-difference
   - Sell price-difference-variation algorithim options [Update period, total time, starting-difference, ending difference]
@@ -239,8 +240,8 @@ To get an Auto-Tune API key please open a ticket on our discord:
 
   #### Auto-Tune API Pricing
 
-Pricing at the moment will be variable based on how much we think your server having Auto-Tune will benefit its development and growth (free keys are available for some servers)
-However, pricing will roughly be at around:
+Pricing at the moment will be variable based on how much we think your server having Auto-Tune will benefit its development and growth (free keys are available until 2021!)
+When Auto-Tune goes paid, however, pricing will roughly be at around:
 - Basic: £1.00 per 25,000 - 50,000 API requests
 - Advanced: £1.00 per 20,000 - 40,000 API requests
 - Exponential: £1.00 per 8,000 - 25,000 API requests

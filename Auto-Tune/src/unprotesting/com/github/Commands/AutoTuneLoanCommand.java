@@ -26,7 +26,7 @@ public class AutoTuneLoanCommand implements CommandExecutor {
         if (command.getName().equalsIgnoreCase("loan")){
             Player p = (Player) sender;
             if (p.hasPermission("at.loan") || p.isOp()){
-                if (args[0] == null || args[0] == " " || args[0] == "" || args[1]!=null){
+                if (args[0] == null){
                     return false;
                 }
                 else{

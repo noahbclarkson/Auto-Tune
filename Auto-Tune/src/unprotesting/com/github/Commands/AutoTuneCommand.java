@@ -120,6 +120,7 @@ public class AutoTuneCommand implements CommandExecutor {
                     return true;
                 }
             }
+            return false;
         }
         return false;
     }

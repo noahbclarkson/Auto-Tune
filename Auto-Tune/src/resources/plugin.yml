@@ -43,6 +43,8 @@ commands:
     gdp:
       description: View GDP info
       usage: <GDP>
+    atconfig:
+      description: View and change plugin config settings
 permssions:
   at.help:
     description: Displays Auto-Tune help information
@@ -63,6 +65,8 @@ permssions:
     description: Decrease price of an item
   at.gdp:
     description: View GDP info
+  at.atconfig:
+    description: View and change plugin config settings
 
 
 

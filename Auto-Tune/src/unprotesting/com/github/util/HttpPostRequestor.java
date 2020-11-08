@@ -27,7 +27,7 @@ public class HttpPostRequestor {
         Double newPrice = price;
         CloseableHttpClient client = HttpClients.createDefault();
         HttpPost httpPost = new HttpPost("https://safe-refuge-09383.herokuapp.com");
-        JSONObject json = JsonManager.returnJSONFromParams(model, algorithm, price, averageBuy, averageSell,
+        JSONObject json = JSONManager.returnJSONFromParams(model, algorithm, price, averageBuy, averageSell,
                 maxVolatility, minVolatility);
         Main.debugLog("Sending data to API for " + item + ": - " + "model: " + model + ", price: " + price
                 + ", averageBuy: " + averageBuy + ", averageSell: " + averageSell + ", maxVolatility: " + maxVolatility

@@ -32,6 +32,7 @@ import unprotesting.com.github.util.TextHandler;
 public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
 	static DecimalFormat df2 = new DecimalFormat("###,###,###,##0.00");
+	static DecimalFormat df3 = new DecimalFormat("###,###,###,##0.00000");
 
 	public Economy economy = Main.getEconomy();
 

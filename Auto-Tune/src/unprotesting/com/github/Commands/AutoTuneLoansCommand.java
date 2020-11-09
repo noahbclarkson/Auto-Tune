@@ -55,7 +55,7 @@ public class AutoTuneLoansCommand implements CommandExecutor {
         String initialDateString = Main.dateFormat.format(initialDate);
         float sec = (((float)(Long.valueOf(Instant.now().toEpochMilli()).doubleValue() - initalTime))/1000);
         String lastChar = str.substring(str.length() - 1);
-        String currentPrice = AutoTuneGUIShopUserCommand.df2.format(dArray[0]);
+        String currentPrice = AutoTuneGUIShopUserCommand.df3.format(dArray[0]);
         TextComponent loanMessage = new TextComponent(ChatColor.GOLD + "Loan No: " + lastChar + " - Current Value: "+ Config.getCurrencySymbol() + currentPrice + " - Intrest Rate: %" + dArray[1] + " - Initial Value: "+ Config.getCurrencySymbol() + dArray[2] + " - Creation Date: " + initialDateString + " - Elapsed Time: " + sec + "s");
         loanMessage.setHoverEvent(new HoverEvent(Action.SHOW_TEXT, new ComponentBuilder("Click to payback loan").create()));
         loanMessage.setClickEvent(new ClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND, "/payloan " + lastChar));

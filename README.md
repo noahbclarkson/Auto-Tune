@@ -9,7 +9,7 @@
  
  ### A powerful Minecraft Automatic-Economy Plugin for 1.14-1.16 with lots of features
    
-  <img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.3/.github/AtLogo.png?raw=true" width="185"/>
+  <img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.4/.github/AtLogo.png?raw=true" width="185"/>
   
 
 ## Features
@@ -26,11 +26,11 @@ Auto-Tune aims to fix the still present problems in both methods of economies by
 
 An example of a graph for an item created by the exponential algorithm displayed online:
 
-<img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.3/.github/graph.png?raw=true" width="550"/>
+<img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.4/.github/graph.png?raw=true" width="550"/>
 
 An example of a shop setup using Auto-Tune:
 
-<img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.3/.github/shop.png?raw=true" width="550"/>
+<img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.4/.github/shop.png?raw=true" width="550"/>
 
   #### Feature List
 
@@ -232,7 +232,7 @@ An example of a shop setup using Auto-Tune:
 
 Auto-Tune API is the API Auto-Tune connects to, in order to automatically calculate price data. In other words, it is the server that is the backbone of the dynamic pricing-model that powers Auto-Tune.
     
-  #### How to purchase an Auto-Tune API key
+  #### How to get an Auto-Tune API key
 
 To get an Auto-Tune API key please open a ticket on our discord:
 
@@ -255,7 +255,7 @@ You will need to send some variables to the API for it to return a price
 Those are: <String> model [Fixed|Variable (On advanced/exponential algorithms the model is fixed at Varaible)], <String> algorithm [Basic|Advanced|Exponential], <String> apikey, <String> email, <String> item [Can be anything], <Double> price, <Double> averageBuy[For Advanced/Exponential calculate the Average Buy Value], <Double> averageSell[For Advanced/Exponential calculate the Average Sell Value], <Double> maxVolatility, <Double> minVolatility
 
 <details>
-  <summary>Http Post requestor for Auto-TuneAPI Example</summary> 
+  <summary>Http-Post-Requestor for Auto-Tune-API Example</summary> 
   
   This code is used in Auto-Tune:
   

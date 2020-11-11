@@ -12,6 +12,9 @@ author: Unprotesting
 description: Automatic Economy Plugin
 softdepend: [Vault]
 api-version: 1.16
+website: https://github.com/Unprotesting/Auto-Tune
+prefix: '[AUTO-TUNE]'
+loadbefore: [Essentials]
 commands:
     at:
       description: Auto-Tune Command.

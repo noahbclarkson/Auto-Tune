@@ -31,7 +31,7 @@ public class HttpPostRequestor {
                 maxVolatility, minVolatility);
         Main.debugLog("Sending data to API for " + item + ": - " + "model: " + model + ", price: " + price
                 + ", averageBuy: " + averageBuy + ", averageSell: " + averageSell + ", maxVolatility: " + maxVolatility
-                + ", minVolatility: " + minVolatility + ", APIKey: " + apikey + ", Email: " + email);
+                + ", minVolatility: " + minVolatility + ", APIKey: " + ("**********" + apikey.substring(10)) + ", Email: " + ("********" + email.substring(8)));
         StringEntity entity = new StringEntity(json.toJSONString());
         httpPost.setEntity(entity);
         httpPost.setHeader("content-type", "application/json");

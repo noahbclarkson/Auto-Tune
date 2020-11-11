@@ -64,6 +64,7 @@ import unprotesting.com.github.util.AutoTunePlayerAutoSellEventHandler;
 import unprotesting.com.github.util.CSVHandler;
 import unprotesting.com.github.util.ChatHandler;
 import unprotesting.com.github.util.Config;
+import unprotesting.com.github.util.EconomyShopConfigManager;
 import unprotesting.com.github.util.HttpPostRequestor;
 import unprotesting.com.github.util.InflationEventHandler;
 import unprotesting.com.github.util.JoinEventHandler;
@@ -105,7 +106,16 @@ public final class Main extends JavaPlugin implements Listener {
   public static Boolean falseBool = false;
 
   static @Getter
-  private File configf, shopf, tradef, tradeShortf;
+  private File configf;
+
+@Getter
+public static File shopf;
+
+@Getter
+private static File tradef;
+
+@Getter
+private static File tradeShortf;
 
   public static String basicVolatilityAlgorithim;
   public static String priceModel;
@@ -180,7 +190,17 @@ public final class Main extends JavaPlugin implements Listener {
     ChatHandler.message = null;
     saveplayerdata();
     loadShopsFile();
+    EconomyShopConfigManager.checkForOtherEconomy();
+    if (EconomyShopConfigManager.otherEconomyPresent){
+      try {
+        EconomyShopConfigManager.loadShopsFile((Config.getEconomyShopConfig().toLowerCase()));
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+    if (!EconomyShopConfigManager.otherEconomyPresent){
     loadShopData();
+    }
     materialListSize = memMap.size();
     vaildAPIKey = HttpPostRequestor.checkAPIKey();
     if (!vaildAPIKey){
@@ -591,6 +611,17 @@ public final class Main extends JavaPlugin implements Listener {
       e.printStackTrace();
     }
 
+  }
+
+  public static FileConfiguration saveEssentialsFiles(){
+    FileConfiguration worthyml;
+    worthyml = YamlConfiguration.loadConfiguration(new File("plugins/Essentials/worth.yml"));
+    try {
+      worthyml.save(new File("plugins/Essentials/", "worth.yml"));
+    } catch (IOException e) {
+      plugin.getLogger().warning("Unable to save worth.yml"); // shouldn't really happen
+    }
+    return worthyml;
   }
 
   public static void setupDataFiles() {

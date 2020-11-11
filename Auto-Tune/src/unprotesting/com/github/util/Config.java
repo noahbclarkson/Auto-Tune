@@ -41,7 +41,8 @@ public final class Config {
                                             apiKey,
                                                 email,
                                                     inflationMethod,
-                                                        currencySymbol;
+                                                        currencySymbol,
+                                                            economyShopConfig;
 
     @Getter
     @Setter
@@ -89,6 +90,7 @@ public final class Config {
     Config.setEmail(Main.getMainConfig().getString("email", "xyz@gmail.com"));
     Config.setBasicVolatilityAlgorithim(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("Volatility-Algorithim", "Variable")));
     Config.setNoPermission(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("no-permission", "You do not have permission to perform this command")));
+    Config.setEconomyShopConfig(Main.getMainConfig().getString("economy-shop-config", "default"));
     Config.setBasicMaxFixedVolatility(Main.getMainConfig().getDouble("Fixed-Max-Volatility", 2.00));
     Config.setBasicMaxVariableVolatility(Main.getMainConfig().getDouble("Variable-Max-Volatility", 2.00));
     Config.setBasicMinFixedVolatility(Main.getMainConfig().getDouble("Fixed-Min-Volatility", 0.05));

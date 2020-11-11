@@ -258,7 +258,7 @@ public class AutoTuneAutoTuneConfigCommand implements CommandExecutor {
                     checkForMessage(p, "Sell Price Variation Time Period", "sell-price-variation-time-period", "integer", sender);}));
         BAConfigPane.addItem(new GuiItem(createItemStackWithMeta("Sell Price Variation Update Period", Config.getSellPriceVariationUpdatePeriod()), event -> {
                     Player p = (Player) event.getWhoClicked();
-                    checkForMessage(p, "Sell Price Variation Update Period", "sell-price-variation-update-period", "integer", sender);}));
+                    checkForMessage(p, "Sell Price Variation Update Period", "sell-price-variation-update-period", "integer", sender);}));    
     }
 
     public void createOtherMenuGuiItems(Gui configGui, OutlinePane BAConfigPane, Player player, CommandSender sender) {
@@ -268,6 +268,9 @@ public class AutoTuneAutoTuneConfigCommand implements CommandExecutor {
         BAConfigPane.addItem(new GuiItem(createItemStackWithMeta("Checksum Header Bypass", String.valueOf(Config.isChecksumHeaderBypass())), event -> {
             Player p = (Player) event.getWhoClicked();
             checkForMessage(p, "Checksum Header Bypass", "checksum-header-bypass", "boolean", sender);}));
+        BAConfigPane.addItem(new GuiItem(createItemStackWithMeta("Economy Shop Config", Config.getEconomyShopConfig()), event -> {
+                    Player p = (Player) event.getWhoClicked();
+                    checkForMessage(p, "Economy Shop Config", "economy-shop-config", "string", sender);}));        
     }
 
     public void resetPlayerToSettings(Player p, CommandSender sender){

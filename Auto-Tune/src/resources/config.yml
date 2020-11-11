@@ -1,19 +1,21 @@
-##################################################
-###                                            ###
-##########       <-- Auto-Tune -->       #########
-###                                            ###
-##################################################
+
+# ░█████╗░██╗░░░██╗████████╗░█████╗░░░░░░░████████╗██╗░░░██╗███╗░░██╗███████╗
+# ██╔══██╗██║░░░██║╚══██╔══╝██╔══██╗░░░░░░╚══██╔══╝██║░░░██║████╗░██║██╔════╝
+# ███████║██║░░░██║░░░██║░░░██║░░██║█████╗░░░██║░░░██║░░░██║██╔██╗██║█████╗░░
+# ██╔══██║██║░░░██║░░░██║░░░██║░░██║╚════╝░░░██║░░░██║░░░██║██║╚████║██╔══╝░░
+# ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗
+# ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝
 
 
 ##  -- General Settings --  ##
 
-##  API key given on purchase
+##  API key given on purchase/signup
 api-key: 'xyz'
 
 ##  Email used on signup
 email: 'xyz@gmail.com'
 
-##  Enable//Disable integrated Web Server.
+##  Enable/Disable integrated Web Server.
 web-server-enabled: true
 
 ##  Port for integrated Web Server (If enabled)
@@ -25,8 +27,9 @@ maximum-short-trade-length: 100
 ##  Server name that will show up in commands and requests
 server-name: 'Auto-Tune Test Server'
 
-##  Automatic Pricing Model
-pricing-model: 'Basic'
+##  Automatic Pricing Model - set this to exponential for best results
+##  Options: Basic | Advanced | Exponential
+pricing-model: 'Exponential'
 
 ##  Time Period in minutes
 time-period: 10
@@ -127,3 +130,8 @@ debug-enabled: false
 
 ##  Enable ChecksumHeaderBypass if you have issues with data retrival or corruption
 checksum-header-bypass: false
+
+##  Use another economies shop settings for prices (don't change this without deleting data.db and resetting)
+##  Options: Default | Essentials
+##  Instructions for use: Turn this on, stop your server, delete data.db, start server, available data-transfers will appear in shops.yml, reset this option to default and restart your server again
+economy-shop-config: 'default'

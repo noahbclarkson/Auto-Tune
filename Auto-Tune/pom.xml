@@ -9,7 +9,7 @@
   <!-- Project information -->
   <groupId>unprotesting.com.github</groupId>
   <artifactId>Auto-Tune</artifactId>
-  <version>0.10.0</version>
+  <version>0.10.1</version>
  <!-- Info -->
   <name>Auto-Tune</name>
   <url>https://github.com/Unprotesting/Auto-Tune</url>
@@ -61,7 +61,7 @@
     <dependency>
       <groupId>com.github.stefvanschie.inventoryframework</groupId>
       <artifactId>IF</artifactId>
-      <version>0.7.0</version>
+      <version>0.7.2</version>
     </dependency>
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
@@ -82,13 +82,13 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
-      <version>5.7.0-RC1</version>
+      <version>5.7.0</version>
       <scope>provided</scope>
   </dependency>
   <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
-      <version>5.7.0-RC1</version>
+      <version>5.7.0</version>
       <scope>provided</scope>
   </dependency>
   </dependencies>

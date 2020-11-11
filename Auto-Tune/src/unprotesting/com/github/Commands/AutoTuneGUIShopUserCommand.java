@@ -73,6 +73,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		Gui gui1;
 		StaticPane pageTwo = new StaticPane(1, 1, 7, menuRows - 2);
 		StaticPane pageThree = new StaticPane(1, 1, 7, menuRows - 2);
+		StaticPane pageFour = new StaticPane(1, 1, 7, menuRows - 2);
 		StaticPane back = new StaticPane(0, menuRows - 1, 1, 1);
 		StaticPane forward = new StaticPane(8, menuRows - 1, 1, 1);
 
@@ -83,14 +84,16 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		Integer paneSize = (menuRows - 2) * 7;
 		Integer pageAmount = 2;
 		if (size > paneSize) {
-			pageTwo = new StaticPane(1, 1, 7, menuRows - 2);
 			pageAmount = 3;
 			pane.addPane(1, pageTwo);
 		}
 		if (size > paneSize * 2) {
-			pageThree = new StaticPane(1, 1, 7, menuRows - 2);
 			pageAmount = 4;
 			pane.addPane(2, pageThree);
+		}
+		if (size > paneSize * 3) {
+			pageAmount = 5;
+			pane.addPane(3, pageFour);
 		}
 
 		final Integer finalPageAmount = pageAmount;
@@ -124,6 +127,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 						}
 						if (finalPageAmount == 4) {
 							pane.setPage(3);
+						}
+						if (finalPageAmount == 5) {
+							pane.setPage(4);
 						}
 						gui.update();
 						playernew.setItemOnCursor(null);
@@ -160,10 +166,16 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 						pageTwo.addItem(a, i - 21, 1);
 					}
 					if (i >= 28 && i<35) {
-						pageThree.addItem(a, i - 28, 1);
+						pageThree.addItem(a, i - 28, 0);
 					}
 					if (i >= 35 && i<42) {
-						pageThree.addItem(a, i - 35, 2);
+						pageThree.addItem(a, i - 35, 1);
+					}
+					if (i >= 42 && i<49) {
+						pageFour.addItem(a, i - 42, 0);
+					}
+					if (i >= 49 && i<56) {
+						pageFour.addItem(a, i - 49, 1);
 					}
 				}
 				if (Config.getMenuRows() == 5) {
@@ -193,6 +205,15 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					}
 					if (i >= 56 && i<63) {
 						pageThree.addItem(a, i - 56, 2);
+					}
+					if (i >= 63 && i<70) {
+						pageFour.addItem(a, i - 63, 0);
+					}
+					if (i >= 70 && i<77) {
+						pageFour.addItem(a, i - 70, 1);
+					}
+					if (i >= 77 && i<84) {
+						pageFour.addItem(a, i - 77, 2);
 					}
 				}
 				if (Config.getMenuRows() == 6) {
@@ -232,6 +253,18 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					if (i >= 77 && i<84) {
 						pageThree.addItem(a, i - 77, 3);
 					}
+					if (i >= 84 && i<91) {
+						pageFour.addItem(a, i - 84, 0);
+					}
+					if (i >= 91 && i<98) {
+						pageFour.addItem(a, i - 91, 1);
+					}
+					if (i >= 98 && i<105) {
+						pageFour.addItem(a, i - 98, 2);
+					}
+					if (i >= 105 && i<112) {
+						pageFour.addItem(a, i - 105, 3);
+					}
 
 				}
 
@@ -248,7 +281,14 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			pane.addPane(1, pageTwo);
 			pane.addPane(2, pageThree);
 			pane.addPane(3, SBPane);
-		} else {
+		}
+		if (finalPageAmount == 5) {
+			pane.addPane(1, pageTwo);
+			pane.addPane(2, pageThree);
+			pane.addPane(3, pageFour);
+			pane.addPane(4, SBPane);
+		}
+		else {
 			pane.addPane(1, SBPane);
 		}
 
@@ -266,6 +306,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		imforward.setLore(Arrays.asList(ChatColor.BOLD + "Click to go to the next page"));
 		isforward.setItemMeta(imforward);
 
+		if (pane.getPage() == 0 && finalPageAmount == 5) {
+			back.setVisible(false);
+			forward.setVisible(true);
+		}
+
 		if (pane.getPage() == 0 && finalPageAmount == 4) {
 			back.setVisible(false);
 			forward.setVisible(true);
@@ -281,22 +326,21 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		}
 
 		back.addItem(new GuiItem(new ItemStack(isback), event -> {
-			if (pane.getPage() != 3) {
+			if (pane.getPage() != 0) {
 				pane.setPage(pane.getPage() - 1);
 			}
-			if (pane.getPage() == 3) {
-				pane.setPage(0);
+			if (pane.getPage() == 0 && finalPageAmount == 5) {
+				back.setVisible(false);
+				forward.setVisible(true);
 			}
 			if (pane.getPage() == 0 && finalPageAmount == 4) {
 				back.setVisible(false);
 				forward.setVisible(true);
 			}
-
 			if (pane.getPage() == 0 && finalPageAmount == 3) {
 				back.setVisible(false);
 				forward.setVisible(true);
 			}
-
 			if (pane.getPage() == 0 && finalPageAmount == 2) {
 				forward.setVisible(false);
 			}
@@ -309,16 +353,13 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		forward.addItem(new GuiItem(new ItemStack(isforward), event -> {
 			pane.setPage(pane.getPage() + 1);
 			forward.setVisible(false);
-			if (pane.getPage() == 1 && finalPageAmount == 4) {
+
+			if ((pane.getPage() == (finalPageAmount)) || (pane.getPage() == (finalPageAmount)-1) || (pane.getPage() == (finalPageAmount)-2)) {
+				forward.setVisible(false);
+			}
+
+			else{
 				forward.setVisible(true);
-			}
-
-			if (pane.getPage() == 4 || pane.getPage() == 3) {
-				forward.setVisible(false);
-			}
-
-			if (pane.getPage() == 0 && finalPageAmount == 2) {
-				forward.setVisible(false);
 			}
 
 			back.setVisible(true);

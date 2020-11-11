@@ -31,13 +31,13 @@ public class MaterialUtil {
     public static Material[] MatchInputToSet(String input) {
         int i = 0;
         input = input.toLowerCase();
-        if (input.contains("air") || input.equals("water") || input.equals("lava")){
+        if (input.equals("air") || input.equals("water") || input.equals("lava")){
             return null;
         }
         for (Material mat : values) {
             String str = mat.toString();
             str = (str.replace("_", "")).toLowerCase();
-            if (input.contains(str)){
+            if (input.equals(str)){
                 return new Material[] {mat};
             }
             i++;

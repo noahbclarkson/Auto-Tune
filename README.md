@@ -7,7 +7,7 @@
 
 # Auto-Tune
  
- ### A powerful Minecraft Automatic-Economy Plugin for 1.14-1.16 with lots of features
+ ### A Powerful Minecraft Automatic-Economy Plugin for 1.14-1.16 with Many Features!
    
   <img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.4/.github/AtLogo.png?raw=true" width="185"/>
   

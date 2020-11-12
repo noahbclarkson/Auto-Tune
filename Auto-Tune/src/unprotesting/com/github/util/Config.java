@@ -58,7 +58,8 @@ public final class Config {
                                                             dynamicInflationValue,
                                                                 inflationValue,
                                                                     intrestRate,
-                                                                        maxDebt;
+                                                                        maxDebt,
+                                                                           shopConfigGUIShopSellValue; 
 
     
     public static void loadDefaults() {
@@ -104,6 +105,7 @@ public final class Config {
     Config.setIntrestRate(Main.getMainConfig().getDouble("intrest-rate", 0.001));
     Config.setMaxDebt(Main.getMainConfig().getDouble("max-debt-value", -1000.00));
     Config.setSellPriceDifferenceVariationStart(Main.getMainConfig().getDouble("sell-price-difference-variation-start", 25.0));
+    Config.setShopConfigGUIShopSellValue(Main.getMainConfig().getDouble("shop-config-guishop-sell-value", 20.00));
   }
 
 }

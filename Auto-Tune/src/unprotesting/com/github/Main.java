@@ -624,6 +624,17 @@ private static File tradeShortf;
     return worthyml;
   }
 
+  public static FileConfiguration saveGUIShopFiles(){
+    FileConfiguration shopsyml;
+    shopsyml = YamlConfiguration.loadConfiguration(new File("plugins/GUIShop/shops.yml"));
+    try {
+      shopsyml.save(new File("plugins/GUIShop/", "shops.yml"));
+    } catch (IOException e) {
+      plugin.getLogger().warning("Unable to save shops.yml"); // shouldn't really happen
+    }
+    return shopsyml;
+  }
+
   public static void setupDataFiles() {
     if (Config.isChecksumHeaderBypass()) {
       Main.debugLog("Enabling checksum-header-bypass");

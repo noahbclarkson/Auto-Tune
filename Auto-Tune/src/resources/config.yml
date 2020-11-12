@@ -132,6 +132,11 @@ debug-enabled: false
 checksum-header-bypass: false
 
 ##  Use another economies shop settings for prices (don't change this without deleting data.db and resetting)
-##  Options: Default | Essentials
+##  This will convert the shops file from another economy to a compatible Auto-Tune shops.yml
+##  Options: Default | Essentials | GUIShop
 ##  Instructions for use: Turn this on, stop your server, delete data.db, start server, available data-transfers will appear in shops.yml, reset this option to default and restart your server again
+##  Remove GUI-Shop once done to avoid incompatiability errors
 economy-shop-config: 'default'
+
+##  Percentage value sell prices have on new price when converting GUIShop to Auto-Tune
+shop-config-guishop-sell-value: 20.00

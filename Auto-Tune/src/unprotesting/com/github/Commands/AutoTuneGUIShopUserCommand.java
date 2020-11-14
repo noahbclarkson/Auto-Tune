@@ -495,7 +495,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
 				Main.map.put(matClickedString, tempMap2);
-				if (hasAvaliableSlot(player) == true && (Main.econ.getBalance(player)) > price) {
+				if (hasAvaliableSlot(player) == true && (Main.econ.getBalance(player)) > (price)) {
 					Main.econ.withdrawPlayer(player, price);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 1));
 					sendPlayerShopMessageAndUpdateGDP(1, price, player, matClickedString, false);
@@ -526,7 +526,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
 				Main.map.put(matClickedString, tempMap2);
-				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > price) {
+				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > (price*2)) {
 					Main.econ.withdrawPlayer(player, price * 2);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 2));
 					sendPlayerShopMessageAndUpdateGDP(2, price, player, matClickedString, false);
@@ -557,7 +557,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
 				Main.map.put(matClickedString, tempMap2);
-				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > price) {
+				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > (price*4)) {
 					Main.econ.withdrawPlayer(player, price * 4);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 4));
 					sendPlayerShopMessageAndUpdateGDP(4, price, player, matClickedString, false);
@@ -587,7 +587,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					sellAmount
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
-				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > price) {
+				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > (price*8)) {
 					Main.econ.withdrawPlayer(player, price * 8);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 8));
 					sendPlayerShopMessageAndUpdateGDP(8, price, player, matClickedString, false);
@@ -618,7 +618,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
 				Main.map.put(matClickedString, tempMap2);
-				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > price) {
+				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > (price*16)) {
 					Main.econ.withdrawPlayer(player, price * 16);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 16));
 					sendPlayerShopMessageAndUpdateGDP(16, price, player, matClickedString, false);
@@ -649,7 +649,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
 				Main.map.put(matClickedString, tempMap2);
-				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > price) {
+				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > (price*32)) {
 					Main.econ.withdrawPlayer(player, price * 32);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 32));
 					sendPlayerShopMessageAndUpdateGDP(32, price, player, matClickedString, false);
@@ -680,7 +680,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
 				Main.map.put(matClickedString, tempMap2);
-				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > price) {
+				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > (price*64)) {
 					Main.econ.withdrawPlayer(player, price * 64);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 64));
 					sendPlayerShopMessageAndUpdateGDP(64, price, player, matClickedString, false);

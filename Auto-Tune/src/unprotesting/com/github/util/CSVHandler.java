@@ -71,7 +71,6 @@ public class CSVHandler {
       csvWriter.append("\n");
 
       int size = item.size();
-      Main.log(AutoTuneGUIShopUserCommand.df2.format(size));
 
       for (int i = size-Config.getMaximumShortTradeLength(); i < size; i++) {
         if (i < 0){

@@ -115,19 +115,19 @@ inflation-method: 'Mixed'
 ##  Time period in ticks between dynamic price increases
 dynamic-inflation-time-period: 5000
 ##  Percentage increase in prices per time-period.
-dynamic-inflation-value: 0.0025
+dynamic-inflation-value: 0.0005
 ##  Percentage increase for buy value per price calculation update period.
 static-inflation-value: 0.1
 
 ##  Intrest rate per intrest-rate-update-period
 ##  Info: This is the increase in the current debt payment per-time period
-intrest-rate: 0.001
+intrest-rate: 0.0025
 ##  Time period in ticks between updates of the intrest rate for users loans
 intrest-rate-update-period: 1200
 
 ##  lowest value in $ a player can go into debt
 ##  Example: -10.00
-max-debt-value: 0.00
+max-debt-value: -5000.00
 
 ##  -- Other Settings --
 

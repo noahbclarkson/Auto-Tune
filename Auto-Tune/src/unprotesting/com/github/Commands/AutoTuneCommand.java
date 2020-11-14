@@ -20,6 +20,9 @@ public class AutoTuneCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String at, String[] args) {
+        if (args[0] == null){
+            return false;
+        }
         if (command.getName().equalsIgnoreCase("at")){
             Player player = (Player) sender;
             UUID uuid = player.getUniqueId();

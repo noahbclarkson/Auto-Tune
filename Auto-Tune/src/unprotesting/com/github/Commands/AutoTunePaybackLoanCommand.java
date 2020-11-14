@@ -37,31 +37,33 @@ public class AutoTunePaybackLoanCommand implements CommandExecutor {
 
     public static void paybackLoan(OfflinePlayer p, String args){
         UUID uuid = p.getUniqueId();
-                Set<String> set = Main.loanMap.getKeys();
-                boolean loaded = false;
-                for (String str : set){
-                    if (str.contains(uuid.toString())){
-                        String lastChar = str.substring(str.length() - 1);
-                        if (lastChar.equals(args)){
-                            double[] arr = Main.loanMap.get(uuid.toString() + args);
-                            double curVal = arr[0];
-                            Main.loanMap.remove(uuid.toString() + args);
-                            Main.getEconomy().withdrawPlayer(p, (Math.round(curVal*1000)/1000));
-                            if (p.isOnline()){
-                                Player player = (Player)p;
-                                player.sendMessage(ChatColor.YELLOW + "Removed loan No: "+ ChatColor.GREEN + args + ChatColor.YELLOW + ". Withdrew " + ChatColor.GREEN + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(curVal) + ChatColor.YELLOW + " from your balance.");
-                            }
-                            if (!(p.isOnline())){
-                                Main.log("Removed loan No: "+ args + ". Withdrew " + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(curVal) + " from " + p.getName() +"'s balance.");
-                            }
-                            loaded = true;
-                        }
-                    }
-                }
-                if (!loaded){
+        Set<String> set = Main.loanMap.getKeys();
+        boolean loaded = false;
+        for (String str : set){
+            if (str.contains(uuid.toString())){
+                String lastChar = str.substring(str.length() - 1);
+                if (lastChar.equals(args)){
+                    double[] arr = Main.loanMap.get(uuid.toString() + args);
+                    double curVal = arr[0];
+                    curVal = Double.parseDouble(AutoTuneGUIShopUserCommand.df4.format(curVal));
+                    Main.loanMap.remove(uuid.toString() + args);
                     if (p.isOnline()){
                         Player player = (Player)p;
-                        player.sendMessage(ChatColor.RED + "Loan is not present, do /loans to view your current loans or /loan to make one");
+                        player.sendMessage(ChatColor.YELLOW + "Removed loan No: "+ ChatColor.GREEN + args + ChatColor.YELLOW + ". Withdrew " + ChatColor.GREEN + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(curVal) + ChatColor.YELLOW + " from your balance.");
+                        Main.getEconomy().withdrawPlayer(p, (Math.round(curVal*10000)/10000));
+                    }
+                    else if (!(p.isOnline())){
+                        Main.log("Removed loan No: "+ args + ". Withdrew " + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(curVal) + " from " + p.getName() +"'s balance.");
+                        Main.getEconomy().withdrawPlayer(p, (Math.round(curVal*10000)/10000));
+                    }
+                    loaded = true;
+                }
+            }
+        }
+        if (!loaded){
+            if (p.isOnline()){
+                Player player = (Player)p;
+                player.sendMessage(ChatColor.RED + "Loan is not present, do /loans to view your current loans or /loan to make one");
             }
         }
     }

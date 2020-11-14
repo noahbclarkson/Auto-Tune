@@ -29,7 +29,6 @@ public class MaterialUtil {
     }
 
     public static Material[] MatchInputToSet(String input) {
-        int i = 0;
         input = input.toLowerCase();
         if (input.equals("air") || input.equals("water") || input.equals("lava")){
             return null;
@@ -40,7 +39,6 @@ public class MaterialUtil {
             if (input.equals(str)){
                 return new Material[] {mat};
             }
-            i++;
         }
         Material output = Material.matchMaterial((input.toUpperCase()));
         if (output != null){

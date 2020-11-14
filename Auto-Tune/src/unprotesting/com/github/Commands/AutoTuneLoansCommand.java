@@ -38,14 +38,16 @@ public class AutoTuneLoansCommand implements CommandExecutor {
                 }
                 if (!loanpresent){
                     p.sendMessage(ChatColor.RED + "No loans currently active. Do /loan <amount> to make a loan");
+                    return true;
                 }
             }
             else if (!(p.hasPermission("at.loan")) && !(p.isOp())){
                 TextHandler.noPermssion(p);
                 return true;
             }
+            return false;
         }
-        return true;
+        return false;
     }
 
     public void sendLoanInfo(Player p, String str){

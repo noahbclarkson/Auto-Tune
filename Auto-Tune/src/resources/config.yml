@@ -32,6 +32,8 @@ server-name: 'Auto-Tune Test Server'
 pricing-model: 'Exponential'
 
 ##  Time Period in minutes
+##  Info: This should be around a tenth of the total items in your shop (i.e with 150 items this would be 15) to prevent overload
+##  Info: When decreasing or increasing this adjust your volatility settings accordingly
 time-period: 10
 
 ##  The amount of menu rows in the GUI shop, value of 4-6.
@@ -47,6 +49,8 @@ no-permission: '&eYou do not have permission to perform this command'
 auto-sell-enabled: true 
 
 ##  How often auto-sell updates in ticks
+##  Info: Set this higher if few players use autosell
+##  Info: Set it lower if many players use autosell
 auto-sell-update-period: 15
 
 ##  How often players are shown their auto-sell profits in ticks
@@ -57,6 +61,7 @@ auto-sell-profit-update-period: 1200
 ##  Volatility Calulation Algorithim
 ##  Info: A fixed rate locks the maxiumum change to a certain price
 ##  Info: A variable rate changes the maxiumum price-change based on current price calculations
+##  Most people dont need to change this off of Variable as they will be using the Exponential model
 Volatility-Algorithim: 'Variable'
 
 ##  Percentage difference in sell price to buy price
@@ -68,7 +73,7 @@ Fixed-Max-Volatility: 2.00
 Fixed-Min-Volatility: 0.05
 
 ##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
-Variable-Max-Volatility: 3.00
+Variable-Max-Volatility: 1.50
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Variable-Min-Volatility: 0.05
 
@@ -91,9 +96,9 @@ data-selection-c: 1.25
 currency-symbol: '$'
 
 ##  Enable sell price difference variation to ease out sell price varition
-sell-price-difference-variation-enabled: false
+sell-price-difference-variation-enabled: true
 ##  Starting percententage sell price difference for sell price varition
-sell-price-difference-variation-start: 25.0
+sell-price-difference-variation-start: 12.5
 ##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 7 days)
 sell-price-variation-time-period: 10080
 ##  Time in minutes that the sell-price-difference updates
@@ -120,8 +125,9 @@ intrest-rate: 0.001
 ##  Time period in ticks between updates of the intrest rate for users loans
 intrest-rate-update-period: 1200
 
-##  Maximum value in $ a player can go into debt
-max-debt-value: -1000.00
+##  lowest value in $ a player can go into debt
+##  Example: -10.00
+max-debt-value: 0.00
 
 ##  -- Other Settings --
 

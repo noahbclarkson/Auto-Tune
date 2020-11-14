@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import unprotesting.com.github.Main;
+import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
 
 public class CSVHandler {
 
@@ -23,7 +24,7 @@ public class CSVHandler {
       csvWriter.append(",");
       csvWriter.append("\n");
 
-      for (int i = 0; i > -10; i++) {
+      for (int i = 0; i > -1; i++) {
         String k = String.valueOf(i);
         csvWriter.append(k);
         Double[] l = (item.get(i));
@@ -70,8 +71,12 @@ public class CSVHandler {
       csvWriter.append("\n");
 
       int size = item.size();
+      Main.log(AutoTuneGUIShopUserCommand.df2.format(size));
 
-      for (int i = size-Config.getMaximumShortTradeLength(); i > -10; i++) {
+      for (int i = size-Config.getMaximumShortTradeLength(); i < size; i++) {
+        if (i < 0){
+          continue;
+        }
         String k = String.valueOf(i);
         csvWriter.append(k);
         Double[] l = (item.get(i));

@@ -119,6 +119,7 @@ public class AutoTuneCommand implements CommandExecutor {
                     TextHandler.noPermssion(player);
                     return true;
                 }
+                return false;
             }
             return false;
         }

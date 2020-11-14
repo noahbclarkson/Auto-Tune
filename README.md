@@ -39,7 +39,7 @@ An example of a shop setup using Auto-Tune:
   - Exponential contains 7 pricing model options. [Volatility Options and algorithim, data-selection-algorithim, and more]
   - 2 forced-inflation methods with individual options [Dynamic and Static Inflation, configurable update periods]
   - 2 integrated web-servers to display prices online in graphs [Server port settings and more]
-  - Configurable GUI with sizing and naming options [80+ supported item-slots]
+  - Configurable GUI with sizing and naming options
   - Config settings can easily be modified with an in-built GUI editor
   - Configurable shops with options to lock price and sell-price-differences [For more look at shops.yml configuration below]
   - Configurable sell-price-difference

@@ -34,6 +34,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 	public static DecimalFormat df1 = new DecimalFormat("###########0.00");
 	public static DecimalFormat df2 = new DecimalFormat("###,###,###,##0.00");
 	static DecimalFormat df3 = new DecimalFormat("###,###,###,##0.00000");
+	public static DecimalFormat df4 = new DecimalFormat("###########0.0000");
 
 	public Economy economy = Main.getEconomy();
 
@@ -494,13 +495,13 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
 				Main.map.put(matClickedString, tempMap2);
-				if (hasAvaliableSlot(player) == true) {
+				if (hasAvaliableSlot(player) == true && (Main.econ.getBalance(player)) > price) {
 					Main.econ.withdrawPlayer(player, price);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 1));
 					sendPlayerShopMessageAndUpdateGDP(1, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchased 1x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price));
-					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+					player.sendMessage(ChatColor.GOLD + "Cannot purchase 1x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price));
+					
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
@@ -525,13 +526,13 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
 				Main.map.put(matClickedString, tempMap2);
-				if (hasAvaliableSlot(player) == true) {
+				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > price) {
 					Main.econ.withdrawPlayer(player, price * 2);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 2));
 					sendPlayerShopMessageAndUpdateGDP(2, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchased 2x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 2));
-					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+					player.sendMessage(ChatColor.GOLD + "Cannot purchase 2x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 2));
+					
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
@@ -556,13 +557,13 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
 				Main.map.put(matClickedString, tempMap2);
-				if (hasAvaliableSlot(player) == true) {
+				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > price) {
 					Main.econ.withdrawPlayer(player, price * 4);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 4));
 					sendPlayerShopMessageAndUpdateGDP(4, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchased 4x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 4));
-					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+					player.sendMessage(ChatColor.GOLD + "Cannot purchase 4x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 4));
+					
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
@@ -586,13 +587,13 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					sellAmount
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
-				if (hasAvaliableSlot(player) == true) {
+				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > price) {
 					Main.econ.withdrawPlayer(player, price * 8);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 8));
 					sendPlayerShopMessageAndUpdateGDP(8, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchased 8x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 8));
-					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+					player.sendMessage(ChatColor.GOLD + "Cannot purchase 8x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 8));
+					
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
@@ -617,13 +618,13 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
 				Main.map.put(matClickedString, tempMap2);
-				if (hasAvaliableSlot(player) == true) {
+				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > price) {
 					Main.econ.withdrawPlayer(player, price * 16);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 16));
 					sendPlayerShopMessageAndUpdateGDP(16, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchased 16x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 16));
-					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+					player.sendMessage(ChatColor.GOLD + "Cannot purchase 16x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 16));
+					
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
@@ -648,13 +649,13 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
 				Main.map.put(matClickedString, tempMap2);
-				if (hasAvaliableSlot(player) == true) {
+				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > price) {
 					Main.econ.withdrawPlayer(player, price * 32);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 32));
 					sendPlayerShopMessageAndUpdateGDP(32, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchased 32x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 32));
-					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+					player.sendMessage(ChatColor.GOLD + "Cannot purchase 32x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 32));
+					
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
@@ -679,13 +680,12 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
 				Main.map.put(matClickedString, tempMap2);
-				if (hasAvaliableSlot(player) == true) {
+				if (hasAvaliableSlot(player) == true && Main.econ.getBalance(player) > price) {
 					Main.econ.withdrawPlayer(player, price * 64);
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 64));
 					sendPlayerShopMessageAndUpdateGDP(64, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchased 64x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 64));
-					player.sendMessage(ChatColor.GOLD + "Inventory Full!");
+					player.sendMessage(ChatColor.GOLD + "Cannot purchase 64x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 64));			
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();

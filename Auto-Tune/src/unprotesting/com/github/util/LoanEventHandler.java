@@ -28,6 +28,12 @@ public class LoanEventHandler implements Runnable{
             UUID id = UUID.fromString(str2);
             OfflinePlayer p = Bukkit.getOfflinePlayer(id);
             double totalLoanVal = AutoTuneLoanCommand.getTotalLoanValue(p);
+            try {
+                Double a = Main.getEconomy().getBalance(p);
+            }
+            catch(IllegalArgumentException e){
+                continue;
+            }
             if ((Main.getEconomy().getBalance(p) - totalLoanVal) < Config.getMaxDebt()){
                 for (String str : set){
                     if (str.contains(id.toString())){

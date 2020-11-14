@@ -314,18 +314,18 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			pane.addPane(1, pageTwo);
 			pane.addPane(2, SBPane);
 		}
-		if (finalPageAmount == 4) {
+		else if (finalPageAmount == 4) {
 			pane.addPane(1, pageTwo);
 			pane.addPane(2, pageThree);
 			pane.addPane(3, SBPane);
 		}
-		if (finalPageAmount == 5) {
+		else if (finalPageAmount == 5) {
 			pane.addPane(1, pageTwo);
 			pane.addPane(2, pageThree);
 			pane.addPane(3, pageFour);
 			pane.addPane(4, SBPane);
 		}
-		if (finalPageAmount == 6) {
+		else if (finalPageAmount == 6) {
 			pane.addPane(1, pageTwo);
 			pane.addPane(2, pageThree);
 			pane.addPane(3, pageFour);
@@ -378,24 +378,14 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			if (pane.getPage() != 0) {
 				pane.setPage(pane.getPage() - 1);
 			}
-			if (pane.getPage() == 0 && finalPageAmount == 6) {
-				back.setVisible(false);
+			if (pane.getPage() != (finalPageAmount-2) && pane.getPage() != (finalPageAmount-1) && pane.getPage() != (finalPageAmount)){
 				forward.setVisible(true);
 			}
-			if (pane.getPage() == 0 && finalPageAmount == 5) {
-				back.setVisible(false);
-				forward.setVisible(true);
-			}
-			if (pane.getPage() == 0 && finalPageAmount == 4) {
-				back.setVisible(false);
-				forward.setVisible(true);
-			}
-			if (pane.getPage() == 0 && finalPageAmount == 3) {
-				back.setVisible(false);
-				forward.setVisible(true);
-			}
-			if (pane.getPage() == 0 && finalPageAmount == 2) {
+			else if (pane.getPage() == 0 && finalPageAmount == 2) {
 				forward.setVisible(false);
+			}
+			if (pane.getPage() == 0){
+				back.setVisible(false);
 			}
 
 			gui1.update();

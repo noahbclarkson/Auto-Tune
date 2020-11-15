@@ -16,7 +16,8 @@ public final class Config {
                                         sellPriceDifferenceVariationEnabled,
                                             inflationEnabled,
                                                 autoSellEnabled,
-                                                    calculateGlobalGDP;
+                                                    calculateGlobalGDP,
+                                                        tutorial;
 
     @Getter
     @Setter
@@ -29,7 +30,8 @@ public final class Config {
                                                 autoSellProfitUpdatePeriod,
                                                     dynamicInflationUpdatePeriod,
                                                         maximumShortTradeLength,
-                                                            intrestRateUpdateRate;
+                                                            intrestRateUpdateRate,
+                                                                tutorialMessagePeriod;
 
     @Getter
     @Setter
@@ -63,8 +65,9 @@ public final class Config {
 
     
     public static void loadDefaults() {
-    Config.setSellPriceDifferenceVariationEnabled(Main.getMainConfig().getBoolean("sell-price-difference-variation-enabled", false));
-    Config.setWebServer(Main.getMainConfig().getBoolean("web-server-enabled", false));
+    Config.setSellPriceDifferenceVariationEnabled(Main.getMainConfig().getBoolean("sell-price-difference-variation-enabled", true));
+    Config.setWebServer(Main.getMainConfig().getBoolean("web-server-enabled", true));
+    Config.setTutorial(Main.getMainConfig().getBoolean("tutorial", true));
     Config.setCalculateGlobalGDP(Main.getMainConfig().getBoolean("calculate-global-GDP", true));
     Config.setAutoSellEnabled(Main.getMainConfig().getBoolean("auto-sell-enabled", true));
     Config.setInflationEnabled(Main.getMainConfig().getBoolean("inflation-enabled", true));
@@ -76,6 +79,7 @@ public final class Config {
     Config.setAutoSellUpdatePeriod(Main.getMainConfig().getInt("auto-sell-update-period", 10));
     Config.setTimePeriod(Main.getMainConfig().getInt("time-period", 10));
     Config.setMenuRows(Main.getMainConfig().getInt("menu-rows", 3));
+    Config.setTutorialMessagePeriod(Main.getMainConfig().getInt("tutorial-message-period", 300));
     Config.setIntrestRateUpdateRate(Main.getMainConfig().getInt("intrest-rate-update-period", 1200));
     Config.setDynamicInflationUpdatePeriod(Main.getMainConfig().getInt("dynamic-inflation-update-period", 5000));
     Config.setSellPriceVariationTimePeriod(Main.getMainConfig().getInt("sell-price-variation-time-period", 10800));
@@ -93,17 +97,17 @@ public final class Config {
     Config.setNoPermission(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("no-permission", "You do not have permission to perform this command")));
     Config.setEconomyShopConfig(Main.getMainConfig().getString("economy-shop-config", "default"));
     Config.setBasicMaxFixedVolatility(Main.getMainConfig().getDouble("Fixed-Max-Volatility", 2.00));
-    Config.setBasicMaxVariableVolatility(Main.getMainConfig().getDouble("Variable-Max-Volatility", 2.00));
+    Config.setBasicMaxVariableVolatility(Main.getMainConfig().getDouble("Variable-Max-Volatility", 1.50));
     Config.setBasicMinFixedVolatility(Main.getMainConfig().getDouble("Fixed-Min-Volatility", 0.05));
     Config.setBasicMinVariableVolatility(Main.getMainConfig().getDouble("Variable-Min-Volatility", 0.05));
     Config.setDataSelectionM(Main.getMainConfig().getDouble("data-selection-m", 0.05));
-    Config.setDataSelectionC(Main.getMainConfig().getDouble("data-selection-c", 1.25));
+    Config.setDataSelectionC(Main.getMainConfig().getDouble("data-selection-c", 1.05));
     Config.setDynamicInflationValue(Main.getMainConfig().getDouble("dynamic-inflation-value", 0.0025));
     Config.setInflationValue(Main.getMainConfig().getDouble("static-inflation-value", 0.1));
     Config.setDataSelectionZ(Main.getMainConfig().getDouble("data-selection-z", 1.6));
     Config.setSellPriceDifference(Main.getMainConfig().getDouble("sell-price-difference", 2.5));
     Config.setIntrestRate(Main.getMainConfig().getDouble("intrest-rate", 0.001));
-    Config.setMaxDebt(Main.getMainConfig().getDouble("max-debt-value", -1000.00));
+    Config.setMaxDebt(Main.getMainConfig().getDouble("max-debt-value", -5000.00));
     Config.setSellPriceDifferenceVariationStart(Main.getMainConfig().getDouble("sell-price-difference-variation-start", 25.0));
     Config.setShopConfigGUIShopSellValue(Main.getMainConfig().getDouble("shop-config-guishop-sell-value", 20.00));
   }

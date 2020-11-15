@@ -56,20 +56,28 @@ permssions:
     description: Login to an Auto-Tune account |(active soon)|
   at.shop:
     description: Open the GUI shop
+    default: true
   at.sell:
     description: Open the sell GUI
+    default: true
   at.autosell:
     description: Open the Auto-Sell GUI and Auto-Sell
+    default: true
   at.loan:
     description: Loan money from the bank
+    default: true
   at.increase:
     description: Increase price of an item
   at.decrease:
     description: Decrease price of an item
   at.gdp:
     description: View GDP info
+    default: true
   at.atconfig:
     description: View and change plugin config settings
+  at.tutorial:
+    description: Allow players to view tutorial messages
+    default: true
 
 
 

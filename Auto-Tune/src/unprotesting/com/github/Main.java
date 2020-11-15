@@ -72,6 +72,7 @@ import unprotesting.com.github.util.LoanEventHandler;
 import unprotesting.com.github.util.MathHandler;
 import unprotesting.com.github.util.StaticFileHandler;
 import unprotesting.com.github.util.TextHandler;
+import unprotesting.com.github.util.TutorialHandler;
 
 public final class Main extends JavaPlugin implements Listener {
 
@@ -212,6 +213,7 @@ private static File tradeShortf;
     if (vaildAPIKey) {
       log("API-Key found in database. Continuing to load Auto-Tune on " + Config.getServerName());
     }
+    TutorialHandler.loadMessages();
     this.getCommand("at").setExecutor(new AutoTuneCommand());
     this.getCommand("shop").setExecutor(new AutoTuneGUIShopUserCommand());
     this.getCommand("sell").setExecutor(new AutoTuneSellCommand());
@@ -231,6 +233,7 @@ private static File tradeShortf;
     scheduler.scheduleSyncRepeatingTask(this, new AutoTunePlayerAutoSellEventHandler(),
         Config.getAutoSellProfitUpdatePeriod() + 20, Config.getAutoSellProfitUpdatePeriod());
     }
+    scheduler.scheduleAsyncRepeatingTask(this, new TutorialHandler(), (Config.getTutorialMessagePeriod()*20), (Config.getTutorialMessagePeriod()*20));
     scheduler.scheduleAsyncRepeatingTask(this, new LoanEventHandler(), Config.getIntrestRateUpdateRate(),
         Config.getIntrestRateUpdateRate());
     runnable();

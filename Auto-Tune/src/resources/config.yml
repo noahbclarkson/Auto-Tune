@@ -19,6 +19,7 @@ email: 'xyz@gmail.com'
 web-server-enabled: true
 
 ##  Port for integrated Web Server (If enabled)
+##  Make sure to port-forward and disable firewalls for this port.
 port: 8123
 
 ##  The maximum length in data points that the trade-short.html will show (this doesn't affect data)
@@ -65,7 +66,7 @@ auto-sell-profit-update-period: 1200
 Volatility-Algorithim: 'Variable'
 
 ##  Percentage difference in sell price to buy price
-sell-price-difference: 2.5
+sell-price-difference: 5.0
 
 ##  Maximum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Fixed-Max-Volatility: 2.00
@@ -88,7 +89,7 @@ data-selection-m: 0.05
 ##  'z' in equation: y=m(x^z)+c
 data-selection-z: 1.6
 ##  'c' in equation: y=m(x^z)+c
-data-selection-c: 1.25
+data-selection-c: 1.05
 
 ##  -- Other Econonomy Settings --
 
@@ -146,3 +147,10 @@ economy-shop-config: 'default'
 
 ##  Percentage value sell prices have on new price when converting GUIShop to Auto-Tune
 shop-config-guishop-sell-value: 20.00
+
+##  Enable the Auto-Tune tutorial for players
+##  Keep this on to encourage purchasing turn it off if its distracting
+tutorial: true
+
+##  Time in seconds between messages
+tutorial-message-period: 300

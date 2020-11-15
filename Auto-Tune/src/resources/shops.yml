@@ -23,10 +23,252 @@
 ##  Options: "locked: <boolean>" set the price to be locked or variable (variable by default).
 ##  Options: "sell-difference: <double>" set a custom sell-price-difference (default set in config).
 
+  ##  Example:
+  ##  GRASS_BLOCK:
+  ##    price: 50.00
+  ##    locked: true      <- Example of a locked item
+  ##    sell-difference: 0.0    <- Example of a set sell-difference item
+
 shops:
+  COAL:
+    price: 8.00
+  COAL_ORE:
+    price: 30.00
+  IRON_INGOT:
+    price: 15.00
+  IRON_ORE:
+    price: 12.00
+  GOLD_INGOT:
+    price: 40.00
+  GOLD_ORE:
+    price: 30.00
+  DIAMOND:
+    price: 250.00
+  DIAMOND_ORE:
+    price: 600.00
+  LAPIS_LAZULI:
+    price: 8.00
+  LAPIS_ORE:
+    price: 60.00
+  EMERALD:
+    price: 100.00
+  EMERALD_ORE:
+    price: 270.00
+  QUARTZ:
+    price: 10.00
+  NETHER_QUARTZ_ORE:
+    price: 40.00
+  REDSTONE:
+    price: 4.00
+  REDSTONE_ORE:
+    price: 40.00
+  NETHERITE_INGOT:
+    price: 6500.00
+  NETHERITE_SCRAP:
+    price: 2000.00
+  GLOWSTONE_DUST:
+    price: 5.00
+  DIRT:
+    price: 1.00
+  GRASS_BLOCK:
+    price: 4.00
+  MYCELIUM:
+    price: 8.00
+  COBBLESTONE:
+    price: 1.00
+  STONE:
+    price: 2.00
+  GRANITE:
+    price: 0.80
+  DIORITE:
+    price: 0.80
+  ANDESITE:
+    price: 1.00
+  GRAVEL:
+    price: 3.00
+  SAND:
+    price: 1.00
+  SANDSTONE:
+    price: 4.00
+  GLASS:
+    price: 3.00
+  SNOWBALL:
+    price: 1.50
+  CLAY_BALL:
+    price: 2.50
+  ICE:
+    price: 5.50
+  PRISMARINE:
+    price: 9.00
+  PRISMARINE_BRICKS:
+    price: 10.00
+  DARK_PRISMARINE:  
+    price: 12.50
+  OBSIDIAN:
+    price: 15.00
+  END_STONE:
+    price: 3.50
+  NETHERRACK:
+    price: 1.00
+  NETHER_BRICKS:
+    price: 8.00
+  BLACKSTONE:
+    price: 2.25
+  SOUL_SAND:
+    price: 4.00
+  WHITE_WOOL:
+    price: 6.50
+  OAK_LOG:
+    price: 8.00
+  SPRUCE_LOG:
+    price: 8.50
+  BIRCH_LOG:
+    price: 8.50
+  DARK_OAK_LOG:
+    price: 8.75
+  ACACIA_LOG:
+    price: 8.25
+  JUNGLE_LOG:
+    price: 8.25
+  CACTUS:
+    price: 3.00
+  VINE:
+    price: 2.00
+  CARROT:
+    price: 4.00
+  EGG:
+    price: 3.50
+  MELON_SLICE:
+    price: 1.75
   APPLE:
-    price: 100.00   ## <- Example of a variable item
-  STICK:
+    price: 6.00
+  WHEAT:
+    price: 2.00
+  SUGAR_CANE:
+    price: 1.50
+  BEEF:
+    price: 2.50
+  PORKCHOP:
+    price: 2.25
+  CHICKEN:
+    price: 1.45
+  RABBIT:
+    price: 2.50
+  MUTTON:
+    price: 2.00
+  PUMPKIN:
+    price: 8.00
+  RED_MUSHROOM:
+    price: 6.00
+  BROWN_MUSHROOM:
+    price: 6.00
+  WHEAT_SEEDS:
+    price: 1.25
+  NETHER_WART:
+    price: 4.00
+  FLINT:
+    price: 4.00
+  GUNPOWDER:
+    price: 12.50
+  LEATHER:
+    price: 20.00
+  INK_SAC:
+    price: 2.50
+  FEATHER:
+    price: 4.00
+  BONE:
+    price: 6.00
+  BONE_MEAL:
+    price: 2.00
+  STRING:
+    price: 4.00
+  ROTTEN_FLESH:
+    price: 0.50
+  SPIDER_EYE:
+    price: 7.00
+  SLIME_BALL:
+    price: 25.00
+  ENDER_PEARL:
+    price: 35.00
+  NETHER_STAR:
+    price: 20000.00
+  GHAST_TEAR:
+    price: 125.00
+  MAGMA_CREAM:
     price: 50.00
-  ##locked: true      <- Example of a locked item
-  ##sell-difference: 0.0    <- Example of a set sell-difference item
+  BLAZE_ROD:
+    price: 45.00
+  ARROW:
+    price: 2.00
+  SADDLE:
+    price: 100.00
+  NAME_TAG:
+    price: 50.00
+  CHORUS_FRUIT:
+    price: 1.25
+  HONEY_BOTTLE:
+    price: 5.00
+  CHEST:
+    price: 20.00
+  MINECART:
+    price: 110.00
+  TORCH:
+    price: 4.0
+  NOTE_BLOCK:
+    price: 36.0
+  BUCKET:
+    price: 40.0
+  FURNACE:
+    price: 8.5
+  TNT:
+    price: 125.0
+  SPONGE:
+    price: 60.00
+  PHANTOM_MEMBRANE:
+    price: 45.00
+  OAK_LEAVES:
+    price: 1.0
+  BIRCH_LEAVES:
+    price: 1.0
+  SPRUCE_LEAVES:
+    price: 1.0
+  JUNGLE_LEAVES:
+    price: 1.0
+  DARK_OAK_LEAVES:
+    price: 1.0
+  ACACIA_LEAVES:
+    price: 1.0
+  OAK_PLANKS:
+    price: 0.5
+  BIRCH_PLANKS:
+    price: 0.5
+  SPRUCE_PLANKS:
+    price: 0.5
+  JUNGLE_PLANKS:
+    price: 0.5
+  DARK_OAK_PLANKS:
+    price: 0.5
+  ACACIA_PLANKS:
+    price: 0.5
+  OAK_SAPLING:
+    price: 2.5
+  BIRCH_SAPLING:
+    price: 2.5
+  SPRUCE_SAPLING:
+    price: 2.5
+  JUNGLE_SAPLING:
+    price: 2.5
+  DARK_OAK_SAPLING:
+    price: 2.5
+  ACACIA_SAPLING:
+    price: 2.5
+  DISPENSER:
+    price: 58.0
+  CAKE:
+    price: 180.0
+  MILK_BUCKET:
+    price: 60.00
+  STICK:
+    price: 0.25
+  BOOK:
+    price: 45.0

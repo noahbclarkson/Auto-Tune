@@ -22,253 +22,495 @@
 ##  Options: "price: <double>" set the defualt starting price of the item
 ##  Options: "locked: <boolean>" set the price to be locked or variable (variable by default).
 ##  Options: "sell-difference: <double>" set a custom sell-price-difference (default set in config).
+##  Options: "max-buy": <integer> set a maximum quantity that can be purchased in a time-period
+##  Options: "max-sell": <integer> set a maximum quantity that can be sold in a time-period
+
 
   ##  Example:
   ##  GRASS_BLOCK:
   ##    price: 50.00
   ##    locked: true      <- Example of a locked item
   ##    sell-difference: 0.0    <- Example of a set sell-difference item
+  ##    max-buy: 10       <- Only 10 items can be bought each time-period - you can increase this on large servers
+  ##    max-sell: 12       <- Only 12 items can be sold each time-period - you can increase this on large servers
 
 shops:
   COAL:
-    price: 8.00
+    price: 15.00
+    max-buy: 80
+    max-sell: 100
   COAL_ORE:
     price: 30.00
+    max-buy: 50
+    max-sell: 90
   IRON_INGOT:
-    price: 15.00
+    price: 13.50
+    max-buy: 75
+    max-sell: 100
   IRON_ORE:
-    price: 12.00
+    price: 15.00
+    max-buy: 60
+    max-sell: 100
   GOLD_INGOT:
-    price: 40.00
-  GOLD_ORE:
     price: 30.00
+    max-buy: 45
+    max-sell: 75
+  GOLD_ORE:
+    price: 32.50
+    max-buy: 40
+    max-sell: 90
   DIAMOND:
-    price: 250.00
+    price: 300.00
+    max-buy: 8
+    max-sell: 16
   DIAMOND_ORE:
-    price: 600.00
+    price: 550.00
+    max-buy: 5
+    max-sell: 14
   LAPIS_LAZULI:
-    price: 8.00
+    price: 18.00
+    max-buy: 128
+    max-sell: 256
   LAPIS_ORE:
-    price: 60.00
+    price: 35.00
+    max-buy: 64
+    max-sell: 100
   EMERALD:
-    price: 100.00
+    price: 150.00
+    max-buy: 8
+    max-sell: 32
   EMERALD_ORE:
-    price: 270.00
+    price: 250.00
+    max-buy: 6
+    max-sell: 32
   QUARTZ:
-    price: 10.00
+    price: 17.00
+    max-buy: 40
+    max-sell: 100
   NETHER_QUARTZ_ORE:
     price: 40.00
+    max-buy: 75
+    max-sell: 100
   REDSTONE:
-    price: 4.00
+    price: 9.00
+    max-buy: 80
+    max-sell: 128
   REDSTONE_ORE:
-    price: 40.00
+    price: 25.00
+    max-buy: 50
+    max-sell: 80
   NETHERITE_INGOT:
-    price: 6500.00
+    price: 8000.00
+    max-buy: 1
+    max-sell: 2
   NETHERITE_SCRAP:
-    price: 2000.00
+    price: 3000.00
+    max-buy: 2
+    max-sell: 4
   GLOWSTONE_DUST:
     price: 5.00
+    max-buy: 128
+    max-sell: 256
   DIRT:
-    price: 1.00
+    price: 0.5
+    max-buy: 512
+    max-sell: 1024
   GRASS_BLOCK:
     price: 4.00
+    max-buy: 128
+    max-sell: 256
   MYCELIUM:
     price: 8.00
+    max-buy: 75
+    max-sell: 100
   COBBLESTONE:
     price: 1.00
+    max-buy: 256
+    max-sell: 800
   STONE:
     price: 2.00
+    max-buy: 128
+    max-sell: 256
   GRANITE:
     price: 0.80
+    max-buy: 128
+    max-sell: 512
   DIORITE:
     price: 0.80
+    max-buy: 128
+    max-sell: 512
   ANDESITE:
     price: 1.00
+    max-buy: 128
+    max-sell: 512
   GRAVEL:
     price: 3.00
+    max-buy: 128
+    max-sell: 256
   SAND:
     price: 1.00
+    max-buy: 128
+    max-sell: 500
   SANDSTONE:
     price: 4.00
+    max-buy: 100
+    max-sell: 250
   GLASS:
     price: 3.00
+    max-buy: 90
+    max-sell: 200
   SNOWBALL:
     price: 1.50
+    max-buy: 128
+    max-sell: 512
   CLAY_BALL:
     price: 2.50
+    max-buy: 64
+    max-sell: 128
   ICE:
     price: 5.50
+    max-buy: 128
+    max-sell: 256
   PRISMARINE:
     price: 9.00
+    max-buy: 64
+    max-sell: 175
   PRISMARINE_BRICKS:
     price: 10.00
+    max-buy: 64
+    max-sell: 175
   DARK_PRISMARINE:  
     price: 12.50
+    max-buy: 64
+    max-sell: 175
   OBSIDIAN:
     price: 15.00
+    max-buy: 20
+    max-sell: 64
   END_STONE:
     price: 3.50
+    max-buy: 80
+    max-sell: 200
   NETHERRACK:
     price: 1.00
+    max-buy: 64
+    max-sell: 256
   NETHER_BRICKS:
     price: 8.00
+    max-buy: 64
+    max-sell: 128
   BLACKSTONE:
     price: 2.25
+    max-buy: 64
+    max-sell: 100
   SOUL_SAND:
     price: 4.00
+    max-buy: 64
+    max-sell: 175
   WHITE_WOOL:
     price: 6.50
+    max-buy: 64
+    max-sell: 80
   OAK_LOG:
     price: 8.00
+    max-buy: 90
+    max-sell: 256
   SPRUCE_LOG:
     price: 8.50
+    max-buy: 90
+    max-sell: 256
   BIRCH_LOG:
     price: 8.50
+    max-buy: 90
+    max-sell: 256
   DARK_OAK_LOG:
     price: 8.75
+    max-buy: 90
+    max-sell: 256
   ACACIA_LOG:
     price: 8.25
+    max-buy: 90
+    max-sell: 256
   JUNGLE_LOG:
     price: 8.25
+    max-buy: 90
+    max-sell: 256
   CACTUS:
     price: 3.00
+    max-buy: 64
+    max-sell: 200
   VINE:
     price: 2.00
+    max-buy: 64
+    max-sell: 256
   CARROT:
     price: 4.00
+    max-buy: 80
+    max-sell: 256
   EGG:
     price: 3.50
+    max-buy: 32
+    max-sell: 128
   MELON_SLICE:
     price: 1.75
+    max-buy: 85
+    max-sell: 175
   APPLE:
-    price: 6.00
+    price: 4.00
+    max-buy: 64
+    max-sell: 100
   WHEAT:
     price: 2.00
+    max-buy: 128
+    max-sell: 256
   SUGAR_CANE:
     price: 1.50
+    max-buy: 164
+    max-sell: 256
   BEEF:
     price: 2.50
+    max-buy: 64
+    max-sell: 150
   PORKCHOP:
     price: 2.25
+    max-buy: 64
+    max-sell: 150
   CHICKEN:
     price: 1.45
+    max-buy: 64
+    max-sell: 150
   RABBIT:
     price: 2.50
+    max-buy: 64
+    max-sell: 150
   MUTTON:
     price: 2.00
+    max-buy: 64
+    max-sell: 150
   PUMPKIN:
     price: 8.00
+    max-buy: 64
+    max-sell: 128
   RED_MUSHROOM:
     price: 6.00
+    max-buy: 64
+    max-sell: 100
   BROWN_MUSHROOM:
     price: 6.00
+    max-buy: 64
+    max-sell: 100
   WHEAT_SEEDS:
     price: 1.25
+    max-buy: 80
+    max-sell: 200
   NETHER_WART:
     price: 4.00
+    max-buy: 64
+    max-sell: 200
   FLINT:
     price: 4.00
+    max-buy: 64
+    max-sell: 128
   GUNPOWDER:
     price: 12.50
+    max-buy: 64
+    max-sell: 128
   LEATHER:
     price: 20.00
+    max-buy: 64
+    max-sell: 128
   INK_SAC:
     price: 2.50
+    max-buy: 32
+    max-sell: 64
   FEATHER:
     price: 4.00
+    max-buy: 32
+    max-sell: 64
   BONE:
     price: 6.00
+    max-buy: 64
+    max-sell: 100
   BONE_MEAL:
     price: 2.00
+    max-buy: 64
+    max-sell: 90
   STRING:
     price: 4.00
+    max-buy: 64
+    max-sell: 100
   ROTTEN_FLESH:
     price: 0.50
+    max-buy: 64
+    max-sell: 128
   SPIDER_EYE:
     price: 7.00
+    max-buy: 64
+    max-sell: 128
   SLIME_BALL:
     price: 25.00
+    max-buy: 32
+    max-sell: 64
   ENDER_PEARL:
     price: 35.00
+    max-buy: 16
+    max-sell: 40
   NETHER_STAR:
-    price: 20000.00
+    price: 3000.00
+    max-buy: 1
+    max-sell: 1
   GHAST_TEAR:
     price: 125.00
+    max-buy: 4
+    max-sell: 8
   MAGMA_CREAM:
     price: 50.00
+    max-buy: 16
+    max-sell: 32
   BLAZE_ROD:
     price: 45.00
+    max-buy: 8
+    max-sell: 32
   ARROW:
     price: 2.00
-  SADDLE:
-    price: 100.00
+    max-buy: 64
+    max-sell: 128
   NAME_TAG:
     price: 50.00
+    max-buy: 8
+    max-sell: 16
   CHORUS_FRUIT:
     price: 1.25
+    max-buy: 64
+    max-sell: 128
   HONEY_BOTTLE:
     price: 5.00
+    max-buy: 64
+    max-sell: 128
   CHEST:
     price: 20.00
-  MINECART:
-    price: 110.00
+    max-buy: 30
+    max-sell: 64
   TORCH:
-    price: 4.0
+    price: 2.5
+    max-buy: 64
+    max-sell: 100
   NOTE_BLOCK:
     price: 36.0
+    max-buy: 16
+    max-sell: 32
   BUCKET:
-    price: 40.0
+    price: 7.50
+    max-buy: 16
+    max-sell: 32
   FURNACE:
     price: 8.5
+    max-buy: 32
+    max-sell: 48
   TNT:
     price: 125.0
+    max-buy: 16
+    max-sell: 32
   SPONGE:
     price: 60.00
+    max-buy: 32
+    max-sell: 128
   PHANTOM_MEMBRANE:
     price: 45.00
+    max-buy: 32
+    max-sell: 64
   OAK_LEAVES:
     price: 1.0
+    max-buy: 64
+    max-sell: 128
   BIRCH_LEAVES:
     price: 1.0
+    max-buy: 64
+    max-sell: 128
   SPRUCE_LEAVES:
     price: 1.0
+    max-buy: 64
+    max-sell: 128
   JUNGLE_LEAVES:
     price: 1.0
+    max-buy: 64
+    max-sell: 128
   DARK_OAK_LEAVES:
     price: 1.0
+    max-buy: 64
+    max-sell: 128
   ACACIA_LEAVES:
     price: 1.0
+    max-buy: 64
+    max-sell: 128
   OAK_PLANKS:
     price: 0.5
+    max-buy: 128
+    max-sell: 256
   BIRCH_PLANKS:
     price: 0.5
+    max-buy: 128
+    max-sell: 256
   SPRUCE_PLANKS:
     price: 0.5
+    max-buy: 128
+    max-sell: 256
   JUNGLE_PLANKS:
     price: 0.5
+    max-buy: 128
+    max-sell: 256
   DARK_OAK_PLANKS:
     price: 0.5
+    max-buy: 128
+    max-sell: 256
   ACACIA_PLANKS:
     price: 0.5
+    max-buy: 128
+    max-sell: 256
   OAK_SAPLING:
     price: 2.5
+    max-buy: 32
+    max-sell: 64
   BIRCH_SAPLING:
     price: 2.5
+    max-buy: 32
+    max-sell: 64
   SPRUCE_SAPLING:
     price: 2.5
+    max-buy: 32
+    max-sell: 64
   JUNGLE_SAPLING:
     price: 2.5
+    max-buy: 32
+    max-sell: 64
   DARK_OAK_SAPLING:
     price: 2.5
+    max-buy: 32
+    max-sell: 64
   ACACIA_SAPLING:
     price: 2.5
+    max-buy: 32
+    max-sell: 64
   DISPENSER:
     price: 58.0
+    max-buy: 8
+    max-sell: 16
   CAKE:
-    price: 180.0
+    price: 160.0
+    max-buy: 8
+    max-sell: 12
   MILK_BUCKET:
-    price: 60.00
+    price: 10.00
+    max-buy: 16
+    max-sell: 20
   STICK:
-    price: 0.25
+    price: 0.2
+    max-buy: 64
+    max-sell: 128
   BOOK:
-    price: 45.0
+    price: 28.0
+    max-buy: 32
+    max-sell: 48
+  
+  ##locked: true      <- Example of a locked item
+  ##sell-difference: 0.0    <- Example of a set sell-difference item

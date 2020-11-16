@@ -93,6 +93,8 @@ public final class Main extends JavaPlugin implements Listener {
   public static DB db, memDB, tempDB, loanDB;
   public static HTreeMap<String, Double> tempdatadata;
   public static ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>> map;
+  public static ConcurrentMap<Player, ConcurrentHashMap<String, Integer>> maxBuyMap = new ConcurrentHashMap<Player, ConcurrentHashMap<String, Integer>>();
+  public static ConcurrentMap<Player, ConcurrentHashMap<String, Integer>> maxSellMap = new ConcurrentHashMap<Player, ConcurrentHashMap<String, Integer>>();
   public static HTreeMap<Integer, String> memMap;
   public static HTreeMap<String, double[]> loanMap;
   public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, Double[]>> tempmap;
@@ -214,6 +216,7 @@ private static File tradeShortf;
       log("API-Key found in database. Continuing to load Auto-Tune on " + Config.getServerName());
     }
     TutorialHandler.loadMessages();
+    setupMaxBuySell();
     this.getCommand("at").setExecutor(new AutoTuneCommand());
     this.getCommand("shop").setExecutor(new AutoTuneGUIShopUserCommand());
     this.getCommand("sell").setExecutor(new AutoTuneSellCommand());
@@ -250,9 +253,6 @@ private static File tradeShortf;
   }
 
   private boolean setupEconomy() {
-    if (getServer().getPluginManager().getPlugin("Vault") == null) {
-      return false;
-    }
     RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
     if (rsp == null) {
       return false;
@@ -268,6 +268,15 @@ private static File tradeShortf;
   public static String[] convert(Set<String> setOfString) {
     String[] arrayOfString = setOfString.stream().toArray(String[]::new);
     return arrayOfString;
+  }
+
+  public static ConcurrentHashMap<String, Integer> loadMaxStrings(ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>> mainMap){
+    Set<String> maxList = mainMap.keySet();
+    ConcurrentHashMap<String, Integer> maxMap = new ConcurrentHashMap<String, Integer>();
+    for (String str : maxList){
+    maxMap.put(str, 0);
+    }
+    return maxMap;
   }
 
   public void runnable() {
@@ -288,6 +297,13 @@ private static File tradeShortf;
 
   public static void tempdataresetSPDifference() {
     Main.tempdatadata.put("SellPriceDifferenceDifference", 0.0);
+  }
+
+  public static void setupMaxBuySell(){
+    for (Player p : Bukkit.getOnlinePlayers()){
+      maxBuyMap.put(p, loadMaxStrings(map));
+      maxSellMap.put(p, loadMaxStrings(map));
+    }
   }
 
   public void SellDifrunnable() {
@@ -322,6 +338,7 @@ private static File tradeShortf;
   }
 
   public static void loadItemPricesAndCalculate() throws ParseException {
+    setupMaxBuySell();
     tempbuys = 0.0;
     tempsells = 0.0;
     buys = 0.0;

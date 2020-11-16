@@ -58,6 +58,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
 		double moneyToGive = 0;
 		boolean couldntSell = false;
         int countSell = 0;
+        boolean totMax = false;
 		for (ItemStack item : items) {
 
 			if (item == null) {
@@ -65,17 +66,38 @@ public class AutoTuneSellCommand implements CommandExecutor {
 			}
 
 			String itemString = getItemStringForItemStack(item);
-
+            int quantity = item.getAmount();
             ConcurrentHashMap<Integer,Double[]> tempMap1 = Main.map.get(itemString);
             
 			if ((tempMap1==null)) {
-				countSell += 1;
+				countSell += quantity;
 				couldntSell = true;
                 player.getInventory().addItem(item);
 				continue;
-			}
-
-			int quantity = item.getAmount();
+            }
+            if (!autoSell){
+                ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player);
+                Integer max = 10000;
+                try{
+                    max = (Integer)Main.getShopConfig().get("shops." + itemString + "." + "max-sell");
+                }
+                catch(ClassCastException ex){
+                    max = Integer.parseInt(AutoTuneGUIShopUserCommand.df5.format(Main.getShopConfig().get("shops." + itemString + "." + "max-sell")));
+                }
+                if (max == null){
+                    max = 100000;
+                }
+                if ((cMap.get(itemString)+quantity) > max){
+                    couldntSell = true;
+                    countSell += quantity;
+                    totMax = true;
+                    player.getInventory().addItem(item);
+                    continue;
+                }
+            }
+            ConcurrentHashMap<String, Integer> cMap2 = Main.maxSellMap.get(player);
+			cMap2.put(itemString, (cMap2.get(itemString)+quantity));
+			Main.maxSellMap.put(player, cMap2);
             Integer tempMapSize = tempMap1.size();
             Double[] tempDoublearray = tempMap1.get(tempMapSize-1);
             Double sellpricedif = Config.getSellPriceDifference();
@@ -93,9 +115,11 @@ public class AutoTuneSellCommand implements CommandExecutor {
 			moneyToGive += quantity * sellPrice;
 
 		}
-
-		if (couldntSell == true) {
-			player.sendMessage(ChatColor.BOLD + "Cant sell " + Integer.toString(countSell) + "x of item");
+		if (couldntSell == true && !autoSell) {
+            player.sendMessage(ChatColor.BOLD + "Cant sell " + Integer.toString(countSell) + "x of item");
+            if (totMax == true){
+                player.sendMessage(ChatColor.RED + "Maximum sells reached");
+            }
         }
         if (autoSell == true){
             roundAndGiveMoney(player, moneyToGive, true);

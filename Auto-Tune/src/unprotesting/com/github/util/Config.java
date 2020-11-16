@@ -17,7 +17,8 @@ public final class Config {
                                             inflationEnabled,
                                                 autoSellEnabled,
                                                     calculateGlobalGDP,
-                                                        tutorial;
+                                                        tutorial,
+                                                            updatePricesWhenInactive;
 
     @Getter
     @Setter
@@ -65,6 +66,7 @@ public final class Config {
 
     
     public static void loadDefaults() {
+    Config.setUpdatePricesWhenInactive(Main.getMainConfig().getBoolean("update-prices-when-inactive", false));
     Config.setSellPriceDifferenceVariationEnabled(Main.getMainConfig().getBoolean("sell-price-difference-variation-enabled", true));
     Config.setWebServer(Main.getMainConfig().getBoolean("web-server-enabled", true));
     Config.setTutorial(Main.getMainConfig().getBoolean("tutorial", true));

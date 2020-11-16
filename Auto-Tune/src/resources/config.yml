@@ -93,6 +93,9 @@ data-selection-c: 1.05
 
 ##  -- Other Econonomy Settings --
 
+##  Update prices for server when no players are online
+update-prices-when-inactive: false
+
 ##  The symbol that appears before all currency
 currency-symbol: '$'
 

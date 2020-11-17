@@ -51,7 +51,7 @@ public class TutorialHandler implements Runnable{
         messages.add(ChatColor.YELLOW + "There are big profits to be made when prices change..");
         messages.add(ChatColor.YELLOW + "Loan money to take leverage of the rise in prices.");
         messages.add(ChatColor.YELLOW + "Sell items that have high demand to make the most money selling.");
-        messages.add(ChatColor.YELLOW + "Using /autosell is an easy way to make money quickly and easily");
+        messages.add(ChatColor.YELLOW + "Using /autosell allows you to make money quickly and easily");
         messages.add(ChatColor.YELLOW + "Viewing prices with /trade allows you to judge the markets.");
     }
 }

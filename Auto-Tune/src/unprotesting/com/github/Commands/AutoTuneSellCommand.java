@@ -104,7 +104,13 @@ public class AutoTuneSellCommand implements CommandExecutor {
             Main.getINSTANCE();
             ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops")
                     .getConfigurationSection((itemString));
-            Double sellpricedif2 = config.getDouble("sell-difference", sellpricedif);
+            Double sellpricedif2 = Config.getSellPriceDifference();
+            try{
+                sellpricedif2 = config.getDouble("sell-difference", sellpricedif);
+            }
+            catch(NullPointerException ex){
+                sellpricedif2 = Config.getSellPriceDifference();
+            }
             Double sellPrice = (tempDoublearray[0]) - (tempDoublearray[0]*0.01*sellpricedif2);
             Double buyAmount = tempDoublearray[1];
             Double sellAmount = tempDoublearray[2];

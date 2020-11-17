@@ -162,7 +162,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				price1 = tempDoublearray[0];
 				String priceString = df2.format(price1);
 				String fullprice = "Price: " + Config.getCurrencySymbol() + priceString;
-				im.setLore(Arrays.asList((ChatColor.GOLD + fullprice), (ChatColor.WHITE + "Maximum Buys: " + (Integer)Main.getShopConfig().get("shops." + Main.memMap.get(i) + "." + "max-sell")), (ChatColor.WHITE + "Maximum Buys: " + (Integer)Main.getShopConfig().get("shops." + Main.memMap.get(i) + "." + "max-buy"))));
+				im.setLore(Arrays.asList((ChatColor.GOLD + fullprice), (ChatColor.WHITE + "Maximum Buys: " + (Integer)Main.getShopConfig().get("shops." + Main.memMap.get(i) + "." + "max-buy") + " per " + Config.getTimePeriod() + "min"), (ChatColor.WHITE + "Maximum Sells: " + (Integer)Main.getShopConfig().get("shops." + Main.memMap.get(i) + "." + "max-sell") + " per " + Config.getTimePeriod() + "min")));
 				is.setItemMeta(im);
 				if (Config.getMenuRows() == 4) {
 					if (i<7) {
@@ -502,7 +502,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 1));
 					sendPlayerShopMessageAndUpdateGDP(1, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchase 1x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price));
+					player.sendMessage(ChatColor.RED + "Cannot purchase 1x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price));
 					
 				}
 				player.setItemOnCursor(null);
@@ -543,7 +543,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 2));
 					sendPlayerShopMessageAndUpdateGDP(2, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchase 2x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 2));
+					player.sendMessage(ChatColor.RED + "Cannot purchase 2x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 2));
 					
 				}
 				player.setItemOnCursor(null);
@@ -584,7 +584,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 4));
 					sendPlayerShopMessageAndUpdateGDP(4, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchase 4x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 4));
+					player.sendMessage(ChatColor.RED + "Cannot purchase 4x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 4));
 					
 				}
 				player.setItemOnCursor(null);
@@ -625,7 +625,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 8));
 					sendPlayerShopMessageAndUpdateGDP(8, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchase 8x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 8));
+					player.sendMessage(ChatColor.RED + "Cannot purchase 8x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 8));
 					
 				}
 				player.setItemOnCursor(null);
@@ -666,7 +666,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 16));
 					sendPlayerShopMessageAndUpdateGDP(16, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchase 16x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 16));
+					player.sendMessage(ChatColor.RED + "Cannot purchase 16x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 16));
 					
 				}
 				player.setItemOnCursor(null);
@@ -707,7 +707,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 32));
 					sendPlayerShopMessageAndUpdateGDP(32, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchase 32x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 32));
+					player.sendMessage(ChatColor.RED + "Cannot purchase 32x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 32));
 					
 				}
 				player.setItemOnCursor(null);
@@ -748,7 +748,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), 64));
 					sendPlayerShopMessageAndUpdateGDP(64, price, player, matClickedString, false);
 				} else {
-					player.sendMessage(ChatColor.GOLD + "Cannot purchase 64x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 64));			
+					player.sendMessage(ChatColor.RED + "Cannot purchase 64x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price * 64));			
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();

@@ -161,8 +161,6 @@ private static File tradeShortf;
     createFiles();
     File folderfileTemp = new File("plugins/Auto-Tune/temp/");
     folderfileTemp.mkdirs();
-    File folderfileJS = new File("plugins/Auto-Tune/Javascript/");
-    folderfileJS.mkdirs();
     INSTANCE = this;
     plugin = this;
     if (!setupEconomy()) {
@@ -326,7 +324,7 @@ private static File tradeShortf;
             + Double.toString(Config.getSellPriceDifference()));
         if (Config.getSellPriceDifference() <= Main.getMainConfig().getDouble("sell-price-difference", 2.5)) {
           Config.setSellPriceDifference(Main.getMainConfig().getDouble("sell-price-difference", 2.5));
-          debugLog("Finished sell difference change task as sell differnce has reached: "
+          debugLog("Finished sell difference change task as sell difference has reached: "
               + Main.getMainConfig().getDouble("sell-price-difference", 2.5));
           cancel();
         }

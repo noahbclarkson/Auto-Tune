@@ -2,6 +2,8 @@ package unprotesting.com.github.util;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.bukkit.Bukkit;
+
 import unprotesting.com.github.Main;
 
 public class InflationEventHandler implements Runnable {
@@ -9,7 +11,10 @@ public class InflationEventHandler implements Runnable {
     @Override
     public void run() {
         for (String str : Main.map.keySet()){
-            increaseItemPrice(str, Config.getDynamicInflationValue(), true);
+            Integer playerCount = Bukkit.getServer().getOnlinePlayers().size();
+            if (Config.isUpdatePricesWhenInactive() || (!Config.isUpdatePricesWhenInactive() && playerCount > 0)){
+                increaseItemPrice(str, Config.getDynamicInflationValue(), true);
+            }
         }
         Main.debugLog("Dynamic Inflation Value: " + Config.getDynamicInflationValue());
     }

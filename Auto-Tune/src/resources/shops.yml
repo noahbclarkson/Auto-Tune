@@ -356,7 +356,7 @@ shops:
     max-buy: 16
     max-sell: 40
   NETHER_STAR:
-    price: 3000.00
+    price: 12000.00
     max-buy: 1
     max-sell: 1
   GHAST_TEAR:
@@ -498,10 +498,10 @@ shops:
   CAKE:
     price: 160.0
     max-buy: 8
-    max-sell: 12
+    max-sell: 10
   MILK_BUCKET:
     price: 10.00
-    max-buy: 16
+    max-buy: 12
     max-sell: 20
   STICK:
     price: 0.2
@@ -511,6 +511,3 @@ shops:
     price: 28.0
     max-buy: 32
     max-sell: 48
-  
-  ##locked: true      <- Example of a locked item
-  ##sell-difference: 0.0    <- Example of a set sell-difference item

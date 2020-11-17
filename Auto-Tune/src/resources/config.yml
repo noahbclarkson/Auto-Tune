@@ -66,7 +66,7 @@ auto-sell-profit-update-period: 1200
 Volatility-Algorithim: 'Variable'
 
 ##  Percentage difference in sell price to buy price
-sell-price-difference: 5.0
+sell-price-difference: 10.0
 
 ##  Maximum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Fixed-Max-Volatility: 2.00
@@ -74,7 +74,7 @@ Fixed-Max-Volatility: 2.00
 Fixed-Min-Volatility: 0.05
 
 ##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
-Variable-Max-Volatility: 1.50
+Variable-Max-Volatility: 1.00
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Variable-Min-Volatility: 0.05
 
@@ -102,7 +102,7 @@ currency-symbol: '$'
 ##  Enable sell price difference variation to ease out sell price varition
 sell-price-difference-variation-enabled: true
 ##  Starting percententage sell price difference for sell price varition
-sell-price-difference-variation-start: 15.0
+sell-price-difference-variation-start: 22.5
 ##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 7 days)
 sell-price-variation-time-period: 10080
 ##  Time in minutes that the sell-price-difference updates
@@ -156,4 +156,4 @@ shop-config-guishop-sell-value: 20.00
 tutorial: true
 
 ##  Time in seconds between messages
-tutorial-message-period: 300
+tutorial-message-period: 325

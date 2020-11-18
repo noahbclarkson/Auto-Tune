@@ -38,7 +38,7 @@ shops:
   COAL:
     price: 15.00
     max-buy: 80
-    max-sell: 100
+    max-sell: 115
   COAL_ORE:
     price: 30.00
     max-buy: 50
@@ -61,12 +61,12 @@ shops:
     max-sell: 90
   DIAMOND:
     price: 300.00
-    max-buy: 8
-    max-sell: 16
+    max-buy: 10
+    max-sell: 24
   DIAMOND_ORE:
     price: 550.00
     max-buy: 5
-    max-sell: 14
+    max-sell: 12
   LAPIS_LAZULI:
     price: 18.00
     max-buy: 128
@@ -74,10 +74,10 @@ shops:
   LAPIS_ORE:
     price: 35.00
     max-buy: 64
-    max-sell: 100
+    max-sell: 80
   EMERALD:
     price: 150.00
-    max-buy: 8
+    max-buy: 12
     max-sell: 32
   EMERALD_ORE:
     price: 250.00
@@ -86,11 +86,11 @@ shops:
   QUARTZ:
     price: 17.00
     max-buy: 40
-    max-sell: 100
+    max-sell: 125
   NETHER_QUARTZ_ORE:
     price: 40.00
     max-buy: 75
-    max-sell: 100
+    max-sell: 90
   REDSTONE:
     price: 9.00
     max-buy: 80

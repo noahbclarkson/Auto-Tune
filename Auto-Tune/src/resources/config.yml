@@ -74,9 +74,9 @@ Fixed-Max-Volatility: 2.00
 Fixed-Min-Volatility: 0.05
 
 ##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
-Variable-Max-Volatility: 1.00
+Variable-Max-Volatility: 0.75
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
-Variable-Min-Volatility: 0.05
+Variable-Min-Volatility: 0.025
 
 ##  -- Exponential Pricing Model Settings --  ##
 

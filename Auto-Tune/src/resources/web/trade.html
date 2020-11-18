@@ -7,13 +7,14 @@
     <title>Minecraft Economy Plugin</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css">  
-    <link rel="stylesheet" href="styles.css">
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css">  
+    <link rel="stylesheet" href="styles.css"> -->
 
   </head>
   <body>
-    <canvas id="myChart" width="400" height="200"></canvas>
-
+    <div class="table-responsive">
+    <canvas id="myChart" style="height:1000px" class="table"></canvas>
+    </div>
     <script>
       window.addEventListener('load', setup);
 
@@ -31,6 +32,8 @@
                     chartObjects
                 }
         var lineChartOptions = {
+            responsive: false,
+            maintainAspectRatio: false,
             scales:{
               xAxes:[{
                 type: 'linear',
@@ -54,9 +57,15 @@
         })
       }
 
+      function getRandomInt(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
+      }
+
       generateColours = function(){
-            for(var i = 0; i < 200; i++){
-              let randomColor = '#'+Math.floor(Math.random()*16777215).toString(16);
+            for(var i = 0; i < 250; i++){
+              let randomColor = 'rgba('+ getRandomInt(0, 256) + ", " + getRandomInt(0, 256) + ", " + getRandomInt(0, 256) + ", 0.5)";
               colours.push(randomColor)
             }
         }
@@ -70,11 +79,15 @@
             {
             label: item.itemName + ' Price in $',
             data: item.points,
-            fill: false,
+            fill: true,
             borderColor: colours[items.indexOf(item)],
             backgroundColor: colours[items.indexOf(item)],
             hidden: true,
-            borderWidth: 1
+            lineTension: 0.1,
+            spanGaps: true,
+            pointHoverRadius: 6,
+            borderWidth: 1,
+            pointRadius: 2
             }
             chartObjects.push(newObject);
         })

@@ -1227,7 +1227,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player);
 			cMap.put(matClickedString, (cMap.get(matClickedString)+amount));
 			Main.maxSellMap.put(player, cMap);
-			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")-(price*amount)));
+			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+(price*amount)));
 			player.sendMessage(ChatColor.GOLD + "Sold " + amount + "x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price*amount));
 		}
 	}

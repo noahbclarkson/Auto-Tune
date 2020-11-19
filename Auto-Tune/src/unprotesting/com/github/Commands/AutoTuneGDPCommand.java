@@ -21,10 +21,10 @@ public class AutoTuneGDPCommand implements CommandExecutor {
                 double returnedGDP = Double.parseDouble(GDP);
                 double[] serverBalance = getServerBalance();
                 double loanBalance = getLoanBalance();
-                returnedGDP += serverBalance[0];
-                returnedGDP -= loanBalance;
-                p.sendMessage(ChatColor.GOLD + "The Current GDP is: " + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df1.format(returnedGDP));
-                p.sendMessage(ChatColor.GOLD + "The Current GDP per capita is: " + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(returnedGDP/serverBalance[1]));
+                p.sendMessage(ChatColor.GOLD + "The Current GDP is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df1.format(returnedGDP));
+                p.sendMessage(ChatColor.GOLD + "The Current GDP per capita is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(returnedGDP/serverBalance[1]));
+                p.sendMessage(ChatColor.GOLD + "The Current Average Balance is: $" + ChatColor.GREEN + (serverBalance[0]/serverBalance[1]));
+                p.sendMessage(ChatColor.GOLD + "The Current Average Debt is: $" + ChatColor.GREEN + (loanBalance/serverBalance[1]));
             }
             else if (!(p.hasPermission("at.gdp")) && !(p.isOp())){
                 TextHandler.noPermssion(p);

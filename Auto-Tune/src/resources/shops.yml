@@ -44,7 +44,7 @@ shops:
     max-buy: 50
     max-sell: 90
   IRON_INGOT:
-    price: 13.50
+    price: 13.00
     max-buy: 75
     max-sell: 100
   IRON_ORE:
@@ -500,7 +500,7 @@ shops:
     max-buy: 8
     max-sell: 10
   MILK_BUCKET:
-    price: 10.00
+    price: 9.00
     max-buy: 12
     max-sell: 20
   STICK:

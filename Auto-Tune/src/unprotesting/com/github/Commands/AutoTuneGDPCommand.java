@@ -16,19 +16,30 @@ public class AutoTuneGDPCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String gdp, String[] args) {
         Player p = (Player) sender;
         if (command.getName().equalsIgnoreCase("gdp")){
-            if (p.hasPermission("at.gdp") || p.isOp()){
-                String GDP = AutoTuneGUIShopUserCommand.df4.format(Main.tempdatadata.get("GDP"));
-                double returnedGDP = Double.parseDouble(GDP);
-                double[] serverBalance = getServerBalance();
-                double loanBalance = getLoanBalance();
-                p.sendMessage(ChatColor.GOLD + "The Current GDP is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df1.format(returnedGDP));
-                p.sendMessage(ChatColor.GOLD + "The Current GDP per capita is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(returnedGDP/serverBalance[1]));
-                p.sendMessage(ChatColor.GOLD + "The Current Average Balance is: $" + ChatColor.GREEN + (serverBalance[0]/serverBalance[1]));
-                p.sendMessage(ChatColor.GOLD + "The Current Average Debt is: $" + ChatColor.GREEN + (loanBalance/serverBalance[1]));
+            if (args[0] == null){
+                if (p.hasPermission("at.gdp") || p.isOp()){
+                    String GDP = AutoTuneGUIShopUserCommand.df4.format(Main.tempdatadata.get("GDP"));
+                    double returnedGDP = Double.parseDouble(GDP);
+                    double[] serverBalance = getServerBalance();
+                    double loanBalance = getLoanBalance();
+                    p.sendMessage(ChatColor.GOLD + "The Current GDP is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df1.format(returnedGDP));
+                    p.sendMessage(ChatColor.GOLD + "The Current GDP per capita is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(returnedGDP/serverBalance[1]));
+                    p.sendMessage(ChatColor.GOLD + "The Current Average Balance is: $" + ChatColor.GREEN + (serverBalance[0]/serverBalance[1]));
+                    p.sendMessage(ChatColor.GOLD + "The Current Average Debt is: $" + ChatColor.GREEN + (loanBalance/serverBalance[1]));
+                }
+                else if (!(p.hasPermission("at.gdp")) && !(p.isOp())){
+                    TextHandler.noPermssion(p);
+                    return true; 
+                }
             }
-            else if (!(p.hasPermission("at.gdp")) && !(p.isOp())){
-                TextHandler.noPermssion(p);
-                return true; 
+            else if(args[0] == "reset"){
+                if (p.hasPermission("at.gdp.reset") || p.isOp()){
+                    Main.tempdatadata.put("GDP", 0.0);
+                }
+                else if (!(p.hasPermission("at.gdp")) && !(p.isOp())){
+                    TextHandler.noPermssion(p);
+                    return true; 
+                }
             }
         }
         return true;

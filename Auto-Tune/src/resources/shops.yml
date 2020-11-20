@@ -61,8 +61,8 @@ shops:
     max-sell: 90
   DIAMOND:
     price: 300.00
-    max-buy: 10
-    max-sell: 24
+    max-buy: 12
+    max-sell: 32
   DIAMOND_ORE:
     price: 550.00
     max-buy: 5
@@ -193,8 +193,8 @@ shops:
     max-sell: 200
   NETHERRACK:
     price: 1.00
-    max-buy: 64
-    max-sell: 256
+    max-buy: 256
+    max-sell: 1024
   NETHER_BRICKS:
     price: 8.00
     max-buy: 64

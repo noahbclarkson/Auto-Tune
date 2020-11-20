@@ -76,6 +76,8 @@ permssions:
   at.gdp:
     description: View GDP info
     default: true
+  at.gdp.reset:
+    description: Reset GDP to 0
   at.atconfig:
     description: View and change plugin config settings
   at.tutorial:

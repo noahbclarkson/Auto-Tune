@@ -28,7 +28,7 @@ public class AutoSellEventHandler implements Runnable {
             ConcurrentHashMap<Integer, ItemStack> itemstosell = new ConcurrentHashMap<Integer, ItemStack>();
             for (String material : config.getKeys(false)){
                 if (player.getInventory().contains(Material.matchMaterial(material)) && Main.playerDataConfig.getBoolean(uuid + ".AutoSell" + "." + material)==true){
-                ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player);
+                ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player.getUniqueId());
                 Integer max = (Integer)Main.getShopConfig().get("shops." + material + "." + "max-sell");
                 Integer amount = getAmount(player, Material.matchMaterial(material));
                 if (max == null){

@@ -76,7 +76,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
 				continue;
             }
             if (!autoSell){
-                ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player);
+                ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player.getUniqueId());
                 Integer max = 10000;
                 try{
                     max = (Integer)Main.getShopConfig().get("shops." + itemString + "." + "max-sell");
@@ -95,9 +95,9 @@ public class AutoTuneSellCommand implements CommandExecutor {
                     continue;
                 }
             }
-            ConcurrentHashMap<String, Integer> cMap2 = Main.maxSellMap.get(player);
+            ConcurrentHashMap<String, Integer> cMap2 = Main.maxSellMap.get(player.getUniqueId());
 			cMap2.put(itemString, (cMap2.get(itemString)+quantity));
-			Main.maxSellMap.put(player, cMap2);
+			Main.maxSellMap.put(player.getUniqueId(), cMap2);
             Integer tempMapSize = tempMap1.size();
             Double[] tempDoublearray = tempMap1.get(tempMapSize-1);
             Double sellpricedif = Config.getSellPriceDifference();

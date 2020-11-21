@@ -2,6 +2,7 @@ package unprotesting.com.github.Commands;
 
 import java.text.DecimalFormat;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.github.stefvanschie.inventoryframework.Gui;
@@ -27,6 +28,7 @@ import net.md_5.bungee.api.ChatColor;
 import net.milkbowl.vault.economy.Economy;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
+import unprotesting.com.github.util.Section;
 import unprotesting.com.github.util.TextHandler;
 
 public class AutoTuneGUIShopUserCommand implements CommandExecutor {
@@ -54,7 +56,10 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			if (Config.getMenuRows() == 6) {
 				SBPanePos = 2;
 			}
-			if (p.hasPermission("at.shop") || p.isOp()){loadGUIMAIN(p, sender);}
+			if (p.hasPermission("at.shop") || p.isOp())
+			{
+				loadGUISECTIONS(p, sender);
+			}
                 else if (!(p.hasPermission("at.shop")) && !(p.isOp())){TextHandler.noPermssion(p);}
 
 			return true;
@@ -64,7 +69,39 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
 	}
 
-	public void loadGUIMAIN(Player player, CommandSender senderpub) {
+	public void loadGUISECTIONS(Player player, CommandSender senderpub){
+		Gui front = new Gui(3, Config.getMenuTitle());
+		OutlinePane pane = new OutlinePane(1, 1, 7, 1);
+		if (Main.sectionedItems.length > 7){
+			front = new Gui(4, Config.getMenuTitle());
+			pane = new OutlinePane(1, 1, 7, 2);
+		}
+		for (int i = 0; i < Main.sectionedItems.length; i++){
+			ItemStack is = new ItemStack((Main.sectionedItems[i].image));
+			ItemMeta im = is.getItemMeta();
+			im.setDisplayName(ChatColor.GOLD + Main.sectionedItems[i].name);
+			im.setLore(Arrays.asList(ChatColor.WHITE + "Click to enter the " + (Main.sectionedItems[i].name.toLowerCase()) + " shop!"));
+			is.setItemMeta(im);
+			final Section inputSection = Main.sectionedItems[i];
+			GuiItem gItem = new GuiItem(is, event ->{
+				final Player playernew = player;
+				if (event.getClick() == ClickType.LEFT) {
+					player.getOpenInventory().close();
+					loadGUIMAIN(player, senderpub, inputSection);
+				}
+				else if (event.getClick() != ClickType.LEFT) {
+					event.setCancelled(true);
+					playernew.setItemOnCursor(null);
+				}
+			});
+			pane.addItem(gItem);
+			front.addPane(pane);
+		}
+		front.update();
+		front.show((HumanEntity) senderpub);
+	}
+
+	public void loadGUIMAIN(Player player, CommandSender senderpub, Section sec) {
 		Integer menuRows = Config.getMenuRows();
 		OutlinePane SBPane = new OutlinePane(1, SBPanePos, 7, 2);
 		ItemStack is;
@@ -80,10 +117,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		StaticPane pageFive = new StaticPane(1, 1, 7, menuRows - 2);
 		StaticPane back = new StaticPane(0, menuRows - 1, 1, 1);
 		StaticPane forward = new StaticPane(8, menuRows - 1, 1, 1);
+		StaticPane reset = new StaticPane(0, 0, 1, 1);
 
 		player = (Player) senderpub;
 		gui1 = new Gui(menuRows, Config.getMenuTitle());
-		Integer size = Main.getMaterialListSize();
+		Integer size = sec.items.size();
 		PaginatedPane pane = new PaginatedPane(0, 0, 9, menuRows);
 		Integer paneSize = (menuRows - 2) * 7;
 		Integer pageAmount = 2;
@@ -108,9 +146,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
 		// page one
 		StaticPane pageOne = new StaticPane(1, 1, 7, menuRows - 2);
-		for (i = 0; i<size;) {
+		for (i = 0; i<sec.items.size();) {
 			if (Main.memMap.isEmpty() == false) {
-				b = (Material.matchMaterial(Main.memMap.get(i)));
+				b = (Material.matchMaterial(sec.items.get(i)));
 				is = new ItemStack(b);
 				a = new GuiItem(is, event -> {
 					if (event.getClick() == ClickType.LEFT) {
@@ -121,8 +159,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 						ItemStack tempis = event.getCurrentItem();
 						Material tempmat = tempis.getType();
 						matClickedString = tempmat.toString();
-						ConcurrentHashMap<Integer,
-							Double[] > tempmap = Main.map.get(matClickedString);
+						ConcurrentHashMap<Integer, Double[] > tempmap = Main.map.get(matClickedString);
 						Integer tempMapSize = tempmap.size();
 						Double[] tempDoublearray = tempmap.get(tempMapSize - 1);
 						price = tempDoublearray[0];
@@ -153,14 +190,14 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					}
 				});
 				ItemMeta im = is.getItemMeta();
-				im.setDisplayName(ChatColor.AQUA + Main.memMap.get(i));
-				ConcurrentHashMap<Integer, Double[] > tempmap = Main.map.get(Main.memMap.get(i));
+				im.setDisplayName(ChatColor.AQUA + sec.items.get(i));
+				ConcurrentHashMap<Integer, Double[] > tempmap = Main.map.get(sec.items.get(i));
 				Integer tempMapSize = tempmap.size();
 				Double[] tempDoublearray = tempmap.get(tempMapSize - 1);
 				price1 = tempDoublearray[0];
 				String priceString = df2.format(price1);
 				String fullprice = "Price: " + Config.getCurrencySymbol() + priceString;
-				im.setLore(Arrays.asList((ChatColor.GOLD + fullprice), (ChatColor.WHITE + "Maximum Buys: " + (Integer)Main.getShopConfig().get("shops." + Main.memMap.get(i) + "." + "max-buy") + " per " + Config.getTimePeriod() + "min"), (ChatColor.WHITE + "Maximum Sells: " + (Integer)Main.getShopConfig().get("shops." + Main.memMap.get(i) + "." + "max-sell") + " per " + Config.getTimePeriod() + "min")));
+				im.setLore(Arrays.asList((ChatColor.GOLD + fullprice), (ChatColor.WHITE + "Maximum Buys: " + (Integer)Main.getShopConfig().get("shops." + sec.items.get(i) + "." + "max-buy") + " per " + Config.getTimePeriod() + "min"), (ChatColor.WHITE + "Maximum Sells: " + (Integer)Main.getShopConfig().get("shops." + sec.items.get(i) + "." + "max-sell") + " per " + Config.getTimePeriod() + "min")));
 				is.setItemMeta(im);
 				if (Config.getMenuRows() == 4) {
 					if (i<7) {
@@ -349,6 +386,18 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		imforward.setDisplayName(ChatColor.WHITE + "Next Page");
 		imforward.setLore(Arrays.asList(ChatColor.BOLD + "Click to go to the next page"));
 		isforward.setItemMeta(imforward);
+		ItemStack isback2 = new ItemStack(Material.ARROW);
+		ItemMeta imback2 = isback2.getItemMeta();
+		imback2.setDisplayName(ChatColor.WHITE + "Main-Menu");
+		imback2.setLore(Arrays.asList(ChatColor.BOLD + "Click to return to Main-Shop Menu"));
+		isback2.setItemMeta(imback2);
+	
+		final Player fPlayer = player;
+		
+		reset.addItem(new GuiItem(new ItemStack(isback2), event -> {
+			fPlayer.getOpenInventory().close();
+			loadGUISECTIONS(fPlayer, senderpub);
+		}), 0, 0);
 
 		if (pane.getPage() == 0 && finalPageAmount == 6) {
 			back.setVisible(false);
@@ -411,9 +460,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
 		gui1.addPane(back);
 		gui1.addPane(forward);
-
-		gui1.addPane(back);
-		gui1.addPane(forward);
+		gui1.addPane(reset);
 
 		gui1.show((HumanEntity) senderpub);
 
@@ -484,7 +531,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					sellAmount
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
-				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-buy");
 				if (max == null){
@@ -525,7 +572,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					sellAmount
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
-				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-buy");
 				if (max == null){
@@ -566,7 +613,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					sellAmount
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
-				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-buy");
 				if (max == null){
@@ -607,7 +654,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					sellAmount
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
-				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-buy");
 				if (max == null){
@@ -648,7 +695,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					sellAmount
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
-				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-buy");
 				if (max == null){
@@ -689,7 +736,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					sellAmount
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
-				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-buy");
 				if (max == null){
@@ -730,7 +777,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					sellAmount
 				};
 				tempMap2.put(tempMap2Size - 1, tempDArray);
-				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-buy");
 				if (max == null){
@@ -801,7 +848,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				} catch (IllegalArgumentException e) {
 					player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
 				}
-				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-sell");
 				if (max == null){
@@ -856,7 +903,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				} catch (IllegalArgumentException e) {
 					player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
 				}
-				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-sell");
 				if (max == null){
@@ -912,7 +959,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				} catch (IllegalArgumentException e) {
 					player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
 				}
-				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-sell");
 				if (max == null){
@@ -968,7 +1015,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				} catch (IllegalArgumentException e) {
 					player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
 				}
-				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-sell");
 				if (max == null){
@@ -1024,7 +1071,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				} catch (IllegalArgumentException e) {
 					player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
 				}
-				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-sell");
 				if (max == null){
@@ -1080,7 +1127,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				} catch (IllegalArgumentException e) {
 					player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
 				}
-				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-sell");
 				if (max == null){
@@ -1135,7 +1182,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				} catch (IllegalArgumentException e) {
 					player.sendMessage(ChatColor.RED + "No items present of that type in your inventory!");
 				}
-				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player);
+				ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player.getUniqueId());
 				boolean notMax = true;
 				Integer max = (Integer)Main.getShopConfig().get("shops." + matClickedString + "." + "max-sell");
 				if (max == null){
@@ -1214,17 +1261,17 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
 	public static void sendPlayerShopMessageAndUpdateGDP(int amount, double price, Player player, String matClickedString, boolean sell){
 		if (!sell){
-			ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player);
+			ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player.getUniqueId());
 			cMap.put(matClickedString, (cMap.get(matClickedString)+amount));
-			Main.maxBuyMap.put(player, cMap);
+			Main.maxBuyMap.put(player.getUniqueId(), cMap);
 			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+(price*amount)));
 			player.sendMessage(ChatColor.GOLD + "Purchased " + amount + "x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price*amount));
 			
 		}
 		else if (sell){
-			ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player);
+			ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player.getUniqueId());
 			cMap.put(matClickedString, (cMap.get(matClickedString)+amount));
-			Main.maxSellMap.put(player, cMap);
+			Main.maxSellMap.put(player.getUniqueId(), cMap);
 			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+(price*amount)));
 			player.sendMessage(ChatColor.GOLD + "Sold " + amount + "x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price*amount));
 		}

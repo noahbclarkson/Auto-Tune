@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Level;
@@ -24,6 +25,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -70,6 +72,7 @@ import unprotesting.com.github.util.InflationEventHandler;
 import unprotesting.com.github.util.JoinEventHandler;
 import unprotesting.com.github.util.LoanEventHandler;
 import unprotesting.com.github.util.MathHandler;
+import unprotesting.com.github.util.Section;
 import unprotesting.com.github.util.StaticFileHandler;
 import unprotesting.com.github.util.TextHandler;
 import unprotesting.com.github.util.TutorialHandler;
@@ -81,6 +84,7 @@ public final class Main extends JavaPlugin implements Listener {
   @Getter
   public static Main INSTANCE;
 
+  public static Section[] sectionedItems;
   private static final Logger log = Logger.getLogger("Minecraft");
   public static Economy econ;
   public static JavaPlugin plugin;
@@ -93,8 +97,8 @@ public final class Main extends JavaPlugin implements Listener {
   public static DB db, memDB, tempDB, loanDB;
   public static HTreeMap<String, Double> tempdatadata;
   public static ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>> map;
-  public static ConcurrentMap<Player, ConcurrentHashMap<String, Integer>> maxBuyMap = new ConcurrentHashMap<Player, ConcurrentHashMap<String, Integer>>();
-  public static ConcurrentMap<Player, ConcurrentHashMap<String, Integer>> maxSellMap = new ConcurrentHashMap<Player, ConcurrentHashMap<String, Integer>>();
+  public static ConcurrentMap<UUID, ConcurrentHashMap<String, Integer>> maxBuyMap = new ConcurrentHashMap<UUID, ConcurrentHashMap<String, Integer>>();
+  public static ConcurrentMap<UUID, ConcurrentHashMap<String, Integer>> maxSellMap = new ConcurrentHashMap<UUID, ConcurrentHashMap<String, Integer>>();
   public static HTreeMap<Integer, String> memMap;
   public static HTreeMap<String, double[]> loanMap;
   public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, Double[]>> tempmap;
@@ -248,6 +252,7 @@ private static File tradeShortf;
           Config.getSellPriceDifferenceVariationStart() - tempdatadata.get("SellPriceDifferenceDifference"));
       SellDifrunnable();
     }
+    loadSections();
   }
 
   private boolean setupEconomy() {
@@ -298,9 +303,9 @@ private static File tradeShortf;
   }
 
   public static void setupMaxBuySell(){
-    for (Player p : Bukkit.getOnlinePlayers()){
-      maxBuyMap.put(p, loadMaxStrings(map));
-      maxSellMap.put(p, loadMaxStrings(map));
+    for (OfflinePlayer p : Bukkit.getOnlinePlayers()){
+      maxBuyMap.put(p.getUniqueId(), loadMaxStrings(map));
+      maxSellMap.put(p.getUniqueId(), loadMaxStrings(map));
     }
   }
 
@@ -594,6 +599,16 @@ private static File tradeShortf;
     }
   }
 
+  public void loadSections(){
+    int sectionAmount = getShopConfig().getConfigurationSection("sections").getKeys(false).size();
+    sectionedItems = new Section[sectionAmount];
+    int i = 0;
+    for (String section : getShopConfig().getConfigurationSection("sections").getKeys(false)){
+      sectionedItems[i] = new Section(section);
+      i++;
+    }
+  }
+
   public void createFiles() {
 
     configf = new File(getDataFolder(), "config.yml");
@@ -778,6 +793,8 @@ private static File tradeShortf;
       }
     }
   }
+
+
 
   @Getter
   public static Set < String > tempCollection;

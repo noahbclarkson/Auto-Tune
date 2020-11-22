@@ -26,7 +26,7 @@ commands:
       usage: /<trade> 
     shop:
       description: GUIShop alias for buy and sell commands.
-      usage: /<shop>
+      usage: /<shop> <shop-section>
     sell:
       description: Sell items quickly to the shop.
       usage: /<sell>

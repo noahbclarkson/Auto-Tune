@@ -64,7 +64,26 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				else if (!(p.hasPermission("at.shop")) && !(p.isOp())){TextHandler.noPermssion(p);}
 				return true;
 			}
-			if (args.length > 0){
+			if (args.length == 1){
+				String inputSection = null;
+				try{
+					inputSection = args[0];
+				}
+				catch(ClassCastException ex){
+					p.sendMessage("Unknown shop format: " + args[0]);
+					return false;
+				}
+				catch(ArrayIndexOutOfBoundsException ex){
+					return false;
+				}
+				for (int i = 0; i < Main.sectionedItems.length; i++){
+					if (Main.sectionedItems[i].name.toLowerCase().equals(inputSection)){
+						loadGUIMAIN(p, sender, Main.sectionedItems[i]);
+						return true;
+					}
+				}
+			}
+			else{
 				return false;
 			}
 		}

@@ -58,7 +58,7 @@ An example of a shop setup using Auto-Tune:
   #### To use Auto-Tune
 
    - Note: Make sure you have a valid API key
-   - 1. Download the latest version of Auto-Tune from the resources tab for your Minecraft server's Minecraft version
+   - 1. Download the latest version of Auto-Tune from the resources tab for your Minecraft server's Minecraft version - Make sure the dependencies are also installed (Vault[https://www.spigotmc.org/resources/vault.34315/] and Essentials[https://essentialsx.net])
    - 2. Put the .jar file in your minecraft plugins folder
    - 3. Restart your server
    - 4. Edit the config.yml file inside plugins/Auto-Tune/, and enter your API key and email (check Auto-Tune API for more)

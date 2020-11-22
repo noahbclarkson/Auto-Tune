@@ -659,12 +659,20 @@ shops:
 ##  Shop sections configuration
 sections:
   'Ores':
+    ##  Block that the section image is displayed as
     block: 'IRON_ORE'
+    ##  Optional - set to disabled to disable the back button when running "/shop <shop-section>".
+    ##  This wont disable the back button when running just "/shop"
+    back-menu-button-enabled: true
   'Blocks':
     block: 'STONE'
+    back-menu-button-enabled: true
   'Food':
     block: 'COOKED_BEEF'
+    back-menu-button-enabled: true
   'Farming':
     block: 'OAK_SAPLING'
+    back-menu-button-enabled: true
   'Other':
     block: 'STICK'
+    back-menu-button-enabled: true

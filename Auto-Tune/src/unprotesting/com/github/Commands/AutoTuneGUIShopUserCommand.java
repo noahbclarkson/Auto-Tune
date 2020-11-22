@@ -78,7 +78,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				for (int i = 0; i < Main.sectionedItems.length; i++){
 					if (Main.sectionedItems[i].name.toLowerCase().equals(inputSection)){
-						loadGUIMAIN(p, sender, Main.sectionedItems[i]);
+						loadGUIMAIN(p, sender, Main.sectionedItems[i], true);
 						return true;
 					}
 				}
@@ -108,7 +108,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				final Player playernew = player;
 				if (event.getClick() == ClickType.LEFT) {
 					player.getOpenInventory().close();
-					loadGUIMAIN(player, senderpub, inputSection);
+					loadGUIMAIN(player, senderpub, inputSection, false);
 				}
 				else if (event.getClick() != ClickType.LEFT) {
 					event.setCancelled(true);
@@ -122,7 +122,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		front.show((HumanEntity) senderpub);
 	}
 
-	public void loadGUIMAIN(Player player, CommandSender senderpub, Section sec) {
+	public void loadGUIMAIN(Player player, CommandSender senderpub, Section sec, boolean twoArgs) {
 		Integer menuRows = Config.getMenuRows();
 		OutlinePane SBPane = new OutlinePane(1, SBPanePos, 7, 2);
 		ItemStack is;
@@ -165,6 +165,14 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
 		final Integer finalPageAmount = pageAmount;
 
+		boolean showBackButton = true;
+		if (twoArgs){
+			if (!sec.showBackButton){
+				showBackButton = false;
+			}
+		}
+		final boolean fSBB = showBackButton;
+
 		// page one
 		StaticPane pageOne = new StaticPane(1, 1, 7, menuRows - 2);
 		for (i = 0; i<sec.items.size();) {
@@ -184,7 +192,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 						Integer tempMapSize = tempmap.size();
 						Double[] tempDoublearray = tempmap.get(tempMapSize - 1);
 						price = tempDoublearray[0];
-						createTradingPanel(gui, matClickedString, playernew, SBPane, price, forward, back);
+						createTradingPanel(gui, matClickedString, playernew, SBPane, price, forward, back, fSBB);
 						if (finalPageAmount == 2) {
 							pane.setPage(1);
 						}
@@ -415,10 +423,12 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 	
 		final Player fPlayer = player;
 		
-		reset.addItem(new GuiItem(new ItemStack(isback2), event -> {
-			fPlayer.getOpenInventory().close();
-			loadGUISECTIONS(fPlayer, senderpub);
-		}), 0, 0);
+		if (fSBB){
+			reset.addItem(new GuiItem(new ItemStack(isback2), event -> {
+				fPlayer.getOpenInventory().close();
+				loadGUISECTIONS(fPlayer, senderpub);
+			}), 0, 0);
+		}
 
 		if (pane.getPage() == 0 && finalPageAmount == 6) {
 			back.setVisible(false);
@@ -481,8 +491,9 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
 		gui1.addPane(back);
 		gui1.addPane(forward);
-		gui1.addPane(reset);
-
+		if (fSBB){
+			gui1.addPane(reset);
+		}
 		gui1.show((HumanEntity) senderpub);
 
 	}
@@ -490,7 +501,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 	public Double sellpricedif;
 	public Double sellpricedif2;
 
-	public void createTradingPanel(Gui gui, String matClickedString, Player player, OutlinePane SBPane, Double price, StaticPane forward, StaticPane back) {
+	public void createTradingPanel(Gui gui, String matClickedString, Player player, OutlinePane SBPane, Double price, StaticPane forward, StaticPane back, boolean showMainMenuButton) {
 		sellpricedif2 = null;
 		sellpricedif = null;
 		sellpricedif = Config.getSellPriceDifference();
@@ -573,7 +584,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				player.setItemOnCursor(null);
 				event.setCancelled(true);
 			}
@@ -614,7 +625,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				player.setItemOnCursor(null);
 				event.setCancelled(true);
 			}
@@ -655,7 +666,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				player.setItemOnCursor(null);
 				event.setCancelled(true);
 			}
@@ -696,7 +707,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				player.setItemOnCursor(null);
 				event.setCancelled(true);
 			}
@@ -737,7 +748,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				player.setItemOnCursor(null);
 				event.setCancelled(true);
 			}
@@ -778,7 +789,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				player.setItemOnCursor(null);
 				event.setCancelled(true);
 			}
@@ -818,7 +829,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				player.setItemOnCursor(null);
 				event.setCancelled(true);
 			}
@@ -882,7 +893,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				if (sellable != true || notMax == false) {
 					event.setCancelled(true);
 					SBPane.clear();
-					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				}
 				if (sellable == true && notMax == true) {
 					ConcurrentHashMap<Integer,
@@ -905,11 +916,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			} else {
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			}
 		});
@@ -938,7 +949,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.setItemOnCursor(null);
 					event.setCancelled(true);
 					SBPane.clear();
-					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				}
 				if (sellable == true && notMax == true) {
 					ConcurrentHashMap<Integer,
@@ -961,11 +972,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			} else {
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			}
 		});
@@ -994,7 +1005,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.setItemOnCursor(null);
 					event.setCancelled(true);
 					SBPane.clear();
-					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				}
 				if (sellable == true && notMax == true) {
 					ConcurrentHashMap<Integer,
@@ -1017,11 +1028,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			} else {
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			}
 		});
@@ -1050,7 +1061,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.setItemOnCursor(null);
 					event.setCancelled(true);
 					SBPane.clear();
-					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				}
 				if (sellable == true && notMax == true) {
 					ConcurrentHashMap<Integer,
@@ -1073,11 +1084,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			} else {
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			}
 		});
@@ -1106,7 +1117,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.setItemOnCursor(null);
 					event.setCancelled(true);
 					SBPane.clear();
-					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				}
 				if (sellable == true && notMax == true) {
 					ConcurrentHashMap<Integer,
@@ -1129,11 +1140,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			} else {
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			}
 		});
@@ -1162,7 +1173,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.setItemOnCursor(null);
 					event.setCancelled(true);
 					SBPane.clear();
-					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				}
 				if (sellable == true && notMax == true) {
 					ConcurrentHashMap<Integer,
@@ -1185,11 +1196,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			} else {
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			}
 		});
@@ -1217,7 +1228,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					player.setItemOnCursor(null);
 					event.setCancelled(true);
 					SBPane.clear();
-					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+					createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				}
 				if (sellable == true && notMax == true) {
 					ConcurrentHashMap<Integer,
@@ -1240,11 +1251,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				player.setItemOnCursor(null);
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			} else {
 				SBPane.clear();
-				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back);
+				createTradingPanel(gui, matClickedString, player, SBPane, price, forward, back, showMainMenuButton);
 				event.setCancelled(true);
 			}
 		});

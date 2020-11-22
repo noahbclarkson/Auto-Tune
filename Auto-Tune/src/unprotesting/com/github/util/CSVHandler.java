@@ -2,6 +2,9 @@ package unprotesting.com.github.util;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -14,7 +17,12 @@ public class CSVHandler {
     FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/web/trade.csv");
 
     Set < String > strSet = Main.map.keySet();
-    for (String str: strSet) {
+    List<String> strList = new ArrayList<String>();
+    for (String str : strSet){
+      strList.add(str);
+    }
+    Collections.sort(strList);
+    for (String str : strList) {
       ConcurrentHashMap < Integer,
       Double[] > item = Main.map.get(str);
 
@@ -60,7 +68,12 @@ public class CSVHandler {
     FileWriter csvWriter = new FileWriter("plugins/Auto-Tune/web/trade-short.csv");
 
     Set < String > strSet = Main.map.keySet();
-    for (String str: strSet) {
+    List<String> strList = new ArrayList<String>();
+    for (String str : strSet){
+      strList.add(str);
+    }
+    Collections.sort(strList);
+    for (String str : strList) {
       ConcurrentHashMap < Integer,
       Double[] > item = Main.map.get(str);
 

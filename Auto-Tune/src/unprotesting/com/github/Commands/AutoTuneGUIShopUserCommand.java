@@ -56,17 +56,19 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			if (Config.getMenuRows() == 6) {
 				SBPanePos = 2;
 			}
-			if (p.hasPermission("at.shop") || p.isOp())
-			{
-				loadGUISECTIONS(p, sender);
+			if (args.length == 0){
+				if (p.hasPermission("at.shop") || p.isOp())
+				{
+					loadGUISECTIONS(p, sender);
+				}
+				else if (!(p.hasPermission("at.shop")) && !(p.isOp())){TextHandler.noPermssion(p);}
+				return true;
 			}
-                else if (!(p.hasPermission("at.shop")) && !(p.isOp())){TextHandler.noPermssion(p);}
-
-			return true;
-
+			if (args.length > 0){
+				return false;
+			}
 		}
-		return true;
-
+		return false;
 	}
 
 	public void loadGUISECTIONS(Player player, CommandSender senderpub){

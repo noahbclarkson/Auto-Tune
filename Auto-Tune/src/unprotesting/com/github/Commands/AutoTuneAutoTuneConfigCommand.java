@@ -38,13 +38,18 @@ public class AutoTuneAutoTuneConfigCommand implements CommandExecutor {
             }
             if (sender instanceof Player) {
                 Player p = (Player) sender;
-                if (p.hasPermission("at.atconfig") || p.isOp()) {
-                    Config.loadDefaults();
-                    openConfigGUI(p, sender);
-                    return true;
-                } else {
-                    TextHandler.noPermssion(p);
-                    return true;
+                if (args.length == 0){
+                    if (p.hasPermission("at.atconfig") || p.isOp()) {
+                        Config.loadDefaults();
+                        openConfigGUI(p, sender);
+                        return true;
+                    } else {
+                        TextHandler.noPermssion(p);
+                        return true;
+                    }
+                }
+                if (args.length > 0){
+                    return false;
                 }
             }
         }
@@ -247,6 +252,12 @@ public class AutoTuneAutoTuneConfigCommand implements CommandExecutor {
     }
 
     public void createOtherEcononomyMenuGuiItems(Gui configGui, OutlinePane BAConfigPane, Player player, CommandSender sender) {
+        BAConfigPane.addItem(new GuiItem(createItemStackWithMeta("Update Prices When Inactive", String.valueOf(Config.isUpdatePricesWhenInactive())), event -> {
+            Player p = (Player) event.getWhoClicked();
+            checkForMessage(p, "Update Prices When Inactive", "update-prices-when-inactive", "boolean", sender);}));
+        BAConfigPane.addItem(new GuiItem(createItemStackWithMeta("Currency Symbol", String.valueOf(Config.getCurrencySymbol())), event -> {
+            Player p = (Player) event.getWhoClicked();
+            checkForMessage(p, "Currency Symbol", "currency-symbol", "string", sender);}));
         BAConfigPane.addItem(new GuiItem(createItemStackWithMeta("Sell Price Difference Variation Enabled", String.valueOf(Config.isSellPriceDifferenceVariationEnabled())), event -> {
             Player p = (Player) event.getWhoClicked();
             checkForMessage(p, "Sell Price Difference Variation Enabled", "sell-price-difference-variation-enabled", "boolean", sender);}));
@@ -270,7 +281,16 @@ public class AutoTuneAutoTuneConfigCommand implements CommandExecutor {
             checkForMessage(p, "Checksum Header Bypass", "checksum-header-bypass", "boolean", sender);}));
         BAConfigPane.addItem(new GuiItem(createItemStackWithMeta("Economy Shop Config", Config.getEconomyShopConfig()), event -> {
                     Player p = (Player) event.getWhoClicked();
-                    checkForMessage(p, "Economy Shop Config", "economy-shop-config", "string", sender);}));        
+                    checkForMessage(p, "Economy GUI-Shop Config", "economy-shop-config", "string", sender);}));  
+        BAConfigPane.addItem(new GuiItem(createItemStackWithMeta("Economy Shop Config Sell Value", Config.getShopConfigGUIShopSellValue()), event -> {
+                    Player p = (Player) event.getWhoClicked();
+                    checkForMessage(p, "Economy GUI-Shop Config Sell Value", "economy-shop-config", "double", sender);}));  
+        BAConfigPane.addItem(new GuiItem(createItemStackWithMeta("Tutorial", String.valueOf(Config.isTutorial())), event -> {
+                    Player p = (Player) event.getWhoClicked();
+                    checkForMessage(p, "Tutorial", "tutorial", "boolean", sender);}));  
+        BAConfigPane.addItem(new GuiItem(createItemStackWithMeta("Tutorial Message Period", Config.getTutorialMessagePeriod()), event -> {
+                    Player p = (Player) event.getWhoClicked();
+                    checkForMessage(p, "Tutorial Message Period", "tutorial-message-period", "integer", sender);}));         
     }
 
     public void resetPlayerToSettings(Player p, CommandSender sender){

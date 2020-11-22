@@ -21,9 +21,13 @@ public class Section {
                 image = Material.matchMaterial(Main.getShopConfig().getConfigurationSection("sections." + section).getString("block"));
                 for (String shop : Main.getShopConfig().getConfigurationSection("shops").getKeys(false)){
                     String shopSection = Main.getShopConfig().getConfigurationSection("shops." + shop).getString("section");
-                    if (shopSection.equals(section)){
-                        Main.log(shop);
-                        items.add(shop);
+                    try{
+                        if (shopSection.equals(section)){
+                            items.add(shop);
+                        }
+                    }
+                    catch(NullPointerException ex){
+                        Main.log("Shop " + shop + " doesn't have a section, please input one to continue");
                     }
                 }
             }

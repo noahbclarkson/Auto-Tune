@@ -34,18 +34,21 @@ public class AutoTuneAutoSellCommand implements CommandExecutor{
             if (!(sender instanceof Player)) {
                 Main.sendMessage(sender, "&cPlayers only.");
                 return true;
-            } 
-
-                Player p = (Player) sender;
-                if (Config.getMenuRows() == 6){
-                    AutoTuneGUIShopUserCommand.SBPanePos = 2;
-                }
+            }
+            Player p = (Player) sender;
+            if (Config.getMenuRows() == 6){
+                AutoTuneGUIShopUserCommand.SBPanePos = 2;
+            }
+            if (args.length == 0){
                 if (p.hasPermission("at.autosell") || p.isOp()){loadGUIMAIN(p, sender);}
                 else if (!(p.hasPermission("at.autosell")) && !(p.isOp())){TextHandler.noPermssion(p);}
-            return true;
-
+                return true;
+            }
+            if (args.length > 0){
+                return false;
+            }
         }
-        return true;
+        return false;
 
     }
 

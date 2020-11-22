@@ -300,7 +300,7 @@ shops:
     price: 4.00
     max-buy: 80
     max-sell: 256
-    section: 'Farming'
+    section: 'Food'
   EGG:
     price: 3.50
     max-buy: 32
@@ -310,12 +310,22 @@ shops:
     price: 1.75
     max-buy: 85
     max-sell: 175
-    section: 'Farming'
+    section: 'Food'
+  POTATO:
+    price: 2.25
+    max-buy: 80
+    max-sell: 120
+    section: 'Food'
+  BREAD:
+    price: 4.50
+    max-buy: 64
+    max-sell: 75
+    section: 'Food'
   APPLE:
     price: 4.00
     max-buy: 64
     max-sell: 100
-    section: 'Farming'
+    section: 'Food'
   WHEAT:
     price: 2.00
     max-buy: 128
@@ -330,32 +340,47 @@ shops:
     price: 2.50
     max-buy: 64
     max-sell: 150
-    section: 'Farming'
+    section: 'Food'
   PORKCHOP:
     price: 2.25
     max-buy: 64
     max-sell: 150
-    section: 'Farming'
+    section: 'Food'
   CHICKEN:
     price: 1.45
     max-buy: 64
     max-sell: 150
-    section: 'Farming'
+    section: 'Food'
   RABBIT:
     price: 2.50
     max-buy: 64
     max-sell: 150
-    section: 'Farming'
+    section: 'Food'
   MUTTON:
     price: 2.00
     max-buy: 64
     max-sell: 150
-    section: 'Farming'
+    section: 'Food'
   PUMPKIN:
     price: 8.00
     max-buy: 64
     max-sell: 128
     section: 'Farming'
+  COD:
+    price: 6.00
+    max-buy: 96
+    max-sell: 124
+    section: 'Food'
+  SALMON:
+    price: 7.50
+    max-buy: 90
+    max-sell: 120
+    section: 'Food'
+  COOKIE:
+    price: 12.00
+    max-buy: 64
+    max-sell: 96
+    section: 'Food'
   RED_MUSHROOM:
     price: 6.00
     max-buy: 64
@@ -380,92 +405,97 @@ shops:
     price: 4.00
     max-buy: 64
     max-sell: 128
-    section: 'Materials'
+    section: 'Other'
   GUNPOWDER:
     price: 12.50
     max-buy: 64
     max-sell: 128
-    section: 'Materials'
+    section: 'Other'
   LEATHER:
     price: 20.00
     max-buy: 64
     max-sell: 128
-    section: 'Materials'
+    section: 'Other'
   INK_SAC:
     price: 2.50
     max-buy: 32
     max-sell: 64
-    section: 'Materials'
+    section: 'Other'
   FEATHER:
     price: 4.00
     max-buy: 32
     max-sell: 64
-    section: 'Materials'
+    section: 'Other'
   BONE:
     price: 6.00
     max-buy: 64
     max-sell: 100
-    section: 'Materials'
+    section: 'Other'
   BONE_MEAL:
     price: 2.00
     max-buy: 64
     max-sell: 90
-    section: 'Materials'
+    section: 'Other'
   STRING:
     price: 4.00
     max-buy: 64
     max-sell: 100
-    section: 'Materials'
+    section: 'Other'
   ROTTEN_FLESH:
     price: 0.50
     max-buy: 64
     max-sell: 128
-    section: 'Materials'
+    section: 'FOOD'
   SPIDER_EYE:
     price: 7.00
     max-buy: 64
     max-sell: 128
-    section: 'Materials'
+    section: 'Other'
   SLIME_BALL:
     price: 25.00
     max-buy: 32
     max-sell: 64
-    section: 'Materials'
+    section: 'Other'
   ENDER_PEARL:
     price: 35.00
     max-buy: 16
     max-sell: 40
-    section: 'Materials'
+    section: 'Other'
   NETHER_STAR:
     price: 12000.00
     max-buy: 1
     max-sell: 1
-    section: 'Materials'
+    section: 'Other'
   GHAST_TEAR:
     price: 125.00
     max-buy: 4
     max-sell: 8
-    section: 'Materials'
+    section: 'Other'
   MAGMA_CREAM:
     price: 50.00
     max-buy: 16
     max-sell: 32
-    section: 'Materials'
+    section: 'Other'
   BLAZE_ROD:
     price: 45.00
     max-buy: 8
     max-sell: 32
-    section: 'Materials'
+    section: 'Other'
   ARROW:
     price: 2.00
     max-buy: 64
     max-sell: 128
-    section: 'Materials'
+    section: 'Other'
+  COCOA_BEANS:
+    price: 7.50
+    max-buy: 64
+    max-sell: 96
+    section: 'Farming'
   NAME_TAG:
     price: 50.00
     max-buy: 8
     max-sell: 16
-    section: 'Materials'
+    section: 'Other'
   CHORUS_FRUIT:
     price: 1.25
     max-buy: 64
@@ -475,7 +505,7 @@ shops:
     price: 20.00
     max-buy: 30
     max-sell: 64
-    section: 'Blocks'
+    section: 'Other'
   TORCH:
     price: 2.5
     max-buy: 64
@@ -495,7 +525,7 @@ shops:
     price: 8.5
     max-buy: 32
     max-sell: 48
-    section: 'Blocks'
+    section: 'Other'
   TNT:
     price: 125.0
     max-buy: 16
@@ -510,7 +540,7 @@ shops:
     price: 45.00
     max-buy: 32
     max-sell: 64
-    section: 'Materials'
+    section: 'Other'
   OAK_LEAVES:
     price: 1.0
     max-buy: 64
@@ -575,32 +605,32 @@ shops:
     price: 2.5
     max-buy: 32
     max-sell: 64
-    section: 'Materials'
+    section: 'Farming'
   BIRCH_SAPLING:
     price: 2.5
     max-buy: 32
     max-sell: 64
-    section: 'Materials'
+    section: 'Farming'
   SPRUCE_SAPLING:
     price: 2.5
     max-buy: 32
     max-sell: 64
-    section: 'Materials'
+    section: 'Farming'
   JUNGLE_SAPLING:
     price: 2.5
     max-buy: 32
     max-sell: 64
-    section: 'Materials'
+    section: 'Farming'
   DARK_OAK_SAPLING:
     price: 2.5
     max-buy: 32
     max-sell: 64
-    section: 'Materials'
+    section: 'Farming'
   ACACIA_SAPLING:
     price: 2.5
     max-buy: 32
     max-sell: 64
-    section: 'Materials'
+    section: 'Farming'
   DISPENSER:
     price: 58.0
     max-buy: 8
@@ -610,7 +640,7 @@ shops:
     price: 160.0
     max-buy: 8
     max-sell: 10
-    section: 'Other'
+    section: 'Food'
   MILK_BUCKET:
     price: 9.00
     max-buy: 12
@@ -620,7 +650,7 @@ shops:
     price: 0.2
     max-buy: 64
     max-sell: 128
-    section: 'Materials'
+    section: 'Other'
   BOOK:
     price: 28.0
     max-buy: 32
@@ -632,9 +662,9 @@ sections:
     block: 'IRON_ORE'
   'Blocks':
     block: 'STONE'
-  'Materials':
-    block: 'STICK'
+  'Food':
+    block: 'COOKED_BEEF'
   'Farming':
-    block: 'WHEAT_SEEDS'
+    block: 'OAK_SAPLING'
   'Other':
-    block: 'COMMAND_BLOCK'
+    block: 'STICK'

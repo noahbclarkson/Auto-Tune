@@ -19,7 +19,7 @@ public class AutoTunePaybackLoanCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String payloan, String[] args) {
         if (sender instanceof Player && command.getName().equalsIgnoreCase("payloan")){
-            if (args[0] == null || args[0].equals(" ") || args[0].equals("")) {
+            if (args.length == 0) {
                 return false;
             }
             Player p = (Player) sender;

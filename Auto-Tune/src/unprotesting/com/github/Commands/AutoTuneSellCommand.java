@@ -35,13 +35,17 @@ public class AutoTuneSellCommand implements CommandExecutor {
             }
             CommandSender sender2 = sender;
             Player p = (Player) sender;
-            if (p.hasPermission("at.sell") || p.isOp()){loadSellGUI(p, sender2);}
-            else if (!(p.hasPermission("at.sell")) && !(p.isOp())){TextHandler.noPermssion(p);}
-
-            return true;
+            if (args.length == 0){
+                if (p.hasPermission("at.sell") || p.isOp()){loadSellGUI(p, sender2);}
+                else if (!(p.hasPermission("at.sell")) && !(p.isOp())){TextHandler.noPermssion(p);}
+                return true;
+            }
+            if (args.length > 0){
+                return false;
+            }
 
         }
-        return true;
+        return false;
 
     }
 

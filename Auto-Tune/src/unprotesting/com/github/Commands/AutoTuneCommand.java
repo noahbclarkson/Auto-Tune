@@ -20,8 +20,20 @@ public class AutoTuneCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String at, String[] args) {
-        if (args[0] == null){
-            return false;
+        if (args.length == 0){
+            Player player = (Player) sender;
+            if (player.hasPermission("at.help") || player.isOp()){
+                player.sendMessage(ChatColor.YELLOW + "\"/at\" command usage:");
+                player.sendMessage(ChatColor.YELLOW + "- /at login | Login to trading plaform");
+                player.sendMessage(ChatColor.YELLOW + "- /at Register | Register to trading plaform");
+                player.sendMessage(ChatColor.YELLOW + "- /at Increase <Item-Name> <Value | %Value> | Increase Item Price");
+                player.sendMessage(ChatColor.YELLOW + "- /at Decrease <Item-Name> <Value | %Value> | Decrease Item Price");
+                return true;
+            }
+            else{
+                player.sendMessage(ChatColor.RED + "This command is for admins only! To configure the plugin please use the config!");
+                return false;
+            }
         }
         if (command.getName().equalsIgnoreCase("at")){
             Player player = (Player) sender;
@@ -35,8 +47,9 @@ public class AutoTuneCommand implements CommandExecutor {
                         Main.playerDataConfig.set(uuid + ".autotuneID", AutoTunePlayerID);
                         Main.saveplayerdata();
                         player.sendMessage(ChatColor.YELLOW + "Creating one for you..");
-                        player.sendMessage(ChatColor.YELLOW + "Created Auto-Tune Account with Unique ID: " + AutoTunePlayerID);return true;}
-
+                        player.sendMessage(ChatColor.YELLOW + "Created Auto-Tune Account with Unique ID: " + AutoTunePlayerID);
+                        return true;
+                    }
                     else if (LoggedIn != null){
                     player.sendMessage(ChatColor.YELLOW + "Already Logged in!");
                     player.sendMessage(ChatColor.YELLOW + "Your unique ID is " + Main.playerDataConfig
@@ -109,6 +122,39 @@ public class AutoTuneCommand implements CommandExecutor {
                     return true;
                 }
             }
+            if (args[0].equalsIgnoreCase("remove")) {
+                if (player.hasPermission("at.remove") || player.isOp()){
+                    if (args.length == 2){
+                        String item = null;
+                        try{
+                            item = (String)args[1];
+                        }
+                        catch(ClassCastException ex){
+                            player.sendMessage(ChatColor.RED + "Unknown item format: " + args[1]);
+                            return false;
+                        }
+                        catch(ArrayIndexOutOfBoundsException ex){
+                            return false;
+                        }
+                        if (Main.map.containsKey(item)){
+                            Main.map.remove(item);
+                            player.sendMessage(ChatColor.GREEN + "Removed item: " + item);
+                            return true;
+                        }
+                        else{
+                            player.sendMessage(ChatColor.RED + item + " unavailable in data.db map!");
+                            return true;
+                        }
+                    }
+                    else{
+                        return false;
+                    }
+                }
+                else if (!(player.hasPermission("at.remove")) && !(player.isOp())){
+                    TextHandler.noPermssion(player);
+                    return true;
+                }
+            }
             else{
                 if (player.hasPermission("at.help") || player.isOp()){
                     player.sendMessage(ChatColor.YELLOW + "\"/at\" command usage:");
@@ -116,6 +162,7 @@ public class AutoTuneCommand implements CommandExecutor {
                     player.sendMessage(ChatColor.YELLOW + "- /at Register | Register to trading plaform");
                     player.sendMessage(ChatColor.YELLOW + "- /at Increase <Item-Name> <Value | %Value> | Increase Item Price");
                     player.sendMessage(ChatColor.YELLOW + "- /at Decrease <Item-Name> <Value | %Value> | Decrease Item Price");
+                    player.sendMessage(ChatColor.YELLOW + "- /at Remove <Item-Name> | Remove an item from the data.db file");
                     return true;
                 }
                 else if (!(player.hasPermission("at.help")) && !(player.isOp())){

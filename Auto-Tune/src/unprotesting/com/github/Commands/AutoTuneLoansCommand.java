@@ -36,6 +36,9 @@ public class AutoTuneLoansCommand implements CommandExecutor {
                         loanpresent = true;
                     }
                 }
+                if (loanpresent){
+                    return true;
+                }
                 if (!loanpresent){
                     p.sendMessage(ChatColor.RED + "No loans currently active. Do /loan <amount> to make a loan");
                     return true;

@@ -16,7 +16,7 @@ public class AutoTuneGDPCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String gdp, String[] args) {
         Player p = (Player) sender;
         if (command.getName().equalsIgnoreCase("gdp")){
-            if (args[0] == null){
+            if (args.length < 1){
                 if (p.hasPermission("at.gdp") || p.isOp()){
                     String GDP = AutoTuneGUIShopUserCommand.df4.format(Main.tempdatadata.get("GDP"));
                     double returnedGDP = Double.parseDouble(GDP);
@@ -32,13 +32,15 @@ public class AutoTuneGDPCommand implements CommandExecutor {
                     return true; 
                 }
             }
-            else if(args[0] == "reset"){
-                if (p.hasPermission("at.gdp.reset") || p.isOp()){
-                    Main.tempdatadata.put("GDP", 0.0);
-                }
-                else if (!(p.hasPermission("at.gdp")) && !(p.isOp())){
-                    TextHandler.noPermssion(p);
-                    return true; 
+            if (args.length == 1){
+                if(args[0] == "reset"){
+                    if (p.hasPermission("at.gdp.reset") || p.isOp()){
+                        Main.tempdatadata.put("GDP", 0.0);
+                    }
+                    else if (!(p.hasPermission("at.gdp")) && !(p.isOp())){
+                        TextHandler.noPermssion(p);
+                        return true; 
+                    }
                 }
             }
         }

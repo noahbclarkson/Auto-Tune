@@ -20,7 +20,7 @@ prefix: '[AUTO-TUNE]'
 commands:
     at:
       description: Auto-Tune Command.
-      usage: /<at> <login|increase|decrease>
+      usage: /<at> <login|increase|decrease|remove>
     trade:
       description: Trade Online with other players.
       usage: /<trade> 
@@ -72,6 +72,8 @@ permssions:
     description: Increase price of an item
   at.decrease:
     description: Decrease price of an item
+  at.remove:
+    description: Remove an item from the data.db map
   at.gdp:
     description: View GDP info
     default: true

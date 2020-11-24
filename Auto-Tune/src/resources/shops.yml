@@ -40,97 +40,97 @@ shops:
     price: 15.00
     max-buy: 80
     max-sell: 115
-    section: 'Ores'
+    section: 'Natural Resources'
   COAL_ORE:
     price: 30.00
     max-buy: 50
     max-sell: 90
-    section: 'Ores'
+    section: 'Natural Resources'
   IRON_INGOT:
     price: 13.00
     max-buy: 75
     max-sell: 100
-    section: 'Ores'
+    section: 'Natural Resources'
   IRON_ORE:
     price: 15.00
     max-buy: 60
     max-sell: 100
-    section: 'Ores'
+    section: 'Natural Resources'
   GOLD_INGOT:
     price: 30.00
     max-buy: 45
     max-sell: 75
-    section: 'Ores'
+    section: 'Natural Resources'
   GOLD_ORE:
     price: 32.50
     max-buy: 40
     max-sell: 90
-    section: 'Ores'
+    section: 'Natural Resources'
   DIAMOND:
     price: 300.00
     max-buy: 12
     max-sell: 32
-    section: 'Ores'
+    section: 'Natural Resources'
   DIAMOND_ORE:
     price: 550.00
     max-buy: 5
     max-sell: 12
-    section: 'Ores'
+    section: 'Natural Resources'
   LAPIS_LAZULI:
     price: 18.00
     max-buy: 128
     max-sell: 256
-    section: 'Ores'
+    section: 'Natural Resources'
   LAPIS_ORE:
     price: 35.00
     max-buy: 64
     max-sell: 80
-    section: 'Ores'
+    section: 'Natural Resources'
   EMERALD:
     price: 150.00
     max-buy: 12
     max-sell: 32
-    section: 'Ores'
+    section: 'Natural Resources'
   EMERALD_ORE:
     price: 250.00
     max-buy: 6
     max-sell: 32
-    section: 'Ores'
+    section: 'Natural Resources'
   QUARTZ:
     price: 17.00
     max-buy: 40
     max-sell: 125
-    section: 'Ores'
+    section: 'Natural Resources'
   NETHER_QUARTZ_ORE:
     price: 40.00
     max-buy: 75
     max-sell: 90
-    section: 'Ores'
+    section: 'Natural Resources'
   REDSTONE:
     price: 9.00
     max-buy: 80
     max-sell: 128
-    section: 'Ores'
+    section: 'Natural Resources'
   REDSTONE_ORE:
     price: 25.00
     max-buy: 50
     max-sell: 80
-    section: 'Ores'
+    section: 'Natural Resources'
   NETHERITE_INGOT:
     price: 8000.00
     max-buy: 1
     max-sell: 2
-    section: 'Ores'
+    section: 'Natural Resources'
   NETHERITE_SCRAP:
     price: 3000.00
     max-buy: 2
     max-sell: 4
-    section: 'Ores'
+    section: 'Natural Resources'
   GLOWSTONE_DUST:
     price: 5.00
     max-buy: 128
     max-sell: 256
-    section: 'Ores'
+    section: 'Natural Resources'
   DIRT:
     price: 0.5
     max-buy: 512
@@ -658,7 +658,7 @@ shops:
     section: 'Other'
 ##  Shop sections configuration
 sections:
-  'Ores':
+  'Natural Resources':
     ##  Block that the section image is displayed as
     block: 'IRON_ORE'
     ##  Optional - set to disabled to disable the back button when running "/shop <shop-section>".

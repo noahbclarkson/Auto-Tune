@@ -52,6 +52,9 @@ public class AutoTuneGDPCommand implements CommandExecutor {
         output[0] = 0.0;
         output[1] = 0.0;
         for (OfflinePlayer player : Bukkit.getOfflinePlayers()){
+            if (player == null){
+                continue;
+            }
             double x = Main.getEconomy().getBalance(player);
             output[0] += x;
             output[1] += 1;

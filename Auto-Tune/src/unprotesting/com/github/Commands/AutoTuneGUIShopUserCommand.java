@@ -1,5 +1,6 @@
 package unprotesting.com.github.Commands;
 
+import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -144,7 +146,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 						if (event.getClick() == ClickType.LEFT){
 							event.setCancelled(true);
 							player.getOpenInventory().close();
-							loadGUITRADING(player, itemName);
+							loadGUITRADING(player, itemName, sec);
 						}
 						else{
 							event.setCancelled(true);
@@ -177,7 +179,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		main.show((HumanEntity) cSender);
 	}
 
-	public void loadGUITRADING(Player player, String itemName){
+	public void loadGUITRADING(Player player, String itemName, Section sec){
 		Gui main = new Gui(4, Config.getMenuTitle());
 		OutlinePane front = new OutlinePane(1, 1, 7, 2);
 		for (int i = 0; i < 14; i++){
@@ -188,16 +190,32 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				iStack = loadTradingItem(itemName, amounts[i], true);
 				gItem = new GuiItem(iStack, event ->{
 					event.setCancelled(true);
-					try {
-						HashMap<Integer, ItemStack> unableItems = player.getInventory().addItem(new ItemStack(Material.matchMaterial(itemName), amounts[finalI]));
-						if (unableItems.size() > 0){
-							player.sendMessage(ChatColor.BOLD + "Cant sell " + Integer.toString(amounts[finalI]) + "x of " + itemName);
+					ConcurrentHashMap<String, Integer> maxBuyMapRec = Main.maxBuyMap.get(player.getUniqueId());
+					int currentMax = maxBuyMapRec.get(itemName);
+					Integer[] max = sec.itemMaxBuySell.get(itemName);
+					if (max[0] < (currentMax+amounts[finalI])){
+						player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI]) + "x of " + itemName);
+						int difference = (currentMax+amounts[finalI]) - max[0];
+						Main.log("difference: " + difference);
+						if (difference != 0 && currentMax != max[0]){
+							sendPlayerShopMessageAndUpdateGDP(difference, player, itemName, false);
+							Main.maxBuyMap.put(player.getUniqueId(), maxBuyMapRec);
 						}
-						else{
-							sendPlayerShopMessageAndUpdateGDP(amounts[finalI], player, itemName, false);
-						}
+						player.sendMessage(ChatColor.RED + "Max Buys Reached! - " + max[0] + "/" + max[0]);
+
 					}
-					catch(IllegalArgumentException ex){
+					else{
+						try {
+							HashMap<Integer, ItemStack> unableItems = player.getInventory().addItem(new ItemStack(Material.matchMaterial(itemName), amounts[finalI]));
+							if (unableItems.size() > 0){
+								player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI]) + "x of " + itemName);
+							}
+							else{
+								sendPlayerShopMessageAndUpdateGDP(amounts[finalI], player, itemName, false);
+							}
+						}
+						catch(IllegalArgumentException ex){
+						}
 					}
 				});
 			}
@@ -205,25 +223,42 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				iStack = loadTradingItem(itemName, amounts[i-7], false);
 				gItem = new GuiItem(iStack, event ->{
 					event.setCancelled(true);
-					try {
-						HashMap<Integer, ItemStack> takenItems = player.getInventory().removeItem(new ItemStack(Material.matchMaterial(itemName), amounts[finalI]));
-						if (takenItems.size() > 0){
-							player.sendMessage(ChatColor.BOLD + "Cant sell " + Integer.toString(amounts[finalI]) + "x of " + itemName);
-						}
-						else{
-							sendPlayerShopMessageAndUpdateGDP(amounts[finalI-8], player, itemName, true);
+					ConcurrentHashMap<String, Integer> maxSellMapRec = Main.maxSellMap.get(player.getUniqueId());
+					int currentMax = maxSellMapRec.get(itemName);
+					Integer[] max = sec.itemMaxBuySell.get(itemName);
+					if (max[1] < (currentMax+amounts[finalI-7])){
+						player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI-7]) + "x of " + itemName);
+						int difference = (currentMax+amounts[finalI-7]) - max[1];
+						if (!(difference < 1)){
+							sendPlayerShopMessageAndUpdateGDP((difference), player, itemName, true);
 						}
 					}
-					catch(IllegalArgumentException ex){
+					else{
+						removeItems(player, (finalI-7), itemName);
 					}
 				});
 			}
 			front.addItem(gItem);
 		}
 		main.addPane(front);
+		main.addPane(loadReturnButton(sec));
 		CommandSender cSender = player;
 		main.update();
 		main.show((HumanEntity) cSender);
+	}
+
+	public void removeItems(Player player, int finalI, String itemName){
+		try {
+			HashMap<Integer, ItemStack> takenItems = player.getInventory().removeItem(new ItemStack(Material.matchMaterial(itemName), amounts[finalI]));
+			if (takenItems.size() > 0){
+				player.sendMessage(ChatColor.BOLD + "Cant sell " + Integer.toString(amounts[finalI]) + "x of " + itemName);
+			}
+			else{
+				sendPlayerShopMessageAndUpdateGDP(amounts[finalI], player, itemName, true);
+			}
+		}
+		catch(IllegalArgumentException ex){
+		}
 	}
 
 	public ItemStack loadShopItem(String itemName, Section sec){
@@ -232,23 +267,48 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		Integer[] maxBuySellForItem = sec.itemMaxBuySell.get(itemName);
 		iMeta.setDisplayName(ChatColor.GOLD + itemName);
 		iMeta.setLore(Arrays.asList((ChatColor.GRAY + "Click to purchase/sell"),
+			(loadPriceDisplay(itemName)),
 			(ChatColor.WHITE + "Max Buys: " + maxBuySellForItem[0] + " per " + Config.getTimePeriod() + "min"),
 			(ChatColor.WHITE + "Max Sells: " + maxBuySellForItem[1] + " per " + Config.getTimePeriod() + "min")));
 		iStack.setItemMeta(iMeta);
 		return iStack;
 	}
 
+	public String loadPriceDisplay(String item){
+		double currentPrice = getItemPrice(item, false);
+		float timePeriod = (float) Config.getTimePeriod();
+		float timePeriodsInADay = (float)(1/(timePeriod/1440));
+		ConcurrentHashMap<Integer, Double[]> newMap = Main.map.get(item);
+		if (newMap.size() <= timePeriodsInADay){
+			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.BLACK + " - " + ChatColor.GRAY + "%0.0");
+		}
+		Integer oneDayOldTP = (int) Math.floor(newMap.size() - timePeriodsInADay);
+		Double[] arr = newMap.get(oneDayOldTP);
+		double oneDayOldPrice = arr[0];
+		if (oneDayOldPrice > currentPrice){
+			double percent = 100*((currentPrice/oneDayOldPrice)-1);
+			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.BLACK + " - " + ChatColor.RED + "%-" + df2.format(Math.abs(percent)));
+		}
+		else if (oneDayOldPrice < currentPrice){
+			double percent = 100*(1-(oneDayOldPrice/currentPrice));
+			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.BLACK + " - " + ChatColor.GREEN + "%+" + df2.format(Math.abs(percent)));
+		}
+		else{
+			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.BLACK + " - " + ChatColor.GRAY + "%0.0");
+		}
+	}
+
 	public ItemStack loadTradingItem(String itemName, int number, boolean buy){
-		ItemStack iStack = new ItemStack(Material.matchMaterial(itemName));
+		ItemStack iStack = new ItemStack(Material.matchMaterial(itemName), number);
 		ItemMeta iMeta = iStack.getItemMeta();
 		iMeta.setDisplayName(ChatColor.GOLD + itemName);
 		if (buy){
-			iMeta.setLore(Arrays.asList((ChatColor.WHITE + "$" + df2.format(getItemPrice(itemName)*number)),
+			iMeta.setLore(Arrays.asList((ChatColor.WHITE + "$" + df2.format(getItemPrice(itemName, false)*number)),
 				(ChatColor.GRAY + "Purchase " + number + "x ")));
 		iStack.setItemMeta(iMeta);
 		}
 		if (!buy){
-			iMeta.setLore(Arrays.asList((ChatColor.WHITE + "$" + df2.format(getItemPrice(itemName)*number)),
+			iMeta.setLore(Arrays.asList((ChatColor.WHITE + "$" + df2.format(getItemPrice(itemName, true)*number)),
 				(ChatColor.GRAY + "Sell " + number + "x ")));
 		iStack.setItemMeta(iMeta);
 		}
@@ -267,10 +327,44 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		return check;
 	}
 
-	public Double getItemPrice(String item){
+	public double getSellPriceDifference(String item){
+		double output = Config.getSellPriceDifference();
+		try{
+			ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops").getConfigurationSection((item));
+			output = config.getDouble("sell-difference", output);
+			return output;
+		}
+		catch(NullPointerException ex){
+			output = Config.getSellPriceDifference();
+		}
+		return output;
+	}
+
+	public Double getItemPrice(String item, boolean sell){
 		ConcurrentHashMap<Integer, Double[]> inputMap = Main.map.get(item);
 		Double[] arr = inputMap.get(inputMap.size()-1);
-		return arr[0];
+		if (!sell){
+			return arr[0];
+		}
+		else{
+			return getSellPriceDifference(item);
+		}
+	}
+
+	public StaticPane loadReturnButton(Section sec){
+		StaticPane output = new StaticPane(0, 0, 1, 1);
+		ItemStack iStack = new ItemStack(Material.ARROW);
+		ItemMeta iMeta = iStack.getItemMeta();
+		iMeta.setDisplayName(ChatColor.DARK_PURPLE + sec.name);
+		iMeta.setLore(Arrays.asList(ChatColor.GRAY + "Click to go to " + ChatColor.WHITE + sec.name));
+		iStack.setItemMeta(iMeta);
+		GuiItem gItem = new GuiItem(iStack, event ->{
+			Player player = (Player) event.getWhoClicked();
+			player.getOpenInventory().close();
+			loadGUIMAIN(player, sec, false);
+		});
+		output.addItem(gItem, 0, 0);
+		return output;
 	}
 
 	public StaticPane[] loadPagePanes(PaginatedPane pPane, int lines, Gui main){
@@ -347,7 +441,6 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			Double[] arr = inputMap.get(inputMap.size()-1);
 			Double[] outputArr = {arr[0], (arr[1]+amount), arr[2]};
 			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+(arr[0]*amount)));
-			player.getInventory().addItem(new ItemStack(Material.matchMaterial(matClickedString), amount));
 			inputMap.put((inputMap.size()-1), outputArr);
 			Main.map.put(matClickedString, inputMap);
 			Main.getEconomy().withdrawPlayer(player, (arr[0]*amount));

@@ -1,6 +1,5 @@
 package unprotesting.com.github.Commands;
 
-import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -125,15 +124,12 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 	public void loadGUIMAIN(Player player, Section sec, boolean twoArgs) {
 		int itemAmount = sec.items.size();
 		int lines = (int)Math.floor(((itemAmount-1)/7)+1);
-		Main.log("Lines: " + lines);
 		if (lines > 4){
 			lines = 4;
 		}
 		Gui main = new Gui((lines+2), Config.getMenuTitle());
 		Integer paneSize = (lines+1)*7;
 		Integer paneAmount = (int) Math.ceil(itemAmount/paneSize)+1;
-		Main.log("Pane Amount: " + paneAmount);
-		Main.log("Pane Size: " + paneSize);
 		PaginatedPane pPane = new PaginatedPane(0, 0, 9, (lines+2));
 		OutlinePane[] shopPanes = new OutlinePane[paneAmount];
 		for (int i = 0; i < shopPanes.length; i++){
@@ -196,8 +192,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					if (max[0] < (currentMax+amounts[finalI])){
 						player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI]) + "x of " + itemName);
 						int difference = (currentMax+amounts[finalI]) - max[0];
-						Main.log("difference: " + difference);
-						if (difference != 0 && currentMax != max[0]){
+						if (difference != 0 && !(currentMax >= max[0])){
 							sendPlayerShopMessageAndUpdateGDP(difference, player, itemName, false);
 							Main.maxBuyMap.put(player.getUniqueId(), maxBuyMapRec);
 						}
@@ -229,9 +224,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					if (max[1] < (currentMax+amounts[finalI-7])){
 						player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI-7]) + "x of " + itemName);
 						int difference = (currentMax+amounts[finalI-7]) - max[1];
-						if (!(difference < 1)){
+						if (difference != 0 && !(currentMax >= max[1])){
 							sendPlayerShopMessageAndUpdateGDP((difference), player, itemName, true);
+							Main.maxSellMap.put(player.getUniqueId(), maxSellMapRec);
 						}
+						player.sendMessage(ChatColor.RED + "Max Sells Reached! - " + max[1] + "/" + max[1]);
 					}
 					else{
 						removeItems(player, (finalI-7), itemName);
@@ -280,21 +277,21 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		float timePeriodsInADay = (float)(1/(timePeriod/1440));
 		ConcurrentHashMap<Integer, Double[]> newMap = Main.map.get(item);
 		if (newMap.size() <= timePeriodsInADay){
-			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.BLACK + " - " + ChatColor.GRAY + "%0.0");
+			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.DARK_GRAY + " - " + ChatColor.GRAY + "%0.0");
 		}
 		Integer oneDayOldTP = (int) Math.floor(newMap.size() - timePeriodsInADay);
 		Double[] arr = newMap.get(oneDayOldTP);
 		double oneDayOldPrice = arr[0];
 		if (oneDayOldPrice > currentPrice){
 			double percent = 100*((currentPrice/oneDayOldPrice)-1);
-			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.BLACK + " - " + ChatColor.RED + "%-" + df2.format(Math.abs(percent)));
+			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.DARK_GRAY + " - " + ChatColor.RED + "%-" + df2.format(Math.abs(percent)));
 		}
 		else if (oneDayOldPrice < currentPrice){
 			double percent = 100*(1-(oneDayOldPrice/currentPrice));
-			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.BLACK + " - " + ChatColor.GREEN + "%+" + df2.format(Math.abs(percent)));
+			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.DARK_GRAY + " - " + ChatColor.GREEN + "%+" + df2.format(Math.abs(percent)));
 		}
 		else{
-			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.BLACK + " - " + ChatColor.GRAY + "%0.0");
+			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.DARK_GRAY + " - " + ChatColor.GRAY + "%0.0");
 		}
 	}
 

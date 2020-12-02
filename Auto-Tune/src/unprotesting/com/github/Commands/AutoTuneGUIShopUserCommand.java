@@ -387,7 +387,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			return arr[0];
 		}
 		else{
-			return getSellPriceDifference(item);
+			return arr[0] - (arr[0]*0.01*getSellPriceDifference(item));
 		}
 	}
 

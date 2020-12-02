@@ -116,7 +116,6 @@ public class AutoTuneSellCommand implements CommandExecutor {
             catch(NullPointerException ex){
                 sellpricedif2 = Config.getSellPriceDifference();
             }
-            Double sellPrice = (tempDoublearray[0]) - (tempDoublearray[0]*0.01*sellpricedif2);
             Double buyAmount = tempDoublearray[1];
             Double sellAmount = tempDoublearray[2];
             sellAmount = quantity + sellAmount;
@@ -124,10 +123,9 @@ public class AutoTuneSellCommand implements CommandExecutor {
             tempMap1.put(tempMapSize-1, tempPutDouble);
             Main.map.put(itemString, tempMap1);
             double enchPrice = EnchantmentAlgorithm.calculatePriceWithEnch(item);
-            moneyToGive += quantity * enchPrice;
+            moneyToGive += (quantity * enchPrice);
             moneyToGive = moneyToGive - (moneyToGive*0.01*sellpricedif2);
             EnchantmentAlgorithm.updateEnchantSellData(item);
-
 		}
 		if (couldntSell == true && !autoSell) {
             player.sendMessage(ChatColor.BOLD + "Cant sell " + Integer.toString(countSell) + "x of item");

@@ -18,6 +18,7 @@ import org.bukkit.inventory.ItemStack;
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
+import unprotesting.com.github.util.EnchantmentAlgorithm;
 import unprotesting.com.github.util.TextHandler;
 
 public class AutoTuneSellCommand implements CommandExecutor {
@@ -122,7 +123,8 @@ public class AutoTuneSellCommand implements CommandExecutor {
             Double[] tempPutDouble = {tempDoublearray[0], buyAmount, sellAmount};
             tempMap1.put(tempMapSize-1, tempPutDouble);
             Main.map.put(itemString, tempMap1);
-			moneyToGive += quantity * sellPrice;
+            double enchPrice = EnchantmentAlgorithm.calculatePriceWithEnch(item);
+			moneyToGive += quantity * enchPrice;
 
 		}
 		if (couldntSell == true && !autoSell) {

@@ -47,6 +47,8 @@ commands:
       usage: <GDP>
     atconfig:
       description: View and change plugin config settings
+    buy:
+      description: Buy items not available in the shop
 permssions:
   at.help:
     description: Displays Auto-Tune help information
@@ -80,6 +82,9 @@ permssions:
     description: View and change plugin config settings
   at.tutorial:
     description: Allow players to view tutorial messages
+    default: true
+  at.buy:
+    description: Allow players to purchase custom items
     default: true
 
 

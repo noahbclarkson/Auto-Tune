@@ -20,11 +20,14 @@
 ##  Info: Make sure you put a decimal point and two digits to create a double for the shop algorithim to accept and parse to a price-value
 ##  Info: Most of these values will be almost useless once the economy has started, to use these values again delete the data.db file
 ##  Info: Material names are available here: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
+##  Info: To remove an item use /at remove <item-name> to remove it from the global map
 ##  Options: 'price: <double>' set the defualt starting price of the item
 ##  Options: 'locked: <boolean>' set the price to be locked or variable (variable by default).
 ##  Options: 'sell-difference: <double>' set a custom sell-price-difference (default set in config).
 ##  Options: 'max-buy': <integer> set a maximum quantity that can be purchased in a time-period
 ##  Options: 'max-sell': <integer> set a maximum quantity that can be sold in a time-period
+##  Options: 'enchantment': <string> set an items enchantment
+##  Options: 'enchantment': <integer> set an items enchantment level
 
 
   ##  Example:
@@ -34,6 +37,8 @@
   ##    sell-difference: 0.0    <- Example of a set sell-difference item
   ##    max-buy: 10       <- Only 10 items can be bought each time-period - you can increase this on large servers
   ##    max-sell: 12       <- Only 12 items can be sold each time-period - you can increase this on large servers
+  ##    enchantment: 'DAMAGE_ALL'     <- Example of set enchanted item - Note: Enchantment price calculation must be turned off!
+  ##    enchantment-level: 1      <- Enchantment level, look above
 
 shops:
   COAL:
@@ -656,6 +661,7 @@ shops:
     max-buy: 32
     max-sell: 48
     section: 'Other'
+    
 ##  Shop sections configuration
 sections:
   'Natural Resources':

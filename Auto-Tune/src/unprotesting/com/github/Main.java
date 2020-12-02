@@ -12,6 +12,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,6 +57,7 @@ import net.milkbowl.vault.economy.Economy;
 import unprotesting.com.github.Commands.AutoTuneGDPCommand;
 import unprotesting.com.github.Commands.AutoTuneAutoSellCommand;
 import unprotesting.com.github.Commands.AutoTuneAutoTuneConfigCommand;
+import unprotesting.com.github.Commands.AutoTuneBuyCommand;
 import unprotesting.com.github.Commands.AutoTuneCommand;
 import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
 import unprotesting.com.github.Commands.AutoTuneLoanCommand;
@@ -67,6 +70,9 @@ import unprotesting.com.github.util.CSVHandler;
 import unprotesting.com.github.util.ChatHandler;
 import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.EconomyShopConfigManager;
+import unprotesting.com.github.util.EnchantmentAlgorithm;
+import unprotesting.com.github.util.EnchantmentPriceHandler;
+import unprotesting.com.github.util.EnchantmentSetting;
 import unprotesting.com.github.util.HttpPostRequestor;
 import unprotesting.com.github.util.InflationEventHandler;
 import unprotesting.com.github.util.JoinEventHandler;
@@ -94,7 +100,7 @@ public final class Main extends JavaPlugin implements Listener {
   public static DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
   public static FileConfiguration playerDataConfig;
   public final static String playerdatafilename = "playerdata.yml";
-  public static DB db, memDB, tempDB, loanDB;
+  public static DB db, memDB, tempDB, loanDB, enchDB;
   public static HTreeMap<String, Double> tempdatadata;
   public static ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>> map;
   public static ConcurrentMap<UUID, ConcurrentHashMap<String, Integer>> maxBuyMap = new ConcurrentHashMap<UUID, ConcurrentHashMap<String, Integer>>();
@@ -112,17 +118,14 @@ public final class Main extends JavaPlugin implements Listener {
   public static Boolean locked = null;
   public static Boolean falseBool = false;
 
+  @Getter
+  public static ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>> enchMap;
+
   static @Getter
   private File configf;
 
 @Getter
-public static File shopf;
-
-@Getter
-private static File tradef;
-
-@Getter
-private static File tradeShortf;
+public static File shopf, tradef, tradeShortf, enchf;
 
   public static String basicVolatilityAlgorithim;
   public static String priceModel;
@@ -145,7 +148,7 @@ private static File tradeShortf;
 
   @Getter
   @Setter
-  static private FileConfiguration mainConfig, shopConfig;
+  static private FileConfiguration mainConfig, shopConfig, enchantmentConfig;
 
   @Getter
   @Setter
@@ -228,6 +231,7 @@ private static File tradeShortf;
     this.getCommand("loans").setExecutor(new AutoTuneLoansCommand());
     this.getCommand("payloan").setExecutor(new AutoTunePaybackLoanCommand());
     this.getCommand("gdp").setExecutor(new AutoTuneGDPCommand());
+    this.getCommand("buy").setExecutor(new AutoTuneBuyCommand());
     basicVolatilityAlgorithim = Config.getBasicVolatilityAlgorithim();
     priceModel = Config.getPricingModel().toString();
     TextHandler.sendPriceModelData(priceModel);
@@ -253,6 +257,11 @@ private static File tradeShortf;
       SellDifrunnable();
     }
     loadSections();
+    debugLog("Loading Enchatments..");
+    EnchantmentAlgorithm.loadEnchantmentSettings();
+    debugLog("Loaded " + enchMap.get("Auto-Tune").size() + " enchantments");
+    AutoTuneBuyCommand.shopTypes.add("enchantments");
+    scheduler.scheduleAsyncRepeatingTask(this, new EnchantmentPriceHandler(), 100, (Config.getTimePeriod()*1200));
   }
 
   private boolean setupEconomy() {
@@ -293,8 +302,8 @@ private static File tradeShortf;
         }
       }
 
-    }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getTimePeriod() * 20 * 60,
-        Config.getTimePeriod() * 20 * 60);
+    }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getTimePeriod() * 20,
+        Config.getTimePeriod() * 1200);
 
   }
 
@@ -613,6 +622,7 @@ private static File tradeShortf;
 
     configf = new File(getDataFolder(), "config.yml");
     shopf = new File(getDataFolder(), "shops.yml");
+    enchf = new File(getDataFolder(), "enchantments.yml");
     tradef = new File("plugins/Auto-Tune/web/", "trade.html");
     tradeShortf = new File("plugins/Auto-Tune/web/", "trade-short.html");
 
@@ -636,12 +646,20 @@ private static File tradeShortf;
       saveResource("shops.yml", false);
     }
 
+    if (!enchf.exists()) {
+      enchf.getParentFile().mkdirs();
+      saveResource("enchantments.yml", false);
+    }
+
+
     mainConfig = new YamlConfiguration();
     shopConfig = new YamlConfiguration();
+    enchantmentConfig = new YamlConfiguration();
 
     try {
       mainConfig.load(configf);
       shopConfig.load(shopf);
+      enchantmentConfig.load(enchf);
 
     } catch (InvalidConfigurationException | IOException e) {
       e.printStackTrace();
@@ -679,12 +697,16 @@ private static File tradeShortf;
       playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
       memDB = DBMaker.memoryDB().checksumHeaderBypass().closeOnJvmShutdown().make();
       memMap = memDB.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
+      enchDB = DBMaker.fileDB("enchantment-data.db").checksumHeaderBypass().closeOnJvmShutdown().make();
+      enchMap = (ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>>) enchDB.hashMap("enchMap", Serializer.STRING, Serializer.JAVA).createOrOpen();
     } else {
       db = DBMaker.fileDB("data.db").checksumHeaderBypass().closeOnJvmShutdown().make();
       map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
       playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
       memDB = DBMaker.memoryDB().closeOnJvmShutdown().make();
       memMap = memDB.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
+      enchDB = DBMaker.fileDB("enchantment-data.db").closeOnJvmShutdown().make();
+      enchMap = (ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>>) enchDB.hashMap("enchMap", Serializer.STRING, Serializer.JAVA).createOrOpen();
     }
     tempDB = DBMaker.fileDB("plugins/Auto-Tune/temp/tempdata.db").checksumHeaderBypass().closeOnJvmShutdown().make();
     tempdatadata = tempDB.hashMap("tempdatadata", Serializer.STRING, Serializer.DOUBLE).createOrOpen();

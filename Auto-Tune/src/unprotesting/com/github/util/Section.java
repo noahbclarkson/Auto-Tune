@@ -15,6 +15,7 @@ public class Section {
     public Material image = Material.matchMaterial("GRASS_BLOCK");
     public boolean showBackButton = true;
     public ConcurrentHashMap<String, Integer[]> itemMaxBuySell = new ConcurrentHashMap<String, Integer[]>();
+    public List<String> enchantedItems = new ArrayList<String>();
 
     public Section(String name){
         this.name = name;
@@ -30,9 +31,13 @@ public class Section {
                 image = Material.matchMaterial(Main.getShopConfig().getConfigurationSection("sections." + section).getString("block"));
                 for (String shop : Main.getShopConfig().getConfigurationSection("shops").getKeys(false)){
                     String shopSection = Main.getShopConfig().getConfigurationSection("shops." + shop).getString("section");
+                    String enchantment = Main.getShopConfig().getConfigurationSection("shops." + shop).getString("enchantment", "none");
                     try{
                         if (shopSection.equals(section)){
                             items.add(shop);
+                            if (!enchantment.contains("none")){
+                                enchantedItems.add(shop);
+                            }
                         }
                     }
                     catch(NullPointerException ex){

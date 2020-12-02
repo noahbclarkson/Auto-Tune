@@ -26,6 +26,7 @@
           <include>plugin.yml</include>
           <include>config.yml</include>
           <include>shops.yml</include>
+          <include>enchantments.yml</include>
           <include>web/trade.html</include>
           <include>web/trade-short.html</include>
         </includes>

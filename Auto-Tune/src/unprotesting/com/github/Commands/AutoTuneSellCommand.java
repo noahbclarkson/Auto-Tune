@@ -124,7 +124,9 @@ public class AutoTuneSellCommand implements CommandExecutor {
             tempMap1.put(tempMapSize-1, tempPutDouble);
             Main.map.put(itemString, tempMap1);
             double enchPrice = EnchantmentAlgorithm.calculatePriceWithEnch(item);
-			moneyToGive += quantity * enchPrice;
+            moneyToGive += quantity * enchPrice;
+            moneyToGive = moneyToGive - (moneyToGive*0.01*sellpricedif2);
+            EnchantmentAlgorithm.updateEnchantSellData(item);
 
 		}
 		if (couldntSell == true && !autoSell) {
@@ -152,7 +154,6 @@ public class AutoTuneSellCommand implements CommandExecutor {
         GUI.addPane(SellingPane);
         GUI.setOnClose(this::onSellClose);
         GUI.show((HumanEntity) sender2);
-
     }
     
     private void onSellClose(InventoryCloseEvent event) {

@@ -40,12 +40,12 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                     for (String str : Main.enchMap.get("Auto-Tune").keySet()){
                         EnchantmentSetting setting = inputMap.get(str);
                         player.sendMessage(ChatColor.WHITE + "Enchantment: " + ChatColor.AQUA + str + ChatColor.YELLOW +
-                        " | Price : "+ Config.getCurrencySymbol() + setting.price + " | Item Multiplier: " + setting.ratio + "x");
+                        " | Price : "+ Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(setting.price) + " | Item Multiplier: " + setting.ratio + "x");
                     }
                     return true;
                 }
                 else{
-                    player.sendMessage("Shop " + args[0] + "not found!");
+                    player.sendMessage(ChatColor.RED + "Shop " + args[0] + " not found!");
                     return false;
                 }
             }

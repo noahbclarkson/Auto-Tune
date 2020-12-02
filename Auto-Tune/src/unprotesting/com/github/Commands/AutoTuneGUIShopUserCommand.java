@@ -190,14 +190,14 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 								+ "x of " + itemName);
 						int difference = (currentMax + amounts[finalI]) - max[0];
 						if (difference != 0 && !(currentMax >= max[0])) {
-							ItemStack is = new ItemStack(Material.matchMaterial(itemName), amounts[finalI]);
+							ItemStack is = new ItemStack(Material.matchMaterial(itemName), (amounts[finalI]-difference));
 							is = checkForEnchantAndApply(is, sec);
 							HashMap<Integer, ItemStack> unableItems = player.getInventory().addItem(is);
 							if (unableItems.size() > 0) {
 								player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
 										+ "x of " + itemName);
 							} else {
-								sendPlayerShopMessageAndUpdateGDP(difference, player, itemName, false);
+								sendPlayerShopMessageAndUpdateGDP((amounts[finalI]-difference), player, itemName, false);
 								Main.maxBuyMap.put(player.getUniqueId(), maxBuyMapRec);
 							}
 						}
@@ -230,7 +230,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 								+ "x of " + itemName);
 						int difference = (currentMax + amounts[finalI - 7]) - max[1];
 						if (difference != 0 && !(currentMax >= max[1])) {
-							sendPlayerShopMessageAndUpdateGDP((difference), player, itemName, true);
+							removeItems(player, (amounts[finalI-7]-difference), itemName, sec);
 							Main.maxSellMap.put(player.getUniqueId(), maxSellMapRec);
 						}
 						player.sendMessage(ChatColor.RED + "Max Sells Reached! - " + max[1] + "/" + max[1]);
@@ -494,11 +494,24 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			ConcurrentHashMap<Integer, Double[]> inputMap = Main.map.get(matClickedString);
 			Double[] arr = inputMap.get(inputMap.size()-1);
 			Double[] outputArr = {arr[0], arr[1], (arr[2]+amount)};
-			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+(arr[0]*amount)));
+			Double price = arr[0] - (arr[0]*0.01*getSellDifference(matClickedString));
+			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+(price*amount)));
 			inputMap.put((inputMap.size()-1), outputArr);
 			Main.map.put(matClickedString, inputMap);
-			Main.getEconomy().depositPlayer(player, (arr[0]*amount));
-			player.sendMessage(ChatColor.GOLD + "Sold " + amount + "x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(arr[0]*amount));
+			Main.getEconomy().depositPlayer(player, (price*amount));
+			player.sendMessage(ChatColor.GOLD + "Sold " + amount + "x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price*amount));
 		}
+	}
+
+	public static double getSellDifference(String item){
+		ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops").getConfigurationSection((item));
+            Double sellpricedif = Config.getSellPriceDifference();
+            try{
+                sellpricedif = config.getDouble("sell-difference", sellpricedif);
+            }
+            catch(NullPointerException ex){
+                sellpricedif = Config.getSellPriceDifference();
+			}
+		return sellpricedif;
 	}
 }

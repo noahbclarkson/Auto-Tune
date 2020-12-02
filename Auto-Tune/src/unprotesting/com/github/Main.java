@@ -261,7 +261,7 @@ public static File shopf, tradef, tradeShortf, enchf;
     EnchantmentAlgorithm.loadEnchantmentSettings();
     debugLog("Loaded " + enchMap.get("Auto-Tune").size() + " enchantments");
     AutoTuneBuyCommand.shopTypes.add("enchantments");
-    scheduler.scheduleAsyncRepeatingTask(this, new EnchantmentPriceHandler(), 100, (Config.getTimePeriod()*1200));
+    scheduler.scheduleAsyncRepeatingTask(this, new EnchantmentPriceHandler(), 1200*Config.getTimePeriod(), (Config.getTimePeriod()*1200));
   }
 
   private boolean setupEconomy() {
@@ -302,7 +302,7 @@ public static File shopf, tradef, tradeShortf, enchf;
         }
       }
 
-    }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getTimePeriod() * 20,
+    }.runTaskTimerAsynchronously(Main.getINSTANCE(), Config.getTimePeriod() * 600,
         Config.getTimePeriod() * 1200);
 
   }

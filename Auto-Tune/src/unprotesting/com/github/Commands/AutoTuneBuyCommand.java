@@ -21,9 +21,9 @@ public class AutoTuneBuyCommand implements CommandExecutor {
 
     public static List<String> shopTypes = new ArrayList<String>();
 
+    @Deprecated
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        
         if (sender instanceof Player){
             Player player = (Player) sender;
             if (args.length == 0){
@@ -64,7 +64,7 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                             ex.printStackTrace();
                             return true;
                         }
-                        double price = EnchantmentAlgorithm.calculatePriceWithEnch(is);
+                        double price = EnchantmentAlgorithm.calculatePriceWithEnch(is, true);
                         Main.getEconomy().withdrawPlayer(player, Double.parseDouble(AutoTuneGUIShopUserCommand.df1.format(price)));
                         player.sendMessage(ChatColor.GOLD + "Purchased " + setting.name + " for "
                          + ChatColor.GREEN + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(price));

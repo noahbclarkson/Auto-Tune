@@ -59,6 +59,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
 		return item.getType().toString().toUpperCase();
 	}
 
+    @Deprecated
     public static void sellItems(Player player, ItemStack[] items, Boolean autoSell) {
 		double moneyToGive = 0;
 		boolean couldntSell = false;
@@ -122,7 +123,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
             Double[] tempPutDouble = {tempDoublearray[0], buyAmount, sellAmount};
             tempMap1.put(tempMapSize-1, tempPutDouble);
             Main.map.put(itemString, tempMap1);
-            double enchPrice = EnchantmentAlgorithm.calculatePriceWithEnch(item);
+            double enchPrice = EnchantmentAlgorithm.calculatePriceWithEnch(item, false);
             moneyToGive += (quantity * enchPrice);
             moneyToGive = moneyToGive - (moneyToGive*0.01*sellpricedif2);
             EnchantmentAlgorithm.updateEnchantSellData(item);

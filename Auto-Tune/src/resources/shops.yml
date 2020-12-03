@@ -521,11 +521,6 @@ shops:
     max-buy: 16
     max-sell: 32
     section: 'Blocks'
-  BUCKET:
-    price: 7.50
-    max-buy: 16
-    max-sell: 32
-    section: 'Other'
   FURNACE:
     price: 8.5
     max-buy: 32
@@ -661,6 +656,218 @@ shops:
     max-buy: 32
     max-sell: 48
     section: 'Other'
+  WOODEN_PICKAXE:
+    price: 8.0
+    max-buy: 4
+    max-sell: 8
+    section: 'Tools'
+  WOODEN_AXE:
+    price: 7.5
+    max-buy: 4
+    max-sell: 8
+    section: 'Tools'
+  WOODEN_SWORD:
+    price: 6.5
+    max-buy: 4
+    max-sell: 8
+    section: 'Tools'
+  WOODEN_SHOVEL:
+    price: 3.5
+    max-buy: 4
+    max-sell: 8
+    section: 'Tools'
+  WOODEN_HOE:
+    price: 3.5
+    max-buy: 4
+    max-sell: 8
+    section: 'Tools'
+  STONE_PICKAXE:
+    price: 11.0
+    max-buy: 4
+    max-sell: 8
+    section: 'Tools'
+  STONE_AXE:
+    price: 10.5
+    max-buy: 4
+    max-sell: 8
+    section: 'Tools'
+  STONE_SWORD:
+    price: 9.0
+    max-buy: 4
+    max-sell: 8
+    section: 'Tools'
+  STONE_SHOVEL:
+    price: 5.0
+    max-buy: 4
+    max-sell: 8
+    section: 'Tools'
+  STONE_HOE:
+    price: 5.0
+    max-buy: 4
+    max-sell: 8
+    section: 'Tools'
+  GOLDEN_PICKAXE:
+    price: 12.0
+    max-buy: 3
+    max-sell: 8
+    section: 'Tools'
+  GOLDEN_AXE:
+    price: 11.5
+    max-buy: 3
+    max-sell: 8
+    section: 'Tools'
+  GOLDEN_SWORD:
+    price: 10.0
+    max-buy: 3
+    max-sell: 8
+    section: 'Tools'
+  GOLDEN_SHOVEL:
+    price: 6.0
+    max-buy: 3
+    max-sell: 8
+    section: 'Tools'
+  GOLDEN_HOE:
+    price: 6.0
+    max-buy: 3
+    max-sell: 8
+    section: 'Tools'
+  IRON_PICKAXE:
+    price: 18.0
+    max-buy: 3
+    max-sell: 6
+    section: 'Tools'
+  IRON_AXE:
+    price: 17.5
+    max-buy: 3
+    max-sell: 6
+    section: 'Tools'
+  IRON_SWORD:
+    price: 13.0
+    max-buy: 3
+    max-sell: 6
+    section: 'Tools'
+  IRON_SHOVEL:
+    price: 7.0
+    max-buy: 3
+    max-sell: 6
+    section: 'Tools'
+  IRON_HOE:
+    price: 7.0
+    max-buy: 3
+    max-sell: 6
+    section: 'Tools'
+  DIAMOND_PICKAXE:
+    price: 260.0
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  DIAMOND_AXE:
+    price: 250.0
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  DIAMOND_SWORD:
+    price: 180.0
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  DIAMOND_SHOVEL:
+    price: 110.0
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  DIAMOND_HOE:
+    price: 110.0
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  LEATHER_HELMET:
+    price: 22.50
+    max-buy: 2
+    max-sell: 4
+    section: 'Tools'
+  LEATHER_CHESTPLATE:
+    price: 46.00
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  LEATHER_LEGGINGS:
+    price: 25.50
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  LEATHER_BOOTS:
+    price: 20.00
+    max-buy: 2
+    max-sell: 4
+    section: 'Tools'
+  IRON_HELMET:
+    price: 45.50
+    max-buy: 2
+    max-sell: 4
+    section: 'Tools'
+  IRON_CHESTPLATE:
+    price: 86.00
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  IRON_LEGGINGS:
+    price: 65.50
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  IRON_BOOTS:
+    price: 38.00
+    max-buy: 2
+    max-sell: 4
+    section: 'Tools'
+  GOLDEN_HELMET:
+    price: 40.50
+    max-buy: 2
+    max-sell: 4
+    section: 'Tools'
+  GOLDEN_CHESTPLATE:
+    price: 80.00
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  GOLDEN_LEGGINGS:
+    price: 60.50
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  GOLDEN_BOOTS:
+    price: 30.00
+    max-buy: 2
+    max-sell: 4
+    section: 'Tools'
+  DIAMOND_HELMET:
+    price: 425.50
+    max-buy: 2
+    max-sell: 4
+    section: 'Tools'
+  DIAMOND_CHESTPLATE:
+    price: 900.00
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  DIAMOND_LEGGINGS:
+    price: 620.50
+    max-buy: 2
+    max-sell: 3
+    section: 'Tools'
+  DIAMOND_BOOTS:
+    price: 350.00
+    max-buy: 2
+    max-sell: 4
+    section: 'Tools'
+  BUCKET:
+    price: 7.50
+    max-buy: 16
+    max-sell: 26
+    section: 'Tools'
+  
+  
     
 ##  Shop sections configuration
 sections:
@@ -678,6 +885,9 @@ sections:
     back-menu-button-enabled: true
   'Farming':
     block: 'OAK_SAPLING'
+    back-menu-button-enabled: true
+  'Tools':
+    block: 'DIAMOND_PICKAXE'
     back-menu-button-enabled: true
   'Other':
     block: 'STICK'

@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 
 import com.github.stefvanschie.inventoryframework.Gui;
 import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
+import com.google.errorprone.annotations.RestrictedApi;
 import com.sun.net.httpserver.HttpServer;
 
 import org.bukkit.Bukkit;
@@ -160,6 +161,7 @@ public static File shopf, tradef, tradeShortf, enchf;
   }
 
   @Override
+  @Deprecated
   public void onEnable() {
     Bukkit.getServer().getPluginManager().registerEvents(new JoinEventHandler(), this);
     Bukkit.getServer().getPluginManager().registerEvents(new ChatHandler(), this);

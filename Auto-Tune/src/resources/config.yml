@@ -133,6 +133,15 @@ intrest-rate-update-period: 1200
 ##  Example: -10.00
 max-debt-value: -10000.00
 
+##  The percentage value to decrease items sold with enchantments
+##  Info: Stacked enchantments etc. can become very expensive so a number between 5% - 15% is usually fine
+##  Info: This doesn't affect buys
+enchantment-limiter: 7.50
+
+##  The percentage value to decrease items sold with a loss in durability
+##  Info: This is applied ON TOP of the durability algorithm to limit the exploitability of selling tools
+durability-limiter: 5.00
+
 ##  -- Other Settings --
 
 ##  Enable debug mode for more info on price calculations

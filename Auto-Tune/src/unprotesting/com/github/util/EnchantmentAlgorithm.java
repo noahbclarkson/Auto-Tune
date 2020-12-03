@@ -37,7 +37,8 @@ public class EnchantmentAlgorithm {
         Main.enchMap.put("Auto-Tune", newMap);
     }
 
-    public static double calculatePriceWithEnch(ItemStack is) {
+    @Deprecated
+    public static double calculatePriceWithEnch(ItemStack is, boolean buy) {
         ItemMeta iMeta = is.getItemMeta();
         Map<Enchantment, Integer> enchants = iMeta.getEnchants();
         ConcurrentHashMap<Integer, Double[]> inMap = Main.map.get(is.getType().toString());
@@ -51,7 +52,22 @@ public class EnchantmentAlgorithm {
             EnchantmentSetting setting = Main.enchMap.get("Auto-Tune").get(enchName);
             Double enchPrice = setting.price;
             Double ratio = setting.ratio;
+            if (!buy){
+                enchPrice = enchPrice - (enchPrice*0.01*Config.getEnchantmentLimiter());
+            }
             cachePrice = cachePrice + (price * ratio) + enchPrice;
+        }
+        double durability = DurabilityAlgorithm.calculateDurability(is);
+        if (durability != 100.00){
+            if (cachePrice == 0) {
+                price = price*durability*0.01;
+                price = price - price*0.01*Config.getDurabilityLimiter();
+                return price;
+            } else {
+                cachePrice = cachePrice*durability*0.01;
+                cachePrice = cachePrice - cachePrice*0.01*Config.getDurabilityLimiter();
+                return cachePrice;
+            }
         }
         if (cachePrice == 0) {
             return price;
@@ -69,6 +85,15 @@ public class EnchantmentAlgorithm {
             ConcurrentHashMap<Integer, Double[]> map = setting.buySellData;
             Integer size = map.size()-1;
             Double[] arr = map.get(size);
+            if (arr == null){
+                arr = new Double[]{setting.price, 0.0, 0.0};
+            }
+            if (arr[2] == null){
+                arr[2] = 0.0;
+            }
+            if (arr[1] == null){
+                arr[1] = 0.0;
+            }
             arr[2] += 1;
             map.put(size, arr);
             setting.buySellData = map;
@@ -100,6 +125,18 @@ public class EnchantmentAlgorithm {
                 break;
             }
             Double[] key = map.get((tempSize - 1) - inty);
+            if (key == null){
+                key = new Double[]{setting.price, 0.0, 0.0};
+            }
+            if (key[0] == null){
+                key[0] = setting.price;
+            }
+            if (key[1] == null){
+                key[1] = 0.0;
+            }
+            if (key[2] == null){
+                key[2] = 0.0;
+            }
             tempbuys = key[1];
             tempbuys = tempbuys * key[0];
             if (tempbuys == 0) {

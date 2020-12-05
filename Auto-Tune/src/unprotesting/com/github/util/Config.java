@@ -62,7 +62,9 @@ public final class Config {
                                                                 inflationValue,
                                                                     intrestRate,
                                                                         maxDebt,
-                                                                           shopConfigGUIShopSellValue; 
+                                                                           shopConfigGUIShopSellValue,
+                                                                                enchantmentLimiter,
+                                                                                    durabilityLimiter;
 
     
     public static void loadDefaults() {
@@ -108,6 +110,8 @@ public final class Config {
     Config.setInflationValue(Main.getMainConfig().getDouble("static-inflation-value", 0.1));
     Config.setDataSelectionZ(Main.getMainConfig().getDouble("data-selection-z", 1.6));
     Config.setSellPriceDifference(Main.getMainConfig().getDouble("sell-price-difference", 2.5));
+    Config.setEnchantmentLimiter(Main.getMainConfig().getDouble("enchantment-limiter", 7.5));
+    Config.setDurabilityLimiter(Main.getMainConfig().getDouble("durability-limiter", 5.0));
     Config.setIntrestRate(Main.getMainConfig().getDouble("intrest-rate", 0.001));
     Config.setMaxDebt(Main.getMainConfig().getDouble("max-debt-value", -5000.00));
     Config.setSellPriceDifferenceVariationStart(Main.getMainConfig().getDouble("sell-price-difference-variation-start", 25.0));

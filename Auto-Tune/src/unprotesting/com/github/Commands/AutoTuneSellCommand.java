@@ -18,6 +18,7 @@ import org.bukkit.inventory.ItemStack;
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
+import unprotesting.com.github.util.EnchantmentAlgorithm;
 import unprotesting.com.github.util.TextHandler;
 
 public class AutoTuneSellCommand implements CommandExecutor {
@@ -58,6 +59,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
 		return item.getType().toString().toUpperCase();
 	}
 
+    @Deprecated
     public static void sellItems(Player player, ItemStack[] items, Boolean autoSell) {
 		double moneyToGive = 0;
 		boolean couldntSell = false;
@@ -115,15 +117,16 @@ public class AutoTuneSellCommand implements CommandExecutor {
             catch(NullPointerException ex){
                 sellpricedif2 = Config.getSellPriceDifference();
             }
-            Double sellPrice = (tempDoublearray[0]) - (tempDoublearray[0]*0.01*sellpricedif2);
             Double buyAmount = tempDoublearray[1];
             Double sellAmount = tempDoublearray[2];
             sellAmount = quantity + sellAmount;
             Double[] tempPutDouble = {tempDoublearray[0], buyAmount, sellAmount};
             tempMap1.put(tempMapSize-1, tempPutDouble);
             Main.map.put(itemString, tempMap1);
-			moneyToGive += quantity * sellPrice;
-
+            double enchPrice = EnchantmentAlgorithm.calculatePriceWithEnch(item, false);
+            moneyToGive += (quantity * enchPrice);
+            moneyToGive = moneyToGive - (moneyToGive*0.01*sellpricedif2);
+            EnchantmentAlgorithm.updateEnchantSellData(item);
 		}
 		if (couldntSell == true && !autoSell) {
             player.sendMessage(ChatColor.BOLD + "Cant sell " + Integer.toString(countSell) + "x of item");
@@ -150,7 +153,6 @@ public class AutoTuneSellCommand implements CommandExecutor {
         GUI.addPane(SellingPane);
         GUI.setOnClose(this::onSellClose);
         GUI.show((HumanEntity) sender2);
-
     }
     
     private void onSellClose(InventoryCloseEvent event) {

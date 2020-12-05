@@ -861,6 +861,16 @@ shops:
     max-buy: 2
     max-sell: 4
     section: 'Tools'
+  FISHING_ROD:
+    price: 25.00
+    max-buy: 3
+    max-sell: 4
+    section: 'Tools'
+  BOW:
+    price: 28.00
+    max-buy: 3
+    max-sell: 4
+    section: 'Tools'
   BUCKET:
     price: 7.50
     max-buy: 16

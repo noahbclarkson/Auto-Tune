@@ -2,9 +2,11 @@ package unprotesting.com.github.Commands;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -54,24 +56,44 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                     ConcurrentHashMap<String, EnchantmentSetting> inputMap = Main.enchMap.get("Auto-Tune");
                     EnchantmentSetting setting = inputMap.get((args[1].toUpperCase()));
                     ItemStack is = player.getInventory().getItemInMainHand();
+                    Material mat = is.getType();
+                    boolean enchantExists = false;
+                    Map<Enchantment, Integer> map = is.getEnchantments();
+                    Enchantment ench = Enchantment.getByName(setting.name);
+                    if (map.get(ench) != null){
+                        enchantExists = true;
+                    }
                     if (is != null){
-                        Enchantment ench = Enchantment.getByName(setting.name);
                         try{
-                            is.addEnchantment(ench, 1);
+                            if (!enchantExists){
+                                is.addEnchantment(ench, 1);
+                            }
+                            else{
+                                int level = is.getEnchantmentLevel(ench);
+                                is.addEnchantment(ench, level+1);
+                            }
                         }
                         catch(IllegalArgumentException ex){
                             player.sendMessage(ChatColor.RED + "Cannot enchant item: " + is.getType().toString() + " with enchantment " + setting.name);
                             ex.printStackTrace();
                             return true;
                         }
-                        double price = EnchantmentAlgorithm.calculatePriceWithEnch(is, true);
+                        ItemStack test = new ItemStack(mat);
+                        test.addEnchantment(ench, 1);
+                        double price = EnchantmentAlgorithm.calculatePriceWithEnch(new ItemStack(mat), true);
                         Main.getEconomy().withdrawPlayer(player, Double.parseDouble(AutoTuneGUIShopUserCommand.df1.format(price)));
                         player.sendMessage(ChatColor.GOLD + "Purchased " + setting.name + " for "
                          + ChatColor.GREEN + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(price));
                         ConcurrentHashMap<Integer, Double[]> buySellMap = setting.buySellData;
                         Double[] arr = buySellMap.get(buySellMap.size()-1);
+                        if (arr == null){
+                            arr = new Double[]{setting.price, 0.0, 0.0};
+                        }
                         if (arr[1] == null){
                             arr[1] = 0.0;
+                        }
+                        if (arr[2] == null){
+                            arr[2] = 0.0;
                         }
                         arr[1] = arr[1]+1; 
                         buySellMap.put(buySellMap.size()-1, arr);

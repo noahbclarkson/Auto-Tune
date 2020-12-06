@@ -14,8 +14,6 @@ import unprotesting.com.github.Main;
 import unprotesting.com.github.Commands.AutoTuneSellCommand;
 
 public class AutoSellEventHandler implements Runnable {
-
-
     @Override
     public void run() {
         for(Player player : Main.getINSTANCE().getServer().getOnlinePlayers()){

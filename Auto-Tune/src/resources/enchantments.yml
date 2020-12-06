@@ -10,7 +10,7 @@ enchantments:
   ARROW_DAMAGE:
     price: 600.00 ##  <- An added price for buying/selling an item with this enchantment
     ratio: 0.6  ##   <- Another added percentage of the item bought/sold with this enchantment
-    ##  Info: An item worth usually 100 will cost (100*1.6)+600=760
+    ##  Info: An item worth usually 100 will cost (100*0.6)+600=660
     ##  Provides extra damage when shooting arrows from bows
   ARROW_FIRE:
     price:  750.00

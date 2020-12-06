@@ -43,6 +43,7 @@ public class TutorialHandler implements Runnable{
         messages.add(ChatColor.YELLOW + "Control the market! Your purchases rise prices.");
         messages.add(ChatColor.YELLOW + "Control the market! Your sales lower prices.");
         messages.add(ChatColor.YELLOW + "Do /autosell to sell items automatically.");
+        messages.add(ChatColor.YELLOW + "Do /buy to purchase custom items.");
         messages.add(ChatColor.YELLOW + "Do /trade to view item prices over time.");
         messages.add(ChatColor.YELLOW + "Do /loan <amount> to loan money. Do /loans to check your loans. Do /payloan <loan.No.> to payback loan");
         messages.add(ChatColor.YELLOW + "Do /gdp to view the server GDP.");

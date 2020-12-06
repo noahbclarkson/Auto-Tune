@@ -1,6 +1,5 @@
 package unprotesting.com.github.util;
 
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;

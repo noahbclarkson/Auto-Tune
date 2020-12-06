@@ -23,7 +23,8 @@ web-server-enabled: true
 port: 8123
 
 ##  The maximum length in data points that the trade-short.html will show (this doesn't affect data)
-maximum-short-trade-length: 100
+##  Info: When the time-period is set to 10, 144 is one day.
+maximum-short-trade-length: 144
 
 ##  Server name that will show up in commands and requests
 server-name: 'Auto-Tune Test Server'

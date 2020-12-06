@@ -7,11 +7,10 @@ import org.bukkit.Bukkit;
 import unprotesting.com.github.Main;
 
 public class InflationEventHandler implements Runnable {
-
     @Override
     public void run() {
+        Integer playerCount = Bukkit.getServer().getOnlinePlayers().size();
         for (String str : Main.map.keySet()){
-            Integer playerCount = Bukkit.getServer().getOnlinePlayers().size();
             if (Config.isUpdatePricesWhenInactive() || (!Config.isUpdatePricesWhenInactive() && playerCount > 0)){
                 increaseItemPrice(str, Config.getDynamicInflationValue(), true);
             }

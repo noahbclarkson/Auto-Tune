@@ -240,6 +240,12 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					ConcurrentHashMap<String, Integer> maxSellMapRec = Main.maxSellMap.get(player.getUniqueId());
 					int currentMax = maxSellMapRec.get(itemName);
 					Integer[] max = sec.itemMaxBuySell.get(itemName);
+					ItemStack test = new ItemStack(Material.matchMaterial(itemName));
+					test = checkForEnchantAndApply(test, sec);
+					if (!player.getInventory().containsAtLeast(test, amounts[finalI-7])){
+						player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI - 7])
+								+ "x of " + itemName);
+					}
 					if (max[1] < (currentMax + amounts[finalI - 7])) {
 						player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI - 7])
 								+ "x of " + itemName);

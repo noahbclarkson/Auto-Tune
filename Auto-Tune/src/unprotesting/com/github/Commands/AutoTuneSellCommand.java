@@ -161,14 +161,13 @@ public class AutoTuneSellCommand implements CommandExecutor {
     }
     
     public static void roundAndGiveMoney(Player player, double moneyToGive, Boolean autoSell) {
-		Double moneyToGiveRounded = (double) Math.round(moneyToGive * 100) / 100;
 
-		if (moneyToGiveRounded > 0 && moneyToGiveRounded != null) {
+		if (moneyToGive > 0) {
             
             if (autoSell == false){
-            Main.econ.depositPlayer(player, moneyToGiveRounded);
-            player.sendMessage(ChatColor.GOLD + "Your items were sold, and "+ Config.getCurrencySymbol() + moneyToGiveRounded + " was added to your account.");
-            if (Config.isCalculateGlobalGDP()){Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+moneyToGiveRounded));}
+            Main.econ.depositPlayer(player, moneyToGive);
+            player.sendMessage(ChatColor.GOLD + "Your items were sold, and "+ Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(moneyToGive) + " was added to your account.");
+            if (Config.isCalculateGlobalGDP()){Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+ moneyToGive));}
             }
             if (autoSell == true){
                 if (Main.tempdatadata.get(player.getUniqueId().toString()) == null){

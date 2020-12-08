@@ -251,12 +251,12 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 								+ "x of " + itemName);
 						int difference = (currentMax + amounts[finalI - 7]) - max[1];
 						if (difference != 0 && !(currentMax >= max[1])) {
-							removeItems(player, (amounts[finalI-7]-difference), itemName, sec);
+							removeItems(player, (finalI-7), itemName, sec, difference);
 							Main.maxSellMap.put(player.getUniqueId(), maxSellMapRec);
 						}
 						player.sendMessage(ChatColor.RED + "Max Sells Reached! - " + max[1] + "/" + max[1]);
 					} else {
-						removeItems(player, (finalI - 7), itemName, sec);
+						removeItems(player, (finalI - 7), itemName, sec, 0);
 					}
 				});
 			}
@@ -269,16 +269,16 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		main.show((HumanEntity) cSender);
 	}
 
-	public void removeItems(Player player, int finalI, String itemName, Section sec) {
+	public void removeItems(Player player, int finalI, String itemName, Section sec, int difference) {
 		try {
-			ItemStack iStack = new ItemStack(Material.matchMaterial(itemName), amounts[finalI]);
+			ItemStack iStack = new ItemStack(Material.matchMaterial(itemName), (amounts[finalI])-difference);
 			iStack = checkForEnchantAndApply(iStack, sec);
 			HashMap<Integer, ItemStack> takenItems = player.getInventory().removeItem(iStack);
 			if (takenItems.size() > 0) {
 				player.sendMessage(
-						ChatColor.BOLD + "Cant sell " + Integer.toString(amounts[finalI]) + "x of " + itemName);
+						ChatColor.BOLD + "Cant sell " + Integer.toString(amounts[finalI]-difference) + "x of " + itemName);
 			} else {
-				sendPlayerShopMessageAndUpdateGDP(amounts[finalI], player, itemName, true);
+				sendPlayerShopMessageAndUpdateGDP((amounts[finalI]-difference), player, itemName, true);
 			}
 		} catch (IllegalArgumentException ex) {
 		}

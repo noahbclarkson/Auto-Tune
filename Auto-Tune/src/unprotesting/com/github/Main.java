@@ -76,6 +76,7 @@ import unprotesting.com.github.util.EnchantmentPriceHandler;
 import unprotesting.com.github.util.EnchantmentSetting;
 import unprotesting.com.github.util.HttpPostRequestor;
 import unprotesting.com.github.util.InflationEventHandler;
+import unprotesting.com.github.util.ItemPriceData;
 import unprotesting.com.github.util.JoinEventHandler;
 import unprotesting.com.github.util.LoanEventHandler;
 import unprotesting.com.github.util.MathHandler;
@@ -125,8 +126,8 @@ public final class Main extends JavaPlugin implements Listener {
   static @Getter
   private File configf;
 
-@Getter
-public static File shopf, tradef, tradeShortf, enchf;
+  @Getter
+  public static File shopf, tradef, tradeShortf, enchf;
 
   public static String basicVolatilityAlgorithim;
   public static String priceModel;
@@ -154,6 +155,9 @@ public static File shopf, tradef, tradeShortf, enchf;
   @Getter
   @Setter
   public static Integer materialListSize;
+
+  @Getter
+  public static ConcurrentHashMap<String, ItemPriceData> itemPrices = new ConcurrentHashMap<String, ItemPriceData>();
 
   @Override
   public void onDisable() {
@@ -263,6 +267,7 @@ public static File shopf, tradef, tradeShortf, enchf;
     EnchantmentAlgorithm.loadEnchantmentSettings();
     debugLog("Loaded " + enchMap.get("Auto-Tune").size() + " enchantments");
     AutoTuneBuyCommand.shopTypes.add("enchantments");
+    loadItemPriceData();
     scheduler.scheduleAsyncRepeatingTask(this, new EnchantmentPriceHandler(), 1200*Config.getTimePeriod(), (Config.getTimePeriod()*1200));
   }
 
@@ -299,6 +304,7 @@ public static File shopf, tradef, tradeShortf, enchf;
       public void run() {
         try {
           loadItemPricesAndCalculate();
+          loadItemPriceData();
         } catch (ParseException e) {
           e.printStackTrace();
         }
@@ -344,9 +350,8 @@ public static File shopf, tradef, tradeShortf, enchf;
               + Main.getMainConfig().getDouble("sell-price-difference", 2.5));
           cancel();
         }
-
+        loadItemPriceData();
       }
-
     }.runTaskTimer(Main.getINSTANCE(), Config.getSellPriceVariationUpdatePeriod() * 20 * 60,
         Config.getSellPriceVariationUpdatePeriod() * 20 * 60);
   }
@@ -619,6 +624,16 @@ public static File shopf, tradef, tradeShortf, enchf;
       i++;
     }
   }
+
+  public static void loadItemPriceData(){
+    if (Main.getItemPrices() != null){
+        Main.itemPrices.clear();
+    }
+    Set<String> strSet = Main.map.keySet();
+    for (String str : strSet){
+        Main.itemPrices.put(str, new ItemPriceData(str));
+    }
+}
 
   public void createFiles() {
 

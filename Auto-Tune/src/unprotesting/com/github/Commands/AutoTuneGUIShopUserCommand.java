@@ -3,6 +3,7 @@ package unprotesting.com.github.Commands;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.github.stefvanschie.inventoryframework.Gui;
@@ -185,7 +186,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 					ConcurrentHashMap<String, Integer> maxBuyMapRec = Main.maxBuyMap.get(player.getUniqueId());
 					int currentMax = maxBuyMapRec.get(itemName);
 					Integer[] max = sec.itemMaxBuySell.get(itemName);
-					Double price = Main.map.get(itemName).get(Main.map.get(itemName).size()-1)[0];
+					Double price = getItemPrice(itemName, false);
 					if (max[0] < (currentMax + amounts[finalI])) {
 						player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
 								+ "x of " + itemName);
@@ -294,14 +295,13 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		double currentPrice = getItemPrice(item, false);
 		float timePeriod = (float) Config.getTimePeriod();
 		float timePeriodsInADay = (float) (1 / (timePeriod / 1440));
-		ConcurrentHashMap<Integer, Double[]> newMap = Main.map.get(item);
+		List<Double> newMap = Main.getItemPrices().get(item).prices;
 		if (newMap.size() <= timePeriodsInADay) {
 			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.DARK_GRAY
 					+ " - " + ChatColor.GRAY + "%0.0");
 		}
 		Integer oneDayOldTP = (int) Math.floor(newMap.size() - timePeriodsInADay);
-		Double[] arr = newMap.get(oneDayOldTP);
-		double oneDayOldPrice = arr[0];
+		double oneDayOldPrice = newMap.get(oneDayOldTP);
 		if (oneDayOldPrice > currentPrice) {
 			double percent = 100 * ((currentPrice / oneDayOldPrice) - 1);
 			return (ChatColor.WHITE + Config.getCurrencySymbol() + df2.format(currentPrice) + ChatColor.DARK_GRAY
@@ -394,14 +394,12 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		return output;
 	}
 
-	public Double getItemPrice(String item, boolean sell){
-		ConcurrentHashMap<Integer, Double[]> inputMap = Main.map.get(item);
-		Double[] arr = inputMap.get(inputMap.size()-1);
+	public static Double getItemPrice(String item, boolean sell){
 		if (!sell){
-			return arr[0];
+			return Main.getItemPrices().get(item).price;
 		}
 		else{
-			return arr[0] - (arr[0]*0.01*getSellPriceDifference(item));
+			return Main.getItemPrices().get(item).sellPrice;
 		}
 	}
 

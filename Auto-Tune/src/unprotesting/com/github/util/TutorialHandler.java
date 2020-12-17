@@ -45,7 +45,7 @@ public class TutorialHandler implements Runnable{
         messages.add(ChatColor.YELLOW + "Do /autosell to sell items automatically.");
         messages.add(ChatColor.YELLOW + "Do /buy to purchase custom items.");
         messages.add(ChatColor.YELLOW + "Do /trade to view item prices over time.");
-        messages.add(ChatColor.YELLOW + "Do /loan <amount> to loan money. Do /loans to check your loans. Do /payloan <loan.No.> to payback loan");
+        messages.add(ChatColor.YELLOW + "Do /loan <amount> to loan money. Do /loan to start.");
         messages.add(ChatColor.YELLOW + "Do /gdp to view the server GDP.");
         messages.add(ChatColor.YELLOW + "Inflation means prices for items generally rise. Put your money in assets (items) to make more money");
         messages.add(ChatColor.YELLOW + "Watch the prices of items! They can go up and down.");
@@ -53,6 +53,7 @@ public class TutorialHandler implements Runnable{
         messages.add(ChatColor.YELLOW + "Loan money to take leverage of the rise in prices.");
         messages.add(ChatColor.YELLOW + "Sell items that have high demand to make the most money selling.");
         messages.add(ChatColor.YELLOW + "Using /autosell allows you to make money quickly and easily");
+        messages.add(ChatColor.YELLOW + "Using /loan to loan money allows you to invest to make even more money.");
         messages.add(ChatColor.YELLOW + "Viewing prices with /trade allows you to judge the markets.");
     }
 }

@@ -35,13 +35,7 @@ commands:
       usage: /<autosell>
     loan:
       description: Auto-Tune Auto Loan Command
-      usage: /<loan> <amount>
-    loans:
-      description: View all of your active loans
-      usage: <loans>
-    payloan:
-      description: Payback one of your loans
-      usage: <payloan> <loanNo.>
+      usage: /<loan> <amount> (Optional)<compound-interest-enabled>
     gdp:
       description: View GDP info
       usage: <GDP>

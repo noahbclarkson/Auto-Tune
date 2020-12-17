@@ -4,7 +4,6 @@ import org.bukkit.Material;
 
 public class MaterialUtil {
 
-
     public static final Material[] LOGS, WOOL, SAPLINGS, WOOD, LEAVES;
 
     static Material[] values = Material.values();

@@ -12,8 +12,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,7 +21,6 @@ import java.util.logging.Logger;
 
 import com.github.stefvanschie.inventoryframework.Gui;
 import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
-import com.google.errorprone.annotations.RestrictedApi;
 import com.sun.net.httpserver.HttpServer;
 
 import org.bukkit.Bukkit;
@@ -55,15 +52,13 @@ import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.milkbowl.vault.economy.Economy;
-import unprotesting.com.github.Commands.AutoTuneGDPCommand;
 import unprotesting.com.github.Commands.AutoTuneAutoSellCommand;
 import unprotesting.com.github.Commands.AutoTuneAutoTuneConfigCommand;
 import unprotesting.com.github.Commands.AutoTuneBuyCommand;
 import unprotesting.com.github.Commands.AutoTuneCommand;
+import unprotesting.com.github.Commands.AutoTuneGDPCommand;
 import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
 import unprotesting.com.github.Commands.AutoTuneLoanCommand;
-import unprotesting.com.github.Commands.AutoTuneLoansCommand;
-import unprotesting.com.github.Commands.AutoTunePaybackLoanCommand;
 import unprotesting.com.github.Commands.AutoTuneSellCommand;
 import unprotesting.com.github.util.AutoSellEventHandler;
 import unprotesting.com.github.util.AutoTunePlayerAutoSellEventHandler;
@@ -76,8 +71,10 @@ import unprotesting.com.github.util.EnchantmentPriceHandler;
 import unprotesting.com.github.util.EnchantmentSetting;
 import unprotesting.com.github.util.HttpPostRequestor;
 import unprotesting.com.github.util.InflationEventHandler;
+import unprotesting.com.github.util.InventoryHandler;
 import unprotesting.com.github.util.ItemPriceData;
 import unprotesting.com.github.util.JoinEventHandler;
+import unprotesting.com.github.util.Loan;
 import unprotesting.com.github.util.LoanEventHandler;
 import unprotesting.com.github.util.MathHandler;
 import unprotesting.com.github.util.Section;
@@ -108,7 +105,7 @@ public final class Main extends JavaPlugin implements Listener {
   public static ConcurrentMap<UUID, ConcurrentHashMap<String, Integer>> maxBuyMap = new ConcurrentHashMap<UUID, ConcurrentHashMap<String, Integer>>();
   public static ConcurrentMap<UUID, ConcurrentHashMap<String, Integer>> maxSellMap = new ConcurrentHashMap<UUID, ConcurrentHashMap<String, Integer>>();
   public static HTreeMap<Integer, String> memMap;
-  public static HTreeMap<String, double[]> loanMap;
+  public static HTreeMap<UUID, ArrayList<Loan>> loanMap;
   public static ConcurrentHashMap<String, ConcurrentHashMap<Integer, Double[]>> tempmap;
   public static ConcurrentMap<Integer, Material> ItemMap;
   public static BukkitScheduler scheduler;
@@ -161,6 +158,13 @@ public final class Main extends JavaPlugin implements Listener {
 
   @Override
   public void onDisable() {
+    if (scheduler == null){
+      scheduler = getServer().getScheduler();
+    }
+    if (getINSTANCE() == null){
+      INSTANCE = this;
+    }
+    scheduler.cancelTasks(getINSTANCE());
     log.info(String.format("[%s] Disabled Version %s", getDescription().getName(), getDescription().getVersion()));
   }
 
@@ -169,6 +173,7 @@ public final class Main extends JavaPlugin implements Listener {
   public void onEnable() {
     Bukkit.getServer().getPluginManager().registerEvents(new JoinEventHandler(), this);
     Bukkit.getServer().getPluginManager().registerEvents(new ChatHandler(), this);
+    Bukkit.getServer().getPluginManager().registerEvents(new InventoryHandler(), this);
     folderfile = new File("plugins/Auto-Tune/web/");
     folderfile.mkdirs();
     createFiles();
@@ -234,8 +239,6 @@ public final class Main extends JavaPlugin implements Listener {
     if (Config.isAutoSellEnabled()){this.getCommand("autosell").setExecutor(new AutoTuneAutoSellCommand());}
     this.getCommand("loan").setExecutor(new AutoTuneLoanCommand());
     this.getCommand("atconfig").setExecutor(new AutoTuneAutoTuneConfigCommand());
-    this.getCommand("loans").setExecutor(new AutoTuneLoansCommand());
-    this.getCommand("payloan").setExecutor(new AutoTunePaybackLoanCommand());
     this.getCommand("gdp").setExecutor(new AutoTuneGDPCommand());
     this.getCommand("buy").setExecutor(new AutoTuneBuyCommand());
     basicVolatilityAlgorithim = Config.getBasicVolatilityAlgorithim();
@@ -249,8 +252,8 @@ public final class Main extends JavaPlugin implements Listener {
         Config.getAutoSellProfitUpdatePeriod() + 20, Config.getAutoSellProfitUpdatePeriod());
     }
     scheduler.scheduleAsyncRepeatingTask(this, new TutorialHandler(), (Config.getTutorialMessagePeriod()*20), (Config.getTutorialMessagePeriod()*20));
-    scheduler.scheduleAsyncRepeatingTask(this, new LoanEventHandler(), Config.getIntrestRateUpdateRate(),
-        Config.getIntrestRateUpdateRate());
+    scheduler.scheduleAsyncRepeatingTask(this, new LoanEventHandler(), 10,
+        (int)Config.getInterestRateUpdateRate());
     runnable();
     if ((Config.getInflationMethod().contains("Mixed") || Config.getInflationMethod().contains("Dynamic"))
         && Config.isInflationEnabled()) {
@@ -290,9 +293,8 @@ public final class Main extends JavaPlugin implements Listener {
   }
 
   public static ConcurrentHashMap<String, Integer> loadMaxStrings(ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>> mainMap){
-    Set<String> maxList = mainMap.keySet();
     ConcurrentHashMap<String, Integer> maxMap = new ConcurrentHashMap<String, Integer>();
-    for (String str : maxList){
+    for (String str : mainMap.keySet()){
     maxMap.put(str, 0);
     }
     return maxMap;
@@ -728,7 +730,7 @@ public final class Main extends JavaPlugin implements Listener {
     tempDB = DBMaker.fileDB("plugins/Auto-Tune/temp/tempdata.db").checksumHeaderBypass().closeOnJvmShutdown().make();
     tempdatadata = tempDB.hashMap("tempdatadata", Serializer.STRING, Serializer.DOUBLE).createOrOpen();
     loanDB = DBMaker.fileDB("plugins/Auto-Tune/temp/loandata.db").checksumHeaderBypass().closeOnJvmShutdown().make();
-    loanMap = loanDB.hashMap("loanMap", Serializer.STRING, Serializer.DOUBLE_ARRAY).createOrOpen();
+    loanMap =  loanDB.hashMap("loanMap", Serializer.JAVA, Serializer.JAVA).createOrOpen();
     if (tempdatadata.get("GDP")==null){
       tempdatadata.put("GDP", 0.0);
     }

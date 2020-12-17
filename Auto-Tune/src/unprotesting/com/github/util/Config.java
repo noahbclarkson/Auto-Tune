@@ -31,7 +31,7 @@ public final class Config {
                                                 autoSellProfitUpdatePeriod,
                                                     dynamicInflationUpdatePeriod,
                                                         maximumShortTradeLength,
-                                                            intrestRateUpdateRate,
+                                                            InterestRateUpdateRate,
                                                                 tutorialMessagePeriod;
 
     @Getter
@@ -60,12 +60,12 @@ public final class Config {
                                                         dataSelectionZ,
                                                             dynamicInflationValue,
                                                                 inflationValue,
-                                                                    intrestRate,
+                                                                    interestRate,
                                                                         maxDebt,
                                                                            shopConfigGUIShopSellValue,
                                                                                 enchantmentLimiter,
-                                                                                    durabilityLimiter;
-
+                                                                                    durabilityLimiter,
+                                                                                        compoundInterestRate;
     
     public static void loadDefaults() {
     Config.setUpdatePricesWhenInactive(Main.getMainConfig().getBoolean("update-prices-when-inactive", false));
@@ -84,7 +84,7 @@ public final class Config {
     Config.setTimePeriod(Main.getMainConfig().getInt("time-period", 10));
     Config.setMenuRows(Main.getMainConfig().getInt("menu-rows", 3));
     Config.setTutorialMessagePeriod(Main.getMainConfig().getInt("tutorial-message-period", 300));
-    Config.setIntrestRateUpdateRate(Main.getMainConfig().getInt("intrest-rate-update-period", 1200));
+    Config.setInterestRateUpdateRate(Main.getMainConfig().getInt("interest-rate-update-period", 1200));
     Config.setDynamicInflationUpdatePeriod(Main.getMainConfig().getInt("dynamic-inflation-update-period", 5000));
     Config.setSellPriceVariationTimePeriod(Main.getMainConfig().getInt("sell-price-variation-time-period", 10800));
     Config.setSellPriceVariationUpdatePeriod(Main.getMainConfig().getInt("sell-price-variation-update-period", 30));
@@ -112,7 +112,8 @@ public final class Config {
     Config.setSellPriceDifference(Main.getMainConfig().getDouble("sell-price-difference", 2.5));
     Config.setEnchantmentLimiter(Main.getMainConfig().getDouble("enchantment-limiter", 7.5));
     Config.setDurabilityLimiter(Main.getMainConfig().getDouble("durability-limiter", 5.0));
-    Config.setIntrestRate(Main.getMainConfig().getDouble("intrest-rate", 0.001));
+    Config.setInterestRate(Main.getMainConfig().getDouble("interest-rate", 0.005));
+    Config.setCompoundInterestRate(Main.getMainConfig().getDouble("compound-interest-rate", 0.0025));
     Config.setMaxDebt(Main.getMainConfig().getDouble("max-debt-value", -5000.00));
     Config.setSellPriceDifferenceVariationStart(Main.getMainConfig().getDouble("sell-price-difference-variation-start", 25.0));
     Config.setShopConfigGUIShopSellValue(Main.getMainConfig().getDouble("shop-config-guishop-sell-value", 20.00));

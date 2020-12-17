@@ -27,6 +27,7 @@ hs_err_pid*
 .settings/
 dependency-reduced-pom.xml
 Auto-Tune/target/classes/config.yml
+Auto-Tune/target/classes/enchantments.yml
 Auto-Tune/target/classes/plugin.yml
 Auto-Tune/target/classes/shops.yml
 Auto-Tune/target/classes/web/trade.html

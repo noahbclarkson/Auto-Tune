@@ -15,9 +15,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import unprotesting.com.github.Main;
+import unprotesting.com.github.util.ChatHandler;
 import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.EnchantmentAlgorithm;
 import unprotesting.com.github.util.EnchantmentSetting;
+import unprotesting.com.github.util.TextHandler;
 
 public class AutoTuneBuyCommand implements CommandExecutor {
 
@@ -28,6 +30,10 @@ public class AutoTuneBuyCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (sender instanceof Player){
             Player player = (Player) sender;
+            if (!(player.hasPermission("at.buy") || player.isOp())){
+                TextHandler.noPermssion(player);
+                return true;
+            }
             if (args.length == 0){
                 player.sendMessage(ChatColor.YELLOW + "Command Usage: ");
                 player.sendMessage(ChatColor.YELLOW + "/buy: <shop-type> <shop>");

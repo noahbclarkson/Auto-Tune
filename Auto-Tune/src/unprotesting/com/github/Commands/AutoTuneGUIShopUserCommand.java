@@ -21,6 +21,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
@@ -29,6 +30,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
+import unprotesting.com.github.util.InventoryHandler;
 import unprotesting.com.github.util.Section;
 import unprotesting.com.github.util.TextHandler;
 
@@ -39,6 +41,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 	public static DecimalFormat df3 = new DecimalFormat("###,###,###,##0.00000");
 	public static DecimalFormat df4 = new DecimalFormat("###########0.0000");
 	public static DecimalFormat df5 = new DecimalFormat("###########0");
+	public static DecimalFormat df6 = new DecimalFormat("###,###,###,##0.00######");
 
 	public static Integer SBPanePos = 1;
 
@@ -123,6 +126,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 	public void loadGUIMAIN(Player player, Section sec, boolean twoArgs) {
 		int itemAmount = sec.items.size();
 		int lines = (int) Math.floor(((itemAmount - 1) / 7) + 1);
+		int itemNo = 0;
 		if (lines > 4) {
 			lines = 4;
 		}
@@ -133,9 +137,10 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		OutlinePane[] shopPanes = new OutlinePane[paneAmount];
 		for (int i = 0; i < shopPanes.length; i++) {
 			shopPanes[i] = new OutlinePane(1, 1, 7, lines);
-			for (int k = 0; k < paneSize; k++) {
-				if (k + (i * paneSize) < sec.items.size()) {
-					String itemName = sec.items.get(k + (i * paneSize));
+			for (int k = 0; k < (paneSize-7); k++) {
+				if (itemNo < sec.items.size()) {
+					String itemName = sec.items.get(itemNo);
+					itemNo++;
 					ItemStack iStack = loadShopItem(itemName, sec);
 					GuiItem item = new GuiItem(iStack, event -> {
 						if (event.getClick() == ClickType.LEFT) {
@@ -182,83 +187,92 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			if (i < 7) {
 				iStack = loadTradingItem(itemName, amounts[i], true, sec);
 				gItem = new GuiItem(iStack, event -> {
-					event.setCancelled(true);
-					ConcurrentHashMap<String, Integer> maxBuyMapRec = Main.maxBuyMap.get(player.getUniqueId());
-					int currentMax = maxBuyMapRec.get(itemName);
-					Integer[] max = sec.itemMaxBuySell.get(itemName);
-					Double price = getItemPrice(itemName, false);
-					if (max[0] < (currentMax + amounts[finalI])) {
-						player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
-								+ "x of " + itemName);
-						int difference = (currentMax + amounts[finalI]) - max[0];
-						if (difference != 0 && !(currentMax >= max[0])) {
-							ItemStack is = new ItemStack(Material.matchMaterial(itemName), (amounts[finalI]-difference));
-							is = checkForEnchantAndApply(is, sec);
-							if (((amounts[finalI]-difference)*price) < Main.getEconomy().getBalance(player)){
-								HashMap<Integer, ItemStack> unableItems = player.getInventory().addItem(is);
-								if (unableItems.size() > 0)  {
-									player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
-											+ "x of " + itemName);
-								} else {
-									sendPlayerShopMessageAndUpdateGDP((amounts[finalI]-difference), player, itemName, false);
-									Main.maxBuyMap.put(player.getUniqueId(), maxBuyMapRec);
+					if (event.getClick() == ClickType.LEFT){
+						event.setCancelled(true);
+						ConcurrentHashMap<String, Integer> maxBuyMapRec = Main.maxBuyMap.get(player.getUniqueId());
+						int currentMax = maxBuyMapRec.get(itemName);
+						Integer[] max = sec.itemMaxBuySell.get(itemName);
+						Double price = getItemPrice(itemName, false);
+						if (max[0] < (currentMax + amounts[finalI])) {
+							player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
+									+ "x of " + itemName);
+							int difference = (currentMax + amounts[finalI]) - max[0];
+							if (difference != 0 && !(currentMax >= max[0])) {
+								ItemStack is = new ItemStack(Material.matchMaterial(itemName), (amounts[finalI]-difference));
+								is = checkForEnchantAndApply(is, sec);
+								if (((amounts[finalI]-difference)*price) < Main.getEconomy().getBalance(player)){
+									HashMap<Integer, ItemStack> unableItems = player.getInventory().addItem(is);
+									if (unableItems.size() > 0)  {
+										player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
+												+ "x of " + itemName);
+									} else {
+										sendPlayerShopMessageAndUpdateGDP((amounts[finalI]-difference), player, itemName, false);
+										Main.maxBuyMap.put(player.getUniqueId(), maxBuyMapRec);
+									}
+									player.sendMessage(ChatColor.RED + "Max Buys Reached! - " + max[0] + "/" + max[0]);
 								}
-								player.sendMessage(ChatColor.RED + "Max Buys Reached! - " + max[0] + "/" + max[0]);
-							}
-							else{
-								player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
-											+ "x of " + itemName);
-							}
-						}
-					} 
-					else {
-						try {
-							ItemStack is = new ItemStack(Material.matchMaterial(itemName), amounts[finalI]);
-							is = checkForEnchantAndApply(is, sec);
-							if ((price*amounts[finalI]) < Main.getEconomy().getBalance(player)){
-								HashMap<Integer, ItemStack> unableItems = player.getInventory().addItem(is);
-								if (unableItems.size() > 0) {
+								else{
 									player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
-											+ "x of " + itemName);
-								} else {
-									sendPlayerShopMessageAndUpdateGDP(amounts[finalI], player, itemName, false);
+												+ "x of " + itemName);
 								}
 							}
-							else{
-								player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
-											+ "x of " + itemName);
+						} 
+						else {
+							try {
+								ItemStack is = new ItemStack(Material.matchMaterial(itemName), amounts[finalI]);
+								is = checkForEnchantAndApply(is, sec);
+								if ((price*amounts[finalI]) < Main.getEconomy().getBalance(player)){
+									HashMap<Integer, ItemStack> unableItems = player.getInventory().addItem(is);
+									if (unableItems.size() > 0) {
+										player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
+												+ "x of " + itemName);
+									} else {
+										sendPlayerShopMessageAndUpdateGDP(amounts[finalI], player, itemName, false);
+									}
+								}
+								else{
+									player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
+												+ "x of " + itemName);
+								}
+							} catch (IllegalArgumentException ex) {
 							}
-						} catch (IllegalArgumentException ex) {
 						}
+					}
+					else{
+						event.setCancelled(true);
 					}
 				});
 			} 
 			else {
 				iStack = loadTradingItem(itemName, amounts[i - 7], false, sec);
 				gItem = new GuiItem(iStack, event -> {
-					event.setCancelled(true);
-					ConcurrentHashMap<String, Integer> maxSellMapRec = Main.maxSellMap.get(player.getUniqueId());
-					int currentMax = maxSellMapRec.get(itemName);
-					Integer[] max = sec.itemMaxBuySell.get(itemName);
-					ItemStack test = new ItemStack(Material.matchMaterial(itemName));
-					test = checkForEnchantAndApply(test, sec);
-					if (!player.getInventory().containsAtLeast(test, amounts[finalI-7])){
-						player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI - 7])
-								+ "x of " + itemName);
-					}
-					if (max[1] < (currentMax + amounts[finalI - 7])) {
-						player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI - 7])
-								+ "x of " + itemName);
-						int difference = (currentMax + amounts[finalI - 7]) - max[1];
-						if (difference != 0 && !(currentMax >= max[1])) {
-							removeItems(player, (finalI-7), itemName, sec, difference);
-							Main.maxSellMap.put(player.getUniqueId(), maxSellMapRec);
+					if (event.getClick() == ClickType.LEFT){
+						event.setCancelled(true);
+						ConcurrentHashMap<String, Integer> maxSellMapRec = Main.maxSellMap.get(player.getUniqueId());
+						int currentMax = maxSellMapRec.get(itemName);
+						Integer[] max = sec.itemMaxBuySell.get(itemName);
+						ItemStack test = new ItemStack(Material.matchMaterial(itemName));
+						test = checkForEnchantAndApply(test, sec);
+						if (!player.getInventory().containsAtLeast(test, amounts[finalI-7])){
+							player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI - 7])
+									+ "x of " + itemName);
 						}
-						player.sendMessage(ChatColor.RED + "Max Sells Reached! - " + max[1] + "/" + max[1]);
-					} else {
-						removeItems(player, (finalI - 7), itemName, sec, 0);
-					}
-				});
+						if (max[1] < (currentMax + amounts[finalI - 7])) {
+							player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI - 7])
+									+ "x of " + itemName);
+							int difference = (currentMax + amounts[finalI - 7]) - max[1];
+							if (difference != 0 && !(currentMax >= max[1])) {
+								removeItems(player, (finalI-7), itemName, sec, difference);
+								Main.maxSellMap.put(player.getUniqueId(), maxSellMapRec);
+							}
+							player.sendMessage(ChatColor.RED + "Max Sells Reached! - " + max[1] + "/" + max[1]);
+						} else {
+							removeItems(player, (finalI - 7), itemName, sec, 0);
+						}
+						}
+					else{
+						event.setCancelled(true);
+					}});	
 			}
 			front.addItem(gItem);
 		}
@@ -340,6 +354,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		return iStack;
 	}
 
+	@Deprecated
 	public ItemStack checkForEnchantAndApply(ItemStack is, Section sec) {
 		for (String enchantedItem : sec.enchantedItems) {
 			if (is.getType().toString().contains(enchantedItem)) {

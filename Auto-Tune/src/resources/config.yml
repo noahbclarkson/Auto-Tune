@@ -72,11 +72,13 @@ sell-price-difference: 10.0
 
 ##  Maximum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Fixed-Max-Volatility: 2.00
+
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Fixed-Min-Volatility: 0.05
 
 ##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
 Variable-Max-Volatility: 0.75
+
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Variable-Min-Volatility: 0.025
 
@@ -88,8 +90,10 @@ Variable-Min-Volatility: 0.025
 
 ##  'm' in equation: y=m(x^z)+c
 data-selection-m: 0.05
+
 ##  'z' in equation: y=m(x^z)+c
 data-selection-z: 1.6
+
 ##  'c' in equation: y=m(x^z)+c
 data-selection-c: 1.05
 
@@ -103,33 +107,45 @@ currency-symbol: '$'
 
 ##  Enable sell price difference variation to ease out sell price varition
 sell-price-difference-variation-enabled: true
+
 ##  Starting percententage sell price difference for sell price varition
 sell-price-difference-variation-start: 22.5
+
 ##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 7 days)
 sell-price-variation-time-period: 10080
+
 ##  Time in minutes that the sell-price-difference updates
 ##  Info: Must be a factor of sell-price-variation-time-period or it wont work!
 sell-price-variation-update-period: 30
 
 ##  Enable forced inflation in the economy
 inflation-enabled: true
+
 ##  Inflation method can be Dynamic, Static or Mixed.
 ##  Info: The dynamic method increases the prices of items in the economy by a percentage each time period
 ##  Info: The static method adds extra values to buys
 ##  Info: Mixed uses both methods
 inflation-method: 'Mixed'
+
 ##  Time period in ticks between dynamic price increases
 dynamic-inflation-time-period: 5000
+
 ##  Percentage increase in prices per time-period.
 dynamic-inflation-value: 0.00025
+
 ##  Percentage increase for buy value per price calculation update period.
 static-inflation-value: 0.1
 
 ##  Intrest rate per intrest-rate-update-period
 ##  Info: This is the increase in the current debt payment per-time period
-intrest-rate: 0.005
+interest-rate: 0.005
+
+##  Intrest rate for compound-intrest loans
+##  Info: Compound intrest loans grow faster so should have a lower initial intrest rate
+compound-interest-rate: 0.0025
+
 ##  Time period in ticks between updates of the intrest rate for users loans
-intrest-rate-update-period: 1200
+interest-rate-update-period: 1200
 
 ##  lowest value in $ a player can go into debt
 ##  Example: -10.00

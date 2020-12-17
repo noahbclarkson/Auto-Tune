@@ -1,5 +1,8 @@
 package unprotesting.com.github.Commands;
 
+import java.util.ArrayList;
+import java.util.UUID;
+
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -9,6 +12,7 @@ import org.bukkit.entity.Player;
 
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
+import unprotesting.com.github.util.Loan;
 import unprotesting.com.github.util.TextHandler;
 
 public class AutoTuneGDPCommand implements CommandExecutor {
@@ -64,9 +68,12 @@ public class AutoTuneGDPCommand implements CommandExecutor {
 
     public double getLoanBalance(){
         double output = 0.0;
-        for (String str : Main.loanMap.keySet()){
-            double[] arr = Main.loanMap.get(str);
-            output += arr[0];
+        for (UUID uuid : Main.loanMap.keySet()){
+            ArrayList<Loan> map = Main.loanMap.get(uuid);
+            for (Loan loan : map){
+                output += loan.current_value;
+            }
+
         }
         return output;
     }

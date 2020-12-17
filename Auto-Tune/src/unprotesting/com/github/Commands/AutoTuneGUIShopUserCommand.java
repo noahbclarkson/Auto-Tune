@@ -126,6 +126,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 	public void loadGUIMAIN(Player player, Section sec, boolean twoArgs) {
 		int itemAmount = sec.items.size();
 		int lines = (int) Math.floor(((itemAmount - 1) / 7) + 1);
+		int itemNo = 0;
 		if (lines > 4) {
 			lines = 4;
 		}
@@ -136,9 +137,10 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		OutlinePane[] shopPanes = new OutlinePane[paneAmount];
 		for (int i = 0; i < shopPanes.length; i++) {
 			shopPanes[i] = new OutlinePane(1, 1, 7, lines);
-			for (int k = 0; k < paneSize; k++) {
-				if (k + (i * paneSize) < sec.items.size()) {
-					String itemName = sec.items.get(k + (i * paneSize));
+			for (int k = 0; k < (paneSize-7); k++) {
+				if (itemNo < sec.items.size()) {
+					String itemName = sec.items.get(itemNo);
+					itemNo++;
 					ItemStack iStack = loadShopItem(itemName, sec);
 					GuiItem item = new GuiItem(iStack, event -> {
 						if (event.getClick() == ClickType.LEFT) {

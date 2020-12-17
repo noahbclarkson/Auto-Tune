@@ -21,7 +21,7 @@ public class InventoryHandler implements Listener{
     public void onInvClick(InventoryClickEvent e){
         Player player = (Player) e.getWhoClicked();
         Inventory inv = e.getClickedInventory();
-        if (e.getView().getTitle().equals(Config.getMenuTitle())){
+        if (e.getView().getTitle().equals(Config.getMenuTitle()) && inv != null){
             if (inv.getType().equals(InventoryType.PLAYER)){
                 if (lockedPlayerList.contains(player)){
                     e.setCancelled(true);

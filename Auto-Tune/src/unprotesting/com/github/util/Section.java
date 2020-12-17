@@ -10,7 +10,7 @@ import unprotesting.com.github.Main;
 
 public class Section {
     
-    public List<String> items;
+    public ArrayList<String> items;
     public String name;
     public Material image = Material.matchMaterial("GRASS_BLOCK");
     public boolean showBackButton = true;

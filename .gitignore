@@ -22,16 +22,16 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 
-/target/
+/target/*
 **/*.swp
 .settings/
 dependency-reduced-pom.xml
 Auto-Tune/target/classes/config.yml
-Auto-Tune/target/classes/enchantments.yml
 Auto-Tune/target/classes/plugin.yml
 Auto-Tune/target/classes/shops.yml
 Auto-Tune/target/classes/web/trade.html
 Auto-Tune/target/classes/web/trade-short.html
+
 
 
 pom.properties
@@ -51,3 +51,5 @@ Auto-Tune/target/surefire-reports/TEST-test.java.unprotesting.com.github.AutoTun
 Auto-Tune/target/surefire-reports/test.java.unprotesting.com.github.AutoTuneTest.txt
 *.lst
 Auto-Tune/data.db
+Auto-Tune/target/classes/enchantments.yml
+*.marker

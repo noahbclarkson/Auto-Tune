@@ -15,7 +15,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import unprotesting.com.github.Main;
-import unprotesting.com.github.util.ChatHandler;
 import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.EnchantmentAlgorithm;
 import unprotesting.com.github.util.EnchantmentSetting;

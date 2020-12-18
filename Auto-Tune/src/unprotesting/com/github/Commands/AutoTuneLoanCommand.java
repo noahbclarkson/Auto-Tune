@@ -7,9 +7,7 @@ import java.util.Arrays;
 
 import com.github.stefvanschie.inventoryframework.Gui;
 import com.github.stefvanschie.inventoryframework.GuiItem;
-import com.github.stefvanschie.inventoryframework.pane.Orientable;
 import com.github.stefvanschie.inventoryframework.pane.StaticPane;
-import com.github.stefvanschie.inventoryframework.pane.Orientable.Orientation;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -33,6 +31,7 @@ public class AutoTuneLoanCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (sender instanceof Player){
             Player player = (Player) sender;
+            Loan loan = null;
             if (!(player.hasPermission("at.loan") || player.isOp())){
                 TextHandler.noPermssion(player);
                 return true;
@@ -53,7 +52,7 @@ public class AutoTuneLoanCommand implements CommandExecutor {
                     player.sendMessage(ChatColor.RED + "Correct Usage: /loan <loan-amount> (Optional)<compund-interest-enabled>");
                     return true;
                 }
-                Loan loan = new Loan(value, Config.getInterestRate(), (Config.getInterestRateUpdateRate()/20), Instant.now(), player, false);
+                loan = new Loan(value, Config.getInterestRate(), (Config.getInterestRateUpdateRate()/20), Instant.now(), player, false);
                 return true;
             }
             if (args.length == 2){
@@ -71,10 +70,10 @@ public class AutoTuneLoanCommand implements CommandExecutor {
 
                 boolean cIntrest = Boolean.parseBoolean(args[1]);
                 if (cIntrest == true){
-                    Loan loan = new Loan(value, Config.getCompoundInterestRate(), (Config.getInterestRateUpdateRate()/20), Instant.now(), player, true);
+                    loan = new Loan(value, Config.getCompoundInterestRate(), (Config.getInterestRateUpdateRate()/20), Instant.now(), player, true);
                 }
                 else if(cIntrest == false){
-                    Loan loan = new Loan(value, Config.getInterestRate(), (Config.getInterestRateUpdateRate()/20), Instant.now(), player, false);
+                    loan = new Loan(value, Config.getInterestRate(), (Config.getInterestRateUpdateRate()/20), Instant.now(), player, false);
                 }
                 return true;
             }

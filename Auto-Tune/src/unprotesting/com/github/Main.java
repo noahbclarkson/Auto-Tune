@@ -23,6 +23,8 @@ import com.github.stefvanschie.inventoryframework.Gui;
 import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.sun.net.httpserver.HttpServer;
 
+import org.bstats.bukkit.Metrics;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -202,6 +204,8 @@ public final class Main extends JavaPlugin implements Listener {
         e.printStackTrace();
       }
     }
+    int pluginId = 9687;
+    Metrics metrics = new Metrics(this, pluginId);
     setupDataFiles();
     if (tempdatadata.isEmpty() == true || tempdatadata.get("SellPriceDifferenceDifference") == null) {
       tempdataresetSPDifference();

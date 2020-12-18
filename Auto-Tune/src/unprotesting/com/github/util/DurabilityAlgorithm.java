@@ -2,8 +2,6 @@ package unprotesting.com.github.util;
 
 import org.bukkit.inventory.ItemStack;
 
-import unprotesting.com.github.Main;
-
 public class DurabilityAlgorithm {
     
     @Deprecated

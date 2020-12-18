@@ -76,6 +76,7 @@ public class EnchantmentAlgorithm {
         }
     }
 
+    @Deprecated
     public static void updateEnchantSellData(ItemStack is){
         ItemMeta iMeta = is.getItemMeta();
         Map<Enchantment, Integer> enchants = iMeta.getEnchants();

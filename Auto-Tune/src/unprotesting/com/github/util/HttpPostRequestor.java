@@ -5,6 +5,7 @@ import java.io.IOException;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.stream.JsonReader;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.ClientProtocolException;

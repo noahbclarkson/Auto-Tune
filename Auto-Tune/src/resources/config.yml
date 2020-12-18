@@ -28,7 +28,7 @@ port: 8123
 maximum-short-trade-length: 144
 
 ##  Server name that will show up in commands and requests
-server-name: 'Auto-Tune Test Server'
+server-name: 'My Server'
 
 ##  Automatic Pricing Model - set this to exponential for best results
 ##  Options: Basic | Advanced | Exponential
@@ -166,7 +166,7 @@ durability-limiter: 5.00
 debug-enabled: false
 
 ##  Enable ChecksumHeaderBypass if you have issues with data retrival or corruption
-checksum-header-bypass: false
+checksum-header-bypass: true
 
 ##  Use another economies shop settings for prices (don't change this without deleting data.db and resetting)
 ##  This will convert the shops file from another economy to a compatible Auto-Tune shops.yml

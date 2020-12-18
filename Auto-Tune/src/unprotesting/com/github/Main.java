@@ -205,7 +205,7 @@ public final class Main extends JavaPlugin implements Listener {
       }
     }
     int pluginId = 9687;
-    Metrics metrics = new Metrics(this, pluginId);
+    Metrics metrics = new Metrics(getINSTANCE(), pluginId);
     setupDataFiles();
     if (tempdatadata.isEmpty() == true || tempdatadata.get("SellPriceDifferenceDifference") == null) {
       tempdataresetSPDifference();
@@ -740,6 +740,7 @@ public final class Main extends JavaPlugin implements Listener {
     }
   }
 
+  @Deprecated
   public boolean onCommand(CommandSender sender, Command testcmd, String trade, String[] help) {
     if (sender instanceof Player) {
       Player player = (Player) sender;

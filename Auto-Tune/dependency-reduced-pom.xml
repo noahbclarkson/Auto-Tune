@@ -50,7 +50,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>2.3</version>
+        <version>2.4</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -60,6 +60,16 @@
           </execution>
         </executions>
         <configuration>
+          <relocations>
+            <relocation>
+              <pattern>net.jpountz</pattern>
+              <shadedPattern>unprotesting.com.github.util</shadedPattern>
+            </relocation>
+            <relocation>
+              <pattern>org.bstats</pattern>
+              <shadedPattern>unprotesting.com.github.util</shadedPattern>
+            </relocation>
+          </relocations>
           <filters>
             <filter>
               <artifact>*:*</artifact>

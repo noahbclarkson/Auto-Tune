@@ -54,7 +54,7 @@ auto-sell-enabled: true
 ##  How often auto-sell updates in ticks
 ##  Info: Set this higher if few players use autosell
 ##  Info: Set it lower if many players use autosell
-auto-sell-update-period: 15
+auto-sell-update-period: 25
 
 ##  How often players are shown their auto-sell profits in ticks
 auto-sell-profit-update-period: 1200
@@ -77,7 +77,7 @@ Fixed-Max-Volatility: 2.00
 Fixed-Min-Volatility: 0.05
 
 ##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
-Variable-Max-Volatility: 0.75
+Variable-Max-Volatility: 1.00
 
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 Variable-Min-Volatility: 0.025

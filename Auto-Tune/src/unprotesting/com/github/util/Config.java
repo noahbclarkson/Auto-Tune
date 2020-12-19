@@ -117,6 +117,10 @@ public final class Config {
     Config.setMaxDebt(Main.getMainConfig().getDouble("max-debt-value", -5000.00));
     Config.setSellPriceDifferenceVariationStart(Main.getMainConfig().getDouble("sell-price-difference-variation-start", 25.0));
     Config.setShopConfigGUIShopSellValue(Main.getMainConfig().getDouble("shop-config-guishop-sell-value", 20.00));
+    if (getTimePeriod() < 15){
+        Main.debugLog("Time-Period Setting reverting to 15 to reduce memory usage.");
+        Config.setTimePeriod(15);
+    }
   }
 
 }

@@ -30,6 +30,7 @@ public class PriceCalculationHandler implements Runnable {
 
     @Override
     public void run() {
+        Main.log("Starting Price Calculation Task");
         try {
             loadItemPricesAndCalculate();
         } catch (ParseException e) {

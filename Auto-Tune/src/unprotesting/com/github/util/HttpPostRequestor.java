@@ -5,7 +5,6 @@ import java.io.IOException;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.gson.stream.JsonReader;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.ClientProtocolException;
@@ -18,8 +17,8 @@ import org.apache.http.util.EntityUtils;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
+import unprotesting.com.github.util.CentralJsonManager;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.util.JSONManager;
 
 public class HttpPostRequestor {
 
@@ -29,7 +28,7 @@ public class HttpPostRequestor {
         Double newPrice = price;
         CloseableHttpClient client = HttpClients.createDefault();
         HttpPost httpPost = new HttpPost("https://safe-refuge-09383.herokuapp.com");
-        JSONObject json = JSONManager.returnJSONFromParams(model, algorithm, price, averageBuy, averageSell,
+        JSONObject json = CentralJsonManager.returnJSONFromParams(model, algorithm, price, averageBuy, averageSell,
                 maxVolatility, minVolatility);
         Main.debugLog("Sending data to API for " + item + ": - " + "model: " + model + ", price: " + price
                 + ", averageBuy: " + averageBuy + ", averageSell: " + averageSell + ", maxVolatility: " + maxVolatility

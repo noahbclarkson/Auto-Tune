@@ -2,7 +2,7 @@ package unprotesting.com.github.util;
 
 import org.json.simple.JSONObject;
 
-public class JSONManager {
+public class CentralJsonManager {
 
     public static JSONObject returnJSONFromParams(String model, String algorithm, Double price, Double averageBuy, Double averageSell, Double maxVolatility, Double minVolatility){
         JSONObject obj = new JSONObject();

@@ -101,9 +101,9 @@ public final class Config {
     Config.setNoPermission(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("no-permission", "You do not have permission to perform this command")));
     Config.setEconomyShopConfig(Main.getMainConfig().getString("economy-shop-config", "default"));
     Config.setBasicMaxFixedVolatility(Main.getMainConfig().getDouble("Fixed-Max-Volatility", 2.00));
-    Config.setBasicMaxVariableVolatility(Main.getMainConfig().getDouble("Variable-Max-Volatility", 1.50));
+    Config.setBasicMaxVariableVolatility(Main.getMainConfig().getDouble("max-volatility", 0.5));
     Config.setBasicMinFixedVolatility(Main.getMainConfig().getDouble("Fixed-Min-Volatility", 0.05));
-    Config.setBasicMinVariableVolatility(Main.getMainConfig().getDouble("Variable-Min-Volatility", 0.05));
+    Config.setBasicMinVariableVolatility(Main.getMainConfig().getDouble("min-volatility", 0.025));
     Config.setDataSelectionM(Main.getMainConfig().getDouble("data-selection-m", 0.05));
     Config.setDataSelectionC(Main.getMainConfig().getDouble("data-selection-c", 1.05));
     Config.setDynamicInflationValue(Main.getMainConfig().getDouble("dynamic-inflation-value", 0.0025));
@@ -117,9 +117,9 @@ public final class Config {
     Config.setMaxDebt(Main.getMainConfig().getDouble("max-debt-value", -5000.00));
     Config.setSellPriceDifferenceVariationStart(Main.getMainConfig().getDouble("sell-price-difference-variation-start", 25.0));
     Config.setShopConfigGUIShopSellValue(Main.getMainConfig().getDouble("shop-config-guishop-sell-value", 20.00));
-    if (getTimePeriod() < 15){
-        Main.debugLog("Time-Period Setting reverting to 15 to reduce memory usage.");
-        Config.setTimePeriod(15);
+    if (getTimePeriod() < 4){
+        Main.debugLog("Time-Period Setting reverting to 4 to reduce memory usage.");
+        Config.setTimePeriod(4);
     }
   }
 

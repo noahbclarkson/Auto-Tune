@@ -1,7 +1,9 @@
 package unprotesting.com.github.util;
 
 import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -15,32 +17,48 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.ParseException;
 
-import unprotesting.com.github.util.CentralJsonManager;
 import unprotesting.com.github.Main;
 
 public class HttpPostRequestor {
 
-    public static Double sendPostRequestUsingHttpClient(String model, String algorithm, String apikey, String email,
-            String item, Double price, Double averageBuy, Double averageSell, Double maxVolatility,
-            Double minVolatility) throws ClientProtocolException, IOException, ParseException {
-        Double newPrice = price;
+    public static void updatePricesforItems(JSONObject json) throws ClientProtocolException, IOException {
+        HttpEntity entityResponse = sendPostRequest(json);
+        if (entityResponse != null) {
+            JsonParser parser = new JsonParser();
+            String result = EntityUtils.toString(entityResponse);
+            JsonElement jsonElement = parser.parse(result);
+            JsonObject jsonObject = jsonElement.getAsJsonObject();
+            JsonElement jsonArrayElement = jsonObject.get("returnData");
+            JsonArray jsonArray = jsonArrayElement.getAsJsonArray();
+            for (JsonElement element : jsonArray){
+                JsonObject obj = element.getAsJsonObject();
+                JsonElement priceElement = obj.get("newPrice");
+                JsonElement nameElement = obj.get("itemName");
+                String priceString = priceElement.getAsString();
+                String name = nameElement.getAsString();
+                Double price = Double.parseDouble(priceString);
+                ConcurrentHashMap<Integer, Double[]> map = Main.map.get(name);
+                Double[] arr = {price, 0.0, 0.0};
+                map.put((map.size()), arr);
+                Main.map.put(name, map); 
+            }
+        }
+    }
+
+    public static HttpEntity sendPostRequest(JSONObject json) throws IOException {
         CloseableHttpClient client = HttpClients.createDefault();
-        HttpPost httpPost = new HttpPost("https://safe-refuge-09383.herokuapp.com");
-        JSONObject json = CentralJsonManager.returnJSONFromParams(model, algorithm, price, averageBuy, averageSell,
-                maxVolatility, minVolatility);
-        Main.debugLog("Sending data to API for " + item + ": - " + "model: " + model + ", price: " + price
-                + ", averageBuy: " + averageBuy + ", averageSell: " + averageSell + ", maxVolatility: " + maxVolatility
-                + ", minVolatility: " + minVolatility + ", APIKey: " + ("**********" + apikey.substring(10)) + ", Email: " + ("********" + email.substring(8)));
+        HttpPost httpPost = new HttpPost("https://economy-api.herokuapp.com/");
         StringEntity entity = new StringEntity(json.toJSONString());
         httpPost.setEntity(entity);
         httpPost.setHeader("content-type", "application/json");
-        httpPost.setHeader("apikey", apikey);
-        httpPost.setHeader("email", email);
+        httpPost.setHeader("apikey", Config.getApiKey());
+        httpPost.setHeader("email", Config.getEmail()); 
         CloseableHttpResponse response = client.execute(httpPost);
         int statusCode = response.getStatusLine().getStatusCode();
+        HttpEntity entityResponse = null;
         if (statusCode == 200) {
+            entityResponse = response.getEntity();
             client.close();
         }
         if (statusCode != 200) {
@@ -48,39 +66,37 @@ public class HttpPostRequestor {
             Main.log("Error on status code");
         }
         Main.debugLog(response.getStatusLine().getReasonPhrase());
-        HttpEntity entityResponse = response.getEntity();
+        return entityResponse;
+    }
+
+    public static void updatePricesforEnchantments(JSONObject json) throws ClientProtocolException, IOException {
+        HttpEntity entityResponse = sendPostRequest(json);
         if (entityResponse != null) {
             JsonParser parser = new JsonParser();
             String result = EntityUtils.toString(entityResponse);
-            Main.debugLog("Result: " + result);
             JsonElement jsonElement = parser.parse(result);
             JsonObject jsonObject = jsonElement.getAsJsonObject();
-            Main.debugLog("JsonElement: " + jsonElement.toString());
-            JsonElement NewPriceElement = (jsonObject.get("newPrice"));
-            String NewPrice = NewPriceElement.getAsString();
-            Main.debugLog("New price for " + item + " = " + Config.getCurrencySymbol() + (NewPrice));
-            newPrice = Double.parseDouble(NewPrice);
+            JsonElement jsonArrayElement = jsonObject.get("returnData");
+            JsonArray jsonArray = jsonArrayElement.getAsJsonArray();
+            for (JsonElement element : jsonArray){
+                JsonObject obj = element.getAsJsonObject();
+                JsonElement priceElement = obj.get("newPrice");
+                JsonElement nameElement = obj.get("itemName");
+                String priceString = priceElement.getAsString();
+                String name = nameElement.getAsString();
+                Double price = Double.parseDouble(priceString);
+                ConcurrentHashMap<Integer, Double[]> map = Main.enchMap.get("Auto-Tune").get(name).buySellData;
+                Double[] arr = {price, 0.0, 0.0};
+                map.put((map.size()), arr);
+                EnchantmentSetting setting = Main.enchMap.get("Auto-Tune").get(name);
+                setting.buySellData.put(setting.buySellData.size(), arr);
+                setting.price = price;
+                ConcurrentHashMap<String, EnchantmentSetting> out = Main.enchMap.get("Auto-Tune");
+                out.put(name, setting);
+                Main.enchMap.put("Auto-Tune", out);
+            }
         }
-        Main.debugLog("Status code: " + Integer.toString(statusCode));
-        return newPrice;
     }
-
-    public static Double sendRequestForPrice(String model, String algorithm, String apikey, String email, String item,
-            Double price, Double averageBuy, Double averageSell, Double maxVolatility, Double minVolatility)
-            throws ParseException {
-        Double newPrice = price;
-        try {
-            newPrice = sendPostRequestUsingHttpClient(model, algorithm, apikey, email, item, price, averageBuy,
-                    averageSell, maxVolatility, minVolatility);
-            return newPrice;
-            }
-            catch (IOException e){
-                e.printStackTrace();
-
-            }
-        return newPrice;
-    }
-
 
     public static boolean ghostCheckAPIKey() throws ClientProtocolException, IOException {
         if (Config.getApiKey() == "xyz"){
@@ -120,11 +136,11 @@ public class HttpPostRequestor {
 
     public static boolean checkAPIKey(){
         try {
-            boolean vaildKey = ghostCheckAPIKey();
-            if (vaildKey == true){
+            boolean validKey = ghostCheckAPIKey();
+            if (validKey == true){
                 return true;
             }
-            else if (vaildKey != true){
+            else if (validKey != true){
                 return false;
             }
         } catch (IOException e) {

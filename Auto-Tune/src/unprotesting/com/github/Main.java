@@ -251,17 +251,17 @@ public final class Main extends JavaPlugin implements Listener {
     TextHandler.sendPriceModelData(priceModel);
     scheduler = getServer().getScheduler();
     if (Config.isAutoSellEnabled()){
-    scheduler.scheduleSyncRepeatingTask(this, new AutoSellEventHandler(), Config.getAutoSellUpdatePeriod() * 5,
+    scheduler.scheduleSyncRepeatingTask(getINSTANCE(), new AutoSellEventHandler(), Config.getAutoSellUpdatePeriod() * 5,
         Config.getAutoSellUpdatePeriod());
-    scheduler.scheduleSyncRepeatingTask(this, new AutoTunePlayerAutoSellEventHandler(),
+    scheduler.scheduleSyncRepeatingTask(getINSTANCE(), new AutoTunePlayerAutoSellEventHandler(),
         Config.getAutoSellProfitUpdatePeriod() + 20, Config.getAutoSellProfitUpdatePeriod());
     }
-    scheduler.scheduleAsyncRepeatingTask(this, new TutorialHandler(), (Config.getTutorialMessagePeriod()*20), (Config.getTutorialMessagePeriod()*20));
-    scheduler.scheduleAsyncRepeatingTask(this, new LoanEventHandler(), 10,
+    scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new TutorialHandler(), (Config.getTutorialMessagePeriod()*20), (Config.getTutorialMessagePeriod()*20));
+    scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new LoanEventHandler(), 10,
         (int)Config.getInterestRateUpdateRate());
     if ((Config.getInflationMethod().contains("Mixed") || Config.getInflationMethod().contains("Dynamic"))
         && Config.isInflationEnabled()) {
-      scheduler.scheduleAsyncRepeatingTask(this, new InflationEventHandler(),
+      scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new InflationEventHandler(),
           Config.getDynamicInflationUpdatePeriod() + 40, Config.getDynamicInflationUpdatePeriod());
     }
     if (Config.isSellPriceDifferenceVariationEnabled()) {
@@ -275,8 +275,8 @@ public final class Main extends JavaPlugin implements Listener {
     debugLog("Loaded " + enchMap.get("Auto-Tune").size() + " enchantments");
     AutoTuneBuyCommand.shopTypes.add("enchantments");
     PriceCalculationHandler.loadItemPriceData();
-    scheduler.scheduleAsyncRepeatingTask(this, new PriceCalculationHandler(),  Config.getTimePeriod() * 600,  Config.getTimePeriod() * 1200);
-    scheduler.scheduleAsyncRepeatingTask(this, new EnchantmentPriceHandler(), 1200*Config.getTimePeriod(), (Config.getTimePeriod()*3600));
+    scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new PriceCalculationHandler(),  Config.getTimePeriod() * 600,  Config.getTimePeriod() * 1200);
+    scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new EnchantmentPriceHandler(), 1800*Config.getTimePeriod(), (Config.getTimePeriod()*2400));
   }
 
   private boolean setupEconomy() {

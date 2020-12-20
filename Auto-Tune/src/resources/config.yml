@@ -30,20 +30,16 @@ maximum-short-trade-length: 144
 ##  Server name that will show up in commands and requests
 server-name: 'My Server'
 
-##  Automatic Pricing Model - set this to exponential for best results
-##  Options: Basic | Advanced | Exponential
-pricing-model: 'Exponential'
-
 ##  Time Period in minutes
 ##  Info: This should be around a tenth of the total items in your shop (i.e with 150 items this would be 15) to prevent overload
 ##  Info: When decreasing or increasing this adjust your volatility settings accordingly
-time-period: 10
+time-period: 5
 
 ##  The amount of menu rows in the GUI shop, value of 4-6.
 menu-rows: 6
 
 ##  GUI Shop Menu title
-menu-title: 'Auto-Tune Shop'
+menu-title: 'Shop'
 
 ##  Message sent for players with no permission
 no-permission: '&eYou do not have permission to perform this command'
@@ -59,32 +55,19 @@ auto-sell-update-period: 25
 ##  How often players are shown their auto-sell profits in ticks
 auto-sell-profit-update-period: 1200
 
-##  -- Basic/Advanced Pricing Model Settings --  ##
-
-##  Volatility Calulation Algorithim
-##  Info: A fixed rate locks the maxiumum change to a certain price
-##  Info: A variable rate changes the maxiumum price-change based on current price calculations
-##  Most people dont need to change this off of Variable as they will be using the Exponential model
-Volatility-Algorithim: 'Variable'
+##  -- Pricing Model Settings --  ##
 
 ##  Percentage difference in sell price to buy price
 sell-price-difference: 10.0
 
-##  Maximum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
-Fixed-Max-Volatility: 2.00
-
-##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
-Fixed-Min-Volatility: 0.05
-
 ##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
-Variable-Max-Volatility: 1.00
+max-volatility: 0.5
 
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
-Variable-Min-Volatility: 0.025
+min-volatility: 0.025
 
-##  -- Exponential Pricing Model Settings --  ##
+##  -- Data Selection Settings --  ##
 
-##  Info: This algorithim uses settings from the Variable-Advanced Pricing Model Settings: sell-price-difference, Variable-Max-Volatility, Variable-Min-Volatility
 ##  Info: When setting your data selection algorithim use a site such as https://www.desmos.com/calculator
 ##  Info: Data selection uses the equation y=m(x^z)+c, for example the default is y=0.075(x^1.6)+1.25
 
@@ -100,6 +83,7 @@ data-selection-c: 1.05
 ##  -- Other Econonomy Settings --
 
 ##  Update prices for server when no players are online
+##  Info: It is recommended to keep this to false
 update-prices-when-inactive: false
 
 ##  The symbol that appears before all currency
@@ -167,16 +151,6 @@ debug-enabled: false
 
 ##  Enable ChecksumHeaderBypass if you have issues with data retrival or corruption
 checksum-header-bypass: true
-
-##  Use another economies shop settings for prices (don't change this without deleting data.db and resetting)
-##  This will convert the shops file from another economy to a compatible Auto-Tune shops.yml
-##  Options: Default | Essentials | GUIShop
-##  Instructions for use: Turn this on, stop your server, delete data.db, start server, available data-transfers will appear in shops.yml, reset this option to default and restart your server again
-##  Remove GUI-Shop once done to avoid incompatiability errors
-economy-shop-config: 'default'
-
-##  Percentage value sell prices have on new price when converting GUIShop to Auto-Tune
-shop-config-guishop-sell-value: 20.00
 
 ##  Enable the Auto-Tune tutorial for players
 ##  Keep this on to encourage purchasing turn it off if its distracting

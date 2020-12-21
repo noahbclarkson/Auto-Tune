@@ -89,17 +89,17 @@ update-prices-when-inactive: false
 ##  The symbol that appears before all currency
 currency-symbol: '$'
 
-##  Enable sell price difference variation to ease out sell price varition
+##  Enable sell price difference variation to ease out sell price variation
 sell-price-difference-variation-enabled: true
 
-##  Starting percententage sell price difference for sell price varition
+##  Starting percententage sell price difference for sell price variation
 sell-price-difference-variation-start: 22.5
 
 ##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 7 days)
 sell-price-variation-time-period: 10080
 
 ##  Time in minutes that the sell-price-difference updates
-##  Info: Must be a factor of sell-price-variation-time-period or it wont work!
+##  Info: Must be a factor of sell-price-variation-time-period or it won't work!
 sell-price-variation-update-period: 30
 
 ##  Enable forced inflation in the economy
@@ -120,15 +120,15 @@ dynamic-inflation-value: 0.00025
 ##  Percentage increase for buy value per price calculation update period.
 static-inflation-value: 0.1
 
-##  Intrest rate per intrest-rate-update-period
+##  Intrest rate per interest-rate-update-period
 ##  Info: This is the increase in the current debt payment per-time period
 interest-rate: 0.005
 
 ##  Intrest rate for compound-intrest loans
-##  Info: Compound intrest loans grow faster so should have a lower initial intrest rate
+##  Info: Compound interest loans grow faster so should have a lower initial interest rate
 compound-interest-rate: 0.0025
 
-##  Time period in ticks between updates of the intrest rate for users loans
+##  Time period in ticks between updates of the interest rate for users loans
 interest-rate-update-period: 1200
 
 ##  lowest value in $ a player can go into debt
@@ -149,11 +149,11 @@ durability-limiter: 5.00
 ##  Enable debug mode for more info on price calculations
 debug-enabled: false
 
-##  Enable ChecksumHeaderBypass if you have issues with data retrival or corruption
+##  Enable ChecksumHeaderBypass if you have issues with data retrieval or corruption
 checksum-header-bypass: true
 
 ##  Enable the Auto-Tune tutorial for players
-##  Keep this on to encourage purchasing turn it off if its distracting
+##  Keep this on to encourage purchasing turn it off if it is distracting
 tutorial: true
 
 ##  Time in seconds between messages

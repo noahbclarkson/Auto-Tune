@@ -83,9 +83,7 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                             ex.printStackTrace();
                             return true;
                         }
-                        ItemStack test = new ItemStack(mat);
-                        test.addEnchantment(ench, 1);
-                        double price = EnchantmentAlgorithm.calculatePriceWithEnch(new ItemStack(mat), true);
+                        double price = setting.price + Main.map.get(is.getType().toString()).get(Main.map.get(is.getType().toString()).size()-1)[0]*setting.ratio;
                         Main.getEconomy().withdrawPlayer(player, Double.parseDouble(AutoTuneGUIShopUserCommand.df1.format(price)));
                         player.sendMessage(ChatColor.GOLD + "Purchased " + setting.name + " for "
                          + ChatColor.GREEN + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(price));

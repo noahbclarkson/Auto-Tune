@@ -119,6 +119,7 @@ public final class Main extends JavaPlugin implements Listener {
   public static double tempsells = 0.0;
   public static Boolean locked = null;
   public static Boolean falseBool = false;
+  HttpServer server;
 
   @Getter
   public static ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>> enchMap;
@@ -168,6 +169,8 @@ public final class Main extends JavaPlugin implements Listener {
       INSTANCE = this;
     }
     scheduler.cancelTasks(getINSTANCE());
+    server.stop(3);
+    closeDataFiles();
     log.info(String.format("[%s] Disabled Version %s", getDescription().getName(), getDescription().getVersion()));
   }
 
@@ -191,7 +194,6 @@ public final class Main extends JavaPlugin implements Listener {
     }
     Config.loadDefaults();
     if (Config.isWebServer()) {
-      HttpServer server;
       try {
         server = HttpServer.create(new InetSocketAddress(Config.getPort()), 0);
         server.createContext("/", new StaticFileHandler(BASEDIR));
@@ -200,7 +202,7 @@ public final class Main extends JavaPlugin implements Listener {
         log.info("[Auto Tune] Web server has started on port " + Config.getPort());
 
       } catch (IOException e) {
-        debugLog(
+        log(
             "Error Creating Server on port: " + Config.getPort() + ". Please try restarting or changing your port.");
         e.printStackTrace();
       }
@@ -241,7 +243,7 @@ public final class Main extends JavaPlugin implements Listener {
     this.getCommand("at").setExecutor(new AutoTuneCommand());
     this.getCommand("shop").setExecutor(new AutoTuneGUIShopUserCommand());
     this.getCommand("sell").setExecutor(new AutoTuneSellCommand());
-    if (Config.isAutoSellEnabled()){this.getCommand("autosell").setExecutor(new AutoTuneAutoSellCommand());}
+    this.getCommand("autosell").setExecutor(new AutoTuneAutoSellCommand());
     this.getCommand("loan").setExecutor(new AutoTuneLoanCommand());
     this.getCommand("atconfig").setExecutor(new AutoTuneAutoTuneConfigCommand());
     this.getCommand("gdp").setExecutor(new AutoTuneGDPCommand());
@@ -251,17 +253,17 @@ public final class Main extends JavaPlugin implements Listener {
     TextHandler.sendPriceModelData(priceModel);
     scheduler = getServer().getScheduler();
     if (Config.isAutoSellEnabled()){
-    scheduler.scheduleSyncRepeatingTask(this, new AutoSellEventHandler(), Config.getAutoSellUpdatePeriod() * 5,
+    scheduler.scheduleSyncRepeatingTask(getINSTANCE(), new AutoSellEventHandler(), Config.getAutoSellUpdatePeriod() * 5,
         Config.getAutoSellUpdatePeriod());
-    scheduler.scheduleSyncRepeatingTask(this, new AutoTunePlayerAutoSellEventHandler(),
+    scheduler.scheduleSyncRepeatingTask(getINSTANCE(), new AutoTunePlayerAutoSellEventHandler(),
         Config.getAutoSellProfitUpdatePeriod() + 20, Config.getAutoSellProfitUpdatePeriod());
     }
-    scheduler.scheduleAsyncRepeatingTask(this, new TutorialHandler(), (Config.getTutorialMessagePeriod()*20), (Config.getTutorialMessagePeriod()*20));
-    scheduler.scheduleAsyncRepeatingTask(this, new LoanEventHandler(), 10,
+    scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new TutorialHandler(), (Config.getTutorialMessagePeriod()*20), (Config.getTutorialMessagePeriod()*20));
+    scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new LoanEventHandler(), 10,
         (int)Config.getInterestRateUpdateRate());
     if ((Config.getInflationMethod().contains("Mixed") || Config.getInflationMethod().contains("Dynamic"))
         && Config.isInflationEnabled()) {
-      scheduler.scheduleAsyncRepeatingTask(this, new InflationEventHandler(),
+      scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new InflationEventHandler(),
           Config.getDynamicInflationUpdatePeriod() + 40, Config.getDynamicInflationUpdatePeriod());
     }
     if (Config.isSellPriceDifferenceVariationEnabled()) {
@@ -275,8 +277,8 @@ public final class Main extends JavaPlugin implements Listener {
     debugLog("Loaded " + enchMap.get("Auto-Tune").size() + " enchantments");
     AutoTuneBuyCommand.shopTypes.add("enchantments");
     PriceCalculationHandler.loadItemPriceData();
-    scheduler.scheduleAsyncRepeatingTask(this, new PriceCalculationHandler(),  Config.getTimePeriod() * 600,  Config.getTimePeriod() * 1200);
-    scheduler.scheduleAsyncRepeatingTask(this, new EnchantmentPriceHandler(), 1200*Config.getTimePeriod(), (Config.getTimePeriod()*3600));
+    scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new PriceCalculationHandler(),  Config.getTimePeriod() * 600,  Config.getTimePeriod() * 1200);
+    scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new EnchantmentPriceHandler(), 900*Config.getTimePeriod(), (Config.getTimePeriod()*2400));
   }
 
   private boolean setupEconomy() {
@@ -453,6 +455,14 @@ public final class Main extends JavaPlugin implements Listener {
     if (tempdatadata.get("GDP")==null){
       tempdatadata.put("GDP", 0.0);
     }
+  }
+
+  public static void closeDataFiles(){
+    db.close();
+    memDB.close();
+    enchDB.close();
+    tempDB.close();
+    loanDB.close();
   }
 
   @Deprecated

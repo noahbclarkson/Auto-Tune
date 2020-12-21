@@ -1,16 +1,6 @@
 package unprotesting.com.github.util;
 
-import static unprotesting.com.github.Main.buys;
-import static unprotesting.com.github.Main.sells;
-import static unprotesting.com.github.Main.tempbuys;
-import static unprotesting.com.github.Main.tempsells;
-import static unprotesting.com.github.Main.setupMaxBuySell;
-import static unprotesting.com.github.Main.basicVolatilityAlgorithim;
 import static unprotesting.com.github.Main.map;
-import static unprotesting.com.github.Main.locked;
-import static unprotesting.com.github.Main.falseBool;
-import static unprotesting.com.github.Main.debugLog;
-import static unprotesting.com.github.Main.dateFormat;
 
 import java.io.IOException;
 import java.util.Calendar;
@@ -18,294 +8,162 @@ import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.http.client.ClientProtocolException;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.ConfigurationSection;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
 import unprotesting.com.github.Main;
-
-import static unprotesting.com.github.Main.priceModel;
 
 public class PriceCalculationHandler implements Runnable {
 
     @Override
     public void run() {
-        Main.log("Starting Price Calculation Task");
         try {
             loadItemPricesAndCalculate();
-        } catch (ParseException e) {
+        } catch (ParseException | IOException e) {
             e.printStackTrace();
         }
         loadItemPriceData();
     }
 
-    public static void loadItemPriceData(){
-        if (Main.getItemPrices() != null){
+    public static void loadItemPriceData() {
+        if (Main.getItemPrices() != null) {
             Main.itemPrices.clear();
         }
         Set<String> strSet = Main.map.keySet();
-        for (String str : strSet){
+        for (String str : strSet) {
             Main.itemPrices.put(str, new ItemPriceData(str));
         }
     }
 
-    public static void loadItemPricesAndCalculate() throws ParseException {
+    public static void loadItemPricesAndCalculate() throws ParseException, ClientProtocolException, IOException {
         Integer playerCount = Bukkit.getServer().getOnlinePlayers().size();
         if (Config.isUpdatePricesWhenInactive() || (!Config.isUpdatePricesWhenInactive() && playerCount > 0)){
-          setupMaxBuySell();
-          tempbuys = 0.0;
-          tempsells = 0.0;
-          buys = 0.0;
-          sells = 0.0;
-          if (priceModel.contains("Basic") || priceModel.contains("Advanced") || priceModel.contains("Exponential")) {
-            TextHandler.sendDataBeforePriceCalculation(priceModel, basicVolatilityAlgorithim);
-            Set<String> strSet = map.keySet();
-            for (String str : strSet) {
-              ConcurrentHashMap<Integer, Double[]> tempMap = map.get(str);
-              Integer expvalues = 0;
-              Main.getINSTANCE();
-              ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops")
-                  .getConfigurationSection(str);
-              locked = null;
-              if (config != null) {
-                Boolean lk = config.getBoolean("locked", false);
-                if (lk == true) {
-                  locked = falseBool;
-                  debugLog("Locked item found: " + str);
-                }
-                tempbuys = 0.0;
-                tempsells = 0.0;
-                buys = 0.0;
-                sells = 0.0;
-    
-                if (priceModel.contains("Basic")) {
-                  for (Integer key1 : tempMap.keySet()) {
-                    Double[] key = tempMap.get(key1);
-                    tempbuys = key[1];
-                    buys = buys + tempbuys;
-                    tempsells = key[2];
-                    sells = sells + tempsells;
-                  }
-                }
-    
-                if (priceModel.contains("Advanced")) {
-                  for (Integer key1 : tempMap.keySet()) {
-                    Double[] key = tempMap.get(key1);
-                    tempbuys = key[1];
-                    tempbuys = tempbuys * key[0];
-                    if (tempbuys == 0) {
-                      tempbuys = key[0];
-                    }
-                    buys = buys + tempbuys;
-                    tempsells = key[2];
-                    tempsells = tempsells * key[0];
-                    if (tempsells == 0) {
-                      tempsells = key[0];
-                    }
-                    sells = sells + tempsells;
-                  }
-                }
-                if (priceModel.contains("Exponential")) {
-                  Integer tempSize = tempMap.keySet().size();
-                  Integer x = 0;
-                  for (; x < 100000;) {
-                    Double y = Config.getDataSelectionM() * (Math.pow(x, Config.getDataSelectionZ()))
-                        + Config.getDataSelectionC();
-                    Integer inty = (int) Math.round(y) - 1;
-                    if (inty > tempSize - 1) {
-                      expvalues = inty + 1;
-                      break;
-                    }
-                    Double[] key = tempMap.get((tempSize - 1) - inty);
-                    tempbuys = key[1];
-                    tempbuys = tempbuys * key[0];
-                    if (tempbuys == 0) {
-                      tempbuys = key[0];
-                    }
-                    buys = buys + tempbuys;
-                    tempsells = key[2];
-                    tempsells = tempsells * key[0];
-                    if (tempsells == 0) {
-                      tempsells = key[0];
-                    }
-                    sells = sells + tempsells;
-                    x++;
-                  }
-                }
-    
-                if ((Config.getInflationMethod().contains("Static") || Config.getInflationMethod().contains("Mixed"))
-                    && Config.isInflationEnabled()) {
-                  buys = buys + buys * 0.01 * Config.getInflationValue();
-                }
-    
-                if (locked == falseBool) {
-                  Double[] temp2 = tempMap.get(tempMap.size() - 1);
-                  Double temp3 = temp2[0];
-                  Integer tsize = tempMap.size();
-                  Double newSpotPrice = temp3;
-                  Double[] temporary = { newSpotPrice, 0.0, 0.0 };
-                  tempMap.put(tsize, temporary);
-                  map.put(str, tempMap);
-                  debugLog("Loading item, " + str + " with price " + Double.toString(temp3) + " as price is locked");
-                }
-                Double avBuy = buys / (tempMap.size());
-                Double avSells = sells / (tempMap.size());
-                if (priceModel.contains("Advanced") || priceModel.contains("Basic")) {
-                  avBuy = buys / (tempMap.size());
-                  avSells = sells / (tempMap.size());
-                }
-                if (priceModel.contains("Exponential")) {
-                  avBuy = buys / (expvalues);
-                  avSells = sells / (expvalues);
-                }
-                if (avBuy > avSells && locked == null) {
-                  if (priceModel.contains("Basic")) {
-                    debugLog("AvBuy > AvSells for " + str);
-                  }
-                  if (priceModel.contains("Advanced") || priceModel.contains("Exponential")) {
-                    debugLog("AvBuyValue > AvSellValue for " + str);
-                  }
-                  Double[] temp2 = tempMap.get(tempMap.size() - 1);
-                  Double temp3 = temp2[0];
-                  Integer tsize = tempMap.size();
-                  if ((priceModel.contains("Basic") == true || priceModel.contains("Advanced")
-                      || priceModel.contains("Exponential")) && basicVolatilityAlgorithim.contains("Fixed") == true) {
-                    Double newSpotPrice = HttpPostRequestor.sendRequestForPrice("Fixed", priceModel, Config.getApiKey(),
-                        Config.getEmail(), str, temp3, avBuy, avSells, Config.getBasicMaxFixedVolatility(),
-                        Config.getBasicMinFixedVolatility());
-                    Double[] temporary = { newSpotPrice, 0.0, 0.0 };
-                    if (priceModel.contains("Basic")) {
-                      debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice)
-                          + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = "
-                          + Double.toString(avSells));
-                    }
-                    if (priceModel.contains("Advanced") || priceModel.contains("Exponential")) {
-                      debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice)
-                          + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = "
-                          + Double.toString(avSells));
-                    }
-                    tempMap.put(tsize, temporary);
-                    map.put(str, tempMap);
-    
-                  }
-                  if ((priceModel.contains("Basic") == true || priceModel.contains("Advanced")
-                      || priceModel.contains("Exponential")) && basicVolatilityAlgorithim.contains("Variable") == true) {
-                    Double newSpotPrice = HttpPostRequestor.sendRequestForPrice("Variable", priceModel, Config.getApiKey(),
-                        Config.getEmail(), str, temp3, avBuy, avSells, Config.getBasicMaxVariableVolatility(),
-                        Config.getBasicMinVariableVolatility());
-                    Double[] temporary = { newSpotPrice, 0.0, 0.0 };
-                    if (priceModel.contains("Basic")) {
-                      debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice)
-                          + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = "
-                          + Double.toString(avSells));
-                    }
-                    if (priceModel.contains("Advanced") || priceModel.contains("Exponential")) {
-                      debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice)
-                          + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = "
-                          + Double.toString(avSells));
-                    }
-                    tempMap.put(tsize, temporary);
-                    map.put(str, tempMap);
-                  }
-                }
-    
-                if (avBuy < avSells && locked == null) {
-                  if (priceModel.contains("Basic")) {
-                    debugLog("AvBuy < AvSells for " + str);
-                  }
-                  if (priceModel.contains("Advanced") || priceModel.contains("Exponential")) {
-                    debugLog("AvBuyValue < AvSellValue for " + str);
-                  }
-                  Double[] temp2 = tempMap.get(tempMap.size() - 1);
-                  Double temp3 = temp2[0];
-                  Integer tsize = tempMap.size();
-                  if ((priceModel.contains("Basic") == true || priceModel.contains("Advanced")
-                      || priceModel.contains("Exponential")) && basicVolatilityAlgorithim.contains("Fixed")) {
-                    Double newSpotPrice = HttpPostRequestor.sendRequestForPrice("Fixed", priceModel, Config.getApiKey(),
-                        Config.getEmail(), str, temp3, avBuy, avSells, Config.getBasicMaxFixedVolatility(),
-                        Config.getBasicMinFixedVolatility());
-                    Double[] temporary = { newSpotPrice, 0.0, 0.0 };
-                    if (priceModel.contains("Basic")) {
-                      debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice)
-                          + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = "
-                          + Double.toString(avSells));
-                    }
-                    if (priceModel.contains("Advanced") || priceModel.contains("Exponential")) {
-                      debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice)
-                          + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = "
-                          + Double.toString(avSells));
-                    }
-                    tempMap.put(tsize, temporary);
-                    map.put(str, tempMap);
-                  }
-                  if ((priceModel.contains("Basic") == true || priceModel.contains("Advanced")
-                      || priceModel.contains("Exponential")) && basicVolatilityAlgorithim.contains("Variable") == true) {
-                    Double newSpotPrice = HttpPostRequestor.sendRequestForPrice("Variable", priceModel, Config.getApiKey(),
-                        Config.getEmail(), str, temp3, avBuy, avSells, Config.getBasicMaxVariableVolatility(),
-                        Config.getBasicMinVariableVolatility());
-                    Double[] temporary = { newSpotPrice, 0.0, 0.0 };
-                    if (priceModel.contains("Basic")) {
-                      debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice)
-                          + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = "
-                          + Double.toString(avSells));
-                    }
-                    if (priceModel.contains("Advanced") || priceModel.contains("Exponential")) {
-                      debugLog("Loading item, " + str + ", with new price: " + Double.toString(newSpotPrice)
-                          + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = "
-                          + Double.toString(avSells));
-                    }
-                    tempMap.put(tsize, temporary);
-                    map.put(str, tempMap);
-                  }
-    
-                }
-    
-                if (avBuy == avSells && locked == null) {
-                  debugLog("AvBuy = AvSells for " + str);
-                  Double[] temp2 = tempMap.get(tempMap.size() - 1);
-                  Double temp3 = temp2[0];
-                  Integer tsize = tempMap.size();
-                  if (priceModel.contains("Basic") == true || priceModel.contains("Advanced")
-                      || priceModel.contains("Exponential")) {
-                    Double newSpotPrice = HttpPostRequestor.sendRequestForPrice("Variable", priceModel, Config.getApiKey(),
-                        Config.getEmail(), str, temp3, avBuy, avSells, Config.getBasicMaxVariableVolatility(),
-                        Config.getBasicMinVariableVolatility());
-                    Double[] temporary = { newSpotPrice, 0.0, 0.0 };
-                    if (priceModel.contains("Basic")) {
-                      debugLog("Loading item, " + str + ", with the same price: " + Double.toString(newSpotPrice)
-                          + " becasue Average buys = " + Double.toString(avBuy) + " and Average sells = "
-                          + Double.toString(avSells));
-                    }
-                    if (priceModel.contains("Advanced") || priceModel.contains("Exponential")) {
-                      debugLog("Loading item, " + str + ", with the same price: " + Double.toString(newSpotPrice)
-                          + " becasue Average buy value = " + Double.toString(avBuy) + " and Average sell value = "
-                          + Double.toString(avSells));
-                    }
-                    tempMap.put(tsize, temporary);
-                    map.put(str, tempMap);
-                  }
-                  locked = null;
-                }
-              }
+            Main.log("Loading Item Price Update Algorithm");
+            JSONObject obj = new JSONObject();
+            JSONArray itemData = new JSONArray();
+            for (String str : Main.map.keySet()) {
+                ConcurrentHashMap<Integer, Double[]> buySellMap = Main.map.get(str);
+                Double price = buySellMap.get(buySellMap.size()-1)[0];
+                Double[] arr = loadAverageBuyAndSellValue(buySellMap, price, str);
+                JSONObject priceData = new JSONObject();
+                priceData.put("itemName", str);
+                priceData.put("price",  price);
+                priceData.put("averageBuy", arr[0]);
+                priceData.put("averageSell", arr[1]);
+                itemData.add(priceData);
+
             }
-            tempbuys = 0.0;
-            tempsells = 0.0;
-            buys = 0.0;
-            sells = 0.0;
+            obj.put("itemData", itemData);
+            obj.put("maxVolatility", Config.getBasicMaxVariableVolatility());
+            obj.put("minVolatility", Config.getBasicMinVariableVolatility());
+            HttpPostRequestor.updatePricesforItems(obj);
             Date date = Calendar.getInstance().getTime();
-            Date newDate = MathHandler.addMinutesToJavaUtilDate(date, Config.getTimePeriod());
-            String strDate = dateFormat.format(newDate);
-            debugLog("Done running price Algorithim, a new check will occur at: " + strDate);
+            Date newDate = MathHandler.addMinutesToJavaUtilDate(date, Config.getTimePeriod()*2);
+            String strDate = Main.dateFormat.format(newDate);
+            Main.log("Done running item price Algorithim, a new check will occur at: " + strDate);
             try {
-              debugLog("Saving data to data.csv file");
-              CSVHandler.writeCSV();
-              CSVHandler.writeShortCSV();
-              debugLog("Saved data to data.csv file");
-            } catch (InterruptedException | IOException e) {
-              e.printStackTrace();
-            }
-          }
+                Main.debugLog("Saving data to data.csv file");
+                CSVHandler.writeCSV();
+                CSVHandler.writeShortCSV();
+                Main.debugLog("Saved data to data.csv file");
+              } catch (InterruptedException | IOException e) {
+                e.printStackTrace();
+              }
         }
-      }
+    }
+
+    public static void loadEnchantmentPricesAndCalculate() throws ParseException, ClientProtocolException, IOException {
+        Integer playerCount = Bukkit.getServer().getOnlinePlayers().size();
+        if (Config.isUpdatePricesWhenInactive() || (!Config.isUpdatePricesWhenInactive() && playerCount > 0)){
+            JSONObject obj = new JSONObject();
+            JSONArray itemData = new JSONArray();
+            Main.log("Loading Enchantment Price Update Algorithm");
+            for (String str : Main.enchMap.get("Auto-Tune").keySet()) {
+                ConcurrentHashMap<Integer, Double[]> buySellMap = Main.enchMap.get("Auto-Tune").get(str).buySellData;
+                Double price = buySellMap.get(buySellMap.size()-1)[0];
+                Double[] arr = loadAverageBuyAndSellValue(buySellMap, price, str);
+                JSONObject priceData = new JSONObject();
+                priceData.put("itemName", str);
+                priceData.put("price",  price);
+                priceData.put("averageBuy", arr[0]);
+                priceData.put("averageSell", arr[1]);
+                itemData.add(priceData);
+
+            }
+            obj.put("itemData", itemData);
+            obj.put("maxVolatility", Config.getBasicMaxVariableVolatility()*2);
+            obj.put("minVolatility", Config.getBasicMinVariableVolatility()*2);
+            HttpPostRequestor.updatePricesforEnchantments(obj);
+            Date date = Calendar.getInstance().getTime();
+            Date newDate = MathHandler.addMinutesToJavaUtilDate(date, Config.getTimePeriod()*2);
+            String strDate = Main.dateFormat.format(newDate);
+            Main.log("Done running enchantment price Algorithim, a new check will occur at: " + strDate);
+        }
+    }
+
+    public static Double[] loadAverageBuyAndSellValue(ConcurrentHashMap<Integer, Double[]> map, Double price, String name)
+            throws ParseException {
+        Integer tempSize = map.size()-1;
+        Double[] arr = map.get(tempSize);
+        Integer x = 0;
+        Integer expvalues = 0;
+        Double tempbuys = 0.0;
+        Double tempsells = 0.0;
+        Double buys = 0.0;
+        Double sells = 0.0;
+        for (; x < 100000;) {
+            Double y = Config.getDataSelectionM() * (Math.pow(x, Config.getDataSelectionZ()))
+                + Config.getDataSelectionC();
+            Integer inty = (int) Math.round(y) - 1;
+            if (inty > tempSize - 1) {
+                expvalues = inty + 1;
+                break;
+            }
+            Double[] key = map.get((tempSize) - inty);
+            if (key == null){
+                key = new Double[]{price, 0.0, 0.0};
+            }
+            if (key[0] == null){
+                key[0] = price;
+            }
+            if (key[1] == null){
+                key[1] = 0.0;
+            }
+            if (key[2] == null){
+                key[2] = 0.0;
+            }
+            tempbuys = key[1];
+            tempbuys = tempbuys * key[0];
+            if (tempbuys == 0) {
+                tempbuys = key[0];
+            }
+            buys = buys + tempbuys;
+            tempsells = key[2];
+            tempsells = tempsells * key[0];
+            if (tempsells == 0) {
+                tempsells = key[0];
+            }
+            sells = sells + tempsells;
+            x++;
+        }
+        if (Config.isInflationEnabled()){
+            buys = buys + buys * 0.01 * Config.getInflationValue();
+        }
+        Double avBuy = buys / (expvalues);
+        Double avSells = sells / (expvalues);
+        if (avBuy > avSells){
+            Main.debugLog("AvBuyValue > AvSellValue for " + name);
+        }
+        if (avBuy < avSells){
+            Main.debugLog("AvBuyValue < AvSellValue for " + name);
+        }
+        if (avBuy == avSells){
+            Main.debugLog("AvBuyValue = AvSellValue for " + name);
+        }
+        return new Double[]{avBuy, avSells};
+    }
     
 }

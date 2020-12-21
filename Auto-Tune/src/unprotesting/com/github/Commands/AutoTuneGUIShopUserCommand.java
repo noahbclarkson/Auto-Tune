@@ -60,13 +60,18 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			}
 			if (args.length == 0) {
 				if (p.hasPermission("at.shop") || p.isOp()) {
-					loadGUISECTIONS(p);
+					loadGUISECTIONS(p, false);
 				} else if (!(p.hasPermission("at.shop")) && !(p.isOp())) {
 					TextHandler.noPermssion(p);
 				}
 				return true;
 			}
 			if (args.length == 1) {
+				if (p.hasPermission("at.shop") || p.isOp()) {
+				} else if (!(p.hasPermission("at.shop")) && !(p.isOp())) {
+					TextHandler.noPermssion(p);
+					return true;
+				}
 				String inputSection = null;
 				try {
 					inputSection = args[0];
@@ -78,7 +83,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				for (int i = 0; i < Main.sectionedItems.length; i++) {
 					if (Main.sectionedItems[i].name.toLowerCase().equals(inputSection)) {
-						loadGUIMAIN(p, Main.sectionedItems[i], true);
+						loadGUIMAIN(p, Main.sectionedItems[i], true, false);
 						return true;
 					}
 				}
@@ -89,7 +94,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		return false;
 	}
 
-	public void loadGUISECTIONS(Player player) {
+	public static void loadGUISECTIONS(Player player, boolean autosell) {
 		int lines = (int) Math.floor(((Main.sectionedItems.length) / 7) + 1);
 		if (lines > 4) {
 			lines = 4;
@@ -100,8 +105,14 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			ItemStack is = new ItemStack((Main.sectionedItems[i].image));
 			ItemMeta im = is.getItemMeta();
 			im.setDisplayName(ChatColor.GOLD + Main.sectionedItems[i].name);
-			im.setLore(Arrays.asList(
+			if (!autosell){
+				im.setLore(Arrays.asList(
 					ChatColor.WHITE + "Click to enter the " + (Main.sectionedItems[i].name.toLowerCase()) + " shop!"));
+			}
+			if (autosell){
+				im.setLore(Arrays.asList(
+					ChatColor.WHITE + "Click to enter the " + (Main.sectionedItems[i].name.toLowerCase()) + " auto-selling configuration!"));
+			}
 			is.setItemMeta(im);
 			final Section inputSection = Main.sectionedItems[i];
 			GuiItem gItem = new GuiItem(is, event -> {
@@ -109,7 +120,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				if (event.getClick() == ClickType.LEFT) {
 					event.setCancelled(true);
 					player.getOpenInventory().close();
-					loadGUIMAIN(player, inputSection, false);
+					loadGUIMAIN(player, inputSection, false, autosell);
 				} else if (event.getClick() != ClickType.LEFT) {
 					event.setCancelled(true);
 					playernew.setItemOnCursor(null);
@@ -123,7 +134,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		front.show((HumanEntity) playerSender);
 	}
 
-	public void loadGUIMAIN(Player player, Section sec, boolean twoArgs) {
+	public static void loadGUIMAIN(Player player, Section sec, boolean twoArgs, boolean autosell) {
 		int itemAmount = sec.items.size();
 		int lines = (int) Math.floor(((itemAmount - 1) / 7) + 1);
 		int itemNo = 0;
@@ -141,17 +152,31 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				if (itemNo < sec.items.size()) {
 					String itemName = sec.items.get(itemNo);
 					itemNo++;
-					ItemStack iStack = loadShopItem(itemName, sec);
-					GuiItem item = new GuiItem(iStack, event -> {
-						if (event.getClick() == ClickType.LEFT) {
-							event.setCancelled(true);
-							player.getOpenInventory().close();
-							loadGUITRADING(player, itemName, sec);
-						} else {
-							event.setCancelled(true);
-						}
-					});
-					shopPanes[i].addItem(item);
+					ItemStack iStack = loadShopItem(itemName, sec, player, autosell);
+					if (autosell) {
+						GuiItem item = new GuiItem(iStack, event -> {
+							if (event.getClick() == ClickType.LEFT) {
+								event.setCancelled(true);
+								player.getOpenInventory().close();
+								AutoTuneAutoSellCommand.changePlayerAutoSellSettings(player, itemName);
+								loadGUIMAIN(player, sec, twoArgs, autosell);
+							} else {
+								event.setCancelled(true);
+							}
+						});
+						shopPanes[i].addItem(item);
+					} else {
+						GuiItem item = new GuiItem(iStack, event -> {
+							if (event.getClick() == ClickType.LEFT) {
+								event.setCancelled(true);
+								player.getOpenInventory().close();
+								loadGUITRADING(player, itemName, sec, autosell);
+							} else {
+								event.setCancelled(true);
+							}
+						});
+						shopPanes[i].addItem(item);
+					}
 				} else {
 					break;
 				}
@@ -170,16 +195,27 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		main.addPane(panes[0]);
 		main.addPane(panes[1]);
 		if (twoArgs == false || (twoArgs == true && sec.showBackButton == true)) {
-			main.addPane(loadMainMenuBackPane(pPane));
+			main.addPane(loadMainMenuBackPane(pPane, autosell));
 		}
 		CommandSender cSender = player;
 		main.update();
 		main.show((HumanEntity) cSender);
 	}
 
-	public void loadGUITRADING(Player player, String itemName, Section sec) {
+	public static void loadGUITRADING(Player player, String itemName, Section sec, boolean autosell) {
 		Gui main = new Gui(4, Config.getMenuTitle());
 		OutlinePane front = new OutlinePane(1, 1, 7, 2);
+		if (!autosell) {
+			front = loadTradingItems(player, itemName, sec, front);
+		}
+		main.addPane(front);
+		main.addPane(loadReturnButton(sec, autosell));
+		CommandSender cSender = player;
+		main.update();
+		main.show((HumanEntity) cSender);
+	}
+
+	public static OutlinePane loadTradingItems(Player player, String itemName, Section sec, OutlinePane front) {
 		for (int i = 0; i < 14; i++) {
 			final int finalI = i;
 			ItemStack iStack;
@@ -187,7 +223,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			if (i < 7) {
 				iStack = loadTradingItem(itemName, amounts[i], true, sec);
 				gItem = new GuiItem(iStack, event -> {
-					if (event.getClick() == ClickType.LEFT){
+					if (event.getClick() == ClickType.LEFT) {
 						event.setCancelled(true);
 						ConcurrentHashMap<String, Integer> maxBuyMapRec = Main.maxBuyMap.get(player.getUniqueId());
 						int currentMax = maxBuyMapRec.get(itemName);
@@ -198,62 +234,59 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 									+ "x of " + itemName);
 							int difference = (currentMax + amounts[finalI]) - max[0];
 							if (difference != 0 && !(currentMax >= max[0])) {
-								ItemStack is = new ItemStack(Material.matchMaterial(itemName), (amounts[finalI]-difference));
+								ItemStack is = new ItemStack(Material.matchMaterial(itemName),
+										(amounts[finalI] - difference));
 								is = checkForEnchantAndApply(is, sec);
-								if (((amounts[finalI]-difference)*price) < Main.getEconomy().getBalance(player)){
+								if (((amounts[finalI] - difference) * price) < Main.getEconomy().getBalance(player)) {
 									HashMap<Integer, ItemStack> unableItems = player.getInventory().addItem(is);
-									if (unableItems.size() > 0)  {
-										player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
-												+ "x of " + itemName);
+									if (unableItems.size() > 0) {
+										player.sendMessage(ChatColor.BOLD + "Cant Purchase "
+												+ Integer.toString(amounts[finalI]) + "x of " + itemName);
 									} else {
-										sendPlayerShopMessageAndUpdateGDP((amounts[finalI]-difference), player, itemName, false);
+										sendPlayerShopMessageAndUpdateGDP((amounts[finalI] - difference), player,
+												itemName, false);
 										Main.maxBuyMap.put(player.getUniqueId(), maxBuyMapRec);
 									}
 									player.sendMessage(ChatColor.RED + "Max Buys Reached! - " + max[0] + "/" + max[0]);
-								}
-								else{
-									player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
-												+ "x of " + itemName);
+								} else {
+									player.sendMessage(ChatColor.BOLD + "Cant Purchase "
+											+ Integer.toString(amounts[finalI]) + "x of " + itemName);
 								}
 							}
-						} 
-						else {
+						} else {
 							try {
 								ItemStack is = new ItemStack(Material.matchMaterial(itemName), amounts[finalI]);
 								is = checkForEnchantAndApply(is, sec);
-								if ((price*amounts[finalI]) < Main.getEconomy().getBalance(player)){
+								if ((price * amounts[finalI]) < Main.getEconomy().getBalance(player)) {
 									HashMap<Integer, ItemStack> unableItems = player.getInventory().addItem(is);
 									if (unableItems.size() > 0) {
-										player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
-												+ "x of " + itemName);
+										player.sendMessage(ChatColor.BOLD + "Cant Purchase "
+												+ Integer.toString(amounts[finalI]) + "x of " + itemName);
 									} else {
 										sendPlayerShopMessageAndUpdateGDP(amounts[finalI], player, itemName, false);
 									}
-								}
-								else{
-									player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
-												+ "x of " + itemName);
+								} else {
+									player.sendMessage(ChatColor.BOLD + "Cant Purchase "
+											+ Integer.toString(amounts[finalI]) + "x of " + itemName);
 								}
 							} catch (IllegalArgumentException ex) {
 							}
 						}
-					}
-					else{
+					} else {
 						event.setCancelled(true);
 					}
 				});
-			} 
-			else {
+			} else {
 				iStack = loadTradingItem(itemName, amounts[i - 7], false, sec);
 				gItem = new GuiItem(iStack, event -> {
-					if (event.getClick() == ClickType.LEFT){
+					if (event.getClick() == ClickType.LEFT) {
 						event.setCancelled(true);
 						ConcurrentHashMap<String, Integer> maxSellMapRec = Main.maxSellMap.get(player.getUniqueId());
 						int currentMax = maxSellMapRec.get(itemName);
 						Integer[] max = sec.itemMaxBuySell.get(itemName);
 						ItemStack test = new ItemStack(Material.matchMaterial(itemName));
 						test = checkForEnchantAndApply(test, sec);
-						if (!player.getInventory().containsAtLeast(test, amounts[finalI-7])){
+						if (!player.getInventory().containsAtLeast(test, amounts[finalI - 7])) {
 							player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI - 7])
 									+ "x of " + itemName);
 						}
@@ -262,56 +295,67 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 									+ "x of " + itemName);
 							int difference = (currentMax + amounts[finalI - 7]) - max[1];
 							if (difference != 0 && !(currentMax >= max[1])) {
-								removeItems(player, (finalI-7), itemName, sec, difference);
+								removeItems(player, (finalI - 7), itemName, sec, difference);
 								Main.maxSellMap.put(player.getUniqueId(), maxSellMapRec);
 							}
 							player.sendMessage(ChatColor.RED + "Max Sells Reached! - " + max[1] + "/" + max[1]);
 						} else {
 							removeItems(player, (finalI - 7), itemName, sec, 0);
 						}
-						}
-					else{
+					} else {
 						event.setCancelled(true);
-					}});	
+					}
+				});
 			}
 			front.addItem(gItem);
 		}
-		main.addPane(front);
-		main.addPane(loadReturnButton(sec));
-		CommandSender cSender = player;
-		main.update();
-		main.show((HumanEntity) cSender);
+		return front;
 	}
 
-	public void removeItems(Player player, int finalI, String itemName, Section sec, int difference) {
+	public static void removeItems(Player player, int finalI, String itemName, Section sec, int difference) {
 		try {
-			ItemStack iStack = new ItemStack(Material.matchMaterial(itemName), (amounts[finalI])-difference);
+			ItemStack iStack = new ItemStack(Material.matchMaterial(itemName), (amounts[finalI]) - difference);
 			iStack = checkForEnchantAndApply(iStack, sec);
 			HashMap<Integer, ItemStack> takenItems = player.getInventory().removeItem(iStack);
 			if (takenItems.size() > 0) {
-				player.sendMessage(
-						ChatColor.BOLD + "Cant sell " + Integer.toString(amounts[finalI]-difference) + "x of " + itemName);
+				player.sendMessage(ChatColor.BOLD + "Cant sell " + Integer.toString(amounts[finalI] - difference)
+						+ "x of " + itemName);
 			} else {
-				sendPlayerShopMessageAndUpdateGDP((amounts[finalI]-difference), player, itemName, true);
+				sendPlayerShopMessageAndUpdateGDP((amounts[finalI] - difference), player, itemName, true);
 			}
 		} catch (IllegalArgumentException ex) {
 		}
 	}
 
-	public ItemStack loadShopItem(String itemName, Section sec) {
+	public static ItemStack loadShopItem(String itemName, Section sec, Player player, boolean autosell) {
 		ItemStack iStack = new ItemStack(Material.matchMaterial(itemName));
 		ItemMeta iMeta = iStack.getItemMeta();
 		Integer[] maxBuySellForItem = sec.itemMaxBuySell.get(itemName);
-		iMeta.setDisplayName(ChatColor.GOLD + itemName);
-		iMeta.setLore(Arrays.asList((ChatColor.GRAY + "Click to purchase/sell"), (loadPriceDisplay(itemName)),
-				(ChatColor.WHITE + "Max Buys: " + maxBuySellForItem[0] + " per " + Config.getTimePeriod() + "min"),
-				(ChatColor.WHITE + "Max Sells: " + maxBuySellForItem[1] + " per " + Config.getTimePeriod() + "min")));
+		if (!autosell) {
+			iMeta.setDisplayName(ChatColor.GOLD + itemName);
+			iMeta.setLore(Arrays.asList((ChatColor.GRAY + "Click to purchase/sell"), (loadPriceDisplay(itemName)),
+					(ChatColor.WHITE + "Max Buys: " + maxBuySellForItem[0] + " per " + Config.getTimePeriod() + "min"),
+					(ChatColor.WHITE + "Max Sells: " + maxBuySellForItem[1] + " per " + Config.getTimePeriod()
+							+ "min")));
+		}
+		if (autosell) {
+			Boolean atonoff = Main.playerDataConfig.getBoolean(player.getUniqueId() + ".AutoSell" + "." + itemName);
+			if (!atonoff) {
+				iMeta.setDisplayName(ChatColor.AQUA + itemName + ChatColor.RED + " - Auto Sell Disabled");
+				iMeta.setLore(
+						Arrays.asList((ChatColor.GRAY + "Click to turn on auto-sell"), (loadPriceDisplay(itemName))));
+			} else {
+				iMeta.setDisplayName(ChatColor.AQUA + itemName + ChatColor.GREEN + " - Auto Sell Enabled");
+				iMeta.setLore(
+						Arrays.asList((ChatColor.GRAY + "Click to turn off auto-sell"), (loadPriceDisplay(itemName))));
+			}
+		}
 		iStack.setItemMeta(iMeta);
 		iStack = checkForEnchantAndApply(iStack, sec);
 		return iStack;
 	}
 
-	public String loadPriceDisplay(String item) {
+	public static String loadPriceDisplay(String item) {
 		double currentPrice = getItemPrice(item, false);
 		float timePeriod = (float) Config.getTimePeriod();
 		float timePeriodsInADay = (float) (1 / (timePeriod / 1440));
@@ -336,7 +380,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		}
 	}
 
-	public ItemStack loadTradingItem(String itemName, int number, boolean buy, Section sec) {
+	public static ItemStack loadTradingItem(String itemName, int number, boolean buy, Section sec) {
 		ItemStack iStack = new ItemStack(Material.matchMaterial(itemName), number);
 		ItemMeta iMeta = iStack.getItemMeta();
 		iMeta.setDisplayName(ChatColor.GOLD + itemName);
@@ -355,7 +399,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 	}
 
 	@Deprecated
-	public ItemStack checkForEnchantAndApply(ItemStack is, Section sec) {
+	public static ItemStack checkForEnchantAndApply(ItemStack is, Section sec) {
 		for (String enchantedItem : sec.enchantedItems) {
 			if (is.getType().toString().contains(enchantedItem)) {
 				ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops")
@@ -364,23 +408,21 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				ItemMeta meta = is.getItemMeta();
 				Enchantment ench = Enchantment.getByName(enchantmentName);
 				int level = config.getInt("enchantment-level", 0);
-				if (level == 0){
+				if (level == 0) {
 					return is;
-				}
-				else if (enchantmentName.contains("none")){
+				} else if (enchantmentName.contains("none")) {
+					Main.debugLog("Enchantment " + enchantmentName + " is null");
+					return is;
+				} else if (ench == null) {
 					Main.debugLog("Enchantment " + enchantmentName + " is null");
 					return is;
 				}
-				else if (ench == null){
-					Main.debugLog("Enchantment " + enchantmentName + " is null");
-					return is;
-				}
-				try{
-				meta.addEnchant(ench, level, true);
-				is.setItemMeta(meta);
-				}
-				catch(IllegalArgumentException ex){
-					Main.debugLog("IllegalArgumentException at shop " + is.getType().toString() + " enchantment " + enchantmentName + " is illegal");
+				try {
+					meta.addEnchant(ench, level, true);
+					is.setItemMeta(meta);
+				} catch (IllegalArgumentException ex) {
+					Main.debugLog("IllegalArgumentException at shop " + is.getType().toString() + " enchantment "
+							+ enchantmentName + " is illegal");
 					ex.printStackTrace();
 					return is;
 				}
@@ -402,84 +444,83 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		return check;
 	}
 
-	public double getSellPriceDifference(String item){
+	public double getSellPriceDifference(String item) {
 		double output = Config.getSellPriceDifference();
-		try{
-			ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops").getConfigurationSection((item));
+		try {
+			ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops")
+					.getConfigurationSection((item));
 			output = config.getDouble("sell-difference", output);
 			return output;
-		}
-		catch(NullPointerException ex){
+		} catch (NullPointerException ex) {
 			output = Config.getSellPriceDifference();
 		}
 		return output;
 	}
 
-	public static Double getItemPrice(String item, boolean sell){
-		if (!sell){
+	public static Double getItemPrice(String item, boolean sell) {
+		if (!sell) {
 			return Main.getItemPrices().get(item).price;
-		}
-		else{
+		} else {
 			return Main.getItemPrices().get(item).sellPrice;
 		}
 	}
 
-	public StaticPane loadReturnButton(Section sec){
+	public static StaticPane loadReturnButton(Section sec, boolean autosell) {
 		StaticPane output = new StaticPane(0, 0, 1, 1);
 		ItemStack iStack = new ItemStack(Material.ARROW);
 		ItemMeta iMeta = iStack.getItemMeta();
 		iMeta.setDisplayName(ChatColor.DARK_PURPLE + sec.name);
 		iMeta.setLore(Arrays.asList(ChatColor.GRAY + "Click to go to " + ChatColor.WHITE + sec.name));
 		iStack.setItemMeta(iMeta);
-		GuiItem gItem = new GuiItem(iStack, event ->{
+		GuiItem gItem = new GuiItem(iStack, event -> {
 			Player player = (Player) event.getWhoClicked();
 			player.getOpenInventory().close();
-			loadGUIMAIN(player, sec, false);
+			loadGUIMAIN(player, sec, false, autosell);
 		});
 		output.addItem(gItem, 0, 0);
 		return output;
 	}
 
-	public StaticPane[] loadPagePanes(PaginatedPane pPane, int lines, Gui main){
+	public static StaticPane[] loadPagePanes(PaginatedPane pPane, int lines, Gui main) {
 		StaticPane output = new StaticPane(0, (lines), 1, 1);
 		ItemStack iStack = new ItemStack(Material.ARROW);
 		ItemMeta iMeta = iStack.getItemMeta();
 		iMeta.setDisplayName(ChatColor.DARK_PURPLE + "Back");
-		iMeta.setLore(Arrays.asList(ChatColor.GRAY + "Page " + ChatColor.WHITE + (pPane.getPage()+1)));
+		iMeta.setLore(Arrays.asList(ChatColor.GRAY + "Page " + ChatColor.WHITE + (pPane.getPage() + 1)));
 		iStack.setItemMeta(iMeta);
 		StaticPane forward = loadForwardPane(pPane, lines, main, output);
-		GuiItem gItem = new GuiItem(iStack, event ->{
+		GuiItem gItem = new GuiItem(iStack, event -> {
 			event.setCancelled(true);
 			int page = pPane.getPage();
-			pPane.setPage(page-1);
+			pPane.setPage(page - 1);
 			forward.setVisible(true);
-			if (pPane.getPage() == 0){
+			if (pPane.getPage() == 0) {
 				output.setVisible(false);
 				forward.setVisible(true);
 			}
 			main.update();
 		});
 		output.addItem(gItem, 0, 0);
-		StaticPane[] realOut = {output, forward};
+		StaticPane[] realOut = { output, forward };
 		return realOut;
 	}
 
-	public StaticPane loadForwardPane(PaginatedPane pPane, int lines, Gui main, StaticPane backPane){
+	public static StaticPane loadForwardPane(PaginatedPane pPane, int lines, Gui main, StaticPane backPane) {
 		StaticPane output = new StaticPane(8, (lines), 1, 1);
 		ItemStack iStack = new ItemStack(Material.ARROW);
 		ItemMeta iMeta = iStack.getItemMeta();
 		iMeta.setDisplayName(ChatColor.DARK_PURPLE + "Next");
-		iMeta.setLore(Arrays.asList(ChatColor.GRAY + "Page " + ChatColor.WHITE + (pPane.getPage()+2)));
+		iMeta.setLore(Arrays.asList(ChatColor.GRAY + "Page " + ChatColor.WHITE + (pPane.getPage() + 2)));
 		iStack.setItemMeta(iMeta);
-		GuiItem gItem = new GuiItem(iStack, event ->{
+		GuiItem gItem = new GuiItem(iStack, event -> {
 			event.setCancelled(true);
 			int page = pPane.getPage();
 			int pages = pPane.getPages();
-			pPane.setPage(page+1);
-			if (pPane.getPage() > (pages-2)){
+			pPane.setPage(page + 1);
+			if (pPane.getPage() > (pages - 2)) {
 				output.setVisible(false);
 			}
-			if (pPane.getPage() > page){
+			if (pPane.getPage() > page) {
 				backPane.setVisible(true);
 			}
 			main.update();
@@ -488,7 +529,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		return output;
 	}
 
-	public StaticPane loadMainMenuBackPane(PaginatedPane pPane){
+	public static StaticPane loadMainMenuBackPane(PaginatedPane pPane, boolean autosell) {
 		StaticPane output = new StaticPane(0, 0, 1, 1);
 		ItemStack iStack = new ItemStack(Material.ARROW);
 		ItemMeta iMeta = iStack.getItemMeta();
@@ -499,7 +540,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			event.setCancelled(true);
 			Player player = (Player) event.getWhoClicked();
 			player.getOpenInventory().close();
-			loadGUISECTIONS(player);
+			loadGUISECTIONS(player, autosell);
 		});
 		output.addItem(gItem, 0, 0);
 		return output;

@@ -39,11 +39,11 @@ public class PriceCalculationHandler implements Runnable {
     }
 
     public static void loadItemPricesAndCalculate() throws ParseException, ClientProtocolException, IOException {
-        Main.log("Loading Item Price Update Algorithm");
         Integer playerCount = Bukkit.getServer().getOnlinePlayers().size();
-        JSONObject obj = new JSONObject();
-        JSONArray itemData = new JSONArray();
         if (Config.isUpdatePricesWhenInactive() || (!Config.isUpdatePricesWhenInactive() && playerCount > 0)){
+            Main.log("Loading Item Price Update Algorithm");
+            JSONObject obj = new JSONObject();
+            JSONArray itemData = new JSONArray();
             for (String str : Main.map.keySet()) {
                 ConcurrentHashMap<Integer, Double[]> buySellMap = Main.map.get(str);
                 Double price = buySellMap.get(buySellMap.size()-1)[0];
@@ -76,11 +76,11 @@ public class PriceCalculationHandler implements Runnable {
     }
 
     public static void loadEnchantmentPricesAndCalculate() throws ParseException, ClientProtocolException, IOException {
-        Main.log("Loading Enchantment Price Update Algorithm");
         Integer playerCount = Bukkit.getServer().getOnlinePlayers().size();
-        JSONObject obj = new JSONObject();
-        JSONArray itemData = new JSONArray();
         if (Config.isUpdatePricesWhenInactive() || (!Config.isUpdatePricesWhenInactive() && playerCount > 0)){
+            JSONObject obj = new JSONObject();
+            JSONArray itemData = new JSONArray();
+            Main.log("Loading Enchantment Price Update Algorithm");
             for (String str : Main.enchMap.get("Auto-Tune").keySet()) {
                 ConcurrentHashMap<Integer, Double[]> buySellMap = Main.enchMap.get("Auto-Tune").get(str).buySellData;
                 Double price = buySellMap.get(buySellMap.size()-1)[0];

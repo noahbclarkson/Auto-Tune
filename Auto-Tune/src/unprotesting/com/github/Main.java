@@ -241,7 +241,7 @@ public final class Main extends JavaPlugin implements Listener {
     this.getCommand("at").setExecutor(new AutoTuneCommand());
     this.getCommand("shop").setExecutor(new AutoTuneGUIShopUserCommand());
     this.getCommand("sell").setExecutor(new AutoTuneSellCommand());
-    if (Config.isAutoSellEnabled()){this.getCommand("autosell").setExecutor(new AutoTuneAutoSellCommand());}
+    this.getCommand("autosell").setExecutor(new AutoTuneAutoSellCommand());
     this.getCommand("loan").setExecutor(new AutoTuneLoanCommand());
     this.getCommand("atconfig").setExecutor(new AutoTuneAutoTuneConfigCommand());
     this.getCommand("gdp").setExecutor(new AutoTuneGDPCommand());

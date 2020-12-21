@@ -119,6 +119,7 @@ public final class Main extends JavaPlugin implements Listener {
   public static double tempsells = 0.0;
   public static Boolean locked = null;
   public static Boolean falseBool = false;
+  HttpServer server;
 
   @Getter
   public static ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>> enchMap;
@@ -168,6 +169,8 @@ public final class Main extends JavaPlugin implements Listener {
       INSTANCE = this;
     }
     scheduler.cancelTasks(getINSTANCE());
+    server.stop(3);
+    closeDataFiles();
     log.info(String.format("[%s] Disabled Version %s", getDescription().getName(), getDescription().getVersion()));
   }
 
@@ -191,7 +194,6 @@ public final class Main extends JavaPlugin implements Listener {
     }
     Config.loadDefaults();
     if (Config.isWebServer()) {
-      HttpServer server;
       try {
         server = HttpServer.create(new InetSocketAddress(Config.getPort()), 0);
         server.createContext("/", new StaticFileHandler(BASEDIR));
@@ -276,7 +278,7 @@ public final class Main extends JavaPlugin implements Listener {
     AutoTuneBuyCommand.shopTypes.add("enchantments");
     PriceCalculationHandler.loadItemPriceData();
     scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new PriceCalculationHandler(),  Config.getTimePeriod() * 600,  Config.getTimePeriod() * 1200);
-    scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new EnchantmentPriceHandler(), 1800*Config.getTimePeriod(), (Config.getTimePeriod()*2400));
+    scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new EnchantmentPriceHandler(), 900*Config.getTimePeriod(), (Config.getTimePeriod()*2400));
   }
 
   private boolean setupEconomy() {
@@ -453,6 +455,14 @@ public final class Main extends JavaPlugin implements Listener {
     if (tempdatadata.get("GDP")==null){
       tempdatadata.put("GDP", 0.0);
     }
+  }
+
+  public static void closeDataFiles(){
+    db.close();
+    memDB.close();
+    enchDB.close();
+    tempDB.close();
+    loanDB.close();
   }
 
   @Deprecated

@@ -202,7 +202,7 @@ public final class Main extends JavaPlugin implements Listener {
         log.info("[Auto Tune] Web server has started on port " + Config.getPort());
 
       } catch (IOException e) {
-        debugLog(
+        log(
             "Error Creating Server on port: " + Config.getPort() + ". Please try restarting or changing your port.");
         e.printStackTrace();
       }

@@ -109,6 +109,7 @@ public class HttpPostRequestor {
         }
         else{
             Main.debugLog("Api-Key has been changed in config");
+            Main.log("Sending API key to database..");
             CloseableHttpClient client = HttpClients.createDefault();
             HttpPost httpPost = new HttpPost("https://safe-refuge-09383.herokuapp.com");
             httpPost.setHeader("content-type", "application/json");

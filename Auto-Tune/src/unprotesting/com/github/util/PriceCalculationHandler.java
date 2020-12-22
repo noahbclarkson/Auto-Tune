@@ -61,7 +61,7 @@ public class PriceCalculationHandler implements Runnable {
             obj.put("minVolatility", Config.getBasicMinVariableVolatility());
             HttpPostRequestor.updatePricesforItems(obj);
             Date date = Calendar.getInstance().getTime();
-            Date newDate = MathHandler.addMinutesToJavaUtilDate(date, Config.getTimePeriod()*2);
+            Date newDate = MathHandler.addMinutesToJavaUtilDate(date, Config.getTimePeriod());
             String strDate = Main.dateFormat.format(newDate);
             Main.log("Done running item price Algorithim, a new check will occur at: " + strDate);
             try {

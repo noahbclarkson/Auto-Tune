@@ -432,25 +432,24 @@ public final class Main extends JavaPlugin implements Listener {
   public static void setupDataFiles() {
     if (Config.isChecksumHeaderBypass()) {
       Main.debugLog("Enabling checksum-header-bypass");
-      db = DBMaker.fileDB("data.db").checksumHeaderBypass().closeOnJvmShutdown().make();
+      db = DBMaker.fileDB("data.db").checksumHeaderBypass().fileChannelEnable().allocateStartSize(10240).transactionEnable().closeOnJvmShutdown().make();
       map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
-      playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
-      memDB = DBMaker.memoryDB().checksumHeaderBypass().closeOnJvmShutdown().make();
+      memDB = DBMaker.heapDB().checksumHeaderBypass().transactionEnable().closeOnJvmShutdown().make();
       memMap = memDB.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
-      enchDB = DBMaker.fileDB("enchantment-data.db").checksumHeaderBypass().closeOnJvmShutdown().make();
+      enchDB = DBMaker.fileDB("enchantment-data.db").checksumHeaderBypass().fileChannelEnable().transactionEnable().closeOnJvmShutdown().make();
       enchMap = (ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>>) enchDB.hashMap("enchMap", Serializer.STRING, Serializer.JAVA).createOrOpen();
     } else {
-      db = DBMaker.fileDB("data.db").checksumHeaderBypass().closeOnJvmShutdown().make();
+      db = DBMaker.fileDB("data.db").checksumHeaderBypass().fileChannelEnable().allocateStartSize(10240).transactionEnable().closeOnJvmShutdown().make();
       map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
-      playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
-      memDB = DBMaker.memoryDB().closeOnJvmShutdown().make();
+      memDB = DBMaker.heapDB().closeOnJvmShutdown().transactionEnable().make();
       memMap = memDB.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
-      enchDB = DBMaker.fileDB("enchantment-data.db").closeOnJvmShutdown().make();
+      enchDB = DBMaker.fileDB("enchantment-data.db").closeOnJvmShutdown().fileChannelEnable().transactionEnable().make();
       enchMap = (ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>>) enchDB.hashMap("enchMap", Serializer.STRING, Serializer.JAVA).createOrOpen();
     }
-    tempDB = DBMaker.fileDB("plugins/Auto-Tune/temp/tempdata.db").checksumHeaderBypass().closeOnJvmShutdown().make();
+    playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
+    tempDB = DBMaker.fileDB("plugins/Auto-Tune/temp/tempdata.db").checksumHeaderBypass().fileMmapEnableIfSupported().fileMmapPreclearDisable().cleanerHackEnable().closeOnJvmShutdown().transactionEnable().make();
     tempdatadata = tempDB.hashMap("tempdatadata", Serializer.STRING, Serializer.DOUBLE).createOrOpen();
-    loanDB = DBMaker.fileDB("plugins/Auto-Tune/temp/loandata.db").checksumHeaderBypass().closeOnJvmShutdown().make();
+    loanDB = DBMaker.fileDB("plugins/Auto-Tune/temp/loandata.db").checksumHeaderBypass().fileMmapEnableIfSupported().fileMmapPreclearDisable().cleanerHackEnable().transactionEnable().closeOnJvmShutdown().make();
     loanMap =  loanDB.hashMap("loanMap", Serializer.JAVA, Serializer.JAVA).createOrOpen();
     if (tempdatadata.get("GDP")==null){
       tempdatadata.put("GDP", 0.0);
@@ -458,6 +457,10 @@ public final class Main extends JavaPlugin implements Listener {
   }
 
   public static void closeDataFiles(){
+    db.commit();
+    enchDB.commit();
+    tempDB.commit();
+    loanDB.commit();
     db.close();
     memDB.close();
     enchDB.close();

@@ -139,6 +139,10 @@ public final class Main extends JavaPlugin implements Listener {
   @Setter
   public static Gui gui;
 
+  @Getter
+  public static Economy economy;
+
+
   public ArrayList<String> itemStringArray;
 
   @Getter
@@ -282,16 +286,12 @@ public final class Main extends JavaPlugin implements Listener {
   }
 
   private boolean setupEconomy() {
-    RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
+    RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
     if (rsp == null) {
       return false;
     }
     econ = rsp.getProvider();
     return econ != null;
-  }
-
-  public static Economy getEconomy() {
-    return econ;
   }
 
   public static String[] convert(Set<String> setOfString) {

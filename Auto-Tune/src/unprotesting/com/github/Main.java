@@ -10,7 +10,9 @@ import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -165,10 +167,10 @@ public final class Main extends JavaPlugin implements Listener {
   public static Integer materialListSize;
 
   @Getter
-  public static TopMover[] topSellers;
+  public static ArrayList<TopMover> topSellers;
 
   @Getter
-  public static TopMover[] topBuyers;
+  public static ArrayList<TopMover> topBuyers;
 
   @Getter
   public static ConcurrentHashMap<String, ItemPriceData> itemPrices = new ConcurrentHashMap<String, ItemPriceData>();
@@ -465,8 +467,8 @@ public final class Main extends JavaPlugin implements Listener {
     if (tempdatadata.get("GDP")==null){
       tempdatadata.put("GDP", 0.0);
     }
-    topSellers = new TopMover[Config.getTopMoversAmount()];
-    topBuyers = new TopMover[Config.getTopMoversAmount()];
+    topSellers = new ArrayList<TopMover>();
+    topBuyers = new ArrayList<TopMover>();
   }
 
   public static void closeDataFiles(){
@@ -482,9 +484,13 @@ public final class Main extends JavaPlugin implements Listener {
   }
 
   public static void loadTopMovers(){
+    Main.topBuyers.clear();
+    Main.topSellers.clear();
     for (String item : Main.map.keySet()){
       TopMover itemMover = new TopMover(item);
     }
+    Collections.sort(Main.topBuyers);
+    Collections.sort(Main.topSellers);
     if (Config.isDebugEnabled()){
       Main.debugLog("Top Buyers: ");
     for (TopMover mover : topBuyers){

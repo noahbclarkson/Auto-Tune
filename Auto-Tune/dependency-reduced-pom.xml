@@ -211,7 +211,7 @@
   </dependencies>
   <properties>
     <mainClass>${project.groupId}.${project.artifactId}</mainClass>
-    <api.version>1.6</api.version>
+    <api.version>1.8</api.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 </project>

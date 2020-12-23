@@ -12,6 +12,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -83,6 +85,7 @@ import unprotesting.com.github.util.PriceCalculationHandler;
 import unprotesting.com.github.util.Section;
 import unprotesting.com.github.util.StaticFileHandler;
 import unprotesting.com.github.util.TextHandler;
+import unprotesting.com.github.util.TopMover;
 import unprotesting.com.github.util.TutorialHandler;
 
 public final class Main extends JavaPlugin implements Listener {
@@ -140,8 +143,8 @@ public final class Main extends JavaPlugin implements Listener {
   public static Gui gui;
 
   @Getter
+  @Setter
   public static Economy economy;
-
 
   public ArrayList<String> itemStringArray;
 
@@ -160,6 +163,12 @@ public final class Main extends JavaPlugin implements Listener {
   @Getter
   @Setter
   public static Integer materialListSize;
+
+  @Getter
+  public static TopMover[] topSellers;
+
+  @Getter
+  public static TopMover[] topBuyers;
 
   @Getter
   public static ConcurrentHashMap<String, ItemPriceData> itemPrices = new ConcurrentHashMap<String, ItemPriceData>();
@@ -283,6 +292,7 @@ public final class Main extends JavaPlugin implements Listener {
     PriceCalculationHandler.loadItemPriceData();
     scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new PriceCalculationHandler(),  Config.getTimePeriod() * 600,  Config.getTimePeriod() * 1200);
     scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new EnchantmentPriceHandler(), 900*Config.getTimePeriod(), (Config.getTimePeriod()*2400));
+    if (Config.isSendPlayerTopMoversOnJoin()){loadTopMovers();};
   }
 
   private boolean setupEconomy() {
@@ -291,6 +301,7 @@ public final class Main extends JavaPlugin implements Listener {
       return false;
     }
     econ = rsp.getProvider();
+    setEconomy(econ);
     return econ != null;
   }
 
@@ -454,6 +465,8 @@ public final class Main extends JavaPlugin implements Listener {
     if (tempdatadata.get("GDP")==null){
       tempdatadata.put("GDP", 0.0);
     }
+    topSellers = new TopMover[Config.getTopMoversAmount()];
+    topBuyers = new TopMover[Config.getTopMoversAmount()];
   }
 
   public static void closeDataFiles(){
@@ -466,6 +479,22 @@ public final class Main extends JavaPlugin implements Listener {
     enchDB.close();
     tempDB.close();
     loanDB.close();
+  }
+
+  public static void loadTopMovers(){
+    for (String item : Main.map.keySet()){
+      TopMover itemMover = new TopMover(item);
+    }
+    if (Config.isDebugEnabled()){
+      Main.debugLog("Top Buyers: ");
+    for (TopMover mover : topBuyers){
+      Main.debugLog(mover.toString());
+    }
+    Main.debugLog("Top Sellers: ");
+    for (TopMover mover : topSellers){
+      Main.debugLog(mover.toString());
+    }
+    }
   }
 
   @Deprecated
@@ -518,11 +547,8 @@ public final class Main extends JavaPlugin implements Listener {
       YamlConfiguration.loadConfiguration(playerdata);
       playerDataConfig.save(playerdata);
     } catch (IOException e) {
-      plugin.getLogger().warning("Unable to save " + playerdatafilename); // shouldn't really happen, but save
-      // throws the
-      // exception
+      plugin.getLogger().warning("Unable to save " + playerdatafilename); 
     }
-
   }
 
   public static void log(String input) {

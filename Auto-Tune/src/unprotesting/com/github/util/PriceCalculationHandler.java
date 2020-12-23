@@ -63,6 +63,7 @@ public class PriceCalculationHandler implements Runnable {
             Date date = Calendar.getInstance().getTime();
             Date newDate = MathHandler.addMinutesToJavaUtilDate(date, Config.getTimePeriod());
             String strDate = Main.dateFormat.format(newDate);
+            Main.loadTopMovers();
             Main.log("Done running item price Algorithim, a new check will occur at: " + strDate);
             try {
                 Main.debugLog("Saving data to data.csv file");

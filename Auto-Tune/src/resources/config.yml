@@ -66,6 +66,12 @@ max-volatility: 0.5
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
 min-volatility: 0.025
 
+##  Send players data about the most significant changes in the economy when they join
+send-player-top-movers-on-join: true
+
+##  How many items should be displayed for sell + buy (A value of 5 means 10 items as 5 for sell + buy)
+top-movers-amount: 5
+
 ##  -- Data Selection Settings --  ##
 
 ##  Info: When setting your data selection algorithim use a site such as https://www.desmos.com/calculator

@@ -206,7 +206,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		Gui main = new Gui(4, Config.getMenuTitle());
 		OutlinePane front = new OutlinePane(1, 1, 7, 2);
 		if (!autosell) {
-			front = loadTradingItems(player, itemName, sec, front);
+			front = loadTradingItems(itemName, sec, front);
 		}
 		main.addPane(front);
 		main.addPane(loadReturnButton(sec, autosell));
@@ -215,7 +215,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		main.show((HumanEntity) cSender);
 	}
 
-	public static OutlinePane loadTradingItems(Player player, String itemName, Section sec, OutlinePane front) {
+	public static OutlinePane loadTradingItems(String itemName, Section sec, OutlinePane front) {
 		for (int i = 0; i < 14; i++) {
 			final int finalI = i;
 			ItemStack iStack;
@@ -223,6 +223,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			if (i < 7) {
 				iStack = loadTradingItem(itemName, amounts[i], true, sec);
 				gItem = new GuiItem(iStack, event -> {
+					Player player = (Player) event.getWhoClicked();
 					if (event.getClick() == ClickType.LEFT) {
 						event.setCancelled(true);
 						ConcurrentHashMap<String, Integer> maxBuyMapRec = Main.maxBuyMap.get(player.getUniqueId());
@@ -279,6 +280,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			} else {
 				iStack = loadTradingItem(itemName, amounts[i - 7], false, sec);
 				gItem = new GuiItem(iStack, event -> {
+					Player player = (Player) event.getWhoClicked();
 					if (event.getClick() == ClickType.LEFT) {
 						event.setCancelled(true);
 						ConcurrentHashMap<String, Integer> maxSellMapRec = Main.maxSellMap.get(player.getUniqueId());

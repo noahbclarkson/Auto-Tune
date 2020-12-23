@@ -100,11 +100,11 @@ public class HttpPostRequestor {
 
     public static boolean ghostCheckAPIKey() throws ClientProtocolException, IOException {
         if (Config.getApiKey() == "xyz"){
-            Main.log("Please change your API key in the config.yml file");
+            Main.log("Please change your API key in the config.yml file. If you don't have an API key you can get one for free on our discord: https://discord.gg/bj2US6KuXW");
             return false;
         }
         if (Config.getEmail() == "xyz@gmail.com"){
-            Main.log("Please change your Email in the config.yml file");
+            Main.log("Please change your email in the config.yml file to be the same email you used to sign up.");
             return false;
         }
         else{

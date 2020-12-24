@@ -183,9 +183,11 @@ public final class Main extends JavaPlugin implements Listener {
     if (getINSTANCE() == null){
       INSTANCE = this;
     }
-    scheduler.cancelTasks(getINSTANCE());
-    server.stop(3);
+    if (server != null){
+      server.stop(0);
+    }
     closeDataFiles();
+    scheduler.cancelTasks(getINSTANCE());
     log.info(String.format("[%s] Disabled Version %s", getDescription().getName(), getDescription().getVersion()));
   }
 
@@ -215,7 +217,6 @@ public final class Main extends JavaPlugin implements Listener {
         server.setExecutor(null);
         server.start();
         log.info("[Auto Tune] Web server has started on port " + Config.getPort());
-
       } catch (IOException e) {
         log(
             "Error Creating Server on port: " + Config.getPort() + ". Please try restarting or changing your port.");
@@ -473,14 +474,14 @@ public final class Main extends JavaPlugin implements Listener {
 
   public static void closeDataFiles(){
     db.commit();
-    enchDB.commit();
-    tempDB.commit();
-    loanDB.commit();
     db.close();
-    memDB.close();
+    enchDB.commit();
     enchDB.close();
+    tempDB.commit();
     tempDB.close();
+    loanDB.commit();
     loanDB.close();
+    memDB.close();
   }
 
   public static void loadTopMovers(){

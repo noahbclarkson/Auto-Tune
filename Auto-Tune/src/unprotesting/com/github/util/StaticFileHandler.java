@@ -34,7 +34,6 @@ public class StaticFileHandler implements HttpHandler {
             ex.sendResponseHeaders(404, 0);
             out.write("404 File not found.".getBytes());
         }
-
         out.close();
     }
 

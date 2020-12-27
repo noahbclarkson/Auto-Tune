@@ -30,7 +30,7 @@ An example of a graph for an item created by the exponential algorithm displayed
 
 An example of a shop setup using Auto-Tune:
 
-<img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.4/.github/shop.png?raw=true" width="550"/>
+<img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.4/.github/ShopDisplay.gif?raw=true" width="550"/>
 
   #### Feature List
 

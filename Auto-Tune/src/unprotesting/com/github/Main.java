@@ -133,7 +133,7 @@ public final class Main extends JavaPlugin implements Listener {
   private File configf;
 
   @Getter
-  public static File shopf, tradef, tradeShortf, enchf;
+  public static File shopf, tradef, tradeShortf, enchf, faviconf;
 
   public static String basicVolatilityAlgorithim;
   public static String priceModel;
@@ -223,6 +223,8 @@ public final class Main extends JavaPlugin implements Listener {
         e.printStackTrace();
       }
     }
+    Main.log("Please leave a positive review for Auto-Tune on our spigot page: https://spigotmc.org/resources/auto-tune.85715");
+    Main.log("Please donate here if you enjoy the plugin: https://www.patreon.com/Unprotesting");
     int pluginId = 9687;
     Metrics metrics = new Metrics(getINSTANCE(), pluginId);
     setupDataFiles();
@@ -379,6 +381,7 @@ public final class Main extends JavaPlugin implements Listener {
     enchf = new File(getDataFolder(), "enchantments.yml");
     tradef = new File("plugins/Auto-Tune/web/", "trade.html");
     tradeShortf = new File("plugins/Auto-Tune/web/", "trade-short.html");
+    faviconf = new File("plugins/Auto-Tune/web/", "favicon.ico");
 
     if (!configf.exists()) {
       configf.getParentFile().mkdirs();
@@ -405,6 +408,10 @@ public final class Main extends JavaPlugin implements Listener {
       saveResource("enchantments.yml", false);
     }
 
+    if (!faviconf.exists()) {
+      faviconf.getParentFile().mkdirs();
+      saveResource("web/favicon.ico", false);
+    }
 
     mainConfig = new YamlConfiguration();
     shopConfig = new YamlConfiguration();

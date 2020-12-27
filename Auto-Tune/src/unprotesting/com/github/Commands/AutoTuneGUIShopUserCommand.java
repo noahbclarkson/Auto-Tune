@@ -21,7 +21,6 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
@@ -30,7 +29,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
-import unprotesting.com.github.util.InventoryHandler;
 import unprotesting.com.github.util.Section;
 import unprotesting.com.github.util.TextHandler;
 
@@ -461,9 +459,26 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
 	public static Double getItemPrice(String item, boolean sell) {
 		if (!sell) {
-			return Main.getItemPrices().get(item).price;
+			Double output = Main.getItemPrices().get(item).price;
+			if (output != null){
+				return output;
+			}
+			else{
+				ConcurrentHashMap<Integer, Double[]> map = Main.map.get(item);
+				output = map.get(map.size()-1)[0];
+				return output;
+			}
 		} else {
-			return Main.getItemPrices().get(item).sellPrice;
+			Double output = Main.getItemPrices().get(item).sellPrice;
+			if (output != null){
+				return output;
+			}
+			else{
+				ConcurrentHashMap<Integer, Double[]> map = Main.map.get(item);
+				output = map.get(map.size()-1)[0];
+				output = output - output*0.01*getSellDifference(item);
+				return output;
+			}
 		}
 	}
 

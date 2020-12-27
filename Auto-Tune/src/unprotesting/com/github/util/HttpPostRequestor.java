@@ -1,6 +1,7 @@
 package unprotesting.com.github.util;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.gson.JsonArray;
@@ -22,16 +23,28 @@ import unprotesting.com.github.Main;
 
 public class HttpPostRequestor {
 
+    public static CloseableHttpClient client = HttpClients.createDefault();
+
     public static void updatePricesforItems(JSONObject json) throws ClientProtocolException, IOException {
         HttpEntity entityResponse = sendPostRequest(json);
         if (entityResponse != null) {
             JsonParser parser = new JsonParser();
-            String result = EntityUtils.toString(entityResponse);
+            String result = null;
+            try {
+                result = EntityUtils.toString(entityResponse);
+            } catch (SocketException ex) {
+                Main.debugLog("Socket Exception: Socket Closed. Reloading HttpClient..");
+                client = HttpClients.createDefault();
+                entityResponse = sendPostRequest(json);
+            }
+            if (result == null) {
+                return;
+            }
             JsonElement jsonElement = parser.parse(result);
             JsonObject jsonObject = jsonElement.getAsJsonObject();
             JsonElement jsonArrayElement = jsonObject.get("returnData");
             JsonArray jsonArray = jsonArrayElement.getAsJsonArray();
-            for (JsonElement element : jsonArray){
+            for (JsonElement element : jsonArray) {
                 JsonObject obj = element.getAsJsonObject();
                 JsonElement priceElement = obj.get("newPrice");
                 JsonElement nameElement = obj.get("itemName");
@@ -39,22 +52,28 @@ public class HttpPostRequestor {
                 String name = nameElement.getAsString();
                 Double price = Double.parseDouble(priceString);
                 ConcurrentHashMap<Integer, Double[]> map = Main.map.get(name);
-                Double[] arr = {price, 0.0, 0.0};
+                Double[] arr = { price, 0.0, 0.0 };
                 map.put((map.size()), arr);
-                Main.map.put(name, map); 
+                Main.map.put(name, map);
             }
         }
     }
 
     public static HttpEntity sendPostRequest(JSONObject json) throws IOException {
-        CloseableHttpClient client = HttpClients.createDefault();
         HttpPost httpPost = new HttpPost("https://economy-api.herokuapp.com/");
         StringEntity entity = new StringEntity(json.toJSONString());
         httpPost.setEntity(entity);
         httpPost.setHeader("content-type", "application/json");
         httpPost.setHeader("apikey", Config.getApiKey());
-        httpPost.setHeader("email", Config.getEmail()); 
-        CloseableHttpResponse response = client.execute(httpPost);
+        httpPost.setHeader("email", Config.getEmail());
+        CloseableHttpResponse response = null;
+        try{
+            response = client.execute(httpPost);
+        }
+        catch (IllegalStateException ex){
+            client = HttpClients.createDefault();
+            response = client.execute(httpPost);
+        }
         int statusCode = response.getStatusLine().getStatusCode();
         HttpEntity entityResponse = null;
         if (statusCode == 200) {

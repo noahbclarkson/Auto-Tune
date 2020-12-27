@@ -41,6 +41,7 @@ public class PriceCalculationHandler implements Runnable {
     public static void loadItemPricesAndCalculate() throws ParseException, ClientProtocolException, IOException {
         Integer playerCount = Bukkit.getServer().getOnlinePlayers().size();
         if (Config.isUpdatePricesWhenInactive() || (!Config.isUpdatePricesWhenInactive() && playerCount > 0)){
+            Main.setupMaxBuySell();
             Main.log("Loading Item Price Update Algorithm");
             JSONObject obj = new JSONObject();
             JSONArray itemData = new JSONArray();

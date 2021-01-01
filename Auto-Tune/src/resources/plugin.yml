@@ -21,9 +21,11 @@ commands:
     at:
       description: Auto-Tune Command.
       usage: /<at> <login|increase|decrease|remove>
+      aliases: [autotune]
     trade:
       description: Trade Online with other players.
       usage: /<trade> 
+      aliases: [pricehistory, onlinepricehistory]
     shop:
       description: GUIShop alias for buy and sell commands.
       usage: /<shop> <shop-section>
@@ -43,6 +45,7 @@ commands:
       description: View and change plugin config settings
     buy:
       description: Buy items not available in the shop
+      aliases: [purchase]
 permssions:
   at.help:
     description: Displays Auto-Tune help information

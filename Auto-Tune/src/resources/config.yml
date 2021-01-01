@@ -164,3 +164,11 @@ tutorial: true
 
 ##  Time in seconds between messages
 tutorial-message-period: 325
+
+##  Data storage location
+data-location: 'plugins/Auto-Tune/'
+
+##  Enable transactions
+##  Info: This will result in much larger file sizes and additional transaction files but more stability and improved data-protection
+##  Info: This is off by default as the default data protection will be fine for most servers
+data-transactions: false

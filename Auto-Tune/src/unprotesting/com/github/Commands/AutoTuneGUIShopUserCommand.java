@@ -290,7 +290,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 							player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI - 7])
 									+ "x of " + itemName);
 						}
-						if (max[1] < (currentMax + amounts[finalI - 7])) {
+						else if (max[1] < (currentMax + amounts[finalI - 7])) {
 							player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI - 7])
 									+ "x of " + itemName);
 							int difference = (currentMax + amounts[finalI - 7]) - max[1];
@@ -299,7 +299,8 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 								Main.maxSellMap.put(player.getUniqueId(), maxSellMapRec);
 							}
 							player.sendMessage(ChatColor.RED + "Max Sells Reached! - " + max[1] + "/" + max[1]);
-						} else {
+						} 
+						else {
 							removeItems(player, (finalI - 7), itemName, sec, 0);
 						}
 					} else {

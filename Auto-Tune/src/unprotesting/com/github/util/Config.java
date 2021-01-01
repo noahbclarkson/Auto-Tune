@@ -19,7 +19,8 @@ public final class Config {
                                                     calculateGlobalGDP,
                                                         tutorial,
                                                             updatePricesWhenInactive,
-                                                                sendPlayerTopMoversOnJoin;
+                                                                sendPlayerTopMoversOnJoin,
+                                                                    dataTransactions;
 
     @Getter
     @Setter
@@ -47,7 +48,8 @@ public final class Config {
                                                 email,
                                                     inflationMethod,
                                                         currencySymbol,
-                                                            economyShopConfig;
+                                                            economyShopConfig,
+                                                                dataLocation;
 
     @Getter
     @Setter
@@ -75,6 +77,7 @@ public final class Config {
     Config.setSendPlayerTopMoversOnJoin(Main.getMainConfig().getBoolean("send-player-top-movers-on-join", true));
     Config.setWebServer(Main.getMainConfig().getBoolean("web-server-enabled", true));
     Config.setTutorial(Main.getMainConfig().getBoolean("tutorial", true));
+    Config.setDataTransactions(Main.getMainConfig().getBoolean("data-transactions", false));
     Config.setCalculateGlobalGDP(Main.getMainConfig().getBoolean("calculate-global-GDP", true));
     Config.setAutoSellEnabled(Main.getMainConfig().getBoolean("auto-sell-enabled", true));
     Config.setInflationEnabled(Main.getMainConfig().getBoolean("inflation-enabled", true));
@@ -97,8 +100,9 @@ public final class Config {
     Config.setMenuTitle(
     ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("menu-title", "Auto-Tune Shop")));
     Config.setPricingModel(
-    ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("pricing-model", "Basic")));
+    ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("pricing-model", "Exponential")));
     Config.setApiKey(Main.getMainConfig().getString("api-key", "xyz"));
+    Config.setDataLocation(Main.getMainConfig().getString("data-location", ""));
     Config.setInflationMethod(Main.getMainConfig().getString("inflation-method", "Mixed"));
     Config.setEmail(Main.getMainConfig().getString("email", "xyz@gmail.com"));
     Config.setBasicVolatilityAlgorithim(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("Volatility-Algorithim", "Variable")));

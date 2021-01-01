@@ -22,14 +22,13 @@ public class AutoTuneGDPCommand implements CommandExecutor {
         if (command.getName().equalsIgnoreCase("gdp")){
             if (args.length < 1){
                 if (p.hasPermission("at.gdp") || p.isOp()){
-                    String GDP = AutoTuneGUIShopUserCommand.df4.format(Main.tempdatadata.get("GDP"));
-                    double returnedGDP = Double.parseDouble(GDP);
+                    String GDP = AutoTuneGUIShopUserCommand.df2.format(Main.tempdatadata.get("GDP"));
                     double[] serverBalance = getServerBalance();
                     double loanBalance = getLoanBalance();
-                    p.sendMessage(ChatColor.GOLD + "The Current GDP is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df1.format(returnedGDP));
-                    p.sendMessage(ChatColor.GOLD + "The Current GDP per capita is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(returnedGDP/serverBalance[1]));
-                    p.sendMessage(ChatColor.GOLD + "The Current Average Balance is: $" + ChatColor.GREEN + (serverBalance[0]/serverBalance[1]));
-                    p.sendMessage(ChatColor.GOLD + "The Current Average Debt is: $" + ChatColor.GREEN + (loanBalance/serverBalance[1]));
+                    p.sendMessage(ChatColor.GOLD + "The Current GDP is: $" + ChatColor.GREEN + GDP);
+                    p.sendMessage(ChatColor.GOLD + "The Current GDP per capita is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(Main.tempdatadata.get("GDP")/serverBalance[1]));
+                    p.sendMessage(ChatColor.GOLD + "The Current Average Balance is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(serverBalance[0]/serverBalance[1]));
+                    p.sendMessage(ChatColor.GOLD + "The Current Average Debt is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(loanBalance/serverBalance[1]));
                 }
                 else if (!(p.hasPermission("at.gdp")) && !(p.isOp())){
                     TextHandler.noPermssion(p);

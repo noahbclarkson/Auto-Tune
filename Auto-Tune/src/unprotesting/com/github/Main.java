@@ -268,7 +268,6 @@ public final class Main extends JavaPlugin implements Listener {
     this.getCommand("buy").setExecutor(new AutoTuneBuyCommand());
     basicVolatilityAlgorithim = Config.getBasicVolatilityAlgorithim();
     priceModel = Config.getPricingModel().toString();
-    TextHandler.sendPriceModelData(priceModel);
     scheduler = getServer().getScheduler();
     if (Config.isAutoSellEnabled()){
     scheduler.scheduleSyncRepeatingTask(getINSTANCE(), new AutoSellEventHandler(), Config.getAutoSellUpdatePeriod() * 5,
@@ -451,16 +450,27 @@ public final class Main extends JavaPlugin implements Listener {
   }
 
   public static void setupDataFiles() {
+    String dataLocationString = (Config.getDataLocation() + "data.db");
     if (Config.isChecksumHeaderBypass()) {
       Main.debugLog("Enabling checksum-header-bypass");
-      db = DBMaker.fileDB("data.db").checksumHeaderBypass().fileChannelEnable().allocateStartSize(10240).transactionEnable().closeOnJvmShutdown().make();
+      if (Config.isDataTransactions()){
+        db = DBMaker.fileDB(dataLocationString).checksumHeaderBypass().fileChannelEnable().allocateStartSize(10240).transactionEnable().closeOnJvmShutdown().make();
+      }
+      else{
+        db = DBMaker.fileDB(dataLocationString).checksumHeaderBypass().fileChannelEnable().allocateStartSize(10240).closeOnJvmShutdown().make();
+      }
       map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
       memDB = DBMaker.heapDB().checksumHeaderBypass().transactionEnable().closeOnJvmShutdown().make();
       memMap = memDB.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
       enchDB = DBMaker.fileDB("enchantment-data.db").checksumHeaderBypass().fileChannelEnable().transactionEnable().closeOnJvmShutdown().make();
       enchMap = (ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>>) enchDB.hashMap("enchMap", Serializer.STRING, Serializer.JAVA).createOrOpen();
     } else {
-      db = DBMaker.fileDB("data.db").checksumHeaderBypass().fileChannelEnable().allocateStartSize(10240).transactionEnable().closeOnJvmShutdown().make();
+      if (Config.isDataTransactions()){
+        db = DBMaker.fileDB(dataLocationString).fileChannelEnable().allocateStartSize(10240).transactionEnable().closeOnJvmShutdown().make();
+      }
+      else{
+        db = DBMaker.fileDB(dataLocationString).fileChannelEnable().allocateStartSize(10240).closeOnJvmShutdown().make();
+      }
       map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
       memDB = DBMaker.heapDB().closeOnJvmShutdown().transactionEnable().make();
       memMap = memDB.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
@@ -513,6 +523,7 @@ public final class Main extends JavaPlugin implements Listener {
 
   @Deprecated
   public boolean onCommand(CommandSender sender, Command testcmd, String trade, String[] help) {
+    if(testcmd.getName().equalsIgnoreCase("trade")){
     if (sender instanceof Player) {
       Player player = (Player) sender;
       String hostIP = "";
@@ -554,6 +565,8 @@ public final class Main extends JavaPlugin implements Listener {
       return true;
     }
     return false;
+  }
+  return false;
   }
 
   public static void saveplayerdata() {

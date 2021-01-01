@@ -44,9 +44,10 @@ An example of a shop setup using Auto-Tune:
   - Configurable shops with options to lock price and sell-price-differences [For more look at shops.yml configuration below]
   - Configurable sell-price-difference
   - Sell price-difference-variation algorithim options [Update period, total time, starting-difference, ending difference]
-  - Player loaning [/loan, /loans, /payloan, easy to use]
+  - Player loaning including an easy loaning GUI with /loan
   - Configurable interest rates [Update period, amount and more]
   - Debt settings
+  - Exploit protection
   - GDP and GDP per capita calculation [factors in buying/selling, debt, and loaning, using /gdp]
   - Incredibly fast data-collection and creation [50000 data insertions and retrevals a second when in memory, 5000 data insertions and retrievals a second when in storage (in our tests)]
   - Data corruption protection
@@ -87,6 +88,7 @@ An example of a shop setup using Auto-Tune:
  ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗
  ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝
 
+
   -- General Settings --  
 
   API key given on purchase/signup
@@ -96,6 +98,7 @@ api-key: 'xyz'
 email: 'xyz@gmail.com'
 
   Enable/Disable integrated Web Server.
+  Info: Use /trade to view the web-server
 web-server-enabled: true
 
   Port for integrated Web Server (If enabled)
@@ -103,25 +106,22 @@ web-server-enabled: true
 port: 8123
 
   The maximum length in data points that the trade-short.html will show (this doesn't affect data)
-maximum-short-trade-length: 100
+  Info: When the time-period is set to 10, 144 is one day.
+maximum-short-trade-length: 144
 
   Server name that will show up in commands and requests
-server-name: 'Auto-Tune Test Server'
-
-  Automatic Pricing Model - set this to exponential for best results
-  Options: Basic | Advanced | Exponential
-pricing-model: 'Exponential'
+server-name: 'My Server'
 
   Time Period in minutes
   Info: This should be around a tenth of the total items in your shop (i.e with 150 items this would be 15) to prevent overload
   Info: When decreasing or increasing this adjust your volatility settings accordingly
-time-period: 10
+time-period: 5
 
   The amount of menu rows in the GUI shop, value of 4-6.
 menu-rows: 6
 
   GUI Shop Menu title
-menu-title: 'Auto-Tune Shop'
+menu-title: 'Shop'
 
   Message sent for players with no permission
 no-permission: '&eYou do not have permission to perform this command'
@@ -132,107 +132,116 @@ auto-sell-enabled: true
   How often auto-sell updates in ticks
   Info: Set this higher if few players use autosell
   Info: Set it lower if many players use autosell
-auto-sell-update-period: 15
+auto-sell-update-period: 25
 
   How often players are shown their auto-sell profits in ticks
 auto-sell-profit-update-period: 1200
 
-  -- Basic/Advanced Pricing Model Settings --  
-
-  Volatility Calulation Algorithim
-  Info: A fixed rate locks the maxiumum change to a certain price
-  Info: A variable rate changes the maxiumum price-change based on current price calculations
-  Most people dont need to change this off of Variable as they will be using the Exponential model
-Volatility-Algorithim: 'Variable'
+  -- Pricing Model Settings --  
 
   Percentage difference in sell price to buy price
 sell-price-difference: 10.0
 
-  Maximum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
-Fixed-Max-Volatility: 2.00
-  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
-Fixed-Min-Volatility: 0.05
-
   Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
-Variable-Max-Volatility: 0.75
+max-volatility: 0.5
+
   Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
-Variable-Min-Volatility: 0.025
+min-volatility: 0.025
 
-  -- Exponential Pricing Model Settings --  
+  Send players data about the most significant changes in the economy when they join
+send-player-top-movers-on-join: true
 
-  Info: This algorithim uses settings from the Variable-Advanced Pricing Model Settings: sell-price-difference, Variable-Max-Volatility, Variable-Min-Volatility
+  How many items should be displayed for sell + buy (A value of 5 means 10 items as 5 for sell + buy)
+top-movers-amount: 5
+
+  -- Data Selection Settings --  
+
   Info: When setting your data selection algorithim use a site such as https://www.desmos.com/calculator
   Info: Data selection uses the equation y=m(x^z)+c, for example the default is y=0.075(x^1.6)+1.25
 
   'm' in equation: y=m(x^z)+c
 data-selection-m: 0.05
+
   'z' in equation: y=m(x^z)+c
 data-selection-z: 1.6
+
   'c' in equation: y=m(x^z)+c
 data-selection-c: 1.05
 
   -- Other Econonomy Settings --
 
   Update prices for server when no players are online
+  Info: It is recommended to keep this to false
 update-prices-when-inactive: false
 
   The symbol that appears before all currency
 currency-symbol: '$'
 
-  Enable sell price difference variation to ease out sell price varition
+  Enable sell price difference variation to ease out sell price variation
 sell-price-difference-variation-enabled: true
-  Starting percententage sell price difference for sell price varition
+
+  Starting percententage sell price difference for sell price variation
 sell-price-difference-variation-start: 22.5
+
   Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 7 days)
 sell-price-variation-time-period: 10080
+
   Time in minutes that the sell-price-difference updates
-  Info: Must be a factor of sell-price-variation-time-period or it wont work!
+  Info: Must be a factor of sell-price-variation-time-period or it won't work!
 sell-price-variation-update-period: 30
 
   Enable forced inflation in the economy
 inflation-enabled: true
+
   Inflation method can be Dynamic, Static or Mixed.
   Info: The dynamic method increases the prices of items in the economy by a percentage each time period
   Info: The static method adds extra values to buys
   Info: Mixed uses both methods
 inflation-method: 'Mixed'
+
   Time period in ticks between dynamic price increases
 dynamic-inflation-time-period: 5000
+
   Percentage increase in prices per time-period.
 dynamic-inflation-value: 0.00025
+
   Percentage increase for buy value per price calculation update period.
 static-inflation-value: 0.1
 
-  Intrest rate per intrest-rate-update-period
+  Intrest rate per interest-rate-update-period
   Info: This is the increase in the current debt payment per-time period
-intrest-rate: 0.005
-  Time period in ticks between updates of the intrest rate for users loans
-intrest-rate-update-period: 1200
+interest-rate: 0.005
+
+  Intrest rate for compound-intrest loans
+  Info: Compound interest loans grow faster so should have a lower initial interest rate
+compound-interest-rate: 0.0025
+
+  Time period in ticks between updates of the interest rate for users loans
+interest-rate-update-period: 1200
 
   lowest value in $ a player can go into debt
   Example: -10.00
 max-debt-value: -10000.00
+
+  The percentage value to decrease items sold with enchantments
+  Info: Stacked enchantments etc. can become very expensive so a number between 5% - 15% is usually fine
+  Info: This doesn't affect buys
+enchantment-limiter: 7.50
+
+  The percentage value to decrease items sold with a loss in durability
+  Info: This is applied ON TOP of the durability algorithm to limit the exploitability of selling tools
+durability-limiter: 5.00
 
   -- Other Settings --
 
   Enable debug mode for more info on price calculations
 debug-enabled: false
 
-  Enable ChecksumHeaderBypass if you have issues with data retrival or corruption
-checksum-header-bypass: false
-
-  Use another economies shop settings for prices (don't change this without deleting data.db and resetting)
-  This will convert the shops file from another economy to a compatible Auto-Tune shops.yml
-  Options: Default | Essentials | GUIShop
-  Instructions for use: Turn this on, stop your server, delete data.db, start server, available data-transfers will appear in shops.yml, reset this option to default and restart your server again
-  Remove GUI-Shop once done to avoid incompatiability errors
-economy-shop-config: 'default'
-
-  Percentage value sell prices have on new price when converting GUIShop to Auto-Tune
-shop-config-guishop-sell-value: 20.00
+  Enable ChecksumHeaderBypass if you have issues with data retrieval or corruption
+checksum-header-bypass: true
 
   Enable the Auto-Tune tutorial for players
-  Keep this on to encourage purchasing turn it off if its distracting
+  Keep this on to encourage purchasing turn it off if it is distracting
 tutorial: true
 
   Time in seconds between messages

@@ -876,8 +876,6 @@ shops:
     max-buy: 16
     max-sell: 26
     section: 'Tools'
-  
-  
     
 ##  Shop sections configuration
 sections:

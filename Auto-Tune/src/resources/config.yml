@@ -99,10 +99,10 @@ currency-symbol: '$'
 sell-price-difference-variation-enabled: true
 
 ##  Starting percententage sell price difference for sell price variation
-sell-price-difference-variation-start: 22.5
+sell-price-difference-variation-start: 25
 
-##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 7 days)
-sell-price-variation-time-period: 10080
+##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 4 weeks)
+sell-price-variation-time-period: 43200
 
 ##  Time in minutes that the sell-price-difference updates
 ##  Info: Must be a factor of sell-price-variation-time-period or it won't work!
@@ -128,11 +128,11 @@ static-inflation-value: 0.1
 
 ##  Intrest rate per interest-rate-update-period
 ##  Info: This is the increase in the current debt payment per-time period
-interest-rate: 0.005
+interest-rate: 0.0075
 
 ##  Intrest rate for compound-intrest loans
 ##  Info: Compound interest loans grow faster so should have a lower initial interest rate
-compound-interest-rate: 0.0025
+compound-interest-rate: 0.005
 
 ##  Time period in ticks between updates of the interest rate for users loans
 interest-rate-update-period: 1200

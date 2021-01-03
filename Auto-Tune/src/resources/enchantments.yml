@@ -54,109 +54,109 @@ enchantments:
     ##  Increases the rate at which you mine/dig
   DURABILITY:
     price: 850.00
-    ratio: 0.85
+    ratio: 0.425
     ##  Decreases the rate at which a tool looses durability
   FIRE_ASPECT:
     price: 1000.00
-    ratio: 0.9
+    ratio: 0.45
     ##  When attacking a target, has a chance to set them on fire
   FROST_WALKER:
     price: 1100.00
-    ratio: 1.0
+    ratio: 0.5
     ##  Freezes any still water adjacent to ice / frost which player is walking on
   IMPALING:
     price: 650.00
-    ratio: 0.8
+    ratio: 0.4
     ##  Deals more damage to mobs that live in the ocean
   KNOCKBACK:
     price: 975.00
-    ratio: 0.8
+    ratio: 0.4
     ##  All damage to other targets will knock them back when hit
   LOOT_BONUS_BLOCKS:
     price: 1250.00
-    ratio: 1.45
+    ratio: 0.725
     ##  Provides a chance of gaining extra loot when destroying blocks
   LOOT_BONUS_MOBS:
     price: 1200.00
-    ratio: 1.35
+    ratio: 0.65
     ##  Provides a chance of gaining extra loot when killing monsters
   LOYALTY:
     price: 1100.00
-    ratio: 0.8
+    ratio: 0.4
     ##  Causes a thrown trident to return to the player who threw it
   LUCK:
     price: 750.00
-    ratio: 1.2
+    ratio: 0.6
     ##  Decreases odds of catching worthless junk
   LURE:
     price: 550.00
-    ratio: 0.5
+    ratio: 0.25
     ##  Increases rate of fish biting your hook
   MENDING:
     price: 4000.00
-    ratio: 2.25
+    ratio: 1.1
     ##  Allows mending the item using experience orbs
   MULTISHOT:
     price: 800.00
-    ratio: 0.8 
+    ratio: 0.4
     ##  Shoot multiple arrows from crossbows
   OXYGEN:
     price: 600.00
-    ratio: 0.7
+    ratio: 0.35
     ##  Decreases the rate of air loss whilst underwater
   PIERCING:
     price: 750.00
-    ratio: 0.8
+    ratio: 0.4
     ##  Crossbow projectiles pierce entities
   PROTECTION_ENVIRONMENTAL:
     price: 900.00
-    ratio: 0.8
+    ratio: 0.4
     ##  Provides protection against environmental damage
   PROTECTION_EXPLOSIONS:
     price: 950.00
-    ratio: 0.85
+    ratio: 0.425
     ##  Provides protection against explosive damage
   PROTECTION_FALL:
     price: 950.00
-    ratio: 0.85
+    ratio: 0.425
     ##  Provides protection against fall damage
   PROTECTION_FIRE:
     price: 950.00
-    ratio: 0.8
+    ratio: 0.4
     ##  Provides protection against fire damage
   PROTECTION_PROJECTILE:
     price: 950.00
-    ratio: 0.85
+    ratio: 0.425
     ##  Provides protection against projectile damage
   QUICK_CHARGE:
     price: 800.00
-    ratio: 0.85
+    ratio: 0.425
     ##  Charges crossbows quickly
   RIPTIDE:
     price: 1050.00
-    ratio: 0.8
+    ratio: 0.4
     ##  When it is rainy, launches the player in the direction their trident is thrown
   SILK_TOUCH:
     price: 1300.00
-    ratio: 1.2
+    ratio: 0.6
     ##  Allows blocks to drop themselves instead of fragments (for example, stone instead of cobblestone)
   SOUL_SPEED:
     price: 1450.00
-    ratio: 1.5
+    ratio: 0.75
     ##  Walk quicker on soul blocks
   SWEEPING_EDGE:
     price: 1900.00
-    ratio: 0.9
+    ratio: 0.4
     ##  Increases damage against targets when using a sweep attack
   THORNS:
     price: 1600.00
-    ratio: 1.25
+    ratio: 0.6
     ##  Damages the attacker
   VANISHING_CURSE:
     price: 50.00
-    ratio: 0.3
+    ratio: 0.15
     ##  Item disappears instead of dropping
   WATER_WORKER:
     price: 800.00
-    ratio: 0.85
+    ratio: 0.45
     ##  Increases the speed at which a player may mine underwater

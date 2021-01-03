@@ -141,7 +141,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		}
 		Gui main = new Gui((lines + 2), Config.getMenuTitle());
 		Integer paneSize = (lines + 1) * 7;
-		Integer paneAmount = (int) Math.ceil(itemAmount / paneSize) + 1;
+		Integer paneAmount = (int) Math.ceil((itemAmount+7) / paneSize) + 1;
 		PaginatedPane pPane = new PaginatedPane(0, 0, 9, (lines + 2));
 		OutlinePane[] shopPanes = new OutlinePane[paneAmount];
 		for (int i = 0; i < shopPanes.length; i++) {
@@ -459,26 +459,38 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 	}
 
 	public static Double getItemPrice(String item, boolean sell) {
+		Double output = 0.0;
 		if (!sell) {
-			Double output = Main.getItemPrices().get(item).price;
-			if (output != null){
+			try{
+				output = Main.getItemPrices().get(item).price;
 				return output;
 			}
-			else{
+			catch(NullPointerException e){
 				ConcurrentHashMap<Integer, Double[]> map = Main.map.get(item);
-				output = map.get(map.size()-1)[0];
-				return output;
+				try{
+					output = map.get(map.size()-1)[0];
+					return output;
+				}
+				catch(NullPointerException e2){
+					return null;
+				}
+				
 			}
 		} else {
-			Double output = Main.getItemPrices().get(item).sellPrice;
-			if (output != null){
+			try{
+				output = Main.getItemPrices().get(item).sellPrice;
 				return output;
 			}
-			else{
+			catch(NullPointerException e){
 				ConcurrentHashMap<Integer, Double[]> map = Main.map.get(item);
 				output = map.get(map.size()-1)[0];
-				output = output - output*0.01*getSellDifference(item);
-				return output;
+				try{
+					output = output - output*0.01*getSellDifference(item);
+					return output;
+				}
+				catch(NullPointerException e2){
+					return null;
+				}
 			}
 		}
 	}

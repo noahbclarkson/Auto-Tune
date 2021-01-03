@@ -84,7 +84,13 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                                 ex.printStackTrace();
                                 return true;
                             }
-                            double price = setting.price + Main.map.get(is.getType().toString()).get(Main.map.get(is.getType().toString()).size()-1)[0]*setting.ratio;
+                            double price = setting.price;
+                            try{
+                                price = setting.price + AutoTuneGUIShopUserCommand.getItemPrice(is.getType().toString(), false)*setting.ratio;
+                            }
+                            catch(NullPointerException e){
+                                price = setting.price;
+                            }
                             Main.getEconomy().withdrawPlayer(player, Double.parseDouble(AutoTuneGUIShopUserCommand.df1.format(price)));
                             player.sendMessage(ChatColor.GOLD + "Purchased " + setting.name + " for "
                              + ChatColor.GREEN + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(price));

@@ -8,6 +8,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import unprotesting.com.github.Main;
+import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
 
 public class EnchantmentAlgorithm {
 
@@ -39,10 +40,12 @@ public class EnchantmentAlgorithm {
     public static double calculatePriceWithEnch(ItemStack is, boolean buy) {
         ItemMeta iMeta = is.getItemMeta();
         Map<Enchantment, Integer> enchants = iMeta.getEnchants();
-        ConcurrentHashMap<Integer, Double[]> inMap = Main.map.get(is.getType().toString());
         double price = 0.0;
-        if (inMap != null) {
-            price = inMap.get(inMap.size() - 1)[0];
+        try{
+            price = AutoTuneGUIShopUserCommand.getItemPrice(is.getType().toString(), !buy);
+        }
+        catch(NullPointerException e){
+            price = 0.0;
         }
         double cachePrice = 0;
         for (Map.Entry<Enchantment, Integer> ench : enchants.entrySet()) {

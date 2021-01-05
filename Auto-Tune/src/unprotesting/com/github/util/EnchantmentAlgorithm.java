@@ -15,6 +15,9 @@ public class EnchantmentAlgorithm {
     public static void loadEnchantmentSettings() {
         ConfigurationSection config = Main.getEnchantmentConfig().getConfigurationSection("enchantments");
         ConcurrentHashMap<String, EnchantmentSetting> newMap = Main.enchMap.get("Auto-Tune");
+        if (newMap == null){
+            newMap = new ConcurrentHashMap<String, EnchantmentSetting>();
+        }
         if (Main.enchMap.containsKey("Auto-Tune")) {
             newMap = Main.enchMap.get("Auto-Tune");
             for (String str : config.getKeys(false)) {

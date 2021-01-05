@@ -1,5 +1,6 @@
 package unprotesting.com.github.Commands;
 
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.github.stefvanschie.inventoryframework.Gui;
@@ -24,7 +25,8 @@ import unprotesting.com.github.util.TextHandler;
 public class AutoTuneSellCommand implements CommandExecutor {
 
     public Integer menuRows = Config.getMenuRows();
-    private Gui GUI;
+
+    ConcurrentHashMap<UUID, Gui> guis = new ConcurrentHashMap<UUID, Gui>();
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String sell, String[] args) {
@@ -37,6 +39,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
             CommandSender sender2 = sender;
             Player p = (Player) sender;
             if (args.length == 0){
+                guis.put(p.getUniqueId(), loadSellGUI(p, sender2));
                 if (p.hasPermission("at.sell") || p.isOp()){loadSellGUI(p, sender2);}
                 else if (!(p.hasPermission("at.sell")) && !(p.isOp())){TextHandler.noPermssion(p);}
                 return true;
@@ -51,7 +54,8 @@ public class AutoTuneSellCommand implements CommandExecutor {
     }
 
     public void sell(Player player, Gui GUI) {
-		sellItems(player, GUI.getInventory().getContents(), false);
+        ItemStack[] items = GUI.getInventory().getContents();
+		sellItems(player, items, false);
 		GUI.getInventory().clear();
 	}
 
@@ -137,22 +141,21 @@ public class AutoTuneSellCommand implements CommandExecutor {
         }
 	}
 
-    public void sell(Player player) {
-		sellItems(player, GUI.getInventory().getContents(), false);
-		GUI.getInventory().clear();
-	}
-
-    public void loadSellGUI(Player player, CommandSender sender2) {
-        GUI = new Gui(menuRows, "Selling Panel");
+    public Gui loadSellGUI(Player player, CommandSender sender2) {
+        Gui GUI = new Gui(menuRows, "Selling Panel");
         StaticPane SellingPane = new StaticPane(0, 0, 9, menuRows, Priority.HIGH);
         GUI.addPane(SellingPane);
         GUI.setOnClose(this::onSellClose);
         GUI.show((HumanEntity) sender2);
+        guis.put(player.getUniqueId(), GUI);
+        return GUI;
     }
     
     private void onSellClose(InventoryCloseEvent event) {
 		Player player = (Player) event.getPlayer();
-		sell(player);
+        UUID uuid = player.getUniqueId();
+		sell(player, guis.get(uuid));
+        guis.remove(uuid);
     }
     
     public static void roundAndGiveMoney(Player player, double moneyToGive, Boolean autoSell) {

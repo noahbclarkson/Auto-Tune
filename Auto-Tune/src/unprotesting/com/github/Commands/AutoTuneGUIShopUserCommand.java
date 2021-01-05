@@ -220,6 +220,20 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			GuiItem gItem;
 			if (i < 7) {
 				iStack = loadTradingItem(itemName, amounts[i], true, sec);
+				int maxStackSize = iStack.getMaxStackSize();
+				int maxBuys = sec.itemMaxBuySell.get(itemName)[0];
+				if (maxStackSize < amounts[i] || maxBuys < amounts[i]){
+					Material mat = Material.RED_STAINED_GLASS_PANE;
+					ItemStack itemPane = new ItemStack(mat);
+					ItemMeta itemPaneMeta = itemPane.getItemMeta();
+					itemPaneMeta.setDisplayName(ChatColor.MAGIC + "_");
+					itemPane.setItemMeta(itemPaneMeta);
+					GuiItem gItemPane = new GuiItem(itemPane, event ->{
+						event.setCancelled(true);
+					});
+					front.addItem(gItemPane);
+					continue;
+				}
 				gItem = new GuiItem(iStack, event -> {
 					Player player = (Player) event.getWhoClicked();
 					if (event.getClick() == ClickType.LEFT) {
@@ -277,6 +291,20 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				});
 			} else {
 				iStack = loadTradingItem(itemName, amounts[i - 7], false, sec);
+				int maxStackSize = iStack.getMaxStackSize();
+				int maxSells = sec.itemMaxBuySell.get(itemName)[1];
+				if (maxStackSize < amounts[i - 7] || maxSells < amounts[i - 7]){
+					Material mat = Material.RED_STAINED_GLASS_PANE;
+					ItemStack itemPane = new ItemStack(mat);
+					ItemMeta itemPaneMeta = itemPane.getItemMeta();
+					itemPaneMeta.setDisplayName(ChatColor.MAGIC + "_");
+					itemPane.setItemMeta(itemPaneMeta);
+					GuiItem gItemPane = new GuiItem(itemPane, event ->{
+						event.setCancelled(true);
+					});
+					front.addItem(gItemPane);
+					continue;
+				}
 				gItem = new GuiItem(iStack, event -> {
 					Player player = (Player) event.getWhoClicked();
 					if (event.getClick() == ClickType.LEFT) {

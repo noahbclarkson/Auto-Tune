@@ -122,11 +122,11 @@ public final class Config {
     Config.setDurabilityLimiter(Main.getMainConfig().getDouble("durability-limiter", 5.0));
     Config.setInterestRate(Main.getMainConfig().getDouble("interest-rate", 0.005));
     Config.setCompoundInterestRate(Main.getMainConfig().getDouble("compound-interest-rate", 0.0025));
-    Config.setMaxDebt(Main.getMainConfig().getDouble("max-debt-value", -5000.00));
+    Config.setMaxDebt(Main.getMainConfig().getDouble("max-debt-value", -100.00));
     Config.setSellPriceDifferenceVariationStart(Main.getMainConfig().getDouble("sell-price-difference-variation-start", 25.0));
     Config.setShopConfigGUIShopSellValue(Main.getMainConfig().getDouble("shop-config-guishop-sell-value", 20.00));
     if (getTimePeriod() < 4){
-        Main.debugLog("Time-Period Setting reverting to 4 to reduce memory usage.");
+        Main.debugLog("Time-Period Setting reverting to 4 to reduce memory usage. If you would like lower time periods open a ticket in the offical discord.");
         Config.setTimePeriod(4);
     }
   }

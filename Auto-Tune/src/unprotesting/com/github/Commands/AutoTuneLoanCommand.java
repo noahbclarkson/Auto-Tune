@@ -52,6 +52,10 @@ public class AutoTuneLoanCommand implements CommandExecutor {
                     player.sendMessage(ChatColor.RED + "Correct Usage: /loan <loan-amount> (Optional)<compund-interest-enabled>");
                     return true;
                 }
+                if (!canPlayerTakeOutThisLoan(value, player)){
+                    player.sendMessage(ChatColor.RED + "Error: Minimum balance for loaning is " + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df6.format(Config.getMaxDebt()));
+                    return true;
+                }
                 loan = new Loan(value, Config.getInterestRate(), (Config.getInterestRateUpdateRate()/20), Instant.now(), player, false);
                 return true;
             }
@@ -67,7 +71,10 @@ public class AutoTuneLoanCommand implements CommandExecutor {
                     player.sendMessage(ChatColor.RED + "Correct Usage: /loan <loan-amount> (Optional)<compund-interest-enabled>");
                     return true;
                 }
-
+                if (!canPlayerTakeOutThisLoan(value, player)){
+                    player.sendMessage(ChatColor.RED + "Error: Minimum balance for loaning is " + Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df6.format(Config.getMaxDebt()));
+                    return true;
+                }
                 boolean cIntrest = Boolean.parseBoolean(args[1]);
                 if (cIntrest == true){
                     loan = new Loan(value, Config.getCompoundInterestRate(), (Config.getInterestRateUpdateRate()/20), Instant.now(), player, true);
@@ -165,6 +172,19 @@ public class AutoTuneLoanCommand implements CommandExecutor {
             return gui;
         }
         return gui;
+    }
+
+    public boolean canPlayerTakeOutThisLoan(double loan_value, Player player){
+        double balance = Main.getEconomy().getBalance(player);
+        double loanTotalValue = LoanEventHandler.getPlayerLoanValue(player);
+        double netWorth = balance - loanTotalValue;
+        double netWorthWithNewLoan = netWorth - loan_value;
+        if (netWorthWithNewLoan <= Config.getMaxDebt()){
+            return false;
+        }
+        else{
+            return true;
+        }
     }
 
     public String generateCompoundEnabledLore(Loan loan){

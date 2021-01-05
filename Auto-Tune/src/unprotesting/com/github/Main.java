@@ -460,9 +460,9 @@ public final class Main extends JavaPlugin implements Listener {
         db = DBMaker.fileDB(dataLocationString).checksumHeaderBypass().fileChannelEnable().allocateStartSize(10240).closeOnJvmShutdown().make();
       }
       map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
-      memDB = DBMaker.heapDB().checksumHeaderBypass().transactionEnable().closeOnJvmShutdown().make();
+      memDB = DBMaker.heapDB().checksumHeaderBypass().closeOnJvmShutdown().make();
       memMap = memDB.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
-      enchDB = DBMaker.fileDB("enchantment-data.db").checksumHeaderBypass().fileChannelEnable().transactionEnable().closeOnJvmShutdown().make();
+      enchDB = DBMaker.fileDB("enchantment-data.db").checksumHeaderBypass().fileChannelEnable().closeOnJvmShutdown().make();
       enchMap = (ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>>) enchDB.hashMap("enchMap", Serializer.STRING, Serializer.JAVA).createOrOpen();
     } else {
       if (Config.isDataTransactions()){
@@ -472,15 +472,15 @@ public final class Main extends JavaPlugin implements Listener {
         db = DBMaker.fileDB(dataLocationString).fileChannelEnable().allocateStartSize(10240).closeOnJvmShutdown().make();
       }
       map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
-      memDB = DBMaker.heapDB().closeOnJvmShutdown().transactionEnable().make();
+      memDB = DBMaker.heapDB().closeOnJvmShutdown().make();
       memMap = memDB.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
-      enchDB = DBMaker.fileDB("enchantment-data.db").closeOnJvmShutdown().fileChannelEnable().transactionEnable().make();
+      enchDB = DBMaker.fileDB("enchantment-data.db").closeOnJvmShutdown().fileChannelEnable().make();
       enchMap = (ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>>) enchDB.hashMap("enchMap", Serializer.STRING, Serializer.JAVA).createOrOpen();
     }
     playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
-    tempDB = DBMaker.fileDB("plugins/Auto-Tune/temp/tempdata.db").checksumHeaderBypass().fileMmapEnableIfSupported().fileMmapPreclearDisable().cleanerHackEnable().closeOnJvmShutdown().transactionEnable().make();
+    tempDB = DBMaker.fileDB("plugins/Auto-Tune/temp/tempdata.db").checksumHeaderBypass().fileMmapEnableIfSupported().fileMmapPreclearDisable().cleanerHackEnable().closeOnJvmShutdown().make();
     tempdatadata = tempDB.hashMap("tempdatadata", Serializer.STRING, Serializer.DOUBLE).createOrOpen();
-    loanDB = DBMaker.fileDB("plugins/Auto-Tune/temp/loandata.db").checksumHeaderBypass().fileMmapEnableIfSupported().fileMmapPreclearDisable().cleanerHackEnable().transactionEnable().closeOnJvmShutdown().make();
+    loanDB = DBMaker.fileDB("plugins/Auto-Tune/temp/loandata.db").checksumHeaderBypass().fileMmapEnableIfSupported().fileMmapPreclearDisable().cleanerHackEnable().closeOnJvmShutdown().make();
     loanMap =  loanDB.hashMap("loanMap", Serializer.JAVA, Serializer.JAVA).createOrOpen();
     if (tempdatadata.get("GDP")==null){
       tempdatadata.put("GDP", 0.0);

@@ -85,7 +85,14 @@ public class PriceCalculationHandler implements Runnable {
             Main.log("Loading Enchantment Price Update Algorithm");
             for (String str : Main.enchMap.get("Auto-Tune").keySet()) {
                 ConcurrentHashMap<Integer, Double[]> buySellMap = Main.enchMap.get("Auto-Tune").get(str).buySellData;
-                Double price = buySellMap.get(buySellMap.size()-1)[0];
+                Double price;
+                try{
+                    price = buySellMap.get(buySellMap.size()-1)[0];
+                }
+                catch(NullPointerException ex){
+                    price = Main.enchMap.get("Auto-Tune").get(str).price;
+                    buySellMap.put(0, new Double[]{price, 0.0, 0.0});
+                }
                 Double[] arr = loadAverageBuyAndSellValue(buySellMap, price, str);
                 JSONObject priceData = new JSONObject();
                 priceData.put("itemName", str);
@@ -96,8 +103,8 @@ public class PriceCalculationHandler implements Runnable {
 
             }
             obj.put("itemData", itemData);
-            obj.put("maxVolatility", Config.getBasicMaxVariableVolatility()*2);
-            obj.put("minVolatility", Config.getBasicMinVariableVolatility()*2);
+            obj.put("maxVolatility", Config.getBasicMaxVariableVolatility()*6);
+            obj.put("minVolatility", Config.getBasicMinVariableVolatility()*6);
             HttpPostRequestor.updatePricesforEnchantments(obj);
             Date date = Calendar.getInstance().getTime();
             Date newDate = MathHandler.addMinutesToJavaUtilDate(date, Config.getTimePeriod()*2);

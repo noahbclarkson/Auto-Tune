@@ -49,7 +49,19 @@ public class TopMover implements Comparable< TopMover >{
         double currentPrice = mover.price;
 		float timePeriod = (float) Config.getTimePeriod();
 		float timePeriodsInADay = (float) (1 / (timePeriod / 1440));
-		List<Double> newMap = Main.getItemPrices().get(item).prices;
+        List<Double> newMap;
+        try{
+            newMap = Main.getItemPrices().get(item).prices;
+        }
+        catch(NullPointerException e){
+            try{
+                PriceCalculationHandler.loadItemPriceData();
+                newMap = Main.getItemPrices().get(item).prices;
+            }
+            catch(NullPointerException ex){
+                return 0.0;
+            }
+        }
 		if (newMap.size() <= timePeriodsInADay) {
 			return 0.0;
 		}

@@ -18,5 +18,6 @@ public class EnchantmentSetting implements Serializable{
         price = Main.getEnchantmentConfig().getDouble("enchantments." + name + ".price");
         ratio = Main.getEnchantmentConfig().getDouble("enchantments." + name + ".ratio");
         buySellData = new ConcurrentHashMap <Integer, Double[]>();
+        buySellData.put(0, new Double[]{this.price, 0.0, 0.0});
     }
 }

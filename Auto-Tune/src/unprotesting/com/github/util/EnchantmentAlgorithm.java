@@ -14,7 +14,7 @@ public class EnchantmentAlgorithm {
 
     public static void loadEnchantmentSettings() {
         ConfigurationSection config = Main.getEnchantmentConfig().getConfigurationSection("enchantments");
-        ConcurrentHashMap<String, EnchantmentSetting> newMap = new ConcurrentHashMap<String, EnchantmentSetting>();
+        ConcurrentHashMap<String, EnchantmentSetting> newMap = Main.enchMap.get("Auto-Tune");
         if (Main.enchMap.containsKey("Auto-Tune")) {
             newMap = Main.enchMap.get("Auto-Tune");
             for (String str : config.getKeys(false)) {
@@ -51,7 +51,25 @@ public class EnchantmentAlgorithm {
         for (Map.Entry<Enchantment, Integer> ench : enchants.entrySet()) {
             String enchName = ench.getKey().getName();
             EnchantmentSetting setting = Main.enchMap.get("Auto-Tune").get(enchName);
-            Double enchPrice = setting.price;
+            if (setting == null){
+                loadEnchantmentSettings();
+                setting = Main.enchMap.get("Auto-Tune").get(enchName);
+                if (setting == null){
+                    return 0.0;
+                }
+            }
+            Double enchPrice;
+            try{
+                enchPrice = setting.price;
+            }
+            catch(NullPointerException e){
+                loadEnchantmentSettings();
+                setting = Main.enchMap.get("Auto-Tune").get(enchName);
+                if (setting == null){
+                    return 0.0;
+                }
+                enchPrice = setting.price;
+            }
             enchPrice = enchPrice * ench.getValue();
             Double ratio = setting.ratio;
             if (!buy){
@@ -85,7 +103,14 @@ public class EnchantmentAlgorithm {
         for (Map.Entry<Enchantment, Integer> ench : enchants.entrySet()) {
             String enchName = ench.getKey().getName();
             EnchantmentSetting setting = Main.enchMap.get("Auto-Tune").get(enchName);
-            ConcurrentHashMap<Integer, Double[]> map = setting.buySellData;
+            ConcurrentHashMap<Integer, Double[]> map;
+            try{
+                map = setting.buySellData;
+            }
+            catch(NullPointerException e){
+                map = new ConcurrentHashMap<Integer, Double[]>();
+                map.put(0, new Double[]{0.0, 0.0, 0.0});
+            }
             Integer size = map.size()-1;
             Double[] arr = map.get(size);
             if (arr == null){

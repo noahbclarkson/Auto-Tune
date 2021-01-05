@@ -450,7 +450,7 @@ shops:
     price: 0.50
     max-buy: 64
     max-sell: 128
-    section: 'FOOD'
+    section: 'Food'
   SPIDER_EYE:
     price: 7.00
     max-buy: 64

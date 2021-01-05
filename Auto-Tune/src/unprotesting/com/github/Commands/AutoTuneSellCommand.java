@@ -106,27 +106,22 @@ public class AutoTuneSellCommand implements CommandExecutor {
 			Main.maxSellMap.put(player.getUniqueId(), cMap2);
             Integer tempMapSize = tempMap1.size();
             Double[] tempDoublearray = tempMap1.get(tempMapSize-1);
-            Double sellpricedif = Config.getSellPriceDifference();
-            Main.getINSTANCE();
-            ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops")
-                    .getConfigurationSection((itemString));
-            Double sellpricedif2 = Config.getSellPriceDifference();
-            try{
-                sellpricedif2 = config.getDouble("sell-difference", sellpricedif);
-            }
-            catch(NullPointerException ex){
-                sellpricedif2 = Config.getSellPriceDifference();
-            }
             Double buyAmount = tempDoublearray[1];
             Double sellAmount = tempDoublearray[2];
             sellAmount = quantity + sellAmount;
             Double[] tempPutDouble = {tempDoublearray[0], buyAmount, sellAmount};
             tempMap1.put(tempMapSize-1, tempPutDouble);
             Main.map.put(itemString, tempMap1);
+            boolean enchantmentPresent = true;
             double enchPrice = EnchantmentAlgorithm.calculatePriceWithEnch(item, false);
+            if (enchPrice == 0.0){
+                enchantmentPresent = false;
+                enchPrice = AutoTuneGUIShopUserCommand.getItemPrice(item.getType().toString(), true);
+            }
             moneyToGive += (quantity * enchPrice);
-            moneyToGive = moneyToGive - (moneyToGive*0.01*sellpricedif2);
-            EnchantmentAlgorithm.updateEnchantSellData(item);
+            if (enchantmentPresent){
+                EnchantmentAlgorithm.updateEnchantSellData(item);
+            }
 		}
 		if (couldntSell == true && !autoSell) {
             player.sendMessage(ChatColor.BOLD + "Cant sell " + Integer.toString(countSell) + "x of item");
@@ -134,10 +129,10 @@ public class AutoTuneSellCommand implements CommandExecutor {
                 player.sendMessage(ChatColor.RED + "Maximum sells reached");
             }
         }
-        if (autoSell == true){
+        else if (autoSell == true){
             roundAndGiveMoney(player, moneyToGive, true);
         }
-        if (autoSell == false){
+        else if (autoSell == false){
         roundAndGiveMoney(player, moneyToGive, false);
         }
 	}

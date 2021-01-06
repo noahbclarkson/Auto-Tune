@@ -252,9 +252,6 @@ public class AutoTuneAutoTuneConfigCommand implements CommandExecutor {
     }
 
     public void createOtherEcononomyMenuGuiItems(Gui configGui, OutlinePane BAConfigPane, Player player, CommandSender sender) {
-        BAConfigPane.addItem(new GuiItem(createItemStackWithMeta("Update Prices When Inactive", String.valueOf(Config.isUpdatePricesWhenInactive())), event -> {
-            Player p = (Player) event.getWhoClicked();
-            checkForMessage(p, "Update Prices When Inactive", "update-prices-when-inactive", "boolean", sender);}));
         BAConfigPane.addItem(new GuiItem(createItemStackWithMeta("Currency Symbol", String.valueOf(Config.getCurrencySymbol())), event -> {
             Player p = (Player) event.getWhoClicked();
             checkForMessage(p, "Currency Symbol", "currency-symbol", "string", sender);}));

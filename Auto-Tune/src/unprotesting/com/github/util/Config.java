@@ -18,10 +18,10 @@ public final class Config {
                                                 autoSellEnabled,
                                                     calculateGlobalGDP,
                                                         tutorial,
-                                                            updatePricesWhenInactive,
-                                                                sendPlayerTopMoversOnJoin,
-                                                                    dataTransactions,   
-                                                                        disableMaxBuysSells;
+                                                            sendPlayerTopMoversOnJoin,
+                                                                dataTransactions,   
+                                                                    disableMaxBuysSells,    
+                                                                        ignoreAFK;
 
     @Getter
     @Setter
@@ -36,7 +36,8 @@ public final class Config {
                                                         maximumShortTradeLength,
                                                             InterestRateUpdateRate,
                                                                 tutorialMessagePeriod,
-                                                                    topMoversAmount;
+                                                                    topMoversAmount,
+                                                                        updatePricesThreshold;
 
     @Getter
     @Setter
@@ -73,11 +74,11 @@ public final class Config {
                                                                                         compoundInterestRate;
     
     public static void loadDefaults() {
-    Config.setUpdatePricesWhenInactive(Main.getMainConfig().getBoolean("update-prices-when-inactive", false));
     Config.setSellPriceDifferenceVariationEnabled(Main.getMainConfig().getBoolean("sell-price-difference-variation-enabled", true));
     Config.setSendPlayerTopMoversOnJoin(Main.getMainConfig().getBoolean("send-player-top-movers-on-join", true));
     Config.setWebServer(Main.getMainConfig().getBoolean("web-server-enabled", true));
     Config.setTutorial(Main.getMainConfig().getBoolean("tutorial", true));
+    Config.setIgnoreAFK(Main.getMainConfig().getBoolean("ignore-afk", true));
     Config.setDataTransactions(Main.getMainConfig().getBoolean("data-transactions", false));
     Config.setDisableMaxBuysSells(Main.getMainConfig().getBoolean("disable-max-buys-sells", false));
     Config.setCalculateGlobalGDP(Main.getMainConfig().getBoolean("calculate-global-GDP", true));
@@ -87,6 +88,7 @@ public final class Config {
     Config.setDebugEnabled(Main.getMainConfig().getBoolean("debug-enabled", false));
     Config.setAutoSellProfitUpdatePeriod(Main.getMainConfig().getInt("auto-sell-profit-update-period", 1200));
     Config.setPort(Main.getMainConfig().getInt("port", 8321));
+    Config.setUpdatePricesThreshold(Main.getMainConfig().getInt("update-prices-threshold", 1));
     Config.setTopMoversAmount(Main.getMainConfig().getInt("top-movers-amount", 5));
     Config.setMaximumShortTradeLength(Main.getMainConfig().getInt("maximum-short-trade-length", 100));
     Config.setAutoSellUpdatePeriod(Main.getMainConfig().getInt("auto-sell-update-period", 10));

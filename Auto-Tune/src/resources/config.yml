@@ -88,9 +88,9 @@ data-selection-c: 1.05
 
 ##  -- Other Econonomy Settings --
 
-##  Update prices for server when no players are online
-##  Info: It is recommended to keep this to false
-update-prices-when-inactive: false
+##  Minimum players needed, to be online, for prices to update
+##  Info: It is recommended to keep this above 0
+update-prices-threshold: 1
 
 ##  The symbol that appears before all currency
 currency-symbol: '$'
@@ -159,6 +159,11 @@ durability-limiter: 7.50
 
 ##  Enable debug mode for more info on price calculations
 debug-enabled: false
+
+##  Ignore AFK players in price calulcations/online checks
+##  Info: Turning this on will mean the price will only update when there's a player that insn't AFK
+##  Info: This only applies to essentials AFK and you must have essentials installed for this to work
+ignore-afk: true
 
 ##  Enable ChecksumHeaderBypass if you have issues with data retrieval or corruption
 checksum-header-bypass: true

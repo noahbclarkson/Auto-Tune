@@ -39,8 +39,8 @@ public class PriceCalculationHandler implements Runnable {
     }
 
     public static void loadItemPricesAndCalculate() throws ParseException, ClientProtocolException, IOException {
-        Integer playerCount = Bukkit.getServer().getOnlinePlayers().size();
-        if (Config.isUpdatePricesWhenInactive() || (!Config.isUpdatePricesWhenInactive() && playerCount > 0)){
+        Integer playerCount = Main.calculatePlayerCount();
+        if (playerCount >= Config.getUpdatePricesThreshold()){
             Main.setupMaxBuySell();
             Main.log("Loading Item Price Update Algorithm");
             JSONObject obj = new JSONObject();
@@ -78,8 +78,8 @@ public class PriceCalculationHandler implements Runnable {
     }
 
     public static void loadEnchantmentPricesAndCalculate() throws ParseException, ClientProtocolException, IOException {
-        Integer playerCount = Bukkit.getServer().getOnlinePlayers().size();
-        if (Config.isUpdatePricesWhenInactive() || (!Config.isUpdatePricesWhenInactive() && playerCount > 0)){
+        Integer playerCount = Main.calculatePlayerCount();
+        if (playerCount >= Config.getUpdatePricesThreshold()){
             JSONObject obj = new JSONObject();
             JSONArray itemData = new JSONArray();
             Main.log("Loading Enchantment Price Update Algorithm");

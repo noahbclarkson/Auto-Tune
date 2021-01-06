@@ -23,6 +23,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.earth2me.essentials.IEssentials;
+import com.earth2me.essentials.User;
 import com.github.stefvanschie.inventoryframework.Gui;
 import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.sun.net.httpserver.HttpServer;
@@ -173,6 +175,9 @@ public final class Main extends JavaPlugin implements Listener {
   public static ArrayList<TopMover> topBuyers;
 
   @Getter
+  public static IEssentials ess;
+
+  @Getter
   public static ConcurrentHashMap<String, ItemPriceData> itemPrices = new ConcurrentHashMap<String, ItemPriceData>();
 
   @Override
@@ -247,6 +252,12 @@ public final class Main extends JavaPlugin implements Listener {
     }
     materialListSize = memMap.size();
     vaildAPIKey = HttpPostRequestor.checkAPIKey();
+    try{
+    ess = (IEssentials) Bukkit.getPluginManager().getPlugin("Essentials");
+    }
+    catch(NullPointerException | ClassCastException ex2){
+      Config.setIgnoreAFK(false);
+    }
     if (!vaildAPIKey){
       log.severe(String.format("Disabled due to invalid API key", getDescription().getName()));
       debugLog("Please check API key is vaild in config.yml");
@@ -307,6 +318,25 @@ public final class Main extends JavaPlugin implements Listener {
     econ = rsp.getProvider();
     setEconomy(econ);
     return econ != null;
+  }
+
+  public static int calculatePlayerCount(){
+    int output = 0;
+    for (Player player : Bukkit.getServer().getOnlinePlayers()){
+      User user = getEss().getUser(player);
+      if (Config.isIgnoreAFK()){
+        if (user.isAfk()){
+          continue;
+        }
+        else if(user.isVanished()){
+          continue;
+        }
+      }
+      else{
+        output++;
+      }
+    }
+    return output;
   }
 
   public static String[] convert(Set<String> setOfString) {

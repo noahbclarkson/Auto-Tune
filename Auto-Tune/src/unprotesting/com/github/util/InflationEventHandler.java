@@ -2,17 +2,15 @@ package unprotesting.com.github.util;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.bukkit.Bukkit;
-
 import unprotesting.com.github.Main;
 import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
 
 public class InflationEventHandler implements Runnable {
     @Override
     public void run() {
-        Integer playerCount = Bukkit.getServer().getOnlinePlayers().size();
-        for (String str : Main.map.keySet()){
-            if (Config.isUpdatePricesWhenInactive() || (!Config.isUpdatePricesWhenInactive() && playerCount > 0)){
+        Integer playerCount = Main.calculatePlayerCount();
+        if (playerCount >= Config.getUpdatePricesThreshold()){
+            for (String str : Main.map.keySet()){
                 increaseItemPrice(str, Config.getDynamicInflationValue(), true);
             }
         }

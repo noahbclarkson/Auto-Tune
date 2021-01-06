@@ -137,6 +137,11 @@ compound-interest-rate: 0.005
 ##  Time period in ticks between updates of the interest rate for users loans
 interest-rate-update-period: 1200
 
+##  Disable the max-buy/max-sells for items
+##  Info: Don't do this unless you know what your doing.
+##  Info: If this is enabled, it is likely to lead to exploitation on servers with under 100 total or under 10 concurrent players
+disable-max-buys-sells: false
+
 ##  lowest value in $ a player can go into debt
 ##  Example: -10.00
 max-debt-value: -100.00

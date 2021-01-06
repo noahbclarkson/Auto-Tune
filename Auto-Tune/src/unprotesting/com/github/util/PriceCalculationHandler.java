@@ -109,6 +109,7 @@ public class PriceCalculationHandler implements Runnable {
             Date date = Calendar.getInstance().getTime();
             Date newDate = MathHandler.addMinutesToJavaUtilDate(date, Config.getTimePeriod()*2);
             String strDate = Main.dateFormat.format(newDate);
+            if (Config.isSendPlayerTopMoversOnJoin()){Main.loadTopMovers();};
             Main.log("Done running enchantment price Algorithim, a new check will occur at: " + strDate);
         }
     }

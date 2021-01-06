@@ -327,9 +327,11 @@ public final class Main extends JavaPlugin implements Listener {
   }
 
   public static void setupMaxBuySell(){
-    for (OfflinePlayer p : Bukkit.getOnlinePlayers()){
-      maxBuyMap.put(p.getUniqueId(), loadMaxStrings(map));
-      maxSellMap.put(p.getUniqueId(), loadMaxStrings(map));
+    if (!Config.isDisableMaxBuysSells()){
+      for (OfflinePlayer p : Bukkit.getOnlinePlayers()){
+        maxBuyMap.put(p.getUniqueId(), loadMaxStrings(map));
+        maxSellMap.put(p.getUniqueId(), loadMaxStrings(map));
+      }
     }
   }
 

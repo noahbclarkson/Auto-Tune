@@ -242,7 +242,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 						int currentMax = maxBuyMapRec.get(itemName);
 						Integer[] max = sec.itemMaxBuySell.get(itemName);
 						Double price = getItemPrice(itemName, false);
-						if (max[0] < (currentMax + amounts[finalI])) {
+						if (max[0] < (currentMax + amounts[finalI]) && !Config.isDisableMaxBuysSells()) {
 							player.sendMessage(ChatColor.BOLD + "Cant Purchase " + Integer.toString(amounts[finalI])
 									+ "x of " + itemName);
 							int difference = (currentMax + amounts[finalI]) - max[0];
@@ -318,7 +318,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 							player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI - 7])
 									+ "x of " + itemName);
 						}
-						else if (max[1] < (currentMax + amounts[finalI - 7])) {
+						else if (max[1] < (currentMax + amounts[finalI - 7]) && !Config.isDisableMaxBuysSells()) {
 							player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI - 7])
 									+ "x of " + itemName);
 							int difference = (currentMax + amounts[finalI - 7]) - max[1];
@@ -362,10 +362,15 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		Integer[] maxBuySellForItem = sec.itemMaxBuySell.get(itemName);
 		if (!autosell) {
 			iMeta.setDisplayName(ChatColor.GOLD + itemName);
-			iMeta.setLore(Arrays.asList((ChatColor.GRAY + "Click to purchase/sell"), (loadPriceDisplay(itemName)),
+			if (!Config.isDisableMaxBuysSells()){
+				iMeta.setLore(Arrays.asList((ChatColor.GRAY + "Click to purchase/sell"), (loadPriceDisplay(itemName)),
 					(ChatColor.WHITE + "Max Buys: " + maxBuySellForItem[0] + " per " + Config.getTimePeriod() + "min"),
 					(ChatColor.WHITE + "Max Sells: " + maxBuySellForItem[1] + " per " + Config.getTimePeriod()
 							+ "min")));
+			}
+			else{
+				iMeta.setLore(Arrays.asList((ChatColor.GRAY + "Click to purchase/sell"), (loadPriceDisplay(itemName))));
+			}
 		}
 		if (autosell) {
 			Boolean atonoff = Main.playerDataConfig.getBoolean(player.getUniqueId() + ".AutoSell" + "." + itemName);

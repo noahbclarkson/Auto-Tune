@@ -16,6 +16,7 @@ public class InflationEventHandler implements Runnable {
                 increaseItemPrice(str, Config.getDynamicInflationValue(), true);
             }
         }
+        if (Config.isSendPlayerTopMoversOnJoin()){Main.loadTopMovers();};
         PriceCalculationHandler.loadItemPriceData();
         Main.debugLog("Dynamic Inflation Value: " + Config.getDynamicInflationValue());
     }

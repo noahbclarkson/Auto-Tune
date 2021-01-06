@@ -78,7 +78,6 @@ public class AutoTuneSellCommand implements CommandExecutor {
 			String itemString = getItemStringForItemStack(item);
             int quantity = item.getAmount();
             ConcurrentHashMap<Integer,Double[]> tempMap1 = Main.map.get(itemString);
-            
 			if ((tempMap1==null)) {
 				countSell += quantity;
 				couldntSell = true;

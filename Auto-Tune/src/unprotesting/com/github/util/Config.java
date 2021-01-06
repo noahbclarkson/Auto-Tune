@@ -20,7 +20,8 @@ public final class Config {
                                                         tutorial,
                                                             updatePricesWhenInactive,
                                                                 sendPlayerTopMoversOnJoin,
-                                                                    dataTransactions;
+                                                                    dataTransactions,   
+                                                                        disableMaxBuysSells;
 
     @Getter
     @Setter
@@ -78,6 +79,7 @@ public final class Config {
     Config.setWebServer(Main.getMainConfig().getBoolean("web-server-enabled", true));
     Config.setTutorial(Main.getMainConfig().getBoolean("tutorial", true));
     Config.setDataTransactions(Main.getMainConfig().getBoolean("data-transactions", false));
+    Config.setDisableMaxBuysSells(Main.getMainConfig().getBoolean("disable-max-buys-sells", false));
     Config.setCalculateGlobalGDP(Main.getMainConfig().getBoolean("calculate-global-GDP", true));
     Config.setAutoSellEnabled(Main.getMainConfig().getBoolean("auto-sell-enabled", true));
     Config.setInflationEnabled(Main.getMainConfig().getBoolean("inflation-enabled", true));

@@ -29,8 +29,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
+import unprotesting.com.github.util.EnchantmentAlgorithm;
 import unprotesting.com.github.util.Section;
 import unprotesting.com.github.util.TextHandler;
+import unprotesting.com.github.util.Transaction;
 
 public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 
@@ -314,6 +316,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 						Integer[] max = sec.itemMaxBuySell.get(itemName);
 						ItemStack test = new ItemStack(Material.matchMaterial(itemName));
 						test = checkForEnchantAndApply(test, sec);
+						EnchantmentAlgorithm.updateEnchantSellData(test, player);
 						if (!player.getInventory().containsAtLeast(test, amounts[finalI - 7])) {
 							player.sendMessage(ChatColor.BOLD + "Cant Sell " + Integer.toString(amounts[finalI - 7])
 									+ "x of " + itemName);
@@ -523,8 +526,8 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			}
 			catch(NullPointerException e){
 				ConcurrentHashMap<Integer, Double[]> map = Main.map.get(item);
-				output = map.get(map.size()-1)[0];
 				try{
+					output = map.get(map.size()-1)[0];
 					output = output - output*0.01*getSellDifference(item);
 					return output;
 				}
@@ -533,6 +536,18 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 			}
 		}
+	}
+
+	@Deprecated
+	public static Double getItemPrice(ItemStack item, boolean sell){
+		Double output;
+		try{
+			output = getItemPrice(item.getType().toString(), sell);
+		}
+		catch (NullPointerException ex){
+			return null;
+		}
+		return output;
 	}
 
 	public static StaticPane loadReturnButton(Section sec, boolean autosell) {
@@ -617,6 +632,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 	}
 
 	public static void sendPlayerShopMessageAndUpdateGDP(int amount, Player player, String matClickedString, boolean sell){
+		ItemStack itemstack = new ItemStack(Material.getMaterial(matClickedString));
 		if (!sell){
 			ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player.getUniqueId());
 			cMap.put(matClickedString, (cMap.get(matClickedString)+amount));
@@ -625,9 +641,11 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			Double[] arr = inputMap.get(inputMap.size()-1);
 			Double[] outputArr = {arr[0], (arr[1]+amount), arr[2]};
 			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+(arr[0]*amount)));
+			Transaction transaction = new Transaction(player, itemstack, "Buy", arr[0]);
 			inputMap.put((inputMap.size()-1), outputArr);
 			Main.map.put(matClickedString, inputMap);
 			Main.getEconomy().withdrawPlayer(player, (arr[0]*amount));
+			transaction.loadIntoMap();
 			player.sendMessage(ChatColor.GOLD + "Purchased " + amount + "x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(arr[0]*amount));
 			
 		}
@@ -638,11 +656,13 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			ConcurrentHashMap<Integer, Double[]> inputMap = Main.map.get(matClickedString);
 			Double[] arr = inputMap.get(inputMap.size()-1);
 			Double[] outputArr = {arr[0], arr[1], (arr[2]+amount)};
-			Double price = arr[0] - (arr[0]*0.01*getSellDifference(matClickedString));
+			Double price = AutoTuneGUIShopUserCommand.getItemPrice(matClickedString, true);
 			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+(price*amount)));
+			Transaction transaction = new Transaction(player, itemstack, "Sell", price);
 			inputMap.put((inputMap.size()-1), outputArr);
 			Main.map.put(matClickedString, inputMap);
 			Main.getEconomy().depositPlayer(player, (price*amount));
+			transaction.loadIntoMap();
 			player.sendMessage(ChatColor.GOLD + "Sold " + amount + "x " + matClickedString + " for " + ChatColor.GREEN + Config.getCurrencySymbol() + df2.format(price*amount));
 		}
 	}

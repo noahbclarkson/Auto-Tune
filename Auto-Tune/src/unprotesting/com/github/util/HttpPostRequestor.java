@@ -9,6 +9,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import org.apache.http.ConnectionClosedException;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -34,8 +35,25 @@ public class HttpPostRequestor {
                 result = EntityUtils.toString(entityResponse);
             } catch (SocketException ex) {
                 Main.debugLog("Socket Exception: Socket Closed. Reloading HttpClient..");
+                client.close();
                 client = HttpClients.createDefault();
                 entityResponse = sendPostRequest(json);
+                try {
+                    result = EntityUtils.toString(entityResponse);
+                } 
+                catch (SocketException ex2) {
+                }
+            }
+            catch (ConnectionClosedException ex){
+                Main.debugLog("Connection Closed Exception: Socket Closed. Reloading HttpClient..");
+                client.close();
+                client = HttpClients.createDefault();
+                entityResponse = sendPostRequest(json);
+                try {
+                    result = EntityUtils.toString(entityResponse);
+                } 
+                catch (SocketException ex2) {
+                }
             }
             if (result == null) {
                 return;
@@ -104,15 +122,13 @@ public class HttpPostRequestor {
                 String priceString = priceElement.getAsString();
                 String name = nameElement.getAsString();
                 Double price = Double.parseDouble(priceString);
-                ConcurrentHashMap<Integer, Double[]> map = Main.enchMap.get("Auto-Tune").get(name).buySellData;
+                ConcurrentHashMap<Integer, Double[]> map = Main.enchMap.get(name).buySellData;
                 Double[] arr = {price, 0.0, 0.0};
                 map.put((map.size()), arr);
-                EnchantmentSetting setting = Main.enchMap.get("Auto-Tune").get(name);
+                EnchantmentSetting setting = Main.enchMap.get(name);
                 setting.buySellData.put(setting.buySellData.size(), arr);
                 setting.price = price;
-                ConcurrentHashMap<String, EnchantmentSetting> out = Main.enchMap.get("Auto-Tune");
-                out.put(name, setting);
-                Main.enchMap.put("Auto-Tune", out);
+                Main.enchMap.put(name, setting);
             }
         }
     }

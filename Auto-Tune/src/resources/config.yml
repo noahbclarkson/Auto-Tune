@@ -118,13 +118,13 @@ inflation-enabled: true
 inflation-method: 'Mixed'
 
 ##  Time period in ticks between dynamic price increases
-dynamic-inflation-time-period: 5000
+dynamic-inflation-time-period: 2500
 
 ##  Percentage increase in prices per time-period.
-dynamic-inflation-value: 0.00025
+dynamic-inflation-value: 0.000025
 
-##  Percentage increase for buy value per price calculation update period.
-static-inflation-value: 0.1
+##  Percentage increase for buy value per price calculation update period. E.g 0.05%
+static-inflation-value: 0.05
 
 ##  Intrest rate per interest-rate-update-period
 ##  Info: This is the increase in the current debt payment per-time period
@@ -147,9 +147,9 @@ disable-max-buys-sells: false
 max-debt-value: -100.00
 
 ##  The percentage value to decrease items sold with enchantments
-##  Info: Stacked enchantments etc. can become very expensive so a number between 10% - 25% is usually fine
+##  Info: Stacked enchantments etc. can become very expensive so a number between 25% - 50% is usually fine
 ##  Info: This doesn't affect buys
-enchantment-limiter: 20.00
+enchantment-limiter: 45.00
 
 ##  The percentage value to decrease items sold with a loss in durability
 ##  Info: This is applied ON TOP of the durability algorithm to limit the exploitability of selling tools

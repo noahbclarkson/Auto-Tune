@@ -19,6 +19,7 @@ import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.EnchantmentAlgorithm;
 import unprotesting.com.github.util.EnchantmentSetting;
 import unprotesting.com.github.util.TextHandler;
+import unprotesting.com.github.util.Transaction;
 
 public class AutoTuneBuyCommand implements CommandExecutor {
 
@@ -44,9 +45,8 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                 }
                 if (args.length == 1){
                     if (args[0].contains("enchantments")){
-                        ConcurrentHashMap<String, EnchantmentSetting> inputMap = Main.enchMap.get("Auto-Tune");
-                        for (String str : Main.enchMap.get("Auto-Tune").keySet()){
-                            EnchantmentSetting setting = inputMap.get(str);
+                        for (String str : Main.enchMap.keySet()){
+                            EnchantmentSetting setting = Main.enchMap.get(str);
                             player.sendMessage(ChatColor.WHITE + "Enchantment: " + ChatColor.AQUA + str + ChatColor.YELLOW +
                             " | Price : "+ Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(setting.price) + " | Item Multiplier: " + setting.ratio + "x");
                         }
@@ -59,10 +59,12 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                 }
                 if (args.length == 2){
                     if (args[0].contains("enchantments")){
-                        ConcurrentHashMap<String, EnchantmentSetting> inputMap = Main.enchMap.get("Auto-Tune");
-                        EnchantmentSetting setting = inputMap.get((args[1].toUpperCase()));
+                        EnchantmentSetting setting = Main.enchMap.get((args[1].toUpperCase()));
                         ItemStack is = player.getInventory().getItemInMainHand();
-                        Material mat = is.getType();
+                        if (Main.getEconomy().getBalance(player) < setting.price){
+                            player.sendMessage(ChatColor.RED + "Cannot enchant item: " + is.getType().toString() + " with enchantment " + setting.name);
+                            return true;
+                        }
                         boolean enchantExists = false;
                         Map<Enchantment, Integer> map = is.getEnchantments();
                         Enchantment ench = Enchantment.getByName(setting.name);
@@ -73,10 +75,14 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                             try{
                                 if (!enchantExists){
                                     is.addEnchantment(ench, 1);
+                                    Transaction transaction = new Transaction(player, ench, "Buy");
+                                    transaction.loadIntoMap();
                                 }
                                 else{
                                     int level = is.getEnchantmentLevel(ench);
                                     is.addEnchantment(ench, level+1);
+                                    Transaction transaction = new Transaction(player, ench, "Buy");
+                                    transaction.loadIntoMap();
                                 }
                             }
                             catch(IllegalArgumentException ex){
@@ -108,8 +114,7 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                             arr[1] = arr[1]+1; 
                             buySellMap.put(buySellMap.size()-1, arr);
                             setting.buySellData = buySellMap;
-                            inputMap.put(setting.name, setting);
-                            Main.enchMap.put("Auto-Tune", inputMap);
+                            Main.enchMap.put(setting.name, setting);
                             return true;
                         }
                         player.sendMessage(ChatColor.RED + "Hold the item you want to enchant in your main hand!");

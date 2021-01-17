@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.http.client.ClientProtocolException;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.ConfigurationSection;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
@@ -29,9 +30,6 @@ public class PriceCalculationHandler implements Runnable {
     }
 
     public static void loadItemPriceData() {
-        if (Main.getItemPrices() != null) {
-            Main.itemPrices.clear();
-        }
         Set<String> strSet = Main.map.keySet();
         for (String str : strSet) {
             Main.itemPrices.put(str, new ItemPriceData(str));
@@ -40,8 +38,9 @@ public class PriceCalculationHandler implements Runnable {
 
     public static void loadItemPricesAndCalculate() throws ParseException, ClientProtocolException, IOException {
         Integer playerCount = Main.calculatePlayerCount();
+        Main.log("Player count on price-update: " + playerCount);
+        Main.setupMaxBuySell();
         if (playerCount >= Config.getUpdatePricesThreshold()){
-            Main.setupMaxBuySell();
             Main.log("Loading Item Price Update Algorithm");
             JSONObject obj = new JSONObject();
             JSONArray itemData = new JSONArray();
@@ -83,14 +82,23 @@ public class PriceCalculationHandler implements Runnable {
             JSONObject obj = new JSONObject();
             JSONArray itemData = new JSONArray();
             Main.log("Loading Enchantment Price Update Algorithm");
-            for (String str : Main.enchMap.get("Auto-Tune").keySet()) {
-                ConcurrentHashMap<Integer, Double[]> buySellMap = Main.enchMap.get("Auto-Tune").get(str).buySellData;
+            Set<String> set = Main.enchMap.keySet();
+            for (String str : set) {
+                ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops").getConfigurationSection(str);
+                try{
+                    boolean locked = config.getBoolean("locked");
+                    if (locked){
+                        continue;
+                    }
+                }
+                catch(NullPointerException ex){}
+                ConcurrentHashMap<Integer, Double[]> buySellMap = Main.enchMap.get(str).buySellData;
                 Double price;
                 try{
                     price = buySellMap.get(buySellMap.size()-1)[0];
                 }
                 catch(NullPointerException ex){
-                    price = Main.enchMap.get("Auto-Tune").get(str).price;
+                    price = Main.enchMap.get(str).price;
                     buySellMap.put(0, new Double[]{price, 0.0, 0.0});
                 }
                 Double[] arr = loadAverageBuyAndSellValue(buySellMap, price, str);
@@ -117,7 +125,6 @@ public class PriceCalculationHandler implements Runnable {
     public static Double[] loadAverageBuyAndSellValue(ConcurrentHashMap<Integer, Double[]> map, Double price, String name)
             throws ParseException {
         Integer tempSize = map.size()-1;
-        Double[] arr = map.get(tempSize);
         Integer x = 0;
         Integer expvalues = 0;
         Double tempbuys = 0.0;

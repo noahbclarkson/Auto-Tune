@@ -30,13 +30,12 @@ public class JoinEventHandler implements Listener {
         Main.playerDataConfig.set(uuid + ".name", name);
         Main.saveplayerdata();
         if (!Config.isDisableMaxBuysSells()){
+            ConcurrentHashMap<String, Integer> cMap = Main.loadMaxStrings(Main.map);
             if (!Main.maxBuyMap.containsKey(player.getUniqueId())){
-                ConcurrentHashMap<String, Integer> cMap = Main.loadMaxStrings(Main.map);
                 Main.maxBuyMap.put(player.getUniqueId(), cMap);
             }  
             if (!Main.maxSellMap.containsKey(player.getUniqueId())){
-                ConcurrentHashMap<String, Integer> cMap2 = Main.loadMaxStrings(Main.map);
-                Main.maxSellMap.put(player.getUniqueId(), cMap2);
+                Main.maxSellMap.put(player.getUniqueId(), cMap);
             }     
         }
     }

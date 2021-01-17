@@ -11,6 +11,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import unprotesting.com.github.Main;
+import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
 import unprotesting.com.github.Commands.AutoTuneSellCommand;
 
 public class AutoSellEventHandler implements Runnable {

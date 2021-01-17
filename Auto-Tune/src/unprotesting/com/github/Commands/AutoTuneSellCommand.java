@@ -10,23 +10,23 @@ import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.EnchantmentAlgorithm;
 import unprotesting.com.github.util.TextHandler;
+import unprotesting.com.github.util.Transaction;
 
 public class AutoTuneSellCommand implements CommandExecutor {
 
     public Integer menuRows = Config.getMenuRows();
-
-    ConcurrentHashMap<UUID, Gui> guis = new ConcurrentHashMap<UUID, Gui>();
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String sell, String[] args) {
@@ -39,7 +39,6 @@ public class AutoTuneSellCommand implements CommandExecutor {
             CommandSender sender2 = sender;
             Player p = (Player) sender;
             if (args.length == 0){
-                guis.put(p.getUniqueId(), loadSellGUI(p, sender2));
                 if (p.hasPermission("at.sell") || p.isOp()){loadSellGUI(p, sender2);}
                 else if (!(p.hasPermission("at.sell")) && !(p.isOp())){TextHandler.noPermssion(p);}
                 return true;
@@ -53,10 +52,8 @@ public class AutoTuneSellCommand implements CommandExecutor {
 
     }
 
-    public void sell(Player player, Gui GUI) {
-        ItemStack[] items = GUI.getInventory().getContents();
+    public void sell(Player player, ItemStack[] items) {
 		sellItems(player, items, false);
-		GUI.getInventory().clear();
 	}
 
     public static String getItemStringForItemStack(ItemStack item) {
@@ -64,81 +61,103 @@ public class AutoTuneSellCommand implements CommandExecutor {
 	}
 
     @Deprecated
-    public static void sellItems(Player player, ItemStack[] items, Boolean autoSell) {
-		double moneyToGive = 0;
-		boolean couldntSell = false;
-        int countSell = 0;
-        boolean totMax = false;
-		for (ItemStack item : items) {
-
-			if (item == null) {
-				continue;
-			}
-
-			String itemString = getItemStringForItemStack(item);
-            int quantity = item.getAmount();
-            ConcurrentHashMap<Integer,Double[]> tempMap1 = Main.map.get(itemString);
-			if ((tempMap1==null)) {
-				countSell += quantity;
-				couldntSell = true;
-                player.getInventory().addItem(item);
-				continue;
+    public static void sellItems(Player player, ItemStack[] items, Boolean autoSell){
+        double money = 0.0;
+        for (ItemStack item : items) {
+            if (item == null){
+                continue;
             }
-            if (!autoSell){
-                ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player.getUniqueId());
-                Integer max = 10000;
-                try{
-                    max = (Integer)Main.getShopConfig().get("shops." + itemString + "." + "max-sell");
-                }
-                catch(ClassCastException ex){
-                    max = Integer.parseInt(AutoTuneGUIShopUserCommand.df5.format(Main.getShopConfig().get("shops." + itemString + "." + "max-sell")));
-                }
-                if (max == null){
-                    max = 100000;
-                }
-                if ((cMap.get(itemString)+quantity) > max){
-                    couldntSell = true;
-                    countSell += quantity;
-                    totMax = true;
+            String itemString = getItemStringForItemStack(item);
+            int quantity = item.getAmount();
+            Double pricePerItem = 0.0;
+            if (item.getItemMeta().hasEnchants()){
+                pricePerItem =  EnchantmentAlgorithm.calculatePriceWithEnch(item, false);
+            }
+            if (!item.getItemMeta().hasEnchants()){
+                pricePerItem = AutoTuneGUIShopUserCommand.getItemPrice(item, true);
+            }
+            if (pricePerItem == null || pricePerItem == 0 || pricePerItem.isInfinite() || pricePerItem.isNaN()){
+                player.sendMessage(ChatColor.RED + "Couldn't sell " + item.getType().toString());
+                player.getInventory().addItem(item);
+                continue;
+            }
+            double totalPrice = pricePerItem * quantity;
+            int maxSells = getMaxSells(itemString);
+            int currentMaxSells = getCurrentSellsMax(itemString, player);
+            int newTempCurrentMaxSells = currentMaxSells + quantity;
+            if (newTempCurrentMaxSells > maxSells){
+                player.sendMessage(ChatColor.RED + "Max Sells Reached for " + item.getType().toString());
+                if (currentMaxSells >= maxSells){
                     player.getInventory().addItem(item);
                     continue;
                 }
+                else{
+                    int difference = newTempCurrentMaxSells - (maxSells);
+                    totalPrice = pricePerItem * difference;
+                    item = loadADifferentAmountFromItemStack(item, difference);
+                    player.getInventory().addItem(loadADifferentAmountFromItemStack(item, (quantity - difference)));
+                    quantity = difference;
+                }
             }
-            ConcurrentHashMap<String, Integer> cMap2 = Main.maxSellMap.get(player.getUniqueId());
-			cMap2.put(itemString, (cMap2.get(itemString)+quantity));
-			Main.maxSellMap.put(player.getUniqueId(), cMap2);
-            Integer tempMapSize = tempMap1.size();
-            Double[] tempDoublearray = tempMap1.get(tempMapSize-1);
-            Double buyAmount = tempDoublearray[1];
-            Double sellAmount = tempDoublearray[2];
-            sellAmount = quantity + sellAmount;
-            Double[] tempPutDouble = {tempDoublearray[0], buyAmount, sellAmount};
-            tempMap1.put(tempMapSize-1, tempPutDouble);
-            Main.map.put(itemString, tempMap1);
-            boolean enchantmentPresent = true;
-            double enchPrice = EnchantmentAlgorithm.calculatePriceWithEnch(item, false);
-            if (enchPrice == 0.0){
-                enchantmentPresent = false;
-                enchPrice = AutoTuneGUIShopUserCommand.getItemPrice(item.getType().toString(), true);
-            }
-            moneyToGive += (quantity * enchPrice);
-            if (enchantmentPresent){
-                EnchantmentAlgorithm.updateEnchantSellData(item);
-            }
-		}
-		if (couldntSell == true && !autoSell) {
-            player.sendMessage(ChatColor.BOLD + "Cant sell " + Integer.toString(countSell) + "x of item");
-            if (totMax == true){
-                player.sendMessage(ChatColor.RED + "Maximum sells reached");
+            increaseMaxSells(player, quantity, item.getType().toString());
+            Transaction transaction = new Transaction(player, item, "Sell", totalPrice);
+            transaction.loadIntoMap();
+            loadEnchantmentTransactions(item, player);
+            increaseMaxSells(player, quantity, itemString);
+            money += totalPrice;
+        }
+        if (money > 0){
+            roundAndGiveMoney(player, money, autoSell);
+        }
+    }
+
+    @Deprecated
+    public static void loadEnchantmentTransactions (ItemStack item, Player player){
+        if (item.getEnchantments().size() < 1){
+            return;
+        }
+        else {
+            for (Enchantment ench : item.getEnchantments().keySet()){
+                Transaction transaction = new Transaction(player, ench, "Sell");
+                transaction.loadIntoMap();
             }
         }
-        else if (autoSell == true){
-            roundAndGiveMoney(player, moneyToGive, true);
+    }
+
+    public static void increaseMaxSells (Player player, int amount, String item) {
+        ConcurrentHashMap<String, Integer> map = Main.maxSellMap.get(player.getUniqueId());
+        if (map.get(item) == null){
+            map.put(item, 0);
         }
-        else if (autoSell == false){
-        roundAndGiveMoney(player, moneyToGive, false);
+        map.put(item, map.get(item)+amount);
+        Main.maxSellMap.put(player.getUniqueId(), map);
+    }
+
+    public static ItemStack loadADifferentAmountFromItemStack (ItemStack item, int new_size){
+        ItemMeta im = item.getItemMeta();
+        ItemStack output = new ItemStack(item.getType(), new_size);
+        output.setItemMeta(im);
+        return output;
+    }
+
+    public static int getCurrentSellsMax(String item, Player player){
+        UUID uuid = player.getUniqueId();
+        return Main.maxSellMap.get(uuid).get(item);
+    }
+
+    public static int getMaxSells(String item){
+        Integer max = 10000;
+        try{
+            max = (Integer)Main.getShopConfig().get("shops." + item + "." + "max-sell");
         }
-	}
+        catch(ClassCastException ex){
+            max = Integer.parseInt(AutoTuneGUIShopUserCommand.df5.format(Main.getShopConfig().get("shops." + item + "." + "max-sell")));
+        }
+        if (max == null){
+            max = 100000;
+        }
+        return max;
+    }
 
     public Gui loadSellGUI(Player player, CommandSender sender2) {
         Gui GUI = new Gui(menuRows, "Selling Panel");
@@ -146,15 +165,13 @@ public class AutoTuneSellCommand implements CommandExecutor {
         GUI.addPane(SellingPane);
         GUI.setOnClose(this::onSellClose);
         GUI.show((HumanEntity) sender2);
-        guis.put(player.getUniqueId(), GUI);
         return GUI;
     }
     
     private void onSellClose(InventoryCloseEvent event) {
 		Player player = (Player) event.getPlayer();
-        UUID uuid = player.getUniqueId();
-		sell(player, guis.get(uuid));
-        guis.remove(uuid);
+        sell(player, event.getInventory().getStorageContents());
+        event.getInventory().clear();
     }
     
     public static void roundAndGiveMoney(Player player, double moneyToGive, Boolean autoSell) {
@@ -173,6 +190,9 @@ public class AutoTuneSellCommand implements CommandExecutor {
                 Main.tempdatadata.put(player.getUniqueId().toString(), Main.tempdatadata.get(player.getUniqueId().toString())+moneyToGive);
             }
 		}
+        else {
+            player.sendMessage(ChatColor.RED + "Error on sale!");
+        }
 	}
 
     

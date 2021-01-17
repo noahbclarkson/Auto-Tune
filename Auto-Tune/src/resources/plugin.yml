@@ -40,12 +40,15 @@ commands:
       usage: /<loan> <amount> (Optional)<compound-interest-enabled>
     gdp:
       description: View GDP info
-      usage: <GDP>
+      usage: /GDP
     atconfig:
       description: View and change plugin config settings
     buy:
       description: Buy items not available in the shop
       aliases: [purchase]
+    transactions:
+      description: View player transactions
+      usage: /transactions <page-no> | /transactions all <page-no> | /transactions <player-name> <page-no>
 permssions:
   at.help:
     description: Displays Auto-Tune help information
@@ -83,6 +86,11 @@ permssions:
   at.buy:
     description: Allow players to purchase custom items
     default: true
+  at.transactions:
+    description: View your own transactions
+    default: true
+  at.transactions.other:  
+    description: View another players transactions | View all transactions
 
 
 

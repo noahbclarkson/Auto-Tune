@@ -68,6 +68,7 @@ import unprotesting.com.github.Commands.AutoTuneGDPCommand;
 import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
 import unprotesting.com.github.Commands.AutoTuneLoanCommand;
 import unprotesting.com.github.Commands.AutoTuneSellCommand;
+import unprotesting.com.github.Commands.AutoTuneTransactionCommand;
 import unprotesting.com.github.util.AutoSellEventHandler;
 import unprotesting.com.github.util.AutoTunePlayerAutoSellEventHandler;
 import unprotesting.com.github.util.CSVHandler;
@@ -90,6 +91,8 @@ import unprotesting.com.github.util.Section;
 import unprotesting.com.github.util.StaticFileHandler;
 import unprotesting.com.github.util.TextHandler;
 import unprotesting.com.github.util.TopMover;
+import unprotesting.com.github.util.Transaction;
+import unprotesting.com.github.util.TransactionSerializer;
 import unprotesting.com.github.util.TutorialHandler;
 
 public final class Main extends JavaPlugin implements Listener {
@@ -109,7 +112,7 @@ public final class Main extends JavaPlugin implements Listener {
   public static DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
   public static FileConfiguration playerDataConfig;
   public final static String playerdatafilename = "playerdata.yml";
-  public static DB db, memDB, tempDB, loanDB, enchDB;
+  public static DB db, memDB, tempDB, loanDB, enchDB, transactionDB;
   public static HTreeMap<String, Double> tempdatadata;
   public static ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>> map;
   public static ConcurrentMap<UUID, ConcurrentHashMap<String, Integer>> maxBuyMap = new ConcurrentHashMap<UUID, ConcurrentHashMap<String, Integer>>();
@@ -129,10 +132,9 @@ public final class Main extends JavaPlugin implements Listener {
   HttpServer server;
 
   @Getter
-  public static ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>> enchMap;
+  public static ConcurrentMap<String, EnchantmentSetting> enchMap;
 
-  static @Getter
-  private File configf;
+  static @Getter private File configf;
 
   @Getter
   public static File shopf, tradef, tradeShortf, enchf, faviconf;
@@ -180,18 +182,24 @@ public final class Main extends JavaPlugin implements Listener {
   @Getter
   public static ConcurrentHashMap<String, ItemPriceData> itemPrices = new ConcurrentHashMap<String, ItemPriceData>();
 
+  @Getter
+  public static HTreeMap<Integer, Transaction> transactions;
+
   @Override
   public void onDisable() {
-    if (scheduler == null){
+    if (scheduler == null) {
       scheduler = getServer().getScheduler();
     }
-    if (getINSTANCE() == null){
+    if (getINSTANCE() == null) {
       INSTANCE = this;
     }
-    if (server != null){
+    if (server != null) {
       server.stop(0);
     }
-    closeDataFiles();
+    try {
+      closeDataFiles();
+    } catch (ClassNotFoundException e) {
+    }
     scheduler.cancelTasks(getINSTANCE());
     log.info(String.format("[%s] Disabled Version %s", getDescription().getName(), getDescription().getVersion()));
   }
@@ -277,6 +285,7 @@ public final class Main extends JavaPlugin implements Listener {
     this.getCommand("atconfig").setExecutor(new AutoTuneAutoTuneConfigCommand());
     this.getCommand("gdp").setExecutor(new AutoTuneGDPCommand());
     this.getCommand("buy").setExecutor(new AutoTuneBuyCommand());
+    this.getCommand("transactions").setExecutor(new AutoTuneTransactionCommand());
     basicVolatilityAlgorithim = Config.getBasicVolatilityAlgorithim();
     priceModel = Config.getPricingModel().toString();
     scheduler = getServer().getScheduler();
@@ -302,7 +311,7 @@ public final class Main extends JavaPlugin implements Listener {
     loadSections();
     debugLog("Loading Enchatments..");
     EnchantmentAlgorithm.loadEnchantmentSettings();
-    debugLog("Loaded " + enchMap.get("Auto-Tune").size() + " enchantments");
+    debugLog("Loaded " + enchMap.size() + " enchantments");
     AutoTuneBuyCommand.shopTypes.add("enchantments");
     PriceCalculationHandler.loadItemPriceData();
     scheduler.scheduleAsyncRepeatingTask(getINSTANCE(), new PriceCalculationHandler(),  Config.getTimePeriod() * 600,  Config.getTimePeriod() * 1200);
@@ -323,18 +332,19 @@ public final class Main extends JavaPlugin implements Listener {
   public static int calculatePlayerCount(){
     int output = 0;
     for (Player player : Bukkit.getServer().getOnlinePlayers()){
+      Main.log("Player: " + player);
       User user = getEss().getUser(player);
       if (Config.isIgnoreAFK()){
         if (user.isAfk()){
+          Main.log("AFK");
           continue;
         }
-        else if(user.isVanished()){
+        if (user.isVanished()){
+          Main.log("Vanished");
           continue;
         }
       }
-      else{
-        output++;
-      }
+      output++;
     }
     return output;
   }
@@ -346,8 +356,9 @@ public final class Main extends JavaPlugin implements Listener {
 
   public static ConcurrentHashMap<String, Integer> loadMaxStrings(ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>> mainMap){
     ConcurrentHashMap<String, Integer> maxMap = new ConcurrentHashMap<String, Integer>();
-    for (String str : mainMap.keySet()){
-    maxMap.put(str, 0);
+    Set<String> set = mainMap.keySet();
+    for (String str : set){
+      maxMap.put(str, 0);
     }
     return maxMap;
   }
@@ -358,9 +369,10 @@ public final class Main extends JavaPlugin implements Listener {
 
   public static void setupMaxBuySell(){
     if (!Config.isDisableMaxBuysSells()){
+      ConcurrentHashMap<String, Integer> cMap = loadMaxStrings(map);
       for (OfflinePlayer p : Bukkit.getOnlinePlayers()){
-        maxBuyMap.put(p.getUniqueId(), loadMaxStrings(map));
-        maxSellMap.put(p.getUniqueId(), loadMaxStrings(map));
+        maxBuyMap.put(p.getUniqueId(), cMap);
+        maxSellMap.put(p.getUniqueId(), cMap);
       }
     }
   }
@@ -369,11 +381,12 @@ public final class Main extends JavaPlugin implements Listener {
     new BukkitRunnable() {
       @Override
       public void run() {
+        double sellPriceDifInConfig = getMainConfig().getDouble("sell-price-difference", 10.0);
         Integer sellPriceVariationInt = Config.getSellPriceVariationUpdatePeriod();
         Double d = Double.valueOf(sellPriceVariationInt);
         Double updates = (Config.getSellPriceVariationTimePeriod() / d);
         Double variation = Config.getSellPriceDifferenceVariationStart()
-            - (getMainConfig().getDouble("sell-price-difference", 2.5));
+            - (sellPriceDifInConfig);
         Double updateVariation = variation / updates;
         Main.tempdatadata.put("SellPriceDifferenceDifference",
             (Main.tempdatadata.get("SellPriceDifferenceDifference")) + updateVariation);
@@ -383,13 +396,12 @@ public final class Main extends JavaPlugin implements Listener {
         Main.debugLog("Variation: " + Double.toString(variation));
         Main.debugLog("Changed sell-price-difference by " + Double.toString(updateVariation) + " to "
             + Double.toString(Config.getSellPriceDifference()));
-        if (Config.getSellPriceDifference() <= Main.getMainConfig().getDouble("sell-price-difference", 2.5)) {
-          Config.setSellPriceDifference(Main.getMainConfig().getDouble("sell-price-difference", 2.5));
+        if (Config.getSellPriceDifference() <= sellPriceDifInConfig) {
+          Config.setSellPriceDifference(sellPriceDifInConfig);
           debugLog("Finished sell difference change task as sell difference has reached: "
-              + Main.getMainConfig().getDouble("sell-price-difference", 2.5));
+              + sellPriceDifInConfig);
           cancel();
         }
-        PriceCalculationHandler.loadItemPriceData();
       }
     }.runTaskTimer(Main.getINSTANCE(), Config.getSellPriceVariationUpdatePeriod() * 20 * 60,
         Config.getSellPriceVariationUpdatePeriod() * 20 * 60);
@@ -483,6 +495,7 @@ public final class Main extends JavaPlugin implements Listener {
 
   public static void setupDataFiles() {
     String dataLocationString = (Config.getDataLocation() + "data.db");
+    String enchanmentLocationString = (Config.getDataLocation() + "enchantment-data.db");
     if (Config.isChecksumHeaderBypass()) {
       Main.debugLog("Enabling checksum-header-bypass");
       if (Config.isDataTransactions()){
@@ -494,8 +507,9 @@ public final class Main extends JavaPlugin implements Listener {
       map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
       memDB = DBMaker.heapDB().checksumHeaderBypass().closeOnJvmShutdown().make();
       memMap = memDB.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
-      enchDB = DBMaker.fileDB("enchantment-data.db").checksumHeaderBypass().fileChannelEnable().closeOnJvmShutdown().make();
-      enchMap = (ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>>) enchDB.hashMap("enchMap", Serializer.STRING, Serializer.JAVA).createOrOpen();
+      enchDB = DBMaker.fileDB(enchanmentLocationString).checksumHeaderBypass().fileChannelEnable().closeOnJvmShutdown().make();
+      enchMap = (ConcurrentMap<String, EnchantmentSetting>) enchDB
+          .hashMap("enchMap", Serializer.STRING, Serializer.JAVA).createOrOpen();
     } else {
       if (Config.isDataTransactions()){
         db = DBMaker.fileDB(dataLocationString).fileChannelEnable().allocateStartSize(10240).transactionEnable().closeOnJvmShutdown().make();
@@ -506,9 +520,12 @@ public final class Main extends JavaPlugin implements Listener {
       map = (ConcurrentMap<String, ConcurrentHashMap<Integer, Double[]>>) db.hashMap("map").createOrOpen();
       memDB = DBMaker.heapDB().closeOnJvmShutdown().make();
       memMap = memDB.hashMap("memMap", Serializer.INTEGER, Serializer.STRING).createOrOpen();
-      enchDB = DBMaker.fileDB("enchantment-data.db").closeOnJvmShutdown().fileChannelEnable().make();
-      enchMap = (ConcurrentMap<String, ConcurrentHashMap<String, EnchantmentSetting>>) enchDB.hashMap("enchMap", Serializer.STRING, Serializer.JAVA).createOrOpen();
+      enchDB = DBMaker.fileDB(enchanmentLocationString).closeOnJvmShutdown().fileChannelEnable().make();
+      enchMap = (ConcurrentMap<String, EnchantmentSetting>) enchDB
+          .hashMap("enchMap", Serializer.STRING, Serializer.JAVA).createOrOpen();
     }
+    transactionDB = DBMaker.fileDB("plugins/Auto-Tune/transactiondata.db").checksumHeaderBypass().fileMmapEnableIfSupported().fileMmapPreclearDisable().cleanerHackEnable().closeOnJvmShutdown().make();
+    transactions = db.hashMap("transactions").keySerializer(Serializer.INTEGER).valueSerializer(new TransactionSerializer()).createOrOpen();
     playerDataConfig = YamlConfiguration.loadConfiguration(playerdata);
     tempDB = DBMaker.fileDB("plugins/Auto-Tune/temp/tempdata.db").checksumHeaderBypass().fileMmapEnableIfSupported().fileMmapPreclearDisable().cleanerHackEnable().closeOnJvmShutdown().make();
     tempdatadata = tempDB.hashMap("tempdatadata", Serializer.STRING, Serializer.DOUBLE).createOrOpen();
@@ -521,7 +538,7 @@ public final class Main extends JavaPlugin implements Listener {
     topBuyers = new ArrayList<TopMover>();
   }
 
-  public static void closeDataFiles(){
+  public static void closeDataFiles() throws ClassNotFoundException {
     db.commit();
     db.close();
     enchDB.commit();

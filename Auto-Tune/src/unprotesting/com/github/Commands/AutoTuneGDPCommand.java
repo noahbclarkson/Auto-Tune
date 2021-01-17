@@ -72,7 +72,6 @@ public class AutoTuneGDPCommand implements CommandExecutor {
             for (Loan loan : map){
                 output += loan.current_value;
             }
-
         }
         return output;
     }

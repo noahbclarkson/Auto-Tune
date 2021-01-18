@@ -129,9 +129,9 @@ public final class Config {
     Config.setMaxDebt(Main.getMainConfig().getDouble("max-debt-value", -100.00));
     Config.setSellPriceDifferenceVariationStart(Main.getMainConfig().getDouble("sell-price-difference-variation-start", 25.0));
     Config.setShopConfigGUIShopSellValue(Main.getMainConfig().getDouble("shop-config-guishop-sell-value", 20.00));
-    if (getTimePeriod() < 4){
-        Main.debugLog("Time-Period Setting reverting to 4 to reduce memory usage. If you would like lower time periods open a ticket in the offical discord.");
-        Config.setTimePeriod(4);
+    if (getTimePeriod() < 3){
+        Main.debugLog("Time-Period Setting reverting to 3 to reduce memory usage. If you would like lower time periods open a ticket in the offical discord.");
+        Config.setTimePeriod(3);
     }
   }
 

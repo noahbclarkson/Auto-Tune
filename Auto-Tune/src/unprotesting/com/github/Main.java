@@ -332,17 +332,20 @@ public final class Main extends JavaPlugin implements Listener {
   public static int calculatePlayerCount(){
     int output = 0;
     for (Player player : Bukkit.getServer().getOnlinePlayers()){
-      Main.log("Player: " + player);
-      User user = getEss().getUser(player);
-      if (Config.isIgnoreAFK()){
-        if (user.isAfk()){
-          Main.log("AFK");
-          continue;
+      try{
+        User user = getEss().getUser(player);
+        if (Config.isIgnoreAFK()){
+          if (user.isAfk()){
+            continue;
+          }
+          if (user.isVanished()){
+            continue;
+          }
         }
-        if (user.isVanished()){
-          Main.log("Vanished");
-          continue;
-        }
+      }
+      catch(NoClassDefFoundError ex){
+        output++;
+        continue;
       }
       output++;
     }

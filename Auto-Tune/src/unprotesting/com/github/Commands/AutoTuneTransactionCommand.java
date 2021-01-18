@@ -99,6 +99,9 @@ public class AutoTuneTransactionCommand implements CommandExecutor {
                 if (transaction.player.equals(input_player_name)) {
                     player.sendMessage(ChatColor.RED + Integer.toString(i+1) + ": " + ChatColor.YELLOW + transaction.toDisplayString());
                 }
+                else{
+                    page = page + (1/10);
+                }
             }
             catch(NullPointerException ex){
             }

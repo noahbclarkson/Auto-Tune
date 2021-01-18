@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -16,7 +15,6 @@ import org.bukkit.inventory.ItemStack;
 
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
-import unprotesting.com.github.util.EnchantmentAlgorithm;
 import unprotesting.com.github.util.EnchantmentSetting;
 import unprotesting.com.github.util.TextHandler;
 import unprotesting.com.github.util.Transaction;
@@ -46,7 +44,13 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                 if (args.length == 1){
                     if (args[0].contains("enchantments")){
                         for (String str : Main.enchMap.keySet()){
-                            EnchantmentSetting setting = Main.enchMap.get(str);
+                            EnchantmentSetting setting;
+                            try{
+                            setting = Main.enchMap.get(str);
+                            }
+                            catch (ClassCastException | NullPointerException ex){
+                                continue;
+                            }
                             player.sendMessage(ChatColor.WHITE + "Enchantment: " + ChatColor.AQUA + str + ChatColor.YELLOW +
                             " | Price : "+ Config.getCurrencySymbol() + AutoTuneGUIShopUserCommand.df2.format(setting.price) + " | Item Multiplier: " + setting.ratio + "x");
                         }
@@ -72,6 +76,17 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                             enchantExists = true;
                         }
                         if (is != null){
+                            double price = setting.price;
+                            try{
+                                price = setting.price + AutoTuneGUIShopUserCommand.getItemPrice(is.getType().toString(), false)*setting.ratio;
+                            }
+                            catch(NullPointerException e){
+                                price = setting.price;
+                            }
+                            if (Main.getEconomy().getBalance(player) < price){
+                                player.sendMessage(ChatColor.RED + "Cannot enchant item: " + is.getType().toString() + " with enchantment " + setting.name);
+                                return true;
+                            }
                             try{
                                 if (!enchantExists){
                                     is.addEnchantment(ench, 1);
@@ -89,13 +104,6 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                                 player.sendMessage(ChatColor.RED + "Cannot enchant item: " + is.getType().toString() + " with enchantment " + setting.name);
                                 ex.printStackTrace();
                                 return true;
-                            }
-                            double price = setting.price;
-                            try{
-                                price = setting.price + AutoTuneGUIShopUserCommand.getItemPrice(is.getType().toString(), false)*setting.ratio;
-                            }
-                            catch(NullPointerException e){
-                                price = setting.price;
                             }
                             Main.getEconomy().withdrawPlayer(player, Double.parseDouble(AutoTuneGUIShopUserCommand.df1.format(price)));
                             player.sendMessage(ChatColor.GOLD + "Purchased " + setting.name + " for "
@@ -125,12 +133,20 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                         return false;
                     }
                 }
+                else{
+                    player.sendMessage(ChatColor.YELLOW + "Command Usage: ");
+                    player.sendMessage(ChatColor.YELLOW + "/buy: <shop-type> <shop>");
+                    for (String str : shopTypes){
+                        player.sendMessage(ChatColor.YELLOW + "Available shop: '" + str + "'");
+                        return true;
+                    }
+                    return false;
+                }
             }
             else{
                 Main.sendMessage(sender, "&cPlayers only.");
                 return true;
             }
-            return false;
         }
         return false;
     }

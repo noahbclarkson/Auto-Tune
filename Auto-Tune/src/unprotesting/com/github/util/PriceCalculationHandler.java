@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang.ObjectUtils.Null;
 import org.apache.http.client.ClientProtocolException;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
@@ -92,7 +93,13 @@ public class PriceCalculationHandler implements Runnable {
                     }
                 }
                 catch(NullPointerException ex){}
-                ConcurrentHashMap<Integer, Double[]> buySellMap = Main.enchMap.get(str).buySellData;
+                ConcurrentHashMap<Integer, Double[]> buySellMap;
+                try{
+                    buySellMap = Main.enchMap.get(str).buySellData;
+                }
+                catch(ClassCastException | NullPointerException ex){
+                    continue;
+                }
                 Double price;
                 try{
                     price = buySellMap.get(buySellMap.size()-1)[0];

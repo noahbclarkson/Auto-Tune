@@ -37,8 +37,16 @@ public class Transaction implements Serializable{
 
     @Deprecated
     public Transaction(Player player, Enchantment enchantment, String type){
-        double price = Main.enchMap.get(enchantment.getName()).price;
-        price = price - price*0.01*Config.getSellPriceDifference();
+        Double price;
+        try{
+            price = Main.enchMap.get(enchantment.getName()).price;
+        }
+        catch (NullPointerException ex){
+            price = 0.0;
+        }
+        if (type.equals("Sell")){
+            price = price - price*0.01*Config.getSellPriceDifference();
+        }
         this.date = Date.from(Instant.now());
         this.player = player.getName();
         this.item = enchantment.getName();
@@ -84,8 +92,10 @@ public class Transaction implements Serializable{
     }
 
     public void loadIntoMap(){
-        int size = Main.getTransactions().size()-1;
-        Main.transactions.put(size, this);
+        if (this.total_price != 0.0){
+            int size = Main.getTransactions().size()-1;
+            Main.transactions.put(size, this);
+        }
     }
 
     public void loadTransactionArrayIntoMap(Transaction[] arr){

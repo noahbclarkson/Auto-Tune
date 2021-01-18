@@ -99,15 +99,31 @@ public class AutoTuneSellCommand implements CommandExecutor {
                     quantity = difference;
                 }
             }
-            increaseMaxSells(player, quantity, item.getType().toString());
+            String item_name = item.getType().toString();
+            increaseMaxSells(player, quantity, item_name);
+            increaseSells(item_name, quantity);
             Transaction transaction = new Transaction(player, item, "Sell", totalPrice);
             transaction.loadIntoMap();
             loadEnchantmentTransactions(item, player);
             increaseMaxSells(player, quantity, itemString);
             money += totalPrice;
         }
-        if (money > 0){
+        if (money > 0) {
             roundAndGiveMoney(player, money, autoSell);
+        }
+    }
+
+    public static void increaseSells(String item_name, int amount) {
+        try{
+            ConcurrentHashMap<Integer, Double[]> map = Main.map.get(item_name);
+            int size = map.size()-1;
+            Double[] arr = map.get(size);
+            arr[2] = arr[2] + amount;
+            map.put(size, arr);
+            Main.map.put(item_name, map);
+        }
+        catch (NullPointerException ex) {
+            return;
         }
     }
 

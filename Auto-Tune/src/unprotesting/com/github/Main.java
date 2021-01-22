@@ -189,7 +189,7 @@ public final class Main extends JavaPlugin implements Listener {
     }
     try {
       closeDataFiles();
-    } catch (ClassNotFoundException e) {
+    } catch (NullPointerException | ClassNotFoundException e) {
       Main.log("Error: Could not close data files correctly.");
     }
     scheduler.cancelTasks(getINSTANCE());

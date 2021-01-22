@@ -24,10 +24,9 @@ import unprotesting.com.github.Main;
 
 public class HttpPostRequestor {
 
-    public static CloseableHttpClient client = HttpClients.createDefault();
-
     public static void updatePricesforItems(JSONObject json) throws ClientProtocolException, IOException {
-        HttpEntity entityResponse = sendPostRequest(json);
+        CloseableHttpClient client = HttpClients.createDefault();
+        HttpEntity entityResponse = sendPostRequest(json, client);
         if (entityResponse != null) {
             JsonParser parser = new JsonParser();
             String result = null;
@@ -37,22 +36,26 @@ public class HttpPostRequestor {
                 Main.debugLog("Socket Exception: Socket Closed. Reloading HttpClient..");
                 client.close();
                 client = HttpClients.createDefault();
-                entityResponse = sendPostRequest(json);
+                entityResponse = sendPostRequest(json, client);
                 try {
                     result = EntityUtils.toString(entityResponse);
                 } 
-                catch (SocketException ex2) {
+                catch (ConnectionClosedException | SocketException ex2) {
+                    Main.log("Connection was closed! Please ensure your firewall isn't blocking our connections!");
+                    return;
                 }
             }
             catch (ConnectionClosedException ex){
                 Main.debugLog("Connection Closed Exception: Socket Closed. Reloading HttpClient..");
                 client.close();
                 client = HttpClients.createDefault();
-                entityResponse = sendPostRequest(json);
+                entityResponse = sendPostRequest(json, client);
                 try {
                     result = EntityUtils.toString(entityResponse);
                 } 
-                catch (SocketException ex2) {
+                catch (ConnectionClosedException | SocketException ex2) {
+                    Main.log("Connection was closed! Please ensure your firewall isn't blocking our connections!");
+                    return;
                 }
             }
             if (result == null) {
@@ -77,7 +80,7 @@ public class HttpPostRequestor {
         }
     }
 
-    public static HttpEntity sendPostRequest(JSONObject json) throws IOException {
+    public static HttpEntity sendPostRequest(JSONObject json, CloseableHttpClient client) throws IOException {
         HttpPost httpPost = new HttpPost("https://economy-api.herokuapp.com/");
         StringEntity entity = new StringEntity(json.toJSONString());
         httpPost.setEntity(entity);
@@ -107,7 +110,7 @@ public class HttpPostRequestor {
     }
 
     public static void updatePricesforEnchantments(JSONObject json) throws ClientProtocolException, IOException {
-        HttpEntity entityResponse = sendPostRequest(json);
+        HttpEntity entityResponse = sendPostRequest(json, HttpClients.createDefault());
         if (entityResponse != null) {
             JsonParser parser = new JsonParser();
             String result = EntityUtils.toString(entityResponse);

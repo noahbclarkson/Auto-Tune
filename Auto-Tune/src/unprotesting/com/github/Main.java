@@ -10,12 +10,7 @@ import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,7 +25,6 @@ import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.sun.net.httpserver.HttpServer;
 
 import org.bstats.bukkit.Metrics;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -46,7 +40,6 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
-import org.json.simple.parser.ParseException;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
@@ -71,7 +64,6 @@ import unprotesting.com.github.Commands.AutoTuneSellCommand;
 import unprotesting.com.github.Commands.AutoTuneTransactionCommand;
 import unprotesting.com.github.util.AutoSellEventHandler;
 import unprotesting.com.github.util.AutoTunePlayerAutoSellEventHandler;
-import unprotesting.com.github.util.CSVHandler;
 import unprotesting.com.github.util.ChatHandler;
 import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.EconomyShopConfigManager;
@@ -85,7 +77,6 @@ import unprotesting.com.github.util.ItemPriceData;
 import unprotesting.com.github.util.JoinEventHandler;
 import unprotesting.com.github.util.Loan;
 import unprotesting.com.github.util.LoanEventHandler;
-import unprotesting.com.github.util.MathHandler;
 import unprotesting.com.github.util.PriceCalculationHandler;
 import unprotesting.com.github.util.Section;
 import unprotesting.com.github.util.StaticFileHandler;
@@ -199,6 +190,7 @@ public final class Main extends JavaPlugin implements Listener {
     try {
       closeDataFiles();
     } catch (ClassNotFoundException e) {
+      Main.log("Error: Could not close data files correctly.");
     }
     scheduler.cancelTasks(getINSTANCE());
     log.info(String.format("[%s] Disabled Version %s", getDescription().getName(), getDescription().getVersion()));

@@ -7,9 +7,11 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
+import unprotesting.com.github.util.DurabilityAlgorithm;
 
 public class EnchantmentAlgorithm {
 
@@ -117,5 +119,53 @@ public class EnchantmentAlgorithm {
             Transaction transaction = new Transaction(player, ench.getKey(), "Sell");
             transaction.loadIntoMap();
         } 
+    }
+
+    @Deprecated
+    public static void updateEnchantSellData (Enchantment enchant, int level) {
+        String enchName = enchant.getName();
+        EnchantmentSetting setting = Main.enchMap.get(enchName);
+        ConcurrentHashMap<Integer, Double[]> map;
+        try{
+            map = setting.buySellData;
+        }
+        catch(NullPointerException e){
+            map = new ConcurrentHashMap<Integer, Double[]>();
+            map.put(0, new Double[]{0.0, 0.0, 0.0});
+        }
+        Integer size = map.size()-1;
+        Double[] arr = map.get(size);
+        if (arr == null){
+            arr = new Double[]{setting.price, 0.0, 0.0};
+        }
+        if (arr[2] == null){
+            arr[2] = 0.0;
+        }
+        if (arr[1] == null){
+            arr[1] = 0.0;
+        }
+        arr[2] += level;
+        map.put(size, arr);
+        setting.buySellData = map;
+        Main.enchMap.put(enchName, setting);
+    }
+
+    public static ItemStack addBookEnchantment(ItemStack item, Enchantment enchantment, int level) {
+        EnchantmentStorageMeta meta = (EnchantmentStorageMeta) item.getItemMeta();
+        if (meta.hasConflictingEnchant(enchantment) || meta.hasConflictingStoredEnchant(enchantment)){
+            return null;
+        }
+        meta.addStoredEnchant(enchantment, level, true);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static boolean checkForEnchantConflicts (ItemStack is, Enchantment ench) {
+        for (Enchantment item_ench : is.getEnchantments().keySet()) {
+            if (ench.conflictsWith(item_ench)){
+                return true;
+            }
+        }
+        return false;
     }
 }

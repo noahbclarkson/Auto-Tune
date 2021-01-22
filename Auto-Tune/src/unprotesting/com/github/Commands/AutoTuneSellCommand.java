@@ -1,5 +1,6 @@
 package unprotesting.com.github.Commands;
 
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -102,7 +103,7 @@ public class AutoTuneSellCommand implements CommandExecutor {
             String item_name = item.getType().toString();
             increaseMaxSells(player, quantity, item_name);
             increaseSells(item_name, quantity);
-            Transaction transaction = new Transaction(player, item, "Sell", totalPrice);
+            Transaction transaction = new Transaction(player.getName(), item, "Sell", totalPrice);
             transaction.loadIntoMap();
             loadEnchantmentTransactions(item, player);
             increaseMaxSells(player, quantity, itemString);
@@ -133,9 +134,12 @@ public class AutoTuneSellCommand implements CommandExecutor {
             return;
         }
         else {
-            for (Enchantment ench : item.getEnchantments().keySet()){
-                Transaction transaction = new Transaction(player, ench, "Sell");
+            Map<Enchantment, Integer> ench = item.getEnchantments();
+            for (Map.Entry<Enchantment, Integer> enchants : ench.entrySet()){
+                Enchantment enchant = enchants.getKey();
+                Transaction transaction = new Transaction(player, enchant, "Sell");
                 transaction.loadIntoMap();
+                EnchantmentAlgorithm.updateEnchantSellData(enchant, enchants.getValue());
             }
         }
     }

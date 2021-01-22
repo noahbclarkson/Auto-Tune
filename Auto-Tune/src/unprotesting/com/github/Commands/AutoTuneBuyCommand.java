@@ -15,6 +15,7 @@ import org.bukkit.inventory.ItemStack;
 
 import unprotesting.com.github.Main;
 import unprotesting.com.github.util.Config;
+import unprotesting.com.github.util.EnchantmentAlgorithm;
 import unprotesting.com.github.util.EnchantmentSetting;
 import unprotesting.com.github.util.TextHandler;
 import unprotesting.com.github.util.Transaction;
@@ -72,6 +73,10 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                         boolean enchantExists = false;
                         Map<Enchantment, Integer> map = is.getEnchantments();
                         Enchantment ench = Enchantment.getByName(setting.name);
+                        if (EnchantmentAlgorithm.checkForEnchantConflicts(is, ench)){
+                            player.sendMessage(ChatColor.RED + "Cannot enchant item: " + is.getType().toString() + " with enchantment " + setting.name);
+                            return true;
+                        }
                         if (map.get(ench) != null){
                             enchantExists = true;
                         }

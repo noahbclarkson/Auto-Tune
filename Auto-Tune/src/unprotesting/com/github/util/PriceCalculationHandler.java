@@ -17,6 +17,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
 import unprotesting.com.github.Main;
+import unprotesting.com.github.Commands.AutoTuneGUIShopUserCommand;
 
 public class PriceCalculationHandler implements Runnable {
 
@@ -47,7 +48,7 @@ public class PriceCalculationHandler implements Runnable {
             JSONArray itemData = new JSONArray();
             for (String str : Main.map.keySet()) {
                 ConcurrentHashMap<Integer, Double[]> buySellMap = Main.map.get(str);
-                Double price = buySellMap.get(buySellMap.size()-1)[0];
+                Double price = AutoTuneGUIShopUserCommand.getItemPrice(str, false);
                 Double[] arr = loadAverageBuyAndSellValue(buySellMap, price, str);
                 JSONObject priceData = new JSONObject();
                 priceData.put("itemName", str);
@@ -118,8 +119,8 @@ public class PriceCalculationHandler implements Runnable {
 
             }
             obj.put("itemData", itemData);
-            obj.put("maxVolatility", Config.getBasicMaxVariableVolatility()*6);
-            obj.put("minVolatility", Config.getBasicMinVariableVolatility()*6);
+            obj.put("maxVolatility", Config.getBasicMaxVariableVolatility()*5.5);
+            obj.put("minVolatility", Config.getBasicMinVariableVolatility()*5.5);
             HttpPostRequestor.updatePricesforEnchantments(obj);
             Date date = Calendar.getInstance().getTime();
             Date newDate = MathHandler.addMinutesToJavaUtilDate(date, Config.getTimePeriod()*2);

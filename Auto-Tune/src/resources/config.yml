@@ -24,8 +24,8 @@ web-server-enabled: true
 port: 8123
 
 ##  The maximum length in data points that the trade-short.html will show (this doesn't affect data)
-##  Info: When the time-period is set to 5, 288 is one day.
-maximum-short-trade-length: 288
+##  Info: When the time-period is set to 144, 1 is one day.
+maximum-short-trade-length: 144
 
 ##  Server name that will show up in commands and requests
 server-name: 'My Server'
@@ -33,7 +33,7 @@ server-name: 'My Server'
 ##  Time Period in minutes
 ##  Info: This should be around a tenth of the total items in your shop (i.e with 150 items this would be 15) to prevent overload
 ##  Info: When decreasing or increasing this adjust your volatility settings accordingly
-time-period: 5
+time-period: 10
 
 ##  The amount of menu rows in the GUI shop, value of 4-6.
 menu-rows: 6

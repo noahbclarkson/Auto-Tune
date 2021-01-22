@@ -27,7 +27,7 @@ public class TransactionSerializer extends GroupSerializerObjectArray<Transactio
     public Transaction deserialize(DataInput2 input, int available) throws IOException {
         Date date = new Date(Date.parse(input.readUTF()));
         String item = input.readUTF();
-        Player player = Bukkit.getPlayer(input.readUTF());
+        String player = input.readUTF();
         String type = input.readUTF();
         int amount = input.readInt();
         double total_price = input.readDouble();

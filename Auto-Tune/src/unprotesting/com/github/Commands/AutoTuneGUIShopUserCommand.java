@@ -102,7 +102,14 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		Gui front = new Gui((lines + 2), Config.getMenuTitle());
 		OutlinePane pane = new OutlinePane(1, 1, 7, lines);
 		for (int i = 0; i < Main.sectionedItems.length; i++) {
-			ItemStack is = new ItemStack((Main.sectionedItems[i].image));
+			ItemStack is;
+			try{
+				is = new ItemStack((Main.sectionedItems[i].image));
+			}
+			catch(IllegalArgumentException ex){
+				Main.log("Section: " + Main.sectionedItems[i].name + " has a null or invalid material-name");
+				continue;
+			}
 			ItemMeta im = is.getItemMeta();
 			im.setDisplayName(ChatColor.GOLD + Main.sectionedItems[i].name);
 			if (!autosell){
@@ -632,7 +639,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 	}
 
 	public static void sendPlayerShopMessageAndUpdateGDP(int amount, Player player, String matClickedString, boolean sell){
-		ItemStack itemstack = new ItemStack(Material.getMaterial(matClickedString));
+		ItemStack itemstack = new ItemStack(Material.getMaterial(matClickedString), amount);
 		if (!sell){
 			ConcurrentHashMap<String, Integer> cMap = Main.maxBuyMap.get(player.getUniqueId());
 			cMap.put(matClickedString, (cMap.get(matClickedString)+amount));
@@ -641,7 +648,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			Double[] arr = inputMap.get(inputMap.size()-1);
 			Double[] outputArr = {arr[0], (arr[1]+amount), arr[2]};
 			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+(arr[0]*amount)));
-			Transaction transaction = new Transaction(player, itemstack, "Buy", arr[0]);
+			Transaction transaction = new Transaction(player.getName(), itemstack, "Buy", arr[0]);
 			inputMap.put((inputMap.size()-1), outputArr);
 			Main.map.put(matClickedString, inputMap);
 			Main.getEconomy().withdrawPlayer(player, (arr[0]*amount));
@@ -658,7 +665,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 			Double[] outputArr = {arr[0], arr[1], (arr[2]+amount)};
 			Double price = AutoTuneGUIShopUserCommand.getItemPrice(matClickedString, true);
 			Main.tempdatadata.put("GDP", (Main.tempdatadata.get("GDP")+(price*amount)));
-			Transaction transaction = new Transaction(player, itemstack, "Sell", price);
+			Transaction transaction = new Transaction(player.getName(), itemstack, "Sell", price);
 			inputMap.put((inputMap.size()-1), outputArr);
 			Main.map.put(matClickedString, inputMap);
 			Main.getEconomy().depositPlayer(player, (price*amount));

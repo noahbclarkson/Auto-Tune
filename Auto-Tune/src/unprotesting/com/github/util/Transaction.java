@@ -2,10 +2,7 @@ package unprotesting.com.github.util;
 
 import java.io.Serializable;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Date;
-
-import javax.lang.model.element.TypeElement;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -26,9 +23,9 @@ public class Transaction implements Serializable{
     public String type;
     public double total_price;
 
-    public Transaction(Player player, ItemStack is, String type, double total_price){
+    public Transaction(String player, ItemStack is, String type, double total_price){
         this.date = Date.from(Instant.now());
-        this.player = player.getName();
+        this.player = player;
         this.item = is.getType().toString();
         this.amount = is.getAmount();
         this.total_price = total_price;
@@ -55,9 +52,9 @@ public class Transaction implements Serializable{
         this.type = type;
     }
 
-    public Transaction(Date date, Player player, String item, int amount, String type, double total_price){
+    public Transaction(Date date, String player, String item, int amount, String type, double total_price){
         this.date = date;
-        this.player = player.getName();
+        this.player = player;
         this.item = item;
         this.amount = amount;
         this.type = type;

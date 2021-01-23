@@ -2,7 +2,6 @@ package unprotesting.com.github.util;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.configuration.ConfigurationSection;
@@ -19,16 +18,11 @@ public class ItemPriceData {
     public ItemPriceData(String name){
         this.name = name;
         ConcurrentHashMap<Integer, Double[]> newMap = Main.map.get(name);
-        int size = newMap.size()-1;
+        int size = (newMap.size())-1;
         for (int i = 0; i < size; i++){
-            try{
-                this.price = newMap.get(i)[0];
-                this.prices.add(price);
-            }
-            catch (NullPointerException ex){
-                break;
-            }
+            this.prices.add(newMap.get(i)[0]);
         }
+        price = newMap.get(size)[0];
         ConfigurationSection config = Main.getShopConfig().getConfigurationSection("shops." + name);
         Double sellDifference = Config.getSellPriceDifference();
         try{
@@ -37,7 +31,7 @@ public class ItemPriceData {
         catch(NullPointerException ex){
             sellDifference = Config.getSellPriceDifference();
         }
-        this.sellPrice = this.price - (this.price*0.01*sellDifference);
+        sellPrice = price - (price*0.01*sellDifference);
     }
 
 }

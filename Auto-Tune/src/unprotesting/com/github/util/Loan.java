@@ -30,7 +30,7 @@ public class Loan implements Serializable{
         this.compound_enabled = compound_enabled;
         double playerBalance = Main.getEconomy().getBalance(player);
         double loanValue = LoanEventHandler.getPlayerLoanValue(player);
-        if (playerBalance-loanValue > Config.getMaxDebt()){
+        if (loanValue > 0.00 && playerBalance-loanValue > Config.getMaxDebt()){
             inputLoanToMap(this, player);
         }
         else{

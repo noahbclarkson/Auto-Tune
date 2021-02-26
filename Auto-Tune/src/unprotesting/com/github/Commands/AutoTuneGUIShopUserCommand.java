@@ -222,6 +222,7 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 		main.show((HumanEntity) cSender);
 	}
 
+	@Deprecated
 	public static OutlinePane loadTradingItems(String itemName, Section sec, OutlinePane front) {
 		for (int i = 0; i < 14; i++) {
 			final int finalI = i;
@@ -245,10 +246,22 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				gItem = new GuiItem(iStack, event -> {
 					Player player = (Player) event.getWhoClicked();
-					if (event.getClick() == ClickType.LEFT) {
+					boolean continueStatement = true;
+					if (Config.isUsePermissionsForShop()){
+						if (!player.hasPermission("at.buy." + itemName)){
+							TextHandler.noPermssion(player);
+							continueStatement = false;
+						}
+					}
+					if (event.getClick() == ClickType.LEFT && continueStatement) {
 						event.setCancelled(true);
 						ConcurrentHashMap<String, Integer> maxBuyMapRec = Main.maxBuyMap.get(player.getUniqueId());
-						int currentMax = maxBuyMapRec.get(itemName);
+						int currentMax = 0;
+						try{
+							currentMax = maxBuyMapRec.get(itemName);
+						}
+						catch (NullPointerException ex){
+						}
 						Integer[] max = sec.itemMaxBuySell.get(itemName);
 						Double price = getItemPrice(itemName, false);
 						if (max[0] < (currentMax + amounts[finalI]) && !Config.isDisableMaxBuysSells()) {
@@ -316,10 +329,22 @@ public class AutoTuneGUIShopUserCommand implements CommandExecutor {
 				}
 				gItem = new GuiItem(iStack, event -> {
 					Player player = (Player) event.getWhoClicked();
-					if (event.getClick() == ClickType.LEFT) {
+					boolean continueStatement = true;
+					if (Config.isUsePermissionsForShop()){
+						if (!player.hasPermission("at.sell." + itemName)){
+							TextHandler.noPermssion(player);
+							continueStatement = false;
+						}
+					}
+					if (event.getClick() == ClickType.LEFT && continueStatement) {
 						event.setCancelled(true);
 						ConcurrentHashMap<String, Integer> maxSellMapRec = Main.maxSellMap.get(player.getUniqueId());
-						int currentMax = maxSellMapRec.get(itemName);
+						int currentMax = 0;
+						try{
+							currentMax = maxSellMapRec.get(itemName);
+						}
+						catch (NullPointerException ex){
+						}
 						Integer[] max = sec.itemMaxBuySell.get(itemName);
 						ItemStack test = new ItemStack(Material.matchMaterial(itemName));
 						test = checkForEnchantAndApply(test, sec);

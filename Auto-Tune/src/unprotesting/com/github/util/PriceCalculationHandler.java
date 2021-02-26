@@ -46,17 +46,27 @@ public class PriceCalculationHandler implements Runnable {
             Main.log("Loading Item Price Update Algorithm");
             JSONObject obj = new JSONObject();
             JSONArray itemData = new JSONArray();
+            int i = 0;
             for (String str : Main.map.keySet()) {
                 ConcurrentHashMap<Integer, Double[]> buySellMap = Main.map.get(str);
                 Double price = AutoTuneGUIShopUserCommand.getItemPrice(str, false);
                 Double[] arr = loadAverageBuyAndSellValue(buySellMap, price, str);
                 JSONObject priceData = new JSONObject();
-                priceData.put("itemName", str);
-                priceData.put("price",  price);
-                priceData.put("averageBuy", arr[0]);
-                priceData.put("averageSell", arr[1]);
+                priceData.put("n", str);
+                priceData.put("p",  price);
+                priceData.put("b", arr[0]);
+                priceData.put("s", arr[1]);
                 itemData.add(priceData);
-
+                i++;
+                if (i > 150){
+                    obj.put("itemData", itemData);
+                    obj.put("maxVolatility", Config.getBasicMaxVariableVolatility());
+                    obj.put("minVolatility", Config.getBasicMinVariableVolatility());
+                    HttpPostRequestor.updatePricesforItems(obj);
+                    itemData.clear();
+                    obj.clear();
+                    i = 0;
+                }
             }
             obj.put("itemData", itemData);
             obj.put("maxVolatility", Config.getBasicMaxVariableVolatility());
@@ -111,10 +121,10 @@ public class PriceCalculationHandler implements Runnable {
                 }
                 Double[] arr = loadAverageBuyAndSellValue(buySellMap, price, str);
                 JSONObject priceData = new JSONObject();
-                priceData.put("itemName", str);
-                priceData.put("price",  price);
-                priceData.put("averageBuy", arr[0]);
-                priceData.put("averageSell", arr[1]);
+                priceData.put("n", str);
+                priceData.put("p",  price);
+                priceData.put("b", arr[0]);
+                priceData.put("s", arr[1]);
                 itemData.add(priceData);
 
             }

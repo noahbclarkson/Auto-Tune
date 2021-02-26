@@ -68,6 +68,11 @@ public class AutoTuneAutoSellCommand implements CommandExecutor{
 	}
 
     public static void changePlayerAutoSellSettings(Player player, String material){
+		if (Config.isUsePermissionsForShop()){
+			if (!player.hasPermission("at.sell." + material)){
+				player.sendMessage(ChatColor.RED + "WARNING: You do not have permission to sell this item at this time!");
+			}
+		}
         UUID uuid = player.getUniqueId();
         Boolean autosellset = false;
         Main.playerDataConfig.contains(uuid + ".AutoSell");

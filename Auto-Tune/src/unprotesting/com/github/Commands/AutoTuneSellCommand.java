@@ -8,6 +8,7 @@ import com.github.stefvanschie.inventoryframework.Gui;
 import com.github.stefvanschie.inventoryframework.pane.Pane.Priority;
 import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 
+import org.apache.commons.lang.ObjectUtils.Null;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -69,6 +70,13 @@ public class AutoTuneSellCommand implements CommandExecutor {
                 continue;
             }
             String itemString = getItemStringForItemStack(item);
+            if (Config.isUsePermissionsForShop()){
+                if (!player.hasPermission("at.sell." + itemString)){
+                    player.getInventory().addItem(item);
+                    TextHandler.noPermssion(player);
+                    continue;
+                }
+            }
             int quantity = item.getAmount();
             Double pricePerItem = 0.0;
             if (item.getItemMeta().hasEnchants()){
@@ -162,7 +170,12 @@ public class AutoTuneSellCommand implements CommandExecutor {
 
     public static int getCurrentSellsMax(String item, Player player){
         UUID uuid = player.getUniqueId();
-        return Main.maxSellMap.get(uuid).get(item);
+        try{
+            return Main.maxSellMap.get(uuid).get(item);
+        }
+        catch(NullPointerException ex){
+            return 0;
+        }
     }
 
     public static int getMaxSells(String item){

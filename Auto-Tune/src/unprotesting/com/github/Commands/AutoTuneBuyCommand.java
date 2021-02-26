@@ -64,6 +64,12 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                 }
                 if (args.length == 2){
                     if (args[0].contains("enchantments")){
+                        if (Config.isUsePermissionsForShop()){
+                            if (!player.hasPermission("at.buy." + args[1])){
+                                TextHandler.noPermssion(player);
+                                return true;
+                            }
+                        }
                         EnchantmentSetting setting = Main.enchMap.get((args[1].toUpperCase()));
                         ItemStack is = player.getInventory().getItemInMainHand();
                         if (Main.getEconomy().getBalance(player) < setting.price){
@@ -130,8 +136,6 @@ public class AutoTuneBuyCommand implements CommandExecutor {
                             Main.enchMap.put(setting.name, setting);
                             return true;
                         }
-                        player.sendMessage(ChatColor.RED + "Hold the item you want to enchant in your main hand!");
-                        return true;
                     }
                     else{
                         player.sendMessage("Shop " + args[0] + "not found!");

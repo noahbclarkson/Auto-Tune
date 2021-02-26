@@ -21,7 +21,8 @@ public final class Config {
                                                             sendPlayerTopMoversOnJoin,
                                                                 dataTransactions,   
                                                                     disableMaxBuysSells,    
-                                                                        ignoreAFK;
+                                                                        ignoreAFK,
+                                                                            usePermissionsForShop;
 
     @Getter
     @Setter
@@ -51,7 +52,8 @@ public final class Config {
                                                     inflationMethod,
                                                         currencySymbol,
                                                             economyShopConfig,
-                                                                dataLocation;
+                                                                dataLocation,
+                                                                    storageSetting;
 
     @Getter
     @Setter
@@ -78,6 +80,7 @@ public final class Config {
     Config.setSendPlayerTopMoversOnJoin(Main.getMainConfig().getBoolean("send-player-top-movers-on-join", true));
     Config.setWebServer(Main.getMainConfig().getBoolean("web-server-enabled", true));
     Config.setTutorial(Main.getMainConfig().getBoolean("tutorial", true));
+    Config.setUsePermissionsForShop(Main.getMainConfig().getBoolean("use-permission-for-shop", false));
     Config.setIgnoreAFK(Main.getMainConfig().getBoolean("ignore-afk", true));
     Config.setDataTransactions(Main.getMainConfig().getBoolean("data-transactions", false));
     Config.setDisableMaxBuysSells(Main.getMainConfig().getBoolean("disable-max-buys-sells", false));
@@ -101,6 +104,7 @@ public final class Config {
     Config.setSellPriceVariationUpdatePeriod(Main.getMainConfig().getInt("sell-price-variation-update-period", 30));
     Config.setServerName(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("server-name", "Survival Server - (Change this in Config)")));
     Config.setCurrencySymbol(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("currency-symbol", "$")));
+    Config.setStorageSetting(ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("storage-setting", "TP-Based")));
     Config.setMenuTitle(
     ChatColor.translateAlternateColorCodes('&', Main.getMainConfig().getString("menu-title", "Auto-Tune Shop")));
     Config.setPricingModel(
@@ -132,6 +136,10 @@ public final class Config {
     if (getTimePeriod() < 3){
         Main.debugLog("Time-Period Setting reverting to 3 to reduce memory usage. If you would like lower time periods open a ticket in the offical discord.");
         Config.setTimePeriod(3);
+    }
+    if (getStorageSetting() != "TP-Based" || getStorageSetting() != "Map-Based"){
+        Main.log("Couldn't find a valid storage setting. Defaulting to TP-Based method");
+        setStorageSetting("TP-Based");
     }
   }
 

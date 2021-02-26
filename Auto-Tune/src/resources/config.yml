@@ -160,6 +160,10 @@ durability-limiter: 7.50
 ##  Enable debug mode for more info on price calculations
 debug-enabled: false
 
+##  Whether to use custom permissions for items
+##  Info: Players will need at.buy.<ITEM_NAME> to purchase and at.sell.<ITEM_NAME> to sell if this is on
+use-permission-for-shop: false
+
 ##  Ignore AFK players in price calulcations/online checks
 ##  Info: Turning this on will mean the price will only update when there's a player that insn't AFK
 ##  Info: This only applies to essentials AFK and you must have essentials installed for this to work
@@ -182,3 +186,9 @@ data-location: 'plugins/Auto-Tune/'
 ##  Info: This will result in much larger file sizes and additional transaction files but more stability and improved data-protection
 ##  Info: This is off by default as the default data protection will be fine for most servers
 data-transactions: false
+
+##  Enable different methods for storing data
+##  Info: Options are | Map-Based | TP-Based |
+##  Info: Map-Based is the oldest method
+##  Info: TPB is the newset method
+storage-setting: 'TP-Based'

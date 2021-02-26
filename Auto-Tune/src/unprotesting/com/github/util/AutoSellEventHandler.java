@@ -29,14 +29,20 @@ public class AutoSellEventHandler implements Runnable {
             ConcurrentHashMap<Integer, ItemStack> itemstosell = new ConcurrentHashMap<Integer, ItemStack>();
             for (String material : config.getKeys(false)){
                 if (player.getInventory().contains(Material.matchMaterial(material)) && Main.playerDataConfig.getBoolean(uuid + ".AutoSell" + "." + material)==true){
+                if (Config.isUsePermissionsForShop() && !player.hasPermission("at.sell." + material)){
+                    continue;
+                }
                 ConcurrentHashMap<String, Integer> cMap = Main.maxSellMap.get(player.getUniqueId());
                 Integer max = (Integer)Main.getShopConfig().get("shops." + material + "." + "max-sell");
                 Integer amount = getAmount(player, Material.matchMaterial(material));
                 if (max == null){
                     max = 100000;
                 }
-                if ((cMap.get(material)+amount) > max){
-                    continue;
+                
+                if (!Config.isDisableMaxBuysSells()){
+                    if ((cMap.get(material)+amount) > max){
+                        continue;
+                    }
                 }
                 if (amount <= 64){
                     ItemStack tosell = new ItemStack(Material.matchMaterial(material), amount);

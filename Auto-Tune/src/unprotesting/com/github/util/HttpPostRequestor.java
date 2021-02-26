@@ -67,8 +67,8 @@ public class HttpPostRequestor {
             JsonArray jsonArray = jsonArrayElement.getAsJsonArray();
             for (JsonElement element : jsonArray) {
                 JsonObject obj = element.getAsJsonObject();
-                JsonElement priceElement = obj.get("newPrice");
-                JsonElement nameElement = obj.get("itemName");
+                JsonElement priceElement = obj.get("p");
+                JsonElement nameElement = obj.get("i");
                 String priceString = priceElement.getAsString();
                 String name = nameElement.getAsString();
                 Double price = Double.parseDouble(priceString);
@@ -81,7 +81,7 @@ public class HttpPostRequestor {
     }
 
     public static HttpEntity sendPostRequest(JSONObject json, CloseableHttpClient client) throws IOException {
-        HttpPost httpPost = new HttpPost("https://economy-api.herokuapp.com/");
+        HttpPost httpPost = new HttpPost("https://auto-tune-economy-api.herokuapp.com/");
         StringEntity entity = new StringEntity(json.toJSONString());
         httpPost.setEntity(entity);
         httpPost.setHeader("content-type", "application/json");
@@ -120,8 +120,8 @@ public class HttpPostRequestor {
             JsonArray jsonArray = jsonArrayElement.getAsJsonArray();
             for (JsonElement element : jsonArray){
                 JsonObject obj = element.getAsJsonObject();
-                JsonElement priceElement = obj.get("newPrice");
-                JsonElement nameElement = obj.get("itemName");
+                JsonElement priceElement = obj.get("p");
+                JsonElement nameElement = obj.get("i");
                 String priceString = priceElement.getAsString();
                 String name = nameElement.getAsString();
                 Double price = Double.parseDouble(priceString);

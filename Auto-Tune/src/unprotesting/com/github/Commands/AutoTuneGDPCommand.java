@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
+import unprotesting.com.github.util.Config;
 import unprotesting.com.github.util.Loan;
 import unprotesting.com.github.util.TextHandler;
 
@@ -25,10 +26,10 @@ public class AutoTuneGDPCommand implements CommandExecutor {
                     String GDP = AutoTuneGUIShopUserCommand.df2.format(Main.tempdatadata.get("GDP"));
                     double[] serverBalance = getServerBalance();
                     double loanBalance = getLoanBalance();
-                    p.sendMessage(ChatColor.GOLD + "The Current GDP is: $" + ChatColor.GREEN + GDP);
-                    p.sendMessage(ChatColor.GOLD + "The Current GDP per capita is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(Main.tempdatadata.get("GDP")/serverBalance[1]));
-                    p.sendMessage(ChatColor.GOLD + "The Current Average Balance is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(serverBalance[0]/serverBalance[1]));
-                    p.sendMessage(ChatColor.GOLD + "The Current Average Debt is: $" + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(loanBalance/serverBalance[1]));
+                    p.sendMessage(ChatColor.GOLD + "The Current GDP is: " + Config.getCurrencySymbol() + ChatColor.GREEN + GDP);
+                    p.sendMessage(ChatColor.GOLD + "The Current GDP per capita is: " + Config.getCurrencySymbol() + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(Main.tempdatadata.get("GDP")/serverBalance[1]));
+                    p.sendMessage(ChatColor.GOLD + "The Current Average Balance is: " + Config.getCurrencySymbol() + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(serverBalance[0]/serverBalance[1]));
+                    p.sendMessage(ChatColor.GOLD + "The Current Average Debt is: " + Config.getCurrencySymbol() + ChatColor.GREEN + AutoTuneGUIShopUserCommand.df2.format(loanBalance/serverBalance[1]));
                 }
                 else if (!(p.hasPermission("at.gdp")) && !(p.isOp())){
                     TextHandler.noPermssion(p);

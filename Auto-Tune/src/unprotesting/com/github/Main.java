@@ -81,6 +81,7 @@ import unprotesting.com.github.util.PriceCalculationHandler;
 import unprotesting.com.github.util.Section;
 import unprotesting.com.github.util.StaticFileHandler;
 import unprotesting.com.github.util.TextHandler;
+import unprotesting.com.github.util.TimePeriod;
 import unprotesting.com.github.util.TopMover;
 import unprotesting.com.github.util.Transaction;
 import unprotesting.com.github.util.TransactionSerializer;
@@ -124,6 +125,9 @@ public final class Main extends JavaPlugin implements Listener {
 
   @Getter
   public static ConcurrentMap<String, EnchantmentSetting> enchMap;
+
+  @Getter
+  public static ConcurrentMap<Integer, TimePeriod> time_period_map;
 
   static @Getter private File configf;
 

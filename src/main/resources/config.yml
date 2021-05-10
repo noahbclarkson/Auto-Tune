@@ -1,0 +1,184 @@
+
+# ░█████╗░██╗░░░██╗████████╗░█████╗░░░░░░░████████╗██╗░░░██╗███╗░░██╗███████╗
+# ██╔══██╗██║░░░██║╚══██╔══╝██╔══██╗░░░░░░╚══██╔══╝██║░░░██║████╗░██║██╔════╝
+# ███████║██║░░░██║░░░██║░░░██║░░██║█████╗░░░██║░░░██║░░░██║██╔██╗██║█████╗░░
+# ██╔══██║██║░░░██║░░░██║░░░██║░░██║╚════╝░░░██║░░░██║░░░██║██║╚████║██╔══╝░░
+# ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗
+# ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝
+
+
+##  -- General Settings --  ##
+
+##  API key given on purchase/signup
+api-key: 'xyz'
+
+##  Email used on signup
+email: 'xyz@gmail.com'
+
+##  Enable/Disable integrated Web Server.
+##  Info: Use /trade to view the web-server
+web-server-enabled: true
+
+##  Port for integrated Web Server (If enabled)
+##  Make sure to port-forward and disable firewalls for this port.
+port: 8123
+
+##  The maximum length in data points that the trade-short.html will show (this doesn't affect data)
+##  Info: When the time-period is set to 144, 1 is one day.
+maximum-short-trade-length: 144
+
+##  Server name that will show up in commands and requests
+server-name: 'My Server'
+
+##  Time Period in minutes
+##  Info: This should be around a tenth of the total items in your shop (i.e with 150 items this would be 15) to prevent overload
+##  Info: When decreasing or increasing this adjust your volatility settings accordingly
+time-period: 10
+
+##  The amount of menu rows in the GUI shop, value of 4-6.
+menu-rows: 6
+
+##  GUI Shop Menu title
+menu-title: 'Shop'
+
+##  Message sent for players with no permission
+no-permission: '&eYou do not have permission to perform this command'
+
+##Enable player-automatic-selling
+auto-sell-enabled: true 
+
+##  How often auto-sell updates in ticks
+##  Info: Set this higher if few players use autosell
+##  Info: Set it lower if many players use autosell
+auto-sell-update-period: 25
+
+##  How often players are shown their auto-sell profits in ticks
+auto-sell-profit-update-period: 1200
+
+##  -- Pricing Model Settings --  ##
+
+##  Percentage difference in sell price to buy price
+sell-price-difference: 10.0
+
+##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
+max-volatility: 0.5
+
+##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
+min-volatility: 0.025
+
+##  Send players data about the most significant changes in the economy when they join
+send-player-top-movers-on-join: true
+
+##  How many items should be displayed for sell + buy (A value of 5 means 10 items as 5 for sell + buy)
+top-movers-amount: 5
+
+##  -- Data Selection Settings --  ##
+
+##  Info: When setting your data selection algorithim use a site such as https://www.desmos.com/calculator
+##  Info: Data selection uses the equation y=m(x^z)+c, for example the default is y=0.075(x^1.6)+1.25
+
+##  'm' in equation: y=m(x^z)+c
+data-selection-m: 0.05
+
+##  'z' in equation: y=m(x^z)+c
+data-selection-z: 1.6
+
+##  'c' in equation: y=m(x^z)+c
+data-selection-c: 1.05
+
+##  -- Other Econonomy Settings --
+
+##  Minimum players needed, to be online, for prices to update
+##  Info: It is recommended to keep this above 0
+update-prices-threshold: 1
+
+##  The symbol that appears before all currency
+currency-symbol: '$'
+
+##  Enable sell price difference variation to ease out sell price variation
+sell-price-difference-variation-enabled: true
+
+##  Starting percententage sell price difference for sell price variation
+sell-price-difference-variation-start: 25
+
+##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 4 weeks)
+sell-price-variation-time-period: 43200
+
+##  Time in minutes that the sell-price-difference updates
+##  Info: Must be a factor of sell-price-variation-time-period or it won't work!
+sell-price-variation-update-period: 30
+
+##  Enable forced inflation in the economy
+inflation-enabled: true
+
+##  Inflation method can be Dynamic, Static or Mixed.
+##  Info: The dynamic method increases the prices of items in the economy by a percentage each time period
+##  Info: The static method adds extra values to buys
+##  Info: Mixed uses both methods
+inflation-method: 'Mixed'
+
+##  Time period in ticks between dynamic price increases
+dynamic-inflation-time-period: 2500
+
+##  Percentage increase in prices per time-period.
+dynamic-inflation-value: 0.000025
+
+##  Percentage increase for buy value per price calculation update period. E.g 0.05%
+static-inflation-value: 0.05
+
+##  Intrest rate per interest-rate-update-period
+##  Info: This is the increase in the current debt payment per-time period
+interest-rate: 0.0075
+
+##  Intrest rate for compound-intrest loans
+##  Info: Compound interest loans grow faster so should have a lower initial interest rate
+compound-interest-rate: 0.005
+
+##  Time period in ticks between updates of the interest rate for users loans
+interest-rate-update-period: 1200
+
+##  Disable the max-buy/max-sells for items
+##  Info: Don't do this unless you know what your doing.
+##  Info: If this is enabled, it is likely to lead to exploitation on servers with under 100 total or under 10 concurrent players
+disable-max-buys-sells: false
+
+##  lowest value in $ a player can go into debt
+##  Example: -10.00
+max-debt-value: -100.00
+
+##  The percentage value to decrease items sold with enchantments
+##  Info: Stacked enchantments etc. can become very expensive so a number between 25% - 50% is usually fine
+##  Info: This doesn't affect buys
+enchantment-limiter: 45.00
+
+##  The percentage value to decrease items sold with a loss in durability
+##  Info: This is applied ON TOP of the durability algorithm to limit the exploitability of selling tools
+durability-limiter: 7.50
+
+##  -- Other Settings --
+
+##  Enable debug mode for more info on price calculations
+debug-enabled: false
+
+##  Ignore AFK players in price calulcations/online checks
+##  Info: Turning this on will mean the price will only update when there's a player that insn't AFK
+##  Info: This only applies to essentials AFK and you must have essentials installed for this to work
+ignore-afk: true
+
+##  Enable ChecksumHeaderBypass if you have issues with data retrieval or corruption
+checksum-header-bypass: true
+
+##  Enable the Auto-Tune tutorial for players
+##  Keep this on to encourage purchasing turn it off if it is distracting
+tutorial: true
+
+##  Time in seconds between messages
+tutorial-message-period: 325
+
+##  Data storage location
+data-location: 'plugins/Auto-Tune/'
+
+##  Enable transactions
+##  Info: This will result in much larger file sizes and additional transaction files but more stability and improved data-protection
+##  Info: This is off by default as the default data protection will be fine for most servers
+data-transactions: false

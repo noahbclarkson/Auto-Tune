@@ -53,3 +53,6 @@ Auto-Tune/data.db
 Auto-Tune/target/classes/enchantments.yml
 *.marker
 Auto-Tune/target/classes/about.html
+/.gradle/
+/build/
+.vscode

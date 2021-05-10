@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Minecraft Economy Plugin</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+    
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css">  
+    <link rel="stylesheet" href="styles.css"> -->
+
+  </head>
+  <body>
+    <div class="table-responsive">
+    <canvas id="myChart" style="height:1000px" class="table"></canvas>
+    </div>
+    <script>
+      window.addEventListener('load', setup);
+
+      const colours = [];
+
+      async function setup() {
+        generateColours();
+        const ctx = document.getElementById('myChart').getContext('2d');
+        const items = await getData();
+        const chartObjects = chartObjectify(items);
+        console.log(items)
+        const data = {
+          labels: items[1].t,
+          datasets:
+          chartObjects
+        };
+        const lineChartOptions = {
+          responsive: false,
+          maintainAspectRatio: false,
+          scales: {
+            xAxes: [{
+              type: 'linear',
+              position: 'bottom'
+            }],
+            yAxes: [
+              {
+                ticks: {
+                  callback: function (value) {
+                    return value + '$';
+                  }
+                }
+              }
+            ]
+          }
+        };
+        const myChart = new Chart(ctx, {
+          type: 'line',
+          data: data,
+          options: lineChartOptions
+        });
+      }
+
+      function getRandomInt(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
+      }
+
+      generateColours = function(){
+            for(let i = 0; i < 250; i++){
+              let randomColor = 'rgba('+ getRandomInt(0, 256) + ", " + getRandomInt(0, 256) + ", " + getRandomInt(0, 256) + ", 0.5)";
+              colours.push(randomColor)
+            }
+        }
+
+      function chartObjectify(items){
+        convertItemDataToPoints(items);
+        console.log(items)
+        const chartObjects = [];
+        items.forEach(item => {
+            let newObject = 
+            {
+            label: item.itemName,
+            data: item.points,
+            fill: true,
+            borderColor: colours[items.indexOf(item)],
+            backgroundColor: colours[items.indexOf(item)],
+            hidden: true,
+            lineTension: 0.1,
+            spanGaps: true,
+            pointHoverRadius: 6,
+            borderWidth: 1,
+            pointRadius: 2
+            }
+            chartObjects.push(newObject);
+        })
+        return chartObjects;
+      }
+
+      function convertItemDataToPoints(items){
+        items.forEach(item => {
+          for(let i = 0; i < item.p.length; i++){
+            let newPoint = {
+              x: item.t[i],
+              y: item.p[i]
+            }
+            item.points.push(newPoint);
+            }
+        })
+      }
+
+      async function getData() {
+        const response = await fetch('trade.csv');
+        const data = await response.text();
+        const items = [];
+        const timeperiods = [];
+        const prices = [];
+        const buys = [];
+        const sells = [];
+        const rows = data.split('\n');
+        let itemName = 'none';
+        rows.forEach(row => {
+          if(row.search('%') !== -1){
+            if(itemName !== 'none'){
+            const t = [...timeperiods];
+            const p = [...prices];
+            const b = [...buys];
+            const s = [...sells];
+              const points = [];
+              items.push({itemName, t, p, b, s, points})
+            prices.splice(0, prices.length)
+            timeperiods.splice(0, timeperiods.length)
+            buys.splice(0, buys.length)
+            sells.splice(0, sells.length)
+            }
+            itemName=row.replace(/%/g, "");
+            itemName=itemName.replace(/,/g, "");
+          }else{
+          const cols = row.split(',');
+            timeperiods.push(parseFloat(cols[0]));
+            prices.push(parseFloat(cols[1]))
+            buys.push(parseFloat(cols[2]));
+            sells.push(parseFloat(cols[3]))
+          }
+        });
+        const t = [...timeperiods];
+        const p = [...prices];
+        const b = [...buys];
+        const s = [...sells];
+        const points = [];
+        items.push({itemName, t, p, b, s, points})
+        prices.splice(0, prices.length)
+        timeperiods.splice(0, timeperiods.length)
+        buys.splice(0, buys.length)
+        sells.splice(0, sells.length)
+        console.log(items)
+        return items;
+      }
+    </script>
+  </body>
+</html>

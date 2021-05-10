@@ -1,0 +1,63 @@
+package unprotesting.com.github;
+
+import org.bukkit.plugin.java.JavaPlugin;
+
+import unprotesting.com.github.Config.DataFiles;
+import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
+import unprotesting.com.github.Data.Persistent.Database;
+import unprotesting.com.github.Economy.EconomyFunctions;
+import unprotesting.com.github.Logging.Logging;
+
+/*  
+    Main initialization file for Auto-Tune
+    Contains startup and shutdown methods
+*/
+
+public class Main extends JavaPlugin{
+
+    public static DataFiles dfiles;
+    public static Database database;
+
+    @Override
+    public void onDisable(){
+
+    }
+
+    @Override
+    public void onEnable(){
+        checkEconomy();
+        setupDataFiles();
+        setupDatabase();
+    }
+
+    private void setupDatabase(){
+        database = new Database();
+    }
+
+    private void checkEconomy(){
+        if (!EconomyFunctions.setupLocalEconomy(this.getServer())){
+            Logging.error(1);
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+    }
+
+    public void setupDataFiles(){
+        dfiles = new DataFiles(getDataFolder());
+        int i = 0;
+        String[] filenames = dfiles.getFileNames();
+        for (;i < 3; i++){
+            saveResource(filenames[i], false);
+        }
+        for (;i < 6; i++){
+            saveResource("web/" + filenames[i], false);
+        }
+        dfiles.loadConfigs();
+    }
+
+
+
+
+
+    
+}

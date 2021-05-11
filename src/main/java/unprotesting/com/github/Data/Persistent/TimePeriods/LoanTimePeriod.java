@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 import lombok.Getter;
+import unprotesting.com.github.Main;
 import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
 import unprotesting.com.github.Data.Ephemeral.Data.LoanData;
 import unprotesting.com.github.Data.Util.LocalDateTimeArrayUtilizer;
@@ -21,9 +22,14 @@ public class LoanTimePeriod extends LocalDateTimeArrayUtilizer implements Serial
 
 
     public LoanTimePeriod(){
-        init(LocalDataCache.getLOANS().size());
+        int size = Main.cache.getLOANS().size();
+        init(size);
+        this.values = new double[size];
+        this.intrest_rates = new double[size];
+        this.time = new int[size][6];
+        this.players = new String[size];
         int i = 0;
-        for (LoanData data : LocalDataCache.getLOANS()){
+        for (LoanData data : Main.cache.getLOANS()){
             setVars(i, data);
             i++;
         }

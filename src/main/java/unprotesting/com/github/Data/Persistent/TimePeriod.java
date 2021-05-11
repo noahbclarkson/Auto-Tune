@@ -3,6 +3,7 @@ package unprotesting.com.github.Data.Persistent;
 import java.io.Serializable;
 
 import lombok.Getter;
+import unprotesting.com.github.Main;
 import unprotesting.com.github.Data.Persistent.TimePeriods.EnchantmentsTimePeriod;
 import unprotesting.com.github.Data.Persistent.TimePeriods.ItemTimePeriod;
 import unprotesting.com.github.Data.Persistent.TimePeriods.LoanTimePeriod;
@@ -25,6 +26,11 @@ public class TimePeriod implements Serializable{
 
     public TimePeriod(){
         getFromCache();
+    }
+
+    public void addToMap(){
+        int size = Main.database.map.size();
+        Main.database.map.put(size, this);
     }
 
     private void getFromCache(){

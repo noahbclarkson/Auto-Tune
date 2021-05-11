@@ -14,12 +14,12 @@ import unprotesting.com.github.Config.Config;
 public class Database {
 
     private DB database;
-    public static HTreeMap<Integer, TimePeriod> map;
+    public HTreeMap<Integer, TimePeriod> map;
 
     @SuppressWarnings("unchecked")
     public Database(){
         createDB();
-        map = database.hashMap("map", Serializer.INTEGER,Serializer.JAVA).createOrOpen();
+        this.map = database.hashMap("map", Serializer.INTEGER,Serializer.JAVA).createOrOpen();
     }
 
     //  Method to build and create or link database to file

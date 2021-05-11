@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Set;
 
 import lombok.Getter;
+import unprotesting.com.github.Main;
 import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
 import unprotesting.com.github.Data.Ephemeral.Data.ItemData;
 import unprotesting.com.github.Data.Util.BuyableTimePeriodFunctions;
@@ -20,11 +21,16 @@ public class ItemTimePeriod extends BuyableTimePeriodFunctions implements Serial
     private String[] items;
 
     public ItemTimePeriod(){
-        Set<String> set = LocalDataCache.getITEMS().keySet();
-        init(set.size());
+        Set<String> set = Main.cache.getITEMS().keySet();
+        int size = set.size();
+        init(size);
+        this.buys = new int[size];
+        this.sells = new int[size];
+        this.prices = new double[size];
+        this.items = new String[size];
         int i = 0;
         for (String key : set){
-            ItemData data = LocalDataCache.getITEMS().get(key);
+            ItemData data = Main.cache.getITEMS().get(key);
             setVars(i, data);
             this.items[i] = key;
             i++;

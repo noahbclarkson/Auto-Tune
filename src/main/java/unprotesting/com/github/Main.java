@@ -1,11 +1,16 @@
 package unprotesting.com.github;
 
+import java.io.IOException;
+
 import org.bukkit.plugin.java.JavaPlugin;
 
 import unprotesting.com.github.Config.DataFiles;
+import unprotesting.com.github.Data.CSV.CSVHandler;
 import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
 import unprotesting.com.github.Data.Persistent.Database;
+import unprotesting.com.github.Data.Persistent.TimePeriod;
 import unprotesting.com.github.Economy.EconomyFunctions;
+import unprotesting.com.github.LocalServer.LocalServer;
 import unprotesting.com.github.Logging.Logging;
 
 /*  
@@ -17,17 +22,22 @@ public class Main extends JavaPlugin{
 
     public static DataFiles dfiles;
     public static Database database;
+    public static LocalDataCache cache;
+    public static LocalServer server;
 
     @Override
     public void onDisable(){
-
     }
 
     @Override
     public void onEnable(){
+        Logging.log("ENABLING AUTO-TUNE");
         checkEconomy();
         setupDataFiles();
         setupDatabase();
+        cache = new LocalDataCache();
+        TimePeriod TP = new TimePeriod();
+        TP.addToMap();
     }
 
     private void setupDatabase(){
@@ -44,14 +54,6 @@ public class Main extends JavaPlugin{
 
     public void setupDataFiles(){
         dfiles = new DataFiles(getDataFolder());
-        int i = 0;
-        String[] filenames = dfiles.getFileNames();
-        for (;i < 3; i++){
-            saveResource(filenames[i], false);
-        }
-        for (;i < 6; i++){
-            saveResource("web/" + filenames[i], false);
-        }
         dfiles.loadConfigs();
     }
 

@@ -16,16 +16,25 @@ public class DataFiles {
         new File("plugins/Auto-Tune/web/").mkdirs();
         this.files = new File[6];
         this.configs = new YamlConfiguration[3];
+        for (int i = 0; i < 3; i++){
+            this.configs[i] = new YamlConfiguration();
+        }
         int i = 0;
         for (;i < 3; i++){
             File file = new File(dataFolder, filenames[i]);
-            file.getParentFile().mkdirs();
             files[i] = file;
+            if (file.exists()){
+                continue;
+            }
+            file.getParentFile().mkdirs();
         }
         for (;i < 6; i++){
             File file = new File("plugins/Auto-Tune/web/", filenames[i]);
-            file.getParentFile().mkdirs();
             files[i] = file;
+            if (file.exists()){
+                continue;
+            }
+            file.getParentFile().mkdirs();
         }
     }
 

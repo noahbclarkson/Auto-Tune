@@ -10,13 +10,14 @@
 
 main: unprotesting.com.github.Main
 name: Auto-Tune
-version: ${projectVersion}
+version: 0.13.0
 author: Unprotesting
 description: Automatic Economy Plugin
 depend: [Vault]
 api-version: 1.14
 website: https://github.com/Unprotesting/Auto-Tune
 prefix: '[AUTO-TUNE]'
+api: ""
 commands:
     at:
       description: Auto-Tune Command.

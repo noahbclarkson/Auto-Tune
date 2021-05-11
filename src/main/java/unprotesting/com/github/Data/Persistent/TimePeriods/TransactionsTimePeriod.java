@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 import lombok.Getter;
+import unprotesting.com.github.Main;
 import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
 import unprotesting.com.github.Data.Ephemeral.Data.TransactionData;
 import unprotesting.com.github.Data.Util.LocalDateTimeArrayUtilizer;
@@ -22,9 +23,16 @@ public class TransactionsTimePeriod extends LocalDateTimeArrayUtilizer implement
     private String[] players, items, positions;
 
     public TransactionsTimePeriod(){
-        init(LocalDataCache.getTRANSACTIONS().size());
+        int size = Main.cache.getTRANSACTIONS().size();
+        init(size);
+        this.prices = new double[size];
+        this.amounts = new int[size];
+        this.items = new String[size];
+        this.players = new String[size];
+        this.positions = new String[size];
+        this.time = new int[size][6];
         int i = 0;
-        for (TransactionData data : LocalDataCache.getTRANSACTIONS()){
+        for (TransactionData data : Main.cache.getTRANSACTIONS()){
             setVars(i, data);
             i++;
         }

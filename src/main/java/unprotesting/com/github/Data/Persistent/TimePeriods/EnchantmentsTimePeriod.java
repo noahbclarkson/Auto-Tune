@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Set;
 
 import lombok.Getter;
+import unprotesting.com.github.Main;
 import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
 import unprotesting.com.github.Data.Ephemeral.Data.EnchantmentData;
 import unprotesting.com.github.Data.Util.BuyableTimePeriodFunctions;
@@ -20,13 +21,17 @@ public class EnchantmentsTimePeriod extends BuyableTimePeriodFunctions implement
     private String[] items;
 
     public EnchantmentsTimePeriod(){
-        Set<String> set = LocalDataCache.getENCHANTMENTS().keySet();
+        Set<String> set = Main.cache.getENCHANTMENTS().keySet();
         int size = set.size();
         init(size);
         this.ratios = new double[size];
+        this.prices = new double[size];
+        this.buys = new int[size];
+        this.sells = new int[size];
+        this.items = new String[size];
         int i = 0;
         for (String key : set){
-            EnchantmentData data = LocalDataCache.getENCHANTMENTS().get(key);
+            EnchantmentData data = Main.cache.getENCHANTMENTS().get(key);
             setVars(i, data);
             this.items[i] = key;
             i++;

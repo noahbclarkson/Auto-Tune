@@ -14,13 +14,17 @@ public class Section {
     @Getter
     private List<String> items;
     @Getter
-    private String name;
+    private String name, background;
     @Getter
     private Material image;
     @Getter
     private boolean back;
+    @Getter
+    private int position;
 
-    public Section(String name, String material, boolean back){
+    public Section(String name, String material, boolean back, int position, String background){
+    this.background = background;
+        this.position = position;
         this.name = name;
         this.back = back;
         this.image = Material.matchMaterial(material);
@@ -32,6 +36,16 @@ public class Section {
                 this.items.add(key);
             }
         }
+    }
+
+    public static int getHighest(List<Section> sections){
+        int output = 0;
+        for (Section section : sections){
+            if (section.getPosition() > output){
+                output = section.getPosition();
+            }
+        }
+        return output;
     }
     
 }

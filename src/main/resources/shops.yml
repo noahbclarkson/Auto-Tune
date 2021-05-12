@@ -16,6 +16,44 @@
 
 ##  -- Auto-Tune Default Shops File --  ##
 
+##  Shop sections configuration
+sections:
+  'Natural Resources':
+    ##  Block that the section image is displayed as
+    block: 'IRON_ORE'
+    ##  Background for sub-menu
+    background: 'GRAY_STAINED_GLASS_PANE'
+    ##  Position in Main Menu GUI
+    position: 10
+    ##  Optional - set to disabled to disable the back button when running "/shop <shop-section>".
+    ##  This wont disable the back button when running just "/shop"
+    back-menu-button-enabled: true
+  'Blocks':
+    block: 'STONE'
+    position: 12
+    background: 'GRAY_STAINED_GLASS_PANE'
+    back-menu-button-enabled: true
+  'Food':
+    block: 'COOKED_BEEF'
+    position: 14
+    background: 'GRAY_STAINED_GLASS_PANE'
+    back-menu-button-enabled: true
+  'Farming':
+    block: 'OAK_SAPLING'
+    position: 16
+    background: 'GRAY_STAINED_GLASS_PANE'
+    back-menu-button-enabled: true
+  'Tools':
+    block: 'DIAMOND_PICKAXE'
+    position: 20
+    background: 'GRAY_STAINED_GLASS_PANE'
+    back-menu-button-enabled: true
+  'Other':
+    block: 'STICK'
+    position: 24
+    background: 'GRAY_STAINED_GLASS_PANE'
+    back-menu-button-enabled: true
+
 ##  Set the default / starting prices for the items you want available in the shop
 ##  Info: Make sure you put a decimal point and two digits to create a double for the shop algorithim to accept and parse to a price-value
 ##  Info: Most of these values will be almost useless once the economy has started, to use these values again delete the data.db file
@@ -26,8 +64,6 @@
 ##  Options: 'sell-difference: <double>' set a custom sell-price-difference (default set in config).
 ##  Options: 'max-buy': <integer> set a maximum quantity that can be purchased in a time-period
 ##  Options: 'max-sell': <integer> set a maximum quantity that can be sold in a time-period
-##  Options: 'enchantment': <string> set an items enchantment
-##  Options: 'enchantment': <integer> set an items enchantment level
 
 
   ##  Example:
@@ -37,8 +73,6 @@
   ##    sell-difference: 0.0    <- Example of a set sell-difference item
   ##    max-buy: 10       <- Only 10 items can be bought each time-period - you can increase this on large servers
   ##    max-sell: 12       <- Only 12 items can be sold each time-period - you can increase this on large servers
-  ##    enchantment: 'DAMAGE_ALL'     <- Example of set enchanted item - Note: Enchantment price calculation must be turned off!
-  ##    enchantment-level: 1      <- Enchantment level, look above
 
 shops:
   COAL:
@@ -876,27 +910,3 @@ shops:
     max-buy: 16
     max-sell: 26
     section: 'Tools'
-    
-##  Shop sections configuration
-sections:
-  'Natural Resources':
-    ##  Block that the section image is displayed as
-    block: 'IRON_ORE'
-    ##  Optional - set to disabled to disable the back button when running "/shop <shop-section>".
-    ##  This wont disable the back button when running just "/shop"
-    back-menu-button-enabled: true
-  'Blocks':
-    block: 'STONE'
-    back-menu-button-enabled: true
-  'Food':
-    block: 'COOKED_BEEF'
-    back-menu-button-enabled: true
-  'Farming':
-    block: 'OAK_SAPLING'
-    back-menu-button-enabled: true
-  'Tools':
-    block: 'DIAMOND_PICKAXE'
-    back-menu-button-enabled: true
-  'Other':
-    block: 'STICK'
-    back-menu-button-enabled: true

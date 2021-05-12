@@ -14,12 +14,16 @@ import org.bukkit.entity.Player;
 import lombok.Getter;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.Commands.Objects.Section;
+import unprotesting.com.github.Config.Config;
+import unprotesting.com.github.Data.CSV.CSVReader;
 import unprotesting.com.github.Data.Ephemeral.Data.EnchantmentData;
 import unprotesting.com.github.Data.Ephemeral.Data.ItemData;
 import unprotesting.com.github.Data.Ephemeral.Data.LoanData;
+import unprotesting.com.github.Data.Ephemeral.Data.MaxBuySellData;
 import unprotesting.com.github.Data.Ephemeral.Data.TransactionData;
 import unprotesting.com.github.Data.Ephemeral.Data.TransactionData.TransactionPositionType;
 import unprotesting.com.github.Data.Ephemeral.Other.PlayerSaleData;
+import unprotesting.com.github.Data.Ephemeral.Other.Sale;
 import unprotesting.com.github.Data.Ephemeral.Other.Sale.SalePositionType;
 import unprotesting.com.github.Data.Persistent.Database;
 import unprotesting.com.github.Data.Persistent.TimePeriods.EnchantmentsTimePeriod;
@@ -45,6 +49,10 @@ public class LocalDataCache {
     private ConcurrentHashMap<Player, PlayerSaleData> PLAYER_SALES;
     @Getter
     private List<Section> SECTIONS;
+    @Getter
+    private ConcurrentHashMap<String, MaxBuySellData> MAX_PURCHASES;
+    @Getter
+    private ConcurrentHashMap<String, Double> PERCENTAGE_CHANGES;
 
     private int size;
 
@@ -55,6 +63,8 @@ public class LocalDataCache {
         this.TRANSACTIONS = new ArrayList<TransactionData>();
         this.PLAYER_SALES = new ConcurrentHashMap<Player, PlayerSaleData>();
         this.SECTIONS = new ArrayList<Section>();
+        this.MAX_PURCHASES = new ConcurrentHashMap<String, MaxBuySellData>();
+        this.PERCENTAGE_CHANGES = new ConcurrentHashMap<String, Double>();
         this.size = Main.database.map.size();
         init();
     }
@@ -96,12 +106,38 @@ public class LocalDataCache {
         return this.ITEMS.get(item).getPrice();
     }
 
+    //  Get enchantment price
     public double getEnchantmentPrice(String enchantment){
         return this.ENCHANTMENTS.get(enchantment).getPrice();
     }
 
+    //  Get enchantement ratio
     public double getEnchantmentRatio(String enchantment){
         return this.ENCHANTMENTS.get(enchantment).getRatio();
+    }
+
+    public int getBuysLeft(String item, Player player){
+        PlayerSaleData pdata = PLAYER_SALES.get(player);
+        int amount = 0;
+        for (Sale sale : pdata.getBuys()){
+            if (sale.getItem().equals(item)){
+                amount += sale.getAmount();
+            }
+        }
+        int max = MAX_PURCHASES.get(item).getBuys();
+        return max-amount;
+    }
+
+    public int getSellsLeft(String item, Player player){
+        PlayerSaleData pdata = PLAYER_SALES.get(player);
+        int amount = 0;
+        for (Sale sale : pdata.getSells()){
+            if (sale.getItem().equals(item)){
+                amount += sale.getAmount();
+            }
+        }
+        int max = MAX_PURCHASES.get(item).getSells();
+        return max-amount;
     }
 
 
@@ -113,6 +149,7 @@ public class LocalDataCache {
         loadEnchantmentDataFromData();
         loadLoanDataFromData();
         loadTransactionDataFromData();
+        loadSectionDataFromFile();
     }
 
     //  Get current cache for a players PlayerData object
@@ -127,21 +164,49 @@ public class LocalDataCache {
     private void loadShopDataFromFile(){
         ConfigurationSection config = Main.dfiles.getShops().getConfigurationSection("shops");
         Set<String> set = config.getKeys(false);
+        ConcurrentHashMap<String, Double> map = new ConcurrentHashMap<String, Double>();
+        try {
+            if (Config.isReadFromCSV()){
+                map = CSVReader.readData();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         for (String key : set){
-            ItemData data = new ItemData(config.getConfigurationSection(key).getDouble("price"));
+            ConfigurationSection section = config.getConfigurationSection(key);
+            ItemData data = new ItemData(section.getDouble("price"));
+            if (Config.isReadFromCSV()){
+                data = new ItemData(map.get(key));
+            }
+            MaxBuySellData mbsdata = new MaxBuySellData(section.getInt("max-buy"), section.getInt("max-sell"));
+            this.MAX_PURCHASES.put(key, mbsdata);
             this.ITEMS.put(key, data);
         }
     }
 
     private void loadShopDataFromData(){
         if (size < 1){
+            for (String str : this.ITEMS.keySet()){
+                this.PERCENTAGE_CHANGES.put(str, 0.0);
+            }
             return;
         }
+        int tpInDay = (int)(1/(Config.getTimePeriod()/1440));
+        ItemTimePeriod ITP2;
         ItemTimePeriod ITP = Main.database.map.get(size-1).getItp();
+        ITP2 = ITP;
+        if (size-1 > tpInDay){
+            ITP2 = Main.database.map.get(size-tpInDay).getItp();
+        }
+        else if (size-1 <= tpInDay){
+            ITP2 = Main.database.map.get(0).getItp();
+        }
         int i = 0;
         for (String item : ITP.getItems()){
             ItemData data = new ItemData(ITP.getPrices()[i]);
             this.ITEMS.put(item, data);
+            double pChange = (ITP2.getPrices()[i]-ITP.getPrices()[i])/ITP.getPrices()[i]*100;
+            this.PERCENTAGE_CHANGES.put(item, pChange);
             i++;
         }
     }
@@ -205,8 +270,9 @@ public class LocalDataCache {
         ConfigurationSection csection = Main.dfiles.getShops().getConfigurationSection("sections");
         for (String section : csection.getKeys(false)){
             ConfigurationSection icsection = csection.getConfigurationSection(section);
-            SECTIONS.add(new Section(section, icsection.getString("block"), icsection.getBoolean("back-menu-button-enabled")));
+            SECTIONS.add(new Section(section, icsection.getString("block"), icsection.getBoolean("back-menu-button-enabled"),
+             icsection.getInt("position"), icsection.getString("background")));
         }
     }
-    
+
 }

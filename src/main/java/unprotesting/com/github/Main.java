@@ -38,6 +38,9 @@ public class Main extends JavaPlugin{
         cache = new LocalDataCache();
         TimePeriod TP = new TimePeriod();
         TP.addToMap();
+        for (String item : cache.getITEMS().keySet()){
+            System.out.println(item + ": " + cache.getItemPrice(item));
+        }
     }
 
     private void setupDatabase(){
@@ -54,6 +57,11 @@ public class Main extends JavaPlugin{
 
     public void setupDataFiles(){
         dfiles = new DataFiles(getDataFolder());
+        for (int i = 0; i < 6; i++){
+            if (!dfiles.getFiles()[i].exists()){
+                saveResource(dfiles.getFileNames()[i], false);
+            }
+        }
         dfiles.loadConfigs();
     }
 

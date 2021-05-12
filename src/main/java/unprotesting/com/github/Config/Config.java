@@ -13,18 +13,18 @@ public class Config {
  @Setter
  private static boolean webServer, debugEnabled, checksumHeaderBypass, sellPriceDifferenceVariationEnabled, inflationEnabled, 
                          autoSellEnabled, calculateGlobalGDP, tutorial, sendPlayerTopMoversOnJoin, dataTransactions, disableMaxBuysSells,
-                          ignoreAFK, usePermissionsForShop;
+                          ignoreAFK, usePermissionsForShop, readFromCSV;
 
  @Getter
  @Setter
- private static Integer port, timePeriod, menuRows, sellPriceVariationTimePeriod, sellPriceVariationUpdatePeriod, autoSellUpdatePeriod, 
+ private static Integer port, timePeriod, sellPriceVariationTimePeriod, sellPriceVariationUpdatePeriod, autoSellUpdatePeriod, 
                          autoSellProfitUpdatePeriod, dynamicInflationUpdatePeriod, maximumShortTradeLength, InterestRateUpdateRate,
                           tutorialMessagePeriod, topMoversAmount, updatePricesThreshold;
 
  @Getter
  @Setter
  private static String serverName, pricingModel, basicVolatilityAlgorithim, menuTitle, noPermission, apiKey, email, inflationMethod,
-                        currencySymbol, economyShopConfig, dataLocation, storageSetting;
+                        currencySymbol, economyShopConfig, dataLocation, storageSetting, background;
 
  @Getter
  @Setter
@@ -44,6 +44,7 @@ public class Config {
         Config.setDisableMaxBuysSells(Main.dfiles.getConfig().getBoolean("disable-max-buys-sells", false));
         Config.setIgnoreAFK(Main.dfiles.getConfig().getBoolean("ignore-afk", true));
         Config.setInflationEnabled(Main.dfiles.getConfig().getBoolean("inflation-enabled", true));
+        Config.setReadFromCSV(Main.dfiles.getConfig().getBoolean("read-from-csv", false));
         Config.setSellPriceDifferenceVariationEnabled(Main.dfiles.getConfig().getBoolean("sell-price-difference-variation-enabled", true));
         Config.setSendPlayerTopMoversOnJoin(Main.dfiles.getConfig().getBoolean("send-player-top-movers-on-join", true));
         Config.setTutorial(Main.dfiles.getConfig().getBoolean("tutorial", true));
@@ -56,7 +57,6 @@ public class Config {
         Config.setDynamicInflationUpdatePeriod(Main.dfiles.getConfig().getInt("dynamic-inflation-update-period", 5000));
         Config.setInterestRateUpdateRate(Main.dfiles.getConfig().getInt("interest-rate-update-period", 1200));
         Config.setMaximumShortTradeLength(Main.dfiles.getConfig().getInt("maximum-short-trade-length", 100));
-        Config.setMenuRows(Main.dfiles.getConfig().getInt("menu-rows", 3));
         Config.setPort(Main.dfiles.getConfig().getInt("port", 8321));
         Config.setSellPriceVariationTimePeriod(Main.dfiles.getConfig().getInt("sell-price-variation-time-period", 10800));
         Config.setSellPriceVariationUpdatePeriod(Main.dfiles.getConfig().getInt("sell-price-variation-update-period", 30));
@@ -67,6 +67,7 @@ public class Config {
 
 
         Config.setApiKey(Main.dfiles.getConfig().getString("api-key", "xyz"));
+        Config.setBackground(Main.dfiles.getConfig().getString("background", "BLACK_STAINED_GLASS_PANE"));
         Config.setBasicVolatilityAlgorithim(ChatColor.translateAlternateColorCodes('&', Main.dfiles.getConfig().getString("Volatility-Algorithim", "Variable")));
         Config.setCurrencySymbol(ChatColor.translateAlternateColorCodes('&', Main.dfiles.getConfig().getString("currency-symbol", "$")));
         Config.setDataLocation(Main.dfiles.getConfig().getString("data-location", ""));
@@ -97,7 +98,6 @@ public class Config {
         Config.setSellPriceDifference(Main.dfiles.getConfig().getDouble("sell-price-difference", 2.5));
         Config.setSellPriceDifferenceVariationStart(Main.dfiles.getConfig().getDouble("sell-price-difference-variation-start", 25.0));
         Config.setShopConfigGUIShopSellValue(Main.dfiles.getConfig().getDouble("shop-config-guishop-sell-value", 20.00));
-
 
         if (getTimePeriod() < 3){
             Logging.debug("Time-Period Setting reverting to 3 to reduce memory usage. If you would like lower time periods open a ticket in the offical discord.");

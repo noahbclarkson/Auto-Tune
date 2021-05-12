@@ -27,19 +27,16 @@ port: 8123
 ##  Info: When the time-period is set to 144, 1 is one day.
 maximum-short-trade-length: 144
 
-##  Server name that will show up in commands and requests
-server-name: 'My Server'
-
 ##  Time Period in minutes
 ##  Info: This should be around a tenth of the total items in your shop (i.e with 150 items this would be 15) to prevent overload
 ##  Info: When decreasing or increasing this adjust your volatility settings accordingly
 time-period: 10
 
-##  The amount of menu rows in the GUI shop, value of 4-6.
-menu-rows: 6
-
 ##  GUI Shop Menu title
 menu-title: 'Shop'
+
+##  GUI Shop Menu background
+background: 'BLACK_STAINED_GLASS_PANE'
 
 ##  Message sent for players with no permission
 no-permission: '&eYou do not have permission to perform this command'
@@ -55,7 +52,9 @@ auto-sell-update-period: 25
 ##  How often players are shown their auto-sell profits in ticks
 auto-sell-profit-update-period: 1200
 
+
 ##  -- Pricing Model Settings --  ##
+
 
 ##  Percentage difference in sell price to buy price
 sell-price-difference: 10.0
@@ -72,7 +71,9 @@ send-player-top-movers-on-join: true
 ##  How many items should be displayed for sell + buy (A value of 5 means 10 items as 5 for sell + buy)
 top-movers-amount: 5
 
+
 ##  -- Data Selection Settings --  ##
+
 
 ##  Info: When setting your data selection algorithim use a site such as https://www.desmos.com/calculator
 ##  Info: Data selection uses the equation y=m(x^z)+c, for example the default is y=0.075(x^1.6)+1.25
@@ -86,7 +87,9 @@ data-selection-z: 1.6
 ##  'c' in equation: y=m(x^z)+c
 data-selection-c: 1.05
 
+
 ##  -- Other Econonomy Settings --
+
 
 ##  Minimum players needed, to be online, for prices to update
 ##  Info: It is recommended to keep this above 0
@@ -155,7 +158,9 @@ enchantment-limiter: 45.00
 ##  Info: This is applied ON TOP of the durability algorithm to limit the exploitability of selling tools
 durability-limiter: 7.50
 
+
 ##  -- Other Settings --
+
 
 ##  Enable debug mode for more info on price calculations
 debug-enabled: false
@@ -182,3 +187,6 @@ data-location: 'plugins/Auto-Tune/'
 ##  Info: This will result in much larger file sizes and additional transaction files but more stability and improved data-protection
 ##  Info: This is off by default as the default data protection will be fine for most servers
 data-transactions: false
+
+##  Read initial price data from trade.csv
+read-from-csv: false

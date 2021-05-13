@@ -38,7 +38,7 @@ public class CSVHandler {
             for (int i = (size-cutoff); i < size; i++){
                 ItemTimePeriod ITP = Main.database.map.get(i).getItp();
                 int pos = Arrays.asList(ITP.getItems()).indexOf(item);
-                writer.write(ITP.getPrices()[pos] + "," +  ITP.getBuys()[pos] + "," + ITP.getSells()[pos] + "\n");
+                writer.append(i + "," + ITP.getPrices()[pos] + "," +  ITP.getBuys()[pos] + "," + ITP.getSells()[pos] + "\n");
             }
         }
         writer.close();

@@ -52,6 +52,9 @@ auto-sell-update-period: 25
 ##  How often players are shown their auto-sell profits in ticks
 auto-sell-profit-update-period: 1200
 
+##  Global number format
+number-format: '###,###,###,##0.00'
+
 
 ##  -- Pricing Model Settings --  ##
 

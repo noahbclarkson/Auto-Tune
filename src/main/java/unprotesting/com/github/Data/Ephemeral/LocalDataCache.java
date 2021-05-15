@@ -1,5 +1,6 @@
 package unprotesting.com.github.Data.Ephemeral;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
@@ -106,6 +108,19 @@ public class LocalDataCache {
         return this.ITEMS.get(item).getPrice();
     }
 
+    //  Get item price
+    public double getItemPrice(String item, boolean sell){
+        if (!sell){
+            return this.ITEMS.get(item).getPrice();
+        }
+        Double spd = Config.getSellPriceDifference();
+        double price = this.ITEMS.get(item).getPrice();
+        if (Main.dfiles.getShops().getConfigurationSection("shops").getConfigurationSection(item).contains("sell-difference")){
+            spd = Main.dfiles.getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("sell-difference");
+        }
+        return (price - price*spd*0.01);
+    }
+
     //  Get enchantment price
     public double getEnchantmentPrice(String enchantment){
         return this.ENCHANTMENTS.get(enchantment).getPrice();
@@ -118,26 +133,52 @@ public class LocalDataCache {
 
     public int getBuysLeft(String item, Player player){
         PlayerSaleData pdata = PLAYER_SALES.get(player);
+        int max = MAX_PURCHASES.get(item).getBuys();
+        if (pdata == null){
+            return max;
+        }
+        if (pdata.getBuys().isEmpty()){
+            return max;
+        }
         int amount = 0;
         for (Sale sale : pdata.getBuys()){
             if (sale.getItem().equals(item)){
                 amount += sale.getAmount();
             }
         }
-        int max = MAX_PURCHASES.get(item).getBuys();
         return max-amount;
     }
 
     public int getSellsLeft(String item, Player player){
         PlayerSaleData pdata = PLAYER_SALES.get(player);
+        int max = MAX_PURCHASES.get(item).getSells();
+        if (pdata == null){
+            return max;
+        }
+        if (pdata.getSells().isEmpty()){
+            return max;
+        }
         int amount = 0;
         for (Sale sale : pdata.getSells()){
             if (sale.getItem().equals(item)){
                 amount += sale.getAmount();
             }
         }
-        int max = MAX_PURCHASES.get(item).getSells();
         return max-amount;
+    }
+
+    public String getPChangeString(String item){
+        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
+        double change = this.PERCENTAGE_CHANGES.get(item);
+        if (change < 0){
+            return (ChatColor.RED + "%" + df.format(change));
+        }
+        if (change > 0){
+            return (ChatColor.GREEN + "%" + df.format(change));
+        }
+        else{
+            return (ChatColor.GRAY + "%" + 0.0);
+        }
     }
 
 
@@ -191,7 +232,9 @@ public class LocalDataCache {
             }
             return;
         }
-        int tpInDay = (int)(1/(Config.getTimePeriod()/1440));
+        double a = Config.getTimePeriod()/1440;
+        double b = 1/a;
+        int tpInDay = (int) Math.floor(b);
         ItemTimePeriod ITP2;
         ItemTimePeriod ITP = Main.database.map.get(size-1).getItp();
         ITP2 = ITP;

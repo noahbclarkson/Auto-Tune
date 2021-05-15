@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
+import unprotesting.com.github.Commands.ShopCommand;
 import unprotesting.com.github.Config.DataFiles;
 import unprotesting.com.github.Data.CSV.CSVHandler;
 import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
@@ -27,20 +28,24 @@ public class Main extends JavaPlugin{
 
     @Override
     public void onDisable(){
+        database.close();
     }
 
     @Override
     public void onEnable(){
-        Logging.log("ENABLING AUTO-TUNE");
         checkEconomy();
         setupDataFiles();
         setupDatabase();
+        updateTimePeriod();
+        setupCommands();
+        setupServer();
+    }
+
+    private void updateTimePeriod(){
         cache = new LocalDataCache();
         TimePeriod TP = new TimePeriod();
         TP.addToMap();
-        for (String item : cache.getITEMS().keySet()){
-            System.out.println(item + ": " + cache.getItemPrice(item));
-        }
+        CSVHandler.writeCSV();
     }
 
     private void setupDatabase(){
@@ -55,7 +60,7 @@ public class Main extends JavaPlugin{
         }
     }
 
-    public void setupDataFiles(){
+    private void setupDataFiles(){
         dfiles = new DataFiles(getDataFolder());
         for (int i = 0; i < 6; i++){
             if (!dfiles.getFiles()[i].exists()){
@@ -63,6 +68,16 @@ public class Main extends JavaPlugin{
             }
         }
         dfiles.loadConfigs();
+    }
+
+    private void setupCommands(){
+        this.getCommand("shop").setExecutor(new ShopCommand());
+    }
+
+    private void setupServer(){
+        try {
+            server = new LocalServer();
+        } catch (IOException e) {e.printStackTrace();}
     }
 
 

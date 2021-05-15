@@ -24,7 +24,7 @@ public class Config {
  @Getter
  @Setter
  private static String serverName, pricingModel, basicVolatilityAlgorithim, menuTitle, noPermission, apiKey, email, inflationMethod,
-                        currencySymbol, economyShopConfig, dataLocation, storageSetting, background;
+                        currencySymbol, economyShopConfig, dataLocation, storageSetting, background, numberFormat;
 
  @Getter
  @Setter
@@ -76,6 +76,7 @@ public class Config {
         Config.setInflationMethod(Main.dfiles.getConfig().getString("inflation-method", "Mixed"));
         Config.setMenuTitle(ChatColor.translateAlternateColorCodes('&', Main.dfiles.getConfig().getString("menu-title", "Auto-Tune Shop")));
         Config.setNoPermission(ChatColor.translateAlternateColorCodes('&', Main.dfiles.getConfig().getString("no-permission", "You do not have permission to perform this command")));
+        Config.setNumberFormat(Main.dfiles.getConfig().getString("number-format", "###,###,###,##0.00"));
         Config.setPricingModel(ChatColor.translateAlternateColorCodes('&', Main.dfiles.getConfig().getString("pricing-model", "Exponential")));
         Config.setServerName(ChatColor.translateAlternateColorCodes('&', Main.dfiles.getConfig().getString("server-name", "Survival Server - (Change this in Config)")));
         Config.setStorageSetting(ChatColor.translateAlternateColorCodes('&', Main.dfiles.getConfig().getString("storage-setting", "TP-Based")));

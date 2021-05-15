@@ -22,6 +22,11 @@ public class Database {
         this.map = database.hashMap("map", Serializer.INTEGER,Serializer.JAVA).createOrOpen();
     }
 
+    public void close(){
+        this.map.close();
+        this.database.close();
+    }
+
     //  Method to build and create or link database to file
     private void createDB(){
         Maker maker = DBMaker.fileDB(Config.getDataLocation() + "data.db");

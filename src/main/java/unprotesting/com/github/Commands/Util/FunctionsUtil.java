@@ -123,7 +123,6 @@ public class FunctionsUtil {
         }
         double ratio = 1;
         double fprice = 0;
-        System.out.println("Fprice: " + fprice);
         double bal = EconomyFunctions.economy.getBalance(player);
         Map<Enchantment, Integer> enchantments = null;
         try{
@@ -150,8 +149,6 @@ public class FunctionsUtil {
                 if (cratio > ratio){
                     ratio = cratio;
                 }
-                System.out.println("Found enchantment: " + ench.getName() + " of level " + level + " selling for " + Config.getCurrencySymbol() + price + " and ratio" + cratio + " highest_ratio is " + ratio);
-                System.out.println("Fprice: " + fprice);
             }
         }
         Double item_price;
@@ -164,7 +161,6 @@ public class FunctionsUtil {
             return;
         }
         fprice = fprice + item_price*ratio;
-        System.out.println("Fprice: " + fprice);
         if (bal < fprice){
             player.sendMessage(ChatColor.RED + "You need " + Config.getCurrencySymbol() + df.format(fprice) + " to purchase this item");
             int size = player.getInventory().addItem(item).size();

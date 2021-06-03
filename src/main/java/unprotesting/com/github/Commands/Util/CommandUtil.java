@@ -14,5 +14,11 @@ public class CommandUtil {
     }
 
     public static void noPermssion(Player p){p.sendMessage(Config.getNoPermission());}
+
+    public static Player closeInventory(CommandSender sender){
+        Player player = (Player)sender;
+        player.getOpenInventory().close();
+        return player;
+    }
     
 }

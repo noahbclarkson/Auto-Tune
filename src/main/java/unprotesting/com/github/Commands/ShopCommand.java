@@ -1,5 +1,6 @@
 package unprotesting.com.github.Commands;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -8,8 +9,8 @@ import com.github.stefvanschie.inventoryframework.gui.GuiItem;
 import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
 import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
-import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 import com.github.stefvanschie.inventoryframework.pane.Pane.Priority;
+import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -26,7 +27,7 @@ import unprotesting.com.github.Commands.Objects.Section;
 import unprotesting.com.github.Commands.Util.CommandUtil;
 import unprotesting.com.github.Commands.Util.FunctionsUtil;
 import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
+import unprotesting.com.github.Logging.Logging;
 
 public class ShopCommand implements CommandExecutor{
 
@@ -62,7 +63,7 @@ public class ShopCommand implements CommandExecutor{
     }
 
     private void loadGUI(CommandSender sender){
-        closeInventory(sender);
+        CommandUtil.closeInventory(sender);
         int highest = Section.getHighest(Main.cache.getSECTIONS());
         int lines = (highest/9)+2;
         ChestGui gui = new ChestGui(lines, Config.getMenuTitle());
@@ -91,7 +92,7 @@ public class ShopCommand implements CommandExecutor{
     }
 
     private void loadShopPane(CommandSender sender, Section section){
-        Player player = closeInventory(sender);
+        Player player = CommandUtil.closeInventory(sender);
         ChestGui gui = new ChestGui(6, Config.getMenuTitle());
         PaginatedPane pages = new PaginatedPane(0, 0, 9, 6);
         List<GuiItem> items = getListFromSection(section, player);
@@ -99,17 +100,21 @@ public class ShopCommand implements CommandExecutor{
         int page = 0;
         int k = 0;
         OutlinePane pane = new OutlinePane(1, 1, 7, 4);
-        pages.addPane(page, getArrowPane(page, ChatColor.GRAY + "BACK", pages, true, gui));
-        pages.addPane(page, getArrowPane(page, ChatColor.GRAY + "NEXT", pages, false, gui));
+        if (items.size() > 28){
+            pages.addPane(page, getArrowPane(page+1, ChatColor.GRAY + "NEXT", pages, false, gui));
+        }
         panes.add(pane);
         for (int i = 0; i < items.size(); i++){
             pane = panes.get(panes.size()-1);
             if (k > 27){
                 pane = new OutlinePane(1, 1, 7, 4);
-                pages.addPane(page, getArrowPane(page, ChatColor.GRAY + "BACK", pages, true, gui));
-                pages.addPane(page, getArrowPane(page, ChatColor.GRAY + "NEXT", pages, false, gui));
-                panes.add(pane);
                 page++;
+                pages.addPane(page, getArrowPane(page-1, ChatColor.GRAY + "BACK", pages, true, gui));
+                if (i+28 < items.size()){
+                    pages.addPane(page, getArrowPane(page+1, ChatColor.GRAY + "NEXT", pages, false, gui));
+                }
+                panes.add(pane);
+                k=-1;
             }
             pane.addItem(items.get(i));
             k++;
@@ -136,6 +141,7 @@ public class ShopCommand implements CommandExecutor{
         GuiItem gItem = new GuiItem(item, event -> {
             event.setCancelled(true);
             pane.setPage(page);
+            GUI.addPane(pane);
             GUI.update();
         });
         output.addItem(gItem, 0, 0);
@@ -146,45 +152,106 @@ public class ShopCommand implements CommandExecutor{
         Player player = (Player)sender;
         List<GuiItem> output = new ArrayList<GuiItem>();
         for (String s_item : section.getItems()){
-            ItemStack item = new ItemStack(Material.matchMaterial(s_item));
+            ItemStack item = new ItemStack(Material.BARRIER);
+            try{
+                if (section.isEnchantmentSection()){
+                    item = new ItemStack(Material.ENCHANTED_BOOK);
+                }
+                if (!section.isEnchantmentSection()){
+                    item = new ItemStack(Material.matchMaterial(s_item));
+                }
+            }
+            catch(NullPointerException e){
+                Logging.error(3);
+                continue;
+            }
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(ChatColor.GOLD + s_item);
-            meta.setLore(Arrays.asList(new String[]{
-            ChatColor.GREEN + Config.getCurrencySymbol() + Main.cache.getItemPrice(s_item),
-            Main.cache.getPChangeString(s_item),
-            ChatColor.WHITE + "Remaining Buys: " + ChatColor.GRAY + Main.cache.getBuysLeft(s_item, player), 
-            ChatColor.WHITE + "Remaining Sells: " + ChatColor.GRAY + Main.cache.getSellsLeft(s_item, player)}));
+            List<String> list = new ArrayList<String>();
+            list.add(ChatColor.GREEN + Config.getCurrencySymbol() + Main.cache.getItemPrice(s_item, false));
+            if (section.isEnchantmentSection()){
+                list.clear();
+                list.add(ChatColor.GREEN + Config.getCurrencySymbol() + getEnchPriceWithHeld(s_item, player));
+            }
+            list.add(Main.cache.getPChangeString(s_item));
+            if (section.isEnchantmentSection()){
+                list.add(ChatColor.YELLOW + "Ratio: " + Main.cache.getEnchantmentRatio(s_item));
+                list.add(ChatColor.YELLOW + "Price: " + Config.getCurrencySymbol() + Main.cache.getEnchantmentPrice(s_item, false));
+            }
+            list.add(ChatColor.WHITE + "Remaining Buys: " + ChatColor.GRAY + Main.cache.getBuysLeft(s_item, player));
+            list.add(ChatColor.WHITE + "Remaining Sells: " + ChatColor.GRAY + Main.cache.getSellsLeft(s_item, player));
+            meta.setLore(list);
             item.setItemMeta(meta);
             GuiItem gItem = new GuiItem(item, event ->{
                 event.setCancelled(true);
-                loadPurchasePane(s_item, sender);
+                if (section.isEnchantmentSection()){
+                    loadPurchasePane(section, s_item, sender);
+                }
+                else{
+                    loadPurchasePane(section, s_item, sender);
+                }
             });
             output.add(gItem);
         }
         return output;
     }
 
-    private void loadPurchasePane(String item, CommandSender sender){
-        closeInventory(sender);
+    private double getEnchPriceWithHeld(String enchantment, Player player){
+        ItemStack held_item = player.getInventory().getItemInMainHand();
+        double i_price = 0;
+        if (held_item != null){
+            i_price = Main.cache.getItemPrice(held_item.getType().toString(), false);
+        }
+        return Main.cache.getOverallEnchantmentPrice(enchantment, i_price, false);
+    }
+
+    private void loadPurchasePane(Section section, String item, CommandSender sender){
+        CommandUtil.closeInventory(sender);
         ChestGui gui = new ChestGui(4, Config.getMenuTitle());
         gui = getBackground(gui, 4, Config.getBackground());
-        gui.addPane(getPurchasePane(item, sender));
+        gui.addPane(getPurchasePane(item, sender, section));
         gui.show((HumanEntity)sender);
     }
 
-    private OutlinePane getPurchasePane(String item_input, CommandSender sender){
+    private OutlinePane getPurchasePane(String item_input, CommandSender sender, Section section){
         Player player = (Player)sender;
+        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         OutlinePane pane = new OutlinePane(1, 1, 7, 2);
         for (int amount : amounts){
-            ItemStack item = getPurchasePaneItem(item_input, "Buy for ", amount, Main.cache.getItemPrice(item_input));
+            ItemStack item;
+            if (!section.isEnchantmentSection()){
+                item = getPurchasePaneItem(item_input, ChatColor.GREEN + "Buy for " + Config.getCurrencySymbol() + df.format(Main.cache.getItemPrice(item_input, false)*amount), amount);
+            }
+            else{
+                item = getPurchasePaneItem("ENCHANTED_BOOK", ChatColor.GREEN + "Buy for " + Config.getCurrencySymbol() + df.format(getEnchPriceWithHeld(item_input, player)*amount), amount);
+            }
+            if (item.getMaxStackSize() < amount){
+                ItemStack background = new ItemStack(Material.matchMaterial(Config.getBackground()));
+                GuiItem gItem = new GuiItem(background, event->{
+                    event.setCancelled(true);
+                });
+                pane.addItem(gItem);
+                continue;
+            }
             GuiItem gItem = new GuiItem(item, event ->{
                 event.setCancelled(true);
-                FunctionsUtil.buyItem(player, item_input, amount);
+                if (!section.isEnchantmentSection()){
+                    FunctionsUtil.buyItem(player, item_input, amount);
+                }
+                else{
+                    FunctionsUtil.buyEnchantment(player, item_input);
+                }
             });
             pane.addItem(gItem);
         }
+        if (section.isEnchantmentSection()){
+            return pane;
+        }
         for (int amount : amounts){
-            ItemStack item = getPurchasePaneItem(item_input, "Sell for ", amount, Main.cache.getItemPrice(item_input, true));
+            ItemStack item = getPurchasePaneItem(item_input, ChatColor.RED + "Sell for " + Config.getCurrencySymbol() + df.format(Main.cache.getItemPrice(item_input, true)*amount), amount);
+            if (item.getMaxStackSize() < amount){
+                continue;
+            }
             GuiItem gItem = new GuiItem(item, event ->{
                 event.setCancelled(true);
                 FunctionsUtil.sellItem(player, item_input, amount);
@@ -194,11 +261,11 @@ public class ShopCommand implements CommandExecutor{
         return pane;
     }
 
-    private ItemStack getPurchasePaneItem(String item_input, String prefix, int amount, double price){
+    private ItemStack getPurchasePaneItem(String item_input, String prefix, int amount){
         ItemStack item = new ItemStack(Material.matchMaterial(item_input), amount);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.GOLD + item_input);
-        meta.setLore(Arrays.asList(new String[]{ChatColor.WHITE + prefix + Config.getCurrencySymbol() + price}));
+        meta.setLore(Arrays.asList(new String[]{ChatColor.WHITE + prefix}));
         item.setItemMeta(meta);
         return item;
     }
@@ -214,12 +281,6 @@ public class ShopCommand implements CommandExecutor{
         background.setRepeat(true);
         GUI.addPane(background);
         return GUI;
-    }
-
-    private Player closeInventory(CommandSender sender){
-        Player player = (Player)sender;
-        player.getOpenInventory().close();
-        return player;
     }
 
 }

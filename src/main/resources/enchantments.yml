@@ -6,55 +6,62 @@
 # ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗
 # ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝
 
+config:
+  position: 22
+  block: 'ENCHANTED_BOOK'
+  background: 'GRAY_STAINED_GLASS_PANE'
+  back-menu-button-enabled: true
+
 enchantments:
   ARROW_DAMAGE:
     price: 600.00 ##  <- An added price for buying/selling an item with this enchantment
-    ratio: 0.6  ##   <- Another added percentage of the item bought/sold with this enchantment
+    ratio: 0.3  ##   <- Another added percentage of the item bought/sold with this enchantment
     ##  Info: An item worth usually 100 will cost (100*0.6)+600=660
     ##  Provides extra damage when shooting arrows from bows
+    ##  sell-price-difference: 10.0  <- Add a custom sell-price-difference
   ARROW_FIRE:
     price:  750.00
-    ratio: 0.8
+    ratio: 0.4
     ##  Sets entities on fire when hit by arrows shot from a bow
   ARROW_INFINITE:
     price: 1500.00
-    ratio: 1.2
+    ratio: 0.6
     ##  Provides infinite arrows when shooting a bow
   ARROW_KNOCKBACK:
     price: 900.00
-    ratio: 0.75
+    ratio: 0.4
     ##  Provides a knockback when an entity is hit by an arrow from a bow
   BINDING_CURSE:
     price: 80.00
-    ratio: 0.1
+    ratio: 0.05
     ##  Item cannot be removed
   CHANNELING:
     price: 600.00
-    ratio: 1.0
+    ratio: 0.5
     ##  Strikes lightning when a mob is hit with a trident if conditions are stormy
   DAMAGE_ALL:
     price: 750.00
-    ratio: 0.8
+    ratio: 0.4
     ##  Increases damage against all targets
   DAMAGE_ARTHROPODS:
     price: 700.00
-    ratio: 0.85
+    ratio: 0.4
     ##  Increases damage against arthropod targets
   DAMAGE_UNDEAD:
     price: 700.00
-    ratio: 0.85
+    ratio: 0.425
     ##  Increases damage against undead targets
   DEPTH_STRIDER:
     price: 900.00
-    ratio: 0.8
+    ratio: 0.4
     ##  Increases walking speed while in water
   DIG_SPEED:
     price: 850.00
-    ratio: 0.75
+    ratio: 0.4
     ##  Increases the rate at which you mine/dig
   DURABILITY:
     price: 850.00
-    ratio: 0.425
+    ratio: 0.375
     ##  Decreases the rate at which a tool looses durability
   FIRE_ASPECT:
     price: 1000.00
@@ -74,11 +81,11 @@ enchantments:
     ##  All damage to other targets will knock them back when hit
   LOOT_BONUS_BLOCKS:
     price: 1250.00
-    ratio: 0.725
+    ratio: 0.625
     ##  Provides a chance of gaining extra loot when destroying blocks
   LOOT_BONUS_MOBS:
     price: 1200.00
-    ratio: 0.65
+    ratio: 0.35
     ##  Provides a chance of gaining extra loot when killing monsters
   LOYALTY:
     price: 1100.00
@@ -86,7 +93,7 @@ enchantments:
     ##  Causes a thrown trident to return to the player who threw it
   LUCK:
     price: 750.00
-    ratio: 0.6
+    ratio: 0.3
     ##  Decreases odds of catching worthless junk
   LURE:
     price: 550.00
@@ -94,31 +101,31 @@ enchantments:
     ##  Increases rate of fish biting your hook
   MENDING:
     price: 4000.00
-    ratio: 1.1
+    ratio: 0.5
     ##  Allows mending the item using experience orbs
   MULTISHOT:
     price: 800.00
-    ratio: 0.4
+    ratio: 0.2
     ##  Shoot multiple arrows from crossbows
   OXYGEN:
     price: 600.00
-    ratio: 0.35
+    ratio: 0.25
     ##  Decreases the rate of air loss whilst underwater
   PIERCING:
     price: 750.00
-    ratio: 0.4
+    ratio: 0.2
     ##  Crossbow projectiles pierce entities
   PROTECTION_ENVIRONMENTAL:
     price: 900.00
-    ratio: 0.4
+    ratio: 0.3
     ##  Provides protection against environmental damage
   PROTECTION_EXPLOSIONS:
     price: 950.00
-    ratio: 0.425
+    ratio: 0.35
     ##  Provides protection against explosive damage
   PROTECTION_FALL:
     price: 950.00
-    ratio: 0.425
+    ratio: 0.325
     ##  Provides protection against fall damage
   PROTECTION_FIRE:
     price: 950.00
@@ -153,10 +160,10 @@ enchantments:
     ratio: 0.6
     ##  Damages the attacker
   VANISHING_CURSE:
-    price: 50.00
-    ratio: 0.15
+    price: 45.00
+    ratio: 0.05
     ##  Item disappears instead of dropping
   WATER_WORKER:
     price: 800.00
-    ratio: 0.45
+    ratio: 0.35
     ##  Increases the speed at which a player may mine underwater

@@ -3,9 +3,11 @@ package unprotesting.com.github.Commands.Util;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -16,13 +18,14 @@ import unprotesting.com.github.Economy.EconomyFunctions;
 
 public class FunctionsUtil {
 
-    public static boolean buyItem(Player player, String item, int amount){
+    
+    public static void buyItem(Player player, String item, int amount){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         double bal = EconomyFunctions.economy.getBalance(player);
-        double price = Main.cache.getItemPrice(item);
+        double price = Main.cache.getItemPrice(item, false);
         if (bal < price){
             player.sendMessage(ChatColor.RED + "You need " + Config.getCurrencySymbol() + df.format(price) + " to purchase this item");
-            return false;
+            return;
         }
         if (bal < (price*amount)){
             player.sendMessage(ChatColor.RED + "You need " + Config.getCurrencySymbol() + df.format(price*amount) + " to purchase x" + amount + " of this item.");
@@ -30,7 +33,7 @@ public class FunctionsUtil {
         }
         if (Main.cache.getBuysLeft(item, player) < amount){
             player.sendMessage(ChatColor.RED + "You have run out of buys for this item.");
-            return false;
+            return;
         }
         HashMap<Integer, ItemStack> map = player.getInventory().addItem(new ItemStack(Material.matchMaterial(item), amount));
         if ((map.size()) > 0){
@@ -39,34 +42,142 @@ public class FunctionsUtil {
         }
         if (amount < 1){
             player.sendMessage(ChatColor.RED + "Not enough space in inventory.");
-            return false;
+            return;
         }
         EconomyFunctions.economy.withdrawPlayer(player, (amount*price));
-        player.sendMessage(ChatColor.GREEN + "Purchased x" + amount + " of " + ChatColor.GOLD + item + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(price) + ".");
+        player.sendMessage(ChatColor.GREEN + "Purchased x" + amount + " of " + ChatColor.GOLD + item + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(price*amount) + ".");
         Main.cache.addSale(player, item, price, amount, SalePositionType.BUY);
-        return true;
     }
 
-    public static boolean sellItem(Player player, String item, int amount){
+    public static void sellItem(Player player, String item, int amount){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         double price = Main.cache.getItemPrice(item, true);
+        if (amount < 1){
+            player.sendMessage(ChatColor.RED + "You do not have this item.");
+            return;
+        }
+        if (Main.cache.getSellsLeft(item, player) < amount){
+            player.sendMessage(ChatColor.RED + "You have run out of sells for this item.");
+            return;
+        }
         HashMap<Integer, ItemStack> map = player.getInventory().removeItem(new ItemStack(Material.matchMaterial(item), amount));
         if ((map.size()) > 0){
             ItemStack istack = (ItemStack)(Arrays.asList(map.values().toArray())).get(0);
             amount = amount-istack.getAmount();
         }
-        if (amount < 1){
-            player.sendMessage(ChatColor.RED + "You do not have this item.");
-            return false;
-        }
-        if (Main.cache.getSellsLeft(item, player) < amount){
-            player.sendMessage(ChatColor.RED + "You have run out of sells for this item.");
-            return false;
-        }
         EconomyFunctions.economy.depositPlayer(player, (amount*price));
-        player.sendMessage(ChatColor.GREEN + "Sold x" + amount + " of " + ChatColor.GOLD + item + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(price) + ".");
+        player.sendMessage(ChatColor.GREEN + "Sold x" + amount + " of " + ChatColor.GOLD + item + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(price*amount) + ".");
         Main.cache.addSale(player, item, price, amount, SalePositionType.SELL);
-        return true;
     }
-    
+
+    @SuppressWarnings("deprecation")
+    public static void buyEnchantment(Player player, String enchantment){
+        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
+        ItemStack item = player.getInventory().getItemInMainHand();
+        boolean off = false;
+        if (item == null){
+            off = true;
+            item = player.getInventory().getItemInOffHand();
+            if (item == null){
+                player.sendMessage(ChatColor.GOLD + "Hold the item you want to enchant in your hand!");
+            }
+        }
+        double item_price = Main.cache.getItemPrice(item.getType().toString(), false);
+        double bal = EconomyFunctions.economy.getBalance(player);
+        double price = Main.cache.getOverallEnchantmentPrice(enchantment, item_price, false);
+        if (bal < price){
+            player.sendMessage(ChatColor.RED + "You need " + Config.getCurrencySymbol() + df.format(price) + " to purchase this item");
+            return;
+        }
+        Enchantment ench = Enchantment.getByName(enchantment);
+        if (ench == null){
+            player.sendMessage(ChatColor.RED + "Enchantment "+ enchantment + " does not exist");
+        }
+        int level = 0;
+        if (item.containsEnchantment(ench)){
+            level = item.getEnchantmentLevel(ench);
+        }
+        try{
+            item.addEnchantment(ench, level+1);
+        }
+        catch(IllegalArgumentException e){
+            player.sendMessage(ChatColor.RED + "Cannot enchant " + item.getType().toString() + " with enchantment " + enchantment + " of level " + (level+1));
+            return;
+        }
+        if (!off){
+            player.getInventory().setItemInMainHand(item);
+        }
+        else{
+            player.getInventory().setItemInOffHand(item);
+        }
+        EconomyFunctions.economy.withdrawPlayer(player, price);
+        player.sendMessage(ChatColor.GREEN + "Purchased 1x of " + ChatColor.GOLD + enchantment.toString() + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(price) + ".");
+        player.getInventory().setItemInMainHand(item);
+    }
+
+    @SuppressWarnings("deprecation")
+    public static void sellCustomItem(Player player, ItemStack item){
+        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
+        if (item == null){
+            return;
+        }
+        double ratio = 1;
+        double fprice = 0;
+        System.out.println("Fprice: " + fprice);
+        double bal = EconomyFunctions.economy.getBalance(player);
+        Map<Enchantment, Integer> enchantments = null;
+        try{
+            enchantments = item.getEnchantments();
+        }
+        catch(NullPointerException e){};
+        if (enchantments != null && enchantments.size() > 0){
+            ratio = 0;
+            for (Enchantment ench : enchantments.keySet()){
+                int level = item.getEnchantmentLevel(ench);
+                Double cratio;
+                Double price;
+                try{
+                    price = Main.cache.getEnchantmentPrice(ench.getName(), true);
+                    price = price - price*0.01*Config.getEnchantmentLimiter();
+                    fprice = fprice + price*level;
+                    cratio = Main.cache.getEnchantmentRatio(ench.getName());
+                }
+                catch(NullPointerException e){
+                    player.sendMessage(ChatColor.RED + "Cannot sell " + item.getType().toString());
+                    player.getInventory().addItem(item);
+                    return;
+                }
+                if (cratio > ratio){
+                    ratio = cratio;
+                }
+                System.out.println("Found enchantment: " + ench.getName() + " of level " + level + " selling for " + Config.getCurrencySymbol() + price + " and ratio" + cratio + " highest_ratio is " + ratio);
+                System.out.println("Fprice: " + fprice);
+            }
+        }
+        Double item_price;
+        try{
+            item_price = Main.cache.getItemPrice(item.getType().toString(), true);
+        }
+        catch(NullPointerException e){
+            player.sendMessage(ChatColor.RED + "Cannot sell " + item.getType().toString());
+            player.getInventory().addItem(item);
+            return;
+        }
+        fprice = fprice + item_price*ratio;
+        System.out.println("Fprice: " + fprice);
+        if (bal < fprice){
+            player.sendMessage(ChatColor.RED + "You need " + Config.getCurrencySymbol() + df.format(fprice) + " to purchase this item");
+            int size = player.getInventory().addItem(item).size();
+            if (size > 0){
+                player.getLocation().getWorld().dropItemNaturally(player.getLocation().add(0, 0.5, 0), item);
+            }
+            return;
+        }
+        EconomyFunctions.economy.depositPlayer(player, (item.getAmount()*fprice));
+        player.sendMessage(ChatColor.GREEN + "Sold x" + item.getAmount() + " of " + ChatColor.GOLD + item.getType().toString() + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(fprice*item.getAmount()) + ".");
+        Main.cache.addSale(player, item.getType().toString(), Main.cache.getItemPrice(item.getType().toString(), false), item.getAmount(), SalePositionType.SELL);
+        for (Enchantment ench : item.getEnchantments().keySet()){
+            Main.cache.addSale(player, ench.getName(), Main.cache.getEnchantmentPrice(ench.toString(), true), item.getEnchantmentLevel(ench), SalePositionType.ESELL);
+        }
+    }
 }

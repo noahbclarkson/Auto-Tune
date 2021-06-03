@@ -27,11 +27,11 @@ import unprotesting.com.github.Data.Ephemeral.Data.TransactionData.TransactionPo
 import unprotesting.com.github.Data.Ephemeral.Other.PlayerSaleData;
 import unprotesting.com.github.Data.Ephemeral.Other.Sale;
 import unprotesting.com.github.Data.Ephemeral.Other.Sale.SalePositionType;
-import unprotesting.com.github.Data.Persistent.Database;
 import unprotesting.com.github.Data.Persistent.TimePeriods.EnchantmentsTimePeriod;
 import unprotesting.com.github.Data.Persistent.TimePeriods.ItemTimePeriod;
 import unprotesting.com.github.Data.Persistent.TimePeriods.LoanTimePeriod;
 import unprotesting.com.github.Data.Persistent.TimePeriods.TransactionsTimePeriod;
+import unprotesting.com.github.Logging.Logging;
 
 //  Global functions file between ephemeral and persistent storage
 
@@ -75,25 +75,31 @@ public class LocalDataCache {
     public void addSale(Player player, String item, double price, int amount, SalePositionType position){
         PlayerSaleData playerSaleData = getPlayerSaleData(player);
         playerSaleData.addSale(item, amount, position);
-        switch(position){
-            case BUY:
-                this.ITEMS.get(item).increaseBuys(amount);
-                this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.BI));
-                break;
-            case SELL:
-                this.ITEMS.get(item).increaseSells(amount);
-                this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.SI));
-                break;
-            case EBUY:
-                this.ENCHANTMENTS.get(item).increaseBuys(amount);
-                this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.BE));
-                break;
-            case ESELL:
-                this.ENCHANTMENTS.get(item).increaseSells(amount);
-                this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.SE));
-                break;
-            default:
-                break;
+        try{
+            switch(position){
+                case BUY:
+                    this.ITEMS.get(item).increaseBuys(amount);
+                    this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.BI));
+                    break;
+                case SELL:
+                    this.ITEMS.get(item).increaseSells(amount);
+                    this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.SI));
+                    break;
+                case EBUY:
+                    this.ENCHANTMENTS.get(item).increaseBuys(amount);
+                    this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.BE));
+                    break;
+                case ESELL:
+                    this.ENCHANTMENTS.get(item).increaseSells(amount);
+                    this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.SE));
+                    break;
+                default:
+                    break;
+            }
+        }
+        catch(NullPointerException | IllegalArgumentException e){
+            Logging.error(4);
+            System.out.println("Cannot parse " + item + " into " + position.toString());
         }
     }
 
@@ -104,17 +110,24 @@ public class LocalDataCache {
     }
 
     //  Get item price
-    public double getItemPrice(String item){
-        return this.ITEMS.get(item).getPrice();
-    }
-
-    //  Get item price
     public double getItemPrice(String item, boolean sell){
+        Double price;
+        try{
+            price = this.ITEMS.get(item).getPrice();
+        }
+        catch(NullPointerException e){
+            try{
+                price = getEnchantmentPrice(item, sell);
+                return price;
+            }
+            catch(NullPointerException e2){
+                return 0;
+            }
+        };
         if (!sell){
-            return this.ITEMS.get(item).getPrice();
+            return price;
         }
         Double spd = Config.getSellPriceDifference();
-        double price = this.ITEMS.get(item).getPrice();
         if (Main.dfiles.getShops().getConfigurationSection("shops").getConfigurationSection(item).contains("sell-difference")){
             spd = Main.dfiles.getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("sell-difference");
         }
@@ -122,22 +135,56 @@ public class LocalDataCache {
     }
 
     //  Get enchantment price
-    public double getEnchantmentPrice(String enchantment){
-        return this.ENCHANTMENTS.get(enchantment).getPrice();
+    public double getEnchantmentPrice(String enchantment, boolean sell){
+        Double price;
+        try{
+            price = this.ENCHANTMENTS.get(enchantment).getPrice();
+        }
+        catch(NullPointerException e){
+            return 0;
+        };
+        if (!sell){
+            return price;
+        }
+        Double spd = Config.getSellPriceDifference();
+        if (Main.dfiles.getEnchantments().getConfigurationSection("enchantments").getConfigurationSection(enchantment).contains("sell-difference")){
+            spd = Main.dfiles.getEnchantments().getConfigurationSection("enchantments").getConfigurationSection(enchantment).getDouble("sell-difference");
+        }
+        return (price - price*spd*0.01);
     }
 
     //  Get enchantement ratio
     public double getEnchantmentRatio(String enchantment){
-        return this.ENCHANTMENTS.get(enchantment).getRatio();
+        Double price;
+        try{
+            price = this.ENCHANTMENTS.get(enchantment).getRatio();
+        }
+        catch(NullPointerException e){
+            return 0;
+        };
+        return price;
+    }
+
+    //  Get price for adding an enchantment to an item
+    public double getOverallEnchantmentPrice(String enchantment, double item_price, boolean sell){
+        double price = getEnchantmentPrice(enchantment, sell);
+        double ratio = getEnchantmentRatio(enchantment);
+        return (price + ratio*item_price);
     }
 
     public int getBuysLeft(String item, Player player){
         PlayerSaleData pdata = PLAYER_SALES.get(player);
-        int max = MAX_PURCHASES.get(item).getBuys();
-        if (pdata == null){
-            return max;
+        Integer max;
+        try{
+            max = MAX_PURCHASES.get(item).getBuys();
         }
-        if (pdata.getBuys().isEmpty()){
+        catch(NullPointerException e){
+            return 9999;
+        }
+        try{
+            pdata.getBuys().isEmpty();
+        }
+        catch(NullPointerException e){
             return max;
         }
         int amount = 0;
@@ -151,11 +198,17 @@ public class LocalDataCache {
 
     public int getSellsLeft(String item, Player player){
         PlayerSaleData pdata = PLAYER_SALES.get(player);
-        int max = MAX_PURCHASES.get(item).getSells();
-        if (pdata == null){
-            return max;
+        Integer max;
+        try{
+            max = MAX_PURCHASES.get(item).getSells();
         }
-        if (pdata.getSells().isEmpty()){
+        catch(NullPointerException e){
+            return 999;
+        }
+        try{
+            pdata.getSells().isEmpty();
+        }
+        catch(NullPointerException e){
             return max;
         }
         int amount = 0;
@@ -169,7 +222,10 @@ public class LocalDataCache {
 
     public String getPChangeString(String item){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
-        double change = this.PERCENTAGE_CHANGES.get(item);
+        Double change = this.PERCENTAGE_CHANGES.get(item);
+        if (change == null){
+            return (ChatColor.GRAY + "%" + 0.0);
+        }
         if (change < 0){
             return (ChatColor.RED + "%" + df.format(change));
         }
@@ -316,6 +372,9 @@ public class LocalDataCache {
             SECTIONS.add(new Section(section, icsection.getString("block"), icsection.getBoolean("back-menu-button-enabled"),
              icsection.getInt("position"), icsection.getString("background")));
         }
+        csection = Main.dfiles.getEnchantments().getConfigurationSection("config");
+        SECTIONS.add(new Section("Enchantments", csection.getString("block"), csection.getBoolean("back-menu-button-enabled"),
+             csection.getInt("position"), csection.getString("background")));
     }
 
 }

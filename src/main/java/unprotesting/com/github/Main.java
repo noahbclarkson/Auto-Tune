@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
+import unprotesting.com.github.Commands.SellCommand;
 import unprotesting.com.github.Commands.ShopCommand;
 import unprotesting.com.github.Config.DataFiles;
 import unprotesting.com.github.Data.CSV.CSVHandler;
@@ -72,6 +73,7 @@ public class Main extends JavaPlugin{
 
     private void setupCommands(){
         this.getCommand("shop").setExecutor(new ShopCommand());
+        this.getCommand("sell").setExecutor(new SellCommand());
     }
 
     private void setupServer(){

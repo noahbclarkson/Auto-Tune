@@ -18,7 +18,7 @@ public class Section {
     @Getter
     private Material image;
     @Getter
-    private boolean back;
+    private boolean back, enchantmentSection;
     @Getter
     private int position;
 
@@ -27,12 +27,23 @@ public class Section {
         this.position = position;
         this.name = name;
         this.back = back;
+        this.enchantmentSection = false;
         this.image = Material.matchMaterial(material);
         this.items = new ArrayList<String>();
-        ConfigurationSection shops = Main.dfiles.getShops().getConfigurationSection("shops");
-        for (String key : shops.getKeys(false)){
-            ConfigurationSection inner = shops.getConfigurationSection(key);
-            if (inner.getString("section").equals(this.name)){
+        if (!this.name.equals("Enchantments")){
+            ConfigurationSection shops = Main.dfiles.getShops().getConfigurationSection("shops");
+            for (String key : shops.getKeys(false)){
+                ConfigurationSection inner = shops.getConfigurationSection(key);
+                if (inner.getString("section").equals(this.name)){
+                    this.items.add(key);
+                }
+            }
+        }
+        else{
+            this.enchantmentSection = true;
+            this.image = Material.matchMaterial(Main.dfiles.getEnchantments().getConfigurationSection("config").getString("block"));
+            ConfigurationSection config = Main.dfiles.getEnchantments().getConfigurationSection("enchantments");
+            for (String key : config.getKeys(false)){
                 this.items.add(key);
             }
         }

@@ -20,7 +20,7 @@ public class ItemTimePeriod extends BuyableTimePeriodFunctions implements Serial
     private String[] items;
 
     public ItemTimePeriod(){
-        Set<String> set = Main.cache.getITEMS().keySet();
+        Set<String> set = Main.getCache().getITEMS().keySet();
         int size = set.size();
         init(size);
         this.buys = new int[size];
@@ -29,7 +29,7 @@ public class ItemTimePeriod extends BuyableTimePeriodFunctions implements Serial
         this.items = new String[size];
         int i = 0;
         for (String key : set){
-            ItemData data = Main.cache.getITEMS().get(key);
+            ItemData data = Main.getCache().getITEMS().get(key);
             setVars(i, data);
             this.items[i] = key;
             i++;

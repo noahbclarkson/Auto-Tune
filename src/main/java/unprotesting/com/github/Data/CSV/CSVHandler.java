@@ -26,8 +26,8 @@ public class CSVHandler {
     //  Create individual CSV file
     private static void write(String csvname, int cutoff) throws IOException{
         FileWriter writer = new FileWriter("plugins/Auto-Tune/web/" + csvname + ".csv");
-        int size = Main.database.map.size();
-        TimePeriod StringTP = Main.database.map.get(size-1);
+        int size = Main.getDatabase().map.size();
+        TimePeriod StringTP = Main.getDatabase().map.get(size-1);
         List<String> strs = Arrays.asList(StringTP.getItp().getItems());
         if (size < cutoff || cutoff < 3){
             cutoff = size;
@@ -36,7 +36,7 @@ public class CSVHandler {
         for (String item : strs){
             writer.write("\n" + "%" + item + "\n");
             for (int i = (size-cutoff); i < size; i++){
-                ItemTimePeriod ITP = Main.database.map.get(i).getItp();
+                ItemTimePeriod ITP = Main.getDatabase().map.get(i).getItp();
                 int pos = Arrays.asList(ITP.getItems()).indexOf(item);
                 writer.append(i + "," + ITP.getPrices()[pos] + "," +  ITP.getBuys()[pos] + "," + ITP.getSells()[pos] + "\n");
             }

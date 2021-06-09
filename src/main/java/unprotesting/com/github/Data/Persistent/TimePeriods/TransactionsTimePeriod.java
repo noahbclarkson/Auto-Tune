@@ -22,7 +22,7 @@ public class TransactionsTimePeriod extends LocalDateTimeArrayUtilizer implement
     private String[] players, items, positions;
 
     public TransactionsTimePeriod(){
-        int size = Main.cache.getTRANSACTIONS().size();
+        int size = Main.getCache().getTRANSACTIONS().size();
         init(size);
         this.prices = new double[size];
         this.amounts = new int[size];
@@ -31,7 +31,7 @@ public class TransactionsTimePeriod extends LocalDateTimeArrayUtilizer implement
         this.positions = new String[size];
         this.time = new int[size][6];
         int i = 0;
-        for (TransactionData data : Main.cache.getTRANSACTIONS()){
+        for (TransactionData data : Main.getCache().getTRANSACTIONS()){
             setVars(i, data);
             i++;
         }

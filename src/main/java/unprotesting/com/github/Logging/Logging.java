@@ -9,7 +9,9 @@ public class Logging {
         "Disabled Auto-Tune due to no Vault dependency found! Please make sure Vault and another economy plugin, such as EssentialsX is installed!",
         "A maximum of 8 sections can be allocated",
         "Item/Enchantment not found in map",
-        "Error adding sale"
+        "Error adding sale",
+        "Error on status code",
+        "Error on API-Key"
     };
 
     public static void log(String input){

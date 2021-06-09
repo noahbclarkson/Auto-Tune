@@ -1,6 +1,7 @@
 package unprotesting.com.github.Data.Ephemeral.Data;
 
 import lombok.Getter;
+import lombok.Setter;
 import unprotesting.com.github.Data.Ephemeral.Data.Util.Transactable;
 
 //  Enchantment data class for storing general item data
@@ -9,7 +10,7 @@ public class EnchantmentData extends Transactable{
 
     @Getter
     private int buys, sells;
-    @Getter
+    @Getter @Setter
     private double price, ratio;
 
     public EnchantmentData(double price, double ratio){

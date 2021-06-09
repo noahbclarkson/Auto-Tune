@@ -20,7 +20,7 @@ public class EnchantmentsTimePeriod extends BuyableTimePeriodFunctions implement
     private String[] items;
 
     public EnchantmentsTimePeriod(){
-        Set<String> set = Main.cache.getENCHANTMENTS().keySet();
+        Set<String> set = Main.getCache().getENCHANTMENTS().keySet();
         int size = set.size();
         init(size);
         this.ratios = new double[size];
@@ -30,7 +30,7 @@ public class EnchantmentsTimePeriod extends BuyableTimePeriodFunctions implement
         this.items = new String[size];
         int i = 0;
         for (String key : set){
-            EnchantmentData data = Main.cache.getENCHANTMENTS().get(key);
+            EnchantmentData data = Main.getCache().getENCHANTMENTS().get(key);
             setVars(i, data);
             this.items[i] = key;
             i++;

@@ -1,6 +1,7 @@
 package unprotesting.com.github.Data.Ephemeral.Data;
 
 import lombok.Getter;
+import lombok.Setter;
 import unprotesting.com.github.Data.Ephemeral.Data.Util.Transactable;
 
 //  Item data class for storing general item data
@@ -9,7 +10,7 @@ public class ItemData extends Transactable{
 
     @Getter
     private int buys, sells;
-    @Getter
+    @Getter @Setter
     private double price;
 
     public ItemData(double price){

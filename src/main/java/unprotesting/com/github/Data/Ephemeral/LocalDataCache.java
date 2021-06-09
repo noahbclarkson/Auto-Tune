@@ -14,6 +14,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import lombok.Getter;
+import lombok.Setter;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.Commands.Objects.Section;
 import unprotesting.com.github.Config.Config;
@@ -67,7 +68,7 @@ public class LocalDataCache {
         this.SECTIONS = new ArrayList<Section>();
         this.MAX_PURCHASES = new ConcurrentHashMap<String, MaxBuySellData>();
         this.PERCENTAGE_CHANGES = new ConcurrentHashMap<String, Double>();
-        this.size = Main.database.map.size();
+        this.size = Main.getDatabase().map.size();
         init();
     }
 
@@ -128,8 +129,8 @@ public class LocalDataCache {
             return price;
         }
         Double spd = Config.getSellPriceDifference();
-        if (Main.dfiles.getShops().getConfigurationSection("shops").getConfigurationSection(item).contains("sell-difference")){
-            spd = Main.dfiles.getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("sell-difference");
+        if (Main.getDfiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).contains("sell-difference")){
+            spd = Main.getDfiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("sell-difference");
         }
         return (price - price*spd*0.01);
     }
@@ -147,8 +148,8 @@ public class LocalDataCache {
             return price;
         }
         Double spd = Config.getSellPriceDifference();
-        if (Main.dfiles.getEnchantments().getConfigurationSection("enchantments").getConfigurationSection(enchantment).contains("sell-difference")){
-            spd = Main.dfiles.getEnchantments().getConfigurationSection("enchantments").getConfigurationSection(enchantment).getDouble("sell-difference");
+        if (Main.getDfiles().getEnchantments().getConfigurationSection("enchantments").getConfigurationSection(enchantment).contains("sell-difference")){
+            spd = Main.getDfiles().getEnchantments().getConfigurationSection("enchantments").getConfigurationSection(enchantment).getDouble("sell-difference");
         }
         return (price - price*spd*0.01);
     }
@@ -163,6 +164,16 @@ public class LocalDataCache {
             return 0;
         };
         return price;
+    }
+
+    //  Get ItemData object for map
+    public ItemData getItemData(String item){
+        return this.ITEMS.get(item);
+    }
+
+    //  Get ItemData object for map
+    public EnchantmentData getEnchantmentData(String enchantment){
+        return this.ENCHANTMENTS.get(enchantment);
     }
 
     //  Get price for adding an enchantment to an item
@@ -237,6 +248,13 @@ public class LocalDataCache {
         }
     }
 
+    public void updatePrices(ConcurrentHashMap<String, ItemData> data){
+        this.ITEMS = data;
+    }
+
+    public void updateEnchantments(ConcurrentHashMap<String, EnchantmentData> data){
+        this.ENCHANTMENTS = data;
+    }
 
     //  Initialize cache from configurations and relavent files
     private void init(){
@@ -259,7 +277,7 @@ public class LocalDataCache {
     }
 
     private void loadShopDataFromFile(){
-        ConfigurationSection config = Main.dfiles.getShops().getConfigurationSection("shops");
+        ConfigurationSection config = Main.getDfiles().getShops().getConfigurationSection("shops");
         Set<String> set = config.getKeys(false);
         ConcurrentHashMap<String, Double> map = new ConcurrentHashMap<String, Double>();
         try {
@@ -292,13 +310,13 @@ public class LocalDataCache {
         double b = 1/a;
         int tpInDay = (int) Math.floor(b);
         ItemTimePeriod ITP2;
-        ItemTimePeriod ITP = Main.database.map.get(size-1).getItp();
+        ItemTimePeriod ITP = Main.getDatabase().map.get(size-1).getItp();
         ITP2 = ITP;
         if (size-1 > tpInDay){
-            ITP2 = Main.database.map.get(size-tpInDay).getItp();
+            ITP2 = Main.getDatabase().map.get(size-tpInDay).getItp();
         }
         else if (size-1 <= tpInDay){
-            ITP2 = Main.database.map.get(0).getItp();
+            ITP2 = Main.getDatabase().map.get(0).getItp();
         }
         int i = 0;
         for (String item : ITP.getItems()){
@@ -311,7 +329,7 @@ public class LocalDataCache {
     }
 
     private void loadEnchantmentDataFromFile(){
-        ConfigurationSection config = Main.dfiles.getEnchantments().getConfigurationSection("enchantments");
+        ConfigurationSection config = Main.getDfiles().getEnchantments().getConfigurationSection("enchantments");
         Set<String> set = config.getKeys(false);
         for (String key : set){
             ConfigurationSection sec = config.getConfigurationSection(key);
@@ -324,7 +342,7 @@ public class LocalDataCache {
         if (size < 1){
             return;
         }
-        EnchantmentsTimePeriod ETP = Main.database.map.get(size-1).getEtp();
+        EnchantmentsTimePeriod ETP = Main.getDatabase().map.get(size-1).getEtp();
         int i = 0;
         for (String item : ETP.getItems()){
             EnchantmentData data = new EnchantmentData(ETP.getPrices()[i], ETP.getRatios()[i]);
@@ -335,8 +353,8 @@ public class LocalDataCache {
 
     private void loadLoanDataFromData(){
         this.LOANS.clear();
-        for (Integer pos : Main.database.map.keySet()){
-            LoanTimePeriod LTP = Main.database.map.get(pos).getLtp();
+        for (Integer pos : Main.getDatabase().map.keySet()){
+            LoanTimePeriod LTP = Main.getDatabase().map.get(pos).getLtp();
             for (int i = 0; i < LTP.getValues().length; i++){
                 UUID uuid = UUID.fromString(LTP.getPlayers()[i]);
                 Player player = Bukkit.getPlayer(uuid);
@@ -352,8 +370,8 @@ public class LocalDataCache {
             return;
         }
         this.TRANSACTIONS.clear();
-        for (Integer pos : Main.database.map.keySet()){
-            TransactionsTimePeriod TTP = Main.database.map.get(pos).getTtp();
+        for (Integer pos : Main.getDatabase().map.keySet()){
+            TransactionsTimePeriod TTP = Main.getDatabase().map.get(pos).getTtp();
             for (int i = 0; i < TTP.getPrices().length; i++){
                 UUID uuid = UUID.fromString(TTP.getPlayers()[i]);
                 Player player = Bukkit.getPlayer(uuid);
@@ -366,13 +384,13 @@ public class LocalDataCache {
     }
 
     private void loadSectionDataFromFile(){
-        ConfigurationSection csection = Main.dfiles.getShops().getConfigurationSection("sections");
+        ConfigurationSection csection = Main.getDfiles().getShops().getConfigurationSection("sections");
         for (String section : csection.getKeys(false)){
             ConfigurationSection icsection = csection.getConfigurationSection(section);
             SECTIONS.add(new Section(section, icsection.getString("block"), icsection.getBoolean("back-menu-button-enabled"),
              icsection.getInt("position"), icsection.getString("background")));
         }
-        csection = Main.dfiles.getEnchantments().getConfigurationSection("config");
+        csection = Main.getDfiles().getEnchantments().getConfigurationSection("config");
         SECTIONS.add(new Section("Enchantments", csection.getString("block"), csection.getBoolean("back-menu-button-enabled"),
              csection.getInt("position"), csection.getString("background")));
     }

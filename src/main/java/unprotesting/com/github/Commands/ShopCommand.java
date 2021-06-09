@@ -51,7 +51,7 @@ public class ShopCommand implements CommandExecutor{
             return true;
         };
         if (args.length == 1){
-            for (Section section : Main.cache.getSECTIONS()){
+            for (Section section : Main.getCache().getSECTIONS()){
                 if (args[0].toLowerCase().replaceAll("-", "").replaceAll(" ", "").equals(section.getName().toLowerCase().replaceAll("-", "").replaceAll(" ", ""))){
                     loadShopPane(sender, section);
                     return true;
@@ -64,7 +64,7 @@ public class ShopCommand implements CommandExecutor{
 
     private void loadGUI(CommandSender sender){
         CommandUtil.closeInventory(sender);
-        int highest = Section.getHighest(Main.cache.getSECTIONS());
+        int highest = Section.getHighest(Main.getCache().getSECTIONS());
         int lines = (highest/9)+2;
         ChestGui gui = new ChestGui(lines, Config.getMenuTitle());
         gui = getBackground(gui, lines, Config.getBackground());
@@ -74,7 +74,7 @@ public class ShopCommand implements CommandExecutor{
 
     private StaticPane loadSectionsPane(CommandSender sender, int lines){
         StaticPane navigationPane = new StaticPane(0, 0, 9, lines);
-        for (Section section : Main.cache.getSECTIONS()){
+        for (Section section : Main.getCache().getSECTIONS()){
             int x = section.getPosition() % 9;
             int y = section.getPosition() / 9;
             ItemStack item = new ItemStack(section.getImage());
@@ -168,18 +168,18 @@ public class ShopCommand implements CommandExecutor{
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(ChatColor.GOLD + s_item);
             List<String> list = new ArrayList<String>();
-            list.add(ChatColor.GREEN + Config.getCurrencySymbol() + Main.cache.getItemPrice(s_item, false));
+            list.add(ChatColor.GREEN + Config.getCurrencySymbol() + Main.getCache().getItemPrice(s_item, false));
             if (section.isEnchantmentSection()){
                 list.clear();
                 list.add(ChatColor.GREEN + Config.getCurrencySymbol() + getEnchPriceWithHeld(s_item, player));
             }
-            list.add(Main.cache.getPChangeString(s_item));
+            list.add(Main.getCache().getPChangeString(s_item));
             if (section.isEnchantmentSection()){
-                list.add(ChatColor.YELLOW + "Ratio: " + Main.cache.getEnchantmentRatio(s_item));
-                list.add(ChatColor.YELLOW + "Price: " + Config.getCurrencySymbol() + Main.cache.getEnchantmentPrice(s_item, false));
+                list.add(ChatColor.YELLOW + "Ratio: " + Main.getCache().getEnchantmentRatio(s_item));
+                list.add(ChatColor.YELLOW + "Price: " + Config.getCurrencySymbol() + Main.getCache().getEnchantmentPrice(s_item, false));
             }
-            list.add(ChatColor.WHITE + "Remaining Buys: " + ChatColor.GRAY + Main.cache.getBuysLeft(s_item, player));
-            list.add(ChatColor.WHITE + "Remaining Sells: " + ChatColor.GRAY + Main.cache.getSellsLeft(s_item, player));
+            list.add(ChatColor.WHITE + "Remaining Buys: " + ChatColor.GRAY + Main.getCache().getBuysLeft(s_item, player));
+            list.add(ChatColor.WHITE + "Remaining Sells: " + ChatColor.GRAY + Main.getCache().getSellsLeft(s_item, player));
             meta.setLore(list);
             item.setItemMeta(meta);
             GuiItem gItem = new GuiItem(item, event ->{
@@ -200,9 +200,9 @@ public class ShopCommand implements CommandExecutor{
         ItemStack held_item = player.getInventory().getItemInMainHand();
         double i_price = 0;
         if (held_item != null){
-            i_price = Main.cache.getItemPrice(held_item.getType().toString(), false);
+            i_price = Main.getCache().getItemPrice(held_item.getType().toString(), false);
         }
-        return Main.cache.getOverallEnchantmentPrice(enchantment, i_price, false);
+        return Main.getCache().getOverallEnchantmentPrice(enchantment, i_price, false);
     }
 
     private void loadPurchasePane(Section section, String item, CommandSender sender){
@@ -220,7 +220,7 @@ public class ShopCommand implements CommandExecutor{
         for (int amount : amounts){
             ItemStack item;
             if (!section.isEnchantmentSection()){
-                item = getPurchasePaneItem(item_input, ChatColor.GREEN + "Buy for " + Config.getCurrencySymbol() + df.format(Main.cache.getItemPrice(item_input, false)*amount), amount);
+                item = getPurchasePaneItem(item_input, ChatColor.GREEN + "Buy for " + Config.getCurrencySymbol() + df.format(Main.getCache().getItemPrice(item_input, false)*amount), amount);
             }
             else{
                 item = getPurchasePaneItem("ENCHANTED_BOOK", ChatColor.GREEN + "Buy for " + Config.getCurrencySymbol() + df.format(getEnchPriceWithHeld(item_input, player)*amount), amount);
@@ -248,7 +248,7 @@ public class ShopCommand implements CommandExecutor{
             return pane;
         }
         for (int amount : amounts){
-            ItemStack item = getPurchasePaneItem(item_input, ChatColor.RED + "Sell for " + Config.getCurrencySymbol() + df.format(Main.cache.getItemPrice(item_input, true)*amount), amount);
+            ItemStack item = getPurchasePaneItem(item_input, ChatColor.RED + "Sell for " + Config.getCurrencySymbol() + df.format(Main.getCache().getItemPrice(item_input, true)*amount), amount);
             if (item.getMaxStackSize() < amount){
                 continue;
             }

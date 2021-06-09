@@ -29,8 +29,8 @@ public class TimePeriod implements Serializable{
     }
 
     public void addToMap(){
-        int size = Main.database.map.size();
-        Main.database.map.put(size, this);
+        int size = Main.getDatabase().map.size();
+        Main.getDatabase().map.put(size, this);
     }
 
     private void getFromCache(){

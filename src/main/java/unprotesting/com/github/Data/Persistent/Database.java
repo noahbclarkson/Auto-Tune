@@ -27,6 +27,10 @@ public class Database {
         this.database.close();
     }
 
+    public void updateTimePeriod(){
+        
+    }
+
     //  Method to build and create or link database to file
     private void createDB(){
         Maker maker = DBMaker.fileDB(Config.getDataLocation() + "data.db");

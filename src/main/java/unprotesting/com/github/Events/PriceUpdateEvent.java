@@ -30,7 +30,6 @@ public class PriceUpdateEvent extends Event{
         } catch (IOException e) {
             e.printStackTrace();
         }
-        
     }
 
     private void calculateAndLoad() throws IOException{
@@ -79,8 +78,8 @@ public class PriceUpdateEvent extends Event{
             itemData.add(priceData);
         }
         obj.put("itemData", itemData);
-        obj.put("maxVolatility", Config.getBasicMaxVariableVolatility()*5);
-        obj.put("minVolatility", Config.getBasicMinVariableVolatility()*5);
+        obj.put("maxVolatility", Config.getBasicMaxVariableVolatility()*2);
+        obj.put("minVolatility", Config.getBasicMinVariableVolatility()*2);
         return obj;
     }
 

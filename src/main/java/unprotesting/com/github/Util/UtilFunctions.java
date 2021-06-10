@@ -1,9 +1,6 @@
 package unprotesting.com.github.Util;
 
 import com.earth2me.essentials.User;
-import com.earth2me.essentials.Essentials;
-import com.earth2me.essentials.IEssentials;
-import com.earth2me.essentials.IEssentialsModule;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;

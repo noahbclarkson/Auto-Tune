@@ -12,7 +12,6 @@ import org.json.simple.JSONObject;
 import lombok.Getter;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Data.Ephemeral.Data.ItemData;
 import unprotesting.com.github.Data.Persistent.Database;
 import unprotesting.com.github.Data.Persistent.TimePeriod;
 import unprotesting.com.github.Util.UtilFunctions;
@@ -74,11 +73,11 @@ public class PriceUpdateEvent extends Event{
     }
 
     private JSONObject loadDefaultObject(JSONArray itemData){
-        JSONObject obj = new JSONObject();
+        HashMap<String, Object> obj = new HashMap<String, Object>();
         obj.put("itemData", itemData);
         obj.put("maxVolatility", Config.getBasicMaxVariableVolatility());
         obj.put("minVolatility", Config.getBasicMinVariableVolatility());
-        return obj;
+        return new JSONObject(obj);
     }
 
     private Double[] loadAverageBuySellValue(String item, Double price, boolean enchantment){

@@ -14,7 +14,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import lombok.Getter;
-import lombok.Setter;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.Commands.Objects.Section;
 import unprotesting.com.github.Config.Config;

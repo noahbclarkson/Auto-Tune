@@ -17,8 +17,6 @@ import unprotesting.com.github.Data.Persistent.Database;
 import unprotesting.com.github.Data.Persistent.TimePeriod;
 import unprotesting.com.github.Util.UtilFunctions;
 
-
-
 public class PriceUpdateEvent extends Event{
 
     @Getter
@@ -43,7 +41,6 @@ public class PriceUpdateEvent extends Event{
 
     @SuppressWarnings("unchecked")
     private JSONObject loadItemJSON(){
-        JSONObject obj = new JSONObject();
         JSONArray itemData = new JSONArray();
         for (String item : Main.getCache().getITEMS().keySet()){
             double price = Main.getCache().getItemPrice(item, false);
@@ -56,15 +53,11 @@ public class PriceUpdateEvent extends Event{
             JSONObject priceData = new JSONObject(priceDetails);
             itemData.add(priceData);
         }
-        obj.put("itemData", itemData);
-        obj.put("maxVolatility", Config.getBasicMaxVariableVolatility());
-        obj.put("minVolatility", Config.getBasicMinVariableVolatility());
-        return obj;
+        return loadDefaultObject(itemData);
     }
 
     @SuppressWarnings("unchecked")
     private JSONObject loadEnchantmentJSON(){
-        JSONObject obj = new JSONObject();
         JSONArray itemData = new JSONArray();
         for (String enchantment : Main.getCache().getENCHANTMENTS().keySet()){
             double price = Main.getCache().getEnchantmentPrice(enchantment, false);
@@ -77,9 +70,14 @@ public class PriceUpdateEvent extends Event{
             JSONObject priceData = new JSONObject(priceDetails);
             itemData.add(priceData);
         }
+        return loadDefaultObject(itemData);
+    }
+
+    private JSONObject loadDefaultObject(JSONArray itemData){
+        JSONObject obj = new JSONObject();
         obj.put("itemData", itemData);
-        obj.put("maxVolatility", Config.getBasicMaxVariableVolatility()*2);
-        obj.put("minVolatility", Config.getBasicMinVariableVolatility()*2);
+        obj.put("maxVolatility", Config.getBasicMaxVariableVolatility());
+        obj.put("minVolatility", Config.getBasicMinVariableVolatility());
         return obj;
     }
 

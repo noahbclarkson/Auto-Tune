@@ -5,6 +5,7 @@ import java.util.Set;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
+import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
 import unprotesting.com.github.Data.Ephemeral.Data.ItemData;
 import unprotesting.com.github.Data.Util.BuyableTimePeriodFunctions;
 
@@ -28,8 +29,9 @@ public class ItemTimePeriod extends BuyableTimePeriodFunctions implements Serial
         this.prices = new double[size];
         this.items = new String[size];
         int i = 0;
+        LocalDataCache cache = Main.getCache();
         for (String key : set){
-            ItemData data = Main.getCache().getITEMS().get(key);
+            ItemData data = cache.getITEMS().get(key);
             setVars(i, data);
             this.items[i] = key;
             i++;
@@ -40,6 +42,9 @@ public class ItemTimePeriod extends BuyableTimePeriodFunctions implements Serial
         this.buys[pos] = data.getBuys();
         this.sells[pos] = data.getSells();
         this.prices[pos] = data.getPrice();
+        if (data.getBuys() != 0 || data.getBuys() != 0){
+            System.out.println(this.items[pos] + " | B:" + this.buys[pos] + " | S: " + this.sells[pos] + " | P: " + this.prices[pos]);
+        }
     }
 
 

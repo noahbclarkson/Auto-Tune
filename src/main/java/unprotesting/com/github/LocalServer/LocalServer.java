@@ -17,12 +17,16 @@ public class LocalServer {
 
     public LocalServer() throws IOException{
         if (Config.isWebServer()) {
-            server = HttpServer.create(new InetSocketAddress(Config.getPort()), 0);
-            server.createContext("/", new StaticFileHandler(base));
-            server.setExecutor(null);
-            server.start();
-            Logging.log("Web server has started on port " + Config.getPort());
-            Logging.log("Error Creating Server on port: " + Config.getPort() + ". Please try restarting or changing your port.");
+            try{
+                server = HttpServer.create(new InetSocketAddress(Config.getPort()), 0);
+                server.createContext("/", new StaticFileHandler(base));
+                server.setExecutor(null);
+                server.start();
+                Logging.log("Web server has started on port " + Config.getPort());
+            }
+            catch(NullPointerException | IllegalArgumentException | IllegalStateException | IOException e){
+                Logging.log("Error Creating Server on port: " + Config.getPort() + ". Please try restarting or changing your port.");
+            }
         }
     }
     

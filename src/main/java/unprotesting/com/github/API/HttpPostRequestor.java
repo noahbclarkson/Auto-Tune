@@ -17,6 +17,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import lombok.Getter;
@@ -39,6 +40,7 @@ public class HttpPostRequestor {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private boolean checkAPIKey() throws IOException{
         if (Config.getApiKey().equals("xyz") || Config.getEmail().equals("xyz@gmail.com")){
             Logging.log("Please change your API key and email in the config.yml file." +
@@ -47,10 +49,15 @@ public class HttpPostRequestor {
         }
         else{
             HttpPost httpPost = getDefaultHttpPost();
-            HashMap<String,Object> details = new HashMap<String,Object>();
-            details.put("apikey", Config.getApiKey());
-            JSONObject json = new JSONObject(details);
-            if (sendRequest(httpPost, json) == null){
+            HashMap<String, Object> priceDetails = new HashMap<String, Object>();
+            priceDetails.put("n", "test");
+            priceDetails.put("p",  1.0);
+            priceDetails.put("b", 2);
+            priceDetails.put("s", 1);
+            JSONObject json = new JSONObject(priceDetails);
+            JSONArray itemData = new JSONArray();
+            itemData.add(json);
+            if (sendRequest(httpPost, loadDefaultObject(itemData)) == null){
                 return false;
             }
             else{
@@ -73,6 +80,7 @@ public class HttpPostRequestor {
             if (result == null) {
                 return;
             }
+            Logging.debug(result);
             JsonElement jsonElement = parser.parse(result);
             JsonObject jsonObject = jsonElement.getAsJsonObject();
             JsonElement jsonArrayElement = jsonObject.get("returnData");
@@ -104,6 +112,14 @@ public class HttpPostRequestor {
         }
     }
 
+    public static JSONObject loadDefaultObject(JSONArray itemData){
+        HashMap<String, Object> obj = new HashMap<String, Object>();
+        obj.put("itemData", itemData);
+        obj.put("maxVolatility", Config.getBasicMaxVariableVolatility());
+        obj.put("minVolatility", Config.getBasicMinVariableVolatility());
+        return new JSONObject(obj);
+    }
+
     private HttpEntity sendRequest(HttpPost httpPost, JSONObject json) throws IOException{
         CloseableHttpClient client = HttpClients.createDefault();
         StringEntity entity = new StringEntity(json.toJSONString());
@@ -124,11 +140,12 @@ public class HttpPostRequestor {
     }
 
     private HttpPost getDefaultHttpPost(){
-        HttpPost httpPost = new HttpPost("https://safe-refuge-09383.herokuapp.com");
+        HttpPost httpPost = new HttpPost("https://auto-tune-economy-api.herokuapp.com/");
         httpPost.setHeader("content-type", "application/json");
         httpPost.setHeader("apikey", Config.getApiKey());
         httpPost.setHeader("email", Config.getEmail());
         return httpPost;
     }
+
     
 }

@@ -48,7 +48,7 @@ public class LocalDataCache {
     @Getter
     private List<TransactionData> TRANSACTIONS;
     @Getter
-    private ConcurrentHashMap<Player, PlayerSaleData> PLAYER_SALES;
+    private ConcurrentHashMap<UUID, PlayerSaleData> PLAYER_SALES;
     @Getter
     private List<Section> SECTIONS;
     @Getter
@@ -63,7 +63,7 @@ public class LocalDataCache {
         this.ENCHANTMENTS = new ConcurrentHashMap<String, EnchantmentData>();
         this.LOANS = new ArrayList<LoanData>();
         this.TRANSACTIONS = new ArrayList<TransactionData>();
-        this.PLAYER_SALES = new ConcurrentHashMap<Player, PlayerSaleData>();
+        this.PLAYER_SALES = new ConcurrentHashMap<UUID, PlayerSaleData>();
         this.SECTIONS = new ArrayList<Section>();
         this.MAX_PURCHASES = new ConcurrentHashMap<String, MaxBuySellData>();
         this.PERCENTAGE_CHANGES = new ConcurrentHashMap<String, Double>();
@@ -75,22 +75,31 @@ public class LocalDataCache {
     public void addSale(Player player, String item, double price, int amount, SalePositionType position){
         PlayerSaleData playerSaleData = getPlayerSaleData(player);
         playerSaleData.addSale(item, amount, position);
+        this.PLAYER_SALES.put(player.getUniqueId(), playerSaleData);
         try{
             switch(position){
                 case BUY:
-                    this.ITEMS.get(item).increaseBuys(amount);
+                    ItemData bdata = this.ITEMS.get(item);
+                    bdata.increaseBuys(amount);
+                    this.ITEMS.put(item, bdata);
                     this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.BI));
                     break;
                 case SELL:
-                    this.ITEMS.get(item).increaseSells(amount);
+                    ItemData sdata = this.ITEMS.get(item);
+                    sdata.increaseSells(amount);
+                    this.ITEMS.put(item, sdata);
                     this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.SI));
                     break;
                 case EBUY:
-                    this.ENCHANTMENTS.get(item).increaseBuys(amount);
+                    EnchantmentData ebdata = this.ENCHANTMENTS.get(item);
+                    ebdata.increaseBuys(amount);
+                    this.ENCHANTMENTS.put(item, ebdata);
                     this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.BE));
                     break;
                 case ESELL:
-                    this.ENCHANTMENTS.get(item).increaseSells(amount);
+                    EnchantmentData esdata = this.ENCHANTMENTS.get(item);
+                    esdata.increaseSells(amount);
+                    this.ENCHANTMENTS.put(item, esdata);
                     this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.SE));
                     break;
                 default:
@@ -183,7 +192,7 @@ public class LocalDataCache {
     }
 
     public int getBuysLeft(String item, Player player){
-        PlayerSaleData pdata = PLAYER_SALES.get(player);
+        PlayerSaleData pdata = PLAYER_SALES.get(player.getUniqueId());
         Integer max;
         try{
             max = MAX_PURCHASES.get(item).getBuys();
@@ -207,7 +216,7 @@ public class LocalDataCache {
     }
 
     public int getSellsLeft(String item, Player player){
-        PlayerSaleData pdata = PLAYER_SALES.get(player);
+        PlayerSaleData pdata = PLAYER_SALES.get(player.getUniqueId());
         Integer max;
         try{
             max = MAX_PURCHASES.get(item).getSells();
@@ -270,7 +279,7 @@ public class LocalDataCache {
     private PlayerSaleData getPlayerSaleData(Player player){
         PlayerSaleData playerSaleData = new PlayerSaleData();
         if (this.PLAYER_SALES.contains(player)){
-            playerSaleData = this.PLAYER_SALES.get(player);
+            playerSaleData = this.PLAYER_SALES.get(player.getUniqueId());
         }
         return playerSaleData;
     }

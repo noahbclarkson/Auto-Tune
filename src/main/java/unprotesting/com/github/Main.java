@@ -48,17 +48,20 @@ public class Main extends JavaPlugin{
 
     @Override
     public void onDisable(){
-        database.close();
+        if (database != null){
+            database.close();
+        }
     }
 
     @Override
     public void onEnable(){
+        INSTANCE = this;
         checkEconomy();
         getEssentials();
-        checkAPIKey();
         setupDataFiles();
+        checkAPIKey();
         setupDatabase();
-        startTimePeriod();
+        initCache();
         setupCommands();
         setupEvents();
         setupServer();
@@ -71,11 +74,8 @@ public class Main extends JavaPlugin{
         cache = new LocalDataCache();
     }
 
-    private void startTimePeriod(){
+    private void initCache(){
         cache = new LocalDataCache();
-        TimePeriod TP = new TimePeriod();
-        TP.addToMap();
-        CSVHandler.writeCSV();
     }
 
     private void setupDatabase(){
@@ -112,15 +112,14 @@ public class Main extends JavaPlugin{
     }
 
     private void checkAPIKey(){
-        APIKeyCheckEvent event = new APIKeyCheckEvent();
         Bukkit.getScheduler().runTaskAsynchronously(this, ()
-         -> Bukkit.getPluginManager().callEvent(event));
+         -> Bukkit.getPluginManager().callEvent(new APIKeyCheckEvent()));
     }
 
     private void setupEvents(){
-        PriceUpdateEvent event = new PriceUpdateEvent();
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
-         -> Bukkit.getPluginManager().callEvent(event), Config.getTimePeriod()*1200, Config.getTimePeriod()*1200);
+         -> Bukkit.getPluginManager().callEvent(new PriceUpdateEvent(true)),
+          Config.getTimePeriod()*300, Config.getTimePeriod()*1200);
     }
 
     private void getEssentials(){

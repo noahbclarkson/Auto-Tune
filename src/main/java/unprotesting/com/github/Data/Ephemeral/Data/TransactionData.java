@@ -14,9 +14,7 @@ public class TransactionData extends LocalDateTimeArrayUtilizer implements Compa
     @Getter
     private LocalDateTime date;
     @Getter
-    private Player player;
-    @Getter
-    private String item;
+    private String item, player;
     @Getter
     private int amount;
     @Getter
@@ -27,7 +25,7 @@ public class TransactionData extends LocalDateTimeArrayUtilizer implements Compa
     //  Create new transaction data
     public TransactionData(Player player, String item, int amount, double price, TransactionPositionType position){
         this.date = LocalDateTime.now();
-        this.player = player;
+        this.player = player.getUniqueId().toString();
         this.item = item;
         this.amount = amount;
         this.price = price;
@@ -37,7 +35,7 @@ public class TransactionData extends LocalDateTimeArrayUtilizer implements Compa
     //  Create new transaction data using previous persistent data
     public TransactionData(Player player, String item, int amount, double price, TransactionPositionType position, int[] date){
         this.date = arrayToDate(date);
-        this.player = player;
+        this.player = player.getUniqueId().toString();
         this.item = item;
         this.amount = amount;
         this.price = price;

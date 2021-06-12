@@ -40,10 +40,11 @@ public class TransactionsTimePeriod extends LocalDateTimeArrayUtilizer implement
     private void setVars(int pos, TransactionData data){
         this.prices[pos] = data.getPrice();
         this.amounts[pos] = data.getAmount();
-        this.players[pos] = data.getPlayer().getUniqueId().toString();
+        this.players[pos] = data.getPlayer();
         this.items[pos] = data.getItem();
         LocalDateTime date = data.getDate();
         this.time[pos] = dateToIntArray(date);
+        this.positions[pos] = data.getPosition().toString();
     }
 
     private void init(int size){

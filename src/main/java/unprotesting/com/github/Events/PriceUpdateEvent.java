@@ -1,6 +1,8 @@
 package unprotesting.com.github.Events;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -11,9 +13,11 @@ import org.json.simple.JSONObject;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
+import unprotesting.com.github.API.HttpPostRequestor;
 import unprotesting.com.github.Config.Config;
 import unprotesting.com.github.Data.Persistent.Database;
 import unprotesting.com.github.Data.Persistent.TimePeriod;
+import unprotesting.com.github.Logging.Logging;
 import unprotesting.com.github.Util.UtilFunctions;
 
 public class PriceUpdateEvent extends Event{
@@ -21,27 +25,48 @@ public class PriceUpdateEvent extends Event{
     @Getter
     private final HandlerList Handlers = new HandlerList();
 
-    public PriceUpdateEvent(){
+    public PriceUpdateEvent(boolean isAsync){
+        super(isAsync);
         try {
             calculateAndLoad();
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    private void calculateAndLoad() throws IOException{
+    private void calculateAndLoad() throws IOException, InterruptedException{
         int playerCount = UtilFunctions.calculatePlayerCount();
+        Logging.debug("Updating prices with player count: " + playerCount);
+        int size = Main.getCache().getITEMS().size() + Main.getCache().getENCHANTMENTS().size();
         if (playerCount >= Config.getUpdatePricesThreshold()){
             Main.updateTimePeriod();
-            Main.getRequestor().updatePrices(loadItemJSON());
+            for (int min = 0; min < size-99;){
+                Main.getRequestor().updatePrices(loadItemJSON(min, min+100));
+                Thread.sleep(1000);
+                min = min + 100;
+            }
             Main.getRequestor().updatePrices(loadEnchantmentJSON());
         }
+        else{
+            Logging.debug("Player count was less than threshhold: " +  Config.getUpdatePricesThreshold());
+        }
+        Logging.debug("Next update: " + LocalDateTime.now().plusMinutes(Config.getTimePeriod())
+         .format(DateTimeFormatter.ISO_LOCAL_TIME).toString());
     }
 
     @SuppressWarnings("unchecked")
-    private JSONObject loadItemJSON(){
+    private JSONObject loadItemJSON(int min, int max){
         JSONArray itemData = new JSONArray();
+        int i = 0;
         for (String item : Main.getCache().getITEMS().keySet()){
+            if (i < min){
+                i++;
+                continue;
+            }
+            if (i >= max){
+                i++;
+                break;
+            }
             double price = Main.getCache().getItemPrice(item, false);
             HashMap<String, Object> priceDetails = new HashMap<String, Object>();
             Double[] sbdata = loadAverageBuySellValue(item, price, false);
@@ -51,8 +76,9 @@ public class PriceUpdateEvent extends Event{
             priceDetails.put("s", sbdata[1]);
             JSONObject priceData = new JSONObject(priceDetails);
             itemData.add(priceData);
+            i++;
         }
-        return loadDefaultObject(itemData);
+        return HttpPostRequestor.loadDefaultObject(itemData);
     }
 
     @SuppressWarnings("unchecked")
@@ -69,15 +95,7 @@ public class PriceUpdateEvent extends Event{
             JSONObject priceData = new JSONObject(priceDetails);
             itemData.add(priceData);
         }
-        return loadDefaultObject(itemData);
-    }
-
-    private JSONObject loadDefaultObject(JSONArray itemData){
-        HashMap<String, Object> obj = new HashMap<String, Object>();
-        obj.put("itemData", itemData);
-        obj.put("maxVolatility", Config.getBasicMaxVariableVolatility());
-        obj.put("minVolatility", Config.getBasicMinVariableVolatility());
-        return new JSONObject(obj);
+        return HttpPostRequestor.loadDefaultObject(itemData);
     }
 
     private Double[] loadAverageBuySellValue(String item, Double price, boolean enchantment){

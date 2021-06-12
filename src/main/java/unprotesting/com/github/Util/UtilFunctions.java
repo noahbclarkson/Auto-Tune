@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 
 import unprotesting.com.github.Main;
 import unprotesting.com.github.Config.Config;
+import unprotesting.com.github.Logging.Logging;
 
 public class UtilFunctions {
 
@@ -18,9 +19,15 @@ public class UtilFunctions {
                 User user = new User(player, Main.getEss());
                 if (Config.isIgnoreAFK()){
                     if (user.isAfk()){
+                        Logging.debug(player.getName() + "is AFK");
                         continue;
                     }
                     if (user.isVanished()){
+                        Logging.debug(player.getName() + "is Vanished");
+                        continue;
+                    }
+                    else{
+                        output++;
                         continue;
                     }
                 }

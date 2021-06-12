@@ -24,7 +24,7 @@ public class Config {
  @Getter
  @Setter
  private static String serverName, pricingModel, basicVolatilityAlgorithim, menuTitle, noPermission, apiKey, email, inflationMethod,
-                        currencySymbol, economyShopConfig, dataLocation, storageSetting, background, numberFormat;
+                        currencySymbol, economyShopConfig, dataLocation, background, numberFormat;
 
  @Getter
  @Setter
@@ -79,7 +79,6 @@ public class Config {
         Config.setNumberFormat(Main.getDfiles().getConfig().getString("number-format", "###,###,###,##0.00"));
         Config.setPricingModel(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("pricing-model", "Exponential")));
         Config.setServerName(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("server-name", "Survival Server - (Change this in Config)")));
-        Config.setStorageSetting(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("storage-setting", "TP-Based")));
 
 
         Config.setBasicMaxFixedVolatility(Main.getDfiles().getConfig().getDouble("Fixed-Max-Volatility", 2.00));
@@ -103,11 +102,6 @@ public class Config {
         if (getTimePeriod() < 3){
             Logging.debug("Time-Period Setting reverting to 3 to reduce memory usage. If you would like lower time periods open a ticket in the offical discord.");
             Config.setTimePeriod(3);
-        }
-        
-        if (getStorageSetting() != "TP-Based" || getStorageSetting() != "Map-Based"){
-            Logging.log("Couldn't find a valid storage setting. Defaulting to TP-Based method");
-            setStorageSetting("TP-Based");
         }
     }
 

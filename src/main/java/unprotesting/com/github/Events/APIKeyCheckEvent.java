@@ -30,6 +30,9 @@ public class APIKeyCheckEvent extends Event{
             Logging.error(6);
             Main.closePlugin();
         }
+        else{
+            Logging.debug("API key found in database.");
+        }
     }
     
 }

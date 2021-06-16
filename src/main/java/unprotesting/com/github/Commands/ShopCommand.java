@@ -151,8 +151,12 @@ public class ShopCommand implements CommandExecutor{
     private List<GuiItem> getListFromSection(Section section, CommandSender sender){
         Player player = (Player)sender;
         List<GuiItem> output = new ArrayList<GuiItem>();
+        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         for (String s_item : section.getItems()){
             ItemStack item = new ItemStack(Material.BARRIER);
+            if (section.isEnchantmentSection() && !Config.isEnableEnchantments()){
+                continue;
+            }
             try{
                 if (section.isEnchantmentSection()){
                     item = new ItemStack(Material.ENCHANTED_BOOK);
@@ -168,15 +172,15 @@ public class ShopCommand implements CommandExecutor{
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(ChatColor.GOLD + s_item);
             List<String> list = new ArrayList<String>();
-            list.add(ChatColor.GREEN + Config.getCurrencySymbol() + Main.getCache().getItemPrice(s_item, false));
+            list.add(ChatColor.GREEN + Config.getCurrencySymbol() + df.format(Main.getCache().getItemPrice(s_item, false)));
             if (section.isEnchantmentSection()){
                 list.clear();
-                list.add(ChatColor.GREEN + Config.getCurrencySymbol() + getEnchPriceWithHeld(s_item, player));
+                list.add(ChatColor.GREEN + Config.getCurrencySymbol() + df.format(getEnchPriceWithHeld(s_item, player)));
             }
             list.add(Main.getCache().getPChangeString(s_item));
             if (section.isEnchantmentSection()){
                 list.add(ChatColor.YELLOW + "Ratio: " + Main.getCache().getEnchantmentRatio(s_item));
-                list.add(ChatColor.YELLOW + "Price: " + Config.getCurrencySymbol() + Main.getCache().getEnchantmentPrice(s_item, false));
+                list.add(ChatColor.YELLOW + "Price: " + Config.getCurrencySymbol() + df.format(Main.getCache().getEnchantmentPrice(s_item, false)));
             }
             list.add(ChatColor.WHITE + "Remaining Buys: " + ChatColor.GRAY + Main.getCache().getBuysLeft(s_item, player));
             list.add(ChatColor.WHITE + "Remaining Sells: " + ChatColor.GRAY + Main.getCache().getSellsLeft(s_item, player));
@@ -219,7 +223,7 @@ public class ShopCommand implements CommandExecutor{
         OutlinePane pane = new OutlinePane(1, 1, 7, 2);
         for (int amount : amounts){
             ItemStack item;
-            if (!section.isEnchantmentSection()){
+            if (!section.isEnchantmentSection() && Config.isEnableEnchantments()){
                 item = getPurchasePaneItem(item_input, ChatColor.GREEN + "Buy for " + Config.getCurrencySymbol() + df.format(Main.getCache().getItemPrice(item_input, false)*amount), amount);
             }
             else{

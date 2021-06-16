@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
@@ -75,32 +76,34 @@ public class LocalDataCache {
     public void addSale(Player player, String item, double price, int amount, SalePositionType position){
         PlayerSaleData playerSaleData = getPlayerSaleData(player);
         playerSaleData.addSale(item, amount, position);
+        UUID uuid = player.getUniqueId();
         this.PLAYER_SALES.put(player.getUniqueId(), playerSaleData);
+        String uuid_string = uuid.toString();
         try{
             switch(position){
                 case BUY:
                     ItemData bdata = this.ITEMS.get(item);
                     bdata.increaseBuys(amount);
                     this.ITEMS.put(item, bdata);
-                    this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.BI));
+                    this.TRANSACTIONS.add(new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BI));
                     break;
                 case SELL:
                     ItemData sdata = this.ITEMS.get(item);
                     sdata.increaseSells(amount);
                     this.ITEMS.put(item, sdata);
-                    this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.SI));
+                    this.TRANSACTIONS.add(new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SI));
                     break;
                 case EBUY:
                     EnchantmentData ebdata = this.ENCHANTMENTS.get(item);
                     ebdata.increaseBuys(amount);
                     this.ENCHANTMENTS.put(item, ebdata);
-                    this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.BE));
+                    this.TRANSACTIONS.add(new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BE));
                     break;
                 case ESELL:
                     EnchantmentData esdata = this.ENCHANTMENTS.get(item);
                     esdata.increaseSells(amount);
                     this.ENCHANTMENTS.put(item, esdata);
-                    this.TRANSACTIONS.add(new TransactionData(player, item, amount, price, TransactionPositionType.SE));
+                    this.TRANSACTIONS.add(new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SE));
                     break;
                 default:
                     break;
@@ -222,7 +225,7 @@ public class LocalDataCache {
             max = MAX_PURCHASES.get(item).getSells();
         }
         catch(NullPointerException e){
-            return 999;
+            return 9999;
         }
         try{
             pdata.getSells().isEmpty();
@@ -262,6 +265,28 @@ public class LocalDataCache {
 
     public void updateEnchantments(ConcurrentHashMap<String, EnchantmentData> data){
         this.ENCHANTMENTS = data;
+    }
+
+    public void updatePercentageChanges(){
+        double a = Config.getTimePeriod()/1440;
+        double b = 1/a;
+        int tpInDay = (int) Math.floor(b);
+        int i = 0;
+        for (String item : Main.getDatabase().map.get(size-1).getItp().getItems()){
+            Double price;
+            try{
+                price = Main.getDatabase().map.get(0).getItp().getPrices()[i];
+                if (size-1 > tpInDay){
+                    price = Main.getDatabase().map.get(size-tpInDay).getItp().getPrices()[i]; 
+                }
+            }
+            catch(NullPointerException e){
+                price = Main.getCache().getItemPrice(item, false);
+            }
+            double pChange = (Main.getCache().getItemPrice(item, false)-price)/price*100;
+            this.PERCENTAGE_CHANGES.put(item, pChange);
+            i++;
+        }
     }
 
     //  Initialize cache from configurations and relavent files
@@ -314,24 +339,12 @@ public class LocalDataCache {
             }
             return;
         }
-        double a = Config.getTimePeriod()/1440;
-        double b = 1/a;
-        int tpInDay = (int) Math.floor(b);
-        ItemTimePeriod ITP2;
-        ItemTimePeriod ITP = Main.getDatabase().map.get(size-1).getItp();
-        ITP2 = ITP;
-        if (size-1 > tpInDay){
-            ITP2 = Main.getDatabase().map.get(size-tpInDay).getItp();
-        }
-        else if (size-1 <= tpInDay){
-            ITP2 = Main.getDatabase().map.get(0).getItp();
-        }
+        updatePercentageChanges();
         int i = 0;
-        for (String item : ITP.getItems()){
+        ItemTimePeriod ITP = Main.getDatabase().map.get(size-1).getItp();
+        for (String item : Main.getDatabase().map.get(size-1).getItp().getItems()){
             ItemData data = new ItemData(ITP.getPrices()[i]);
             this.ITEMS.put(item, data);
-            double pChange = (ITP2.getPrices()[i]-ITP.getPrices()[i])/ITP.getPrices()[i]*100;
-            this.PERCENTAGE_CHANGES.put(item, pChange);
             i++;
         }
     }
@@ -382,9 +395,9 @@ public class LocalDataCache {
             TransactionsTimePeriod TTP = Main.getDatabase().map.get(pos).getTtp();
             for (int i = 0; i < TTP.getPrices().length; i++){
                 UUID uuid = UUID.fromString(TTP.getPlayers()[i]);
-                Player player = Bukkit.getPlayer(uuid);
+                OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
                 TransactionPositionType position = TransactionPositionType.valueOf(TTP.getPositions()[i]);
-                TransactionData data = new TransactionData(player, TTP.getItems()[i], TTP.getAmounts()[0], TTP.getPrices()[i], position, TTP.getTime()[i]);
+                TransactionData data = new TransactionData(player.getUniqueId().toString(), TTP.getItems()[i], TTP.getAmounts()[0], TTP.getPrices()[i], position, TTP.getTime()[i]);
                 this.TRANSACTIONS.add(data);
             }
         }

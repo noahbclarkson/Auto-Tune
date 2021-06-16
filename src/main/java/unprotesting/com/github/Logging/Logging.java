@@ -11,7 +11,8 @@ public class Logging {
         "Item/Enchantment not found in map",
         "Error adding sale",
         "Error on status code",
-        "Error on API-Key"
+        "Error on API-Key",
+        "Failed to update prices"
     };
 
     public static void log(String input){

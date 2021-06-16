@@ -9,6 +9,7 @@ import java.util.List;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.Config.Config;
 import unprotesting.com.github.Data.Persistent.TimePeriod;
+import unprotesting.com.github.Data.Persistent.TimePeriods.EnchantmentsTimePeriod;
 import unprotesting.com.github.Data.Persistent.TimePeriods.ItemTimePeriod;
 
 public class CSVHandler {
@@ -29,9 +30,11 @@ public class CSVHandler {
         int size = Main.getDatabase().map.size();
         TimePeriod StringTP = Main.getDatabase().map.get(size-1);
         List<String> strs = Arrays.asList(StringTP.getItp().getItems());
+        List<String> strs2 = Arrays.asList(StringTP.getEtp().getItems());
         if (size < cutoff || cutoff < 3){
             cutoff = size;
         }
+        Collections.sort(strs);
         Collections.sort(strs);
         for (String item : strs){
             writer.write("\n" + "%" + item + "\n");
@@ -39,6 +42,16 @@ public class CSVHandler {
                 ItemTimePeriod ITP = Main.getDatabase().map.get(i).getItp();
                 int pos = Arrays.asList(ITP.getItems()).indexOf(item);
                 writer.append(i + "," + ITP.getPrices()[pos] + "," +  ITP.getBuys()[pos] + "," + ITP.getSells()[pos] + "\n");
+            }
+        }
+        if (Config.isEnableEnchantments()){
+            for (String enchantment : strs2){
+                writer.write("\n" + "%" + enchantment + "\n");
+                for (int i = (size-cutoff); i < size; i++){
+                    EnchantmentsTimePeriod ETP = Main.getDatabase().map.get(i).getEtp();
+                    int pos = Arrays.asList(ETP.getItems()).indexOf(enchantment);
+                    writer.append(i + "," + ETP.getPrices()[pos] + "," +  ETP.getBuys()[pos] + "," + ETP.getSells()[pos] + "\n");
+                }
             }
         }
         writer.close();

@@ -5,7 +5,6 @@ import org.bukkit.ChatColor;
 import lombok.Getter;
 import lombok.Setter;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Logging.Logging;
 
 public class Config {
 
@@ -13,7 +12,7 @@ public class Config {
  @Setter
  private static boolean webServer, debugEnabled, checksumHeaderBypass, sellPriceDifferenceVariationEnabled, inflationEnabled, 
                          autoSellEnabled, calculateGlobalGDP, tutorial, sendPlayerTopMoversOnJoin, dataTransactions, disableMaxBuysSells,
-                          ignoreAFK, usePermissionsForShop, readFromCSV;
+                          ignoreAFK, usePermissionsForShop, readFromCSV, enableEnchantments;
 
  @Getter
  @Setter
@@ -50,6 +49,7 @@ public class Config {
         Config.setTutorial(Main.getDfiles().getConfig().getBoolean("tutorial", true));
         Config.setUsePermissionsForShop(Main.getDfiles().getConfig().getBoolean("use-permission-for-shop", false));
         Config.setWebServer(Main.getDfiles().getConfig().getBoolean("web-server-enabled", true));
+        Config.setEnableEnchantments(Main.getDfiles().getConfig().getBoolean("enable-enchantments", true));
 
 
         Config.setAutoSellProfitUpdatePeriod(Main.getDfiles().getConfig().getInt("auto-sell-profit-update-period", 1200));
@@ -98,11 +98,6 @@ public class Config {
         Config.setSellPriceDifference(Main.getDfiles().getConfig().getDouble("sell-price-difference", 2.5));
         Config.setSellPriceDifferenceVariationStart(Main.getDfiles().getConfig().getDouble("sell-price-difference-variation-start", 25.0));
         Config.setShopConfigGUIShopSellValue(Main.getDfiles().getConfig().getDouble("shop-config-guishop-sell-value", 20.00));
-
-        if (getTimePeriod() < 3){
-            Logging.debug("Time-Period Setting reverting to 3 to reduce memory usage. If you would like lower time periods open a ticket in the offical discord.");
-            Config.setTimePeriod(3);
-        }
     }
 
 }

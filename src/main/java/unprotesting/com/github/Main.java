@@ -70,8 +70,8 @@ public class Main extends JavaPlugin{
     public static void updateTimePeriod(){
         TimePeriod TP = new TimePeriod();
         TP.addToMap();
-        CSVHandler.writeCSV();
         cache = new LocalDataCache();
+        CSVHandler.writeCSV();
     }
 
     private void initCache(){
@@ -112,14 +112,14 @@ public class Main extends JavaPlugin{
     }
 
     private void checkAPIKey(){
-        Bukkit.getScheduler().runTaskAsynchronously(this, ()
+        Bukkit.getScheduler().runTask(this, ()
          -> Bukkit.getPluginManager().callEvent(new APIKeyCheckEvent()));
     }
 
     private void setupEvents(){
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
          -> Bukkit.getPluginManager().callEvent(new PriceUpdateEvent(true)),
-          Config.getTimePeriod()*300, Config.getTimePeriod()*1200);
+          Config.getTimePeriod()*500, Config.getTimePeriod()*1200);
     }
 
     private void getEssentials(){

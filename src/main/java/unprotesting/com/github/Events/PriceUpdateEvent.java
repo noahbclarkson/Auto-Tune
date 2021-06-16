@@ -1,20 +1,18 @@
 package unprotesting.com.github.Events;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.API.HttpPostRequestor;
 import unprotesting.com.github.Config.Config;
+import unprotesting.com.github.Data.Ephemeral.Data.EnchantmentData;
+import unprotesting.com.github.Data.Ephemeral.Data.ItemData;
 import unprotesting.com.github.Data.Persistent.Database;
 import unprotesting.com.github.Data.Persistent.TimePeriod;
 import unprotesting.com.github.Logging.Logging;
@@ -29,23 +27,20 @@ public class PriceUpdateEvent extends Event{
         super(isAsync);
         try {
             calculateAndLoad();
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    private void calculateAndLoad() throws IOException, InterruptedException{
+    private void calculateAndLoad() throws InterruptedException{
         int playerCount = UtilFunctions.calculatePlayerCount();
         Logging.debug("Updating prices with player count: " + playerCount);
-        int size = Main.getCache().getITEMS().size() + Main.getCache().getENCHANTMENTS().size();
         if (playerCount >= Config.getUpdatePricesThreshold()){
             Main.updateTimePeriod();
-            for (int min = 0; min < size-99;){
-                Main.getRequestor().updatePrices(loadItemJSON(min, min+100));
-                Thread.sleep(1000);
-                min = min + 100;
-            }
-            Main.getRequestor().updatePrices(loadEnchantmentJSON());
+            updateItems();
+            Thread.sleep(500);
+            updateEnchantments();
+            Main.getCache().updatePercentageChanges();
         }
         else{
             Logging.debug("Player count was less than threshhold: " +  Config.getUpdatePricesThreshold());
@@ -54,53 +49,55 @@ public class PriceUpdateEvent extends Event{
          .format(DateTimeFormatter.ISO_LOCAL_TIME).toString());
     }
 
-    @SuppressWarnings("unchecked")
-    private JSONObject loadItemJSON(int min, int max){
-        JSONArray itemData = new JSONArray();
-        int i = 0;
-        for (String item : Main.getCache().getITEMS().keySet()){
-            if (i < min){
-                i++;
-                continue;
+    private void updateItems(){
+        ConcurrentHashMap<String, ItemData> ITEMS = Main.getCache().getITEMS();
+        for (String item : ITEMS.keySet()){
+            ItemData data = ITEMS.get(item);
+            double price = data.getPrice();
+            Double[] buysell = loadAverageBuySellValue(item, price, false);
+            Double newprice;
+            Double total = buysell[0]+buysell[1];
+            if (buysell[0] > buysell[1]){
+                newprice = price + price*Config.getBasicMaxVariableVolatility()*0.01*(buysell[0]/total) + price*0.01*Config.getBasicMinVariableVolatility();
             }
-            if (i >= max){
-                i++;
-                break;
+            else if(buysell[0] < buysell[1]){
+                newprice = price + price*Config.getBasicMaxVariableVolatility()*0.01*(buysell[1]/total) + price*0.01*Config.getBasicMinVariableVolatility();
             }
-            double price = Main.getCache().getItemPrice(item, false);
-            HashMap<String, Object> priceDetails = new HashMap<String, Object>();
-            Double[] sbdata = loadAverageBuySellValue(item, price, false);
-            priceDetails.put("n", item);
-            priceDetails.put("p",  price);
-            priceDetails.put("b", sbdata[0]);
-            priceDetails.put("s", sbdata[1]);
-            JSONObject priceData = new JSONObject(priceDetails);
-            itemData.add(priceData);
-            i++;
+            else{
+                newprice = price;
+            }
+            data.setPrice(newprice);
+            ITEMS.put(item, data);
         }
-        return HttpPostRequestor.loadDefaultObject(itemData);
+        Main.getCache().updatePrices(ITEMS);
     }
 
-    @SuppressWarnings("unchecked")
-    private JSONObject loadEnchantmentJSON(){
-        JSONArray itemData = new JSONArray();
-        for (String enchantment : Main.getCache().getENCHANTMENTS().keySet()){
-            double price = Main.getCache().getEnchantmentPrice(enchantment, false);
-            HashMap<String, Object> priceDetails = new HashMap<String, Object>();
-            Double[] sbdata = loadAverageBuySellValue(enchantment, price, true);
-            priceDetails.put("n", enchantment);
-            priceDetails.put("p",  price);
-            priceDetails.put("b", sbdata[0]);
-            priceDetails.put("s", sbdata[1]);
-            JSONObject priceData = new JSONObject(priceDetails);
-            itemData.add(priceData);
+    private void updateEnchantments(){
+        ConcurrentHashMap<String, EnchantmentData> ENCHANTMENTS = Main.getCache().getENCHANTMENTS();
+        for (String item : ENCHANTMENTS.keySet()){
+            EnchantmentData data = ENCHANTMENTS.get(item);
+            double price = data.getPrice();
+            Double[] buysell = loadAverageBuySellValue(item, price, true);
+            Double newprice;
+            Double total = buysell[0]+buysell[1];
+            if (buysell[0] > buysell[1]){
+                newprice = price + price*Config.getBasicMaxVariableVolatility()*0.01*(buysell[0]/total) + price*0.01*Config.getBasicMinVariableVolatility();
+            }
+            else if(buysell[0] < buysell[1]){
+                newprice = price - price*Config.getBasicMaxVariableVolatility()*0.01*(buysell[1]/total) - price*0.01*Config.getBasicMinVariableVolatility();
+            }
+            else{
+                newprice = price;
+            }
+            data.setPrice(newprice);
+            ENCHANTMENTS.put(item, data);
         }
-        return HttpPostRequestor.loadDefaultObject(itemData);
+        Main.getCache().updateEnchantments(ENCHANTMENTS);
     }
 
     private Double[] loadAverageBuySellValue(String item, Double price, boolean enchantment){
         double x = 0;
-        int size = Main.getDatabase().map.getSize();
+        int size = Main.getDatabase().map.size();
         Database db = Main.getDatabase();
         double final_y = 1;
         double final_buys = 0;
@@ -113,7 +110,7 @@ public class PriceUpdateEvent extends Event{
                 break;
             }
             int input = (int) y;
-            TimePeriod period = db.map.get(input);
+            TimePeriod period = db.map.get(size-input);
             double buys = 0;
             double sells = 0;
             try{
@@ -129,10 +126,11 @@ public class PriceUpdateEvent extends Event{
                 }
             }
             catch(NullPointerException e){
+                e.printStackTrace();
                 break;
             }
-            final_buys += buys * price;
-            final_sells += sells * price;
+            final_buys += buys;
+            final_sells += sells;
             x++;
         }
         if (Config.isInflationEnabled()){

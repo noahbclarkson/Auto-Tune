@@ -1,30 +1,20 @@
 package unprotesting.com.github.API;
 
 import java.io.IOException;
-import java.net.SocketException;
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.NoHttpResponseException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import lombok.Getter;
-import unprotesting.com.github.Main;
 import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Data.Ephemeral.Data.EnchantmentData;
-import unprotesting.com.github.Data.Ephemeral.Data.ItemData;
 import unprotesting.com.github.Logging.Logging;
 
 public class HttpPostRequestor {
@@ -66,52 +56,6 @@ public class HttpPostRequestor {
         }
     }
 
-    public void updatePrices(JSONObject json) throws IOException{
-        HttpPost httpPost = getDefaultHttpPost();
-        HttpEntity entityResponse = sendRequest(httpPost, json);
-        if (entityResponse != null){
-            JsonParser parser = new JsonParser();
-            String result = null;
-            try {
-                result = EntityUtils.toString(entityResponse);
-            } catch (SocketException ex) {
-                return;    
-            }
-            if (result == null) {
-                return;
-            }
-            Logging.debug(result);
-            JsonElement jsonElement = parser.parse(result);
-            JsonObject jsonObject = jsonElement.getAsJsonObject();
-            JsonElement jsonArrayElement = jsonObject.get("returnData");
-            JsonArray jsonArray = jsonArrayElement.getAsJsonArray();
-            ConcurrentHashMap<String, ItemData> map = Main.getCache().getITEMS();
-            ConcurrentHashMap<String, EnchantmentData> emap = Main.getCache().getENCHANTMENTS();
-            for (JsonElement element : jsonArray) {
-                JsonObject obj = element.getAsJsonObject();
-                JsonElement priceElement = obj.get("p");
-                JsonElement nameElement = obj.get("i");
-                String priceString = priceElement.getAsString();
-                String name = nameElement.getAsString();
-                Double price = Double.parseDouble(priceString);
-                ItemData data;
-                EnchantmentData edata;
-                try{
-                    data = map.get(name);
-                    data.setPrice(price);
-                    map.put(name, data);
-                }
-                catch(NullPointerException e){
-                    edata = emap.get(name);
-                    edata.setPrice(price);
-                    emap.put(name, edata);
-                }
-            }
-            Main.getCache().updatePrices(map);
-            Main.getCache().updateEnchantments(emap);
-        }
-    }
-
     public static JSONObject loadDefaultObject(JSONArray itemData){
         HashMap<String, Object> obj = new HashMap<String, Object>();
         obj.put("itemData", itemData);
@@ -124,18 +68,27 @@ public class HttpPostRequestor {
         CloseableHttpClient client = HttpClients.createDefault();
         StringEntity entity = new StringEntity(json.toJSONString());
         httpPost.setEntity(entity);
-        CloseableHttpResponse response = client.execute(httpPost);
-        int statusCode = response.getStatusLine().getStatusCode();
-        HttpEntity entityResponse = null;
+        CloseableHttpResponse response;
+        int statusCode;
+        try{
+            response = client.execute(httpPost);
+            statusCode = response.getStatusLine().getStatusCode();
+        }
+        catch(NoHttpResponseException e){
+            Logging.error(7);
+            response = null;
+            statusCode = -1;
+            return null;
+        }
         if (statusCode == 200) {
             client.close();
-            entityResponse = response.getEntity();
+            HttpEntity entityResponse = response.getEntity();
             return entityResponse;
         }
         else {
             client.close();
             Logging.error(5);
-            return entityResponse;
+            return null;
         }
     }
 

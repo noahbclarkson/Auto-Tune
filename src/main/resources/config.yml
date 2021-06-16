@@ -55,6 +55,9 @@ auto-sell-profit-update-period: 1200
 ##  Global number format
 number-format: '###,###,###,##0.00'
 
+##  Enable Enchantments
+enable-enchantments: true
+
 
 ##  -- Pricing Model Settings --  ##
 

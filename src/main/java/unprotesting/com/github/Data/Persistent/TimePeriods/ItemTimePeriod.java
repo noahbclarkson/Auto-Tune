@@ -32,8 +32,8 @@ public class ItemTimePeriod extends BuyableTimePeriodFunctions implements Serial
         LocalDataCache cache = Main.getCache();
         for (String key : set){
             ItemData data = cache.getITEMS().get(key);
-            setVars(i, data);
             this.items[i] = key;
+            setVars(i, data);
             i++;
         }
     }
@@ -42,9 +42,6 @@ public class ItemTimePeriod extends BuyableTimePeriodFunctions implements Serial
         this.buys[pos] = data.getBuys();
         this.sells[pos] = data.getSells();
         this.prices[pos] = data.getPrice();
-        if (data.getBuys() != 0 || data.getBuys() != 0){
-            System.out.println(this.items[pos] + " | B:" + this.buys[pos] + " | S: " + this.sells[pos] + " | P: " + this.prices[pos]);
-        }
     }
 
 

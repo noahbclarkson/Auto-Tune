@@ -72,6 +72,9 @@ public class FunctionsUtil {
 
     @SuppressWarnings("deprecation")
     public static void buyEnchantment(Player player, String enchantment){
+        if (!Config.isEnableEnchantments()){
+            return;
+        }
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         ItemStack item = player.getInventory().getItemInMainHand();
         boolean off = false;
@@ -110,6 +113,7 @@ public class FunctionsUtil {
         else{
             player.getInventory().setItemInOffHand(item);
         }
+        Main.getCache().addSale(player, enchantment, price, 1, SalePositionType.EBUY);
         EconomyFunctions.economy.withdrawPlayer(player, price);
         player.sendMessage(ChatColor.GREEN + "Purchased 1x of " + ChatColor.GOLD + enchantment.toString() + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(price) + ".");
         player.getInventory().setItemInMainHand(item);
@@ -129,7 +133,7 @@ public class FunctionsUtil {
             enchantments = item.getEnchantments();
         }
         catch(NullPointerException e){};
-        if (enchantments != null && enchantments.size() > 0){
+        if (enchantments != null && enchantments.size() > 0 && Config.isEnableEnchantments()){
             ratio = 0;
             for (Enchantment ench : enchantments.keySet()){
                 int level = item.getEnchantmentLevel(ench);

@@ -12,6 +12,7 @@ import net.ess3.api.IEssentials;
 import unprotesting.com.github.API.HttpPostRequestor;
 import unprotesting.com.github.Commands.SellCommand;
 import unprotesting.com.github.Commands.ShopCommand;
+import unprotesting.com.github.Commands.TradeCommand;
 import unprotesting.com.github.Config.Config;
 import unprotesting.com.github.Config.DataFiles;
 import unprotesting.com.github.Data.CSV.CSVHandler;
@@ -103,6 +104,7 @@ public class Main extends JavaPlugin{
     private void setupCommands(){
         this.getCommand("shop").setExecutor(new ShopCommand());
         this.getCommand("sell").setExecutor(new SellCommand());
+        this.getCommand("trade").setExecutor(new TradeCommand());
     }
 
     private void setupServer(){

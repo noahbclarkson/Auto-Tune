@@ -44,7 +44,8 @@ public class Main extends JavaPlugin{
     private static HttpPostRequestor requestor;
     @Getter
     private static IEssentials ess;
-
+    @Getter @Setter
+    private static String[] serverIPStrings;
     @Getter @Setter
     private static boolean correctAPIKey = false;
 
@@ -67,6 +68,7 @@ public class Main extends JavaPlugin{
         getEssentials();
         setupDataFiles();
         checkAPIKey();
+        getIP();
         setupDatabase();
         initCache();
         setupCommands();
@@ -124,6 +126,11 @@ public class Main extends JavaPlugin{
     private void checkAPIKey(){
         Bukkit.getScheduler().runTaskAsynchronously(this, ()
          -> Bukkit.getPluginManager().callEvent(new APIKeyCheckEvent(true)));
+    }
+
+    private void getIP(){
+        Bukkit.getScheduler().runTaskAsynchronously(this, ()
+         -> Bukkit.getPluginManager().callEvent(new IPCheckEvent(true)));
     }
 
     private void setupEvents(){

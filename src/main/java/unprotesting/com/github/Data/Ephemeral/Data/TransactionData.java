@@ -48,7 +48,7 @@ public class TransactionData extends LocalDateTimeArrayUtilizer implements Compa
 
     @Override
     public int compareTo(TransactionData o) {
-        return this.getDate().compareTo(o.getDate());
+        return o.getDate().compareTo(this.getDate());
     }
     
 }

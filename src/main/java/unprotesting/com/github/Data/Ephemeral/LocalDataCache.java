@@ -423,7 +423,7 @@ public class LocalDataCache {
                 UUID uuid = UUID.fromString(TTP.getPlayers()[i]);
                 OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
                 TransactionPositionType position = TransactionPositionType.valueOf(TTP.getPositions()[i]);
-                TransactionData data = new TransactionData(player.getUniqueId().toString(), TTP.getItems()[i], TTP.getAmounts()[0], TTP.getPrices()[i], position, TTP.getTime()[i]);
+                TransactionData data = new TransactionData(player.getUniqueId().toString(), TTP.getItems()[i], TTP.getAmounts()[i], TTP.getPrices()[i], position, TTP.getTime()[i]);
                 this.TRANSACTIONS.add(data);
             }
         }

@@ -431,11 +431,11 @@ public class LocalDataCache {
 
     private void loadGDPDataFromData(){
         if (size < 1){
-            this.GDPDATA = new GDPData(0.0, 0.0);
+            this.GDPDATA = new GDPData(0, 0, 0, 0, 0);
             return;
         }
         GDPTimePeriod GTP = Main.getDatabase().map.get(size-1).getGtp();
-        this.GDPDATA = new GDPData(GTP.getGDP(), GTP.getLoss());
+        this.GDPDATA = new GDPData(GTP.getGDP(), GTP.getBalance(), GTP.getLoss(), GTP.getDebt(), GTP.getPlayerCount());
     }
 
 }

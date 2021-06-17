@@ -16,19 +16,20 @@ public class APIKeyCheckEvent extends Event{
     @Getter
     private final HandlerList Handlers = new HandlerList();
 
-    public APIKeyCheckEvent(){
+    public APIKeyCheckEvent(boolean isAsync){
+        super(isAsync);
         Main.setRequestor(new HttpPostRequestor());
         while(Main.getRequestor().getCorrectAPIKey() == null){
             try {
-                Thread.sleep(100);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         };
         this.correctAPIKey = Main.getRequestor().getCorrectAPIKey();
+        Main.setCorrectAPIKey(this.correctAPIKey);
         if (!this.correctAPIKey){
             Logging.error(6);
-            Main.closePlugin();
         }
         else{
             Logging.debug("API key found in database.");

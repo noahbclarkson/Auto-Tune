@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.ess3.api.IEssentials;
 import unprotesting.com.github.API.HttpPostRequestor;
+import unprotesting.com.github.Commands.GDPCommand;
 import unprotesting.com.github.Commands.SellCommand;
 import unprotesting.com.github.Commands.ShopCommand;
 import unprotesting.com.github.Commands.TradeCommand;
@@ -45,11 +46,16 @@ public class Main extends JavaPlugin{
     @Getter
     private static IEssentials ess;
 
+    @Getter @Setter
+    private static boolean correctAPIKey = false;
+
     public static LocalServer server;
 
     @Override
     public void onDisable(){
-        updateTimePeriod();
+        if (cache != null){
+            updateTimePeriod();
+        }
         if (database != null){
             database.close();
         }
@@ -106,6 +112,7 @@ public class Main extends JavaPlugin{
         this.getCommand("shop").setExecutor(new ShopCommand());
         this.getCommand("sell").setExecutor(new SellCommand());
         this.getCommand("trade").setExecutor(new TradeCommand());
+        this.getCommand("gdp").setExecutor(new GDPCommand());
     }
 
     private void setupServer(){
@@ -115,8 +122,8 @@ public class Main extends JavaPlugin{
     }
 
     private void checkAPIKey(){
-        Bukkit.getScheduler().runTask(this, ()
-         -> Bukkit.getPluginManager().callEvent(new APIKeyCheckEvent()));
+        Bukkit.getScheduler().runTaskAsynchronously(this, ()
+         -> Bukkit.getPluginManager().callEvent(new APIKeyCheckEvent(true)));
     }
 
     private void setupEvents(){

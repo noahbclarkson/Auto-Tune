@@ -15,10 +15,12 @@ public class GDPData {
     @Getter
     private int playerCount;
 
-    public GDPData(double GDP, double loss){
+    public GDPData(double GDP, double balance, double loss, double debt, int playerCount){
         this.GDP = GDP;
-        updateBalance();
-        updateDebt();
+        this.loss = loss;
+        this.balance = balance;
+        this.playerCount = playerCount;
+        this.debt = debt;
     }
 
     public void increaseGDP(double d){
@@ -36,8 +38,11 @@ public class GDPData {
             if (player == null){
                 continue;
             }
-            double bal = EconomyFunctions.getEconomy().getBalance(player);
-            server_balance += bal;
+            try{
+                double bal = EconomyFunctions.getEconomy().getBalance(player);
+                server_balance += bal;
+            }
+            catch(RuntimeException e){}
             server_player_count++;
         }
         this.balance = server_balance;

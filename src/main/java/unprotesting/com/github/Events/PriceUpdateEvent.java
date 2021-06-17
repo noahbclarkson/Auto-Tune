@@ -25,10 +25,12 @@ public class PriceUpdateEvent extends Event{
 
     public PriceUpdateEvent(boolean isAsync){
         super(isAsync);
-        try {
-            calculateAndLoad();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        if (Main.isCorrectAPIKey()){
+            try {
+                calculateAndLoad();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 

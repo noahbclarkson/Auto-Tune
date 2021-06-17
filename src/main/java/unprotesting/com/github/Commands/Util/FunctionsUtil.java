@@ -21,7 +21,7 @@ public class FunctionsUtil {
     
     public static void buyItem(Player player, String item, int amount){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
-        double bal = EconomyFunctions.economy.getBalance(player);
+        double bal = EconomyFunctions.getEconomy().getBalance(player);
         double price = Main.getCache().getItemPrice(item, false);
         if (bal < price){
             player.sendMessage(ChatColor.RED + "You need " + Config.getCurrencySymbol() + df.format(price) + " to purchase this item");
@@ -44,7 +44,7 @@ public class FunctionsUtil {
             player.sendMessage(ChatColor.RED + "Not enough space in inventory.");
             return;
         }
-        EconomyFunctions.economy.withdrawPlayer(player, (amount*price));
+        EconomyFunctions.getEconomy().withdrawPlayer(player, (amount*price));
         player.sendMessage(ChatColor.GREEN + "Purchased x" + amount + " of " + ChatColor.GOLD + item + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(price*amount) + ".");
         Main.getCache().addSale(player, item, price, amount, SalePositionType.BUY);
     }
@@ -65,7 +65,7 @@ public class FunctionsUtil {
             ItemStack istack = (ItemStack)(Arrays.asList(map.values().toArray())).get(0);
             amount = amount-istack.getAmount();
         }
-        EconomyFunctions.economy.depositPlayer(player, (amount*price));
+        EconomyFunctions.getEconomy().depositPlayer(player, (amount*price));
         player.sendMessage(ChatColor.GREEN + "Sold x" + amount + " of " + ChatColor.GOLD + item + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(price*amount) + ".");
         Main.getCache().addSale(player, item, price, amount, SalePositionType.SELL);
     }
@@ -86,7 +86,7 @@ public class FunctionsUtil {
             }
         }
         double item_price = Main.getCache().getItemPrice(item.getType().toString(), false);
-        double bal = EconomyFunctions.economy.getBalance(player);
+        double bal = EconomyFunctions.getEconomy().getBalance(player);
         double price = Main.getCache().getOverallEnchantmentPrice(enchantment, item_price, false);
         if (bal < price){
             player.sendMessage(ChatColor.RED + "You need " + Config.getCurrencySymbol() + df.format(price) + " to purchase this item");
@@ -114,7 +114,7 @@ public class FunctionsUtil {
             player.getInventory().setItemInOffHand(item);
         }
         Main.getCache().addSale(player, enchantment, price, 1, SalePositionType.EBUY);
-        EconomyFunctions.economy.withdrawPlayer(player, price);
+        EconomyFunctions.getEconomy().withdrawPlayer(player, price);
         player.sendMessage(ChatColor.GREEN + "Purchased 1x of " + ChatColor.GOLD + enchantment.toString() + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(price) + ".");
         player.getInventory().setItemInMainHand(item);
     }
@@ -127,7 +127,7 @@ public class FunctionsUtil {
         }
         double ratio = 1;
         double fprice = 0;
-        double bal = EconomyFunctions.economy.getBalance(player);
+        double bal = EconomyFunctions.getEconomy().getBalance(player);
         Map<Enchantment, Integer> enchantments = null;
         try{
             enchantments = item.getEnchantments();
@@ -173,7 +173,7 @@ public class FunctionsUtil {
             }
             return;
         }
-        EconomyFunctions.economy.depositPlayer(player, (item.getAmount()*fprice));
+        EconomyFunctions.getEconomy().depositPlayer(player, (item.getAmount()*fprice));
         player.sendMessage(ChatColor.GREEN + "Sold x" + item.getAmount() + " of " + ChatColor.GOLD + item.getType().toString() + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(fprice*item.getAmount()) + ".");
         Main.getCache().addSale(player, item.getType().toString(), Main.getCache().getItemPrice(item.getType().toString(), false), item.getAmount(), SalePositionType.SELL);
         for (Enchantment ench : item.getEnchantments().keySet()){

@@ -20,6 +20,7 @@ import unprotesting.com.github.Commands.Objects.Section;
 import unprotesting.com.github.Config.Config;
 import unprotesting.com.github.Data.CSV.CSVReader;
 import unprotesting.com.github.Data.Ephemeral.Data.EnchantmentData;
+import unprotesting.com.github.Data.Ephemeral.Data.GDPData;
 import unprotesting.com.github.Data.Ephemeral.Data.ItemData;
 import unprotesting.com.github.Data.Ephemeral.Data.LoanData;
 import unprotesting.com.github.Data.Ephemeral.Data.MaxBuySellData;
@@ -29,6 +30,7 @@ import unprotesting.com.github.Data.Ephemeral.Other.PlayerSaleData;
 import unprotesting.com.github.Data.Ephemeral.Other.Sale;
 import unprotesting.com.github.Data.Ephemeral.Other.Sale.SalePositionType;
 import unprotesting.com.github.Data.Persistent.TimePeriods.EnchantmentsTimePeriod;
+import unprotesting.com.github.Data.Persistent.TimePeriods.GDPTimePeriod;
 import unprotesting.com.github.Data.Persistent.TimePeriods.ItemTimePeriod;
 import unprotesting.com.github.Data.Persistent.TimePeriods.LoanTimePeriod;
 import unprotesting.com.github.Data.Persistent.TimePeriods.TransactionsTimePeriod;
@@ -56,6 +58,9 @@ public class LocalDataCache {
     private ConcurrentHashMap<String, MaxBuySellData> MAX_PURCHASES;
     @Getter
     private ConcurrentHashMap<String, Double> PERCENTAGE_CHANGES;
+    @Getter
+    private GDPData GDPDATA;
+
 
     private int size;
 
@@ -86,24 +91,31 @@ public class LocalDataCache {
                     bdata.increaseBuys(amount);
                     this.ITEMS.put(item, bdata);
                     this.TRANSACTIONS.add(new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BI));
+                    this.GDPDATA.increaseGDP((amount*price));
                     break;
                 case SELL:
                     ItemData sdata = this.ITEMS.get(item);
                     sdata.increaseSells(amount);
                     this.ITEMS.put(item, sdata);
                     this.TRANSACTIONS.add(new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SI));
+                    this.GDPDATA.increaseGDP((amount*price));
+                    this.GDPDATA.increaseLoss((amount*getItemPrice(item, false))-(amount*price));
                     break;
                 case EBUY:
                     EnchantmentData ebdata = this.ENCHANTMENTS.get(item);
                     ebdata.increaseBuys(amount);
                     this.ENCHANTMENTS.put(item, ebdata);
                     this.TRANSACTIONS.add(new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BE));
+                    this.GDPDATA.increaseGDP((amount*price));
                     break;
                 case ESELL:
                     EnchantmentData esdata = this.ENCHANTMENTS.get(item);
                     esdata.increaseSells(amount);
                     this.ENCHANTMENTS.put(item, esdata);
                     this.TRANSACTIONS.add(new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SE));
+                    this.GDPDATA.increaseGDP((amount*price));
+                    this.GDPDATA.increaseLoss((amount*getOverallEnchantmentPrice(item,
+                     getItemPrice(player.getInventory().getItemInMainHand().getType().toString(), false), false)-(amount*price)));
                     break;
                 default:
                     break;
@@ -298,6 +310,7 @@ public class LocalDataCache {
         loadLoanDataFromData();
         loadTransactionDataFromData();
         loadSectionDataFromFile();
+        loadGDPDataFromData();
     }
 
     //  Get current cache for a players PlayerData object
@@ -414,6 +427,15 @@ public class LocalDataCache {
         csection = Main.getDfiles().getEnchantments().getConfigurationSection("config");
         SECTIONS.add(new Section("Enchantments", csection.getString("block"), csection.getBoolean("back-menu-button-enabled"),
              csection.getInt("position"), csection.getString("background")));
+    }
+
+    private void loadGDPDataFromData(){
+        if (size < 1){
+            this.GDPDATA = new GDPData(0.0, 0.0);
+            return;
+        }
+        GDPTimePeriod GTP = Main.getDatabase().map.get(size-1).getGtp();
+        this.GDPDATA = new GDPData(GTP.getGDP(), GTP.getLoss());
     }
 
 }

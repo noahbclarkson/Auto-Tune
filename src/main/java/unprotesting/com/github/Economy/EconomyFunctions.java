@@ -11,7 +11,7 @@ import net.milkbowl.vault.economy.Economy;
 public class EconomyFunctions {
 
     @Getter
-    public static Economy economy;
+    private static Economy economy;
 
     public static boolean setupLocalEconomy(Server server){
         return setupEconomy(server);

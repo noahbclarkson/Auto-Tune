@@ -49,6 +49,7 @@ public class Main extends JavaPlugin{
 
     @Override
     public void onDisable(){
+        updateTimePeriod();
         if (database != null){
             database.close();
         }

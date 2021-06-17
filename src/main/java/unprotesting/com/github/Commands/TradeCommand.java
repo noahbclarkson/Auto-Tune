@@ -51,7 +51,7 @@ public class TradeCommand implements CommandExecutor{
             return new String[] {offical_website, offical_website};
         }
         String base = "http://" + hostIP + ":" + Config.getPort();
-        String[] output = {base + "/trade.html", base + "trade-short.html"};
+        String[] output = {base + "/trade.html", base + "/trade-short.html"};
         return output;
     }
 

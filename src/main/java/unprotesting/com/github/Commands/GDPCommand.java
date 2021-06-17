@@ -34,6 +34,7 @@ public class GDPCommand implements CommandExecutor{
     }
 
     private void openGDPGui(CommandSender sender){
+        CommandUtil.closeInventory(sender);
         ChestGui GUI = new ChestGui(3, "GDP and Economy Info");
         StaticPane pane = new StaticPane(9, 3);
         Main.getCache().getGDPDATA().updateBalance();

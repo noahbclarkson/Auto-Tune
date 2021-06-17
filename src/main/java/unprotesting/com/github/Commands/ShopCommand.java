@@ -9,7 +9,6 @@ import com.github.stefvanschie.inventoryframework.gui.GuiItem;
 import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
 import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
-import com.github.stefvanschie.inventoryframework.pane.Pane.Priority;
 import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 
 import org.bukkit.ChatColor;
@@ -67,7 +66,7 @@ public class ShopCommand implements CommandExecutor{
         int highest = Section.getHighest(Main.getCache().getSECTIONS());
         int lines = (highest/9)+2;
         ChestGui gui = new ChestGui(lines, Config.getMenuTitle());
-        gui = getBackground(gui, lines, Config.getBackground());
+        gui = CommandUtil.getBackground(gui, lines, Config.getBackground());
         gui.addPane(loadSectionsPane(sender, lines));
         gui.show((HumanEntity)(sender));
     }
@@ -97,55 +96,7 @@ public class ShopCommand implements CommandExecutor{
         PaginatedPane pages = new PaginatedPane(0, 0, 9, 6);
         List<GuiItem> items = getListFromSection(section, player);
         List<OutlinePane> panes = new ArrayList<OutlinePane>();
-        int page = 0;
-        int k = 0;
-        OutlinePane pane = new OutlinePane(1, 1, 7, 4);
-        if (items.size() > 28){
-            pages.addPane(page, getArrowPane(page+1, ChatColor.GRAY + "NEXT", pages, false, gui));
-        }
-        panes.add(pane);
-        for (int i = 0; i < items.size(); i++){
-            pane = panes.get(panes.size()-1);
-            if (k > 27){
-                pane = new OutlinePane(1, 1, 7, 4);
-                page++;
-                pages.addPane(page, getArrowPane(page-1, ChatColor.GRAY + "BACK", pages, true, gui));
-                if (i+28 < items.size()){
-                    pages.addPane(page, getArrowPane(page+1, ChatColor.GRAY + "NEXT", pages, false, gui));
-                }
-                panes.add(pane);
-                k=-1;
-            }
-            pane.addItem(items.get(i));
-            k++;
-        }
-        int i = 0;
-        for (OutlinePane opane : panes){
-            pages.addPane(i, opane);
-            i++;
-        }
-        gui.addPane(pages);
-        gui = getBackground(gui, 6, section.getBackground());
-        gui.show((HumanEntity)(sender));
-    }
-
-    private StaticPane getArrowPane(int page, String dName, PaginatedPane pane, boolean back, ChestGui GUI){
-        StaticPane output = new StaticPane(0, 5, 1, 1);
-        if (!back){
-            output = new StaticPane(8, 5, 1, 1);
-        }
-        ItemStack item = new ItemStack(Material.ARROW);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.WHITE + dName);
-        item.setItemMeta(meta);
-        GuiItem gItem = new GuiItem(item, event -> {
-            event.setCancelled(true);
-            pane.setPage(page);
-            GUI.addPane(pane);
-            GUI.update();
-        });
-        output.addItem(gItem, 0, 0);
-        return output;
+        CommandUtil.loadGuiItemsIntoPane(items, gui, pages, panes, section.getBackground(), sender);
     }
 
     private List<GuiItem> getListFromSection(Section section, CommandSender sender){
@@ -212,7 +163,7 @@ public class ShopCommand implements CommandExecutor{
     private void loadPurchasePane(Section section, String item, CommandSender sender){
         CommandUtil.closeInventory(sender);
         ChestGui gui = new ChestGui(4, Config.getMenuTitle());
-        gui = getBackground(gui, 4, Config.getBackground());
+        gui = CommandUtil.getBackground(gui, 4, Config.getBackground());
         gui.addPane(getPurchasePane(item, sender, section));
         gui.show((HumanEntity)sender);
     }
@@ -223,11 +174,14 @@ public class ShopCommand implements CommandExecutor{
         OutlinePane pane = new OutlinePane(1, 1, 7, 2);
         for (int amount : amounts){
             ItemStack item;
-            if (!section.isEnchantmentSection() && Config.isEnableEnchantments()){
+            if (!section.isEnchantmentSection()){
                 item = getPurchasePaneItem(item_input, ChatColor.GREEN + "Buy for " + Config.getCurrencySymbol() + df.format(Main.getCache().getItemPrice(item_input, false)*amount), amount);
             }
-            else{
+            else if (Config.isEnableEnchantments()){
                 item = getPurchasePaneItem("ENCHANTED_BOOK", ChatColor.GREEN + "Buy for " + Config.getCurrencySymbol() + df.format(getEnchPriceWithHeld(item_input, player)*amount), amount);
+            }
+            else{
+                return pane;
             }
             if (item.getMaxStackSize() < amount){
                 ItemStack background = new ItemStack(Material.matchMaterial(Config.getBackground()));
@@ -272,19 +226,6 @@ public class ShopCommand implements CommandExecutor{
         meta.setLore(Arrays.asList(new String[]{ChatColor.WHITE + prefix}));
         item.setItemMeta(meta);
         return item;
-    }
-
-    private ChestGui getBackground(ChestGui GUI, int lines, String bItem){
-        GUI.setOnGlobalClick(event -> event.setCancelled(true));
-        OutlinePane background = new OutlinePane(0, 0, 9, lines, Priority.LOWEST);
-        background.addItem(new GuiItem(new ItemStack(Material.matchMaterial(bItem))));
-        ItemStack item = new ItemStack(Material.matchMaterial(bItem));
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.MAGIC + "|");
-        item.setItemMeta(meta);
-        background.setRepeat(true);
-        GUI.addPane(background);
-        return GUI;
     }
 
 }

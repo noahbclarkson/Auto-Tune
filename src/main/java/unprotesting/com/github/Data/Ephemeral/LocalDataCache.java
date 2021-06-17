@@ -284,7 +284,8 @@ public class LocalDataCache {
         double b = 1/a;
         int tpInDay = (int) Math.floor(b);
         int i = 0;
-        for (String item : Main.getDatabase().map.get(size-1).getItp().getItems()){
+        ItemTimePeriod latest = Main.getDatabase().map.get(size-1).getItp();
+        for (String item : latest.getItems()){
             Double price;
             try{
                 price = Main.getDatabase().map.get(0).getItp().getPrices()[i];
@@ -293,9 +294,21 @@ public class LocalDataCache {
                 }
             }
             catch(NullPointerException e){
-                price = Main.getCache().getItemPrice(item, false);
+                try{
+                    price = Main.getCache().getItemPrice(item, false);
+                }
+                catch(NullPointerException e2){
+                    price = latest.getPrices()[i];
+                }
             }
-            double pChange = (Main.getCache().getItemPrice(item, false)-price)/price*100;
+            Double newprice;
+            try{
+                newprice = Main.getCache().getItemPrice(item, false);
+            }
+            catch(NullPointerException e){
+                newprice = latest.getPrices()[i];
+            }
+            double pChange = (newprice-price)/price*100;
             this.PERCENTAGE_CHANGES.put(item, pChange);
             i++;
         }

@@ -9,22 +9,21 @@ import org.bukkit.plugin.java.JavaPlugin;
 import lombok.Getter;
 import lombok.Setter;
 import net.ess3.api.IEssentials;
-import unprotesting.com.github.API.HttpPostRequestor;
+import unprotesting.com.github.API.*;
 import unprotesting.com.github.Commands.GDPCommand;
 import unprotesting.com.github.Commands.SellCommand;
 import unprotesting.com.github.Commands.ShopCommand;
 import unprotesting.com.github.Commands.TradeCommand;
-import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Config.DataFiles;
+import unprotesting.com.github.Commands.TransactionCommand;
+import unprotesting.com.github.Config.*;
 import unprotesting.com.github.Data.CSV.CSVHandler;
 import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
 import unprotesting.com.github.Data.Persistent.Database;
 import unprotesting.com.github.Data.Persistent.TimePeriod;
-import unprotesting.com.github.Economy.EconomyFunctions;
-import unprotesting.com.github.Events.APIKeyCheckEvent;
-import unprotesting.com.github.Events.PriceUpdateEvent;
+import unprotesting.com.github.Economy.*;
+import unprotesting.com.github.Events.*;
 import unprotesting.com.github.LocalServer.LocalServer;
-import unprotesting.com.github.Logging.Logging;
+import unprotesting.com.github.Logging.*;
 
 /*  
     Main initialization file for Auto-Tune
@@ -113,6 +112,7 @@ public class Main extends JavaPlugin{
         this.getCommand("sell").setExecutor(new SellCommand());
         this.getCommand("trade").setExecutor(new TradeCommand());
         this.getCommand("gdp").setExecutor(new GDPCommand());
+        this.getCommand("transactions").setExecutor(new TransactionCommand());
     }
 
     private void setupServer(){

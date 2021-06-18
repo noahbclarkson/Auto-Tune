@@ -1,4 +1,4 @@
-package unprotesting.com.github.Commands.Util;
+package unprotesting.com.github.commands.util;
 
 import java.text.DecimalFormat;
 import java.util.Arrays;
@@ -12,9 +12,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Data.Ephemeral.Other.Sale.SalePositionType;
-import unprotesting.com.github.Economy.EconomyFunctions;
+import unprotesting.com.github.config.Config;
+import unprotesting.com.github.data.ephemeral.other.Sale.SalePositionType;
+import unprotesting.com.github.economy.EconomyFunctions;
 
 public class FunctionsUtil {
 
@@ -115,7 +115,7 @@ public class FunctionsUtil {
         }
         Main.getCache().addSale(player, enchantment, price, 1, SalePositionType.EBUY);
         EconomyFunctions.getEconomy().withdrawPlayer(player, price);
-        player.sendMessage(ChatColor.GREEN + "Purchased 1x of " + ChatColor.GOLD + enchantment.toString() + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(price) + ".");
+        player.sendMessage(ChatColor.GREEN + "Purchased 1x of " + ChatColor.GOLD + enchantment + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(price) + ".");
         player.getInventory().setItemInMainHand(item);
     }
 
@@ -132,7 +132,7 @@ public class FunctionsUtil {
         try{
             enchantments = item.getEnchantments();
         }
-        catch(NullPointerException e){};
+        catch(NullPointerException e){}
         if (enchantments != null && enchantments.size() > 0 && Config.isEnableEnchantments()){
             ratio = 0;
             for (Enchantment ench : enchantments.keySet()){

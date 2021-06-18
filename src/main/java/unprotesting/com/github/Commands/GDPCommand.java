@@ -1,4 +1,4 @@
-package unprotesting.com.github.Commands;
+package unprotesting.com.github.commands;
 
 import java.text.DecimalFormat;
 import java.util.Arrays;
@@ -13,12 +13,13 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.HumanEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Commands.Util.CommandUtil;
-import unprotesting.com.github.Config.Config;
+import unprotesting.com.github.commands.util.CommandUtil;
+import unprotesting.com.github.config.Config;
 
 public class GDPCommand implements CommandExecutor{
 
@@ -29,6 +30,8 @@ public class GDPCommand implements CommandExecutor{
     }
 
     private boolean interpretCommand(CommandSender sender, String[] args){
+        Player player = CommandUtil.closeInventory(sender);
+        if (!(player.hasPermission("at.gdp") || player.isOp())){CommandUtil.noPermssion(player);return true;}
         openGDPGui(sender);
         return true;
     }

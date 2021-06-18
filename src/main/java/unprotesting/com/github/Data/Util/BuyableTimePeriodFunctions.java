@@ -1,4 +1,4 @@
-package unprotesting.com.github.Data.Util;
+package unprotesting.com.github.data.util;
 
 import lombok.Getter;
 

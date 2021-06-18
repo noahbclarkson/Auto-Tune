@@ -1,13 +1,13 @@
-package unprotesting.com.github.Data.Persistent.TimePeriods;
+package unprotesting.com.github.data.persistent.timePeriods;
 
 import java.io.Serializable;
 import java.util.Set;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
-import unprotesting.com.github.Data.Ephemeral.Data.EnchantmentData;
-import unprotesting.com.github.Data.Util.BuyableTimePeriodFunctions;
+import unprotesting.com.github.data.ephemeral.LocalDataCache;
+import unprotesting.com.github.data.ephemeral.data.EnchantmentData;
+import unprotesting.com.github.data.util.BuyableTimePeriodFunctions;
 
 //  Enchantment time period object for storing enchantment price, ratio and buy/sell data 
 

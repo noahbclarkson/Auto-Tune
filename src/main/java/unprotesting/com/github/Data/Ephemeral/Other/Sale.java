@@ -1,4 +1,4 @@
-package unprotesting.com.github.Data.Ephemeral.Other;
+package unprotesting.com.github.data.ephemeral.other;
 
 import lombok.Getter;
 import lombok.Setter;

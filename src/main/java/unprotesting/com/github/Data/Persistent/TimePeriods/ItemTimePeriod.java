@@ -1,13 +1,13 @@
-package unprotesting.com.github.Data.Persistent.TimePeriods;
+package unprotesting.com.github.data.persistent.timePeriods;
 
 import java.io.Serializable;
 import java.util.Set;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
-import unprotesting.com.github.Data.Ephemeral.Data.ItemData;
-import unprotesting.com.github.Data.Util.BuyableTimePeriodFunctions;
+import unprotesting.com.github.data.ephemeral.LocalDataCache;
+import unprotesting.com.github.data.ephemeral.data.ItemData;
+import unprotesting.com.github.data.util.BuyableTimePeriodFunctions;
 
 //  Item time period object for storing item price and buy/sell data 
 

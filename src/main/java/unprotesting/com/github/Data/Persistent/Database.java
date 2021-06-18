@@ -1,4 +1,4 @@
-package unprotesting.com.github.Data.Persistent;
+package unprotesting.com.github.data.persistent;
 
 
 import org.mapdb.DB;
@@ -7,7 +7,7 @@ import org.mapdb.HTreeMap;
 import org.mapdb.Serializer;
 import org.mapdb.DBMaker.Maker;
 
-import unprotesting.com.github.Config.Config;
+import unprotesting.com.github.config.Config;
 
 //  Database object for storing all time-period object in persistent data
 
@@ -18,7 +18,13 @@ public class Database {
 
     @SuppressWarnings("unchecked")
     public Database(){
-        createDB();
+        createDB(Config.getDataLocation());
+        this.map = database.hashMap("map", Serializer.INTEGER,Serializer.JAVA).createOrOpen();
+    }
+
+    @SuppressWarnings("unchecked")
+    public Database(String location){
+        createDB(location);
         this.map = database.hashMap("map", Serializer.INTEGER,Serializer.JAVA).createOrOpen();
     }
 
@@ -27,13 +33,9 @@ public class Database {
         this.database.close();
     }
 
-    public void updateTimePeriod(){
-        
-    }
-
     //  Method to build and create or link database to file
-    private void createDB(){
-        Maker maker = DBMaker.fileDB(Config.getDataLocation() + "data.db");
+    private void createDB(String location){
+        Maker maker = DBMaker.fileDB(location + "data.db");
         database = checkDataTransactions(checkChecksumHeaderBypass(maker))
         .fileChannelEnable()
         .fileMmapEnable()

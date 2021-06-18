@@ -1,17 +1,20 @@
-package unprotesting.com.github.Data.Ephemeral.Other;
+package unprotesting.com.github.data.ephemeral.other;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import lombok.Getter;
-import unprotesting.com.github.Data.Ephemeral.Other.Sale.SalePositionType;
+import unprotesting.com.github.data.ephemeral.other.Sale.SalePositionType;
 
 //  Player sale data class for storing general sale data
 
 public class PlayerSaleData {
 
     @Getter
-    private List<Sale> buys, sells, ebuys, esells;
+    private List<Sale> buys,
+                       sells, 
+                       ebuys, 
+                       esells;
 
     public PlayerSaleData(){
         this.buys = new ArrayList<Sale>();

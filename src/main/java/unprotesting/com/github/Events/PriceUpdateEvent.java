@@ -1,4 +1,4 @@
-package unprotesting.com.github.Events;
+package unprotesting.com.github.events;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -10,13 +10,13 @@ import org.bukkit.event.HandlerList;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Data.Ephemeral.Data.EnchantmentData;
-import unprotesting.com.github.Data.Ephemeral.Data.ItemData;
-import unprotesting.com.github.Data.Persistent.Database;
-import unprotesting.com.github.Data.Persistent.TimePeriod;
-import unprotesting.com.github.Logging.Logging;
-import unprotesting.com.github.Util.UtilFunctions;
+import unprotesting.com.github.config.Config;
+import unprotesting.com.github.data.ephemeral.data.EnchantmentData;
+import unprotesting.com.github.data.ephemeral.data.ItemData;
+import unprotesting.com.github.data.persistent.Database;
+import unprotesting.com.github.data.persistent.TimePeriod;
+import unprotesting.com.github.logging.Logging;
+import unprotesting.com.github.util.UtilFunctions;
 
 public class PriceUpdateEvent extends Event{
 

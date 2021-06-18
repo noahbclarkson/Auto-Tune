@@ -1,9 +1,9 @@
-package unprotesting.com.github.Data.Ephemeral.Data;
+package unprotesting.com.github.data.ephemeral.data;
 
 import java.time.LocalDateTime;
 
 import lombok.Getter;
-import unprotesting.com.github.Data.Util.LocalDateTimeArrayUtilizer;
+import unprotesting.com.github.data.util.LocalDateTimeArrayUtilizer;
 
 //  Transaction class for storing general transaction data
 
@@ -12,7 +12,8 @@ public class TransactionData extends LocalDateTimeArrayUtilizer implements Compa
     @Getter
     private LocalDateTime date;
     @Getter
-    private String item, player;
+    private String item,
+                   player;
     @Getter
     private int amount;
     @Getter

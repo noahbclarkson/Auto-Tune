@@ -1,4 +1,4 @@
-package unprotesting.com.github.Commands;
+package unprotesting.com.github.commands;
 
 import java.text.DecimalFormat;
 import java.time.format.DateTimeFormatter;
@@ -19,14 +19,15 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Commands.Util.CommandUtil;
-import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Data.Ephemeral.Data.TransactionData;
-import unprotesting.com.github.Data.Ephemeral.Data.TransactionData.TransactionPositionType;
+import unprotesting.com.github.commands.util.CommandUtil;
+import unprotesting.com.github.config.Config;
+import unprotesting.com.github.data.ephemeral.data.TransactionData;
+import unprotesting.com.github.data.ephemeral.data.TransactionData.TransactionPositionType;
 
 public class TransactionCommand implements CommandExecutor{
 
@@ -39,7 +40,8 @@ public class TransactionCommand implements CommandExecutor{
     }
 
     private boolean interpretCommand(CommandSender sender, String[] args) {
-        CommandUtil.closeInventory(sender);
+        Player player = CommandUtil.closeInventory(sender);
+        if (!(player.hasPermission("at.transactions") || player.isOp())){CommandUtil.noPermssion(player);return true;}
         ChestGui gui = new ChestGui(6, "Transactions");
         PaginatedPane pages = new PaginatedPane(0, 0, 9, 6);
         List<TransactionData> loans = Main.getCache().getTRANSACTIONS();

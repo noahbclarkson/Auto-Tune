@@ -1,4 +1,4 @@
-package unprotesting.com.github.Data.Ephemeral.Data;
+package unprotesting.com.github.data.ephemeral.data;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -8,7 +8,8 @@ import lombok.Setter;
 public class ItemData{
 
     @Getter
-    private int buys, sells;
+    private int buys,
+                sells;            
     @Getter @Setter
     private double price;
 

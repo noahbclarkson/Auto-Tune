@@ -1,12 +1,12 @@
-package unprotesting.com.github.Data.Persistent.TimePeriods;
+package unprotesting.com.github.data.persistent.timePeriods;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Data.Ephemeral.Data.TransactionData;
-import unprotesting.com.github.Data.Util.LocalDateTimeArrayUtilizer;
+import unprotesting.com.github.data.ephemeral.data.TransactionData;
+import unprotesting.com.github.data.util.LocalDateTimeArrayUtilizer;
 
 //  Transaction time period object for storing transaction price, player, buy/sell and creation-date
 

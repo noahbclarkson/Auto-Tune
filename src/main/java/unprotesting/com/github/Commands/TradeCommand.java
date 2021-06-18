@@ -1,9 +1,4 @@
-package unprotesting.com.github.Commands;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
+package unprotesting.com.github.commands;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -16,17 +11,16 @@ import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Commands.Util.CommandUtil;
-import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Logging.Logging;
+import unprotesting.com.github.commands.util.CommandUtil;
+import unprotesting.com.github.logging.Logging;
 
 public class TradeCommand implements CommandExecutor{
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String trade, String[] args) {
         if (sender instanceof Player){
-            Player player = (Player) sender;
-            if (!(player.hasPermission("at.trade") || player.isOp())) {CommandUtil.noPermssion(player);return true;}
+            Player player = CommandUtil.closeInventory(sender);
+            if (!(player.hasPermission("at.trade") || player.isOp())){CommandUtil.noPermssion(player);return true;}
             String[] arr = Main.getServerIPStrings();
             player.spigot().sendMessage(createTextComponent(ChatColor.YELLOW + "View Overall Item Prices", "Click to go to " + arr[0], arr[0]));
             player.spigot().sendMessage(createTextComponent(ChatColor.YELLOW + "View Recent Item Prices", "Click to go to " + arr[1], arr[1]));

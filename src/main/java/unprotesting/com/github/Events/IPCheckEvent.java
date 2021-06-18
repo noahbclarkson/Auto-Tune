@@ -1,4 +1,4 @@
-package unprotesting.com.github.Events;
+package unprotesting.com.github.events;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -10,7 +10,7 @@ import org.bukkit.event.HandlerList;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Config.Config;
+import unprotesting.com.github.config.Config;
 
 public class IPCheckEvent extends Event{
 

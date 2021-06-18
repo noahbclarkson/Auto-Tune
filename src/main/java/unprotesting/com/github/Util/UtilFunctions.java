@@ -1,4 +1,4 @@
-package unprotesting.com.github.Util;
+package unprotesting.com.github.util;
 
 import com.earth2me.essentials.User;
 
@@ -6,8 +6,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Logging.Logging;
+import unprotesting.com.github.config.Config;
+import unprotesting.com.github.logging.Logging;
 
 public class UtilFunctions {
 

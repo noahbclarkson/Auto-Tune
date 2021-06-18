@@ -7,5 +7,4 @@ import org.junit.jupiter.api.TestMethodOrder;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Auto-Tune Tests")
 class AutoTuneTest {
-
 }

@@ -1,4 +1,4 @@
-package unprotesting.com.github.Commands.Util;
+package unprotesting.com.github.commands.util;
 
 import java.util.List;
 
@@ -17,8 +17,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Logging.Logging;
+import unprotesting.com.github.config.Config;
+import unprotesting.com.github.logging.Logging;
 
 public class CommandUtil {
 

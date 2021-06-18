@@ -1,17 +1,19 @@
-package unprotesting.com.github.Data.Ephemeral.Data;
+package unprotesting.com.github.data.ephemeral.data;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Economy.EconomyFunctions;
+import unprotesting.com.github.economy.EconomyFunctions;
 
 public class GDPData {
 
     @Getter
-    private double GDP, balance, debt, loss;
-
+    private double GDP,
+                   balance,
+                   debt, 
+                   loss;
     @Getter
     private int playerCount;
 

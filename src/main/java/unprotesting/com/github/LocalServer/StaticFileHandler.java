@@ -1,4 +1,4 @@
-package unprotesting.com.github.LocalServer;
+package unprotesting.com.github.localServer;
 
 import java.io.File;
 import java.io.IOException;

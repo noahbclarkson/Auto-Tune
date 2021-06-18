@@ -1,4 +1,4 @@
-package unprotesting.com.github.Economy;
+package unprotesting.com.github.economy;
 
 import org.bukkit.Server;
 import org.bukkit.plugin.RegisteredServiceProvider;

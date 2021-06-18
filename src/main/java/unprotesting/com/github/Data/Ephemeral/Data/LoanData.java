@@ -1,11 +1,11 @@
-package unprotesting.com.github.Data.Ephemeral.Data;
+package unprotesting.com.github.data.ephemeral.data;
 
 import java.time.LocalDateTime;
 
 import org.bukkit.entity.Player;
 
 import lombok.Getter;
-import unprotesting.com.github.Data.Util.LocalDateTimeArrayUtilizer;
+import unprotesting.com.github.data.util.LocalDateTimeArrayUtilizer;
 
 //  Loan data class for storing player loan info
 
@@ -14,7 +14,8 @@ public class LoanData extends LocalDateTimeArrayUtilizer implements Comparable<L
     @Getter
     private LocalDateTime date;
     @Getter
-    private Double value, intrest_rate;
+    private Double value,
+                   intrest_rate;
     @Getter
     private Player player;
 

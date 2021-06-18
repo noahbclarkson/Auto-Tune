@@ -1,4 +1,4 @@
-package unprotesting.com.github.Logging;
+package unprotesting.com.github.logging;
 
 //  Global logging functions
 

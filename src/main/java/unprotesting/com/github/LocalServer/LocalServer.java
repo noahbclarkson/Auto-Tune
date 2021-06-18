@@ -1,12 +1,12 @@
-package unprotesting.com.github.LocalServer;
+package unprotesting.com.github.localServer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import com.sun.net.httpserver.HttpServer;
 
-import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Logging.Logging;
+import unprotesting.com.github.config.Config;
+import unprotesting.com.github.logging.Logging;
 
 //  Local static HTTP server for price-data etc.
 

@@ -1,4 +1,4 @@
-package unprotesting.com.github.Data.CSV;
+package unprotesting.com.github.data.csv;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -7,10 +7,10 @@ import java.util.Collections;
 import java.util.List;
 
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Data.Persistent.TimePeriod;
-import unprotesting.com.github.Data.Persistent.TimePeriods.EnchantmentsTimePeriod;
-import unprotesting.com.github.Data.Persistent.TimePeriods.ItemTimePeriod;
+import unprotesting.com.github.config.Config;
+import unprotesting.com.github.data.persistent.TimePeriod;
+import unprotesting.com.github.data.persistent.timePeriods.EnchantmentsTimePeriod;
+import unprotesting.com.github.data.persistent.timePeriods.ItemTimePeriod;
 
 public class CSVHandler {
 

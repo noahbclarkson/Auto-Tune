@@ -1,4 +1,4 @@
-package unprotesting.com.github.Data.Ephemeral;
+package unprotesting.com.github.data.ephemeral;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -16,25 +16,13 @@ import org.bukkit.entity.Player;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Commands.Objects.Section;
-import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Data.CSV.CSVReader;
-import unprotesting.com.github.Data.Ephemeral.Data.EnchantmentData;
-import unprotesting.com.github.Data.Ephemeral.Data.GDPData;
-import unprotesting.com.github.Data.Ephemeral.Data.ItemData;
-import unprotesting.com.github.Data.Ephemeral.Data.LoanData;
-import unprotesting.com.github.Data.Ephemeral.Data.MaxBuySellData;
-import unprotesting.com.github.Data.Ephemeral.Data.TransactionData;
-import unprotesting.com.github.Data.Ephemeral.Data.TransactionData.TransactionPositionType;
-import unprotesting.com.github.Data.Ephemeral.Other.PlayerSaleData;
-import unprotesting.com.github.Data.Ephemeral.Other.Sale;
-import unprotesting.com.github.Data.Ephemeral.Other.Sale.SalePositionType;
-import unprotesting.com.github.Data.Persistent.TimePeriods.EnchantmentsTimePeriod;
-import unprotesting.com.github.Data.Persistent.TimePeriods.GDPTimePeriod;
-import unprotesting.com.github.Data.Persistent.TimePeriods.ItemTimePeriod;
-import unprotesting.com.github.Data.Persistent.TimePeriods.LoanTimePeriod;
-import unprotesting.com.github.Data.Persistent.TimePeriods.TransactionsTimePeriod;
-import unprotesting.com.github.Logging.Logging;
+import unprotesting.com.github.commands.objects.Section;
+import unprotesting.com.github.config.Config;
+import unprotesting.com.github.data.csv.CSVReader;
+import unprotesting.com.github.data.ephemeral.data.*;
+import unprotesting.com.github.data.ephemeral.other.*;
+import unprotesting.com.github.data.persistent.timePeriods.*;
+import unprotesting.com.github.logging.Logging;
 
 //  Global functions file between ephemeral and persistent storage
 
@@ -147,7 +135,7 @@ public class LocalDataCache {
             catch(NullPointerException e2){
                 return 0;
             }
-        };
+        }
         if (!sell){
             return price;
         }

@@ -1,4 +1,4 @@
-package unprotesting.com.github.Data.CSV;
+package unprotesting.com.github.data.csv;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

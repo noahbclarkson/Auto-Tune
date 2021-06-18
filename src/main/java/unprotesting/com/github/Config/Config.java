@@ -1,4 +1,4 @@
-package unprotesting.com.github.Config;
+package unprotesting.com.github.config;
 
 import org.bukkit.ChatColor;
 

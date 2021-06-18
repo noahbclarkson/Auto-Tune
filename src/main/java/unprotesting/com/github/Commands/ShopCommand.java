@@ -1,4 +1,4 @@
-package unprotesting.com.github.Commands;
+package unprotesting.com.github.commands;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -22,11 +22,11 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Commands.Objects.Section;
-import unprotesting.com.github.Commands.Util.CommandUtil;
-import unprotesting.com.github.Commands.Util.FunctionsUtil;
-import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Logging.Logging;
+import unprotesting.com.github.commands.objects.Section;
+import unprotesting.com.github.commands.util.CommandUtil;
+import unprotesting.com.github.commands.util.FunctionsUtil;
+import unprotesting.com.github.config.Config;
+import unprotesting.com.github.logging.Logging;
 
 public class ShopCommand implements CommandExecutor{
 
@@ -39,8 +39,8 @@ public class ShopCommand implements CommandExecutor{
     }
 
     private boolean interpretCommand(CommandSender sender, String[] args){
-        Player player = (Player)sender;
-        if (!(player.hasPermission("at.shop") || player.isOp())){CommandUtil.noPermssion(player);return true;};
+        Player player = CommandUtil.closeInventory(sender);
+        if (!(player.hasPermission("at.shop") || player.isOp())){CommandUtil.noPermssion(player);return true;}
         if (args.length > 1){
             player.sendMessage(ChatColor.RED + "Correct usage: /<shop> <shop-section>");
             return true;
@@ -51,7 +51,7 @@ public class ShopCommand implements CommandExecutor{
         };
         if (args.length == 1){
             for (Section section : Main.getCache().getSECTIONS()){
-                if (args[0].toLowerCase().replaceAll("-", "").replaceAll(" ", "").equals(section.getName().toLowerCase().replaceAll("-", "").replaceAll(" ", ""))){
+                if (args[0].replaceAll("-", "").replaceAll(" ", "").equalsIgnoreCase(section.getName().replaceAll("-", "").replaceAll(" ", ""))){
                     loadShopPane(sender, section);
                     return true;
                 }

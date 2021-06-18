@@ -1,10 +1,10 @@
-package unprotesting.com.github.Data.Persistent.TimePeriods;
+package unprotesting.com.github.data.persistent.timePeriods;
 
 import java.io.Serializable;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.Data.Ephemeral.Data.GDPData;
+import unprotesting.com.github.data.ephemeral.data.GDPData;
 
 public class GDPTimePeriod implements Serializable{
 

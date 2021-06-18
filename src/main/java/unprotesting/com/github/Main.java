@@ -9,21 +9,21 @@ import org.bukkit.plugin.java.JavaPlugin;
 import lombok.Getter;
 import lombok.Setter;
 import net.ess3.api.IEssentials;
-import unprotesting.com.github.API.*;
-import unprotesting.com.github.Commands.GDPCommand;
-import unprotesting.com.github.Commands.SellCommand;
-import unprotesting.com.github.Commands.ShopCommand;
-import unprotesting.com.github.Commands.TradeCommand;
-import unprotesting.com.github.Commands.TransactionCommand;
-import unprotesting.com.github.Config.*;
-import unprotesting.com.github.Data.CSV.CSVHandler;
-import unprotesting.com.github.Data.Ephemeral.LocalDataCache;
-import unprotesting.com.github.Data.Persistent.Database;
-import unprotesting.com.github.Data.Persistent.TimePeriod;
-import unprotesting.com.github.Economy.*;
-import unprotesting.com.github.Events.*;
-import unprotesting.com.github.LocalServer.LocalServer;
-import unprotesting.com.github.Logging.*;
+import unprotesting.com.github.api.*;
+import unprotesting.com.github.commands.GDPCommand;
+import unprotesting.com.github.commands.SellCommand;
+import unprotesting.com.github.commands.ShopCommand;
+import unprotesting.com.github.commands.TradeCommand;
+import unprotesting.com.github.commands.TransactionCommand;
+import unprotesting.com.github.config.*;
+import unprotesting.com.github.data.csv.CSVHandler;
+import unprotesting.com.github.data.ephemeral.LocalDataCache;
+import unprotesting.com.github.data.persistent.Database;
+import unprotesting.com.github.data.persistent.TimePeriod;
+import unprotesting.com.github.economy.*;
+import unprotesting.com.github.events.*;
+import unprotesting.com.github.localServer.LocalServer;
+import unprotesting.com.github.logging.*;
 
 /*  
     Main initialization file for Auto-Tune

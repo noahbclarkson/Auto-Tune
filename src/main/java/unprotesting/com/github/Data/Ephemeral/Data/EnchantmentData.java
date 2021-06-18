@@ -1,4 +1,4 @@
-package unprotesting.com.github.Data.Ephemeral.Data;
+package unprotesting.com.github.data.ephemeral.data;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -8,9 +8,11 @@ import lombok.Setter;
 public class EnchantmentData{
 
     @Getter
-    private int buys, sells;
+    private int buys,
+                sells;
     @Getter @Setter
-    private double price, ratio;
+    private double price,
+                   ratio;
 
     public EnchantmentData(double price, double ratio){
         this.buys = 0;

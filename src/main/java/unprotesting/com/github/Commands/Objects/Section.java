@@ -1,4 +1,4 @@
-package unprotesting.com.github.Commands.Objects;
+package unprotesting.com.github.commands.objects;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,11 +14,13 @@ public class Section {
     @Getter
     private List<String> items;
     @Getter
-    private String name, background;
+    private String name,
+                   background;
     @Getter
     private Material image;
     @Getter
-    private boolean back, enchantmentSection;
+    private boolean back,
+                    enchantmentSection;
     @Getter
     private int position;
 

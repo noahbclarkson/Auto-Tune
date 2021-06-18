@@ -1,4 +1,4 @@
-package unprotesting.com.github.API;
+package unprotesting.com.github.api;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -14,8 +14,8 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import lombok.Getter;
-import unprotesting.com.github.Config.Config;
-import unprotesting.com.github.Logging.Logging;
+import unprotesting.com.github.config.Config;
+import unprotesting.com.github.logging.Logging;
 
 public class HttpPostRequestor {
 
@@ -50,9 +50,7 @@ public class HttpPostRequestor {
             if (sendRequest(httpPost, loadDefaultObject(itemData)) == null){
                 return false;
             }
-            else{
-                return true;
-            }
+            return true;
         }
     }
 

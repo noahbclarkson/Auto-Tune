@@ -40,16 +40,17 @@ public class ShopCommand implements CommandExecutor{
 
     private boolean interpretCommand(CommandSender sender, String[] args){
         Player player = CommandUtil.closeInventory(sender);
+        int length = args.length;
         if (!(player.hasPermission("at.shop") || player.isOp())){CommandUtil.noPermssion(player);return true;}
-        if (args.length > 1){
+        if (length > 1){
             player.sendMessage(ChatColor.RED + "Correct usage: /<shop> <shop-section>");
             return true;
         }
-        if (args.length == 0){
+        if (length == 0){
             loadGUI(sender);
             return true;
-        };
-        if (args.length == 1){
+        }
+        if (length == 1){
             for (Section section : Main.getCache().getSECTIONS()){
                 if (args[0].replaceAll("-", "").replaceAll(" ", "").equalsIgnoreCase(section.getName().replaceAll("-", "").replaceAll(" ", ""))){
                     loadShopPane(sender, section);

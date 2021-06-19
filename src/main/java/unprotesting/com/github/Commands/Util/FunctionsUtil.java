@@ -173,6 +173,7 @@ public class FunctionsUtil {
             }
             return;
         }
+        fprice = getnewPriceWithDurability(fprice, item);
         EconomyFunctions.getEconomy().depositPlayer(player, (item.getAmount()*fprice));
         player.sendMessage(ChatColor.GREEN + "Sold x" + item.getAmount() + " of " + ChatColor.GOLD + item.getType().toString() + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(fprice*item.getAmount()) + ".");
         Main.getCache().addSale(player, item.getType().toString(), Main.getCache().getItemPrice(item.getType().toString(), false), item.getAmount(), SalePositionType.SELL);
@@ -180,4 +181,18 @@ public class FunctionsUtil {
             Main.getCache().addSale(player, ench.getName(), Main.getCache().getEnchantmentPrice(ench.toString(), true), item.getEnchantmentLevel(ench), SalePositionType.ESELL);
         }
     }
+
+    @Deprecated
+    private static double getnewPriceWithDurability(double price, ItemStack item){
+        double durability = (double) item.getDurability();
+        double maxDurability = (double) item.getType().getMaxDurability();
+        if (durability == 0 ){
+            return price;
+        }
+        double current = maxDurability - durability;
+        double result = (current/maxDurability);
+        double newprice = price*result;
+        newprice = newprice - newprice * 0.01 * Config.getDurabilityLimiter();
+        return newprice;
+    }   
 }

@@ -51,7 +51,7 @@ An example of a shop setup using Auto-Tune:
   - Incredibly fast data-collection and creation [50000 data insertions and retrevals a second when in memory, 5000 data insertions and retrievals a second when in storage (in our tests)]
   - Data corruption protection
   - And more!
-  - Coming soon (Dynamic Intrest rates, Credit scoring, Lots more GUI-shop configuration, even faster data-retrieval, updated web-server, and more (We're open to suggestions))
+  - Coming soon (Dynamic Interest rates, Credit scoring, Lots more GUI-shop configuration, even faster data-retrieval, updated web-server, and more (We're open to suggestions))
 
 ## Usage
 
@@ -207,11 +207,11 @@ dynamic-inflation-value: 0.00025
   Percentage increase for buy value per price calculation update period.
 static-inflation-value: 0.1
 
-  Intrest rate per interest-rate-update-period
+  Interest rate per interest-rate-update-period
   Info: This is the increase in the current debt payment per-time period
 interest-rate: 0.005
 
-  Intrest rate for compound-intrest loans
+  Interest rate for compound-interest loans
   Info: Compound interest loans grow faster so should have a lower initial interest rate
 compound-interest-rate: 0.0025
 

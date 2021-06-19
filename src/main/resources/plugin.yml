@@ -68,6 +68,8 @@ permssions:
   at.loan:
     description: Loan money from the bank
     default: true
+  at.loan.other:
+    description: View and interact with other players loans
   at.increase:
     description: Increase price of an item
   at.decrease:

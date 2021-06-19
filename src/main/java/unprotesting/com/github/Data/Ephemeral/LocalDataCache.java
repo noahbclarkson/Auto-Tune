@@ -118,8 +118,11 @@ public class LocalDataCache {
     }
 
     //  Add a new loan to ephemeral storage
-    public void addLoan(double value, double intrest_rate, Player player){
-        this.LOANS.add(new LoanData(value, intrest_rate, player));
+    public void addLoan(double value, double interest_rate, Player player){
+        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
+        this.LOANS.add(new LoanData(value, interest_rate, player.getUniqueId().toString()));
+        player.sendMessage(ChatColor.RED + "Loan of " + Config.getCurrencySymbol() + value +
+         " with interest-rate: " + interest_rate + " % per " + df.format(Config.getInterestRateUpdateRate()/60) + "min");
         Collections.sort(LOANS);
     }
 
@@ -393,9 +396,7 @@ public class LocalDataCache {
         for (Integer pos : Main.getDatabase().map.keySet()){
             LoanTimePeriod LTP = Main.getDatabase().map.get(pos).getLtp();
             for (int i = 0; i < LTP.getValues().length; i++){
-                UUID uuid = UUID.fromString(LTP.getPlayers()[i]);
-                Player player = Bukkit.getPlayer(uuid);
-                LoanData data = new LoanData(LTP.getValues()[i], LTP.getIntrest_rates()[i], player, LTP.getTime()[i]);
+                LoanData data = new LoanData(LTP.getValues()[i], LTP.getInterest_rates()[i], LTP.getPlayers()[i], LTP.getTime()[i]);
                 this.LOANS.add(data);
             }
         }

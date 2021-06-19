@@ -29,7 +29,7 @@ import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.ephemeral.data.TransactionData;
 import unprotesting.com.github.data.ephemeral.data.TransactionData.TransactionPositionType;
 
-public class TransactionCommand implements CommandExecutor{
+public class TransactionsCommand implements CommandExecutor{
 
     private DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     
@@ -39,6 +39,7 @@ public class TransactionCommand implements CommandExecutor{
         return interpretCommand(sender, args);
     }
 
+    @Deprecated
     private boolean interpretCommand(CommandSender sender, String[] args) {
         Player player = CommandUtil.closeInventory(sender);
         if (!(player.hasPermission("at.transactions") || player.isOp())){CommandUtil.noPermssion(player);return true;}
@@ -46,15 +47,45 @@ public class TransactionCommand implements CommandExecutor{
         PaginatedPane pages = new PaginatedPane(0, 0, 9, 6);
         List<TransactionData> loans = Main.getCache().getTRANSACTIONS();
         List<OutlinePane> panes = new ArrayList<OutlinePane>();
-        List<GuiItem> items = getGuiItemsFromTransactions(loans);
+        String player_uuid = player.getUniqueId().toString();
+        List<GuiItem> items;
+        if (args.length < 1){
+            if (!player.hasPermission("at.transactions.other") && !player.isOp()){
+                items = getGuiItemsFromTransactions(loans, player_uuid);
+            }
+            else{
+                items = getGuiItemsFromTransactions(loans, null);
+            }
+        }
+        else if (args[0].equals("-p")){
+            if (args[1].equals(player.getName())){
+                items = getGuiItemsFromTransactions(loans, player_uuid);
+            }
+            else if (!args[1].equals(player.getName()) && (!player.hasPermission("at.transactions.other") && !player.isOp())){
+                CommandUtil.noPermssion(player);
+                return true;
+            }
+            else{
+                OfflinePlayer offPlayer = Bukkit.getOfflinePlayer(args[1]);
+                items = getGuiItemsFromTransactions(loans, offPlayer.getUniqueId().toString());
+            }
+        }
+        else{
+            return false;
+        }
         CommandUtil.loadGuiItemsIntoPane(items, gui, pages, panes, "GRAY_STAINED_GLASS_PANE", sender);
         return true;
     }
 
-    private List<GuiItem> getGuiItemsFromTransactions(List<TransactionData> data){
+    private List<GuiItem> getGuiItemsFromTransactions(List<TransactionData> data, String player_uuid){
         List<GuiItem> output = new ArrayList<GuiItem>();
         Collections.sort(data);
         for (TransactionData transaction : data){
+            if (player_uuid != null){
+                if (!transaction.getPlayer().equals(player_uuid)){
+                    continue;
+                }
+            }
             if (transaction.getPosition().equals(TransactionPositionType.BI) || transaction.getPosition().equals(TransactionPositionType.SI)){
                 ItemStack item = new ItemStack(Material.matchMaterial(transaction.getItem()), transaction.getAmount());
                 ItemMeta meta = item.getItemMeta();

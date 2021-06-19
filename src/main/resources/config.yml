@@ -135,11 +135,11 @@ dynamic-inflation-value: 0.00025
 ##  Percentage increase for buy value per price calculation update period. E.g 0.05%
 static-inflation-value: 0.05
 
-##  Intrest rate per interest-rate-update-period
+##  Interest rate per interest-rate-update-period
 ##  Info: This is the increase in the current debt payment per-time period
 interest-rate: 0.0075
 
-##  Intrest rate for compound-intrest loans
+##  Interest rate for compound-interest loans
 ##  Info: Compound interest loans grow faster so should have a lower initial interest rate
 compound-interest-rate: 0.005
 

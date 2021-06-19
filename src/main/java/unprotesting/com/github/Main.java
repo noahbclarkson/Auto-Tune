@@ -14,7 +14,7 @@ import unprotesting.com.github.commands.GDPCommand;
 import unprotesting.com.github.commands.SellCommand;
 import unprotesting.com.github.commands.ShopCommand;
 import unprotesting.com.github.commands.TradeCommand;
-import unprotesting.com.github.commands.TransactionCommand;
+import unprotesting.com.github.commands.TransactionsCommand;
 import unprotesting.com.github.config.*;
 import unprotesting.com.github.data.csv.CSVHandler;
 import unprotesting.com.github.data.ephemeral.LocalDataCache;
@@ -114,7 +114,7 @@ public class Main extends JavaPlugin{
         this.getCommand("sell").setExecutor(new SellCommand());
         this.getCommand("trade").setExecutor(new TradeCommand());
         this.getCommand("gdp").setExecutor(new GDPCommand());
-        this.getCommand("transactions").setExecutor(new TransactionCommand());
+        this.getCommand("transactions").setExecutor(new TransactionsCommand());
     }
 
     private void setupServer(){

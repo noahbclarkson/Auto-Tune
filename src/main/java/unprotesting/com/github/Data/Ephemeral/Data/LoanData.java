@@ -10,6 +10,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 import lombok.Getter;
+import lombok.Setter;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.util.LocalDateTimeArrayUtilizer;
@@ -21,7 +22,7 @@ public class LoanData extends LocalDateTimeArrayUtilizer implements Comparable<L
 
     @Getter
     private LocalDateTime date;
-    @Getter
+    @Getter @Setter
     private Double value,
                    interest_rate;
     @Getter

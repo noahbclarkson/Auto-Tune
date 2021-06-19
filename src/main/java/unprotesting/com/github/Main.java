@@ -142,6 +142,9 @@ public class Main extends JavaPlugin{
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
          -> Bukkit.getPluginManager().callEvent(new InflationUpdateEvent(true)),
            Config.getDynamicInflationUpdatePeriod(), Config.getDynamicInflationUpdatePeriod());
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
+         -> Bukkit.getPluginManager().callEvent(new LoanUpdateEvent(true)),
+           Config.getInterestRateUpdateRate(), Config.getInterestRateUpdateRate());
     }
 
     private void getEssentials(){

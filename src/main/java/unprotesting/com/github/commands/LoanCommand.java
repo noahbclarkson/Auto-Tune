@@ -104,7 +104,7 @@ public class LoanCommand implements CommandExecutor{
             meta.setLore(Arrays.asList(new String[]{
                 ChatColor.WHITE + "Player: " + ChatColor.GOLD + player.getName(),
                 ChatColor.WHITE + "Interest Rate: " + ChatColor.GOLD + data.getInterest_rate()
-                 + "% per " + df.format(Config.getInterestRateUpdateRate()/60) + "min has been created.",
+                 + "% per " + df.format(Config.getInterestRateUpdateRate()/1200) + "min has been created.",
                 ChatColor.WHITE + "Date: " + ChatColor.GOLD + data.getDate().format(formatter),
                 ChatColor.GREEN + "Click to pay-back loan!"
             }));

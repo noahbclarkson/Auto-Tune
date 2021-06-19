@@ -22,7 +22,7 @@ public class InflationUpdateEvent extends Event{
         if (Config.getInflationMethod().equalsIgnoreCase("mixed") ||
          Config.getInflationMethod().equalsIgnoreCase("dynamic")){
             updateInflation();
-         }
+        }
     }
 
     private void updateInflation(){

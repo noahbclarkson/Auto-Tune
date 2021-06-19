@@ -15,6 +15,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import lombok.Getter;
+import lombok.Setter;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.config.Config;
@@ -36,7 +37,7 @@ public class LocalDataCache {
     private ConcurrentHashMap<String, ItemData> ITEMS;
     @Getter
     private ConcurrentHashMap<String, EnchantmentData> ENCHANTMENTS;
-    @Getter
+    @Getter @Setter
     private List<LoanData> LOANS,
                            NEW_LOANS;
     @Getter
@@ -136,7 +137,7 @@ public class LocalDataCache {
         this.LOANS.add(data);
         this.NEW_LOANS.add(data);
         player.sendMessage(ChatColor.RED + "Loan of " + Config.getCurrencySymbol() + value +
-         " with interest-rate: " + interest_rate + " % per " + df.format(Config.getInterestRateUpdateRate()/60) + "min");
+         " with interest-rate: " + interest_rate + " % per " + df.format(Config.getInterestRateUpdateRate()/1200) + "min");
         Collections.sort(LOANS);
     }
 

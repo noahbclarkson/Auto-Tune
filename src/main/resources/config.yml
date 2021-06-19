@@ -130,7 +130,7 @@ inflation-method: 'Mixed'
 dynamic-inflation-time-period: 2500
 
 ##  Percentage increase in prices per time-period.
-dynamic-inflation-value: 0.000025
+dynamic-inflation-value: 0.00025
 
 ##  Percentage increase for buy value per price calculation update period. E.g 0.05%
 static-inflation-value: 0.05

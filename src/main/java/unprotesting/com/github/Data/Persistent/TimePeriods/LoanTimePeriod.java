@@ -13,7 +13,8 @@ import unprotesting.com.github.data.util.LocalDateTimeArrayUtilizer;
 public class LoanTimePeriod extends LocalDateTimeArrayUtilizer implements Serializable{
 
     @Getter
-    private double[] values, interest_rates;
+    private double[] values,
+                     interest_rates;
     @Getter
     private String[] players;
     @Getter

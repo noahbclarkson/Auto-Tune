@@ -9,7 +9,10 @@ import unprotesting.com.github.data.ephemeral.data.GDPData;
 public class GDPTimePeriod implements Serializable{
 
     @Getter
-    private double GDP, balance, debt, loss;
+    private double GDP,
+                   balance, 
+                   debt, 
+                   loss;
 
     @Getter
     private int playerCount;

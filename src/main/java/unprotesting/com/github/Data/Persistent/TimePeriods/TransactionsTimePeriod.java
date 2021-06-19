@@ -19,7 +19,9 @@ public class TransactionsTimePeriod extends LocalDateTimeArrayUtilizer implement
     @Getter
     private int[][] time;
     @Getter
-    private String[] players, items, positions;
+    private String[] players,
+                     items, 
+                     positions;
 
     public TransactionsTimePeriod(){
         int size = Main.getCache().getNEW_TRANSACTIONS().size();

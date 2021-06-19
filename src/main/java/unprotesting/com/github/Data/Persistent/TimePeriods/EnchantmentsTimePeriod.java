@@ -14,9 +14,11 @@ import unprotesting.com.github.data.util.BuyableTimePeriodFunctions;
 public class EnchantmentsTimePeriod extends BuyableTimePeriodFunctions implements Serializable{
 
     @Getter
-    private int[] buys, sells;
+    private int[] buys, 
+                  sells;
     @Getter
-    private double[] prices, ratios;
+    private double[] prices, 
+                     ratios;
     @Getter
     private String[] items;
 

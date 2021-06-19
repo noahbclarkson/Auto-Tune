@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
+import unprotesting.com.github.data.persistent.timePeriods.EconomyInfoTimePeriod;
 import unprotesting.com.github.data.persistent.timePeriods.EnchantmentsTimePeriod;
 import unprotesting.com.github.data.persistent.timePeriods.GDPTimePeriod;
 import unprotesting.com.github.data.persistent.timePeriods.ItemTimePeriod;
@@ -26,6 +27,8 @@ public class TimePeriod implements Serializable{
     private LoanTimePeriod ltp;
     @Getter
     private GDPTimePeriod gtp;
+    @Getter
+    private EconomyInfoTimePeriod eitp;
 
     public TimePeriod(){
         getFromCache();
@@ -48,6 +51,7 @@ public class TimePeriod implements Serializable{
         getTTPFromCache();
         getLTPFromCache();
         getGTPFromCache();
+        getEITPFromCache();
     }
 
     private void getITPFromCache(){
@@ -70,5 +74,8 @@ public class TimePeriod implements Serializable{
         this.gtp = new GDPTimePeriod();
     }
 
+    private void getEITPFromCache(){
+        this.eitp = new EconomyInfoTimePeriod();
+    }
     
 }

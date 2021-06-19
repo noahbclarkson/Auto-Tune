@@ -3,7 +3,7 @@ package unprotesting.com.github.data.ephemeral.data;
 import lombok.Getter;
 import lombok.Setter;
 
-//  Enchantment data class for storing general item data
+//  Enchantment data class for storing general enchantment data
 
 public class EnchantmentData{
 

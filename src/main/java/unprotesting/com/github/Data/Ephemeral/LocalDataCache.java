@@ -53,6 +53,8 @@ public class LocalDataCache {
     private ConcurrentHashMap<String, Double> PERCENTAGE_CHANGES;
     @Getter
     private GDPData GDPDATA;
+    @Getter
+    private EconomyInfoData ECONOMYINFO;
 
 
     private int size;
@@ -332,6 +334,8 @@ public class LocalDataCache {
         loadTransactionDataFromData();
         loadSectionDataFromFile();
         loadGDPDataFromData();
+        loadEconomyInfoDataFromFile();
+        loadEconomyInfoDataFromData();
     }
 
     //  Get current cache for a players PlayerData object
@@ -455,6 +459,17 @@ public class LocalDataCache {
         }
         GDPTimePeriod GTP = Main.getDatabase().map.get(size-1).getGtp();
         this.GDPDATA = new GDPData(GTP.getGDP(), GTP.getBalance(), GTP.getLoss(), GTP.getDebt(), GTP.getPlayerCount());
+    }
+
+    private void loadEconomyInfoDataFromFile(){
+        this.ECONOMYINFO = new EconomyInfoData(Config.getSellPriceDifferenceVariationStart());
+    }
+
+    private void loadEconomyInfoDataFromData(){
+        if (size < 1){
+            return;
+        }
+        this.ECONOMYINFO = new EconomyInfoData(Main.getDatabase().map.get(size-1).getEitp().getSellPriceDifference());
     }
 
 }

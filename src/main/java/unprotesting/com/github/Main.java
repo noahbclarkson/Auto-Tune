@@ -138,13 +138,16 @@ public class Main extends JavaPlugin{
     private void setupEvents(){
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
          -> Bukkit.getPluginManager().callEvent(new PriceUpdateEvent(true)),
-          Config.getTimePeriod()*500, Config.getTimePeriod()*1200);
+          Config.getTimePeriod()*1200, Config.getTimePeriod()*1200);
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
          -> Bukkit.getPluginManager().callEvent(new InflationUpdateEvent(true)),
            Config.getDynamicInflationUpdatePeriod(), Config.getDynamicInflationUpdatePeriod());
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
          -> Bukkit.getPluginManager().callEvent(new LoanUpdateEvent(true)),
            Config.getInterestRateUpdateRate(), Config.getInterestRateUpdateRate());
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
+         -> Bukkit.getPluginManager().callEvent(new SellPriceDifferenceUpdateEvent(true)),
+           Config.getSellPriceVariationUpdatePeriod()*1200, Config.getSellPriceVariationUpdatePeriod()*1200);
     }
 
     private void getEssentials(){

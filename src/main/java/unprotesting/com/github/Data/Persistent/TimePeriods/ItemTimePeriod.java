@@ -14,7 +14,8 @@ import unprotesting.com.github.data.util.BuyableTimePeriodFunctions;
 public class ItemTimePeriod extends BuyableTimePeriodFunctions implements Serializable{
 
     @Getter
-    private int[] buys, sells;
+    private int[] buys, 
+                  sells;
     @Getter
     private double[] prices;
     @Getter

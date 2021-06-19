@@ -38,7 +38,7 @@ commands:
       usage: /<autosell>
     loan:
       description: Auto-Tune Auto Loan Command
-      usage: /<loan> <amount> (Optional)<compound-interest-enabled>
+      usage: /<loan> <amount>
     gdp:
       description: View GDP info
       usage: /GDP

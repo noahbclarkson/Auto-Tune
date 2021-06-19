@@ -21,14 +21,14 @@ public class LoanTimePeriod extends LocalDateTimeArrayUtilizer implements Serial
 
 
     public LoanTimePeriod(){
-        int size = Main.getCache().getLOANS().size();
+        int size = Main.getCache().getNEW_LOANS().size();
         init(size);
         this.values = new double[size];
         this.interest_rates = new double[size];
         this.time = new int[size][6];
         this.players = new String[size];
         int i = 0;
-        for (LoanData data : Main.getCache().getLOANS()){
+        for (LoanData data : Main.getCache().getNEW_LOANS()){
             setVars(i, data);
             i++;
         }

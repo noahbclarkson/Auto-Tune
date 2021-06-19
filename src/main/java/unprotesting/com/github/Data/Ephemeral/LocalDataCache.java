@@ -37,9 +37,11 @@ public class LocalDataCache {
     @Getter
     private ConcurrentHashMap<String, EnchantmentData> ENCHANTMENTS;
     @Getter
-    private List<LoanData> LOANS;
+    private List<LoanData> LOANS,
+                           NEW_LOANS;
     @Getter
-    private List<TransactionData> TRANSACTIONS;
+    private List<TransactionData> TRANSACTIONS,
+                                  NEW_TRANSACTIONS;
     @Getter
     private ConcurrentHashMap<UUID, PlayerSaleData> PLAYER_SALES;
     @Getter
@@ -58,7 +60,9 @@ public class LocalDataCache {
         this.ITEMS = new ConcurrentHashMap<String, ItemData>();
         this.ENCHANTMENTS = new ConcurrentHashMap<String, EnchantmentData>();
         this.LOANS = new ArrayList<LoanData>();
+        this.NEW_LOANS = new ArrayList<LoanData>();
         this.TRANSACTIONS = new ArrayList<TransactionData>();
+        this.NEW_TRANSACTIONS = new ArrayList<TransactionData>();
         this.PLAYER_SALES = new ConcurrentHashMap<UUID, PlayerSaleData>();
         this.SECTIONS = new ArrayList<Section>();
         this.MAX_PURCHASES = new ConcurrentHashMap<String, MaxBuySellData>();
@@ -80,14 +84,18 @@ public class LocalDataCache {
                     ItemData bdata = this.ITEMS.get(item);
                     bdata.increaseBuys(amount);
                     this.ITEMS.put(item, bdata);
-                    this.TRANSACTIONS.add(new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BI));
+                    TransactionData btdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BI);
+                    this.TRANSACTIONS.add(btdata);
+                    this.NEW_TRANSACTIONS.add(btdata);
                     this.GDPDATA.increaseGDP((amount*price));
                     break;
                 case SELL:
                     ItemData sdata = this.ITEMS.get(item);
                     sdata.increaseSells(amount);
                     this.ITEMS.put(item, sdata);
-                    this.TRANSACTIONS.add(new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SI));
+                    TransactionData stdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SI);
+                    this.TRANSACTIONS.add(stdata);
+                    this.NEW_TRANSACTIONS.add(stdata);
                     this.GDPDATA.increaseGDP((amount*price));
                     this.GDPDATA.increaseLoss((amount*getItemPrice(item, false))-(amount*price));
                     break;
@@ -95,14 +103,18 @@ public class LocalDataCache {
                     EnchantmentData ebdata = this.ENCHANTMENTS.get(item);
                     ebdata.increaseBuys(amount);
                     this.ENCHANTMENTS.put(item, ebdata);
-                    this.TRANSACTIONS.add(new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BE));
+                    TransactionData betdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BE);
+                    this.TRANSACTIONS.add(betdata);
+                    this.NEW_TRANSACTIONS.add(betdata);
                     this.GDPDATA.increaseGDP((amount*price));
                     break;
                 case ESELL:
                     EnchantmentData esdata = this.ENCHANTMENTS.get(item);
                     esdata.increaseSells(amount);
                     this.ENCHANTMENTS.put(item, esdata);
-                    this.TRANSACTIONS.add(new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SE));
+                    TransactionData setdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SE);
+                    this.TRANSACTIONS.add(setdata);
+                    this.NEW_TRANSACTIONS.add(setdata);
                     this.GDPDATA.increaseGDP((amount*price));
                     this.GDPDATA.increaseLoss((amount*getOverallEnchantmentPrice(item,
                      getItemPrice(player.getInventory().getItemInMainHand().getType().toString(), false), false)-(amount*price)));
@@ -120,7 +132,9 @@ public class LocalDataCache {
     //  Add a new loan to ephemeral storage
     public void addLoan(double value, double interest_rate, Player player){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
-        this.LOANS.add(new LoanData(value, interest_rate, player.getUniqueId().toString()));
+        LoanData data = new LoanData(value, interest_rate, player.getUniqueId().toString());
+        this.LOANS.add(data);
+        this.NEW_LOANS.add(data);
         player.sendMessage(ChatColor.RED + "Loan of " + Config.getCurrencySymbol() + value +
          " with interest-rate: " + interest_rate + " % per " + df.format(Config.getInterestRateUpdateRate()/60) + "min");
         Collections.sort(LOANS);

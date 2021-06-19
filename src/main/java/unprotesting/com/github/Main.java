@@ -11,6 +11,7 @@ import lombok.Setter;
 import net.ess3.api.IEssentials;
 import unprotesting.com.github.api.*;
 import unprotesting.com.github.commands.GDPCommand;
+import unprotesting.com.github.commands.LoanCommand;
 import unprotesting.com.github.commands.SellCommand;
 import unprotesting.com.github.commands.ShopCommand;
 import unprotesting.com.github.commands.TradeCommand;
@@ -115,6 +116,7 @@ public class Main extends JavaPlugin{
         this.getCommand("trade").setExecutor(new TradeCommand());
         this.getCommand("gdp").setExecutor(new GDPCommand());
         this.getCommand("transactions").setExecutor(new TransactionsCommand());
+        this.getCommand("loan").setExecutor(new LoanCommand());
     }
 
     private void setupServer(){

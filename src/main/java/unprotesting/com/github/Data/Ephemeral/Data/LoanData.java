@@ -58,11 +58,13 @@ public class LoanData extends LocalDateTimeArrayUtilizer implements Comparable<L
         EconomyFunctions.getEconomy().withdrawPlayer(player, this.value);
         if (player.isOnline()){
             Player onlinePlayer = (Player) player;
+            onlinePlayer.getOpenInventory().close();
             onlinePlayer.sendMessage(ChatColor.GREEN + "Loan created on " + this.date.format(formatter) + " has been payed-back.");
             onlinePlayer.sendMessage(ChatColor.GREEN + Config.getCurrencySymbol() + this.value + " has been withdrawn from your balance.");
             
         }
         Main.getCache().getLOANS().remove(this);
+        Main.getCache().getNEW_LOANS().remove(this);
         return true;
     }
 

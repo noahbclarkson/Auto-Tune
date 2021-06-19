@@ -63,7 +63,7 @@ public class PriceUpdateEvent extends Event{
                 newprice = price + price*Config.getBasicMaxVariableVolatility()*0.01*(buysell[0]/total) + price*0.01*Config.getBasicMinVariableVolatility();
             }
             else if(buysell[0] < buysell[1]){
-                newprice = price + price*Config.getBasicMaxVariableVolatility()*0.01*(buysell[1]/total) + price*0.01*Config.getBasicMinVariableVolatility();
+                newprice = price - price*Config.getBasicMaxVariableVolatility()*0.01*(buysell[1]/total) - price*0.01*Config.getBasicMinVariableVolatility();
             }
             else{
                 newprice = price;

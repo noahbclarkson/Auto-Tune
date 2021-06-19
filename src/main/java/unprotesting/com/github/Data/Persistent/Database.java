@@ -41,7 +41,7 @@ public class Database {
         .fileMmapEnable()
         .fileMmapEnableIfSupported()
         .cleanerHackEnable()
-        .allocateStartSize(10485760)
+        .allocateStartSize(1048576)
         .closeOnJvmShutdown().make();
     }
 

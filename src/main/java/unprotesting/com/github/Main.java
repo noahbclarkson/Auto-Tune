@@ -21,6 +21,7 @@ import unprotesting.com.github.config.*;
 import unprotesting.com.github.data.csv.CSVHandler;
 import unprotesting.com.github.data.ephemeral.LocalDataCache;
 import unprotesting.com.github.data.ephemeral.data.AutosellData;
+import unprotesting.com.github.data.ephemeral.data.MessagesData;
 import unprotesting.com.github.data.persistent.Database;
 import unprotesting.com.github.data.persistent.TimePeriod;
 import unprotesting.com.github.economy.EconomyFunctions;
@@ -56,6 +57,8 @@ public class Main extends JavaPlugin{
                             placeholderAPI = false;
     @Getter @Setter
     private static AutosellData autosellData;
+    @Getter @Setter
+    private static MessagesData MESSAGES;
 
 
     public static LocalServer server;
@@ -86,6 +89,7 @@ public class Main extends JavaPlugin{
         initPlaceholderAPI();
         setupServer();
         setAutosellData(new AutosellData());
+        setMESSAGES(new MessagesData());
     }
     
     public static void updateTimePeriod(){
@@ -93,6 +97,10 @@ public class Main extends JavaPlugin{
         TP.addToMap();
         cache = new LocalDataCache();
         CSVHandler.writeCSV();
+    }
+
+    public static void updatePlayerTutorialData(String player_uuid){
+        getMESSAGES().updatePlayerTutorialData(player_uuid);
     }
 
     private void initCache(){

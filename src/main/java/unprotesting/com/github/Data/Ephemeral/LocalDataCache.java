@@ -55,8 +55,6 @@ public class LocalDataCache {
     private GDPData GDPDATA;
     @Getter
     private EconomyInfoData ECONOMYINFO;
-    @Getter
-    private MessagesData MESSAGES;
 
     private int size;
 
@@ -71,7 +69,6 @@ public class LocalDataCache {
         this.SECTIONS = new ArrayList<Section>();
         this.MAX_PURCHASES = new ConcurrentHashMap<String, MaxBuySellData>();
         this.PERCENTAGE_CHANGES = new ConcurrentHashMap<String, Double>();
-        this.MESSAGES = new MessagesData();
         this.size = Main.getDatabase().map.size();
         init();
     }
@@ -324,10 +321,6 @@ public class LocalDataCache {
             this.PERCENTAGE_CHANGES.put(item, pChange);
             i++;
         }
-    }
-
-    public void updatePlayerTutorialData(String player_uuid){
-        this.MESSAGES.updatePlayerTutorialData(player_uuid);
     }
 
     //  Initialize cache from configurations and relavent files

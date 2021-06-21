@@ -25,8 +25,8 @@ public class TutorialSendEvent extends Event{
         for (Player player : Bukkit.getOnlinePlayers()){
             if (player.hasPermission("at.tutorial") || player.isOp()){
                 String uuid = player.getUniqueId().toString();
-                Main.getCache().updatePlayerTutorialData(uuid);
-                String message = Main.getCache().getMESSAGES().getTutorial().get(Main.getCache().getMESSAGES().getTutorialData().get(uuid)-1);
+                Main.updatePlayerTutorialData(uuid);
+                String message = Main.getMESSAGES().getTutorial().get(Main.getMESSAGES().getTutorialData().get(uuid)-1);
                 if (Main.isPlaceholderAPI()){
                     message = PlaceholderAPI.setPlaceholders(player, message);
                 }

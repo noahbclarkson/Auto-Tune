@@ -12,7 +12,7 @@ public class AutoTuneJoinMessageEventHandler implements Listener{
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e){
-        for (String message : Main.getCache().getMESSAGES().getOnJoin()){
+        for (String message : Main.getMESSAGES().getOnJoin()){
             Player player = e.getPlayer();
             if (Main.isPlaceholderAPI()){
                 message = PlaceholderAPI.setPlaceholders(player, message);

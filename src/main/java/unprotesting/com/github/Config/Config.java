@@ -18,11 +18,11 @@ public class Config {
  @Setter
  private static Integer port, timePeriod, sellPriceVariationTimePeriod, sellPriceVariationUpdatePeriod, autoSellUpdatePeriod, 
                          autoSellProfitUpdatePeriod, dynamicInflationUpdatePeriod, maximumShortTradeLength, InterestRateUpdateRate,
-                          tutorialMessagePeriod, topMoversAmount, updatePricesThreshold;
+                          tutorialMessagePeriod, updatePricesThreshold;
 
  @Getter
  @Setter
- private static String serverName, pricingModel, basicVolatilityAlgorithim, menuTitle, noPermission, apiKey, email, inflationMethod,
+ private static String menuTitle, noPermission, apiKey, email, inflationMethod,
                         currencySymbol, economyShopConfig, dataLocation, background, numberFormat;
 
  @Getter
@@ -30,7 +30,7 @@ public class Config {
  private static Double basicMaxFixedVolatility, basicMaxVariableVolatility, basicMinFixedVolatility, basicMinVariableVolatility, 
                         sellPriceDifference, sellPriceDifferenceVariationStart, dataSelectionM, dataSelectionC, dataSelectionZ,
                          dynamicInflationValue, inflationValue, interestRate, maxDebt, shopConfigGUIShopSellValue, enchantmentLimiter,
-                          durabilityLimiter, compoundInterestRate;
+                          durabilityLimiter;
 
     public static void loadDefaults() {
 
@@ -59,14 +59,12 @@ public class Config {
         Config.setSellPriceVariationTimePeriod(Main.getDfiles().getConfig().getInt("sell-price-variation-time-period", 10800));
         Config.setSellPriceVariationUpdatePeriod(Main.getDfiles().getConfig().getInt("sell-price-variation-update-period", 30));
         Config.setTimePeriod(Main.getDfiles().getConfig().getInt("time-period", 10));
-        Config.setTopMoversAmount(Main.getDfiles().getConfig().getInt("top-movers-amount", 5));
         Config.setTutorialMessagePeriod(Main.getDfiles().getConfig().getInt("tutorial-message-period", 300));
         Config.setUpdatePricesThreshold(Main.getDfiles().getConfig().getInt("update-prices-threshold", 1));
 
 
         Config.setApiKey(Main.getDfiles().getConfig().getString("api-key", "xyz"));
         Config.setBackground(Main.getDfiles().getConfig().getString("background", "BLACK_STAINED_GLASS_PANE"));
-        Config.setBasicVolatilityAlgorithim(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("Volatility-Algorithim", "Variable")));
         Config.setCurrencySymbol(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("currency-symbol", "$")));
         Config.setDataLocation(Main.getDfiles().getConfig().getString("data-location", ""));
         Config.setEconomyShopConfig(Main.getDfiles().getConfig().getString("economy-shop-config", "default"));
@@ -75,15 +73,12 @@ public class Config {
         Config.setMenuTitle(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("menu-title", "Auto-Tune Shop")));
         Config.setNoPermission(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("no-permission", "You do not have permission to perform this command")));
         Config.setNumberFormat(Main.getDfiles().getConfig().getString("number-format", "###,###,###,##0.00"));
-        Config.setPricingModel(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("pricing-model", "Exponential")));
-        Config.setServerName(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("server-name", "Survival Server - (Change this in Config)")));
 
 
         Config.setBasicMaxFixedVolatility(Main.getDfiles().getConfig().getDouble("Fixed-Max-Volatility", 2.00));
         Config.setBasicMaxVariableVolatility(Main.getDfiles().getConfig().getDouble("max-volatility", 0.5));
         Config.setBasicMinFixedVolatility(Main.getDfiles().getConfig().getDouble("Fixed-Min-Volatility", 0.05));
         Config.setBasicMinVariableVolatility(Main.getDfiles().getConfig().getDouble("min-volatility", 0.025));
-        Config.setCompoundInterestRate(Main.getDfiles().getConfig().getDouble("compound-interest-rate", 0.0025));
         Config.setDataSelectionC(Main.getDfiles().getConfig().getDouble("data-selection-c", 1.05));
         Config.setDataSelectionM(Main.getDfiles().getConfig().getDouble("data-selection-m", 0.05));
         Config.setDataSelectionZ(Main.getDfiles().getConfig().getDouble("data-selection-z", 1.6));

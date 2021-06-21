@@ -79,6 +79,15 @@ public class LoanCommand implements CommandExecutor{
             catch(NumberFormatException e){
                 return false;
             }
+            double bal = EconomyFunctions.getEconomy().getBalance(player);
+            if ((bal-loanAmount) < Config.getMaxDebt()){
+                if (bal < Config.getMaxDebt()){
+                    player.sendMessage(ChatColor.RED + "Your balance must be more than " + Config.getCurrencySymbol() + Config.getMaxDebt() + " to take out a loan.");
+                    return true;
+                }
+                player.sendMessage(ChatColor.RED + "Your balance minus your loans cannot be less than " + Config.getCurrencySymbol() + Config.getMaxDebt() + ".");
+                return true;
+            }
             EconomyFunctions.getEconomy().depositPlayer(player, loanAmount);
             Main.getCache().addLoan(loanAmount, Config.getInterestRate(), player);
             return true;

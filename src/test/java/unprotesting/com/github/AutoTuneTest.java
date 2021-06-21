@@ -18,9 +18,7 @@ import unprotesting.com.github.data.persistent.TimePeriod;
 @DisplayName("Auto-Tune Tests")
 class AutoTuneTest {
 
-    private long start_time,
-                 end_time;
-
+    private long start_time;
 
     @BeforeEach
     void beforeEach() {
@@ -29,9 +27,10 @@ class AutoTuneTest {
 
     @AfterEach
     void afterEach() {
-        end_time = System.nanoTime();
-        long duration = (end_time - start_time); // divide by 1000000 to get milliseconds.
-        System.out.println("Test Duration: " + duration + " nanoseconds or " + duration / 1000000 + " milliseconds or " + duration / 1000000000 + " seconds.");
+        long end_time = System.nanoTime();
+        long duration = (end_time - start_time);
+        System.out.println("Test Duration: " + duration + " nanoseconds or " +
+        duration / 1000000 + " milliseconds or " + duration / 1000000000 + " seconds.");
     }
 
     @Test

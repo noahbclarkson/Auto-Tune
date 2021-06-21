@@ -24,7 +24,7 @@ import unprotesting.com.github.data.ephemeral.data.*;
 import unprotesting.com.github.data.ephemeral.other.*;
 import unprotesting.com.github.data.ephemeral.data.TransactionData.TransactionPositionType;
 import unprotesting.com.github.data.ephemeral.other.Sale.SalePositionType;
-import unprotesting.com.github.data.persistent.timePeriods.*;
+import unprotesting.com.github.data.persistent.timeperiods.*;
 import unprotesting.com.github.logging.Logging;
 
 //  Global functions file between ephemeral and persistent storage

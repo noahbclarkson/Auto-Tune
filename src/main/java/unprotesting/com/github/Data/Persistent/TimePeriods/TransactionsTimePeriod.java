@@ -1,4 +1,4 @@
-package unprotesting.com.github.data.persistent.timePeriods;
+package unprotesting.com.github.data.persistent.timeperiods;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;

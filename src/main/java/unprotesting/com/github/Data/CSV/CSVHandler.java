@@ -9,9 +9,9 @@ import java.util.List;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.persistent.TimePeriod;
-import unprotesting.com.github.data.persistent.timePeriods.EnchantmentsTimePeriod;
-import unprotesting.com.github.data.persistent.timePeriods.GDPTimePeriod;
-import unprotesting.com.github.data.persistent.timePeriods.ItemTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.EnchantmentsTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.GDPTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.ItemTimePeriod;
 
 public class CSVHandler {
 

@@ -13,6 +13,7 @@ import org.bukkit.inventory.ItemStack;
 
 import unprotesting.com.github.Main;
 import unprotesting.com.github.config.Config;
+import unprotesting.com.github.data.ephemeral.data.AutosellData;
 import unprotesting.com.github.data.ephemeral.other.Sale.SalePositionType;
 import unprotesting.com.github.economy.EconomyFunctions;
 
@@ -120,7 +121,7 @@ public class FunctionsUtil {
     }
 
     @SuppressWarnings("deprecation")
-    public static void sellCustomItem(Player player, ItemStack item){
+    public static void sellCustomItem(Player player, ItemStack item, boolean autosell){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         if (item == null){
             return;
@@ -174,8 +175,17 @@ public class FunctionsUtil {
             return;
         }
         fprice = getnewPriceWithDurability(fprice, item);
-        EconomyFunctions.getEconomy().depositPlayer(player, (item.getAmount()*fprice));
-        player.sendMessage(ChatColor.GREEN + "Sold x" + item.getAmount() + " of " + ChatColor.GOLD + item.getType().toString() + ChatColor.GREEN + " for " + Config.getCurrencySymbol() + df.format(fprice*item.getAmount()) + ".");
+        if (!autosell){
+            EconomyFunctions.getEconomy().depositPlayer(player, (item.getAmount()*fprice));
+            player.sendMessage(ChatColor.GREEN + "Sold x" + item.getAmount() + " of " + ChatColor.GOLD +
+             item.getType().toString() + ChatColor.GREEN + " for " + Config.getCurrencySymbol() +
+              df.format(fprice*item.getAmount()) + ".");
+        }
+        if (autosell){
+            AutosellData data = Main.getAutosellData();
+            data.add(player.getUniqueId().toString(), item.getAmount()*fprice);
+            Main.setAutosellData(data);
+        }
         Main.getCache().addSale(player, item.getType().toString(), Main.getCache().getItemPrice(item.getType().toString(), false), item.getAmount(), SalePositionType.SELL);
         for (Enchantment ench : item.getEnchantments().keySet()){
             Main.getCache().addSale(player, ench.getName(), Main.getCache().getEnchantmentPrice(ench.toString(), true), item.getEnchantmentLevel(ench), SalePositionType.ESELL);

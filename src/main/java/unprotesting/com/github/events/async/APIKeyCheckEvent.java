@@ -1,4 +1,4 @@
-package unprotesting.com.github.events;
+package unprotesting.com.github.events.async;
 
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;

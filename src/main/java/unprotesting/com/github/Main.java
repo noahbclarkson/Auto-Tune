@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.ess3.api.IEssentials;
 import unprotesting.com.github.api.*;
+import unprotesting.com.github.commands.AutosellCommand;
 import unprotesting.com.github.commands.GDPCommand;
 import unprotesting.com.github.commands.LoanCommand;
 import unprotesting.com.github.commands.SellCommand;
@@ -19,12 +20,12 @@ import unprotesting.com.github.commands.TransactionsCommand;
 import unprotesting.com.github.config.*;
 import unprotesting.com.github.data.csv.CSVHandler;
 import unprotesting.com.github.data.ephemeral.LocalDataCache;
+import unprotesting.com.github.data.ephemeral.data.AutosellData;
 import unprotesting.com.github.data.persistent.Database;
 import unprotesting.com.github.data.persistent.TimePeriod;
-import unprotesting.com.github.economy.*;
-import unprotesting.com.github.events.*;
+import unprotesting.com.github.events.async.*;
+import unprotesting.com.github.events.sync.*;
 import unprotesting.com.github.localServer.LocalServer;
-import unprotesting.com.github.logging.*;
 
 /*  
     Main initialization file for Auto-Tune
@@ -49,11 +50,14 @@ public class Main extends JavaPlugin{
     private static String[] serverIPStrings;
     @Getter @Setter
     private static boolean correctAPIKey = false;
+    @Getter @Setter
+    private static AutosellData autosellData;
 
     public static LocalServer server;
 
     @Override
     public void onDisable(){
+        new AutosellProfitUpdateEvent(true);
         if (cache != null){
             updateTimePeriod();
         }
@@ -75,6 +79,7 @@ public class Main extends JavaPlugin{
         setupCommands();
         setupEvents();
         setupServer();
+        setAutosellData(new AutosellData());
     }
     
     public static void updateTimePeriod(){
@@ -93,16 +98,12 @@ public class Main extends JavaPlugin{
     }
 
     private void checkEconomy(){
-        if (!EconomyFunctions.setupLocalEconomy(this.getServer())){
-            Logging.error(1);
-            closePlugin();
-            return;
-        }
+
     }
 
     private void setupDataFiles(){
         dfiles = new DataFiles(getDataFolder());
-        for (int i = 0; i < 6; i++){
+        for (int i = 0; i < 7; i++){
             if (!dfiles.getFiles()[i].exists()){
                 saveResource(dfiles.getFileNames()[i], false);
             }
@@ -117,6 +118,7 @@ public class Main extends JavaPlugin{
         this.getCommand("gdp").setExecutor(new GDPCommand());
         this.getCommand("transactions").setExecutor(new TransactionsCommand());
         this.getCommand("loan").setExecutor(new LoanCommand());
+        this.getCommand("autosell").setExecutor(new AutosellCommand());
     }
 
     private void setupServer(){
@@ -136,6 +138,7 @@ public class Main extends JavaPlugin{
     }
 
     private void setupEvents(){
+        //  Asynchronous
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
          -> Bukkit.getPluginManager().callEvent(new PriceUpdateEvent(true)),
           Config.getTimePeriod()*1200, Config.getTimePeriod()*1200);
@@ -148,6 +151,14 @@ public class Main extends JavaPlugin{
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
          -> Bukkit.getPluginManager().callEvent(new SellPriceDifferenceUpdateEvent(true)),
            Config.getSellPriceVariationUpdatePeriod()*1200, Config.getSellPriceVariationUpdatePeriod()*1200);
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
+         -> Bukkit.getPluginManager().callEvent(new AutosellProfitUpdateEvent(true)),
+           Config.getAutoSellProfitUpdatePeriod(), Config.getAutoSellProfitUpdatePeriod());
+        
+        //  Synchronous
+        Bukkit.getScheduler().runTaskTimer(this, ()
+         -> Bukkit.getPluginManager().callEvent(new AutosellUpdateEvent()),
+           Config.getAutoSellUpdatePeriod(), Config.getSellPriceVariationUpdatePeriod());
     }
 
     private void getEssentials(){

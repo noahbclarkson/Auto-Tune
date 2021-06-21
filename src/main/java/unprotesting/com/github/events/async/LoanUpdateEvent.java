@@ -1,4 +1,4 @@
-package unprotesting.com.github.events;
+package unprotesting.com.github.events.async;
 
 import java.util.ArrayList;
 import java.util.List;

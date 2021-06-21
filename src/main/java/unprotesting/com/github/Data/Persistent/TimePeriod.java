@@ -4,12 +4,12 @@ import java.io.Serializable;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
-import unprotesting.com.github.data.persistent.timePeriods.EconomyInfoTimePeriod;
-import unprotesting.com.github.data.persistent.timePeriods.EnchantmentsTimePeriod;
-import unprotesting.com.github.data.persistent.timePeriods.GDPTimePeriod;
-import unprotesting.com.github.data.persistent.timePeriods.ItemTimePeriod;
-import unprotesting.com.github.data.persistent.timePeriods.LoanTimePeriod;
-import unprotesting.com.github.data.persistent.timePeriods.TransactionsTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.EconomyInfoTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.EnchantmentsTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.GDPTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.ItemTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.LoanTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.TransactionsTimePeriod;
 
 //  Time period object to be stored in database
 

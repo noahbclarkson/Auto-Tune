@@ -57,13 +57,12 @@ public class ShopCommand implements CommandExecutor{
                     return true;
                 }
             }
-            player.sendMessage(ChatColor.RED + "Correct usage: /<shop> <shop-section>");
+            player.sendMessage(ChatColor.RED + "Correct usage: /shop <shop-section>");
         }
         return true;
     }
 
     private void loadGUI(CommandSender sender){
-        CommandUtil.closeInventory(sender);
         int highest = Section.getHighest(Main.getCache().getSECTIONS());
         int lines = (highest/9)+2;
         ChestGui gui = new ChestGui(lines, Config.getMenuTitle());
@@ -92,12 +91,32 @@ public class ShopCommand implements CommandExecutor{
     }
 
     private void loadShopPane(CommandSender sender, Section section){
-        Player player = CommandUtil.closeInventory(sender);
+        CommandUtil.closeInventory(sender);
         ChestGui gui = new ChestGui(6, Config.getMenuTitle());
         PaginatedPane pages = new PaginatedPane(0, 0, 9, 6);
-        List<GuiItem> items = getListFromSection(section, player);
+        List<GuiItem> items = getListFromSection(section, sender);
         List<OutlinePane> panes = new ArrayList<OutlinePane>();
         CommandUtil.loadGuiItemsIntoPane(items, gui, pages, panes, section.getBackground(), sender);
+        gui.addPane(generateMenuBackPane(sender));
+        gui.update();
+    }
+
+    private StaticPane generateMenuBackPane(CommandSender sender){
+        StaticPane output = new StaticPane(0, 0, 1, 1);
+        ItemStack item = new ItemStack(Material.ARROW);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.GRAY + "MENU");
+        meta.setLore(Arrays.asList(new String[]{ChatColor.WHITE + "Click to go back to the main menu"}));
+        item.setItemMeta(meta);
+        GuiItem gItem = new GuiItem(item, event ->{
+            event.setCancelled(true);
+            int highest = Section.getHighest(Main.getCache().getSECTIONS());
+            int lines = (highest/9)+2;
+            event.getWhoClicked().getOpenInventory().close();
+            loadSectionsPane(sender, lines);
+        });
+        output.addItem(gItem, 0, 0);
+        return output;
     }
 
     private List<GuiItem> getListFromSection(Section section, CommandSender sender){
@@ -166,6 +185,7 @@ public class ShopCommand implements CommandExecutor{
         ChestGui gui = new ChestGui(4, Config.getMenuTitle());
         gui = CommandUtil.getBackground(gui, 4, Config.getBackground());
         gui.addPane(getPurchasePane(item, sender, section));
+        gui.addPane(generateMenuBackPane(sender));
         gui.show((HumanEntity)sender);
     }
 

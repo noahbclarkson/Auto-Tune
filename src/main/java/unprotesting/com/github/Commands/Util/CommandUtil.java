@@ -17,6 +17,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import unprotesting.com.github.Main;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.logging.Logging;
 
@@ -59,7 +60,7 @@ public class CommandUtil {
         int k = 0;
         OutlinePane pane = new OutlinePane(1, 1, 7, 4);
         if (items.size() > 28){
-            pages.addPane(page, CommandUtil.getArrowPane(page+1, ChatColor.GRAY + "NEXT", pages, false, gui));
+            pages.addPane(page, getArrowPane(page+1, ChatColor.GRAY + "NEXT", pages, false, gui));
         }
         panes.add(pane);
         for (int i = 0; i < items.size(); i++){
@@ -67,9 +68,9 @@ public class CommandUtil {
             if (k > 27){
                 pane = new OutlinePane(1, 1, 7, 4);
                 page++;
-                pages.addPane(page, CommandUtil.getArrowPane(page-1, ChatColor.GRAY + "BACK", pages, true, gui));
+                pages.addPane(page, getArrowPane(page-1, ChatColor.GRAY + "BACK", pages, true, gui));
                 if (i+28 < items.size()){
-                    pages.addPane(page, CommandUtil.getArrowPane(page+1, ChatColor.GRAY + "NEXT", pages, false, gui));
+                    pages.addPane(page, getArrowPane(page+1, ChatColor.GRAY + "NEXT", pages, false, gui));
                 }
                 panes.add(pane);
                 k=-1;
@@ -98,6 +99,11 @@ public class CommandUtil {
         background.setRepeat(true);
         GUI.addPane(background);
         return GUI;
+    }
+
+    public static boolean getPlayerAutoSellSetting(Player player, String item){
+        String uuid = player.getUniqueId().toString();
+        return Main.getDfiles().getPlayerData().getBoolean(uuid + ".autosell." + item, false);
     }
     
 }

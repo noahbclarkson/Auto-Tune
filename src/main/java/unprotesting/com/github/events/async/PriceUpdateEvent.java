@@ -1,4 +1,4 @@
-package unprotesting.com.github.events;
+package unprotesting.com.github.events.async;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -54,6 +54,9 @@ public class PriceUpdateEvent extends Event{
     private void updateItems(){
         ConcurrentHashMap<String, ItemData> ITEMS = Main.getCache().getITEMS();
         for (String item : ITEMS.keySet()){
+            if (Main.getDfiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getBoolean("locked")){
+                continue;
+            }
             ItemData data = ITEMS.get(item);
             double price = data.getPrice();
             Double[] buysell = loadAverageBuySellValue(item, price, false);

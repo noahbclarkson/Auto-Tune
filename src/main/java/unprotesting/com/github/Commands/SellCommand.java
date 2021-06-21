@@ -32,7 +32,7 @@ public class SellCommand implements CommandExecutor{
         ChestGui gui = new ChestGui(5, "Sell Panel");
         gui.setOnClose(event ->{
             for (ItemStack item : gui.getInventory().getStorageContents()){
-                FunctionsUtil.sellCustomItem(player, item);
+                FunctionsUtil.sellCustomItem(player, item, false);
             }
         });
         gui.show((HumanEntity)sender);

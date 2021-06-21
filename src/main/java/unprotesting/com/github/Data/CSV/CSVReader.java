@@ -21,7 +21,7 @@ public class CSVReader {
             }
             char firstChar = line.charAt(0);
             if (firstChar == percent){
-                String item = line.replaceAll("%", "").replaceAll(",", "");
+                String item = line.replace("%", "").replace(",", "");
                 String[] values = new String[4];
                 String[] output_values = new String[4];
                 while ((line = br.readLine()) != null){

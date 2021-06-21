@@ -11,6 +11,9 @@ name: Auto-Tune
 version: 0.13.0
 author: Unprotesting
 description: Automatic Economy Plugin
+softdepend:
+  - PlaceholderAPI
+  - EssentialsX
 depend: [Vault]
 api-version: 1.14
 website: https://github.com/Unprotesting/Auto-Tune

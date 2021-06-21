@@ -11,7 +11,7 @@ public class Config {
  @Getter
  @Setter
  private static boolean webServer, debugEnabled, checksumHeaderBypass, sellPriceDifferenceVariationEnabled, inflationEnabled, 
-                         autoSellEnabled, calculateGlobalGDP, tutorial, sendPlayerTopMoversOnJoin, dataTransactions, disableMaxBuysSells,
+                         tutorial, sendPlayerTopMoversOnJoin, dataTransactions, disableMaxBuysSells,
                           ignoreAFK, usePermissionsForShop, readFromCSV, enableEnchantments;
 
  @Getter
@@ -35,8 +35,6 @@ public class Config {
     public static void loadDefaults() {
 
         
-        Config.setAutoSellEnabled(Main.getDfiles().getConfig().getBoolean("auto-sell-enabled", true));
-        Config.setCalculateGlobalGDP(Main.getDfiles().getConfig().getBoolean("calculate-global-GDP", true));
         Config.setChecksumHeaderBypass(Main.getDfiles().getConfig().getBoolean("checksum-header-bypass", false));
         Config.setDataTransactions(Main.getDfiles().getConfig().getBoolean("data-transactions", false));
         Config.setDebugEnabled(Main.getDfiles().getConfig().getBoolean("debug-enabled", false));

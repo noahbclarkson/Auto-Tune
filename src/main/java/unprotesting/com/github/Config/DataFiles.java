@@ -13,17 +13,17 @@ public class DataFiles {
 
     @Getter
     private File[] files;
-    private final String[] filenames = {"config.yml", "shops.yml", "enchantments.yml", "playerdata.yml", "web/trade.html", "web/trade-short.html", "web/favicon.ico"};
+    private final String[] filenames = {"config.yml", "shops.yml", "enchantments.yml", "playerdata.yml", "messages.yml", "web/trade.html", "web/trade-short.html", "web/favicon.ico"};
     private YamlConfiguration[] configs;
 
     public DataFiles(File dataFolder){
-        this.files = new File[7];
-        this.configs = new YamlConfiguration[4];
-        for (int i = 0; i < 4; i++){
+        this.files = new File[8];
+        this.configs = new YamlConfiguration[5];
+        for (int i = 0; i < 5; i++){
             this.configs[i] = new YamlConfiguration();
         }
         int i = 0;
-        for (;i < 7; i++){
+        for (;i < 8; i++){
             File file = new File(dataFolder, filenames[i]);
             files[i] = file;
         }
@@ -31,7 +31,7 @@ public class DataFiles {
 
     public void loadConfigs(){
         try{
-            for (int i = 0; i < 4; i++){
+            for (int i = 0; i < 5; i++){
                 configs[i].load(this.files[i]);
             }
         }
@@ -68,6 +68,10 @@ public class DataFiles {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public YamlConfiguration getMessages(){
+        return this.configs[4];
     }
     
 }

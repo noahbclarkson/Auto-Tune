@@ -41,9 +41,6 @@ background: 'BLACK_STAINED_GLASS_PANE'
 ##  Message sent for players with no permission
 no-permission: '&eYou do not have permission to perform this command'
 
-##Enable player-automatic-selling
-auto-sell-enabled: true 
-
 ##  How often auto-sell updates in ticks
 ##  Info: Set this higher if few players use autosell
 ##  Info: Set it lower if many players use autosell

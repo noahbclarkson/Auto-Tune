@@ -23,7 +23,6 @@ public class EconomyFunctions {
           return false;
         }
         economy = rsp.getProvider();
-
         return economy != null;
     }
     

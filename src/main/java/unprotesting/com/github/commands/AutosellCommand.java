@@ -40,8 +40,7 @@ public class AutosellCommand implements CommandExecutor{
         int length = args.length;
         if (!(player.hasPermission("at.autosell") || player.isOp())){CommandUtil.noPermssion(player);return true;}
         if (length > 1){
-            player.sendMessage(ChatColor.RED + "Correct usage: /autosell <shop-section>");
-            return true;
+            return false;
         }
         if (length == 0){
             loadGUI(sender);
@@ -49,14 +48,13 @@ public class AutosellCommand implements CommandExecutor{
         }
         if (length == 1){
             for (Section section : Main.getCache().getSECTIONS()){
-                if (args[0].replaceAll("-", "").replaceAll(" ", "").equalsIgnoreCase(section.getName().replaceAll("-", "").replaceAll(" ", ""))){
+                if (args[0].replace("-", "").replace(" ", "").equalsIgnoreCase(section.getName().replace("-", "").replace(" ", ""))){
                     loadShopPane(sender, section);
                     return true;
                 }
             }
-            player.sendMessage(ChatColor.RED + "Correct usage: /<shop> <shop-section>");
         }
-        return true;
+        return false;
     }
 
     private void loadGUI(CommandSender sender){
@@ -162,10 +160,8 @@ public class AutosellCommand implements CommandExecutor{
         item.setItemMeta(meta);
         GuiItem gItem = new GuiItem(item, event ->{
             event.setCancelled(true);
-            int highest = Section.getHighest(Main.getCache().getSECTIONS());
-            int lines = (highest/9)+2;
             event.getWhoClicked().getOpenInventory().close();
-            loadSectionsPane(sender, lines);
+            loadGUI(sender);
         });
         output.addItem(gItem, 0, 0);
         return output;

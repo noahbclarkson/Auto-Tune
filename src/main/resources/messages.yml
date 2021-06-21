@@ -1,0 +1,91 @@
+
+# ░█████╗░██╗░░░██╗████████╗░█████╗░░░░░░░████████╗██╗░░░██╗███╗░░██╗███████╗
+# ██╔══██╗██║░░░██║╚══██╔══╝██╔══██╗░░░░░░╚══██╔══╝██║░░░██║████╗░██║██╔════╝
+# ███████║██║░░░██║░░░██║░░░██║░░██║█████╗░░░██║░░░██║░░░██║██╔██╗██║█████╗░░
+# ██╔══██║██║░░░██║░░░██║░░░██║░░██║╚════╝░░░██║░░░██║░░░██║██║╚████║██╔══╝░░
+# ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗
+# ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝
+
+##  Placeholders (Placeholder API must be installed for these to work)
+##  These placeholders can be used in other plugins
+##  %AT_GDP_GDP%, %AT_GDP_BALANCE%, %AT_GDP_DEBT%, %AT_GDP_LOSS%, 
+##  %AT_<ITEM>_PRICE%, %AT_<ITEM>_SELLPRICE%, %AT_<ITEM>_BUYSLEFT%, %AT_<ITEM>_SELLSLEFT%,
+##  %AT_<ENCHANTMENT>_PRICE%, %AT_<ITEM>_SELLPRICE%
+##  %AT_TOP_MOVERS_ITEM_<POSITION>%, %AT_TOP_MOVERS_CHANGE_<POSITION>%
+
+##  Local placeholders (Work without Placeholder API)
+##  These placeholders don't work outside of Auto-Tune.
+##  Look for "LOCAL-VARIABLES-ALLOWED, below".
+##  If a general placeholder is not working in game it may not be applicable for the environment
+##  %GENERAL_ITEM% - General placeholder for item-name
+##  %GENERAL_ITEM_PRICE% - General placeholder for an item price
+##  %GENERAL_ITEM_AMOUNT% - General placeholder for an item amount
+##  %GENERAL_ITEM_PRICEXAMOUNT% - General placeholder for an item-price*amount
+##  %GENERAL_ITEM_PRICE_SELL% - General placeholder for an item sell-price
+##  %GENERAL_ITEM_PRICEXAMOUNT_SELL% - General placeholder for an item-sell-price*amount
+##  %GENERAL_ENCHANTMENT% - General placeholder for enchantment-name
+##  %GENERAL_ENCHANTMENT_LEVEL% - General placeholder for enchantment level.
+##  %GENERAL_ENCHANTMENT_PRICE% - General placeholder for an enchantment price
+
+##  Buying items
+##  LOCAL-VARIABLES-ALLOWED
+not-enough-money: "&cYou need %GENERAL_ITEM_PRICE% to purchase this item."
+not-enough-moneyxamount: "&cYou need %GENERAL_ITEM_PRICEXAMOUNT% to purchase x%GENERAL_ITEM_AMOUNT% of this item."
+run-out-of-buys: "&cYou have run out of buys for this item."
+not-enough-space: "&cNot enough space in inventory."
+shop-purchase: "&aPurchased x%GENERAL_ITEM_AMOUNT% of &6%GENERAL_ITEM% &afor %GENERAL_ITEM_PRICEXAMOUNT%."
+
+##  Selling items
+##  LOCAL-VARIABLES-ALLOWED
+dont-have-item: "&cYou do not have this item."
+run-out-of-sells: "&cYou have run out of sells for this item."
+shop-sell: "&aSold x%GENERAL_ITEM_AMOUNT% of &6%GENERAL_ITEM% &afor %GENERAL_ITEM_PRICEXAMOUNT%_SELL."
+
+##  Buying enchantments
+##  LOCAL-VARIABLES-ALLOWED
+hold-item-in-hand: "&cHold the item you want to enchant in your hand!"
+not-enough-money-enchantments: "&cYou need %GENERAL_ENCHANTMENT_PRICE% to purchase this enchantment."
+enchantment-error: "&cCannot enchant %GENERAL_ITEM% with enchantment %GENERAL_ENCHANTMENT% of level %GENERAL_ENCHANTMENT_LEVEL%"
+enchantment-purchase: "&aPurchased &6%GENERAL_ENCHANTMENT% &afor %GENERAL_ENCHANTMENT_PRICE%."
+
+##  Selling custom items
+##  LOCAL-VARIABLES-ALLOWED
+cannot-sell-custom: "&cCannot sell %GENERAL_ITEM%."
+sell-custom-item: "&aSold x%GENERAL_ITEM_AMOUNT% of &6%GENERAL_ITEM% &afor %GENERAL_ITEM_PRICEXAMOUNT_SELL%."
+
+##  Autoselling items
+##  LOCAL-VARIABLES-ALLOWED
+##  Use %GENERAL_ITEM_PRICE% to represent the money given to the player on a profit update
+autosell-profit-update: "&6Your items were sold and %GENERAL_ITEM_PRICE% has been added to your account."
+
+##  Tutorial messages
+##  These messages are displayed in this order from a player joining
+tutorial:
+  - '&6Do /shop to open the shop and start exchanging items.'
+  - '&6Do /sell to sell items quickly.'
+  - '&6Control the market! Your purchases rise prices.'
+  - '&6Control the market! Your sales lower prices.'
+  - '&6Do /autosell to sell items automatically.'
+  - '&6Do /buy to purchase custom items.'
+  - '&6Do /trade to view item prices over time.'
+  - '&6Do /loan <amount> to loan money. Do /loan to view your loans.'
+  - '&6Do /gdp to view the server GDP info.'
+  - '&6Inflation means prices for items generally rise. Put your money in assets (items) to make more money.'
+  - '&6Watch the prices of items! They can go up and down.'
+  - '&6There are big profits to be made when prices change..'
+  - '&6Loan money to take leverage of the rise in prices.'
+  - '&6Sell items that have high demand to make the most money selling.'
+  - '&6Using /autosell allows you to make money quickly and easily'
+  - '&6Using /loan to loan money allows you to invest to make even more money.'
+  - '&6Viewing prices with /trade allows you to judge the markets.'
+
+##  Join messages
+##  These message are displayed when a player joins
+on-join:
+  - '&6 GDP: &a%AT_GDP_GDP% &0| &6Server-Balance: &a%AT_GDP_BALANCE%'
+  - '&0|&a%AT_TOP_MOVERS_CHANGE_0%&0| &a%AT_TOP_MOVERS_ITEM_0%'
+  - '&0|&a%AT_TOP_MOVERS_CHANGE_1%&0| &a%AT_TOP_MOVERS_ITEM_1%'
+  - '&0|&a%AT_TOP_MOVERS_CHANGE_2%&0| &a%AT_TOP_MOVERS_ITEM_2%'
+  - '&0|&4%AT_TOP_MOVERS_CHANGE_-0%&0| &4%AT_TOP_MOVERS_ITEM_-0%'
+  - '&0|&4%AT_TOP_MOVERS_CHANGE_-1%&0| &4%AT_TOP_MOVERS_ITEM_-1%'
+  - '&0|&4%AT_TOP_MOVERS_CHANGE_-2%&0| &4%AT_TOP_MOVERS_ITEM_-2%'

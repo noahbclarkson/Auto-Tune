@@ -1,5 +1,7 @@
 package unprotesting.com.github.logging;
 
+import unprotesting.com.github.config.Config;
+
 //  Global logging functions
 
 public class Logging {
@@ -20,7 +22,9 @@ public class Logging {
     }
 
     public static void debug(String input){
-        System.out.println("Auto-Tune-DEBUG: " + input);
+        if (Config.isDebugEnabled()){
+            System.out.println("Auto-Tune-DEBUG: " + input);
+        }
     }
 
     public static void error(int error){

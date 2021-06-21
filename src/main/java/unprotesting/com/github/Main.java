@@ -23,9 +23,12 @@ import unprotesting.com.github.data.ephemeral.LocalDataCache;
 import unprotesting.com.github.data.ephemeral.data.AutosellData;
 import unprotesting.com.github.data.persistent.Database;
 import unprotesting.com.github.data.persistent.TimePeriod;
+import unprotesting.com.github.economy.EconomyFunctions;
 import unprotesting.com.github.events.async.*;
 import unprotesting.com.github.events.sync.*;
 import unprotesting.com.github.localServer.LocalServer;
+import unprotesting.com.github.logging.Logging;
+import unprotesting.com.github.util.AutoTunePlaceholderExpansion;
 
 /*  
     Main initialization file for Auto-Tune
@@ -49,9 +52,11 @@ public class Main extends JavaPlugin{
     @Getter @Setter
     private static String[] serverIPStrings;
     @Getter @Setter
-    private static boolean correctAPIKey = false;
+    private static boolean correctAPIKey = false,
+                            placeholderAPI = false;
     @Getter @Setter
     private static AutosellData autosellData;
+
 
     public static LocalServer server;
 
@@ -78,6 +83,7 @@ public class Main extends JavaPlugin{
         initCache();
         setupCommands();
         setupEvents();
+        initPlaceholderAPI();
         setupServer();
         setAutosellData(new AutosellData());
     }
@@ -98,12 +104,16 @@ public class Main extends JavaPlugin{
     }
 
     private void checkEconomy(){
-
+        if (!EconomyFunctions.setupLocalEconomy(this.getServer())){
+            Logging.error(1);
+            closePlugin();
+            return;
+        }
     }
 
     private void setupDataFiles(){
         dfiles = new DataFiles(getDataFolder());
-        for (int i = 0; i < 7; i++){
+        for (int i = 0; i < 8; i++){
             if (!dfiles.getFiles()[i].exists()){
                 saveResource(dfiles.getFileNames()[i], false);
             }
@@ -154,11 +164,16 @@ public class Main extends JavaPlugin{
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
          -> Bukkit.getPluginManager().callEvent(new AutosellProfitUpdateEvent(true)),
            Config.getAutoSellProfitUpdatePeriod(), Config.getAutoSellProfitUpdatePeriod());
+
+        Bukkit.getServer().getPluginManager().registerEvents(new AutoTuneJoinMessageEventHandler(), this);
         
         //  Synchronous
         Bukkit.getScheduler().runTaskTimer(this, ()
          -> Bukkit.getPluginManager().callEvent(new AutosellUpdateEvent()),
            Config.getAutoSellUpdatePeriod(), Config.getSellPriceVariationUpdatePeriod());
+        Bukkit.getScheduler().runTaskTimer(this, ()
+         -> Bukkit.getPluginManager().callEvent(new TutorialSendEvent()),
+           Config.getTutorialMessagePeriod()*20, Config.getTutorialMessagePeriod()*20);
     }
 
     private void getEssentials(){
@@ -170,6 +185,14 @@ public class Main extends JavaPlugin{
 
     public static void closePlugin(){
         getINSTANCE().getServer().getPluginManager().disablePlugin(getINSTANCE());
+    }
+
+    private void initPlaceholderAPI(){
+        if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null){
+            Logging.debug("PlaceholderAPI found");
+            setPlaceholderAPI(true);
+            new AutoTunePlaceholderExpansion().register();
+        }
     }
     
 }

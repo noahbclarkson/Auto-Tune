@@ -12,6 +12,7 @@ repositories {
     maven { url 'https://jitpack.io' }
     maven { url 'https://ci.ender.zone/plugin/repository/everything/' }
     maven { url 'https://papermc.io/repo/repository/maven-public/' }
+    maven { url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
 }
 
 dependencies {
@@ -24,6 +25,7 @@ dependencies {
     compileOnly "com.github.MilkBowl:VaultAPI:1.7"
     compileOnly 'org.projectlombok:lombok:1.18.20'
     compileOnly 'net.ess3:EssentialsX:2.18.2'
+    compileOnly 'me.clip:placeholderapi:2.10.9'
 
     annotationProcessor 'org.projectlombok:lombok:1.18.20'
 

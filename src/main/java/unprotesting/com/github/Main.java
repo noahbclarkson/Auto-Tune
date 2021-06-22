@@ -2,6 +2,7 @@ package unprotesting.com.github;
 
 import java.io.IOException;
 
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -191,16 +192,21 @@ public class Main extends JavaPlugin{
         }
     }
 
-    public static void closePlugin(){
-        getINSTANCE().getServer().getPluginManager().disablePlugin(getINSTANCE());
-    }
-
     private void initPlaceholderAPI(){
         if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null){
             Logging.debug("PlaceholderAPI found");
             setPlaceholderAPI(true);
             new AutoTunePlaceholderExpansion().register();
         }
+    }
+
+    private void initBStats(){
+        int pluginId = 9687;
+        new Metrics(getINSTANCE(), pluginId);
+    }
+
+    public static void closePlugin(){
+        getINSTANCE().getServer().getPluginManager().disablePlugin(getINSTANCE());
     }
     
 }

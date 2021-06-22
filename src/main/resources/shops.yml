@@ -46,16 +46,18 @@ sections:
     background: 'GRAY_STAINED_GLASS_PANE'
     back-menu-button-enabled: true
 
-##  Set the default / starting prices for the items you want available in the shop
-##  Info: Make sure you put a decimal point and two digits to create a double for the shop algorithim to accept and parse to a price-value
-##  Info: Most of these values will be almost useless once the economy has started, to use these values again delete the data.db file
-##  Info: Material names are available here: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
-##  Info: To remove an item use /at remove <item-name> to remove it from the global map
-##  Options: 'price: <double>' set the defualt starting price of the item
+##  Set the default / starting prices for the items you want available in the shop.
+##  Info: Make sure you put a decimal point and two digits to create a double for the shop algorithim to accept and parse to a price-value.
+##  Info: Most of these values will be almost useless once the economy has started, to use these values again delete the data.db file.
+##  Info: Material names are available here: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html.
+##  Info: To remove an item use /at remove <item-name> to remove it from the global map.
+##  Options: 'price: <double>' set the defualt starting price of the item.
 ##  Options: 'locked: <boolean>' set the price to be locked or variable (variable by default).
 ##  Options: 'sell-difference: <double>' set a custom sell-price-difference (default set in config).
-##  Options: 'max-buy': <integer> set a maximum quantity that can be purchased in a time-period
-##  Options: 'max-sell': <integer> set a maximum quantity that can be sold in a time-period
+##  Options: 'max-buy': <integer> set a maximum quantity that can be purchased in a time-period.
+##  Options: 'max-sell': <integer> set a maximum quantity that can be sold in a time-period.
+##  Options: 'max-volatility: <double>' set the maximum volatility per time-period for this individual item.
+##  Options: 'min-volatility: <double>' set the minimum volatility per time-period for this individual item.
 
 
   ##  Example:
@@ -65,6 +67,8 @@ sections:
   ##    sell-difference: 0.0    <- Example of a set sell-difference item
   ##    max-buy: 10       <- Only 10 items can be bought each time-period - you can increase this on large servers
   ##    max-sell: 12       <- Only 12 items can be sold each time-period - you can increase this on large servers
+  ##    max-volatility: 0.25       <- Example of an item with a lower max-volatility
+  ##    min-volatility: 0.05       <- Example of an item with a higher min-volatility
 
 shops:
   COAL:

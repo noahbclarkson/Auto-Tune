@@ -85,11 +85,19 @@ public class PriceUpdateEvent extends Event{
             Double[] buysell = loadAverageBuySellValue(item, price, true);
             Double newprice;
             Double total = buysell[0]+buysell[1];
+            Double max_vol = Config.getBasicMaxVariableVolatility();
+            Double min_vol = Config.getBasicMinVariableVolatility();
+            if (Main.getDfiles().getShops().getConfigurationSection("shop." + item).contains("max-volatility")){
+                max_vol = Main.getDfiles().getShops().getConfigurationSection("shop." + item).getDouble("max-volatility");
+            }
+            if (Main.getDfiles().getShops().getConfigurationSection("shop." + item).contains("min-volatility")){
+                min_vol = Main.getDfiles().getShops().getConfigurationSection("shop." + item).getDouble("min-volatility");
+            }
             if (buysell[0] > buysell[1]){
-                newprice = price + price*Config.getBasicMaxVariableVolatility()*0.01*(buysell[0]/total) + price*0.01*Config.getBasicMinVariableVolatility();
+                newprice = price + price*max_vol*0.01*(buysell[0]/total) + price*0.01*min_vol;
             }
             else if(buysell[0] < buysell[1]){
-                newprice = price - price*Config.getBasicMaxVariableVolatility()*0.01*(buysell[1]/total) - price*0.01*Config.getBasicMinVariableVolatility();
+                newprice = price - price*max_vol*0.01*(buysell[1]/total) - price*0.01*min_vol;
             }
             else{
                 newprice = price;

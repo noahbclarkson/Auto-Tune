@@ -6,7 +6,6 @@
 # ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗
 # ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝
 
-
 ##  -- General Settings --  ##
 
 ##  API key given on purchase/signup
@@ -37,9 +36,6 @@ menu-title: 'Shop'
 
 ##  GUI Shop Menu background
 background: 'BLACK_STAINED_GLASS_PANE'
-
-##  Message sent for players with no permission
-no-permission: '&eYou do not have permission to perform this command'
 
 ##  How often auto-sell updates in ticks
 ##  Info: Set this higher if few players use autosell
@@ -75,14 +71,12 @@ min-volatility: 0.025
 data-selection-m: 0.05
 
 ##  'z' in equation: y=m(x^z)+c
-data-selection-z: 1.6
+data-selection-z: 1.75
 
 ##  'c' in equation: y=m(x^z)+c
-data-selection-c: 1.05
-
+data-selection-c: 1.005
 
 ##  -- Other Econonomy Settings --
-
 
 ##  Minimum players needed, to be online, for prices to update
 ##  Info: It is recommended to keep this above 0

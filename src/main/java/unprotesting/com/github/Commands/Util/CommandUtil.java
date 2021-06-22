@@ -19,6 +19,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import unprotesting.com.github.Main;
 import unprotesting.com.github.config.Config;
+import unprotesting.com.github.data.ephemeral.data.MessagesData;
 import unprotesting.com.github.logging.Logging;
 
 public class CommandUtil {
@@ -28,7 +29,7 @@ public class CommandUtil {
         return true;
     }
 
-    public static void noPermssion(Player p){p.sendMessage(Config.getNoPermission());}
+    public static void noPermssion(Player p){p.sendMessage(MessagesData.getNoPermission(p));}
 
     public static Player closeInventory(CommandSender sender){
         Player player = (Player)sender;

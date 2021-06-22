@@ -22,8 +22,8 @@ public class Config {
 
  @Getter
  @Setter
- private static String menuTitle, noPermission, apiKey, email, inflationMethod,
-                        currencySymbol, economyShopConfig, dataLocation, background, numberFormat;
+ private static String menuTitle, apiKey, email, inflationMethod, currencySymbol,
+                        economyShopConfig, dataLocation, background, numberFormat;
 
  @Getter
  @Setter
@@ -71,7 +71,6 @@ public class Config {
         Config.setEmail(Main.getDfiles().getConfig().getString("email", "xyz@gmail.com"));
         Config.setInflationMethod(Main.getDfiles().getConfig().getString("inflation-method", "Mixed"));
         Config.setMenuTitle(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("menu-title", "Auto-Tune Shop")));
-        Config.setNoPermission(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("no-permission", "You do not have permission to perform this command")));
         Config.setNumberFormat(Main.getDfiles().getConfig().getString("number-format", "###,###,###,##0.00"));
 
 

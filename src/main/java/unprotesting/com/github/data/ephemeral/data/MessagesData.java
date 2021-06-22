@@ -82,7 +82,13 @@ public class MessagesData {
         tutorialData.put(player_uuid, tutorialData.get(player_uuid)+1);
     }
 
-
+    public static String getNoPermission(Player player){
+        String base = Main.getDfiles().getMessages().getString("no-permission");
+        if (Main.isPlaceholderAPI()){
+            base = PlaceholderAPI.setPlaceholders(player, base);
+        }
+        return base;
+    }
 
     public static String getPlayerBuyItemString(String message, Player player, String item, double i_price, int i_amount){
         String base = Main.getDfiles().getMessages().getString(message);

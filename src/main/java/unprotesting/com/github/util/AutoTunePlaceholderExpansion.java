@@ -17,7 +17,7 @@ import unprotesting.com.github.config.Config;
 
 public class AutoTunePlaceholderExpansion extends PlaceholderExpansion{
 
-    JavaPlugin plugin;
+    private JavaPlugin plugin;
 
     public AutoTunePlaceholderExpansion(){
         this.plugin = Main.getINSTANCE();

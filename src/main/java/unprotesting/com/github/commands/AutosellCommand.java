@@ -6,9 +6,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.github.stefvanschie.inventoryframework.gui.GuiItem;
-import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
-import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
-import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
 import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 
 import org.bukkit.ChatColor;
@@ -17,7 +14,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -25,9 +21,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.commands.util.CommandUtil;
+import unprotesting.com.github.commands.util.ShopFormat;
 import unprotesting.com.github.config.Config;
 
-public class AutosellCommand implements CommandExecutor{
+public class AutosellCommand extends ShopFormat implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String autosell, String[] args) {
@@ -57,16 +54,7 @@ public class AutosellCommand implements CommandExecutor{
         return false;
     }
 
-    private void loadGUI(CommandSender sender){
-        int highest = Section.getHighest(Main.getCache().getSECTIONS());
-        int lines = (highest/9)+2;
-        ChestGui gui = new ChestGui(lines, Config.getMenuTitle());
-        gui = CommandUtil.getBackground(gui, lines, Config.getBackground());
-        gui.addPane(loadSectionsPane(sender, lines));
-        gui.show((HumanEntity)(sender));
-    }
-
-    private StaticPane loadSectionsPane(CommandSender sender, int lines){
+    public StaticPane loadSectionsPane(CommandSender sender, int lines){
         StaticPane navigationPane = new StaticPane(0, 0, 9, lines);
         for (Section section : Main.getCache().getSECTIONS()){
             if (section.isEnchantmentSection()){
@@ -88,18 +76,7 @@ public class AutosellCommand implements CommandExecutor{
         return navigationPane;
     }
 
-    private void loadShopPane(CommandSender sender, Section section){
-        CommandUtil.closeInventory(sender);
-        ChestGui gui = new ChestGui(6, Config.getMenuTitle());
-        PaginatedPane pages = new PaginatedPane(0, 0, 9, 6);
-        List<GuiItem> items = getListFromSection(section, sender);
-        List<OutlinePane> panes = new ArrayList<OutlinePane>();
-        CommandUtil.loadGuiItemsIntoPane(items, gui, pages, panes, section.getBackground(), sender);
-        gui.addPane(generateMenuBackPane(sender));
-        gui.update();
-    }
-
-    private List<GuiItem> getListFromSection(Section section, CommandSender sender){
+    public List<GuiItem> getListFromSection(Section section, CommandSender sender){
         Player player = (Player)sender;
         List<GuiItem> output = new ArrayList<GuiItem>();
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
@@ -150,23 +127,5 @@ public class AutosellCommand implements CommandExecutor{
             config.set(uuid + ".autosell." + item, !setting);
         }
     }
-
-    private StaticPane generateMenuBackPane(CommandSender sender){
-        StaticPane output = new StaticPane(0, 0, 1, 1);
-        ItemStack item = new ItemStack(Material.ARROW);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.GRAY + "MENU");
-        meta.setLore(Arrays.asList(new String[]{ChatColor.WHITE + "Click to go back to the main menu"}));
-        item.setItemMeta(meta);
-        GuiItem gItem = new GuiItem(item, event ->{
-            event.setCancelled(true);
-            event.getWhoClicked().getOpenInventory().close();
-            loadGUI(sender);
-        });
-        output.addItem(gItem, 0, 0);
-        return output;
-    }
-
-    
     
 }

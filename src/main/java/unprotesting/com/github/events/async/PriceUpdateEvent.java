@@ -107,7 +107,7 @@ public class PriceUpdateEvent extends Event{
         double final_y = 1;
         double final_buys = 0;
         double final_sells = 0;
-        for (;x < 100000;){
+        for (;x < 1000000;){
             double y = Config.getDataSelectionM() * Math.pow(x, Config.getDataSelectionZ()) + Config.getDataSelectionC();
             y = Math.round(y);
             if (y > size){

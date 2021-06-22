@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'unprotesting.com.github'
-version '0.13.0-pre-release-4'
+version '0.13.0-pre-release-5'
 
 repositories {
     mavenCentral()

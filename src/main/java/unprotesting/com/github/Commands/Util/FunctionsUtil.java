@@ -127,6 +127,13 @@ public class FunctionsUtil {
         if (item == null){
             return;
         }
+        if (!Main.getCache().getITEMS().contains(item.getType().toString()) || item.getAmount() < 1){
+            if (!autosell){
+                player.sendMessage(MessagesData.getPlayerSellItemString("cannot-sell-custom", player, item.getType().toString(), 0.0, 0, 0.0));
+                player.getInventory().addItem(item);
+            }
+            return;
+        }
         double ratio = 1;
         double fprice = 0;
         Map<Enchantment, Integer> enchantments = null;
@@ -176,7 +183,7 @@ public class FunctionsUtil {
             data.add(player.getUniqueId().toString(), item.getAmount()*fprice);
             Main.setAutosellData(data);
         }
-        Main.getCache().addSale(player, item.getType().toString(), Main.getCache().getItemPrice(item.getType().toString(), false), item.getAmount(), SalePositionType.SELL);
+        Main.getCache().addSale(player, item.getType().toString(), Main.getCache().getItemPrice(item.getType().toString(), true), item.getAmount(), SalePositionType.SELL);
         for (Enchantment ench : item.getEnchantments().keySet()){
             Main.getCache().addSale(player, ench.getName(), Main.getCache().getEnchantmentPrice(ench.toString(), true), item.getEnchantmentLevel(ench), SalePositionType.ESELL);
         }

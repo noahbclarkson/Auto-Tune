@@ -89,7 +89,7 @@ public class LocalDataCache {
                     TransactionData btdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BI);
                     this.TRANSACTIONS.add(btdata);
                     this.NEW_TRANSACTIONS.add(btdata);
-                    this.GDPDATA.increaseGDP((amount*price));
+                    this.GDPDATA.increaseGDP((amount*price)/2);
                     break;
                 case SELL:
                     ItemData sdata = this.ITEMS.get(item);
@@ -98,7 +98,7 @@ public class LocalDataCache {
                     TransactionData stdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SI);
                     this.TRANSACTIONS.add(stdata);
                     this.NEW_TRANSACTIONS.add(stdata);
-                    this.GDPDATA.increaseGDP((amount*price));
+                    this.GDPDATA.increaseGDP((amount*price)/2);
                     this.GDPDATA.increaseLoss((amount*getItemPrice(item, false))-(amount*price));
                     break;
                 case EBUY:
@@ -108,7 +108,7 @@ public class LocalDataCache {
                     TransactionData betdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BE);
                     this.TRANSACTIONS.add(betdata);
                     this.NEW_TRANSACTIONS.add(betdata);
-                    this.GDPDATA.increaseGDP((amount*price));
+                    this.GDPDATA.increaseGDP((amount*price)/2);
                     break;
                 case ESELL:
                     EnchantmentData esdata = this.ENCHANTMENTS.get(item);
@@ -117,7 +117,7 @@ public class LocalDataCache {
                     TransactionData setdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SE);
                     this.TRANSACTIONS.add(setdata);
                     this.NEW_TRANSACTIONS.add(setdata);
-                    this.GDPDATA.increaseGDP((amount*price));
+                    this.GDPDATA.increaseGDP((amount*price)/2);
                     this.GDPDATA.increaseLoss((amount*getOverallEnchantmentPrice(item,
                      getItemPrice(player.getInventory().getItemInMainHand().getType().toString(), false), false)-(amount*price)));
                     break;

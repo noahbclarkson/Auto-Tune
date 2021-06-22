@@ -14,7 +14,8 @@ public class LoanTimePeriod extends LocalDateTimeArrayUtilizer implements Serial
 
     @Getter
     private double[] values,
-                     interest_rates;
+                     interest_rates,
+                     base_values;
     @Getter
     private String[] players;
     @Getter
@@ -24,10 +25,6 @@ public class LoanTimePeriod extends LocalDateTimeArrayUtilizer implements Serial
     public LoanTimePeriod(){
         int size = Main.getCache().getNEW_LOANS().size();
         init(size);
-        this.values = new double[size];
-        this.interest_rates = new double[size];
-        this.time = new int[size][6];
-        this.players = new String[size];
         int i = 0;
         for (LoanData data : Main.getCache().getNEW_LOANS()){
             setVars(i, data);
@@ -41,6 +38,7 @@ public class LoanTimePeriod extends LocalDateTimeArrayUtilizer implements Serial
         this.players[pos] = data.getPlayer();
         LocalDateTime date = data.getDate();
         this.time[pos] = dateToIntArray(date);
+        this.values[pos] = data.getBase_value();
     }
 
 
@@ -49,6 +47,7 @@ public class LoanTimePeriod extends LocalDateTimeArrayUtilizer implements Serial
         this.interest_rates = new double[size];
         this.players = new String[size];
         this.time = new int[size][6];
+        this.base_values = new double[size];
     }
     
 }

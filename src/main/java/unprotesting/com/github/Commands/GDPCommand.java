@@ -38,14 +38,15 @@ public class GDPCommand implements CommandExecutor{
 
     private void openGDPGui(CommandSender sender){
         CommandUtil.closeInventory(sender);
-        ChestGui GUI = new ChestGui(3, "GDP and Economy Info");
-        StaticPane pane = new StaticPane(9, 3);
+        ChestGui GUI = new ChestGui(5, "GDP and Economy Info");
+        StaticPane pane = new StaticPane(9, 5);
         Main.getCache().getGDPDATA().updateBalance();
         Main.getCache().getGDPDATA().updateDebt();
-        pane.addItem(getGDPGuiItem(), 1, 1);
-        pane.addItem(getBalanceGuiItem(), 3, 1);
-        pane.addItem(getDebtGuiItem(), 5, 1);
-        pane.addItem(getLossGuiItem(), 7, 1);
+        pane.addItem(getGDPGuiItem(), 3, 1);
+        pane.addItem(getBalanceGuiItem(), 5, 1);
+        pane.addItem(getDebtGuiItem(), 2, 1);
+        pane.addItem(getLossGuiItem(), 4, 1);
+        pane.addItem(getInflationGuiItem(), 6, 1);
         GUI.addPane(pane);
         GUI.show((HumanEntity) sender);
     }
@@ -136,5 +137,25 @@ public class GDPCommand implements CommandExecutor{
         });
         return gItem;
     }
+
+    private GuiItem getInflationGuiItem(){
+        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
+        ItemStack item = new ItemStack(Material.BAMBOO);
+        ItemMeta meta = item.getItemMeta();
+        double inflation = Main.getCache().getGDPDATA().getInflation();
+        meta.setDisplayName(ChatColor.AQUA + "Inflation");
+        meta.setLore(Arrays.asList(new String[]{
+            ChatColor.GOLD + "-> Inflation: " + Config.getCurrencySymbol() + df.format(inflation) + ".",
+            ChatColor.WHITE + "-> Inflation is the average change",
+            ChatColor.WHITE + "in prices in the last 24 hours.",
+        }));
+        item.setItemMeta(meta);
+        GuiItem gItem = new GuiItem(item, event ->{
+            event.setCancelled(true);
+        });
+        return gItem;
+    }
+
+
     
 }

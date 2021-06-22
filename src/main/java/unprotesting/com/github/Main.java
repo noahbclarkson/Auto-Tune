@@ -91,6 +91,7 @@ public class Main extends JavaPlugin{
         setupServer();
         setAutosellData(new AutosellData());
         setMESSAGES(new MessagesData());
+        initBStats();
     }
     
     public static void updateTimePeriod(){

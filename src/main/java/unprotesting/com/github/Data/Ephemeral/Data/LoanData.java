@@ -24,7 +24,8 @@ public class LoanData extends LocalDateTimeArrayUtilizer implements Comparable<L
     private LocalDateTime date;
     @Getter @Setter
     private Double value,
-                   interest_rate;
+                   interest_rate,
+                   base_value;
     @Getter
     private String player;
 
@@ -34,6 +35,7 @@ public class LoanData extends LocalDateTimeArrayUtilizer implements Comparable<L
         this.interest_rate = interest_rate;
         this.value = value;
         this.player = player_uuid;
+        this.base_value = value;
     }
 
     //  Create new loan data using previous persistent data
@@ -42,6 +44,7 @@ public class LoanData extends LocalDateTimeArrayUtilizer implements Comparable<L
         this.interest_rate = interest_rate;
         this.value = value;
         this.player = player_uuid;
+        this.base_value = value;
     }
 
     @Override
@@ -66,6 +69,9 @@ public class LoanData extends LocalDateTimeArrayUtilizer implements Comparable<L
         }
         Main.getCache().getLOANS().remove(this);
         Main.getCache().getNEW_LOANS().remove(this);
+        GDPData data = Main.getCache().getGDPDATA();
+        data.increaseLoss(this.value-this.base_value);
+        Main.getCache().setGDPDATA(data);
         return true;
     }
 

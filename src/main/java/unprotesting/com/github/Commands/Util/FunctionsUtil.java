@@ -134,6 +134,11 @@ public class FunctionsUtil {
             }
             return;
         }
+        if (Main.getCache().getSellsLeft(item.getType().toString(), player) < item.getAmount()){
+            player.sendMessage(MessagesData.getPlayerSellItemString("run-out-of-sells", player, item.getType().toString(), 0.0, item.getAmount(), 0.0));
+            player.getInventory().addItem(item);
+            return;
+        }
         double ratio = 1;
         double fprice = 0;
         Map<Enchantment, Integer> enchantments = null;

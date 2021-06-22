@@ -51,7 +51,7 @@ public class LocalDataCache {
     private ConcurrentHashMap<String, MaxBuySellData> MAX_PURCHASES;
     @Getter
     private ConcurrentHashMap<String, Double> PERCENTAGE_CHANGES;
-    @Getter
+    @Getter @Setter
     private GDPData GDPDATA;
     @Getter
     private EconomyInfoData ECONOMYINFO;
@@ -216,6 +216,9 @@ public class LocalDataCache {
     }
 
     public int getBuysLeft(String item, Player player){
+        if (Config.isDisableMaxBuysSells()){
+            return 9999;
+        }
         PlayerSaleData pdata = PLAYER_SALES.get(player.getUniqueId());
         Integer max;
         try{
@@ -240,6 +243,9 @@ public class LocalDataCache {
     }
 
     public int getSellsLeft(String item, Player player){
+        if (Config.isDisableMaxBuysSells()){
+            return 9999;
+        }
         PlayerSaleData pdata = PLAYER_SALES.get(player.getUniqueId());
         Integer max;
         try{
@@ -265,10 +271,7 @@ public class LocalDataCache {
 
     public String getPChangeString(String item){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
-        Double change = this.PERCENTAGE_CHANGES.get(item);
-        if (change == null){
-            return (ChatColor.GRAY + "%" + 0.0);
-        }
+        Double change = Double.parseDouble(df.format(this.PERCENTAGE_CHANGES.get(item)));
         if (change < 0){
             return (ChatColor.RED + "%" + df.format(change));
         }
@@ -453,11 +456,11 @@ public class LocalDataCache {
 
     private void loadGDPDataFromData(){
         if (size < 1){
-            this.GDPDATA = new GDPData(0, 0, 0, 0, 0);
+            this.GDPDATA = new GDPData(0, 0, 0, 0, 0, 0);
             return;
         }
         GDPTimePeriod GTP = Main.getDatabase().map.get(size-1).getGtp();
-        this.GDPDATA = new GDPData(GTP.getGDP(), GTP.getBalance(), GTP.getLoss(), GTP.getDebt(), GTP.getPlayerCount());
+        this.GDPDATA = new GDPData(GTP.getGDP(), GTP.getBalance(), GTP.getLoss(), GTP.getDebt(), GTP.getInflation(), GTP.getPlayerCount());
     }
 
     private void loadEconomyInfoDataFromFile(){

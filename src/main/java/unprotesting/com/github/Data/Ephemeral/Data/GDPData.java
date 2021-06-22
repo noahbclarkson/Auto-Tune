@@ -13,16 +13,18 @@ public class GDPData {
     private double GDP,
                    balance,
                    debt, 
-                   loss;
+                   loss,
+                   inflation;
     @Getter
     private int playerCount;
 
-    public GDPData(double GDP, double balance, double loss, double debt, int playerCount){
+    public GDPData(double GDP, double balance, double loss, double debt, double inflation, int playerCount){
         this.GDP = GDP;
         this.loss = loss;
         this.balance = balance;
         this.playerCount = playerCount;
         this.debt = debt;
+        this.inflation = inflation;
     }
 
     public void increaseGDP(double d){
@@ -57,6 +59,16 @@ public class GDPData {
             server_debt += data.getValue();
         }
         this.debt = server_debt;
+    }
+
+    public void updateInflation(){
+        double inflation_total = 0.0;
+        int i = 0;
+        for (String str : Main.getCache().getPERCENTAGE_CHANGES().keySet()){
+            inflation_total += Main.getCache().getPERCENTAGE_CHANGES().get(str);
+            i++;
+        }
+        this.inflation = (inflation_total/i);
     }
     
 }

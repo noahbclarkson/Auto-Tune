@@ -20,10 +20,6 @@ website: https://github.com/Unprotesting/Auto-Tune
 prefix: '[AUTO-TUNE]'
 api: ""
 commands:
-    at:
-      description: Auto-Tune Command.
-      usage: /<at> <login|increase|decrease|remove|update>
-      aliases: [autotune]
     trade:
       description: Trade Online with other players.
       usage: /<trade> 
@@ -43,8 +39,6 @@ commands:
     gdp:
       description: View GDP info
       usage: /GDP
-    atconfig:
-      description: View and change plugin config settings
     buy:
       description: Buy items not available in the shop
       aliases: [purchase]
@@ -52,51 +46,36 @@ commands:
       description: View player transactions
       usage: /transactions <page-no> | /transactions all <page-no> | /transactions <player-name> <page-no>
 permssions:
-  at.help:
-    description: Displays Auto-Tune help information
-    default: true
-  at.login: 
-    description: Login to an Auto-Tune account |(active soon)|
-  at.shop:
-    description: Open the GUI shop
-    default: true
-  at.sell:
-    description: Open the sell GUI
-    default: true
   at.autosell:
-    description: Open the Auto-Sell GUI and Auto-Sell
+    description: Open the auto-sell GUI and use automatic selling.
+    default: true
+  at.gdp:
+    description: View GDP and other server info.
     default: true
   at.loan:
-    description: Loan money from the bank
+    description: Loan money from the bank and view loans.
     default: true
   at.loan.other:
-    description: View and interact with other players loans
-  at.increase:
-    description: Increase price of an item
-  at.decrease:
-    description: Decrease price of an item
-  at.remove:
-    description: Remove an item from the data.db map
-  at.update:
-    description: Update item price data
-  at.gdp:
-    description: View GDP info
+    description: View and interact with other players loans.
+    default: false
+  at.sell:
+    description: Open the sell GUI and sell items.
     default: true
-  at.gdp.reset:
-    description: Reset GDP to 0
-  at.atconfig:
-    description: View and change plugin config settings
-  at.tutorial:
-    description: Allow players to view tutorial messages
+  at.shop:
+    description: Open the GUI shop to buy/sell items.
     default: true
-  at.buy:
-    description: Allow players to purchase custom items
+  at.trade:
+    description: Access the integrated web-server to view item prices.
     default: true
   at.transactions:
-    description: View your own transactions
+    description: View your own transactions history.
     default: true
   at.transactions.other:  
-    description: View another players transactions | View all transactions
+    description: View all transactions.
+    default: false
+  at.tutorial:
+    description: Allow players to view tutorial messages.
+    default: true
 
 
 

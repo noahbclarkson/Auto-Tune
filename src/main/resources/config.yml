@@ -8,7 +8,7 @@
 
 ##  -- General Settings --  ##
 
-##  API key given on purchase/signup
+##  API key given on signup
 api-key: 'xyz'
 
 ##  Email used on signup
@@ -23,7 +23,7 @@ web-server-enabled: true
 port: 8123
 
 ##  The maximum length in data points that the trade-short.html will show (this doesn't affect data)
-##  Info: When the time-period is set to 144, 1 is one day.
+##  Info: When the time-period is set to 10, 144 is one day.
 maximum-short-trade-length: 144
 
 ##  Time Period in minutes
@@ -40,7 +40,7 @@ background: 'BLACK_STAINED_GLASS_PANE'
 ##  How often auto-sell updates in ticks
 ##  Info: Set this higher if few players use autosell
 ##  Info: Set it lower if many players use autosell
-auto-sell-update-period: 25
+auto-sell-update-period: 20
 
 ##  How often players are shown their auto-sell profits in ticks
 auto-sell-profit-update-period: 1200
@@ -65,7 +65,7 @@ min-volatility: 0.025
 ##  -- Data Selection Settings --  ##
 
 ##  Info: When setting your data selection algorithim use a site such as https://www.desmos.com/calculator
-##  Info: Data selection uses the equation y=m(x^z)+c, for example the default is y=0.075(x^1.6)+1.25
+##  Info: Data selection uses the equation y=m(x^z)+c, for example the default is y=0.075(x^(1.6))+0.55
 
 ##  'm' in equation: y=m(x^z)+c
 data-selection-m: 0.05
@@ -74,7 +74,7 @@ data-selection-m: 0.05
 data-selection-z: 1.75
 
 ##  'c' in equation: y=m(x^z)+c
-data-selection-c: 1.005
+data-selection-c: 0.55
 
 ##  -- Other Econonomy Settings --
 
@@ -89,13 +89,12 @@ currency-symbol: '$'
 sell-price-difference-variation-enabled: true
 
 ##  Starting percententage sell price difference for sell price variation
-sell-price-difference-variation-start: 25
+sell-price-difference-variation-start: 25.0
 
 ##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 4 weeks)
 sell-price-variation-time-period: 43200
 
 ##  Time in minutes that the sell-price-difference updates
-##  Info: Must be a factor of sell-price-variation-time-period or it won't work!
 sell-price-variation-update-period: 30
 
 ##  Enable forced inflation in the economy
@@ -129,8 +128,8 @@ interest-rate-update-period: 1200
 disable-max-buys-sells: false
 
 ##  lowest value in $ a player can go into debt
-##  For example if a player has $300 and this is set to 100 a player will can take out a loan up to $200
-max-debt-value: 100.00
+##  For example if a player has $3000 and this is set to 1000 a player will can take out a loan up to $2000
+max-debt-value: 1000.00
 
 ##  The percentage value to decrease items sold with enchantments
 ##  Info: Stacked enchantments etc. can become very expensive so a number between 25% - 50% is usually fine
@@ -143,12 +142,11 @@ durability-limiter: 7.50
 
 ##  -- Other Settings --
 
-
 ##  Enable debug mode for more info on price calculations
 debug-enabled: false
 
 ##  Ignore AFK players in price calulcations/online checks
-##  Info: Turning this on will mean the price will only update when there's a player that insn't AFK
+##  Info: Turning this on will mean the price will only update when there's a player that is not AFK
 ##  Info: This only applies to essentials AFK and you must have essentials installed for this to work
 ignore-afk: true
 

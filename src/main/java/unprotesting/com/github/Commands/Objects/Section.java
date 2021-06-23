@@ -31,6 +31,9 @@ public class Section {
         this.back = back;
         this.enchantmentSection = false;
         this.image = Material.matchMaterial(material);
+        if (this.image == null){
+            this.image = Material.BARRIER;
+        }
         this.items = new ArrayList<String>();
         if (!this.name.equals("Enchantments")){
             ConfigurationSection shops = Main.getDfiles().getShops().getConfigurationSection("shops");

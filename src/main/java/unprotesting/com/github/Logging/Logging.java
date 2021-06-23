@@ -31,4 +31,8 @@ public class Logging {
         System.out.println("Auto-Tune-ERROR: " + errors[error]);
     }
 
+    public static void error(String error){
+        System.out.println("Auto-Tune-ERROR: " + error);
+    }
+
 }

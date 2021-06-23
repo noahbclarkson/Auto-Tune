@@ -6,8 +6,8 @@ import com.github.stefvanschie.inventoryframework.gui.GuiItem;
 import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
 import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
-import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 import com.github.stefvanschie.inventoryframework.pane.Pane.Priority;
+import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -18,7 +18,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import unprotesting.com.github.Main;
-import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.ephemeral.data.MessagesData;
 import unprotesting.com.github.logging.Logging;
 

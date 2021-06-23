@@ -40,11 +40,14 @@ class AutoTuneTest {
         File file = new File("./tests/");
         file.mkdirs();
         Database database = new Database("./tests/");
+        database.map.clear();
         System.out.println("Testing 1000 empty data inputs.");
         for (int i = 0; i < 1000; i++){
             TimePeriod TP = new TimePeriod(true);
             database.map.put(database.map.size(), TP);
         }
+        System.out.println(database.map.size());
+        assert(database.map.size() == 1000);
     }
 
 }

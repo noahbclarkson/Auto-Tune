@@ -175,7 +175,7 @@ public class LocalDataCache {
         }
         catch(NullPointerException e){
             return 0;
-        };
+        }
         if (!sell){
             return price;
         }

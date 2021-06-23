@@ -59,7 +59,7 @@ public class PriceUpdateEvent extends Event{
             }
             ItemData data = ITEMS.get(item);
             double price = data.getPrice();
-            Double[] buysell = loadAverageBuySellValue(item, price, false);
+            Double[] buysell = loadAverageBuySellValue(item, false);
             Double newprice;
             Double total = buysell[0]+buysell[1];
             if (buysell[0] > buysell[1]){
@@ -82,7 +82,7 @@ public class PriceUpdateEvent extends Event{
         for (String item : ENCHANTMENTS.keySet()){
             EnchantmentData data = ENCHANTMENTS.get(item);
             double price = data.getPrice();
-            Double[] buysell = loadAverageBuySellValue(item, price, true);
+            Double[] buysell = loadAverageBuySellValue(item, true);
             Double newprice;
             Double total = buysell[0]+buysell[1];
             Double max_vol = Config.getBasicMaxVariableVolatility();
@@ -108,7 +108,7 @@ public class PriceUpdateEvent extends Event{
         Main.getCache().updateEnchantments(ENCHANTMENTS);
     }
 
-    private Double[] loadAverageBuySellValue(String item, Double price, boolean enchantment){
+    private Double[] loadAverageBuySellValue(String item, boolean enchantment){
         double x = 0;
         int size = Main.getDatabase().map.size();
         Database db = Main.getDatabase();

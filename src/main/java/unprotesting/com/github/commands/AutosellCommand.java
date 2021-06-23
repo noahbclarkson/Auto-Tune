@@ -1,9 +1,7 @@
 package unprotesting.com.github.commands;
 
 import java.text.DecimalFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import com.github.stefvanschie.inventoryframework.gui.GuiItem;
 import com.github.stefvanschie.inventoryframework.pane.StaticPane;
@@ -22,36 +20,13 @@ import unprotesting.com.github.Main;
 import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.commands.util.CommandUtil;
 import unprotesting.com.github.commands.util.ShopFormat;
-import unprotesting.com.github.config.Config;
 
 public class AutosellCommand extends ShopFormat implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String autosell, String[] args) {
         if (!CommandUtil.checkIfSenderPlayer(sender)){return true;}
-        return interpretCommand(sender, args);
-    }
-
-    private boolean interpretCommand(CommandSender sender, String[] args){
-        Player player = CommandUtil.closeInventory(sender);
-        int length = args.length;
-        if (!(player.hasPermission("at.autosell") || player.isOp())){CommandUtil.noPermssion(player);return true;}
-        if (length > 1){
-            return false;
-        }
-        if (length == 0){
-            loadGUI(sender);
-            return true;
-        }
-        if (length == 1){
-            for (Section section : Main.getCache().getSECTIONS()){
-                if (args[0].replace("-", "").replace(" ", "").equalsIgnoreCase(section.getName().replace("-", "").replace(" ", ""))){
-                    loadShopPane(sender, section);
-                    return true;
-                }
-            }
-        }
-        return false;
+        return interpretCommand(sender, args, "at.autosell");
     }
 
     public StaticPane loadSectionsPane(CommandSender sender, int lines){
@@ -76,34 +51,28 @@ public class AutosellCommand extends ShopFormat implements CommandExecutor {
         return navigationPane;
     }
 
-    public List<GuiItem> getListFromSection(Section section, CommandSender sender){
-        Player player = (Player)sender;
-        List<GuiItem> output = new ArrayList<GuiItem>();
-        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
-        for (String s_item : section.getItems()){
-            ItemStack item = new ItemStack(Material.matchMaterial(s_item));
-            ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName(ChatColor.GOLD + s_item);
-            String lore;
-            boolean setting = CommandUtil.getPlayerAutoSellSetting(player, item.getType().toString());
-            if (setting){
-                lore = ChatColor.GREEN + "Click to turn off auto-selling!";
-            }
-            else {
-                lore = ChatColor.RED + "Click to turn on auto-selling!";
-            }
-            meta.setLore(Arrays.asList(new String[]{lore, ChatColor.WHITE + "Sell-Price: "
-             + ChatColor.GOLD + df.format(Main.getCache().getItemPrice(item.getType().toString(), true))}));
-            item.setItemMeta(meta);
-            GuiItem gItem = new GuiItem(item, event ->{
-                event.setCancelled(true);
-                changePlayerAutoSellSetting(player, item.getType().toString());
-                player.getOpenInventory().close();
-                loadShopPane(sender, section);
-            });
-            output.add(gItem);
+    public GuiItem getGUIItem(Section section, String s_item, Player player, CommandSender sender, DecimalFormat df){
+        ItemStack item = new ItemStack(Material.matchMaterial(s_item));
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.GOLD + s_item);
+        String lore;
+        boolean setting = CommandUtil.getPlayerAutoSellSetting(player, item.getType().toString());
+        if (setting){
+            lore = ChatColor.GREEN + "Click to turn off auto-selling!";
         }
-        return output;
+        else {
+            lore = ChatColor.RED + "Click to turn on auto-selling!";
+        }
+        meta.setLore(Arrays.asList(new String[]{lore, ChatColor.WHITE + "Sell-Price: "
+         + ChatColor.GOLD + df.format(Main.getCache().getItemPrice(item.getType().toString(), true))}));
+        item.setItemMeta(meta);
+        GuiItem gItem = new GuiItem(item, event ->{
+            event.setCancelled(true);
+            changePlayerAutoSellSetting(player, item.getType().toString());
+            player.getOpenInventory().close();
+            loadShopPane(sender, section);
+        });
+        return gItem;
     }
 
     private void changePlayerAutoSellSetting(Player player, String item){

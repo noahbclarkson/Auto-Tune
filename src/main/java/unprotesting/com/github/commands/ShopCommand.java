@@ -35,29 +35,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
     @Override
     public boolean onCommand(CommandSender sender, Command command, String shop, String[] args) {
         if (!CommandUtil.checkIfSenderPlayer(sender)){return true;}
-        return interpretCommand((Player) sender, args);
-    }
-
-    private boolean interpretCommand(CommandSender sender, String[] args){
-        Player player = CommandUtil.closeInventory(sender);
-        int length = args.length;
-        if (!(player.hasPermission("at.shop") || player.isOp())){CommandUtil.noPermssion(player);return true;}
-        if (length > 1){
-            return false;
-        }
-        if (length == 0){
-            loadGUI(sender);
-            return true;
-        }
-        if (length == 1){
-            for (Section section : Main.getCache().getSECTIONS()){
-                if (args[0].replace("-", "").replace(" ", "").equalsIgnoreCase(section.getName().replace("-", "").replace(" ", ""))){
-                    loadShopPane(sender, section);
-                    return true;
-                }
-            }
-        }
-        return false;
+        return interpretCommand((Player) sender, args, "at.shop");
     }
 
     public StaticPane loadSectionsPane(CommandSender sender, int lines){
@@ -79,14 +57,10 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
         return navigationPane;
     }
 
-    public List<GuiItem> getListFromSection(Section section, CommandSender sender){
-        Player player = (Player)sender;
-        List<GuiItem> output = new ArrayList<GuiItem>();
-        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
-        for (String s_item : section.getItems()){
-            ItemStack item = new ItemStack(Material.BARRIER);
+    public GuiItem getGUIItem(Section section, String s_item, Player player, CommandSender sender, DecimalFormat df){
+        ItemStack item = new ItemStack(Material.BARRIER);
             if (section.isEnchantmentSection() && !Config.isEnableEnchantments()){
-                continue;
+                return null;
             }
             try{
                 if (section.isEnchantmentSection()){
@@ -98,7 +72,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
             }
             catch(NullPointerException e){
                 Logging.error(3);
-                continue;
+                return null;
             }
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(ChatColor.GOLD + s_item);
@@ -126,9 +100,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
                     loadPurchasePane(section, s_item, sender);
                 }
             });
-            output.add(gItem);
-        }
-        return output;
+            return gItem;
     }
 
     private double getEnchPriceWithHeld(String enchantment, Player player){

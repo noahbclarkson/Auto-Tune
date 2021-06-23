@@ -1,5 +1,6 @@
 package unprotesting.com.github.commands.util;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -14,6 +15,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.HumanEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -22,6 +24,42 @@ import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.config.Config;
 
 public abstract class ShopFormat {
+
+    protected boolean interpretCommand(CommandSender sender, String[] args, String permission){
+        Player player = CommandUtil.closeInventory(sender);
+        int length = args.length;
+        if (!(player.hasPermission(permission) || player.isOp())){CommandUtil.noPermssion(player);return true;}
+        if (length > 1){
+            return false;
+        }
+        if (length == 0){
+            loadGUI(sender);
+            return true;
+        }
+        if (length == 1){
+            for (Section section : Main.getCache().getSECTIONS()){
+                if (args[0].replace("-", "").replace(" ", "").equalsIgnoreCase(section.getName().replace("-", "").replace(" ", ""))){
+                    loadShopPane(sender, section);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    protected List<GuiItem> getListFromSection(Section section, CommandSender sender){
+        Player player = (Player)sender;
+        List<GuiItem> output = new ArrayList<GuiItem>();
+        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
+        for (String s_item : section.getItems()){
+            GuiItem item = getGUIItem(section, s_item, player, sender, df);
+            if (item == null){
+                continue;
+            }
+            output.add(item);
+        }
+        return output;
+    }
 
     protected void loadShopPane(CommandSender sender, Section section){
         CommandUtil.closeInventory(sender);
@@ -61,7 +99,7 @@ public abstract class ShopFormat {
         gui.show((HumanEntity)(sender));
     }
 
-    public abstract List<GuiItem> getListFromSection(Section section, CommandSender sender);
+    public abstract GuiItem getGUIItem(Section section, String s_item, Player player, CommandSender sender, DecimalFormat df);
 
     public abstract StaticPane loadSectionsPane(CommandSender sender, int lines);
     

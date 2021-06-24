@@ -22,7 +22,7 @@ public class LocalServer {
                 server.createContext("/", new StaticFileHandler(base));
                 server.setExecutor(null);
                 server.start();
-                Logging.log("Web server has started on port " + Config.getPort());
+                Logging.debug("Web server has started on port " + Config.getPort());
             }
             catch(NullPointerException | IllegalArgumentException | IllegalStateException | IOException e){
                 Logging.error("Error Creating Server on port: " + Config.getPort() + ". Please try restarting or changing your port.");

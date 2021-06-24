@@ -31,10 +31,10 @@ public class StaticFileHandler implements HttpHandler {
             ex.sendResponseHeaders(200, path.length());
             out.write(Files.readAllBytes(path.toPath()));
         } else {
-            System.err.println("File not found: " + path.getAbsolutePath());
+            Logging.error("File not found: " + path.getAbsolutePath());
 
             ex.sendResponseHeaders(404, 0);
-            out.write("404 File not found.".getBytes());
+            Logging.error("404 File not found.".getBytes());
         }
         out.close();
     }

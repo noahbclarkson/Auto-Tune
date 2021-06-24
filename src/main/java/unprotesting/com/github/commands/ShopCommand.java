@@ -41,6 +41,9 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
     public StaticPane loadSectionsPane(CommandSender sender, int lines){
         StaticPane navigationPane = new StaticPane(0, 0, 9, lines);
         for (Section section : Main.getCache().getSECTIONS()){
+            if (section.isEnchantmentSection() && !Config.isEnableEnchantments()){
+                continue;
+            }
             int x = section.getPosition() % 9;
             int y = section.getPosition() / 9;
             ItemStack item = new ItemStack(section.getImage());

@@ -8,7 +8,7 @@
 
 ##  Placeholders (Placeholder API must be installed for these to work)
 ##  These placeholders can be used in other plugins
-##  %AT_GDP_GDP%, %AT_GDP_BALANCE%, %AT_GDP_DEBT%, %AT_GDP_LOSS%, 
+##  %AT_GDP_GDP%, %AT_GDP_BALANCE%, %AT_GDP_DEBT%, %AT_GDP_LOSS%, %AT_GDP_INFLATION%
 ##  %AT_<ITEM>_PRICE%, %AT_<ITEM>_SELLPRICE%, %AT_<ITEM>_BUYSLEFT%, %AT_<ITEM>_SELLSLEFT%,
 ##  %AT_<ENCHANTMENT>_PRICE%, %AT_<ITEM>_SELLPRICE%
 ##  %AT_TOP_MOVERS_ITEM_<POSITION>%, %AT_TOP_MOVERS_CHANGE_<POSITION>%
@@ -85,10 +85,10 @@ tutorial:
 ##  Join messages
 ##  These message are displayed when a player joins
 on-join:
-  - '&6 GDP: &a%AT_GDP_GDP% &0| &6Server-Balance: &a%AT_GDP_BALANCE%'
-  - '&0|&a%AT_TOP_MOVERS_CHANGE_0%&0| &a%AT_TOP_MOVERS_ITEM_0%'
-  - '&0|&a%AT_TOP_MOVERS_CHANGE_1%&0| &a%AT_TOP_MOVERS_ITEM_1%'
-  - '&0|&a%AT_TOP_MOVERS_CHANGE_2%&0| &a%AT_TOP_MOVERS_ITEM_2%'
-  - '&0|&4%AT_TOP_MOVERS_CHANGE_-0%&0| &4%AT_TOP_MOVERS_ITEM_-0%'
-  - '&0|&4%AT_TOP_MOVERS_CHANGE_-1%&0| &4%AT_TOP_MOVERS_ITEM_-1%'
-  - '&0|&4%AT_TOP_MOVERS_CHANGE_-2%&0| &4%AT_TOP_MOVERS_ITEM_-2%'
+  - '&6 GDP: &a%AT_GDP_GDP% &7| &6Server-Balance: &a%AT_GDP_BALANCE%'
+  - '&7|&a%AT_TOP_MOVERS_CHANGE_0%&7| &a%AT_TOP_MOVERS_ITEM_0%'
+  - '&7|&a%AT_TOP_MOVERS_CHANGE_1%&7| &a%AT_TOP_MOVERS_ITEM_1%'
+  - '&7|&a%AT_TOP_MOVERS_CHANGE_2%&7| &a%AT_TOP_MOVERS_ITEM_2%'
+  - '&7|&4%AT_TOP_MOVERS_CHANGE_-0%&7| &4%AT_TOP_MOVERS_ITEM_-0%'
+  - '&7|&4%AT_TOP_MOVERS_CHANGE_-1%&7| &4%AT_TOP_MOVERS_ITEM_-1%'
+  - '&7|&4%AT_TOP_MOVERS_CHANGE_-2%&7| &4%AT_TOP_MOVERS_ITEM_-2%'

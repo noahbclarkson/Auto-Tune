@@ -68,6 +68,9 @@ public class AutoTunePlaceholderExpansion extends PlaceholderExpansion{
             if (identifier.equals("GDP_LOSS")){
                 return Config.getCurrencySymbol() + df.format(Main.getCache().getGDPDATA().getLoss());
             }
+            if (identifier.equals("GDP_INFLATION")){
+                return df.format(Main.getCache().getGDPDATA().getInflation()) + "%";
+            }
         }
         if (identifier.contains("_PRICE") || identifier.contains("_SELLPRICE") ||
          identifier.contains("_BUYSLEFT") || identifier.contains("_SELLSLEFT")){

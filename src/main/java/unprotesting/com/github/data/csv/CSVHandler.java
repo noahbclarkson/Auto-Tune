@@ -68,7 +68,7 @@ public class CSVHandler {
             else if (k==3){
                 writer.write("\n" + "%Loss" + "\n");
             }
-            else if (k==3){
+            else if (k==4){
                 writer.write("\n" + "%Inflation" + "\n");
             }
             for (int i = (size-cutoff); i < size; i++){

@@ -1,5 +1,6 @@
 package unprotesting.com.github.commands.util;
 
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,20 +19,21 @@ import unprotesting.com.github.economy.EconomyFunctions;
 
 public class FunctionsUtil {
 
-    
     public static void buyItem(Player player, String item, int amount){
+        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         double bal = EconomyFunctions.getEconomy().getBalance(player);
         double price = Main.getCache().getItemPrice(item, false);
+        String[] inputs = new String[]{item, df.format(price), Integer.toString(amount), df.format(price*amount)};
         if (bal < price){
-            player.sendMessage(MessagesData.getPlayerBuyItemString("not-enough-money", player, item, price, amount));
+            player.sendMessage(MessagesData.getMessageString(player, "not-enough-money", inputs));
             return;
         }
         if (bal < (price*amount)){
-            player.sendMessage(MessagesData.getPlayerBuyItemString("not-enough-moneyxamount", player, item, price, amount));
+            player.sendMessage(MessagesData.getMessageString(player, "not-enough-moneyxamount", inputs));
             amount = (int) Math.floor(bal/price);
         }
         if (Main.getCache().getBuysLeft(item, player) < amount){
-            player.sendMessage(MessagesData.getPlayerBuyItemString("run-out-of-buys", player, item, price, amount));
+            player.sendMessage(MessagesData.getMessageString(player, "run-out-of-buys", inputs));
             return;
         }
         HashMap<Integer, ItemStack> map = player.getInventory().addItem(new ItemStack(Material.matchMaterial(item), amount));
@@ -40,23 +42,25 @@ public class FunctionsUtil {
             amount = amount-istack.getAmount();
         }
         if (amount < 1){
-            player.sendMessage(MessagesData.getPlayerBuyItemString("not-enough-space", player, item, price, amount));
+            player.sendMessage(MessagesData.getMessageString(player, "not-enough-space", inputs));
             return;
         }
         EconomyFunctions.getEconomy().withdrawPlayer(player, (amount*price));
-        player.sendMessage(MessagesData.getPlayerBuyItemString("shop-purchase", player, item, price, amount));
+        player.sendMessage(MessagesData.getMessageString(player, "shop-purchase", inputs));
         Main.getCache().addSale(player, item, price, amount, SalePositionType.BUY);
     }
 
     public static void sellItem(Player player, String item, int amount){
+        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         double price = Main.getCache().getItemPrice(item, true);
         double buyprice = Main.getCache().getItemPrice(item, false);
+        String[] inputs = new String[]{item, df.format(buyprice), Integer.toString(amount), df.format(buyprice*amount), df.format(price), df.format(price*amount)};
         if (amount < 1){
-            player.sendMessage(MessagesData.getPlayerSellItemString("dont-have-item", player, item, buyprice, amount, price));
+            player.sendMessage(MessagesData.getMessageString(player, "dont-have-item", inputs));
             return;
         }
         if (Main.getCache().getSellsLeft(item, player) < amount){
-            player.sendMessage(MessagesData.getPlayerSellItemString("run-out-of-sells", player, item, buyprice, amount, price));
+            player.sendMessage(MessagesData.getMessageString(player, "run-out-of-sells", inputs));
             return;
         }
         HashMap<Integer, ItemStack> map = player.getInventory().removeItem(new ItemStack(Material.matchMaterial(item), amount));
@@ -65,7 +69,7 @@ public class FunctionsUtil {
             amount = amount-istack.getAmount();
         }
         EconomyFunctions.getEconomy().depositPlayer(player, (amount*price));
-        player.sendMessage(MessagesData.getPlayerSellItemString("shop-sell", player, item, buyprice, amount, price));
+        player.sendMessage(MessagesData.getMessageString(player, "shop-sell", inputs));
         Main.getCache().addSale(player, item, price, amount, SalePositionType.SELL);
     }
 
@@ -74,13 +78,14 @@ public class FunctionsUtil {
         if (!Config.isEnableEnchantments()){
             return;
         }
+        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         ItemStack item = player.getInventory().getItemInMainHand();
         boolean off = false;
         if (item == null){
             off = true;
             item = player.getInventory().getItemInOffHand();
             if (item == null){
-                player.sendMessage(MessagesData.getPlayerBuyEnchantmentString("hold-item-in-hand", player, null, 0.0, 0, 0.0, enchantment, 0.0, 0));
+                player.sendMessage(MessagesData.getMessageString(player, "hold-item-in-hand", new String[]{}));
             }
         }
         double item_price = Main.getCache().getItemPrice(item.getType().toString(), false);
@@ -88,25 +93,25 @@ public class FunctionsUtil {
         double bal = EconomyFunctions.getEconomy().getBalance(player);
         double price = Main.getCache().getOverallEnchantmentPrice(enchantment, item_price, false);
         Enchantment ench = Enchantment.getByName(enchantment);
-        if (ench == null){
-            player.sendMessage(MessagesData.getPlayerBuyEnchantmentString("enchantment-error", player, item.getType().toString(),
-            item_price, 1, item_price_sell, enchantment, price, 0));
-        }
         int level = 0;
+        if (ench == null){
+            player.sendMessage(MessagesData.getMessageString(player, "enchantment-error", new String[]{item.getType().toString()}));
+            return;
+        }
         if (item.containsEnchantment(ench)){
             level = item.getEnchantmentLevel(ench);
         }
+        String[] inputs = new String[]{item.getType().toString(), df.format(item_price), Integer.toString(item.getAmount()), df.format(item.getAmount()*item_price),
+         df.format(item_price_sell), df.format(item.getAmount()*item_price_sell), enchantment, Integer.toString(level), df.format(price)};
         if (bal < price){
-            player.sendMessage(MessagesData.getPlayerBuyEnchantmentString("not-enough-money-enchantments", player, item.getType().toString(),
-            item_price, 1, item_price_sell, enchantment, price, level+1));
+            player.sendMessage(MessagesData.getMessageString(player, "enchantment-error", inputs));
             return;
         }
         try{
             item.addEnchantment(ench, level+1);
         }
         catch(IllegalArgumentException e){
-            player.sendMessage(MessagesData.getPlayerBuyEnchantmentString("enchantment-error", player, item.getType().toString(),
-            item_price, 1, item_price_sell, enchantment, price, level+1));
+            player.sendMessage(MessagesData.getMessageString(player, "enchantment-error", inputs));
             return;
         }
         if (!off){
@@ -117,8 +122,7 @@ public class FunctionsUtil {
         }
         Main.getCache().addSale(player, enchantment, price, 1, SalePositionType.EBUY);
         EconomyFunctions.getEconomy().withdrawPlayer(player, price);
-        player.sendMessage(MessagesData.getPlayerBuyEnchantmentString("enchantment-purchase", player, item.getType().toString(),
-            item_price, 1, item_price_sell, enchantment, price, level+1));
+        player.sendMessage(MessagesData.getMessageString(player, "enchantment-purchase", inputs));
         player.getInventory().setItemInMainHand(item);
     }
 
@@ -127,18 +131,20 @@ public class FunctionsUtil {
         if (item == null){
             return;
         }
-        if (!Main.getCache().getITEMS().contains(item.getType().toString()) || item.getAmount() < 1){
+        if ((!Main.getCache().getITEMS().containsKey(item.getType().toString())) || item.getAmount() < 1){
             if (!autosell){
-                player.sendMessage(MessagesData.getPlayerSellItemString("cannot-sell-custom", player, item.getType().toString(), 0.0, 0, 0.0));
+                player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", item.getType().toString()));
+                System.out.println("a");
                 player.getInventory().addItem(item);
             }
             return;
         }
         if (Main.getCache().getSellsLeft(item.getType().toString(), player) < item.getAmount()){
-            player.sendMessage(MessagesData.getPlayerSellItemString("run-out-of-sells", player, item.getType().toString(), 0.0, item.getAmount(), 0.0));
+            player.sendMessage(MessagesData.getMessageString(player, "run-out-of-sells", item.getType().toString()));
             player.getInventory().addItem(item);
             return;
         }
+        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         double ratio = 1;
         double fprice = 0;
         Map<Enchantment, Integer> enchantments = null;
@@ -159,7 +165,8 @@ public class FunctionsUtil {
                     cratio = Main.getCache().getEnchantmentRatio(ench.getName());
                 }
                 catch(NullPointerException e){
-                    player.sendMessage(MessagesData.getPlayerSellItemString("cannot-sell-custom", player, item.getType().toString(), 0.0, 0, 0.0));
+                    player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", item.getType().toString()));
+                    System.out.println("b");
                     player.getInventory().addItem(item);
                     return;
                 }
@@ -173,15 +180,19 @@ public class FunctionsUtil {
             item_price = Main.getCache().getItemPrice(item.getType().toString(), true);
         }
         catch(NullPointerException e){
-            player.sendMessage(MessagesData.getPlayerSellItemString("cannot-sell-custom", player, item.getType().toString(), 0.0, 0, 0.0));
+            player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", item.getType().toString()));
+            System.out.println("c");
             player.getInventory().addItem(item);
             return;
         }
+        Double item_buy_price = Main.getCache().getItemPrice(item.getType().toString(), false);
         fprice = fprice + item_price*ratio;
         fprice = getnewPriceWithDurability(fprice, item);
         if (!autosell){
             EconomyFunctions.getEconomy().depositPlayer(player, (item.getAmount()*fprice));
-            player.sendMessage(MessagesData.getPlayerSellItemString("sell-custom-item", player, item.getType().toString(), 0.0, item.getAmount(), fprice));
+            player.sendMessage(MessagesData.getMessageString(player, "sell-custom-item", new String[]{item.getType().toString(),
+             df.format(item_buy_price), Integer.toString(item.getAmount()), df.format(item.getAmount()*item_buy_price),
+              df.format(fprice), df.format(fprice*item.getAmount()), item.getEnchantments().toString()}));
         }
         if (autosell){
             AutosellData data = Main.getAutosellData();

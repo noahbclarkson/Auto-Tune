@@ -39,13 +39,13 @@ shop-purchase: "&aPurchased x%GENERAL_ITEM_AMOUNT% of &6%GENERAL_ITEM% &afor %GE
 ##  LOCAL-VARIABLES-ALLOWED
 dont-have-item: "&cYou do not have this item."
 run-out-of-sells: "&cYou have run out of sells for this item."
-shop-sell: "&aSold x%GENERAL_ITEM_AMOUNT% of &6%GENERAL_ITEM% &afor %GENERAL_ITEM_PRICEXAMOUNT%_SELL."
+shop-sell: "&aSold x%GENERAL_ITEM_AMOUNT% of &6%GENERAL_ITEM% &afor %GENERAL_ITEM_PRICEXAMOUNT_SELL%."
 
 ##  Buying enchantments
 ##  LOCAL-VARIABLES-ALLOWED
 hold-item-in-hand: "&cHold the item you want to enchant in your hand!"
 not-enough-money-enchantments: "&cYou need %GENERAL_ENCHANTMENT_PRICE% to purchase this enchantment."
-enchantment-error: "&cCannot enchant %GENERAL_ITEM% with enchantment %GENERAL_ENCHANTMENT% of level %GENERAL_ENCHANTMENT_LEVEL%"
+enchantment-error: "&cCannot enchant %GENERAL_ITEM% with enchantment."
 enchantment-purchase: "&aPurchased &6%GENERAL_ENCHANTMENT% &afor %GENERAL_ENCHANTMENT_PRICE%."
 
 ##  Selling custom items

@@ -84,7 +84,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
             }
             list.add(Main.getCache().getPChangeString(s_item));
             if (section.isEnchantmentSection()){
-                list.add(ChatColor.YELLOW + "Ratio: " + Main.getCache().getEnchantmentRatio(s_item));
+                list.add(ChatColor.YELLOW + "Ratio: " + df.format(Main.getCache().getEnchantmentRatio(s_item)));
                 list.add(ChatColor.YELLOW + "Price: " + Config.getCurrencySymbol() + df.format(Main.getCache().getEnchantmentPrice(s_item, false)));
             }
             list.add(ChatColor.WHITE + "Remaining Buys: " + ChatColor.GRAY + Main.getCache().getBuysLeft(s_item, player));

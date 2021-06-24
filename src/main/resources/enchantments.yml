@@ -19,6 +19,9 @@ enchantments:
     ##  Info: An item worth usually 100 will cost (100*0.6)+600=660
     ##  Provides extra damage when shooting arrows from bows
     ##  sell-price-difference: 10.0  <- Add a custom sell-price-difference
+    ##  locked: true <- Example of a locked item
+    ##  max-volatility: 1.0 <- Add a custom max-volatility
+    ##  min-volatility: 0.1 <- Add a custom min-volatility
   ARROW_FIRE:
     price:  750.00
     ratio: 0.4

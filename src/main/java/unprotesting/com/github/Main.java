@@ -2,7 +2,6 @@ package unprotesting.com.github;
 
 import java.io.IOException;
 
-import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -31,6 +30,7 @@ import unprotesting.com.github.events.sync.*;
 import unprotesting.com.github.localServer.LocalServer;
 import unprotesting.com.github.logging.Logging;
 import unprotesting.com.github.util.AutoTunePlaceholderExpansion;
+import unprotesting.com.github.util.bstats.Metrics;
 
 /*  
     Main initialization file for Auto-Tune

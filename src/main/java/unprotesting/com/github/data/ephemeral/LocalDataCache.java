@@ -271,11 +271,11 @@ public class LocalDataCache {
 
     public String getPChangeString(String item){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
-        Double change = Double.parseDouble(df.format(this.PERCENTAGE_CHANGES.get(item)));
-        if (change < 0){
+        Double change = this.PERCENTAGE_CHANGES.get(item);
+        if (change < -0.005){
             return (ChatColor.RED + "%" + df.format(change));
         }
-        if (change > 0){
+        if (change > 0.005){
             return (ChatColor.GREEN + "%" + df.format(change));
         }
         else{

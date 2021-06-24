@@ -1,6 +1,5 @@
 package unprotesting.com.github.data.ephemeral.data;
 
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,6 +20,13 @@ public class MessagesData {
     @Getter
     private ConcurrentHashMap<String, Integer> tutorialData;
 
+    public static String[] localVariables = new String[]{
+        "GENERAL_ITEM", "GENERAL_ITEM_PRICE", "GENERAL_ITEM_AMOUNT",
+        "GENERAL_ITEM_PRICEXAMOUNT", "GENERAL_ITEM_PRICE_SELL",
+        "GENERAL_ITEM_PRICEXAMOUNT_SELL", "GENERAL_ENCHANTMENT",
+        "GENERAL_ENCHANTMENT_LEVEL", "GENERAL_ENCHANTMENT_PRICE"
+    };
+
     public MessagesData(){
         this.tutorialData = new ConcurrentHashMap<String, Integer>();
         this.tutorial = new ArrayList<String>();
@@ -33,43 +39,6 @@ public class MessagesData {
         for (String str : input){
             this.onJoin.add(ChatColor.translateAlternateColorCodes('&', str));
         }
-    }
-
-    private static String replaceLocalPlaceholders(Player player, String base, String item, Double i_price, Integer i_amount, Double i_sell_price,
-     String ench, Double ench_price, Integer ench_level){
-        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
-        if (item != null){
-            base = base.replace("%GENERAL_ITEM%", item);
-        }
-        if (i_price != null){
-            base = base.replace("%GENERAL_ITEM_PRICE%", Config.getCurrencySymbol() + df.format(i_price));
-            if (i_amount != null){
-                base = base.replace("%GENERAL_ITEM_PRICEXAMOUNT%", Config.getCurrencySymbol() + df.format(i_price*i_amount));
-            }
-        }
-        if (i_amount != null){
-            base = base.replace("%GENERAL_ITEM_AMOUNT%", Integer.toString(i_amount));
-        }
-        if (i_sell_price != null){
-            base = base.replace("%GENERAL_ITEM_PRICE_SELL%", Config.getCurrencySymbol() + df.format(i_sell_price));
-            if (i_amount != null){
-                base = base.replace("%GENERAL_ITEM_PRICEXAMOUNT_SELL%", Config.getCurrencySymbol() + df.format(i_sell_price*i_amount));
-            }
-        }
-        if (ench != null){
-            base = base.replace("%GENERAL_ENCHANTMENT%", ench);
-        }
-        if (ench_price != null){
-            base = base.replace("%GENERAL_ENCHANTMENT_PRICE%", Config.getCurrencySymbol() + df.format(ench_price));
-        }
-        if (ench_level != null){
-            base = base.replace("%GENERAL_ENCHANTMENT_LEVEL%", Integer.toString(ench_level));
-        }
-        base = ChatColor.translateAlternateColorCodes('&', base);
-        if (Main.isPlaceholderAPI()){
-            base = PlaceholderAPI.setPlaceholders(player, base);
-        }
-        return base;
     }
 
     public void updatePlayerTutorialData(String player_uuid){
@@ -90,20 +59,31 @@ public class MessagesData {
         return base;
     }
 
-    public static String getPlayerBuyItemString(String message, Player player, String item, double i_price, int i_amount){
-        String base = Main.getDfiles().getMessages().getString(message);
-        return replaceLocalPlaceholders(player, base, item, i_price, i_amount, null, null, null, null);
+    private static String updatePlaceHolders(String base, Player player){
+        if (Main.isPlaceholderAPI()){
+            base = PlaceholderAPI.setPlaceholders(player, base);
+        }
+        return base;
     }
 
-    public static String getPlayerSellItemString(String message, Player player, String item, double i_price, int i_amount, double i_sell_price){
-        String base = Main.getDfiles().getMessages().getString(message);
-        return replaceLocalPlaceholders(player, base, item, i_price, i_amount, i_sell_price, null, null, null);
+    private static String replaceLocalPlaceholder(String message, Player player, String input, String placeholder){
+        message = message.replace(("%" + placeholder + "%"), input);
+        return message;
     }
 
-    public static String getPlayerBuyEnchantmentString(String message, Player player, String item, double i_price, int i_amount, double i_sell_price,
-    String ench, double ench_price, int ench_level){
+    public static String getMessageString(Player player, String message, String... inputs){
         String base = Main.getDfiles().getMessages().getString(message);
-        return replaceLocalPlaceholders(player, base, item, i_price, i_amount, i_sell_price, ench, ench_price, ench_level);
+        for (int i = 0; i < inputs.length; i++){
+            String input = inputs[i];
+            if (input != null){
+                if (i == 1 || i == 3 || i == 4 || i == 5 || i == 8){
+                    input = Config.getCurrencySymbol() + input;
+                }
+                base = replaceLocalPlaceholder(base, player, input, localVariables[i]);
+            }
+        }
+        base = updatePlaceHolders(base, player);
+        return base;
     }
     
 }

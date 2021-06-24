@@ -80,29 +80,38 @@ public class PriceUpdateEvent extends Event{
     private void updateEnchantments(){
         ConcurrentHashMap<String, EnchantmentData> ENCHANTMENTS = Main.getCache().getENCHANTMENTS();
         for (String item : ENCHANTMENTS.keySet()){
+            if (Main.getDfiles().getEnchantments().getConfigurationSection("enchantments." + item).getBoolean("locked")){
+                continue;
+            }
             EnchantmentData data = ENCHANTMENTS.get(item);
             double price = data.getPrice();
+            double ratio = data.getRatio();
             Double[] buysell = loadAverageBuySellValue(item, true);
             Double newprice;
+            Double newratio;
             Double total = buysell[0]+buysell[1];
             Double max_vol = Config.getBasicMaxVariableVolatility();
             Double min_vol = Config.getBasicMinVariableVolatility();
-            if (Main.getDfiles().getShops().getConfigurationSection("shop." + item).contains("max-volatility")){
-                max_vol = Main.getDfiles().getShops().getConfigurationSection("shop." + item).getDouble("max-volatility");
+            if (Main.getDfiles().getEnchantments().getConfigurationSection("enchantments." + item).contains("max-volatility")){
+                max_vol = Main.getDfiles().getEnchantments().getConfigurationSection("enchantments." + item).getDouble("max-volatility");
             }
-            if (Main.getDfiles().getShops().getConfigurationSection("shop." + item).contains("min-volatility")){
-                min_vol = Main.getDfiles().getShops().getConfigurationSection("shop." + item).getDouble("min-volatility");
+            if (Main.getDfiles().getEnchantments().getConfigurationSection("enchantments." + item).contains("min-volatility")){
+                min_vol = Main.getDfiles().getEnchantments().getConfigurationSection("enchantments." + item).getDouble("min-volatility");
             }
             if (buysell[0] > buysell[1]){
                 newprice = price + price*max_vol*0.01*(buysell[0]/total) + price*0.01*min_vol;
+                newratio = ratio + price*max_vol*0.01*(buysell[0]/total) + ratio*0.01*min_vol;
             }
             else if(buysell[0] < buysell[1]){
                 newprice = price - price*max_vol*0.01*(buysell[1]/total) - price*0.01*min_vol;
+                newratio = ratio - price*max_vol*0.01*(buysell[1]/total) - ratio*0.01*min_vol;
             }
             else{
                 newprice = price;
+                newratio = ratio;
             }
             data.setPrice(newprice);
+            data.setRatio(newratio);
             ENCHANTMENTS.put(item, data);
         }
         Main.getCache().updateEnchantments(ENCHANTMENTS);

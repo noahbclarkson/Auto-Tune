@@ -9,6 +9,8 @@ import java.nio.file.Files;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
+import unprotesting.com.github.logging.Logging;
+
 //  File handler for HTTP server
 
 public class StaticFileHandler implements HttpHandler {
@@ -31,10 +33,8 @@ public class StaticFileHandler implements HttpHandler {
             ex.sendResponseHeaders(200, path.length());
             out.write(Files.readAllBytes(path.toPath()));
         } else {
-            Logging.error("File not found: " + path.getAbsolutePath());
-
+            Logging.error("404 File not found: " + path.getAbsolutePath());
             ex.sendResponseHeaders(404, 0);
-            Logging.error("404 File not found.".getBytes());
         }
         out.close();
     }

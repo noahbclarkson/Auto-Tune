@@ -4,12 +4,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
 import lombok.Getter;
+import lombok.Setter;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.economy.EconomyFunctions;
 
 public class GDPData {
 
-    @Getter
+    @Getter @Setter
     private double GDP,
                    balance,
                    debt, 

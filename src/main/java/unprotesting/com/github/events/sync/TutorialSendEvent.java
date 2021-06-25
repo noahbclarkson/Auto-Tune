@@ -23,7 +23,7 @@ public class TutorialSendEvent extends Event{
 
     private void sendTutorialMessages(){
         for (Player player : Bukkit.getOnlinePlayers()){
-            if (player.hasPermission("at.tutorial") || player.isOp()){
+            if (player.hasPermission("at.tutorial")){
                 String uuid = player.getUniqueId().toString();
                 Main.updatePlayerTutorialData(uuid);
                 String message = Main.getMESSAGES().getTutorial().get(Main.getMESSAGES().getTutorialData().get(uuid)-1);

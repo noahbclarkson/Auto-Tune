@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.ess3.api.IEssentials;
 import unprotesting.com.github.api.*;
+import unprotesting.com.github.commands.AutoTuneCommand;
 import unprotesting.com.github.commands.AutosellCommand;
 import unprotesting.com.github.commands.GDPCommand;
 import unprotesting.com.github.commands.LoanCommand;
@@ -139,6 +140,7 @@ public class Main extends JavaPlugin{
         this.getCommand("transactions").setExecutor(new TransactionsCommand());
         this.getCommand("loan").setExecutor(new LoanCommand());
         this.getCommand("autosell").setExecutor(new AutosellCommand());
+        this.getCommand("at").setExecutor(new AutoTuneCommand());
     }
 
     private void setupServer(){
@@ -174,8 +176,6 @@ public class Main extends JavaPlugin{
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
          -> Bukkit.getPluginManager().callEvent(new AutosellProfitUpdateEvent(true)),
            Config.getAutoSellProfitUpdatePeriod(), Config.getAutoSellProfitUpdatePeriod());
-
-        Bukkit.getServer().getPluginManager().registerEvents(new AutoTuneJoinMessageEventHandler(), this);
         
         //  Synchronous
         Bukkit.getScheduler().runTaskTimer(this, ()
@@ -184,6 +184,8 @@ public class Main extends JavaPlugin{
         Bukkit.getScheduler().runTaskTimer(this, ()
          -> Bukkit.getPluginManager().callEvent(new TutorialSendEvent()),
            Config.getTutorialMessagePeriod()*20, Config.getTutorialMessagePeriod()*20);
+
+        Bukkit.getServer().getPluginManager().registerEvents(new AutoTuneJoinMessageEventHandler(), this);
     }
 
     private void getEssentials(){

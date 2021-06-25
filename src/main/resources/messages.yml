@@ -10,7 +10,7 @@
 ##  These placeholders can be used in other plugins
 ##  %AT_GDP_GDP%, %AT_GDP_BALANCE%, %AT_GDP_DEBT%, %AT_GDP_LOSS%, %AT_GDP_INFLATION%
 ##  %AT_<ITEM>_PRICE%, %AT_<ITEM>_SELLPRICE%, %AT_<ITEM>_BUYSLEFT%, %AT_<ITEM>_SELLSLEFT%,
-##  %AT_<ENCHANTMENT>_PRICE%, %AT_<ITEM>_SELLPRICE%
+##  %AT_<ENCHANTMENT>_PRICE%, %AT_<ENCHANTMENT>_SELLPRICE%
 ##  %AT_TOP_MOVERS_ITEM_<POSITION>%, %AT_TOP_MOVERS_CHANGE_<POSITION>%
 
 ##  Local placeholders (Work without Placeholder API)

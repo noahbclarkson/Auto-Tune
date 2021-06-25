@@ -43,7 +43,7 @@ public class LoanCommand implements CommandExecutor{
     @Deprecated
     private boolean interpretCommand(CommandSender sender, String[] args){
         Player player = CommandUtil.closeInventory(sender);
-        if (!(player.hasPermission("at.loan") || player.isOp())){CommandUtil.noPermssion(player);return true;}
+        if (!(player.hasPermission("at.loan") || player.hasPermission("at.admin"))){CommandUtil.noPermssion(player);return true;}
         ChestGui gui = new ChestGui(6, "Loans");
         PaginatedPane pages = new PaginatedPane(0, 0, 9, 6);
         List<LoanData> loans = Main.getCache().getLOANS();
@@ -51,7 +51,7 @@ public class LoanCommand implements CommandExecutor{
         List<GuiItem> items;
         String player_uuid = player.getUniqueId().toString();
         if (args.length < 1){
-            if (!player.hasPermission("at.loan.other") && !player.isOp()){
+            if (!player.hasPermission("at.loan.other") && !player.hasPermission("at.admin")){
                 items = getGuiItemsFromLoans(loans, player_uuid);
             }
             else{
@@ -62,7 +62,7 @@ public class LoanCommand implements CommandExecutor{
             if (args[1].equals(player.getName())){
                 items = getGuiItemsFromLoans(loans, player_uuid);
             }
-            else if (!args[1].equals(player.getName()) && (!player.hasPermission("at.loan.other") && !player.isOp())){
+            else if (!args[1].equals(player.getName()) && (!player.hasPermission("at.loan.other") && !player.hasPermission("at.admin"))){
                 CommandUtil.noPermssion(player);
                 return true;
             }

@@ -31,7 +31,7 @@ public class GDPCommand implements CommandExecutor{
 
     private boolean interpretCommand(CommandSender sender, String[] args){
         Player player = CommandUtil.closeInventory(sender);
-        if (!(player.hasPermission("at.gdp") || player.isOp())){CommandUtil.noPermssion(player);return true;}
+        if (!(player.hasPermission("at.gdp") || player.hasPermission("at.admin"))){CommandUtil.noPermssion(player);return true;}
         openGDPGui(sender);
         return true;
     }

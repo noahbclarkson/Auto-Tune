@@ -20,6 +20,10 @@ website: https://github.com/Unprotesting/Auto-Tune
 prefix: '[AUTO-TUNE]'
 api: ""
 commands:
+    at:
+      description: Change item prices and force price-updates.
+      usage: /<at> <update/price>
+      aliases: [autotune]
     trade:
       description: Trade Online with other players.
       usage: /<trade> 
@@ -46,6 +50,8 @@ commands:
       description: View player transactions
       usage: /transactions <page-no> | /transactions all <page-no> | /transactions <player-name> <page-no>
 permssions:
+  at.admin:
+    description: Admin commands and access to all other commands.
   at.autosell:
     description: Open the auto-sell GUI and use automatic selling.
     default: true

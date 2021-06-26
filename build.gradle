@@ -6,6 +6,9 @@ plugins {
 group 'unprotesting.com.github'
 version '0.13.0-pre-release-5'
 
+targetCompatibility = '1.8'
+sourceCompatibility = '1.8'
+
 repositories {
     mavenCentral()
     maven { url 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/' }

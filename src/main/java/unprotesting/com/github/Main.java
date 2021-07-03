@@ -67,7 +67,7 @@ public class Main extends JavaPlugin{
 
     @Override
     public void onDisable(){
-        new AutosellProfitUpdateEvent(true);
+       database.saveCacheToLastTP();
         if (cache != null){
             updateTimePeriod();
         }

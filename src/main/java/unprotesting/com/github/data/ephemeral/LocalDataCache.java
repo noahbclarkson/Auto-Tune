@@ -273,13 +273,13 @@ public class LocalDataCache {
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         Double change = this.PERCENTAGE_CHANGES.get(item);
         if (change < -0.005){
-            return (ChatColor.RED + "%" + df.format(change));
+            return (ChatColor.RED + df.format(change) + "%");
         }
         if (change > 0.005){
-            return (ChatColor.GREEN + "%" + df.format(change));
+            return (ChatColor.GREEN + df.format(change) + "%");
         }
         else{
-            return (ChatColor.GRAY + "%" + 0.0);
+            return (ChatColor.GRAY + "0.0%");
         }
     }
 
@@ -296,7 +296,13 @@ public class LocalDataCache {
         double b = 1/a;
         int tpInDay = (int) Math.floor(b);
         int i = 0;
-        ItemTimePeriod latest = Main.getDatabase().map.get(size-1).getItp();
+        ItemTimePeriod latest;
+        try{
+            latest = Main.getDatabase().map.get(size-1).getItp();
+        }
+        catch(NullPointerException e){
+            return;
+        }
         for (String item : latest.getItems()){
             Double price;
             try{
@@ -319,6 +325,35 @@ public class LocalDataCache {
             }
             catch(NullPointerException e){
                 newprice = latest.getPrices()[i];
+            }
+            double pChange = (newprice-price)/price*100;
+            this.PERCENTAGE_CHANGES.put(item, pChange);
+            i++;
+        }
+        i = 0;
+        EnchantmentsTimePeriod latest2 = Main.getDatabase().map.get(size-1).getEtp();
+        for (String item : latest2.getItems()){
+            Double price;
+            try{
+                price = Main.getDatabase().map.get(0).getEtp().getPrices()[i];
+                if (size-1 > tpInDay){
+                    price = Main.getDatabase().map.get(size-tpInDay).getEtp().getPrices()[i]; 
+                }
+            }
+            catch(NullPointerException e){
+                try{
+                    price = Main.getCache().getEnchantmentPrice(item, false);
+                }
+                catch(NullPointerException e2){
+                    price = latest2.getPrices()[i];
+                }
+            }
+            Double newprice;
+            try{
+                newprice = Main.getCache().getEnchantmentPrice(item, false);
+            }
+            catch(NullPointerException e){
+                newprice = latest2.getPrices()[i];
             }
             double pChange = (newprice-price)/price*100;
             this.PERCENTAGE_CHANGES.put(item, pChange);
@@ -373,13 +408,24 @@ public class LocalDataCache {
     }
 
     private void loadShopDataFromData(){
-        if (size < 1){
+        if (size == 0){
             for (String str : this.ITEMS.keySet()){
                 this.PERCENTAGE_CHANGES.put(str, 0.0);
             }
             return;
         }
-        updatePercentageChanges();
+        if (size == 1){
+            int i = 0;
+            ItemTimePeriod ITP = Main.getDatabase().map.get(0).getItp();
+            for (String item : Main.getDatabase().map.get(0).getItp().getItems()){
+                ItemData data = new ItemData(ITP.getPrices()[i]);
+                this.ITEMS.put(item, data);
+                i++;
+            }
+            for (String str : this.ITEMS.keySet()){
+                this.PERCENTAGE_CHANGES.put(str, 0.0);
+            }
+        }
         int i = 0;
         ItemTimePeriod ITP = Main.getDatabase().map.get(size-1).getItp();
         for (String item : Main.getDatabase().map.get(size-1).getItp().getItems()){

@@ -3,6 +3,7 @@ package unprotesting.com.github.data.persistent;
 import java.io.Serializable;
 
 import lombok.Getter;
+import lombok.Setter;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.data.persistent.timeperiods.EconomyInfoTimePeriod;
 import unprotesting.com.github.data.persistent.timeperiods.EnchantmentsTimePeriod;
@@ -17,17 +18,19 @@ public class TimePeriod implements Serializable{
 
     //  Contains all relavent time-periods in persistent form
 
-    @Getter
+    private static final long serialVersionUID = -1102531403L;
+
+    @Getter @Setter
     private ItemTimePeriod itp;
-    @Getter
+    @Getter @Setter
     private EnchantmentsTimePeriod etp;
-    @Getter
+    @Getter @Setter
     private TransactionsTimePeriod ttp;
-    @Getter
+    @Getter @Setter
     private LoanTimePeriod ltp;
-    @Getter
+    @Getter @Setter
     private GDPTimePeriod gtp;
-    @Getter
+    @Getter @Setter
     private EconomyInfoTimePeriod eitp;
 
     public TimePeriod(){

@@ -8,6 +8,8 @@ import unprotesting.com.github.data.ephemeral.data.GDPData;
 
 public class GDPTimePeriod implements Serializable{
 
+    private static final long serialVersionUID = -1102531406L;
+
     @Getter
     private double GDP,
                    balance, 

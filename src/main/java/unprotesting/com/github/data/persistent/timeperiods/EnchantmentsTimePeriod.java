@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Set;
 
 import lombok.Getter;
+import lombok.Setter;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.data.ephemeral.LocalDataCache;
 import unprotesting.com.github.data.ephemeral.data.EnchantmentData;
@@ -13,7 +14,9 @@ import unprotesting.com.github.data.util.BuyableTimePeriodFunctions;
 
 public class EnchantmentsTimePeriod extends BuyableTimePeriodFunctions implements Serializable{
 
-    @Getter
+    private static final long serialVersionUID = -1102531405L;
+
+    @Getter @Setter
     private int[] buys, 
                   sells;
     @Getter

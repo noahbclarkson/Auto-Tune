@@ -119,7 +119,11 @@ public class TransactionsCommand implements CommandExecutor{
     private GuiItem applyMetaToStack(ItemMeta meta, ItemStack item, TransactionData transaction, List<String> lore){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         OfflinePlayer player = Bukkit.getPlayer(UUID.fromString(transaction.getPlayer()));
-        lore.add(ChatColor.WHITE + "Player: " + player.getName());
+        String player_name = "Unknown";
+        if (player != null){
+            player_name = player.getName();
+        }
+        lore.add(ChatColor.WHITE + "Player: " + player_name);
         lore.add(ChatColor.WHITE + "Price: " + Config.getCurrencySymbol() + df.format(transaction.getPrice()));
         lore.add(ChatColor.WHITE + "Date: " + transaction.getDate().format(formatter));
         meta.setLore(lore);

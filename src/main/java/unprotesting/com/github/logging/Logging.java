@@ -7,7 +7,7 @@ import unprotesting.com.github.config.Config;
 public class Logging {
 
     private static String[] errors = {
-        "Only players can execut this command",
+        "Only players can execute this command",
         "Disabled Auto-Tune due to no Vault dependency found! Please make sure Vault and another economy plugin, such as EssentialsX is installed!",
         "A maximum of 8 sections can be allocated",
         "Item/Enchantment not found in map",

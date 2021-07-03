@@ -49,7 +49,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
             ItemStack item = new ItemStack(section.getImage());
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(ChatColor.GOLD + section.getName());
-            meta.setLore(Arrays.asList(new String[]{ChatColor.WHITE + "CLick to enter " + section.getName() + " shop"}));
+            meta.setLore(Arrays.asList(new String[]{ChatColor.WHITE + "Click to enter " + section.getName() + " shop"}));
             item.setItemMeta(meta);
             GuiItem gItem = new GuiItem(item, event ->{
                 event.setCancelled(true);

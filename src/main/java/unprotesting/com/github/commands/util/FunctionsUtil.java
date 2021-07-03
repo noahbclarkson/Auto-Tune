@@ -68,6 +68,10 @@ public class FunctionsUtil {
             ItemStack istack = (ItemStack)(Arrays.asList(map.values().toArray())).get(0);
             amount = amount-istack.getAmount();
         }
+        if (amount < 1 || price == 0){
+            player.sendMessage(MessagesData.getMessageString(player, "dont-have-item", inputs));
+            return;
+        }
         EconomyFunctions.getEconomy().depositPlayer(player, (amount*price));
         player.sendMessage(MessagesData.getMessageString(player, "shop-sell", inputs));
         Main.getCache().addSale(player, item, price, amount, SalePositionType.SELL);

@@ -44,9 +44,9 @@ public class GDPCommand implements CommandExecutor{
         Main.getCache().getGDPDATA().updateDebt();
         pane.addItem(getGDPGuiItem(), 3, 1);
         pane.addItem(getBalanceGuiItem(), 5, 1);
-        pane.addItem(getDebtGuiItem(), 2, 1);
-        pane.addItem(getLossGuiItem(), 4, 1);
-        pane.addItem(getInflationGuiItem(), 6, 1);
+        pane.addItem(getDebtGuiItem(), 2, 2);
+        pane.addItem(getLossGuiItem(), 4, 2);
+        pane.addItem(getInflationGuiItem(), 6, 2);
         GUI.addPane(pane);
         GUI.show((HumanEntity) sender);
     }

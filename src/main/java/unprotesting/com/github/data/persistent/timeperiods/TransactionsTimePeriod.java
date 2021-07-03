@@ -12,6 +12,8 @@ import unprotesting.com.github.data.util.LocalDateTimeArrayUtilizer;
 
 public class TransactionsTimePeriod extends LocalDateTimeArrayUtilizer implements Serializable {
 
+    private static final long serialVersionUID = -1102531409L;
+
     @Getter
     private double[] prices;
     @Getter

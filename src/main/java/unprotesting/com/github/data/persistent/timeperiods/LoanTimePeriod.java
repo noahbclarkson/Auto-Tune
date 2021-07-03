@@ -12,6 +12,8 @@ import unprotesting.com.github.data.util.LocalDateTimeArrayUtilizer;
 
 public class LoanTimePeriod extends LocalDateTimeArrayUtilizer implements Serializable{
 
+    private static final long serialVersionUID = -1102531408L;
+
     @Getter
     private double[] values,
                      interest_rates,

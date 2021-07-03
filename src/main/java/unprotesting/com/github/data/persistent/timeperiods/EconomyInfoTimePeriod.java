@@ -7,6 +7,8 @@ import unprotesting.com.github.Main;
 
 public class EconomyInfoTimePeriod implements Serializable{
 
+    private static final long serialVersionUID = -1102531404L;
+
     @Getter
     private double sellPriceDifference;
 

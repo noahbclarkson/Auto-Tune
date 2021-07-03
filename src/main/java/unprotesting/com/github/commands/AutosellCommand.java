@@ -20,6 +20,7 @@ import unprotesting.com.github.Main;
 import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.commands.util.CommandUtil;
 import unprotesting.com.github.commands.util.ShopFormat;
+import unprotesting.com.github.config.Config;
 
 public class AutosellCommand extends ShopFormat implements CommandExecutor {
 
@@ -64,7 +65,7 @@ public class AutosellCommand extends ShopFormat implements CommandExecutor {
             lore = ChatColor.RED + "Click to turn on auto-selling!";
         }
         meta.setLore(Arrays.asList(new String[]{lore, ChatColor.WHITE + "Sell-Price: "
-         + ChatColor.GOLD + df.format(Main.getCache().getItemPrice(item.getType().toString(), true))}));
+         + ChatColor.GOLD + Config.getCurrencySymbol() + df.format(Main.getCache().getItemPrice(item.getType().toString(), true))}));
         item.setItemMeta(meta);
         GuiItem gItem = new GuiItem(item, event ->{
             event.setCancelled(true);

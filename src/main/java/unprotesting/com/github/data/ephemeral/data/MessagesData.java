@@ -36,8 +36,10 @@ public class MessagesData {
             this.tutorial.add(ChatColor.translateAlternateColorCodes('&', str));
         }
         input = Main.getDfiles().getMessages().getStringList("on-join");
-        for (String str : input){
-            this.onJoin.add(ChatColor.translateAlternateColorCodes('&', str));
+        if (input != null){
+            for (String str : input){
+                this.onJoin.add(ChatColor.translateAlternateColorCodes('&', str));
+            }
         }
     }
 

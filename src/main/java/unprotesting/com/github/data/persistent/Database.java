@@ -83,6 +83,7 @@ public class Database {
             buys[pos] = buys[pos] + Main.getCache().getITEMS().get(item).getBuys();
             sells[pos] = sells[pos] + Main.getCache().getITEMS().get(item).getSells();
             ITP.setBuys(buys);
+            ITP.setSells(sells);
             pos++;
         }
         TP.setItp(ITP);
@@ -94,7 +95,8 @@ public class Database {
         for (String enchantment : enchantments){
             ebuys[pos] = ebuys[pos] + Main.getCache().getENCHANTMENTS().get(enchantment).getBuys();
             esells[pos] = esells[pos] + Main.getCache().getENCHANTMENTS().get(enchantment).getSells();
-            ETP.setBuys(buys);
+            ETP.setBuys(ebuys);
+            ETP.setSells(esells);
             pos++;
         }
         TP.setEtp(ETP);

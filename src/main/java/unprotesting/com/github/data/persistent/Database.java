@@ -69,7 +69,11 @@ public class Database {
     }
 
     public void saveCacheToLastTP(){
-        TimePeriod TP = this.map.get(this.map.size()-1);
+        int size = this.map.size()-1;
+        if (size < 1){
+            return;
+        }
+        TimePeriod TP = this.map.get(size);
         ItemTimePeriod ITP = TP.getItp();
         String[] items = ITP.getItems();
         int[] buys = ITP.getBuys();
@@ -83,12 +87,13 @@ public class Database {
         }
         TP.setItp(ITP);
         EnchantmentsTimePeriod ETP = TP.getEtp();
-        items = ETP.getItems();
-        buys = ETP.getBuys();
-        sells = ETP.getSells();
-        for (String item : items){
-            buys[pos] = buys[pos] + Main.getCache().getENCHANTMENTS().get(item).getBuys();
-            sells[pos] = sells[pos] + Main.getCache().getENCHANTMENTS().get(item).getSells();
+        String[] enchantments = ETP.getItems();
+        int[] ebuys = ETP.getBuys();
+        int[] esells = ETP.getSells();
+        pos = 0;
+        for (String enchantment : enchantments){
+            ebuys[pos] = ebuys[pos] + Main.getCache().getENCHANTMENTS().get(enchantment).getBuys();
+            esells[pos] = esells[pos] + Main.getCache().getENCHANTMENTS().get(enchantment).getSells();
             ETP.setBuys(buys);
             pos++;
         }

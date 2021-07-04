@@ -125,6 +125,7 @@ public class TransactionsCommand implements CommandExecutor{
         }
         lore.add(ChatColor.WHITE + "Player: " + player_name);
         lore.add(ChatColor.WHITE + "Price: " + Config.getCurrencySymbol() + df.format(transaction.getPrice()));
+        lore.add(ChatColor.WHITE + "Total: " + Config.getCurrencySymbol() + df.format(transaction.getPrice()*transaction.getAmount()));
         lore.add(ChatColor.WHITE + "Date: " + transaction.getDate().format(formatter));
         meta.setLore(lore);
         item.setItemMeta(meta);

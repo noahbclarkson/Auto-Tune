@@ -43,7 +43,13 @@ public class GDPData {
             if (player == null){
                 continue;
             }
-            double bal = EconomyFunctions.getEconomy().getBalance(player);
+            Double bal;
+            try{
+                bal = EconomyFunctions.getEconomy().getBalance(player);
+            }
+            catch(RuntimeException e){
+                return;
+            }
             server_balance += bal;
             server_player_count++;
         }

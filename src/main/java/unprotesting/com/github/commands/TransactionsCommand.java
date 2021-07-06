@@ -118,7 +118,7 @@ public class TransactionsCommand implements CommandExecutor{
 
     private GuiItem applyMetaToStack(ItemMeta meta, ItemStack item, TransactionData transaction, List<String> lore){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
-        OfflinePlayer player = Bukkit.getPlayer(UUID.fromString(transaction.getPlayer()));
+        OfflinePlayer player = Bukkit.getOfflinePlayer(UUID.fromString(transaction.getPlayer()));
         String player_name = "Unknown";
         if (player != null){
             player_name = player.getName();

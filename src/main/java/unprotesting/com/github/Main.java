@@ -185,7 +185,7 @@ public class Main extends JavaPlugin{
          -> Bukkit.getPluginManager().callEvent(new TutorialSendEvent()),
            Config.getTutorialMessagePeriod()*20, Config.getTutorialMessagePeriod()*20);
 
-        Bukkit.getServer().getPluginManager().registerEvents(new AutoTuneJoinMessageEventHandler(), this);
+        Bukkit.getServer().getPluginManager().registerEvents(new JoinMessageEventHandler(), this);
     }
 
     private void getEssentials(){

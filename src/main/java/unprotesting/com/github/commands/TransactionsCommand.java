@@ -120,9 +120,7 @@ public class TransactionsCommand implements CommandExecutor{
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         OfflinePlayer player = Bukkit.getOfflinePlayer(UUID.fromString(transaction.getPlayer()));
         String player_name = "Unknown";
-        if (player != null){
-            player_name = player.getName();
-        }
+        player_name = player.getName();
         lore.add(ChatColor.WHITE + "Player: " + player_name);
         lore.add(ChatColor.WHITE + "Price: " + Config.getCurrencySymbol() + df.format(transaction.getPrice()));
         lore.add(ChatColor.WHITE + "Total: " + Config.getCurrencySymbol() + df.format(transaction.getPrice()*transaction.getAmount()));

@@ -376,6 +376,7 @@ public class LocalDataCache {
         loadGDPDataFromData();
         loadEconomyInfoDataFromFile();
         loadEconomyInfoDataFromData();
+        updatePercentageChanges();
     }
 
     //  Get current cache for a players PlayerData object

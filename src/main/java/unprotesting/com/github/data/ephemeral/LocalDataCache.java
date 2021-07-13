@@ -8,9 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
@@ -20,11 +18,22 @@ import unprotesting.com.github.Main;
 import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.csv.CSVReader;
-import unprotesting.com.github.data.ephemeral.data.*;
-import unprotesting.com.github.data.ephemeral.other.*;
+import unprotesting.com.github.data.ephemeral.data.EconomyInfoData;
+import unprotesting.com.github.data.ephemeral.data.EnchantmentData;
+import unprotesting.com.github.data.ephemeral.data.GDPData;
+import unprotesting.com.github.data.ephemeral.data.ItemData;
+import unprotesting.com.github.data.ephemeral.data.LoanData;
+import unprotesting.com.github.data.ephemeral.data.MaxBuySellData;
+import unprotesting.com.github.data.ephemeral.data.TransactionData;
 import unprotesting.com.github.data.ephemeral.data.TransactionData.TransactionPositionType;
+import unprotesting.com.github.data.ephemeral.other.PlayerSaleData;
+import unprotesting.com.github.data.ephemeral.other.Sale;
 import unprotesting.com.github.data.ephemeral.other.Sale.SalePositionType;
-import unprotesting.com.github.data.persistent.timeperiods.*;
+import unprotesting.com.github.data.persistent.timeperiods.EnchantmentsTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.GDPTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.ItemTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.LoanTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.TransactionsTimePeriod;
 import unprotesting.com.github.logging.Logging;
 
 //  Global functions file between ephemeral and persistent storage
@@ -475,18 +484,22 @@ public class LocalDataCache {
     }
 
     private void loadTransactionDataFromData(){
-        if (size < 1){
+        if (this.size < 1){
             return;
         }
         this.TRANSACTIONS.clear();
         for (Integer pos : Main.getDatabase().map.keySet()){
             TransactionsTimePeriod TTP = Main.getDatabase().map.get(pos).getTtp();
             for (int i = 0; i < TTP.getPrices().length; i++){
-                UUID uuid = UUID.fromString(TTP.getPlayers()[i]);
-                OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
                 TransactionPositionType position = TransactionPositionType.valueOf(TTP.getPositions()[i]);
-                TransactionData data = new TransactionData(player.getUniqueId().toString(), TTP.getItems()[i], TTP.getAmounts()[i], TTP.getPrices()[i], position, TTP.getTime()[i]);
-                this.TRANSACTIONS.add(data);
+                try{
+                    TransactionData data = new TransactionData(TTP.getPlayers()[i], TTP.getItems()[i],
+                     TTP.getAmounts()[i], TTP.getPrices()[i], position, TTP.getTime()[i]);
+                    this.TRANSACTIONS.add(data);
+                }
+                catch(NullPointerException e){
+                    Logging.error("Auto-Tune failed to cache data for a transaction!");
+                }
             }
         }
         Collections.sort(this.TRANSACTIONS);

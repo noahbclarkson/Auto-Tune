@@ -34,7 +34,7 @@ public class AutosellProfitUpdateEvent extends Event{
             double amount = Main.getAutosellData().getData().get(player_uuid);
             EconomyFunctions.getEconomy().depositPlayer(offPlayer, amount);
             if (offPlayer.isOnline()){
-                Player player = (Player) offPlayer;
+                Player player = offPlayer.getPlayer();
                 String[] inputs = new String[2];
                 inputs[1] = df.format(amount);
                 player.sendMessage(MessagesData.getMessageString(player, "autosell-profit-update", inputs));

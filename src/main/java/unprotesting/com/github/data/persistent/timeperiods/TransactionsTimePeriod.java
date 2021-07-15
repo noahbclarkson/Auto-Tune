@@ -28,12 +28,6 @@ public class TransactionsTimePeriod extends LocalDateTimeArrayUtilizer implement
     public TransactionsTimePeriod(){
         int size = Main.getCache().getNEW_TRANSACTIONS().size();
         init(size);
-        this.prices = new double[size];
-        this.amounts = new int[size];
-        this.items = new String[size];
-        this.players = new String[size];
-        this.positions = new String[size];
-        this.time = new int[size][6];
         int i = 0;
         for (TransactionData data : Main.getCache().getNEW_TRANSACTIONS()){
             setVars(i, data);
@@ -45,6 +39,9 @@ public class TransactionsTimePeriod extends LocalDateTimeArrayUtilizer implement
         this.prices[pos] = data.getPrice();
         this.amounts[pos] = data.getAmount();
         this.players[pos] = data.getPlayer();
+        if (this.players[pos] == null){
+            throw new NullPointerException("Transaction player can't be null in database");
+        }
         this.items[pos] = data.getItem();
         LocalDateTime date = data.getDate();
         this.time[pos] = dateToIntArray(date);
@@ -57,6 +54,7 @@ public class TransactionsTimePeriod extends LocalDateTimeArrayUtilizer implement
         this.items = new String[size];
         this.time = new int[size][6];
         this.amounts = new int[size];
+        this.positions = new String[size];
     }
     
 }

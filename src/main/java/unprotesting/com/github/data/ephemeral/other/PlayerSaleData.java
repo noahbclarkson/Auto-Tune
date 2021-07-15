@@ -49,13 +49,21 @@ public class PlayerSaleData {
     private Sale checkIfSaleExisits(String item, SalePositionType position){
         switch(position){
             case BUY:
-                return getSale(item, this.buys);
+                Sale sale = getSale(item, this.buys);
+                this.buys.remove(sale);
+                return sale;
             case SELL:  
-                return getSale(item, this.sells);
+                Sale sale2 = getSale(item, this.sells);
+                this.sells.remove(sale2);
+                return sale2;
             case EBUY:
-                return getSale(item, this.ebuys);
+                Sale sale3 = getSale(item, this.ebuys);
+                this.ebuys.remove(sale3);
+                return sale3;
             case ESELL:
-                return getSale(item, this.esells);
+                Sale sale4 = getSale(item, this.esells);
+                this.esells.remove(sale4);
+                return sale4;
             default:
                 break;
         }
@@ -65,7 +73,6 @@ public class PlayerSaleData {
     private Sale getSale(String item, List<Sale> sales){
         for (Sale sale : sales){
             if(sale.getItem().equals(item)){
-                buys.remove(sale);
                 return sale;
             }
         }

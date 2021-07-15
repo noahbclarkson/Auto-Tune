@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
@@ -53,7 +54,7 @@ public class LocalDataCache {
     private List<TransactionData> TRANSACTIONS,
                                   NEW_TRANSACTIONS;
     @Getter
-    private ConcurrentHashMap<UUID, PlayerSaleData> PLAYER_SALES;
+    private ConcurrentHashMap<String, PlayerSaleData> PLAYER_SALES;
     @Getter
     private List<Section> SECTIONS;
     @Getter
@@ -74,7 +75,7 @@ public class LocalDataCache {
         this.NEW_LOANS = new ArrayList<LoanData>();
         this.TRANSACTIONS = new ArrayList<TransactionData>();
         this.NEW_TRANSACTIONS = new ArrayList<TransactionData>();
-        this.PLAYER_SALES = new ConcurrentHashMap<UUID, PlayerSaleData>();
+        this.PLAYER_SALES = new ConcurrentHashMap<String, PlayerSaleData>();
         this.SECTIONS = new ArrayList<Section>();
         this.MAX_PURCHASES = new ConcurrentHashMap<String, MaxBuySellData>();
         this.PERCENTAGE_CHANGES = new ConcurrentHashMap<String, Double>();
@@ -83,11 +84,11 @@ public class LocalDataCache {
     }
 
     //  Add a new sale to related maps depending on type, item, etc.
-    public void addSale(Player player, String item, double price, int amount, SalePositionType position){
+    public void addSale(OfflinePlayer player, String item, double price, int amount, SalePositionType position){
         PlayerSaleData playerSaleData = getPlayerSaleData(player);
         playerSaleData.addSale(item, amount, position);
         UUID uuid = player.getUniqueId();
-        this.PLAYER_SALES.put(player.getUniqueId(), playerSaleData);
+        this.PLAYER_SALES.put(player.getUniqueId().toString(), playerSaleData);
         String uuid_string = uuid.toString();
         try{
             switch(position){
@@ -127,8 +128,11 @@ public class LocalDataCache {
                     this.TRANSACTIONS.add(setdata);
                     this.NEW_TRANSACTIONS.add(setdata);
                     this.GDPDATA.increaseGDP((amount*price)/2);
-                    this.GDPDATA.increaseLoss((amount*getOverallEnchantmentPrice(item,
-                     getItemPrice(player.getInventory().getItemInMainHand().getType().toString(), false), false)-(amount*price)));
+                    if (player.isOnline()){
+                        Player onlinePlayer = player.getPlayer();
+                        this.GDPDATA.increaseLoss((amount*getOverallEnchantmentPrice(item,
+                         getItemPrice(onlinePlayer.getInventory().getItemInMainHand().getType().toString(), false), false)-(amount*price)));
+                    }
                     break;
                 default:
                     break;
@@ -141,13 +145,16 @@ public class LocalDataCache {
     }
 
     //  Add a new loan to ephemeral storage
-    public void addLoan(double value, double interest_rate, Player player){
+    public void addLoan(double value, double interest_rate, OfflinePlayer player){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         LoanData data = new LoanData(value, interest_rate, player.getUniqueId().toString());
         this.LOANS.add(data);
         this.NEW_LOANS.add(data);
-        player.sendMessage(ChatColor.RED + "Loan of " + Config.getCurrencySymbol() + value +
-         " with interest-rate: " + interest_rate + " % per " + df.format(Config.getInterestRateUpdateRate()/1200) + "min");
+        if (player.isOnline()){
+            Player onlinePlayer = player.getPlayer();
+            onlinePlayer.sendMessage(ChatColor.RED + "Loan of " + Config.getCurrencySymbol() + value +
+             " with interest-rate: " + interest_rate + " % per " + df.format(Config.getInterestRateUpdateRate()/1200) + "min");
+        }
         Collections.sort(LOANS);
     }
 
@@ -224,11 +231,11 @@ public class LocalDataCache {
         return (price + ratio*item_price);
     }
 
-    public int getBuysLeft(String item, Player player){
+    public int getBuysLeft(String item, OfflinePlayer player){
         if (Config.isDisableMaxBuysSells()){
             return 9999;
         }
-        PlayerSaleData pdata = PLAYER_SALES.get(player.getUniqueId());
+        PlayerSaleData pdata = PLAYER_SALES.get(player.getUniqueId().toString());
         Integer max;
         try{
             max = MAX_PURCHASES.get(item).getBuys();
@@ -251,11 +258,11 @@ public class LocalDataCache {
         return max-amount;
     }
 
-    public int getSellsLeft(String item, Player player){
+    public int getSellsLeft(String item, OfflinePlayer player){
         if (Config.isDisableMaxBuysSells()){
             return 9999;
         }
-        PlayerSaleData pdata = PLAYER_SALES.get(player.getUniqueId());
+        PlayerSaleData pdata = PLAYER_SALES.get(player.getUniqueId().toString());
         Integer max;
         try{
             max = MAX_PURCHASES.get(item).getSells();
@@ -389,10 +396,10 @@ public class LocalDataCache {
     }
 
     //  Get current cache for a players PlayerData object
-    private PlayerSaleData getPlayerSaleData(Player player){
+    private PlayerSaleData getPlayerSaleData(OfflinePlayer player){
         PlayerSaleData playerSaleData = new PlayerSaleData();
         if (this.PLAYER_SALES.contains(player)){
-            playerSaleData = this.PLAYER_SALES.get(player.getUniqueId());
+            playerSaleData = this.PLAYER_SALES.get(player.getUniqueId().toString());
         }
         return playerSaleData;
     }
@@ -410,11 +417,11 @@ public class LocalDataCache {
         }
         for (String key : set){
             ConfigurationSection section = config.getConfigurationSection(key);
-            ItemData data = new ItemData(section.getDouble("price"));
+            ItemData data = new ItemData(section.getDouble("price", 0.0));
             if (Config.isReadFromCSV()){
                 data = new ItemData(map.get(key));
             }
-            MaxBuySellData mbsdata = new MaxBuySellData(section.getInt("max-buy"), section.getInt("max-sell"));
+            MaxBuySellData mbsdata = new MaxBuySellData(section.getInt("max-buy", 9999), section.getInt("max-sell", 9999));
             this.MAX_PURCHASES.put(key, mbsdata);
             this.ITEMS.put(key, data);
         }
@@ -453,7 +460,7 @@ public class LocalDataCache {
         Set<String> set = config.getKeys(false);
         for (String key : set){
             ConfigurationSection sec = config.getConfigurationSection(key);
-            EnchantmentData data = new EnchantmentData(sec.getDouble("price"), sec.getDouble("ratio"));
+            EnchantmentData data = new EnchantmentData(sec.getDouble("price", 0.0), sec.getDouble("ratio", 0.0));
             this.ENCHANTMENTS.put(key, data);
         }
     }

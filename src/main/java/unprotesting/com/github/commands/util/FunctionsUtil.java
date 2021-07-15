@@ -92,6 +92,7 @@ public class FunctionsUtil {
                 player.sendMessage(MessagesData.getMessageString(player, "hold-item-in-hand", new String[]{}));
             }
         }
+        
         double item_price = Main.getCache().getItemPrice(item.getType().toString(), false);
         double item_price_sell = Main.getCache().getItemPrice(item.getType().toString(), false);
         double bal = EconomyFunctions.getEconomy().getBalance(player);

@@ -10,26 +10,26 @@ public class Config {
 
  @Getter
  @Setter
- private static boolean webServer, debugEnabled, checksumHeaderBypass, sellPriceDifferenceVariationEnabled, inflationEnabled, 
+ private static boolean webServer, debugEnabled, checksumHeaderBypass, sellPriceDifferenceVariationEnabled, 
                          tutorial, sendPlayerTopMoversOnJoin, dataTransactions, disableMaxBuysSells,
                           ignoreAFK, usePermissionsForShop, readFromCSV, enableEnchantments;
 
  @Getter
  @Setter
  private static Integer port, timePeriod, sellPriceVariationTimePeriod, sellPriceVariationUpdatePeriod, autoSellUpdatePeriod, 
-                         autoSellProfitUpdatePeriod, dynamicInflationUpdatePeriod, maximumShortTradeLength, InterestRateUpdateRate,
+                         autoSellProfitUpdatePeriod, maximumShortTradeLength, InterestRateUpdateRate,
                           tutorialMessagePeriod, updatePricesThreshold;
 
  @Getter
  @Setter
- private static String menuTitle, apiKey, email, inflationMethod, currencySymbol,
-                        economyShopConfig, dataLocation, background, numberFormat;
+ private static String menuTitle, apiKey, email, currencySymbol, economyShopConfig,
+                         dataLocation, background, numberFormat;
 
  @Getter
  @Setter
  private static Double basicMaxFixedVolatility, basicMaxVariableVolatility, basicMinFixedVolatility, basicMinVariableVolatility, 
                         sellPriceDifference, sellPriceDifferenceVariationStart, dataSelectionM, dataSelectionC, dataSelectionZ,
-                         dynamicInflationValue, inflationValue, interestRate, maxDebt, shopConfigGUIShopSellValue, enchantmentLimiter,
+                         interestRate, maxDebt, shopConfigGUIShopSellValue, enchantmentLimiter,
                           durabilityLimiter;
 
     public static void loadDefaults() {
@@ -40,7 +40,6 @@ public class Config {
         Config.setDebugEnabled(Main.getDfiles().getConfig().getBoolean("debug-enabled", false));
         Config.setDisableMaxBuysSells(Main.getDfiles().getConfig().getBoolean("disable-max-buys-sells", false));
         Config.setIgnoreAFK(Main.getDfiles().getConfig().getBoolean("ignore-afk", true));
-        Config.setInflationEnabled(Main.getDfiles().getConfig().getBoolean("inflation-enabled", true));
         Config.setReadFromCSV(Main.getDfiles().getConfig().getBoolean("read-from-csv", false));
         Config.setSellPriceDifferenceVariationEnabled(Main.getDfiles().getConfig().getBoolean("sell-price-difference-variation-enabled", true));
         Config.setSendPlayerTopMoversOnJoin(Main.getDfiles().getConfig().getBoolean("send-player-top-movers-on-join", true));
@@ -52,7 +51,6 @@ public class Config {
 
         Config.setAutoSellProfitUpdatePeriod(Main.getDfiles().getConfig().getInt("auto-sell-profit-update-period", 1200));
         Config.setAutoSellUpdatePeriod(Main.getDfiles().getConfig().getInt("auto-sell-update-period", 10));
-        Config.setDynamicInflationUpdatePeriod(Main.getDfiles().getConfig().getInt("dynamic-inflation-update-period", 5000));
         Config.setInterestRateUpdateRate(Main.getDfiles().getConfig().getInt("interest-rate-update-period", 1200));
         Config.setMaximumShortTradeLength(Main.getDfiles().getConfig().getInt("maximum-short-trade-length", 100));
         Config.setPort(Main.getDfiles().getConfig().getInt("port", 8321));
@@ -69,7 +67,6 @@ public class Config {
         Config.setDataLocation(Main.getDfiles().getConfig().getString("data-location", ""));
         Config.setEconomyShopConfig(Main.getDfiles().getConfig().getString("economy-shop-config", "default"));
         Config.setEmail(Main.getDfiles().getConfig().getString("email", "xyz@gmail.com"));
-        Config.setInflationMethod(Main.getDfiles().getConfig().getString("inflation-method", "Mixed"));
         Config.setMenuTitle(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("menu-title", "Auto-Tune Shop")));
         Config.setNumberFormat(Main.getDfiles().getConfig().getString("number-format", "###,###,###,##0.00"));
 
@@ -82,9 +79,7 @@ public class Config {
         Config.setDataSelectionM(Main.getDfiles().getConfig().getDouble("data-selection-m", 0.05));
         Config.setDataSelectionZ(Main.getDfiles().getConfig().getDouble("data-selection-z", 1.6));
         Config.setDurabilityLimiter(Main.getDfiles().getConfig().getDouble("durability-limiter", 5.0));
-        Config.setDynamicInflationValue(Main.getDfiles().getConfig().getDouble("dynamic-inflation-value", 0.0025));
         Config.setEnchantmentLimiter(Main.getDfiles().getConfig().getDouble("enchantment-limiter", 7.5));
-        Config.setInflationValue(Main.getDfiles().getConfig().getDouble("static-inflation-value", 0.1));
         Config.setInterestRate(Main.getDfiles().getConfig().getDouble("interest-rate", 0.005));
         Config.setMaxDebt(Main.getDfiles().getConfig().getDouble("max-debt-value", -100.00));
         Config.setSellPriceDifference(Main.getDfiles().getConfig().getDouble("sell-price-difference", 2.5));

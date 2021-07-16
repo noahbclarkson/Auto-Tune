@@ -97,24 +97,6 @@ sell-price-variation-time-period: 43200
 ##  Time in minutes that the sell-price-difference updates
 sell-price-variation-update-period: 30
 
-##  Enable forced inflation in the economy
-inflation-enabled: true
-
-##  Inflation method can be Dynamic, Static or Mixed.
-##  Info: The dynamic method increases the prices of items in the economy by a percentage each time period
-##  Info: The static method adds extra values to buys
-##  Info: Mixed uses both methods
-inflation-method: 'Mixed'
-
-##  Time period in ticks between dynamic price increases
-dynamic-inflation-time-period: 2500
-
-##  Percentage increase in prices per time-period.
-dynamic-inflation-value: 0.01
-
-##  Percentage increase for buy value per price calculation update period. E.g 0.05%
-static-inflation-value: 0.05
-
 ##  Interest rate per interest-rate-update-period
 ##  Info: This is the increase in the current debt payment per-time period
 interest-rate: 0.0075

@@ -155,9 +155,6 @@ public class PriceUpdateEvent extends Event{
             final_sells += sells;
             x++;
         }
-        if (Config.isInflationEnabled()){
-            final_buys += final_buys * 0.01 * Config.getInflationValue();
-        }
         double avBuy = final_buys / final_y;
         double avSell = final_sells / final_y;
         return new Double[]{avBuy, avSell};

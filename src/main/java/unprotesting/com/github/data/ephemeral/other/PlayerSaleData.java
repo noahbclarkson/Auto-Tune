@@ -29,16 +29,16 @@ public class PlayerSaleData {
         sale.setAmount(sale.getAmount()+amount);
         switch(position){
             case BUY:
-                buys.add(sale);
+                this.buys.add(sale);
                 break;
             case SELL:
-                sells.add(sale);
+                this.sells.add(sale);
                 break;
             case EBUY:
-                ebuys.add(sale);
+                this.ebuys.add(sale);
                 break;
             case ESELL:
-                esells.add(sale);
+                this.esells.add(sale);
                 break;
             default:
                 break;
@@ -65,9 +65,8 @@ public class PlayerSaleData {
                 this.esells.remove(sale4);
                 return sale4;
             default:
-                break;
+                return new Sale(item, 0);
         }
-        return new Sale(item, 0);
     }
 
     private Sale getSale(String item, List<Sale> sales){

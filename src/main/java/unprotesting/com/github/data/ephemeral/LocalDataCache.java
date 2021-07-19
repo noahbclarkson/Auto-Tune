@@ -2,6 +2,7 @@ package unprotesting.com.github.data.ephemeral;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -139,6 +140,9 @@ public class LocalDataCache {
             }
         }
         catch(NullPointerException | IllegalArgumentException e){
+            if (Config.isDebugEnabled()){
+                e.printStackTrace();
+            }
             Logging.error(4);
             System.out.println("Cannot parse " + item + " into " + position.toString());
         }
@@ -311,72 +315,39 @@ public class LocalDataCache {
     }
 
     public void updatePercentageChanges(){
-        double a = Config.getTimePeriod()/1440;
-        double b = 1/a;
-        int tpInDay = (int) Math.floor(b);
-        int i = 0;
-        ItemTimePeriod latest;
-        try{
-            latest = Main.getDatabase().map.get(size-1).getItp();
-        }
-        catch(NullPointerException e){
+        int tpInDay = (int) Math.floor(1.0/(Config.getTimePeriod()/1440.0));
+        ItemTimePeriod Ilatest;
+        ItemTimePeriod Ibase;
+        EnchantmentsTimePeriod Elatest;
+        EnchantmentsTimePeriod Ebase;
+        if (this.size < 2){
             return;
         }
-        for (String item : latest.getItems()){
-            Double price;
-            try{
-                price = Main.getDatabase().map.get(0).getItp().getPrices()[i];
-                if (size-1 > tpInDay){
-                    price = Main.getDatabase().map.get(size-tpInDay).getItp().getPrices()[i]; 
-                }
-            }
-            catch(NullPointerException e){
-                try{
-                    price = Main.getCache().getItemPrice(item, false);
-                }
-                catch(NullPointerException e2){
-                    price = latest.getPrices()[i];
-                }
-            }
-            Double newprice;
-            try{
-                newprice = Main.getCache().getItemPrice(item, false);
-            }
-            catch(NullPointerException e){
-                newprice = latest.getPrices()[i];
-            }
-            double pChange = (newprice-price)/price*100;
-            this.PERCENTAGE_CHANGES.put(item, pChange);
-            i++;
+        Ilatest = Main.getDatabase().map.get(size-1).getItp();
+        Ibase = Main.getDatabase().map.get(0).getItp();
+        if (this.size-1 > tpInDay){
+            Ibase = Main.getDatabase().map.get(size-tpInDay).getItp();
         }
-        i = 0;
-        EnchantmentsTimePeriod latest2 = Main.getDatabase().map.get(size-1).getEtp();
-        for (String item : latest2.getItems()){
-            Double price;
-            try{
-                price = Main.getDatabase().map.get(0).getEtp().getPrices()[i];
-                if (size-1 > tpInDay){
-                    price = Main.getDatabase().map.get(size-tpInDay).getEtp().getPrices()[i]; 
-                }
-            }
-            catch(NullPointerException e){
-                try{
-                    price = Main.getCache().getEnchantmentPrice(item, false);
-                }
-                catch(NullPointerException e2){
-                    price = latest2.getPrices()[i];
-                }
-            }
-            Double newprice;
-            try{
-                newprice = Main.getCache().getEnchantmentPrice(item, false);
-            }
-            catch(NullPointerException e){
-                newprice = latest2.getPrices()[i];
-            }
-            double pChange = (newprice-price)/price*100;
+        for (String item : Ilatest.getItems()){
+            int latestPosition = Arrays.asList(Ilatest.getItems()).indexOf(item);
+            int basePosition = Arrays.asList(Ibase.getItems()).indexOf(item);
+            double latestPrice = Ilatest.getPrices()[latestPosition];
+            double basePrice = Ibase.getPrices()[basePosition];
+            double pChange = (latestPrice-basePrice)/basePrice*100;
             this.PERCENTAGE_CHANGES.put(item, pChange);
-            i++;
+        }
+        Elatest = Main.getDatabase().map.get(size-1).getEtp();
+        Ebase = Main.getDatabase().map.get(0).getEtp();
+        if (this.size-1 > tpInDay){
+            Ebase = Main.getDatabase().map.get(size-tpInDay).getEtp();
+        }
+        for (String enchantment : Elatest.getItems()){
+            int latestPosition = Arrays.asList(Elatest.getItems()).indexOf(enchantment);
+            int basePosition = Arrays.asList(Ebase.getItems()).indexOf(enchantment);
+            double latestPrice = Elatest.getPrices()[latestPosition];
+            double basePrice = Ebase.getPrices()[basePosition];
+            double pChange = (latestPrice-basePrice)/basePrice*100;
+            this.PERCENTAGE_CHANGES.put(enchantment, pChange);
         }
     }
 

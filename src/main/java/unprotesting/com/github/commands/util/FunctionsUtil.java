@@ -47,7 +47,7 @@ public class FunctionsUtil {
         }
         EconomyFunctions.getEconomy().withdrawPlayer(player, (amount*price));
         player.sendMessage(MessagesData.getMessageString(player, "shop-purchase", inputs));
-        Main.getCache().addSale(player, item, price, amount, SalePositionType.BUY);
+        Main.getCache().addSale(player.getUniqueId(), item, price, amount, SalePositionType.BUY);
     }
 
     public static void sellItem(Player player, String item, int amount){
@@ -74,7 +74,7 @@ public class FunctionsUtil {
         }
         EconomyFunctions.getEconomy().depositPlayer(player, (amount*price));
         player.sendMessage(MessagesData.getMessageString(player, "shop-sell", inputs));
-        Main.getCache().addSale(player, item, price, amount, SalePositionType.SELL);
+        Main.getCache().addSale(player.getUniqueId(), item, price, amount, SalePositionType.SELL);
     }
 
     @SuppressWarnings("deprecation")
@@ -125,7 +125,7 @@ public class FunctionsUtil {
         else{
             player.getInventory().setItemInOffHand(item);
         }
-        Main.getCache().addSale(player, enchantment, price, 1, SalePositionType.EBUY);
+        Main.getCache().addSale(player.getUniqueId(), enchantment, price, 1, SalePositionType.EBUY);
         EconomyFunctions.getEconomy().withdrawPlayer(player, price);
         player.sendMessage(MessagesData.getMessageString(player, "enchantment-purchase", inputs));
         player.getInventory().setItemInMainHand(item);
@@ -204,9 +204,9 @@ public class FunctionsUtil {
             data.add(player.getUniqueId().toString(), item.getAmount()*fprice);
             Main.setAutosellData(data);
         }
-        Main.getCache().addSale(player, item.getType().toString(), Main.getCache().getItemPrice(item.getType().toString(), true), item.getAmount(), SalePositionType.SELL);
+        Main.getCache().addSale(player.getUniqueId(), item.getType().toString(), Main.getCache().getItemPrice(item.getType().toString(), true), item.getAmount(), SalePositionType.SELL);
         for (Enchantment ench : item.getEnchantments().keySet()){
-            Main.getCache().addSale(player, ench.getName(), Main.getCache().getEnchantmentPrice(ench.toString(), true), item.getEnchantmentLevel(ench), SalePositionType.ESELL);
+            Main.getCache().addSale(player.getUniqueId(), ench.getName(), Main.getCache().getEnchantmentPrice(ench.toString(), true), item.getEnchantmentLevel(ench), SalePositionType.ESELL);
         }
     }
 

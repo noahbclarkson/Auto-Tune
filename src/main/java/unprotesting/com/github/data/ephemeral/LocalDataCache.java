@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
@@ -85,12 +86,12 @@ public class LocalDataCache {
     }
 
     //  Add a new sale to related maps depending on type, item, etc.
-    public void addSale(OfflinePlayer player, String item, double price, int amount, SalePositionType position){
+    public void addSale(UUID player_uuid, String item, double price, int amount, SalePositionType position){
+        OfflinePlayer player = Bukkit.getOfflinePlayer(player_uuid);
         PlayerSaleData playerSaleData = getPlayerSaleData(player);
         playerSaleData.addSale(item, amount, position);
-        UUID uuid = player.getUniqueId();
         this.PLAYER_SALES.put(player.getUniqueId().toString(), playerSaleData);
-        String uuid_string = uuid.toString();
+        String uuid_string = player_uuid.toString();
         try{
             switch(position){
                 case BUY:

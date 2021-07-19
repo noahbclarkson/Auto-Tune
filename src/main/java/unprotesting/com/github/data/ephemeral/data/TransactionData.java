@@ -37,7 +37,7 @@ public class TransactionData extends LocalDateTimeArrayUtilizer implements Compa
     //  Create new transaction data using previous persistent data
     public TransactionData(String player_uuid, String item, int amount, double price, TransactionPositionType position, int[] date){
         this.date = arrayToDate(date);
-        if (player == null){
+        if (player_uuid == null){
             throw new NullPointerException("Transaction player can't be null");
         }
         this.player = player_uuid;

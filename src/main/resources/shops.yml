@@ -6,7 +6,9 @@
 # ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗  
 # ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝  
 
-##  -- Auto-Tune Default Shops File --  ##
+##  -- Auto-Tune Shops File --  ##
+
+## See the wiki for info on each setting: https://github.com/Unprotesting/Auto-Tune/wiki
 
 ##  Shop sections configuration
 sections:

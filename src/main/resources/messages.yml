@@ -6,6 +6,10 @@
 # ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗
 # ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝
 
+##  -- Auto-Tune Messages File --  ##
+
+## See the wiki for info on each setting: https://github.com/Unprotesting/Auto-Tune/wiki
+
 ##  Placeholders (Placeholder API must be installed for these to work)
 ##  These placeholders can be used in other plugins
 ##  %AT_GDP_GDP%, %AT_GDP_BALANCE%, %AT_GDP_DEBT%, %AT_GDP_LOSS%, %AT_GDP_INFLATION%

@@ -370,7 +370,7 @@ public class LocalDataCache {
     //  Get current cache for a players PlayerData object
     private PlayerSaleData getPlayerSaleData(OfflinePlayer player){
         PlayerSaleData playerSaleData = new PlayerSaleData();
-        if (this.PLAYER_SALES.contains(player)){
+        if (this.PLAYER_SALES.containsKey(player.getUniqueId().toString())){
             playerSaleData = this.PLAYER_SALES.get(player.getUniqueId().toString());
         }
         return playerSaleData;

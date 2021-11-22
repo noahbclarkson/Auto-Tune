@@ -35,56 +35,56 @@ public class Config {
     public static void loadDefaults() {
 
         
-        Config.setChecksumHeaderBypass(Main.getDfiles().getConfig().getBoolean("checksum-header-bypass", false));
-        Config.setDataTransactions(Main.getDfiles().getConfig().getBoolean("data-transactions", false));
-        Config.setDebugEnabled(Main.getDfiles().getConfig().getBoolean("debug-enabled", false));
-        Config.setDisableMaxBuysSells(Main.getDfiles().getConfig().getBoolean("disable-max-buys-sells", false));
-        Config.setIgnoreAFK(Main.getDfiles().getConfig().getBoolean("ignore-afk", true));
-        Config.setReadFromCSV(Main.getDfiles().getConfig().getBoolean("read-from-csv", false));
-        Config.setSellPriceDifferenceVariationEnabled(Main.getDfiles().getConfig().getBoolean("sell-price-difference-variation-enabled", true));
-        Config.setSendPlayerTopMoversOnJoin(Main.getDfiles().getConfig().getBoolean("send-player-top-movers-on-join", true));
-        Config.setTutorial(Main.getDfiles().getConfig().getBoolean("tutorial", true));
-        Config.setUsePermissionsForShop(Main.getDfiles().getConfig().getBoolean("use-permission-for-shop", false));
-        Config.setWebServer(Main.getDfiles().getConfig().getBoolean("web-server-enabled", true));
-        Config.setEnableEnchantments(Main.getDfiles().getConfig().getBoolean("enable-enchantments", true));
+        Config.setChecksumHeaderBypass(Main.getDataFiles().getConfig().getBoolean("checksum-header-bypass", false));
+        Config.setDataTransactions(Main.getDataFiles().getConfig().getBoolean("data-transactions", false));
+        Config.setDebugEnabled(Main.getDataFiles().getConfig().getBoolean("debug-enabled", false));
+        Config.setDisableMaxBuysSells(Main.getDataFiles().getConfig().getBoolean("disable-max-buys-sells", false));
+        Config.setIgnoreAFK(Main.getDataFiles().getConfig().getBoolean("ignore-afk", true));
+        Config.setReadFromCSV(Main.getDataFiles().getConfig().getBoolean("read-from-csv", false));
+        Config.setSellPriceDifferenceVariationEnabled(Main.getDataFiles().getConfig().getBoolean("sell-price-difference-variation-enabled", true));
+        Config.setSendPlayerTopMoversOnJoin(Main.getDataFiles().getConfig().getBoolean("send-player-top-movers-on-join", true));
+        Config.setTutorial(Main.getDataFiles().getConfig().getBoolean("tutorial", true));
+        Config.setUsePermissionsForShop(Main.getDataFiles().getConfig().getBoolean("use-permission-for-shop", false));
+        Config.setWebServer(Main.getDataFiles().getConfig().getBoolean("web-server-enabled", true));
+        Config.setEnableEnchantments(Main.getDataFiles().getConfig().getBoolean("enable-enchantments", true));
 
 
-        Config.setAutoSellProfitUpdatePeriod(Main.getDfiles().getConfig().getInt("auto-sell-profit-update-period", 1200));
-        Config.setAutoSellUpdatePeriod(Main.getDfiles().getConfig().getInt("auto-sell-update-period", 10));
-        Config.setInterestRateUpdateRate(Main.getDfiles().getConfig().getInt("interest-rate-update-period", 1200));
-        Config.setMaximumShortTradeLength(Main.getDfiles().getConfig().getInt("maximum-short-trade-length", 100));
-        Config.setPort(Main.getDfiles().getConfig().getInt("port", 8321));
-        Config.setSellPriceVariationTimePeriod(Main.getDfiles().getConfig().getInt("sell-price-variation-time-period", 10800));
-        Config.setSellPriceVariationUpdatePeriod(Main.getDfiles().getConfig().getInt("sell-price-variation-update-period", 30));
-        Config.setTimePeriod(Main.getDfiles().getConfig().getInt("time-period", 10));
-        Config.setTutorialMessagePeriod(Main.getDfiles().getConfig().getInt("tutorial-message-period", 300));
-        Config.setUpdatePricesThreshold(Main.getDfiles().getConfig().getInt("update-prices-threshold", 1));
+        Config.setAutoSellProfitUpdatePeriod(Main.getDataFiles().getConfig().getInt("auto-sell-profit-update-period", 1200));
+        Config.setAutoSellUpdatePeriod(Main.getDataFiles().getConfig().getInt("auto-sell-update-period", 10));
+        Config.setInterestRateUpdateRate(Main.getDataFiles().getConfig().getInt("interest-rate-update-period", 1200));
+        Config.setMaximumShortTradeLength(Main.getDataFiles().getConfig().getInt("maximum-short-trade-length", 100));
+        Config.setPort(Main.getDataFiles().getConfig().getInt("port", 8321));
+        Config.setSellPriceVariationTimePeriod(Main.getDataFiles().getConfig().getInt("sell-price-variation-time-period", 10800));
+        Config.setSellPriceVariationUpdatePeriod(Main.getDataFiles().getConfig().getInt("sell-price-variation-update-period", 30));
+        Config.setTimePeriod(Main.getDataFiles().getConfig().getInt("time-period", 10));
+        Config.setTutorialMessagePeriod(Main.getDataFiles().getConfig().getInt("tutorial-message-period", 300));
+        Config.setUpdatePricesThreshold(Main.getDataFiles().getConfig().getInt("update-prices-threshold", 1));
 
 
-        Config.setApiKey(Main.getDfiles().getConfig().getString("api-key", "xyz"));
-        Config.setBackground(Main.getDfiles().getConfig().getString("background", "BLACK_STAINED_GLASS_PANE"));
-        Config.setCurrencySymbol(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("currency-symbol", "$")));
-        Config.setDataLocation(Main.getDfiles().getConfig().getString("data-location", ""));
-        Config.setEconomyShopConfig(Main.getDfiles().getConfig().getString("economy-shop-config", "default"));
-        Config.setEmail(Main.getDfiles().getConfig().getString("email", "xyz@gmail.com"));
-        Config.setMenuTitle(ChatColor.translateAlternateColorCodes('&', Main.getDfiles().getConfig().getString("menu-title", "Auto-Tune Shop")));
-        Config.setNumberFormat(Main.getDfiles().getConfig().getString("number-format", "###,###,###,##0.00"));
+        Config.setApiKey(Main.getDataFiles().getConfig().getString("api-key", "xyz"));
+        Config.setBackground(Main.getDataFiles().getConfig().getString("background", "BLACK_STAINED_GLASS_PANE"));
+        Config.setCurrencySymbol(ChatColor.translateAlternateColorCodes('&', Main.getDataFiles().getConfig().getString("currency-symbol", "$")));
+        Config.setDataLocation(Main.getDataFiles().getConfig().getString("data-location", ""));
+        Config.setEconomyShopConfig(Main.getDataFiles().getConfig().getString("economy-shop-config", "default"));
+        Config.setEmail(Main.getDataFiles().getConfig().getString("email", "xyz@gmail.com"));
+        Config.setMenuTitle(ChatColor.translateAlternateColorCodes('&', Main.getDataFiles().getConfig().getString("menu-title", "Auto-Tune Shop")));
+        Config.setNumberFormat(Main.getDataFiles().getConfig().getString("number-format", "###,###,###,##0.00"));
 
 
-        Config.setBasicMaxFixedVolatility(Main.getDfiles().getConfig().getDouble("Fixed-Max-Volatility", 2.00));
-        Config.setBasicMaxVariableVolatility(Main.getDfiles().getConfig().getDouble("max-volatility", 0.5));
-        Config.setBasicMinFixedVolatility(Main.getDfiles().getConfig().getDouble("Fixed-Min-Volatility", 0.05));
-        Config.setBasicMinVariableVolatility(Main.getDfiles().getConfig().getDouble("min-volatility", 0.025));
-        Config.setDataSelectionC(Main.getDfiles().getConfig().getDouble("data-selection-c", 1.05));
-        Config.setDataSelectionM(Main.getDfiles().getConfig().getDouble("data-selection-m", 0.05));
-        Config.setDataSelectionZ(Main.getDfiles().getConfig().getDouble("data-selection-z", 1.6));
-        Config.setDurabilityLimiter(Main.getDfiles().getConfig().getDouble("durability-limiter", 5.0));
-        Config.setEnchantmentLimiter(Main.getDfiles().getConfig().getDouble("enchantment-limiter", 7.5));
-        Config.setInterestRate(Main.getDfiles().getConfig().getDouble("interest-rate", 0.005));
-        Config.setMaxDebt(Main.getDfiles().getConfig().getDouble("max-debt-value", -100.00));
-        Config.setSellPriceDifference(Main.getDfiles().getConfig().getDouble("sell-price-difference", 2.5));
-        Config.setSellPriceDifferenceVariationStart(Main.getDfiles().getConfig().getDouble("sell-price-difference-variation-start", 25.0));
-        Config.setShopConfigGUIShopSellValue(Main.getDfiles().getConfig().getDouble("shop-config-guishop-sell-value", 20.00));
+        Config.setBasicMaxFixedVolatility(Main.getDataFiles().getConfig().getDouble("Fixed-Max-Volatility", 2.00));
+        Config.setBasicMaxVariableVolatility(Main.getDataFiles().getConfig().getDouble("max-volatility", 0.5));
+        Config.setBasicMinFixedVolatility(Main.getDataFiles().getConfig().getDouble("Fixed-Min-Volatility", 0.05));
+        Config.setBasicMinVariableVolatility(Main.getDataFiles().getConfig().getDouble("min-volatility", 0.025));
+        Config.setDataSelectionC(Main.getDataFiles().getConfig().getDouble("data-selection-c", 1.05));
+        Config.setDataSelectionM(Main.getDataFiles().getConfig().getDouble("data-selection-m", 0.05));
+        Config.setDataSelectionZ(Main.getDataFiles().getConfig().getDouble("data-selection-z", 1.6));
+        Config.setDurabilityLimiter(Main.getDataFiles().getConfig().getDouble("durability-limiter", 5.0));
+        Config.setEnchantmentLimiter(Main.getDataFiles().getConfig().getDouble("enchantment-limiter", 7.5));
+        Config.setInterestRate(Main.getDataFiles().getConfig().getDouble("interest-rate", 0.005));
+        Config.setMaxDebt(Main.getDataFiles().getConfig().getDouble("max-debt-value", -100.00));
+        Config.setSellPriceDifference(Main.getDataFiles().getConfig().getDouble("sell-price-difference", 2.5));
+        Config.setSellPriceDifferenceVariationStart(Main.getDataFiles().getConfig().getDouble("sell-price-difference-variation-start", 25.0));
+        Config.setShopConfigGUIShopSellValue(Main.getDataFiles().getConfig().getDouble("shop-config-guishop-sell-value", 20.00));
     }
 
 }

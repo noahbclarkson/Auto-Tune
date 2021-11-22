@@ -36,7 +36,7 @@ public class Section {
         }
         this.items = new ArrayList<String>();
         if (!this.name.equals("Enchantments")){
-            ConfigurationSection shops = Main.getDfiles().getShops().getConfigurationSection("shops");
+            ConfigurationSection shops = Main.getDataFiles().getShops().getConfigurationSection("shops");
             for (String key : shops.getKeys(false)){
                 ConfigurationSection inner = shops.getConfigurationSection(key);
                 if (inner.getString("section").equals(this.name)){
@@ -46,8 +46,8 @@ public class Section {
         }
         else{
             this.enchantmentSection = true;
-            this.image = Material.matchMaterial(Main.getDfiles().getEnchantments().getConfigurationSection("config").getString("block"));
-            ConfigurationSection config = Main.getDfiles().getEnchantments().getConfigurationSection("enchantments");
+            this.image = Material.matchMaterial(Main.getDataFiles().getEnchantments().getConfigurationSection("config").getString("block"));
+            ConfigurationSection config = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments");
             for (String key : config.getKeys(false)){
                 this.items.add(key);
             }

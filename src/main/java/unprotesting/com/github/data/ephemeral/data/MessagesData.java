@@ -31,11 +31,11 @@ public class MessagesData {
         this.tutorialData = new ConcurrentHashMap<String, Integer>();
         this.tutorial = new ArrayList<String>();
         this.onJoin = new ArrayList<String>();
-        List<String> input = Main.getDfiles().getMessages().getStringList("tutorial");
+        List<String> input = Main.getDataFiles().getMessages().getStringList("tutorial");
         for (String str : input){
             this.tutorial.add(ChatColor.translateAlternateColorCodes('&', str));
         }
-        input = Main.getDfiles().getMessages().getStringList("on-join");
+        input = Main.getDataFiles().getMessages().getStringList("on-join");
         if (input != null){
             for (String str : input){
                 this.onJoin.add(ChatColor.translateAlternateColorCodes('&', str));
@@ -54,7 +54,7 @@ public class MessagesData {
     }
 
     public static String getNoPermission(Player player){
-        String base = Main.getDfiles().getMessages().getString("no-permission");
+        String base = Main.getDataFiles().getMessages().getString("no-permission");
         if (Main.isPlaceholderAPI()){
             base = PlaceholderAPI.setPlaceholders(player, base);
         }
@@ -74,7 +74,7 @@ public class MessagesData {
     }
 
     public static String getMessageString(Player player, String message, String... inputs){
-        String base = Main.getDfiles().getMessages().getString(message);
+        String base = Main.getDataFiles().getMessages().getString(message);
         for (int i = 0; i < inputs.length; i++){
             String input = inputs[i];
             if (input != null){

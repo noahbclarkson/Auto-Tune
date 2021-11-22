@@ -21,10 +21,10 @@ public class GDPTimePeriod implements Serializable{
     private int playerCount;
 
     public GDPTimePeriod(){
-        Main.getCache().getGDPDATA().updateDebt();
-        Main.getCache().getGDPDATA().updateBalance();
-        Main.getCache().getGDPDATA().updateInflation();
-        GDPData data = Main.getCache().getGDPDATA();
+        Main.getCache().getGDP_DATA().updateDebt();
+        Main.getCache().getGDP_DATA().updateBalance();
+        Main.getCache().getGDP_DATA().updateInflation();
+        GDPData data = Main.getCache().getGDP_DATA();
         this.GDP = data.getGDP();
         this.balance = data.getBalance();
         this.playerCount = data.getPlayerCount();

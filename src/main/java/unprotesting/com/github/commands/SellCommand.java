@@ -22,7 +22,7 @@ public class SellCommand implements CommandExecutor{
 
     private boolean interpretCommand(CommandSender sender){
         Player player = CommandUtil.closeInventory(sender);
-        if (!(player.hasPermission("at.sell") || player.hasPermission("at.admin"))){CommandUtil.noPermssion(player);return true;}
+        if (!(player.hasPermission("at.sell") || player.hasPermission("at.admin"))){CommandUtil.noPermission(player);return true;}
         setupSellGUI(sender);
         return true;
     }

@@ -43,7 +43,7 @@ import unprotesting.com.github.logging.Logging;
 
 public class LocalDataCache {
 
-    //  Globally accessable caches for persistent storage
+    //  Globally accessible caches for persistent storage
 
     @Getter
     private ConcurrentHashMap<String, ItemData> ITEMS;
@@ -64,9 +64,9 @@ public class LocalDataCache {
     @Getter
     private ConcurrentHashMap<String, Double> PERCENTAGE_CHANGES;
     @Getter @Setter
-    private GDPData GDPDATA;
+    private GDPData GDP_DATA;
     @Getter
-    private EconomyInfoData ECONOMYINFO;
+    private EconomyInfoData ECONOMY_INFO;
 
     private int size;
 
@@ -101,7 +101,7 @@ public class LocalDataCache {
                     TransactionData btdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BI);
                     this.TRANSACTIONS.add(btdata);
                     this.NEW_TRANSACTIONS.add(btdata);
-                    this.GDPDATA.increaseGDP((amount*price)/2);
+                    this.GDP_DATA.increaseGDP((amount*price)/2);
                     break;
                 case SELL:
                     ItemData sdata = this.ITEMS.get(item);
@@ -110,8 +110,8 @@ public class LocalDataCache {
                     TransactionData stdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SI);
                     this.TRANSACTIONS.add(stdata);
                     this.NEW_TRANSACTIONS.add(stdata);
-                    this.GDPDATA.increaseGDP((amount*price)/2);
-                    this.GDPDATA.increaseLoss((amount*getItemPrice(item, false))-(amount*price));
+                    this.GDP_DATA.increaseGDP((amount*price)/2);
+                    this.GDP_DATA.increaseLoss((amount*getItemPrice(item, false))-(amount*price));
                     break;
                 case EBUY:
                     EnchantmentData ebdata = this.ENCHANTMENTS.get(item);
@@ -120,7 +120,7 @@ public class LocalDataCache {
                     TransactionData betdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BE);
                     this.TRANSACTIONS.add(betdata);
                     this.NEW_TRANSACTIONS.add(betdata);
-                    this.GDPDATA.increaseGDP((amount*price)/2);
+                    this.GDP_DATA.increaseGDP((amount*price)/2);
                     break;
                 case ESELL:
                     EnchantmentData esdata = this.ENCHANTMENTS.get(item);
@@ -129,10 +129,10 @@ public class LocalDataCache {
                     TransactionData setdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SE);
                     this.TRANSACTIONS.add(setdata);
                     this.NEW_TRANSACTIONS.add(setdata);
-                    this.GDPDATA.increaseGDP((amount*price)/2);
+                    this.GDP_DATA.increaseGDP((amount*price)/2);
                     if (player.isOnline()){
                         Player onlinePlayer = player.getPlayer();
-                        this.GDPDATA.increaseLoss((amount*getOverallEnchantmentPrice(item,
+                        this.GDP_DATA.increaseLoss((amount*getOverallEnchantmentPrice(item,
                          getItemPrice(onlinePlayer.getInventory().getItemInMainHand().getType().toString(), false), false)-(amount*price)));
                     }
                     break;
@@ -182,8 +182,8 @@ public class LocalDataCache {
             return price;
         }
         Double spd = Config.getSellPriceDifference();
-        if (Main.getDfiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).contains("sell-difference")){
-            spd = Main.getDfiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("sell-difference");
+        if (Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).contains("sell-difference")){
+            spd = Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("sell-difference");
         }
         return (price - price*spd*0.01);
     }
@@ -201,13 +201,13 @@ public class LocalDataCache {
             return price;
         }
         Double spd = Config.getSellPriceDifference();
-        if (Main.getDfiles().getEnchantments().getConfigurationSection("enchantments").getConfigurationSection(enchantment).contains("sell-difference")){
-            spd = Main.getDfiles().getEnchantments().getConfigurationSection("enchantments").getConfigurationSection(enchantment).getDouble("sell-difference");
+        if (Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments").getConfigurationSection(enchantment).contains("sell-difference")){
+            spd = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments").getConfigurationSection(enchantment).getDouble("sell-difference");
         }
         return (price - price*spd*0.01);
     }
 
-    //  Get enchantement ratio
+    //  Get enchantment ratio
     public double getEnchantmentRatio(String enchantment){
         Double price;
         try{
@@ -352,7 +352,7 @@ public class LocalDataCache {
         }
     }
 
-    //  Initialize cache from configurations and relavent files
+    //  Initialize cache from configurations and relevant files
     private void init(){
         loadShopDataFromFile();
         loadShopDataFromData();
@@ -377,7 +377,7 @@ public class LocalDataCache {
     }
 
     private void loadShopDataFromFile(){
-        ConfigurationSection config = Main.getDfiles().getShops().getConfigurationSection("shops");
+        ConfigurationSection config = Main.getDataFiles().getShops().getConfigurationSection("shops");
         Set<String> set = config.getKeys(false);
         ConcurrentHashMap<String, Double> map = new ConcurrentHashMap<String, Double>();
         try {
@@ -428,7 +428,7 @@ public class LocalDataCache {
     }
 
     private void loadEnchantmentDataFromFile(){
-        ConfigurationSection config = Main.getDfiles().getEnchantments().getConfigurationSection("enchantments");
+        ConfigurationSection config = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments");
         Set<String> set = config.getKeys(false);
         for (String key : set){
             ConfigurationSection sec = config.getConfigurationSection(key);
@@ -485,35 +485,35 @@ public class LocalDataCache {
     }
 
     private void loadSectionDataFromFile(){
-        ConfigurationSection csection = Main.getDfiles().getShops().getConfigurationSection("sections");
+        ConfigurationSection csection = Main.getDataFiles().getShops().getConfigurationSection("sections");
         for (String section : csection.getKeys(false)){
             ConfigurationSection icsection = csection.getConfigurationSection(section);
             SECTIONS.add(new Section(section, icsection.getString("block"), icsection.getBoolean("back-menu-button-enabled"),
              icsection.getInt("position"), icsection.getString("background")));
         }
-        csection = Main.getDfiles().getEnchantments().getConfigurationSection("config");
+        csection = Main.getDataFiles().getEnchantments().getConfigurationSection("config");
         SECTIONS.add(new Section("Enchantments", csection.getString("block"), csection.getBoolean("back-menu-button-enabled"),
              csection.getInt("position"), csection.getString("background")));
     }
 
     private void loadGDPDataFromData(){
         if (size < 1){
-            this.GDPDATA = new GDPData(0, 0, 0, 0, 0, 0);
+            this.GDP_DATA = new GDPData(0, 0, 0, 0, 0, 0);
             return;
         }
         GDPTimePeriod GTP = Main.getDatabase().map.get(size-1).getGtp();
-        this.GDPDATA = new GDPData(GTP.getGDP(), GTP.getBalance(), GTP.getLoss(), GTP.getDebt(), GTP.getInflation(), GTP.getPlayerCount());
+        this.GDP_DATA = new GDPData(GTP.getGDP(), GTP.getBalance(), GTP.getLoss(), GTP.getDebt(), GTP.getInflation(), GTP.getPlayerCount());
     }
 
     private void loadEconomyInfoDataFromFile(){
-        this.ECONOMYINFO = new EconomyInfoData(Config.getSellPriceDifferenceVariationStart());
+        this.ECONOMY_INFO = new EconomyInfoData(Config.getSellPriceDifferenceVariationStart());
     }
 
     private void loadEconomyInfoDataFromData(){
         if (size < 1){
             return;
         }
-        this.ECONOMYINFO = new EconomyInfoData(Main.getDatabase().map.get(size-1).getEitp().getSellPriceDifference());
+        this.ECONOMY_INFO = new EconomyInfoData(Main.getDatabase().map.get(size-1).getEitp().getSellPriceDifference());
     }
 
 }

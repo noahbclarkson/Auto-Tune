@@ -20,13 +20,13 @@ public class SellPriceDifferenceUpdateEvent extends Event{
     }
 
     private void updateSellPriceDifference(){
-        double SPD = Main.getCache().getECONOMYINFO().getSellPriceDifference();
+        double SPD = Main.getCache().getECONOMY_INFO().getSellPriceDifference();
         double fraction = Config.getSellPriceVariationUpdatePeriod()/Config.getSellPriceVariationTimePeriod();
         double change = fraction*(Config.getSellPriceDifferenceVariationStart()
-         - Main.getDfiles().getConfig().getDouble("sell-price-difference", 10));
+         - Main.getDataFiles().getConfig().getDouble("sell-price-difference", 10));
         double newSPD = SPD - change;
-        if (newSPD > Main.getDfiles().getConfig().getDouble("sell-price-difference", 10)){
-            Main.getCache().getECONOMYINFO().updateSellPriceDifference(newSPD);
+        if (newSPD > Main.getDataFiles().getConfig().getDouble("sell-price-difference", 10)){
+            Main.getCache().getECONOMY_INFO().updateSellPriceDifference(newSPD);
         }
     }
     

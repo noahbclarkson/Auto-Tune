@@ -28,7 +28,7 @@ public abstract class ShopFormat {
     protected boolean interpretCommand(CommandSender sender, String[] args, String permission){
         Player player = CommandUtil.closeInventory(sender);
         int length = args.length;
-        if (!(player.hasPermission(permission) || player.hasPermission("at.admin"))){CommandUtil.noPermssion(player);return true;}
+        if (!(player.hasPermission(permission) || player.hasPermission("at.admin"))){CommandUtil.noPermission(player);return true;}
         if (length > 1){
             return false;
         }

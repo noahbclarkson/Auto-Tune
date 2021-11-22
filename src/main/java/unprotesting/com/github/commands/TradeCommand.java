@@ -20,7 +20,7 @@ public class TradeCommand implements CommandExecutor{
     public boolean onCommand(CommandSender sender, Command command, String trade, String[] args) {
         if (sender instanceof Player){
             Player player = CommandUtil.closeInventory(sender);
-            if (!(player.hasPermission("at.trade") || player.hasPermission("at.admin"))){CommandUtil.noPermssion(player);return true;}
+            if (!(player.hasPermission("at.trade") || player.hasPermission("at.admin"))){CommandUtil.noPermission(player);return true;}
             String[] arr = Main.getServerIPStrings();
             player.spigot().sendMessage(createTextComponent(ChatColor.YELLOW + "View Overall Item Prices", "Click to go to " + arr[0], arr[0]));
             player.spigot().sendMessage(createTextComponent(ChatColor.YELLOW + "View Recent Item Prices", "Click to go to " + arr[1], arr[1]));

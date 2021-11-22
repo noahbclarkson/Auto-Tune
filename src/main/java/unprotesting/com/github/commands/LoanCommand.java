@@ -43,7 +43,7 @@ public class LoanCommand implements CommandExecutor{
     @Deprecated
     private boolean interpretCommand(CommandSender sender, String[] args){
         Player player = CommandUtil.closeInventory(sender);
-        if (!(player.hasPermission("at.loan") || player.hasPermission("at.admin"))){CommandUtil.noPermssion(player);return true;}
+        if (!(player.hasPermission("at.loan") || player.hasPermission("at.admin"))){CommandUtil.noPermission(player);return true;}
         ChestGui gui = new ChestGui(6, "Loans");
         PaginatedPane pages = new PaginatedPane(0, 0, 9, 6);
         List<LoanData> loans = Main.getCache().getLOANS();
@@ -63,7 +63,7 @@ public class LoanCommand implements CommandExecutor{
                 items = getGuiItemsFromLoans(loans, player_uuid);
             }
             else if (!args[1].equals(player.getName()) && (!player.hasPermission("at.loan.other") && !player.hasPermission("at.admin"))){
-                CommandUtil.noPermssion(player);
+                CommandUtil.noPermission(player);
                 return true;
             }
             else{

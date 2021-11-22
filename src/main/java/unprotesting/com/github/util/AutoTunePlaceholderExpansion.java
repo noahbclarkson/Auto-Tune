@@ -57,19 +57,19 @@ public class AutoTunePlaceholderExpansion extends PlaceholderExpansion{
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         if (identifier.contains("GDP")){
             if (identifier.equals("GDP_GDP")){
-                return Config.getCurrencySymbol() + df.format(Main.getCache().getGDPDATA().getGDP());
+                return Config.getCurrencySymbol() + df.format(Main.getCache().getGDP_DATA().getGDP());
             }
             if (identifier.equals("GDP_BALANCE")){
-                return Config.getCurrencySymbol() + df.format(Main.getCache().getGDPDATA().getBalance());
+                return Config.getCurrencySymbol() + df.format(Main.getCache().getGDP_DATA().getBalance());
             }
             if (identifier.equals("GDP_DEBT")){
-                return Config.getCurrencySymbol() + df.format(Main.getCache().getGDPDATA().getDebt());
+                return Config.getCurrencySymbol() + df.format(Main.getCache().getGDP_DATA().getDebt());
             }
             if (identifier.equals("GDP_LOSS")){
-                return Config.getCurrencySymbol() + df.format(Main.getCache().getGDPDATA().getLoss());
+                return Config.getCurrencySymbol() + df.format(Main.getCache().getGDP_DATA().getLoss());
             }
             if (identifier.equals("GDP_INFLATION")){
-                return df.format(Main.getCache().getGDPDATA().getInflation()) + "%";
+                return df.format(Main.getCache().getGDP_DATA().getInflation()) + "%";
             }
         }
         if (identifier.contains("_PRICE") || identifier.contains("_SELLPRICE") ||

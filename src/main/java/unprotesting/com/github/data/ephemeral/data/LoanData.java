@@ -69,9 +69,9 @@ public class LoanData extends LocalDateTimeArrayUtilizer implements Comparable<L
         }
         Main.getCache().getLOANS().remove(this);
         Main.getCache().getNEW_LOANS().remove(this);
-        GDPData data = Main.getCache().getGDPDATA();
+        GDPData data = Main.getCache().getGDP_DATA();
         data.increaseLoss(this.value-this.base_value);
-        Main.getCache().setGDPDATA(data);
+        Main.getCache().setGDP_DATA(data);
         return true;
     }
 

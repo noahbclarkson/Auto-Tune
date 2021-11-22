@@ -13,7 +13,7 @@ public class EconomyInfoTimePeriod implements Serializable{
     private double sellPriceDifference;
 
     public EconomyInfoTimePeriod(){
-        this.sellPriceDifference = Main.getCache().getECONOMYINFO().getSellPriceDifference();
+        this.sellPriceDifference = Main.getCache().getECONOMY_INFO().getSellPriceDifference();
     }
     
 }

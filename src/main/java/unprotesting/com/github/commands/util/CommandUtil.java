@@ -28,7 +28,7 @@ public class CommandUtil {
         return true;
     }
 
-    public static void noPermssion(Player p){p.sendMessage(MessagesData.getNoPermission(p));}
+    public static void noPermission(Player p){p.sendMessage(MessagesData.getNoPermission(p));}
 
     public static Player closeInventory(CommandSender sender){
         Player player = (Player)sender;
@@ -79,8 +79,8 @@ public class CommandUtil {
             k++;
         }
         int i = 0;
-        for (OutlinePane opane : panes){
-            pages.addPane(i, opane);
+        for (OutlinePane outlinePane : panes){
+            pages.addPane(i, outlinePane);
             i++;
         }
         gui.addPane(pages);
@@ -103,7 +103,7 @@ public class CommandUtil {
 
     public static boolean getPlayerAutoSellSetting(Player player, String item){
         String uuid = player.getUniqueId().toString();
-        return Main.getDfiles().getPlayerData().getBoolean(uuid + ".autosell." + item, false);
+        return Main.getDataFiles().getPlayerData().getBoolean(uuid + ".autosell." + item, false);
     }
     
 }

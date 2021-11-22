@@ -21,7 +21,7 @@ public class AutosellUpdateEvent extends Event{
     private final HandlerList Handlers = new HandlerList();
 
     public AutosellUpdateEvent(){
-        YamlConfiguration config = Main.getDfiles().getPlayerData();
+        YamlConfiguration config = Main.getDataFiles().getPlayerData();
         for (Player player : Bukkit.getOnlinePlayers()){
             List<String> data = new ArrayList<String>();
             ConfigurationSection section = config.getConfigurationSection(player.getUniqueId().toString() + ".autosell");

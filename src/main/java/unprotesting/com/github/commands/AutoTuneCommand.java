@@ -27,7 +27,7 @@ public class AutoTuneCommand implements CommandExecutor{
 
     private boolean interpretCommand(CommandSender sender, String[] args){
         Player player = CommandUtil.closeInventory(sender);
-        if (!(player.hasPermission("at.admin"))){CommandUtil.noPermssion(player);return true;}
+        if (!(player.hasPermission("at.admin"))){CommandUtil.noPermission(player);return true;}
         if (args.length == 0){
             return returnDefault(player);
         }
@@ -86,7 +86,7 @@ public class AutoTuneCommand implements CommandExecutor{
             return true;
         }
         else {
-            GDPData data = Main.getCache().getGDPDATA();
+            GDPData data = Main.getCache().getGDP_DATA();
             if (input.equals("GDP")){
                 data.setGDP(price);
                 player.sendMessage(ChatColor.GREEN + "Changed GDP to " + Config.getCurrencySymbol() + new_price);
@@ -113,7 +113,7 @@ public class AutoTuneCommand implements CommandExecutor{
                 return true;
             }
         }
-        player.sendMessage(ChatColor.RED + input + " is not a vaild input.");
+        player.sendMessage(ChatColor.RED + input + " is not a valid input.");
         return false;
     }
 

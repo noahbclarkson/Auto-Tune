@@ -41,7 +41,7 @@ import unprotesting.com.github.util.bstats.Metrics;
 public class Main extends JavaPlugin{
 
     @Getter
-    private static DataFiles dfiles;
+    private static DataFiles dataFiles;
     @Getter
     private static Database database;
     @Getter
@@ -123,13 +123,13 @@ public class Main extends JavaPlugin{
     }
 
     private void setupDataFiles(){
-        dfiles = new DataFiles(getDataFolder());
+        dataFiles = new DataFiles(getDataFolder());
         for (int i = 0; i < 8; i++){
-            if (!dfiles.getFiles()[i].exists()){
-                saveResource(dfiles.getFileNames()[i], false);
+            if (!dataFiles.getFiles()[i].exists()){
+                saveResource(dataFiles.getFileNames()[i], false);
             }
         }
-        dfiles.loadConfigs();
+        dataFiles.loadConfigs();
     }
 
     private void setupCommands(){

@@ -31,7 +31,7 @@ public class GDPCommand implements CommandExecutor{
 
     private boolean interpretCommand(CommandSender sender, String[] args){
         Player player = CommandUtil.closeInventory(sender);
-        if (!(player.hasPermission("at.gdp") || player.hasPermission("at.admin"))){CommandUtil.noPermssion(player);return true;}
+        if (!(player.hasPermission("at.gdp") || player.hasPermission("at.admin"))){CommandUtil.noPermission(player);return true;}
         openGDPGui(sender);
         return true;
     }
@@ -40,8 +40,8 @@ public class GDPCommand implements CommandExecutor{
         CommandUtil.closeInventory(sender);
         ChestGui GUI = new ChestGui(5, "GDP and Economy Info");
         StaticPane pane = new StaticPane(9, 5);
-        Main.getCache().getGDPDATA().updateBalance();
-        Main.getCache().getGDPDATA().updateDebt();
+        Main.getCache().getGDP_DATA().updateBalance();
+        Main.getCache().getGDP_DATA().updateDebt();
         pane.addItem(getGDPGuiItem(), 3, 1);
         pane.addItem(getBalanceGuiItem(), 5, 1);
         pane.addItem(getDebtGuiItem(), 2, 2);
@@ -55,8 +55,8 @@ public class GDPCommand implements CommandExecutor{
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         ItemStack item = new ItemStack(Material.DIAMOND);
         ItemMeta meta = item.getItemMeta();
-        double GDP = Main.getCache().getGDPDATA().getGDP();
-        double GDPperCapita = GDP/Main.getCache().getGDPDATA().getPlayerCount();
+        double GDP = Main.getCache().getGDP_DATA().getGDP();
+        double GDPperCapita = GDP/Main.getCache().getGDP_DATA().getPlayerCount();
         meta.setDisplayName(ChatColor.AQUA + "GDP");
         meta.setLore(Arrays.asList(new String[]{
             ChatColor.GOLD + "-> GDP: " + Config.getCurrencySymbol() + df.format(GDP) + ".",
@@ -77,8 +77,8 @@ public class GDPCommand implements CommandExecutor{
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         ItemStack item = new ItemStack(Material.GOLD_INGOT);
         ItemMeta meta = item.getItemMeta();
-        double bal = Main.getCache().getGDPDATA().getBalance();
-        double balPerCapita = bal/Main.getCache().getGDPDATA().getPlayerCount();
+        double bal = Main.getCache().getGDP_DATA().getBalance();
+        double balPerCapita = bal/Main.getCache().getGDP_DATA().getPlayerCount();
         meta.setDisplayName(ChatColor.AQUA + "Balance");
         meta.setLore(Arrays.asList(new String[]{
             ChatColor.GOLD + "-> Balance: " + Config.getCurrencySymbol() + df.format(bal) + ".",
@@ -99,8 +99,8 @@ public class GDPCommand implements CommandExecutor{
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         ItemStack item = new ItemStack(Material.EMERALD);
         ItemMeta meta = item.getItemMeta();
-        double debt = Main.getCache().getGDPDATA().getDebt();
-        double debtPerCapita = debt/Main.getCache().getGDPDATA().getPlayerCount();
+        double debt = Main.getCache().getGDP_DATA().getDebt();
+        double debtPerCapita = debt/Main.getCache().getGDP_DATA().getPlayerCount();
         meta.setDisplayName(ChatColor.AQUA + "Debt");
         meta.setLore(Arrays.asList(new String[]{
             ChatColor.GOLD + "-> Debt: " + Config.getCurrencySymbol() + df.format(debt) + ".",
@@ -120,8 +120,8 @@ public class GDPCommand implements CommandExecutor{
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         ItemStack item = new ItemStack(Material.FLINT);
         ItemMeta meta = item.getItemMeta();
-        double loss = Main.getCache().getGDPDATA().getLoss();
-        double lossPerCapita = loss/Main.getCache().getGDPDATA().getPlayerCount();
+        double loss = Main.getCache().getGDP_DATA().getLoss();
+        double lossPerCapita = loss/Main.getCache().getGDP_DATA().getPlayerCount();
         meta.setDisplayName(ChatColor.AQUA + "Loss");
         meta.setLore(Arrays.asList(new String[]{
             ChatColor.GOLD + "-> Loss: " + Config.getCurrencySymbol() + df.format(loss) + ".",
@@ -142,7 +142,7 @@ public class GDPCommand implements CommandExecutor{
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         ItemStack item = new ItemStack(Material.BAMBOO);
         ItemMeta meta = item.getItemMeta();
-        double inflation = Main.getCache().getGDPDATA().getInflation();
+        double inflation = Main.getCache().getGDP_DATA().getInflation();
         meta.setDisplayName(ChatColor.AQUA + "Inflation");
         meta.setLore(Arrays.asList(new String[]{
             ChatColor.GOLD + "-> Inflation: " + Config.getCurrencySymbol() + df.format(inflation) + ".",

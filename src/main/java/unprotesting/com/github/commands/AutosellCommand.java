@@ -78,17 +78,17 @@ public class AutosellCommand extends ShopFormat implements CommandExecutor {
 
     private void changePlayerAutoSellSetting(Player player, String item){
         String uuid = player.getUniqueId().toString();
-        YamlConfiguration config = Main.getDfiles().getPlayerData();
+        YamlConfiguration config = Main.getDataFiles().getPlayerData();
         if (!config.contains(uuid + ".autosell")){
             config.createSection(uuid + ".autosell");
             config.set(uuid + ".autosell." + item, true);
-            Main.getDfiles().setPlayerData(config);
+            Main.getDataFiles().setPlayerData(config);
             return;
         }
         else if (!config.contains(uuid + ".autosell." + item)){
             config.createSection(uuid + ".autosell." + item);
             config.set(uuid + ".autosell." + item, true);
-            Main.getDfiles().setPlayerData(config);
+            Main.getDataFiles().setPlayerData(config);
             return;
         }
         else{

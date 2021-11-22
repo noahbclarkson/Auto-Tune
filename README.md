@@ -6,9 +6,9 @@
 
 # Auto-Tune
  
- ### A Powerful Minecraft Automatic-Economy Plugin for ```1.14-1.16``` with Many Features!
+ ### A Powerful Minecraft Automatic-Economy Plugin for ```1.13-1.17``` with Many Features!
    
-  <img src="https://github.com/Unprotesting/Auto-Tune/blob/1.16.4/.github/AtLogo.png?raw=true" width="185"/>
+  <img src="https://github.com/Unprotesting/Auto-Tune/blob/0.13.0-Development/.github/AtLogo.png?raw=true" width="185"/>
   
 
 ## Features
@@ -34,13 +34,13 @@ An example of a shop setup using Auto-Tune:
   #### Feature List
 
   - ```Exponential pricing model.```
-  - ```Contains 7 pricing model options. [Volatility Options and algorithim, data-selection-algorithim, and more].```
+  - ```Contains 7 pricing model options. [Volatility Options and algorithm, data-selection-algorithm, and more].```
   - ```2 forced-inflation methods with individual options [Dynamic and Static Inflation, configurable update periods].```
   - ```2 integrated web-servers to display prices online in graphs [Server port settings and more].```
   - ```Configurable GUI with sizing, positioning and naming options.```
   - ```Configurable shops with options to lock price and sell-price-differences [For more look at shops.yml configuration below].```
   - ```Configurable sell-price-difference.```
-  - ```Sell price-difference-variation algorithim options [Update period, total time, starting-difference, ending difference].```
+  - ```Sell price-difference-variation algorithm options [Update period, total time, starting-difference, ending difference].```
   - ```Player loaning including an easy loaning GUI.```
   - ```Configurable interest rates [Update period, amount and more].```
   - ```Debt settings.```
@@ -94,10 +94,10 @@ An example of a shop setup using Auto-Tune:
 
 ##  -- General Settings --  ##
 
-##  API key given on signup
+##  API key given on sign-up
 api-key: 'xyz'
 
-##  Email used on signup
+##  Email used on sign-up
 email: 'xyz@gmail.com'
 
 ##  Enable/Disable integrated Web Server.
@@ -142,15 +142,15 @@ enable-enchantments: true
 ##  Percentage difference in sell price to buy price
 sell-price-difference: 10.0
 
-##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
+##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithm as a percentage of total price
 max-volatility: 0.5
 
-##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
+##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithm in economy units
 min-volatility: 0.025
 
 ##  -- Data Selection Settings --  ##
 
-##  Info: When setting your data selection algorithim use a site such as https://www.desmos.com/calculator
+##  Info: When setting your data selection algorithm use a site such as https://www.desmos.com/calculator
 ##  Info: Data selection uses the equation y=m(x^z)+c, for example the default is y=0.075(x^(1.6))+0.55
 
 ##  'm' in equation: y=m(x^z)+c
@@ -162,7 +162,7 @@ data-selection-z: 1.75
 ##  'c' in equation: y=m(x^z)+c
 data-selection-c: 0.55
 
-##  -- Other Econonomy Settings --
+##  -- Other Economy Settings --
 
 ##  Minimum players needed, to be online, for prices to update
 ##  Info: It is recommended to keep this above 0
@@ -174,7 +174,7 @@ currency-symbol: '$'
 ##  Enable sell price difference variation to ease out sell price variation
 sell-price-difference-variation-enabled: true
 
-##  Starting percententage sell price difference for sell price variation
+##  Starting percentage sell price difference for sell price variation
 sell-price-difference-variation-start: 25.0
 
 ##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 4 weeks)
@@ -223,7 +223,7 @@ max-debt-value: 1000.00
 enchantment-limiter: 45.00
 
 ##  The percentage value to decrease items sold with a loss in durability
-##  Info: This is applied ON TOP of the durability algorithm to limit the exploitability of selling tools
+##  Info: This is applied ON TOP of the durability algorithm to limit the exploit-ability of selling tools
 durability-limiter: 7.50
 
 ##  -- Other Settings --
@@ -231,7 +231,7 @@ durability-limiter: 7.50
 ##  Enable debug mode for more info on price calculations
 debug-enabled: false
 
-##  Ignore AFK players in price calulcations/online checks
+##  Ignore AFK players in price calculations/online checks
 ##  Info: Turning this on will mean the price will only update when there's a player that is not AFK
 ##  Info: This only applies to essentials AFK and you must have essentials installed for this to work
 ignore-afk: true
@@ -316,11 +316,11 @@ sections:
     back-menu-button-enabled: true
 
 ##  Set the default / starting prices for the items you want available in the shop.
-##  Info: Make sure you put a decimal point and two digits to create a double for the shop algorithim to accept and parse to a price-value.
+##  Info: Make sure you put a decimal point and two digits to create a double for the shop algorithm to accept and parse to a price-value.
 ##  Info: Most of these values will be almost useless once the economy has started, to use these values again delete the data.db file.
 ##  Info: Material names are available here: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html.
 ##  Info: To remove an item use /at remove <item-name> to remove it from the global map.
-##  Options: 'price: <double>' set the defualt starting price of the item.
+##  Options: 'price: <double>' set the default starting price of the item.
 ##  Options: 'section: <string>' set the section of this item.
 ##  Options: 'locked: <boolean>' set the price to be locked or variable (variable by default).
 ##  Options: 'sell-difference: <double>' set a custom sell-price-difference (default set in config).
@@ -333,7 +333,7 @@ sections:
   ##  Example:
   ##  GRASS_BLOCK:
   ##    price: 50.00
-  ##    section: 'Blocks'      Tihs item will exist within the 'Blocks' shop-section
+  ##    section: 'Blocks'      This item will exist within the 'Blocks' shop-section
   ##    locked: true      <- Example of a locked item
   ##    sell-difference: 0.0    <- Example of a set sell-difference item
   ##    max-buy: 10       <- Only 10 items can be bought each time-period - you can increase this on large servers

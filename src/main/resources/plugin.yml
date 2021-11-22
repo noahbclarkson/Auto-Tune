@@ -49,7 +49,7 @@ commands:
     transactions:
       description: View player transactions
       usage: /transactions <page-no> | /transactions all <page-no> | /transactions <player-name> <page-no>
-permssions:
+permissions:
   at.admin:
     description: Admin commands and access to all other commands.
   at.autosell:
@@ -78,7 +78,7 @@ permssions:
     default: true
   at.transactions.other:  
     description: View all transactions.
-    default: false
+    default: op
   at.tutorial:
     description: Allow players to view tutorial messages.
     default: true

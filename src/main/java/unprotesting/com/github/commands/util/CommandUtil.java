@@ -88,9 +88,12 @@ public class CommandUtil {
         gui.show((HumanEntity)(sender));
     }
 
-    public static  ChestGui getBackground(ChestGui GUI, int lines, String bItem){
+    public static ChestGui getBackground(ChestGui GUI, int lines, String bItem){
         GUI.setOnGlobalClick(event -> event.setCancelled(true));
         OutlinePane background = new OutlinePane(0, 0, 9, lines, Priority.LOWEST);
+        if (bItem.equalsIgnoreCase("none")){
+            return GUI;
+        }
         ItemStack item = new ItemStack(Material.matchMaterial(bItem));
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.MAGIC + "|");

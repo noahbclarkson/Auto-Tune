@@ -38,6 +38,7 @@ time-period: 30
 menu-title: 'Shop'
 
 ##  GUI Shop Menu background
+##  Info: Use 'NONE' for no background
 background: 'BLACK_STAINED_GLASS_PANE'
 
 ##  How often auto-sell updates in ticks

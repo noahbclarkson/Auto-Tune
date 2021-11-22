@@ -16,6 +16,7 @@ sections:
     ##  Block that the section image is displayed as
     block: 'IRON_ORE'
     ##  Background for sub-menu
+    ##  Use 'NONE' for no background
     background: 'GRAY_STAINED_GLASS_PANE'
     ##  Position in Main Menu GUI
     position: 10

@@ -11,9 +11,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -38,6 +42,7 @@ import unprotesting.com.github.data.persistent.timeperiods.ItemTimePeriod;
 import unprotesting.com.github.data.persistent.timeperiods.LoanTimePeriod;
 import unprotesting.com.github.data.persistent.timeperiods.TransactionsTimePeriod;
 import unprotesting.com.github.logging.Logging;
+import unprotesting.com.github.util.UtilFunctions;
 
 //  Global functions file between ephemeral and persistent storage
 
@@ -389,6 +394,10 @@ public class LocalDataCache {
         }
         for (String key : set){
             ConfigurationSection section = config.getConfigurationSection(key);
+            if (!Material.matchMaterial(key).isItem()){
+                Logging.error("Invalid item in shops.yml: " + key);
+                continue;
+            }
             ItemData data = new ItemData(section.getDouble("price", 0.0));
             if (Config.isReadFromCSV()){
                 data = new ItemData(map.get(key));
@@ -431,6 +440,10 @@ public class LocalDataCache {
         ConfigurationSection config = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments");
         Set<String> set = config.getKeys(false);
         for (String key : set){
+            if (Enchantment.getByKey(new NamespacedKey(Main.getINSTANCE(), key)) == null){
+                Logging.error("Invalid enchantment in enchantments.yml: " + key);
+                continue;
+            }
             ConfigurationSection sec = config.getConfigurationSection(key);
             EnchantmentData data = new EnchantmentData(sec.getDouble("price", 0.0), sec.getDouble("ratio", 0.0));
             this.ENCHANTMENTS.put(key, data);

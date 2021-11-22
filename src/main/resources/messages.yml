@@ -58,7 +58,7 @@ sell-custom-item: "&aSold x%GENERAL_ITEM_AMOUNT% of &6%GENERAL_ITEM% &afor %GENE
 ##  Use %GENERAL_ITEM_PRICE% to represent the money given to the player on a profit update
 autosell-profit-update: "&6Your items were sold and %GENERAL_ITEM_PRICE% has been added to your account."
 
-##  Message when a player doesn't have permission to perform a comman
+##  Message when a player doesn't have permission to perform a command
 no-permission: "&eYou do not have permission to perform this command."
 
 ##  Tutorial messages

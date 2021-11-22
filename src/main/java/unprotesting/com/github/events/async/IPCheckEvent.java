@@ -25,13 +25,13 @@ public class IPCheckEvent extends Event{
     private String[] getIP(){
         String hostIP;
         try {
-            URL url_name = new URL("http://bot.whatismyipaddress.com");
-            BufferedReader sc = new BufferedReader(new InputStreamReader(url_name.openStream()));
-            hostIP = sc.readLine().trim();
+            URL whatIsmMyIp = new URL("http://checkip.amazonaws.com");
+            BufferedReader in = new BufferedReader(new InputStreamReader(whatIsmMyIp.openStream()));
+            hostIP = in.readLine().trim();
         } catch (IOException e) {
             e.printStackTrace();
-            String offical_website = "http://autotune.xyz";
-            return new String[] {offical_website, offical_website};
+            String official_website = "http://autotune.xyz";
+            return new String[] {official_website, official_website};
         }
         String base = "http://" + hostIP + ":" + Config.getPort();
         String[] output = {base + "/trade.html", base + "/trade-short.html"};

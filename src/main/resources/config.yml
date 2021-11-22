@@ -8,10 +8,10 @@
 
 ##  -- General Settings --  ##
 
-##  API key given on signup
+##  API key given on sign-up
 api-key: 'xyz'
 
-##  Email used on signup
+##  Email used on sign-up
 email: 'xyz@gmail.com'
 
 ##  Enable/Disable integrated Web Server.
@@ -56,15 +56,15 @@ enable-enchantments: true
 ##  Percentage difference in sell price to buy price
 sell-price-difference: 10.0
 
-##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithim as a percentage of total price
+##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithm as a percentage of total price
 max-volatility: 0.5
 
-##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithim in economy units
+##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithm in economy units
 min-volatility: 0.025
 
 ##  -- Data Selection Settings --  ##
 
-##  Info: When setting your data selection algorithim use a site such as https://www.desmos.com/calculator
+##  Info: When setting your data selection algorithm use a site such as https://www.desmos.com/calculator
 ##  Info: Data selection uses the equation y=m(x^z)+c, for example the default is y=0.075(x^(1.6))+0.55
 
 ##  'm' in equation: y=m(x^z)+c
@@ -76,7 +76,7 @@ data-selection-z: 1.75
 ##  'c' in equation: y=m(x^z)+c
 data-selection-c: 0.55
 
-##  -- Other Econonomy Settings --
+##  -- Other Economy Settings --
 
 ##  Minimum players needed, to be online, for prices to update
 ##  Info: It is recommended to keep this above 0
@@ -88,7 +88,7 @@ currency-symbol: '$'
 ##  Enable sell price difference variation to ease out sell price variation
 sell-price-difference-variation-enabled: true
 
-##  Starting percententage sell price difference for sell price variation
+##  Starting percentage sell price difference for sell price variation
 sell-price-difference-variation-start: 25.0
 
 ##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 4 weeks)
@@ -119,7 +119,7 @@ max-debt-value: 1000.00
 enchantment-limiter: 45.00
 
 ##  The percentage value to decrease items sold with a loss in durability
-##  Info: This is applied ON TOP of the durability algorithm to limit the exploitability of selling tools
+##  Info: This is applied ON TOP of the durability algorithm to limit the exploit-ability of selling tools
 durability-limiter: 7.50
 
 ##  -- Other Settings --
@@ -127,7 +127,7 @@ durability-limiter: 7.50
 ##  Enable debug mode for more info on price calculations
 debug-enabled: false
 
-##  Ignore AFK players in price calulcations/online checks
+##  Ignore AFK players in price calculations/online checks
 ##  Info: Turning this on will mean the price will only update when there's a player that is not AFK
 ##  Info: This only applies to essentials AFK and you must have essentials installed for this to work
 ignore-afk: true

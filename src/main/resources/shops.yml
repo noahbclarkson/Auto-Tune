@@ -59,7 +59,8 @@ sections:
 ##  Options: 'max-sell': <integer> set a maximum quantity that can be sold in a time-period.
 ##  Options: 'max-volatility: <double>' set the maximum volatility per time-period for this individual item.
 ##  Options: 'min-volatility: <double>' set the minimum volatility per time-period for this individual item.
-
+##  IMPORTANT: These values can't be changed once the database has been created. To change the price of items use /at price <item-name> <double>
+##  or reset the data.db file. Max-sell and max-buys can be changed via this file and updated at a server restart.
 
   ##  Example:
   ##  GRASS_BLOCK:

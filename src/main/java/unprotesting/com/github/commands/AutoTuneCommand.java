@@ -38,8 +38,8 @@ public class AutoTuneCommand implements CommandExecutor{
             player.sendMessage(ChatColor.GREEN + "Updated Auto-Tune time period.");
             return true;
         }
-        else if (args[0].equalsIgnoreCase("price") && args.length == 2){
-            return changePrice(player, args[0], args[1]);
+        else if (args[0].equalsIgnoreCase("price") && args.length == 3){
+            return changePrice(player, args[1], args[2]);
         }
         return true;
     }

@@ -68,7 +68,7 @@ public class MessagesData {
         return base;
     }
 
-    private static String replaceLocalPlaceholder(String message, Player player, String input, String placeholder){
+    private static String replaceLocalPlaceholder(String message, String input, String placeholder){
         message = message.replace(("%" + placeholder + "%"), input);
         return message;
     }
@@ -81,7 +81,7 @@ public class MessagesData {
                 if (i == 1 || i == 3 || i == 4 || i == 5 || i == 8){
                     input = Config.getCurrencySymbol() + input;
                 }
-                base = replaceLocalPlaceholder(base, player, input, localVariables[i]);
+                base = replaceLocalPlaceholder(base, input, localVariables[i]);
             }
         }
         base = updatePlaceHolders(base, player);

@@ -1,4 +1,4 @@
-package unprotesting.com.github.localServer;
+package unprotesting.com.github.localserver;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

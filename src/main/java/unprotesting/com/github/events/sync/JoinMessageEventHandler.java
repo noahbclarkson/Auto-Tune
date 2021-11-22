@@ -12,15 +12,13 @@ public class JoinMessageEventHandler implements Listener{
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e){
-        if (Main.getMESSAGES().getOnJoin() != null){
-            if (Main.getMESSAGES().getOnJoin().size() > 0){
-                for (String message : Main.getMESSAGES().getOnJoin()){
-                    Player player = e.getPlayer();
-                    if (Main.isPlaceholderAPI()){
-                        message = PlaceholderAPI.setPlaceholders(player, message);
-                    }
-                    player.sendMessage(message);
+        if (Main.getMESSAGES().getOnJoin() != null && Main.getMESSAGES().getOnJoin().size() > 0){
+            for (String message : Main.getMESSAGES().getOnJoin()){
+                Player player = e.getPlayer();
+                if (Main.isPlaceholderAPI()){
+                    message = PlaceholderAPI.setPlaceholders(player, message);
                 }
+                player.sendMessage(message);
             }
         }
     }

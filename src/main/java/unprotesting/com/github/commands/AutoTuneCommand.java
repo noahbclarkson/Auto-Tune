@@ -51,7 +51,7 @@ public class AutoTuneCommand implements CommandExecutor{
         return true;
     }
 
-    private boolean changePrice(Player player, String input, String new_price){
+    private boolean changePrice(Player player, String item_name, String new_price){
         Double price;
         if (new_price == null){
             return false;
@@ -66,54 +66,54 @@ public class AutoTuneCommand implements CommandExecutor{
         catch(NullPointerException e){
             return false;
         }
-        input = input.toUpperCase();
-        if (Main.getCache().getITEMS().containsKey(input)){
+        item_name = item_name.toUpperCase();
+        if (Main.getCache().getITEMS().containsKey(item_name)){
             ConcurrentHashMap<String, ItemData> ITEMS = Main.getCache().getITEMS();
-            ItemData data = ITEMS.get(input);
+            ItemData data = ITEMS.get(item_name);
             data.setPrice(price);
-            ITEMS.put(input, data);
+            ITEMS.put(item_name, data);
             Main.getCache().updatePrices(ITEMS);
-            player.sendMessage(ChatColor.GREEN + "Changed " + input + " to " + Config.getCurrencySymbol() + new_price);
+            player.sendMessage(ChatColor.GREEN + "Changed " + item_name + " to " + Config.getCurrencySymbol() + new_price);
             return true;
         }
-        else if (Main.getCache().getENCHANTMENTS().containsKey(input)){
+        else if (Main.getCache().getENCHANTMENTS().containsKey(item_name)){
             ConcurrentHashMap<String, EnchantmentData> ENCHANTMENTS = Main.getCache().getENCHANTMENTS();
-            EnchantmentData data = ENCHANTMENTS.get(input);
+            EnchantmentData data = ENCHANTMENTS.get(item_name);
             data.setPrice(price);
-            ENCHANTMENTS.put(input, data);
+            ENCHANTMENTS.put(item_name, data);
             Main.getCache().updateEnchantments(ENCHANTMENTS);
-            player.sendMessage(ChatColor.GREEN + "Changed " + input + " to " + Config.getCurrencySymbol() + new_price);
+            player.sendMessage(ChatColor.GREEN + "Changed " + item_name + " to " + Config.getCurrencySymbol() + new_price);
             return true;
         }
         else {
             GDPData data = Main.getCache().getGDP_DATA();
-            if (input.equals("GDP")){
+            if (item_name.equals("GDP")){
                 data.setGDP(price);
                 player.sendMessage(ChatColor.GREEN + "Changed GDP to " + Config.getCurrencySymbol() + new_price);
                 return true;
             }
-            else if (input.equals("BALANCE")){
+            else if (item_name.equals("BALANCE")){
                 data.setBalance(price);
                 player.sendMessage(ChatColor.GREEN + "Changed Balance to " + Config.getCurrencySymbol() + new_price);
                 return true;
             }
-            else if (input.equals("DEBT")){
+            else if (item_name.equals("DEBT")){
                 data.setDebt(price);
                 player.sendMessage(ChatColor.GREEN + "Changed Debt to " + Config.getCurrencySymbol() + new_price);
                 return true;
             }
-            else if (input.equals("Loss")){
+            else if (item_name.equals("Loss")){
                 data.setLoss(price);
                 player.sendMessage(ChatColor.GREEN + "Changed Loss to " + Config.getCurrencySymbol() + new_price);
                 return true;
             }
-            else if (input.equals("GDP")){
+            else if (item_name.equals("GDP")){
                 data.setInflation(price);
                 player.sendMessage(ChatColor.GREEN + "Changed Inflation to " + Config.getCurrencySymbol() + new_price);
                 return true;
             }
         }
-        player.sendMessage(ChatColor.RED + input + " is not a valid input.");
+        player.sendMessage(ChatColor.RED + item_name + " is not a valid input.");
         return false;
     }
 

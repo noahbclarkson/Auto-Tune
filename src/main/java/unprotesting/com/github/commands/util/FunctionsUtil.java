@@ -19,10 +19,11 @@ import unprotesting.com.github.economy.EconomyFunctions;
 
 public class FunctionsUtil {
 
-    public static void buyItem(Player player, String item, int amount){
+    public static void buyItem(Player player, String item, int item_amount){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         double bal = EconomyFunctions.getEconomy().getBalance(player);
         double price = Main.getCache().getItemPrice(item, false);
+        int amount = item_amount;
         String[] inputs = new String[]{item, df.format(price), Integer.toString(amount), df.format(price*amount)};
         if (bal < price){
             player.sendMessage(MessagesData.getMessageString(player, "not-enough-money", inputs));

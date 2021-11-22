@@ -1,5 +1,6 @@
 package unprotesting.com.github;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 
@@ -47,7 +48,7 @@ class AutoTuneTest {
             database.map.put(database.map.size(), TP);
         }
         System.out.println(database.map.size());
-        assert(database.map.size() == 1000);
+        assertTrue(database.map.size() == 1000);
     }
 
 }

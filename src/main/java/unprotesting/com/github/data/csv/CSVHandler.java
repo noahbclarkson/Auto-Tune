@@ -26,7 +26,8 @@ public class CSVHandler {
     }
 
     //  Create individual CSV file
-    private static void write(String csvname, int cutoff) throws IOException{
+    private static void write(String csvname, int cutoffValue) throws IOException{
+        int cutoff = cutoffValue;
         FileWriter writer = new FileWriter("plugins/Auto-Tune/web/" + csvname + ".csv");
         int size = Main.getDatabase().map.size();
         TimePeriod StringTP = Main.getDatabase().map.get(size-1);

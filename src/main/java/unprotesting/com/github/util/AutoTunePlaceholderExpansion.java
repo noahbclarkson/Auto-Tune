@@ -49,11 +49,11 @@ public class AutoTunePlaceholderExpansion extends PlaceholderExpansion{
     }
 
     @Override
-    public String onPlaceholderRequest(Player player, String identifier){
+    public String onPlaceholderRequest(Player player, String identifierValue){
         if(player == null){
             return "";
         }
-        identifier = identifier.toUpperCase();
+        String identifier = identifierValue.toUpperCase();
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         if (identifier.contains("GDP")){
             if (identifier.equals("GDP_GDP")){

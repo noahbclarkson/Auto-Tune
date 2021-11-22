@@ -28,7 +28,7 @@ import unprotesting.com.github.data.persistent.TimePeriod;
 import unprotesting.com.github.economy.EconomyFunctions;
 import unprotesting.com.github.events.async.*;
 import unprotesting.com.github.events.sync.*;
-import unprotesting.com.github.localServer.LocalServer;
+import unprotesting.com.github.localserver.LocalServer;
 import unprotesting.com.github.logging.Logging;
 import unprotesting.com.github.util.AutoTunePlaceholderExpansion;
 import unprotesting.com.github.util.bstats.Metrics;

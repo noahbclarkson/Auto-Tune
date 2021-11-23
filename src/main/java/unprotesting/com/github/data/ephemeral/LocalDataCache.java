@@ -17,7 +17,6 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -42,7 +41,6 @@ import unprotesting.com.github.data.persistent.timeperiods.ItemTimePeriod;
 import unprotesting.com.github.data.persistent.timeperiods.LoanTimePeriod;
 import unprotesting.com.github.data.persistent.timeperiods.TransactionsTimePeriod;
 import unprotesting.com.github.logging.Logging;
-import unprotesting.com.github.util.UtilFunctions;
 
 //  Global functions file between ephemeral and persistent storage
 
@@ -95,49 +93,49 @@ public class LocalDataCache {
         OfflinePlayer player = Bukkit.getOfflinePlayer(player_uuid);
         PlayerSaleData playerSaleData = getPlayerSaleData(player);
         playerSaleData.addSale(item, amount, position);
-        this.PLAYER_SALES.put(player.getUniqueId().toString(), playerSaleData);
+        PLAYER_SALES.put(player.getUniqueId().toString(), playerSaleData);
         String uuid_string = player_uuid.toString();
         try{
             switch(position){
                 case BUY:
-                    ItemData bdata = this.ITEMS.get(item);
+                    ItemData bdata = ITEMS.get(item);
                     bdata.increaseBuys(amount);
-                    this.ITEMS.put(item, bdata);
+                    ITEMS.put(item, bdata);
                     TransactionData btdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BI);
-                    this.TRANSACTIONS.add(btdata);
-                    this.NEW_TRANSACTIONS.add(btdata);
-                    this.GDP_DATA.increaseGDP((amount*price)/2);
+                    TRANSACTIONS.add(btdata);
+                    NEW_TRANSACTIONS.add(btdata);
+                    GDP_DATA.increaseGDP((amount*price)/2);
                     break;
                 case SELL:
-                    ItemData sdata = this.ITEMS.get(item);
+                    ItemData sdata = ITEMS.get(item);
                     sdata.increaseSells(amount);
-                    this.ITEMS.put(item, sdata);
+                    ITEMS.put(item, sdata);
                     TransactionData stdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SI);
-                    this.TRANSACTIONS.add(stdata);
-                    this.NEW_TRANSACTIONS.add(stdata);
-                    this.GDP_DATA.increaseGDP((amount*price)/2);
-                    this.GDP_DATA.increaseLoss((amount*getItemPrice(item, false))-(amount*price));
+                    TRANSACTIONS.add(stdata);
+                    NEW_TRANSACTIONS.add(stdata);
+                    GDP_DATA.increaseGDP((amount*price)/2);
+                    GDP_DATA.increaseLoss((amount*getItemPrice(item, false))-(amount*price));
                     break;
                 case EBUY:
-                    EnchantmentData ebdata = this.ENCHANTMENTS.get(item);
+                    EnchantmentData ebdata = ENCHANTMENTS.get(item);
                     ebdata.increaseBuys(amount);
-                    this.ENCHANTMENTS.put(item, ebdata);
+                    ENCHANTMENTS.put(item, ebdata);
                     TransactionData betdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.BE);
-                    this.TRANSACTIONS.add(betdata);
-                    this.NEW_TRANSACTIONS.add(betdata);
-                    this.GDP_DATA.increaseGDP((amount*price)/2);
+                    TRANSACTIONS.add(betdata);
+                    NEW_TRANSACTIONS.add(betdata);
+                    GDP_DATA.increaseGDP((amount*price)/2);
                     break;
                 case ESELL:
-                    EnchantmentData esdata = this.ENCHANTMENTS.get(item);
+                    EnchantmentData esdata = ENCHANTMENTS.get(item);
                     esdata.increaseSells(amount);
-                    this.ENCHANTMENTS.put(item, esdata);
+                    ENCHANTMENTS.put(item, esdata);
                     TransactionData setdata = new TransactionData(uuid_string, item, amount, price, TransactionPositionType.SE);
-                    this.TRANSACTIONS.add(setdata);
-                    this.NEW_TRANSACTIONS.add(setdata);
-                    this.GDP_DATA.increaseGDP((amount*price)/2);
+                    TRANSACTIONS.add(setdata);
+                    NEW_TRANSACTIONS.add(setdata);
+                    GDP_DATA.increaseGDP((amount*price)/2);
                     if (player.isOnline()){
                         Player onlinePlayer = player.getPlayer();
-                        this.GDP_DATA.increaseLoss((amount*getOverallEnchantmentPrice(item,
+                        GDP_DATA.increaseLoss((amount*getOverallEnchantmentPrice(item,
                          getItemPrice(onlinePlayer.getInventory().getItemInMainHand().getType().toString(), false), false)-(amount*price)));
                     }
                     break;
@@ -158,8 +156,8 @@ public class LocalDataCache {
     public void addLoan(double value, double interest_rate, OfflinePlayer player){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         LoanData data = new LoanData(value, interest_rate, player.getUniqueId().toString());
-        this.LOANS.add(data);
-        this.NEW_LOANS.add(data);
+        LOANS.add(data);
+        NEW_LOANS.add(data);
         if (player.isOnline()){
             Player onlinePlayer = player.getPlayer();
             onlinePlayer.sendMessage(ChatColor.RED + "Loan of " + Config.getCurrencySymbol() + value +
@@ -172,7 +170,7 @@ public class LocalDataCache {
     public double getItemPrice(String item, boolean sell){
         Double price;
         try{
-            price = this.ITEMS.get(item).getPrice();
+            price = ITEMS.get(item).getPrice();
         }
         catch(NullPointerException e){
             try{
@@ -197,7 +195,7 @@ public class LocalDataCache {
     public double getEnchantmentPrice(String enchantment, boolean sell){
         Double price;
         try{
-            price = this.ENCHANTMENTS.get(enchantment).getPrice();
+            price = ENCHANTMENTS.get(enchantment).getPrice();
         }
         catch(NullPointerException e){
             return 0;
@@ -216,7 +214,7 @@ public class LocalDataCache {
     public double getEnchantmentRatio(String enchantment){
         Double price;
         try{
-            price = this.ENCHANTMENTS.get(enchantment).getRatio();
+            price = ENCHANTMENTS.get(enchantment).getRatio();
         }
         catch(NullPointerException e){
             return 0;
@@ -226,12 +224,12 @@ public class LocalDataCache {
 
     //  Get ItemData object for map
     public ItemData getItemData(String item){
-        return this.ITEMS.get(item);
+        return ITEMS.get(item);
     }
 
     //  Get ItemData object for map
     public EnchantmentData getEnchantmentData(String enchantment){
-        return this.ENCHANTMENTS.get(enchantment);
+        return ENCHANTMENTS.get(enchantment);
     }
 
     //  Get price for adding an enchantment to an item
@@ -297,7 +295,7 @@ public class LocalDataCache {
 
     public String getPChangeString(String item){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
-        Double change = this.PERCENTAGE_CHANGES.get(item);
+        Double change = PERCENTAGE_CHANGES.get(item);
         if (change == null){
             return (ChatColor.GRAY + "0.0%");
         }
@@ -313,11 +311,11 @@ public class LocalDataCache {
     }
 
     public void updatePrices(ConcurrentHashMap<String, ItemData> data){
-        this.ITEMS = data;
+        ITEMS = data;
     }
 
     public void updateEnchantments(ConcurrentHashMap<String, EnchantmentData> data){
-        this.ENCHANTMENTS = data;
+        ENCHANTMENTS = data;
     }
 
     public void updatePercentageChanges(){
@@ -326,12 +324,12 @@ public class LocalDataCache {
         ItemTimePeriod Ibase;
         EnchantmentsTimePeriod Elatest;
         EnchantmentsTimePeriod Ebase;
-        if (this.size < 2){
+        if (size < 2){
             return;
         }
         Ilatest = Main.getDatabase().map.get(size-1).getItp();
         Ibase = Main.getDatabase().map.get(0).getItp();
-        if (this.size-1 > tpInDay){
+        if (size-1 > tpInDay){
             Ibase = Main.getDatabase().map.get(size-tpInDay).getItp();
         }
         for (String item : Ilatest.getItems()){
@@ -340,11 +338,11 @@ public class LocalDataCache {
             double latestPrice = Ilatest.getPrices()[latestPosition];
             double basePrice = Ibase.getPrices()[basePosition];
             double pChange = (latestPrice-basePrice)/basePrice*100;
-            this.PERCENTAGE_CHANGES.put(item, pChange);
+            PERCENTAGE_CHANGES.put(item, pChange);
         }
         Elatest = Main.getDatabase().map.get(size-1).getEtp();
         Ebase = Main.getDatabase().map.get(0).getEtp();
-        if (this.size-1 > tpInDay){
+        if (size-1 > tpInDay){
             Ebase = Main.getDatabase().map.get(size-tpInDay).getEtp();
         }
         for (String enchantment : Elatest.getItems()){
@@ -353,7 +351,7 @@ public class LocalDataCache {
             double latestPrice = Elatest.getPrices()[latestPosition];
             double basePrice = Ebase.getPrices()[basePosition];
             double pChange = (latestPrice-basePrice)/basePrice*100;
-            this.PERCENTAGE_CHANGES.put(enchantment, pChange);
+            PERCENTAGE_CHANGES.put(enchantment, pChange);
         }
     }
 
@@ -375,8 +373,8 @@ public class LocalDataCache {
     //  Get current cache for a players PlayerData object
     private PlayerSaleData getPlayerSaleData(OfflinePlayer player){
         PlayerSaleData playerSaleData = new PlayerSaleData();
-        if (this.PLAYER_SALES.containsKey(player.getUniqueId().toString())){
-            playerSaleData = this.PLAYER_SALES.get(player.getUniqueId().toString());
+        if (PLAYER_SALES.containsKey(player.getUniqueId().toString())){
+            playerSaleData = PLAYER_SALES.get(player.getUniqueId().toString());
         }
         return playerSaleData;
     }
@@ -403,15 +401,15 @@ public class LocalDataCache {
                 data = new ItemData(map.get(key));
             }
             MaxBuySellData mbsdata = new MaxBuySellData(section.getInt("max-buy", 9999), section.getInt("max-sell", 9999));
-            this.MAX_PURCHASES.put(key, mbsdata);
-            this.ITEMS.put(key, data);
+            MAX_PURCHASES.put(key, mbsdata);
+            ITEMS.put(key, data);
         }
     }
 
     private void loadShopDataFromData(){
         if (size == 0){
-            for (String str : this.ITEMS.keySet()){
-                this.PERCENTAGE_CHANGES.put(str, 0.0);
+            for (String str : ITEMS.keySet()){
+                PERCENTAGE_CHANGES.put(str, 0.0);
             }
             return;
         }
@@ -420,33 +418,34 @@ public class LocalDataCache {
             ItemTimePeriod ITP = Main.getDatabase().map.get(0).getItp();
             for (String item : Main.getDatabase().map.get(0).getItp().getItems()){
                 ItemData data = new ItemData(ITP.getPrices()[i]);
-                this.ITEMS.put(item, data);
+                ITEMS.put(item, data);
                 i++;
             }
-            for (String str : this.ITEMS.keySet()){
-                this.PERCENTAGE_CHANGES.put(str, 0.0);
+            for (String str : ITEMS.keySet()){
+                PERCENTAGE_CHANGES.put(str, 0.0);
             }
         }
         int i = 0;
         ItemTimePeriod ITP = Main.getDatabase().map.get(size-1).getItp();
         for (String item : Main.getDatabase().map.get(size-1).getItp().getItems()){
             ItemData data = new ItemData(ITP.getPrices()[i]);
-            this.ITEMS.put(item, data);
+            ITEMS.put(item, data);
             i++;
         }
     }
 
+    @SuppressWarnings("deprecated")
     private void loadEnchantmentDataFromFile(){
         ConfigurationSection config = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments");
         Set<String> set = config.getKeys(false);
         for (String key : set){
-            if (Enchantment.getByKey(new NamespacedKey(Main.getINSTANCE(), key)) == null){
+            if (Enchantment.getByName(key) == null){
                 Logging.error("Invalid enchantment in enchantments.yml: " + key);
                 continue;
             }
             ConfigurationSection sec = config.getConfigurationSection(key);
             EnchantmentData data = new EnchantmentData(sec.getDouble("price", 0.0), sec.getDouble("ratio", 0.0));
-            this.ENCHANTMENTS.put(key, data);
+            ENCHANTMENTS.put(key, data);
         }
     }
 
@@ -458,28 +457,28 @@ public class LocalDataCache {
         int i = 0;
         for (String item : ETP.getItems()){
             EnchantmentData data = new EnchantmentData(ETP.getPrices()[i], ETP.getRatios()[i]);
-            this.ENCHANTMENTS.put(item, data);
+            ENCHANTMENTS.put(item, data);
             i++;
         }
     }
 
     private void loadLoanDataFromData(){
-        this.LOANS.clear();
+        LOANS.clear();
         for (Integer pos : Main.getDatabase().map.keySet()){
             LoanTimePeriod LTP = Main.getDatabase().map.get(pos).getLtp();
             for (int i = 0; i < LTP.getValues().length; i++){
                 LoanData data = new LoanData(LTP.getValues()[i], LTP.getInterest_rates()[i], LTP.getPlayers()[i], LTP.getTime()[i]);
-                this.LOANS.add(data);
+                LOANS.add(data);
             }
         }
-        Collections.sort(this.LOANS);
+        Collections.sort(LOANS);
     }
 
     private void loadTransactionDataFromData(){
-        if (this.size < 1){
+        if (size < 1){
             return;
         }
-        this.TRANSACTIONS.clear();
+        TRANSACTIONS.clear();
         for (Integer pos : Main.getDatabase().map.keySet()){
             TransactionsTimePeriod TTP = Main.getDatabase().map.get(pos).getTtp();
             for (int i = 0; i < TTP.getPrices().length; i++){
@@ -487,14 +486,14 @@ public class LocalDataCache {
                 try{
                     TransactionData data = new TransactionData(TTP.getPlayers()[i], TTP.getItems()[i],
                      TTP.getAmounts()[i], TTP.getPrices()[i], position, TTP.getTime()[i]);
-                    this.TRANSACTIONS.add(data);
+                    TRANSACTIONS.add(data);
                 }
                 catch(NullPointerException e){
                     Logging.error("Auto-Tune failed to cache data for a transaction!");
                 }
             }
         }
-        Collections.sort(this.TRANSACTIONS);
+        Collections.sort(TRANSACTIONS);
     }
 
     private void loadSectionDataFromFile(){
@@ -511,22 +510,22 @@ public class LocalDataCache {
 
     private void loadGDPDataFromData(){
         if (size < 1){
-            this.GDP_DATA = new GDPData(0, 0, 0, 0, 0, 0);
+            GDP_DATA = new GDPData(0, 0, 0, 0, 0, 0);
             return;
         }
         GDPTimePeriod GTP = Main.getDatabase().map.get(size-1).getGtp();
-        this.GDP_DATA = new GDPData(GTP.getGDP(), GTP.getBalance(), GTP.getLoss(), GTP.getDebt(), GTP.getInflation(), GTP.getPlayerCount());
+        GDP_DATA = new GDPData(GTP.getGDP(), GTP.getBalance(), GTP.getLoss(), GTP.getDebt(), GTP.getInflation(), GTP.getPlayerCount());
     }
 
     private void loadEconomyInfoDataFromFile(){
-        this.ECONOMY_INFO = new EconomyInfoData(Config.getSellPriceDifferenceVariationStart());
+        ECONOMY_INFO = new EconomyInfoData(Config.getSellPriceDifferenceVariationStart());
     }
 
     private void loadEconomyInfoDataFromData(){
         if (size < 1){
             return;
         }
-        this.ECONOMY_INFO = new EconomyInfoData(Main.getDatabase().map.get(size-1).getEitp().getSellPriceDifference());
+        ECONOMY_INFO = new EconomyInfoData(Main.getDatabase().map.get(size-1).getEitp().getSellPriceDifference());
     }
 
 }

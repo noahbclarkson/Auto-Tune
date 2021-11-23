@@ -22,11 +22,11 @@ public class EnchantmentData{
     }
 
     public void increaseBuys(int amount){
-        this.buys = this.buys+amount;
+        buys = buys+amount;
     }
 
     public void increaseSells(int amount){
-        this.sells = this.sells + amount;
+        sells = sells + amount;
     }
 
 }

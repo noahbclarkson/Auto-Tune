@@ -57,8 +57,8 @@ public class HttpPostRequestor {
     public static JSONObject loadDefaultObject(JSONArray itemData){
         HashMap<String, Object> obj = new HashMap<String, Object>();
         obj.put("itemData", itemData);
-        obj.put("maxVolatility", Config.getBasicMaxVariableVolatility());
-        obj.put("minVolatility", Config.getBasicMinVariableVolatility());
+        obj.put("maxVolatility", Config.getMaxVolatility());
+        obj.put("minVolatility", Config.getMinVolatility());
         return new JSONObject(obj);
     }
 

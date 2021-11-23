@@ -115,7 +115,7 @@ public class Main extends JavaPlugin{
     }
 
     private void checkEconomy(){
-        if (!EconomyFunctions.setupLocalEconomy(this.getServer())){
+        if (!EconomyFunctions.setupLocalEconomy(getServer())){
             Logging.error(1);
             closePlugin();
             return;
@@ -133,14 +133,14 @@ public class Main extends JavaPlugin{
     }
 
     private void setupCommands(){
-        this.getCommand("shop").setExecutor(new ShopCommand());
-        this.getCommand("sell").setExecutor(new SellCommand());
-        this.getCommand("trade").setExecutor(new TradeCommand());
-        this.getCommand("gdp").setExecutor(new GDPCommand());
-        this.getCommand("transactions").setExecutor(new TransactionsCommand());
-        this.getCommand("loan").setExecutor(new LoanCommand());
-        this.getCommand("autosell").setExecutor(new AutosellCommand());
-        this.getCommand("at").setExecutor(new AutoTuneCommand());
+        getCommand("shop").setExecutor(new ShopCommand());
+        getCommand("sell").setExecutor(new SellCommand());
+        getCommand("trade").setExecutor(new TradeCommand());
+        getCommand("gdp").setExecutor(new GDPCommand());
+        getCommand("transactions").setExecutor(new TransactionsCommand());
+        getCommand("loan").setExecutor(new LoanCommand());
+        getCommand("autosell").setExecutor(new AutosellCommand());
+        getCommand("at").setExecutor(new AutoTuneCommand());
     }
 
     private void setupServer(){

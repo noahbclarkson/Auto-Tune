@@ -35,21 +35,21 @@ public class LoanTimePeriod extends LocalDateTimeArrayUtilizer implements Serial
     }
 
     private void setVars(int pos, LoanData data){
-        this.values[pos] = data.getValue();
-        this.interest_rates[pos] = data.getInterest_rate();
-        this.players[pos] = data.getPlayer();
+        values[pos] = data.getValue();
+        interest_rates[pos] = data.getInterest_rate();
+        players[pos] = data.getPlayer();
         LocalDateTime date = data.getDate();
-        this.time[pos] = dateToIntArray(date);
-        this.values[pos] = data.getBase_value();
+        time[pos] = dateToIntArray(date);
+        values[pos] = data.getBase_value();
     }
 
 
     private void init(int size){
-        this.values = new double[size];
-        this.interest_rates = new double[size];
-        this.players = new String[size];
-        this.time = new int[size][6];
-        this.base_values = new double[size];
+        values = new double[size];
+        interest_rates = new double[size];
+        players = new String[size];
+        time = new int[size][6];
+        base_values = new double[size];
     }
     
 }

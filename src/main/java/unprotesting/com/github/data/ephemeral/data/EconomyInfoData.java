@@ -17,7 +17,7 @@ public class EconomyInfoData {
     }
 
     public void updateSellPriceDifference(double newSPD){
-        this.sellPriceDifference = newSPD;
+        sellPriceDifference = newSPD;
         Config.setSellPriceDifference(newSPD);
     }
     

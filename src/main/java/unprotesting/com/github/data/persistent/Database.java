@@ -36,8 +36,8 @@ public class Database {
     }
 
     public void close(){
-        this.map.close();
-        this.database.close();
+        map.close();
+        database.close();
     }
 
     //  Method to build and create or link database to file
@@ -69,11 +69,11 @@ public class Database {
     }
 
     public void saveCacheToLastTP(){
-        int size = this.map.size()-1;
+        int size = map.size()-1;
         if (size < 1){
             return;
         }
-        TimePeriod TP = this.map.get(size);
+        TimePeriod TP = map.get(size);
         ItemTimePeriod ITP = TP.getItp();
         String[] items = ITP.getItems();
         int[] buys = ITP.getBuys();
@@ -104,7 +104,7 @@ public class Database {
         TP.setLtp(new LoanTimePeriod());
         TP.setTtp(new TransactionsTimePeriod());
         TP.setEitp(new EconomyInfoTimePeriod());
-        this.map.put(this.map.size()-1, TP);
+        map.put(map.size()-1, TP);
     }
 
 

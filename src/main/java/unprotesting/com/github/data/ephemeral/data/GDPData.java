@@ -29,11 +29,11 @@ public class GDPData {
     }
 
     public void increaseGDP(double d){
-        this.GDP += d;
+        GDP += d;
     }
 
     public void increaseLoss(double d){
-        this.loss += d;
+        loss += d;
     }
 
     public void updateBalance(){
@@ -53,8 +53,8 @@ public class GDPData {
             server_balance += bal;
             server_player_count++;
         }
-        this.balance = server_balance;
-        this.playerCount = server_player_count;
+        balance = server_balance;
+        playerCount = server_player_count;
     }
 
     public void updateDebt(){
@@ -62,7 +62,7 @@ public class GDPData {
         for (LoanData data : Main.getCache().getLOANS()){
             server_debt += data.getValue();
         }
-        this.debt = server_debt;
+        debt = server_debt;
     }
 
     public void updateInflation(){
@@ -72,7 +72,7 @@ public class GDPData {
             inflation_total += Main.getCache().getPERCENTAGE_CHANGES().get(str);
             i++;
         }
-        this.inflation = (inflation_total/i);
+        inflation = (inflation_total/i);
     }
     
 }

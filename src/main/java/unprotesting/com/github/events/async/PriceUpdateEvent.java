@@ -62,11 +62,19 @@ public class PriceUpdateEvent extends Event{
             Double[] buySellValues = loadAverageBuySellValue(item, false);
             Double newPrice;
             Double total = buySellValues[0]+buySellValues[1];
+            Double max_vol = Config.getMaxVolatility();
+            Double min_vol = Config.getMinVolatility();
+            if (Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).contains("max-volatility")){
+                max_vol = Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("max-volatility");
+            }
+            if (Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).contains("min-volatility")){
+                min_vol = Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("min-volatility");
+            }
             if (buySellValues[0] > buySellValues[1]){
-                newPrice = price + price*Config.getBasicMaxVariableVolatility()*0.01*(buySellValues[0]/total) + price*0.01*Config.getBasicMinVariableVolatility();
+                newPrice = price + price*max_vol*0.01*(buySellValues[0]/total) + price*0.01*min_vol;
             }
             else if(buySellValues[0] < buySellValues[1]){
-                newPrice = price - price*Config.getBasicMaxVariableVolatility()*0.01*(buySellValues[1]/total) - price*0.01*Config.getBasicMinVariableVolatility();
+                newPrice = price - price*max_vol*0.01*(buySellValues[1]/total) - price*0.01*min_vol;
             }
             else{
                 newPrice = price;
@@ -90,8 +98,8 @@ public class PriceUpdateEvent extends Event{
             Double newPrice;
             Double newRatio;
             Double total = buySellValues[0]+buySellValues[1];
-            Double max_vol = Config.getBasicMaxVariableVolatility();
-            Double min_vol = Config.getBasicMinVariableVolatility();
+            Double max_vol = Config.getMaxVolatility();
+            Double min_vol = Config.getMinVolatility();
             if (Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).contains("max-volatility")){
                 max_vol = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).getDouble("max-volatility");
             }

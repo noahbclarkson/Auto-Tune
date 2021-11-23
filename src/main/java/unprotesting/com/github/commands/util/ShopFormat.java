@@ -47,6 +47,15 @@ public abstract class ShopFormat {
         return false;
     }
 
+    protected void loadGUI(CommandSender sender){
+        int highest = Section.getHighest(Main.getCache().getSECTIONS());
+        int lines = (highest/9)+2;
+        ChestGui gui = new ChestGui(lines, Config.getMenuTitle());
+        gui = CommandUtil.getBackground(gui, lines, Config.getBackground());
+        gui.addPane(loadSectionsPane(sender, lines));
+        gui.show((HumanEntity)(sender));
+    }
+
     protected List<GuiItem> getListFromSection(Section section, CommandSender sender){
         Player player = (Player)sender;
         List<GuiItem> output = new ArrayList<GuiItem>();
@@ -88,15 +97,6 @@ public abstract class ShopFormat {
         });
         output.addItem(gItem, 0, 0);
         return output;
-    }
-
-    protected void loadGUI(CommandSender sender){
-        int highest = Section.getHighest(Main.getCache().getSECTIONS());
-        int lines = (highest/9)+2;
-        ChestGui gui = new ChestGui(lines, Config.getMenuTitle());
-        gui = CommandUtil.getBackground(gui, lines, Config.getBackground());
-        gui.addPane(loadSectionsPane(sender, lines));
-        gui.show((HumanEntity)(sender));
     }
 
     public abstract GuiItem getGUIItem(Section section, String s_item, Player player, CommandSender sender, DecimalFormat df);

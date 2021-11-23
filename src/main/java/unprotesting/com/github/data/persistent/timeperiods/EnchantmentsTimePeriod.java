@@ -45,10 +45,10 @@ public class EnchantmentsTimePeriod extends BuyableTimePeriodFunctions implement
     }
 
     private void setVars(int pos, EnchantmentData data){
-        this.buys[pos] = data.getBuys();
-        this.sells[pos] = data.getSells();
-        this.prices[pos] = data.getPrice();
-        this.ratios[pos] = data.getRatio();
+        buys[pos] = data.getBuys();
+        sells[pos] = data.getSells();
+        prices[pos] = data.getPrice();
+        ratios[pos] = data.getRatio();
     }
 
     

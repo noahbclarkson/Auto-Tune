@@ -25,20 +25,20 @@ public class PlayerSaleData {
 
     //  Add a new sale to one of the sale lists
     public void addSale(String item, int amount, SalePositionType position){
-        Sale sale = checkIfSaleExisits(item, position);
+        Sale sale = checkIfSaleExists(item, position);
         sale.setAmount(sale.getAmount()+amount);
         switch(position){
             case BUY:
-                this.buys.add(sale);
+                buys.add(sale);
                 break;
             case SELL:
-                this.sells.add(sale);
+                sells.add(sale);
                 break;
             case EBUY:
-                this.ebuys.add(sale);
+                ebuys.add(sale);
                 break;
             case ESELL:
-                this.esells.add(sale);
+                esells.add(sale);
                 break;
             default:
                 break;
@@ -46,23 +46,23 @@ public class PlayerSaleData {
     }
 
     //  Ensure a sale object for an item doesn't already exist in a select list
-    private Sale checkIfSaleExisits(String item, SalePositionType position){
+    private Sale checkIfSaleExists(String item, SalePositionType position){
         switch(position){
             case BUY:
-                Sale sale = getSale(item, this.buys);
-                this.buys.remove(sale);
+                Sale sale = getSale(item, buys);
+                buys.remove(sale);
                 return sale;
             case SELL:  
-                Sale sale2 = getSale(item, this.sells);
-                this.sells.remove(sale2);
+                Sale sale2 = getSale(item, sells);
+                sells.remove(sale2);
                 return sale2;
             case EBUY:
-                Sale sale3 = getSale(item, this.ebuys);
-                this.ebuys.remove(sale3);
+                Sale sale3 = getSale(item, ebuys);
+                ebuys.remove(sale3);
                 return sale3;
             case ESELL:
-                Sale sale4 = getSale(item, this.esells);
-                this.esells.remove(sale4);
+                Sale sale4 = getSale(item, esells);
+                esells.remove(sale4);
                 return sale4;
             default:
                 return new Sale(item, 0);

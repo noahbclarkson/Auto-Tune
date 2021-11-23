@@ -49,28 +49,28 @@ public class LoanData extends LocalDateTimeArrayUtilizer implements Comparable<L
 
     @Override
     public int compareTo(LoanData o) {
-        return o.getDate().compareTo(this.getDate());
+        return o.getDate().compareTo(getDate());
     }
 
     public boolean payBackLoan(){
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        OfflinePlayer player = Bukkit.getPlayer(UUID.fromString(this.player));
-        double balance = EconomyFunctions.getEconomy().getBalance(player);
-        if (balance < this.getValue()){
+        OfflinePlayer offPlayer = Bukkit.getPlayer(UUID.fromString(player));
+        double balance = EconomyFunctions.getEconomy().getBalance(offPlayer);
+        if (balance < getValue()){
             return false;
         }
-        EconomyFunctions.getEconomy().withdrawPlayer(player, this.value);
-        if (player.isOnline()){
-            Player onlinePlayer = (Player) player;
+        EconomyFunctions.getEconomy().withdrawPlayer(offPlayer, value);
+        if (offPlayer.isOnline()){
+            Player onlinePlayer = (Player) offPlayer;
             onlinePlayer.getOpenInventory().close();
-            onlinePlayer.sendMessage(ChatColor.GREEN + "Loan created on " + this.date.format(formatter) + " has been payed-back.");
-            onlinePlayer.sendMessage(ChatColor.GREEN + Config.getCurrencySymbol() + this.value + " has been withdrawn from your balance.");
+            onlinePlayer.sendMessage(ChatColor.GREEN + "Loan created on " + date.format(formatter) + " has been payed-back.");
+            onlinePlayer.sendMessage(ChatColor.GREEN + Config.getCurrencySymbol() + value + " has been withdrawn from your balance.");
             
         }
         Main.getCache().getLOANS().remove(this);
         Main.getCache().getNEW_LOANS().remove(this);
         GDPData data = Main.getCache().getGDP_DATA();
-        data.increaseLoss(this.value-this.base_value);
+        data.increaseLoss(value-base_value);
         Main.getCache().setGDP_DATA(data);
         return true;
     }

@@ -43,9 +43,9 @@ public class ItemTimePeriod extends BuyableTimePeriodFunctions implements Serial
     }
 
     private void setVars(int pos, ItemData data){
-        this.buys[pos] = data.getBuys();
-        this.sells[pos] = data.getSells();
-        this.prices[pos] = data.getPrice();
+        buys[pos] = data.getBuys();
+        sells[pos] = data.getSells();
+        prices[pos] = data.getPrice();
     }
 
 

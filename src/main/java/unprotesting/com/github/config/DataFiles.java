@@ -32,7 +32,7 @@ public class DataFiles {
     public void loadConfigs(){
         try{
             for (int i = 0; i < 5; i++){
-                configs[i].load(this.files[i]);
+                configs[i].load(files[i]);
             }
         }
         catch(InvalidConfigurationException | IOException e){
@@ -42,36 +42,36 @@ public class DataFiles {
     }
 
     public String[] getFileNames(){
-        return this.filenames;
+        return filenames;
     }
 
     public YamlConfiguration getConfig(){
-        return this.configs[0];
+        return configs[0];
     }
 
     public YamlConfiguration getShops(){
-        return this.configs[1];
+        return configs[1];
     }
 
     public YamlConfiguration getEnchantments(){
-        return this.configs[2];
+        return configs[2];
     }
 
     public YamlConfiguration getPlayerData(){
-        return this.configs[3];
+        return configs[3];
     }
 
     public void setPlayerData(YamlConfiguration config){
-        this.configs[3] = config;
+        configs[3] = config;
         try {
-            this.configs[3].save(this.files[3]);
+            configs[3].save(files[3]);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public YamlConfiguration getMessages(){
-        return this.configs[4];
+        return configs[4];
     }
     
 }

@@ -64,7 +64,7 @@ sell-price-difference: 10.0
 max-volatility: 0.5
 
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithm in economy units
-min-volatility: 0.025
+min-volatility: 0.05
 
 ##  -- Data Selection Settings --  ##
 
@@ -103,7 +103,7 @@ sell-price-variation-update-period: 30
 
 ##  Interest rate per interest-rate-update-period
 ##  Info: This is the increase in the current debt payment per-time period
-interest-rate: 0.0075
+interest-rate: 0.01
 
 ##  Time period in ticks between updates of the interest rate for users loans
 interest-rate-update-period: 1200
@@ -115,7 +115,7 @@ disable-max-buys-sells: false
 
 ##  lowest value in $ a player can go into debt
 ##  For example if a player has $3,000.00 and this is set to 1,000 a player can take out a loan up to $2,000.00
-max-debt-value: 1000.00
+max-debt-value: 1000.0
 
 ##  The percentage value to decrease items sold with enchantments
 ##  Info: Stacked enchantments etc. can become very expensive so a number between 25% - 50% is usually fine

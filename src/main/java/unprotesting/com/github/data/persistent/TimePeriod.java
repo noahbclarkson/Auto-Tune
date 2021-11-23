@@ -16,7 +16,7 @@ import unprotesting.com.github.data.persistent.timeperiods.TransactionsTimePerio
 
 public class TimePeriod implements Serializable{
 
-    //  Contains all relavent time-periods in persistent form
+    //  Contains all relevant time-periods in persistent form
 
     private static final long serialVersionUID = -1102531403L;
 
@@ -58,27 +58,27 @@ public class TimePeriod implements Serializable{
     }
 
     private void getITPFromCache(){
-        this.itp = new ItemTimePeriod();
+        itp = new ItemTimePeriod();
     }
 
     private void getETPFromCache(){
-        this.etp = new EnchantmentsTimePeriod();
+        etp = new EnchantmentsTimePeriod();
     }
 
     private void getTTPFromCache(){
-        this.ttp = new TransactionsTimePeriod();
+        ttp = new TransactionsTimePeriod();
     }
 
     private void getLTPFromCache(){
-        this.ltp = new LoanTimePeriod();
+        ltp = new LoanTimePeriod();
     }
 
     private void getGTPFromCache(){
-        this.gtp = new GDPTimePeriod();
+        gtp = new GDPTimePeriod();
     }
 
     private void getEITPFromCache(){
-        this.eitp = new EconomyInfoTimePeriod();
+        eitp = new EconomyInfoTimePeriod();
     }
     
 }

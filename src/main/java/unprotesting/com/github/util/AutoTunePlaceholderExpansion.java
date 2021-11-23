@@ -13,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import unprotesting.com.github.Main;
+import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.config.Config;
 
 public class AutoTunePlaceholderExpansion extends PlaceholderExpansion{
@@ -107,9 +108,9 @@ public class AutoTunePlaceholderExpansion extends PlaceholderExpansion{
             });
             if (identifier.contains("TOP_MOVERS_ITEM_")){
                 if (identifier.contains("-")){
-                    return values.get(values.size()-1-Integer.parseInt(identifier.replace("TOP_MOVERS_ITEM_-", "")));
+                    return Section.getItemDisplayName(values.get(values.size()-1-Integer.parseInt(identifier.replace("TOP_MOVERS_ITEM_-", ""))));
                 }
-                return values.get(Integer.parseInt(identifier.replace("TOP_MOVERS_ITEM_", "")));
+                return Section.getItemDisplayName(values.get(Integer.parseInt(identifier.replace("TOP_MOVERS_ITEM_", ""))));
             }
             if (identifier.contains("TOP_MOVERS_CHANGE_")){
                 if (identifier.contains("-")){

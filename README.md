@@ -73,10 +73,12 @@ An example of a shop setup using Auto-Tune:
 
   #### To build the project yourself
 
-   - Clone the project to a local directory.
+   - Clone the project to a local directory using ```git clone https://github.com/Unprotesting/Auto-Tune.git ```.
    - Run ```cd Auto-Tune``` to enter the Auto-Tune folder.
-   - Run ```gradle build```.
-   - Go to the ```/builds/libs/``` directory and Auto-Tune-0.x.x will be there if successful.
+   - Run ```./gradlew build```.
+   - Navigate to the ```/builds/libs/``` directory and Auto-Tune-0.x.x will be there if successful.
+
+  In addition all the latest builds are available under the [Actions](https://github.com/Unprotesting/Auto-Tune/actions) section of the github.
 
   #### Configuring config.yml
   <details>

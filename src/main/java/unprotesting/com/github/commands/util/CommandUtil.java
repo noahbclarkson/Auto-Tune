@@ -91,7 +91,7 @@ public class CommandUtil {
     public static ChestGui getBackground(ChestGui GUI, int lines, Material bItem){
         GUI.setOnGlobalClick(event -> event.setCancelled(true));
         OutlinePane background = new OutlinePane(0, 0, 9, lines, Priority.LOWEST);
-        if (bItem.equals(Material.BARRIER)){
+        if (bItem == null || bItem.equals(Material.BARRIER)){
             return GUI;
         }
         ItemStack item = new ItemStack(bItem);

@@ -46,7 +46,7 @@ public class Section {
                 ConfigurationSection inner = shops.getConfigurationSection(key);
                 if (inner.getString("section").equals(this.name)){
                     this.items.add(key);
-                    this.displayNames.add(ChatColor.translateAlternateColorCodes('&', inner.getString("display-name", "&g" + key)));
+                    this.displayNames.add(ChatColor.translateAlternateColorCodes('&', inner.getString("display-name", "&6" + key)));
                 }
             }
         }
@@ -55,7 +55,7 @@ public class Section {
             ConfigurationSection config = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments");
             for (String key : config.getKeys(false)){
                 this.items.add(key);
-                this.displayNames.add(ChatColor.translateAlternateColorCodes('&', config.getConfigurationSection(key).getString("display-name", "&g" + key)));
+                this.displayNames.add(ChatColor.translateAlternateColorCodes('&', config.getConfigurationSection(key).getString("display-name", "&6" + key)));
             }
         }
     }

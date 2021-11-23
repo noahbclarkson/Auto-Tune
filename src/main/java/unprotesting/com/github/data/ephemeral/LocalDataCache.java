@@ -504,7 +504,7 @@ public class LocalDataCache {
             icsection.getBoolean("back-menu-button-enabled", true),
             icsection.getInt("position", 1), 
             icsection.getString("background", "BLACK_STAINED_GLASS_PANE"),
-            icsection.getString("display-name", "&g" + section)));
+            icsection.getString("display-name", "&6" + section)));
         }
         csection = Main.getDataFiles().getEnchantments().getConfigurationSection("config");
         SECTIONS.add(new Section("Enchantments",
@@ -512,7 +512,7 @@ public class LocalDataCache {
             csection.getBoolean("back-menu-button-enabled", true),
             csection.getInt("position", 1),
             csection.getString("background", "BLACK_STAINED_GLASS_PANE"),
-            csection.getString("display-name", "&gEnchantments")));
+            csection.getString("display-name", "&6Enchantments")));
     }
 
     private void loadGDPDataFromData(){

@@ -64,12 +64,8 @@ public class PriceUpdateEvent extends Event{
             Double total = buySellValues[0]+buySellValues[1];
             Double max_vol = Config.getMaxVolatility();
             Double min_vol = Config.getMinVolatility();
-            if (Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).contains("max-volatility")){
-                max_vol = Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("max-volatility");
-            }
-            if (Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).contains("min-volatility")){
-                min_vol = Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("min-volatility");
-            }
+            max_vol = Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("max-volatility", max_vol);
+            min_vol = Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("min-volatility", min_vol);
             if (buySellValues[0] > buySellValues[1]){
                 newPrice = price + price*max_vol*0.01*(buySellValues[0]/total) + price*0.01*min_vol;
             }
@@ -100,12 +96,8 @@ public class PriceUpdateEvent extends Event{
             Double total = buySellValues[0]+buySellValues[1];
             Double max_vol = Config.getMaxVolatility();
             Double min_vol = Config.getMinVolatility();
-            if (Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).contains("max-volatility")){
-                max_vol = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).getDouble("max-volatility");
-            }
-            if (Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).contains("min-volatility")){
-                min_vol = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).getDouble("min-volatility");
-            }
+            max_vol = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).getDouble("max-volatility", max_vol);
+            min_vol = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).getDouble("min-volatility", min_vol);
             if (buySellValues[0] > buySellValues[1]){
                 newPrice = price + price*max_vol*0.01*(buySellValues[0]/total) + price*0.01*min_vol;
                 newRatio = ratio + price*max_vol*0.01*(buySellValues[0]/total) + ratio*0.01*min_vol;

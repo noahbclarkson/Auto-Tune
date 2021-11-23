@@ -12,7 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
@@ -434,7 +433,7 @@ public class LocalDataCache {
         }
     }
 
-    @SuppressWarnings("deprecated")
+    @SuppressWarnings("deprecation")
     private void loadEnchantmentDataFromFile(){
         ConfigurationSection config = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments");
         Set<String> set = config.getKeys(false);
@@ -500,12 +499,20 @@ public class LocalDataCache {
         ConfigurationSection csection = Main.getDataFiles().getShops().getConfigurationSection("sections");
         for (String section : csection.getKeys(false)){
             ConfigurationSection icsection = csection.getConfigurationSection(section);
-            SECTIONS.add(new Section(section, icsection.getString("block"), icsection.getBoolean("back-menu-button-enabled"),
-             icsection.getInt("position"), icsection.getString("background")));
+            SECTIONS.add(new Section(section, 
+            icsection.getString("block", "BARRIER"), 
+            icsection.getBoolean("back-menu-button-enabled", true),
+            icsection.getInt("position", 1), 
+            icsection.getString("background", "BLACK_STAINED_GLASS_PANE"),
+            icsection.getString("display-name", "&g" + section)));
         }
         csection = Main.getDataFiles().getEnchantments().getConfigurationSection("config");
-        SECTIONS.add(new Section("Enchantments", csection.getString("block"), csection.getBoolean("back-menu-button-enabled"),
-             csection.getInt("position"), csection.getString("background")));
+        SECTIONS.add(new Section("Enchantments",
+            csection.getString("block", "ENCHANTED_BOOK"), 
+            csection.getBoolean("back-menu-button-enabled", true),
+            csection.getInt("position", 1),
+            csection.getString("background", "BLACK_STAINED_GLASS_PANE"),
+            csection.getString("display-name", "&gEnchantments")));
     }
 
     private void loadGDPDataFromData(){

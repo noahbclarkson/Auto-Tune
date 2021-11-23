@@ -60,12 +60,15 @@ public abstract class ShopFormat {
         Player player = (Player)sender;
         List<GuiItem> output = new ArrayList<GuiItem>();
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
+        int i = 0;
         for (String s_item : section.getItems()){
-            GuiItem item = getGUIItem(section, s_item, player, sender, df);
+            GuiItem item = getGUIItem(section, s_item, section.getDisplayNames().get(i), player, sender, df);
+            i++;
             if (item == null){
                 continue;
             }
             output.add(item);
+
         }
         return output;
     }
@@ -99,7 +102,7 @@ public abstract class ShopFormat {
         return output;
     }
 
-    public abstract GuiItem getGUIItem(Section section, String s_item, Player player, CommandSender sender, DecimalFormat df);
+    public abstract GuiItem getGUIItem(Section section, String s_item, String displayName, Player player, CommandSender sender, DecimalFormat df);
 
     public abstract StaticPane loadSectionsPane(CommandSender sender, int lines);
     

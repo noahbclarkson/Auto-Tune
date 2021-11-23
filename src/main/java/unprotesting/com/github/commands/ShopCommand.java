@@ -48,7 +48,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
             int y = section.getPosition() / 9;
             ItemStack item = new ItemStack(section.getImage());
             ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName(ChatColor.GOLD + section.getName());
+            meta.setDisplayName(section.getDisplayName());
             meta.setLore(Arrays.asList(new String[]{ChatColor.WHITE + "Click to enter " + section.getName() + " shop"}));
             item.setItemMeta(meta);
             GuiItem gItem = new GuiItem(item, event ->{
@@ -60,7 +60,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
         return navigationPane;
     }
 
-    public GuiItem getGUIItem(Section section, String s_item, Player player, CommandSender sender, DecimalFormat df){
+    public GuiItem getGUIItem(Section section, String s_item, String displayName, Player player, CommandSender sender, DecimalFormat df){
         ItemStack item = new ItemStack(Material.BARRIER);
             if (section.isEnchantmentSection() && !Config.isEnableEnchantments()){
                 return null;
@@ -78,7 +78,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
                 return null;
             }
             ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName(ChatColor.GOLD + s_item);
+            meta.setDisplayName(displayName);
             List<String> list = new ArrayList<String>();
             list.add(ChatColor.GREEN + Config.getCurrencySymbol() + df.format(Main.getCache().getItemPrice(s_item, false)));
             if (section.isEnchantmentSection()){
@@ -97,10 +97,10 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
             GuiItem gItem = new GuiItem(item, event ->{
                 event.setCancelled(true);
                 if (section.isEnchantmentSection()){
-                    loadPurchasePane(section, s_item, sender);
+                    loadPurchasePane(section, s_item, displayName, sender);
                 }
                 else{
-                    loadPurchasePane(section, s_item, sender);
+                    loadPurchasePane(section, s_item, displayName, sender);
                 }
             });
             return gItem;
@@ -115,26 +115,26 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
         return Main.getCache().getOverallEnchantmentPrice(enchantment, i_price, false);
     }
 
-    private void loadPurchasePane(Section section, String item, CommandSender sender){
+    private void loadPurchasePane(Section section, String item, String displayName, CommandSender sender){
         CommandUtil.closeInventory(sender);
         ChestGui gui = new ChestGui(4, Config.getMenuTitle());
         gui = CommandUtil.getBackground(gui, 4, Config.getBackground());
-        gui.addPane(getPurchasePane(item, sender, section));
+        gui.addPane(getPurchasePane(item, displayName, sender, section));
         gui.addPane(generateMenuBackPane(sender));
         gui.show((HumanEntity)sender);
     }
 
-    private OutlinePane getPurchasePane(String item_input, CommandSender sender, Section section){
+    private OutlinePane getPurchasePane(String item_input, String displayName, CommandSender sender, Section section){
         Player player = (Player)sender;
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         OutlinePane pane = new OutlinePane(1, 1, 7, 2);
         for (int amount : amounts){
             ItemStack item;
             if (!section.isEnchantmentSection()){
-                item = getPurchasePaneItem(item_input, ChatColor.GREEN + "Buy for " + Config.getCurrencySymbol() + df.format(Main.getCache().getItemPrice(item_input, false)*amount), amount);
+                item = getPurchasePaneItem(item_input, displayName, ChatColor.GREEN + "Buy for " + Config.getCurrencySymbol() + df.format(Main.getCache().getItemPrice(item_input, false)*amount), amount);
             }
             else if (Config.isEnableEnchantments()){
-                item = getPurchasePaneItem("ENCHANTED_BOOK", ChatColor.GREEN + "Buy for " + Config.getCurrencySymbol() + df.format(getEnchPriceWithHeld(item_input, player)*amount), amount);
+                item = getPurchasePaneItem("ENCHANTED_BOOK", displayName, ChatColor.GREEN + "Buy for " + Config.getCurrencySymbol() + df.format(getEnchPriceWithHeld(item_input, player)*amount), amount);
             }
             else{
                 return pane;
@@ -150,10 +150,10 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
             GuiItem gItem = new GuiItem(item, event ->{
                 event.setCancelled(true);
                 if (!section.isEnchantmentSection()){
-                    FunctionsUtil.buyItem(player, item_input, amount);
+                    FunctionsUtil.buyItem(player, item_input, displayName, amount);
                 }
                 else{
-                    FunctionsUtil.buyEnchantment(player, item_input);
+                    FunctionsUtil.buyEnchantment(player, item_input, displayName);
                 }
             });
             pane.addItem(gItem);
@@ -162,23 +162,23 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
             return pane;
         }
         for (int amount : amounts){
-            ItemStack item = getPurchasePaneItem(item_input, ChatColor.RED + "Sell for " + Config.getCurrencySymbol() + df.format(Main.getCache().getItemPrice(item_input, true)*amount), amount);
+            ItemStack item = getPurchasePaneItem(item_input, displayName, ChatColor.RED + "Sell for " + Config.getCurrencySymbol() + df.format(Main.getCache().getItemPrice(item_input, true)*amount), amount);
             if (item.getMaxStackSize() < amount){
                 continue;
             }
             GuiItem gItem = new GuiItem(item, event ->{
                 event.setCancelled(true);
-                FunctionsUtil.sellItem(player, item_input, amount);
+                FunctionsUtil.sellItem(player, item_input, displayName, amount);
             });
             pane.addItem(gItem);
         }
         return pane;
     }
 
-    private ItemStack getPurchasePaneItem(String item_input, String prefix, int amount){
+    private ItemStack getPurchasePaneItem(String item_input, String displayName, String prefix, int amount){
         ItemStack item = new ItemStack(Material.matchMaterial(item_input), amount);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.GOLD + item_input);
+        meta.setDisplayName(displayName);
         meta.setLore(Arrays.asList(new String[]{ChatColor.WHITE + prefix}));
         item.setItemMeta(meta);
         return item;

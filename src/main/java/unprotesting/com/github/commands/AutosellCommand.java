@@ -40,7 +40,7 @@ public class AutosellCommand extends ShopFormat implements CommandExecutor {
             int y = section.getPosition() / 9;
             ItemStack item = new ItemStack(section.getImage());
             ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName(ChatColor.GOLD + section.getName());
+            meta.setDisplayName(section.getDisplayName());
             meta.setLore(Arrays.asList(new String[]{ChatColor.WHITE + "Click to change " + section.getName() + " autosell settings."}));
             item.setItemMeta(meta);
             GuiItem gItem = new GuiItem(item, event ->{
@@ -52,10 +52,10 @@ public class AutosellCommand extends ShopFormat implements CommandExecutor {
         return navigationPane;
     }
 
-    public GuiItem getGUIItem(Section section, String s_item, Player player, CommandSender sender, DecimalFormat df){
+    public GuiItem getGUIItem(Section section, String s_item, String displayName, Player player, CommandSender sender, DecimalFormat df){
         ItemStack item = new ItemStack(Material.matchMaterial(s_item));
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.GOLD + s_item);
+        meta.setDisplayName(displayName);
         String lore;
         boolean setting = CommandUtil.getPlayerAutoSellSetting(player, item.getType().toString());
         if (setting){

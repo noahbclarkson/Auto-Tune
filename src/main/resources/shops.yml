@@ -23,31 +23,38 @@ sections:
     ##  Optional - set to disabled to disable the back button when running "/shop <shop-section>".
     ##  This wont disable the back button when running just "/shop"
     back-menu-button-enabled: true
+    ##  Set the display name for the section
+    display-name: '&6Natural Resources'
   'Blocks':
     block: 'STONE'
     position: 12
     background: 'GRAY_STAINED_GLASS_PANE'
     back-menu-button-enabled: true
+    display-name: '&6Blocks'
   'Food':
     block: 'COOKED_BEEF'
     position: 14
     background: 'GRAY_STAINED_GLASS_PANE'
     back-menu-button-enabled: true
+    display-name: '&6Food'
   'Farming':
     block: 'OAK_SAPLING'
     position: 16
     background: 'GRAY_STAINED_GLASS_PANE'
     back-menu-button-enabled: true
+    display-name: '&6Farming'
   'Tools':
     block: 'DIAMOND_PICKAXE'
     position: 20
     background: 'GRAY_STAINED_GLASS_PANE'
     back-menu-button-enabled: true
+    display-name: '&6Tools'
   'Other':
     block: 'STICK'
     position: 24
     background: 'GRAY_STAINED_GLASS_PANE'
     back-menu-button-enabled: true
+    display-name: '&6Other'
 
 ##  Set the default / starting prices for the items you want available in the shop.
 ##  Info: Make sure you put a decimal point and two digits to create a double for the shop algorithm to accept and parse to a price-value.
@@ -62,8 +69,9 @@ sections:
 ##  Options: 'max-sell': <integer> set a maximum quantity that can be sold in a time-period.
 ##  Options: 'max-volatility: <double>' set the maximum volatility per time-period for this individual item.
 ##  Options: 'min-volatility: <double>' set the minimum volatility per time-period for this individual item.
-##  IMPORTANT: These values can't be changed once the database has been created. To change the price of items use /at price <item-name> <double>
-##  or reset the data.db file. Max-sell and max-buys can be changed via this file and updated at a server restart.
+##  Options: 'display-name': <string>' set the display name of the item.
+##  IMPORTANT: Thee prices of these items can't be changed once the database has been created. To change the price of items use /at price <item-name> <double>
+##  or reset the data.db file.
 
   ##  Example:
   ##  GRASS_BLOCK:
@@ -82,533 +90,640 @@ shops:
     max-buy: 80
     max-sell: 115
     section: 'Natural Resources'
+    display-name: '&6Coal'
   IRON_INGOT:
     price: 17.00
     max-buy: 75
     max-sell: 100
     section: 'Natural Resources'
+    display-name: '&6Iron Ingot'
   COPPER_INGOT:
     price: 20.00
     max-buy: 64
     max-sell: 80
     section: 'Natural Resources'
+    display-name: '&6Copper Ingot'
   GOLD_INGOT:
     price: 25.00
     max-buy: 45
     max-sell: 75
     section: 'Natural Resources'
+    display-name: '&6Gold Ingot'
   DIAMOND:
     price: 325.00
     max-buy: 15
     max-sell: 32
     section: 'Natural Resources'
+    display-name: '&6Diamond'
   AMETHYST_SHARD:
     price: 22.00
     max-buy: 32
     max-sell: 45
     section: 'Natural Resources'
+    display-name: '&6Amethyst Shard'
   LAPIS_LAZULI:
     price: 12.00
     max-buy: 128
     max-sell: 256
     section: 'Natural Resources'
+    display-name: '&6Lapis Lazuli'
   EMERALD:
     price: 145.00
     max-buy: 12
     max-sell: 32
     section: 'Natural Resources'
+    display-name: '&6Emerald'
   QUARTZ:
     price: 11.00
     max-buy: 40
     max-sell: 125
     section: 'Natural Resources'
+    display-name: '&6Quartz'
   REDSTONE:
     price: 8.00
     max-buy: 80
     max-sell: 128
     section: 'Natural Resources'
+    display-name: '&6Redstone'
   NETHERITE_INGOT:
     price: 8500.00
     max-buy: 1
     max-sell: 2
     section: 'Natural Resources'
+    display-name: '&6Netherite Ingot'
   GLOWSTONE_DUST:
     price: 4.00
     max-buy: 128
     max-sell: 256
     section: 'Natural Resources'
+    display-name: '&6Glowstone Dust'
   DIRT:
     price: 0.5
     max-buy: 512
     max-sell: 1024
     section: 'Blocks'
+    display-name: '&6Dirt'
   COBBLESTONE:
     price: 1.00
     max-buy: 256
     max-sell: 800
     section: 'Blocks'
+    display-name: '&6Cobblestone'
   STONE:
     price: 2.00
     max-buy: 128
     max-sell: 256
     section: 'Blocks'
+    display-name: '&6Stone'
   GRAVEL:
     price: 3.00
     max-buy: 128
     max-sell: 256
     section: 'Blocks'
+    display-name: '&6Gravel'
   SAND:
     price: 1.00
     max-buy: 128
     max-sell: 500
     section: 'Blocks'
+    display-name: '&6Sand'
   SANDSTONE:
     price: 4.00
     max-buy: 100
     max-sell: 250
     section: 'Blocks'
+    display-name: '&6Sandstone'
   OBSIDIAN:
     price: 15.00
     max-buy: 20
     max-sell: 64
     section: 'Blocks'
+    display-name: '&6Obsidian'
   END_STONE:
     price: 3.50
     max-buy: 80
     max-sell: 200
     section: 'Blocks'
+    display-name: '&6End Stone'
   NETHERRACK:
     price: 1.00
     max-buy: 256
     max-sell: 1024
     section: 'Blocks'
+    display-name: '&6Netherrack'
   WHITE_WOOL:
     price: 6.50
     max-buy: 64
     max-sell: 80
     section: 'Blocks'
+    display-name: '&6White Wool'
   OAK_LOG:
     price: 8.00
     max-buy: 90
     max-sell: 256
     section: 'Blocks'
+    display-name: '&6Oak Log'
   MOSS_BLOCK:
     price: 35.00
     max-buy: 15
     max-sell: 32
     section: 'Blocks'
+    display-name: '&6Moss Block'
   CACTUS:
     price: 3.00
     max-buy: 64
     max-sell: 200
     section: 'Farming'
+    display-name: '&6Cactus'
   VINE:
     price: 2.00
     max-buy: 64
     max-sell: 256
     section: 'Farming'
+    display-name: '&6Vine'
   CARROT:
     price: 4.00
     max-buy: 80
     max-sell: 256
     section: 'Food'
+    display-name: '&6Carrot'
   MELON_SLICE:
     price: 1.75
     max-buy: 85
     max-sell: 175
     section: 'Food'
+    display-name: '&6Melon Slice'
   POTATO:
     price: 2.25
     max-buy: 80
     max-sell: 120
     section: 'Food'
+    display-name: '&6Potato'
   APPLE:
     price: 4.00
     max-buy: 64
     max-sell: 100
     section: 'Food'
+    display-name: '&6Apple'
   WHEAT:
     price: 2.00
     max-buy: 128
     max-sell: 256
     section: 'Farming'
+    display-name: '&6Wheat'
   SUGAR_CANE:
     price: 1.50
     max-buy: 164
     max-sell: 256
     section: 'Farming'
+    display-name: '&6Sugar Cane'
   BEEF:
     price: 2.50
     max-buy: 64
     max-sell: 150
     section: 'Food'
+    display-name: '&6Beef'
   PORKCHOP:
     price: 2.25
     max-buy: 64
     max-sell: 150
     section: 'Food'
+    display-name: '&6Porkchop'
   CHICKEN:
     price: 1.45
     max-buy: 64
     max-sell: 150
     section: 'Food'
+    display-name: '&6Chicken'
   RABBIT:
     price: 2.50
     max-buy: 64
     max-sell: 150
     section: 'Food'
+    display-name: '&6Rabbit'
   MUTTON:
     price: 2.00
     max-buy: 64
     max-sell: 150
     section: 'Food'
+    display-name: '&6Mutton'
   PUMPKIN:
     price: 8.00
     max-buy: 64
     max-sell: 128
     section: 'Farming'
+    display-name: '&6Pumpkin'
   COD:
     price: 6.00
     max-buy: 96
     max-sell: 124
     section: 'Food'
+    display-name: '&6Cod'
   WHEAT_SEEDS:
     price: 1.25
     max-buy: 80
     max-sell: 200
     section: 'Farming'
+    display-name: '&6Wheat Seeds'
   NETHER_WART:
     price: 4.00
     max-buy: 64
     max-sell: 200
     section: 'Farming'
+    display-name: '&6Nether Wart'
   FLINT:
     price: 4.00
     max-buy: 64
     max-sell: 128
     section: 'Other'
+    display-name: '&6Flint'
   GUNPOWDER:
     price: 12.50
     max-buy: 64
     max-sell: 128
     section: 'Other'
+    display-name: '&6Gunpowder'
   LEATHER:
     price: 20.00
     max-buy: 64
     max-sell: 128
     section: 'Other'
+    display-name: '&6Leather'
   INK_SAC:
     price: 2.50
     max-buy: 32
     max-sell: 64
     section: 'Other'
+    display-name: '&6Ink Sac'
   FEATHER:
     price: 4.00
     max-buy: 32
     max-sell: 64
     section: 'Other'
+    display-name: '&6Feather'
   BONE:
     price: 6.00
     max-buy: 64
     max-sell: 100
     section: 'Other'
+    display-name: '&6Bone'
   STRING:
     price: 4.00
     max-buy: 64
     max-sell: 100
     section: 'Other'
+    display-name: '&6String'
   ROTTEN_FLESH:
     price: 0.50
     max-buy: 64
     max-sell: 128
     section: 'Food'
+    display-name: '&6Rotten Flesh'
   SPIDER_EYE:
     price: 7.00
     max-buy: 64
     max-sell: 128
     section: 'Other'
+    display-name: '&6Spider Eye'
   SLIME_BALL:
     price: 25.00
     max-buy: 32
     max-sell: 64
     section: 'Other'
+    display-name: '&6Slime Ball'
   ENDER_PEARL:
     price: 45.00
     max-buy: 8
     max-sell: 20
     section: 'Other'
+    display-name: '&6Ender Pearl'
   NETHER_STAR:
     price: 15000.00
     max-buy: 1
     max-sell: 1
     section: 'Other'
+    display-name: '&6Nether Star'
   BLAZE_ROD:
     price: 85.00
     max-buy: 6
     max-sell: 15
     section: 'Other'
+    display-name: '&6Blaze Rod'
   ARROW:
     price: 2.00
     max-buy: 64
     max-sell: 128
     section: 'Other'
+    display-name: '&6Arrow'
   OAK_PLANKS:
     price: 0.5
     max-buy: 128
     max-sell: 256
     section: 'Blocks'
+    display-name: '&6Oak Planks'
   BIRCH_PLANKS:
     price: 0.5
     max-buy: 128
     max-sell: 256
     section: 'Blocks'
+    display-name: '&6Birch Planks'
   SPRUCE_PLANKS:
     price: 0.5
     max-buy: 128
     max-sell: 256
     section: 'Blocks'
+    display-name: '&6Spruce Planks'
   JUNGLE_PLANKS:
     price: 0.5
     max-buy: 128
     max-sell: 256
     section: 'Blocks'
+    display-name: '&6Jungle Planks'
   DARK_OAK_PLANKS:
     price: 0.5
     max-buy: 128
     max-sell: 256
     section: 'Blocks'
+    display-name: '&6Dark Oak Planks'
   ACACIA_PLANKS:
     price: 0.5
     max-buy: 128
     max-sell: 256
     section: 'Blocks'
+    display-name: '&6Acacia Planks'
   OAK_SAPLING:
     price: 2.5
     max-buy: 32
     max-sell: 64
     section: 'Farming'
+    display-name: '&6Oak Sapling'
   STICK:
     price: 0.2
     max-buy: 64
     max-sell: 128
     section: 'Other'
+    display-name: '&6Stick'
   BOOK:
     price: 22.0
     max-buy: 20
     max-sell: 32
     section: 'Other'
+    display-name: '&6Book'
   WOODEN_PICKAXE:
     price: 8.0
     max-buy: 4
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Wooden Pickaxe'
   WOODEN_AXE:
     price: 7.5
     max-buy: 4
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Wooden Axe'
   WOODEN_SWORD:
     price: 6.5
     max-buy: 4
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Wooden Sword'
   WOODEN_SHOVEL:
     price: 3.5
     max-buy: 4
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Wooden Shovel'
   WOODEN_HOE:
     price: 3.5
     max-buy: 4
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Wooden Hoe'
   STONE_PICKAXE:
     price: 11.0
     max-buy: 4
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Stone Pickaxe'
   STONE_AXE:
     price: 10.5
     max-buy: 4
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Stone Axe'
   STONE_SWORD:
     price: 9.0
     max-buy: 4
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Stone Sword'
   STONE_SHOVEL:
     price: 5.0
     max-buy: 4
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Stone Shovel'
   STONE_HOE:
     price: 5.0
     max-buy: 4
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Stone Hoe'
   GOLDEN_PICKAXE:
     price: 12.0
     max-buy: 3
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Golden Pickaxe'
   GOLDEN_AXE:
     price: 11.5
     max-buy: 3
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Golden Axe'
   GOLDEN_SWORD:
     price: 10.0
     max-buy: 3
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Golden Sword'
   GOLDEN_SHOVEL:
     price: 6.0
     max-buy: 3
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Golden Shovel'
   GOLDEN_HOE:
     price: 6.0
     max-buy: 3
     max-sell: 8
     section: 'Tools'
+    display-name: '&6Golden Hoe'
   IRON_PICKAXE:
     price: 18.0
     max-buy: 3
     max-sell: 6
     section: 'Tools'
+    display-name: '&6Iron Pickaxe'
   IRON_AXE:
     price: 17.5
     max-buy: 3
     max-sell: 6
     section: 'Tools'
+    display-name: '&6Iron Axe'
   IRON_SWORD:
     price: 13.0
     max-buy: 3
     max-sell: 6
     section: 'Tools'
+    display-name: '&6Iron Sword'
   IRON_SHOVEL:
     price: 7.0
     max-buy: 3
     max-sell: 6
     section: 'Tools'
+    display-name: '&6Iron Shovel'
   IRON_HOE:
     price: 7.0
     max-buy: 3
     max-sell: 6
     section: 'Tools'
+    display-name: '&6Iron Hoe'
   DIAMOND_PICKAXE:
     price: 260.0
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Diamond Pickaxe'
   DIAMOND_AXE:
     price: 250.0
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Diamond Axe'
   DIAMOND_SWORD:
     price: 180.0
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Diamond Sword'
   DIAMOND_SHOVEL:
     price: 110.0
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Diamond Shovel'
   DIAMOND_HOE:
     price: 110.0
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Diamond Hoe'
   LEATHER_HELMET:
     price: 22.50
     max-buy: 2
     max-sell: 4
     section: 'Tools'
+    display-name: '&6Leather Helmet'
   LEATHER_CHESTPLATE:
     price: 46.00
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Leather Chestplate'
   LEATHER_LEGGINGS:
     price: 25.50
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Leather Leggings'
   LEATHER_BOOTS:
     price: 20.00
     max-buy: 2
     max-sell: 4
     section: 'Tools'
+    display-name: '&6Leather Boots'
   IRON_HELMET:
     price: 45.50
     max-buy: 2
     max-sell: 4
     section: 'Tools'
+    display-name: '&6Iron Helmet'
   IRON_CHESTPLATE:
     price: 86.00
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Iron Chestplate'
   IRON_LEGGINGS:
     price: 65.50
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Iron Leggings'
   IRON_BOOTS:
     price: 38.00
     max-buy: 2
     max-sell: 4
     section: 'Tools'
+    display-name: '&6Iron Boots'
   GOLDEN_HELMET:
     price: 40.50
     max-buy: 2
     max-sell: 4
     section: 'Tools'
+    display-name: '&6Golden Helmet'
   GOLDEN_CHESTPLATE:
     price: 80.00
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Golden Chestplate'
   GOLDEN_LEGGINGS:
     price: 60.50
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Golden Leggings'
   GOLDEN_BOOTS:
     price: 30.00
     max-buy: 2
     max-sell: 4
     section: 'Tools'
+    display-name: '&6Golden Boots'
   DIAMOND_HELMET:
     price: 425.50
     max-buy: 2
     max-sell: 4
     section: 'Tools'
+    display-name: '&6Diamond Helmet'
   DIAMOND_CHESTPLATE:
     price: 900.00
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Diamond Chestplate'
   DIAMOND_LEGGINGS:
     price: 620.50
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    display-name: '&6Diamond Leggings'
   DIAMOND_BOOTS:
     price: 350.00
     max-buy: 2
     max-sell: 4
     section: 'Tools'
+    display-name: '&6Diamond Boots'
   FISHING_ROD:
     price: 25.00
     max-buy: 3
     max-sell: 4
     section: 'Tools'
+    display-name: '&6Fishing Rod'
   BOW:
     price: 28.00
     max-buy: 3
     max-sell: 4
     section: 'Tools'
+    display-name: '&6Bow'

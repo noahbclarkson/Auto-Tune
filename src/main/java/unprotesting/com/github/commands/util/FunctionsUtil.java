@@ -19,12 +19,12 @@ import unprotesting.com.github.economy.EconomyFunctions;
 
 public class FunctionsUtil {
 
-    public static void buyItem(Player player, String item, int item_amount){
+    public static void buyItem(Player player, String item, String displayName, int item_amount){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         double bal = EconomyFunctions.getEconomy().getBalance(player);
         double price = Main.getCache().getItemPrice(item, false);
         int amount = item_amount;
-        String[] inputs = new String[]{item, df.format(price), Integer.toString(amount), df.format(price*amount)};
+        String[] inputs = new String[]{displayName, df.format(price), Integer.toString(amount), df.format(price*amount)};
         if (bal < price){
             player.sendMessage(MessagesData.getMessageString(player, "not-enough-money", inputs));
             return;
@@ -51,11 +51,11 @@ public class FunctionsUtil {
         Main.getCache().addSale(player.getUniqueId(), item, price, amount, SalePositionType.BUY);
     }
 
-    public static void sellItem(Player player, String item, int amount){
+    public static void sellItem(Player player, String item, String displayName, int amount){
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
         double price = Main.getCache().getItemPrice(item, true);
         double buyprice = Main.getCache().getItemPrice(item, false);
-        String[] inputs = new String[]{item, df.format(buyprice), Integer.toString(amount), df.format(buyprice*amount), df.format(price), df.format(price*amount)};
+        String[] inputs = new String[]{displayName, df.format(buyprice), Integer.toString(amount), df.format(buyprice*amount), df.format(price), df.format(price*amount)};
         if (amount < 1){
             player.sendMessage(MessagesData.getMessageString(player, "dont-have-item", inputs));
             return;
@@ -79,7 +79,7 @@ public class FunctionsUtil {
     }
 
     @SuppressWarnings("deprecation")
-    public static void buyEnchantment(Player player, String enchantment){
+    public static void buyEnchantment(Player player, String enchantment, String displayName){
         if (!Config.isEnableEnchantments()){
             return;
         }
@@ -100,13 +100,13 @@ public class FunctionsUtil {
         Enchantment ench = Enchantment.getByName(enchantment);
         int level = 0;
         if (ench == null){
-            player.sendMessage(MessagesData.getMessageString(player, "enchantment-error", new String[]{item.getType().toString()}));
+            player.sendMessage(MessagesData.getMessageString(player, "enchantment-error", new String[]{displayName}));
             return;
         }
         if (item.containsEnchantment(ench)){
             level = item.getEnchantmentLevel(ench);
         }
-        String[] inputs = new String[]{item.getType().toString(), df.format(item_price), Integer.toString(item.getAmount()), df.format(item.getAmount()*item_price),
+        String[] inputs = new String[]{displayName, df.format(item_price), Integer.toString(item.getAmount()), df.format(item.getAmount()*item_price),
          df.format(item_price_sell), df.format(item.getAmount()*item_price_sell), enchantment, Integer.toString(level), df.format(price)};
         if (bal < price){
             player.sendMessage(MessagesData.getMessageString(player, "enchantment-error", inputs));
@@ -192,7 +192,7 @@ public class FunctionsUtil {
         }
         Double item_buy_price = Main.getCache().getItemPrice(item.getType().toString(), false);
         fprice = fprice + item_price*ratio;
-        fprice = getnewPriceWithDurability(fprice, item);
+        fprice = getNewPriceWithDurability(fprice, item);
         if (!autosell){
             EconomyFunctions.getEconomy().depositPlayer(player, (item.getAmount()*fprice));
             player.sendMessage(MessagesData.getMessageString(player, "sell-custom-item", new String[]{item.getType().toString(),
@@ -211,7 +211,7 @@ public class FunctionsUtil {
     }
 
     @Deprecated
-    private static double getnewPriceWithDurability(double price, ItemStack item){
+    private static double getNewPriceWithDurability(double price, ItemStack item){
         double durability = (double) item.getDurability();
         double maxDurability = (double) item.getType().getMaxDurability();
         if (durability == 0 ){
@@ -219,8 +219,8 @@ public class FunctionsUtil {
         }
         double current = maxDurability - durability;
         double result = (current/maxDurability);
-        double newprice = price*result;
-        newprice = newprice - newprice * 0.01 * Config.getDurabilityLimiter();
-        return newprice;
+        double newPrice = price*result;
+        newPrice = newPrice - newPrice * 0.01 * Config.getDurabilityLimiter();
+        return newPrice;
     }   
 }

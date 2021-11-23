@@ -73,6 +73,9 @@ public class Section {
                 output += s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase() + " ";
             }
         }
+        else{
+            output = item_name.substring(0, 1).toUpperCase() + item_name.substring(1).toLowerCase();
+        }
         return "&6" + output;
     }
     

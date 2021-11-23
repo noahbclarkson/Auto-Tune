@@ -87,7 +87,6 @@ sections:
   ##    display-name: '&aGrass'      <- Example of a custom display name (with a green color code)
   ##    collect-first-setting: 'each-player' <- Example of a custom collect-first-setting
 
-
 shops:
   COAL:
     price: 15.00

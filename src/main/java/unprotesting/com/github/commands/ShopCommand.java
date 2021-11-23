@@ -140,6 +140,9 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
                 return pane;
             }
             if (item.getMaxStackSize() < amount){
+                if (Material.matchMaterial(Config.getBackground()) == null){
+                    continue;
+                }
                 ItemStack background = new ItemStack(Material.matchMaterial(Config.getBackground()));
                 GuiItem gItem = new GuiItem(background, event->{
                     event.setCancelled(true);

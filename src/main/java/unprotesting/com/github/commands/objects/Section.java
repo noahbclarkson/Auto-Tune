@@ -7,7 +7,6 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 
 import lombok.Data;
-import lombok.Getter;
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 

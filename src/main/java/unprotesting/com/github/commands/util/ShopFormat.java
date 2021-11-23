@@ -52,7 +52,11 @@ public abstract class ShopFormat {
         int highest = Section.getHighest(Main.getCache().getSECTIONS());
         int lines = (highest/9)+2;
         ChestGui gui = new ChestGui(lines, Config.getMenuTitle());
-        gui = CommandUtil.getBackground(gui, lines, Material.matchMaterial(Config.getBackground()));
+        Material mat = Material.BARRIER;
+        if (!Config.getBackground().equalsIgnoreCase("none")){
+            mat = Material.matchMaterial(Config.getBackground());
+        }
+        gui = CommandUtil.getBackground(gui, lines, mat);
         gui.addPane(loadSectionsPane(sender, lines));
         gui.show((HumanEntity)(sender));
     }

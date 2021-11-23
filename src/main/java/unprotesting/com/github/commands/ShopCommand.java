@@ -118,7 +118,11 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
     private void loadPurchasePane(Section section, String item, String displayName, CommandSender sender){
         CommandUtil.closeInventory(sender);
         ChestGui gui = new ChestGui(4, Config.getMenuTitle());
-        gui = CommandUtil.getBackground(gui, 4, Material.matchMaterial(Config.getBackground()));
+        Material mat = Material.BARRIER;
+        if (!Config.getBackground().equalsIgnoreCase("none")){
+            mat = Material.matchMaterial(Config.getBackground());
+        }
+        gui = CommandUtil.getBackground(gui, 4, mat);
         gui.addPane(getPurchasePane(item, displayName, sender, section));
         gui.addPane(generateMenuBackPane(sender));
         gui.show((HumanEntity)sender);
@@ -140,6 +144,9 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
                 return pane;
             }
             if (item.getMaxStackSize() < amount){
+                if (Config.getBackground().equalsIgnoreCase("none")){
+                    continue;
+                }
                 ItemStack background = new ItemStack(Material.matchMaterial(Config.getBackground()));
                 GuiItem gItem = new GuiItem(background, event->{
                     event.setCancelled(true);

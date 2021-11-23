@@ -210,7 +210,7 @@ public class FunctionsUtil {
             data.add(player.getUniqueId().toString(), item.getAmount()*fprice);
             Main.setAutosellData(data);
         }
-        Main.getCache().addSale(player.getUniqueId(), Section.getItemDisplayName(item.getType().toString()), Main.getCache().getItemPrice(item.getType().toString(), true), item.getAmount(), SalePositionType.SELL);
+        Main.getCache().addSale(player.getUniqueId(), item.getType().toString(), Main.getCache().getItemPrice(item.getType().toString(), true), item.getAmount(), SalePositionType.SELL);
         for (Enchantment ench : item.getEnchantments().keySet()){
             Main.getCache().addSale(player.getUniqueId(), ench.getName(), Main.getCache().getEnchantmentPrice(ench.toString(), true), item.getEnchantmentLevel(ench), SalePositionType.ESELL);
         }

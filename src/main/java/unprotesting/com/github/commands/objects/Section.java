@@ -53,13 +53,13 @@ public class Section {
         for (String key : Main.getDataFiles().getShops().getConfigurationSection("shops").getKeys(false)){
             if (key.equalsIgnoreCase(item_name)){
                 return ChatColor.translateAlternateColorCodes('&', Main.getDataFiles().getShops()
-                .getConfigurationSection("shops").getConfigurationSection(key).getString("display-name"));
+                .getConfigurationSection("shops").getConfigurationSection(key).getString("display-name", itemNameToDisplayName(output)));
             }
         }
         for (String ench : Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments").getKeys(false)){
             if (ench.equalsIgnoreCase(item_name)){
                 return ChatColor.translateAlternateColorCodes('&', Main.getDataFiles().getEnchantments()
-                .getConfigurationSection("enchantments").getConfigurationSection(ench).getString("display-name"));
+                .getConfigurationSection("enchantments").getConfigurationSection(ench).getString("display-name", itemNameToDisplayName(output)));
             }
         }
         return ChatColor.translateAlternateColorCodes('&', itemNameToDisplayName(output));

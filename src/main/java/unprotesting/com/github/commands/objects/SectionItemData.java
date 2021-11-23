@@ -19,7 +19,5 @@ public class SectionItemData {
         this.displayName = ChatColor.translateAlternateColorCodes('&', displayName);
         this.setting = setting;
     }
-
-    
     
 }

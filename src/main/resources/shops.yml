@@ -85,7 +85,7 @@ sections:
   ##    max-volatility: 0.25       <- Example of an item with a lower max-volatility
   ##    min-volatility: 0.05       <- Example of an item with a higher min-volatility
   ##    display-name: '&aGrass'      <- Example of a custom display name (with a green color code)
-  ##    collect-first-setting: 'each-player' <- Example of a custom collect-first-setting
+  ##    collect-first-setting: 'EACH_PLAYER' <- Example of a custom collect-first-setting
 
 shops:
   COAL:

@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import unprotesting.com.github.Main;
+import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.ephemeral.data.AutosellData;
 import unprotesting.com.github.data.ephemeral.data.MessagesData;
@@ -143,14 +144,14 @@ public class FunctionsUtil {
         }
         if ((!Main.getCache().getITEMS().containsKey(item.getType().toString())) || item.getAmount() < 1){
             if (!autosell){
-                player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", item.getType().toString()));
+                player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", Section.getItemDisplayName(item.getType().toString())));
                 System.out.println("a");
                 player.getInventory().addItem(item);
             }
             return;
         }
         if (Main.getCache().getSellsLeft(item.getType().toString(), player) < item.getAmount()){
-            player.sendMessage(MessagesData.getMessageString(player, "run-out-of-sells", item.getType().toString()));
+            player.sendMessage(MessagesData.getMessageString(player, "run-out-of-sells", Section.getItemDisplayName(item.getType().toString())));
             player.getInventory().addItem(item);
             return;
         }
@@ -175,7 +176,7 @@ public class FunctionsUtil {
                     cratio = Main.getCache().getEnchantmentRatio(ench.getName());
                 }
                 catch(NullPointerException e){
-                    player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", item.getType().toString()));
+                    player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", Section.getItemDisplayName(item.getType().toString())));
                     System.out.println("b");
                     player.getInventory().addItem(item);
                     return;
@@ -190,7 +191,7 @@ public class FunctionsUtil {
             item_price = Main.getCache().getItemPrice(item.getType().toString(), true);
         }
         catch(NullPointerException e){
-            player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", item.getType().toString()));
+            player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", Section.getItemDisplayName(item.getType().toString())));
             System.out.println("c");
             player.getInventory().addItem(item);
             return;
@@ -200,7 +201,7 @@ public class FunctionsUtil {
         fprice = getNewPriceWithDurability(fprice, item);
         if (!autosell){
             EconomyFunctions.getEconomy().depositPlayer(player, (item.getAmount()*fprice));
-            player.sendMessage(MessagesData.getMessageString(player, "sell-custom-item", new String[]{item.getType().toString(),
+            player.sendMessage(MessagesData.getMessageString(player, "sell-custom-item", new String[]{Section.getItemDisplayName(item.getType().toString()),
              df.format(item_buy_price), Integer.toString(item.getAmount()), df.format(item.getAmount()*item_buy_price),
               df.format(fprice), df.format(fprice*item.getAmount()), item.getEnchantments().toString()}));
         }
@@ -209,7 +210,7 @@ public class FunctionsUtil {
             data.add(player.getUniqueId().toString(), item.getAmount()*fprice);
             Main.setAutosellData(data);
         }
-        Main.getCache().addSale(player.getUniqueId(), item.getType().toString(), Main.getCache().getItemPrice(item.getType().toString(), true), item.getAmount(), SalePositionType.SELL);
+        Main.getCache().addSale(player.getUniqueId(), Section.getItemDisplayName(item.getType().toString()), Main.getCache().getItemPrice(item.getType().toString(), true), item.getAmount(), SalePositionType.SELL);
         for (Enchantment ench : item.getEnchantments().keySet()){
             Main.getCache().addSale(player.getUniqueId(), ench.getName(), Main.getCache().getEnchantmentPrice(ench.toString(), true), item.getEnchantmentLevel(ench), SalePositionType.ESELL);
         }

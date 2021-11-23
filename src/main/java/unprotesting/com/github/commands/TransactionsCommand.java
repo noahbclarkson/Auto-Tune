@@ -24,6 +24,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import unprotesting.com.github.Main;
+import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.commands.util.CommandUtil;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.ephemeral.data.TransactionData;
@@ -89,7 +90,8 @@ public class TransactionsCommand implements CommandExecutor{
             if (transaction.getPosition().equals(TransactionPositionType.BI) || transaction.getPosition().equals(TransactionPositionType.SI)){
                 ItemStack item = new ItemStack(Material.matchMaterial(transaction.getItem()), transaction.getAmount());
                 ItemMeta meta = item.getItemMeta();
-                meta.setDisplayName(ChatColor.GOLD + Integer.toString(transaction.getAmount()) + "x" + " " + transaction.getItem());
+                meta.setDisplayName(ChatColor.GOLD + Integer.toString(transaction.getAmount())
+                 + "x " + Section.getItemDisplayName(transaction.getItem()));
                 List<String> lore = new ArrayList<String>();
                 if (transaction.getPosition().equals(TransactionPositionType.BI)){
                     lore.add(ChatColor.GREEN + "BUY");
@@ -102,7 +104,7 @@ public class TransactionsCommand implements CommandExecutor{
             else{
                 ItemStack item = new ItemStack(Material.ENCHANTED_BOOK);
                 ItemMeta meta = item.getItemMeta();
-                meta.setDisplayName(ChatColor.GOLD + transaction.getItem());
+                meta.setDisplayName(Section.getItemDisplayName(transaction.getItem()));
                 List<String> lore = new ArrayList<String>();
                 if (transaction.getPosition().equals(TransactionPositionType.BE)){
                     lore.add(ChatColor.GREEN + "BUY");

@@ -35,7 +35,7 @@ public class Section {
                 ConfigurationSection inner = shops.getConfigurationSection(key);
                 if (inner.getString("section").equals(this.name)){
                     this.items.add(new SectionItemData(key, inner.getString("display-name",
-                     itemNameToDisplayName(key)), CollectFirstSetting.valueOf(inner.getString("collect-first-setting", "NONE"))));
+                     itemNameToDisplayName(key)), CollectFirstSetting.valueOf(inner.getString("collect-first-setting", "NONE").toUpperCase())));
                 }
             }
        }
@@ -43,9 +43,26 @@ public class Section {
             ConfigurationSection config = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments");
             for (String key : config.getKeys(false)){
                 this.items.add(new SectionItemData(key, config.getString("display-name",
-                itemNameToDisplayName(key)), CollectFirstSetting.valueOf(config.getString("collect-first-setting", "NONE"))));
+                itemNameToDisplayName(key)), CollectFirstSetting.valueOf(config.getString("collect-first-setting", "NONE").toUpperCase())));
             }
        }
+    }
+
+    public static String getItemDisplayName(String item_name){
+        String output = item_name;
+        for (String key : Main.getDataFiles().getShops().getConfigurationSection("shops").getKeys(false)){
+            if (key.equalsIgnoreCase(item_name)){
+                return ChatColor.translateAlternateColorCodes('&', Main.getDataFiles().getShops()
+                .getConfigurationSection("shops").getConfigurationSection(key).getString("display-name"));
+            }
+        }
+        for (String ench : Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments").getKeys(false)){
+            if (ench.equalsIgnoreCase(item_name)){
+                return ChatColor.translateAlternateColorCodes('&', Main.getDataFiles().getEnchantments()
+                .getConfigurationSection("enchantments").getConfigurationSection(ench).getString("display-name"));
+            }
+        }
+        return ChatColor.translateAlternateColorCodes('&', itemNameToDisplayName(output));
     }
 
     public static enum CollectFirstSetting{

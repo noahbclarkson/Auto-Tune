@@ -118,7 +118,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
     private void loadPurchasePane(Section section, String item, String displayName, CommandSender sender){
         CommandUtil.closeInventory(sender);
         ChestGui gui = new ChestGui(4, Config.getMenuTitle());
-        gui = CommandUtil.getBackground(gui, 4, Config.getBackground());
+        gui = CommandUtil.getBackground(gui, 4, Material.matchMaterial(Config.getBackground()));
         gui.addPane(getPurchasePane(item, displayName, sender, section));
         gui.addPane(generateMenuBackPane(sender));
         gui.show((HumanEntity)sender);

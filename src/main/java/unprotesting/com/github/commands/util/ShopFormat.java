@@ -21,6 +21,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import unprotesting.com.github.Main;
 import unprotesting.com.github.commands.objects.Section;
+import unprotesting.com.github.commands.objects.SectionItemData;
 import unprotesting.com.github.config.Config;
 
 public abstract class ShopFormat {
@@ -51,7 +52,7 @@ public abstract class ShopFormat {
         int highest = Section.getHighest(Main.getCache().getSECTIONS());
         int lines = (highest/9)+2;
         ChestGui gui = new ChestGui(lines, Config.getMenuTitle());
-        gui = CommandUtil.getBackground(gui, lines, Config.getBackground());
+        gui = CommandUtil.getBackground(gui, lines, Material.matchMaterial(Config.getBackground()));
         gui.addPane(loadSectionsPane(sender, lines));
         gui.show((HumanEntity)(sender));
     }
@@ -60,10 +61,8 @@ public abstract class ShopFormat {
         Player player = (Player)sender;
         List<GuiItem> output = new ArrayList<GuiItem>();
         DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
-        int i = 0;
-        for (String s_item : section.getItems()){
-            GuiItem item = getGUIItem(section, s_item, section.getDisplayNames().get(i), player, sender, df);
-            i++;
+        for (SectionItemData s_item : section.getItems()){
+            GuiItem item = getGUIItem(section, s_item.getName(), s_item.getDisplayName(), player, sender, df);
             if (item == null){
                 continue;
             }

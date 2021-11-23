@@ -70,6 +70,7 @@ sections:
 ##  Options: 'max-volatility: <double>' set the maximum volatility per time-period for this individual item.
 ##  Options: 'min-volatility: <double>' set the minimum volatility per time-period for this individual item.
 ##  Options: 'display-name': <string>' set the display name of the item.
+##  Options: 'collect-first-setting': <string>' ('NONE'|'SERVER_WIDE'|'EACH_PLAYER') the setting for the item to be required to be collected before it can be purchased
 ##  IMPORTANT: Thee prices of these items can't be changed once the database has been created. To change the price of items use /at price <item-name> <double>
 ##  or reset the data.db file.
 
@@ -83,6 +84,9 @@ sections:
   ##    max-sell: 12       <- Only 12 items can be sold each time-period - you can increase this on large servers
   ##    max-volatility: 0.25       <- Example of an item with a lower max-volatility
   ##    min-volatility: 0.05       <- Example of an item with a higher min-volatility
+  ##    display-name: '&aGrass'      <- Example of a custom display name (with a green color code)
+  ##    collect-first-setting: 'each-player' <- Example of a custom collect-first-setting
+
 
 shops:
   COAL:

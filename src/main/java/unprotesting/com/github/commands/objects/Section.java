@@ -6,58 +6,53 @@ import java.util.List;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 
+import lombok.Data;
 import lombok.Getter;
 import net.md_5.bungee.api.ChatColor;
 import unprotesting.com.github.Main;
 
+@Data
 public class Section {
 
-    @Getter
-    private List<String> items,
-                         displayNames;
-    @Getter
-    private String name,
-                   background,
-                   displayName;
-    @Getter
-    private Material image;
-    @Getter
-    private boolean back,
-                    enchantmentSection;
-    @Getter
+    private String name, displayName;
+    private List<SectionItemData> items;
+    private Material image, background;
+    private boolean back, enchantmentSection;
     private int position;
 
-    public Section(String name, String material, boolean back, int position, String background, String displayName){
-        this.background = background;
-        this.position = position;
-        this.name = name;
-        this.back = back;
-        this.enchantmentSection = false;
-        this.image = Material.matchMaterial(material);
-        if (this.image == null){
-            this.image = Material.BARRIER;
-        }
-        this.displayName = ChatColor.translateAlternateColorCodes('&', displayName);
-        this.items = new ArrayList<String>();
-        this.displayNames = new ArrayList<String>();
-        if (!this.name.equals("Enchantments")){
+    public Section(ConfigurationSection section, String name) {
+       this.name = name;
+       this.displayName = ChatColor.translateAlternateColorCodes('&', section.getString("display-name", "&6" + name));
+       this.image = Material.matchMaterial(section.getString("block", "BARRIER"));
+       this.image = this.image == null ? Material.BARRIER : this.image;
+       this.back = section.getBoolean("back-menu-button-enabled", true);
+       this.enchantmentSection = name.equalsIgnoreCase("Enchantments");
+       this.background = Material.matchMaterial(section.getString("background", "GRAY_STAINED_GLASS_PANE"));
+       this.position = section.getInt("position", 0);
+       this.items = new ArrayList<SectionItemData>();
+       if (!this.isEnchantmentSection()){
             ConfigurationSection shops = Main.getDataFiles().getShops().getConfigurationSection("shops");
             for (String key : shops.getKeys(false)){
                 ConfigurationSection inner = shops.getConfigurationSection(key);
                 if (inner.getString("section").equals(this.name)){
-                    this.items.add(key);
-                    this.displayNames.add(ChatColor.translateAlternateColorCodes('&', inner.getString("display-name", "&g" + key)));
+                    this.items.add(new SectionItemData(key, inner.getString("display-name",
+                     itemNameToDisplayName(key)), CollectFirstSetting.valueOf(inner.getString("collect-first-setting", "NONE"))));
                 }
             }
-        }
-        else{
-            this.enchantmentSection = true;
+       }
+       else{
             ConfigurationSection config = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments");
             for (String key : config.getKeys(false)){
-                this.items.add(key);
-                this.displayNames.add(ChatColor.translateAlternateColorCodes('&', config.getConfigurationSection(key).getString("display-name", "&g" + key)));
+                this.items.add(new SectionItemData(key, config.getString("display-name",
+                itemNameToDisplayName(key)), CollectFirstSetting.valueOf(config.getString("collect-first-setting", "NONE"))));
             }
-        }
+       }
+    }
+
+    public static enum CollectFirstSetting{
+        NONE,
+        SERVER_WIDE,
+        EACH_PLAYER
     }
 
     public static int getHighest(List<Section> sections){
@@ -69,5 +64,18 @@ public class Section {
         }
         return output;
     }
+
+    public static String itemNameToDisplayName(String item_name){
+        String output = item_name;
+        if (item_name.contains("_")){
+            String[] split = item_name.split("_");
+            output = "";
+            for (String s : split){
+                output += s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase() + " ";
+            }
+        }
+        return "&6" + output;
+    }
+    
     
 }

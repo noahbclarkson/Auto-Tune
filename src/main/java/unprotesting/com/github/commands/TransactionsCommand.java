@@ -73,7 +73,7 @@ public class TransactionsCommand implements CommandExecutor{
         else{
             return false;
         }
-        CommandUtil.loadGuiItemsIntoPane(items, gui, pages, panes, "GRAY_STAINED_GLASS_PANE", sender);
+        CommandUtil.loadGuiItemsIntoPane(items, gui, pages, panes, Material.GRAY_STAINED_GLASS_PANE, sender);
         return true;
     }
 

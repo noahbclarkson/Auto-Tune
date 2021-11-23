@@ -16,6 +16,7 @@ import unprotesting.com.github.data.ephemeral.data.AutosellData;
 import unprotesting.com.github.data.ephemeral.data.MessagesData;
 import unprotesting.com.github.data.ephemeral.other.Sale.SalePositionType;
 import unprotesting.com.github.economy.EconomyFunctions;
+import unprotesting.com.github.events.sync.UnlockUpdateEvent;
 
 public class FunctionsUtil {
 
@@ -25,6 +26,10 @@ public class FunctionsUtil {
         double price = Main.getCache().getItemPrice(item, false);
         int amount = item_amount;
         String[] inputs = new String[]{displayName, df.format(price), Integer.toString(amount), df.format(price*amount)};
+        if (!UnlockUpdateEvent.isUnlocked(player, item)){
+            player.sendMessage(MessagesData.getMessageString(player, "not-unlocked", inputs));
+            return;
+        }
         if (bal < price){
             player.sendMessage(MessagesData.getMessageString(player, "not-enough-money", inputs));
             return;

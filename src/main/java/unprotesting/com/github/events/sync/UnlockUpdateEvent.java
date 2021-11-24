@@ -41,7 +41,8 @@ public class UnlockUpdateEvent extends Event{
         }
     }
 
-    private void addItem(String item, String uuid){
+    private void addItem(String item, String uuid_input){
+        String uuid = uuid_input;
         if (Main.getDataFiles().getShops().getConfigurationSection("shops")
         .getConfigurationSection(item).getString("collect-first-setting").equals("SERVER_WIDE")){
             uuid = "server";
@@ -59,7 +60,6 @@ public class UnlockUpdateEvent extends Event{
             Main.getDataFiles().setPlayerData(config);
             return;
         }
-        return;
     }
 
     public static boolean isUnlocked(Player player, String item_name){

@@ -9,7 +9,8 @@ import unprotesting.com.github.commands.objects.Section.CollectFirstSetting;
 @Data
 public class SectionItemData {
 
-    private String name, displayName;
+    private String name, 
+                   displayName;
     private Material image;
     private CollectFirstSetting setting;
 

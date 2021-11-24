@@ -13,10 +13,13 @@ import unprotesting.com.github.Main;
 @Data
 public class Section {
 
-    private String name, displayName;
+    private String name,
+                   displayName;
     private List<SectionItemData> items;
-    private Material image, background;
-    private boolean back, enchantmentSection;
+    private Material image, 
+                     background;
+    private boolean back, 
+                    enchantmentSection;
     private int position;
 
     public Section(ConfigurationSection section, String name) {

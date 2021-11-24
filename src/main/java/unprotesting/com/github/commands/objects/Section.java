@@ -87,7 +87,7 @@ public class Section {
             String[] split = item_name.split("_");
             output = "";
             for (String s : split){
-                output += s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase() + " ";
+                output += s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
             }
         }
         else{

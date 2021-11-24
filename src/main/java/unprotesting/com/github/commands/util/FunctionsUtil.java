@@ -142,7 +142,14 @@ public class FunctionsUtil {
         if (item == null){
             return;
         }
-        if ((!Main.getCache().getITEMS().containsKey(item.getType().toString())) || item.getAmount() < 1){
+        boolean isPresent = false;
+        for (String key : Main.getDataFiles().getShops().getConfigurationSection("shops").getKeys(false)){
+            if (key.equalsIgnoreCase(item.getType().toString())){
+                isPresent = true;
+                break;
+            }
+        }
+        if (!isPresent || item.getAmount() < 1){
             if (!autosell){
                 player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", Section.getItemDisplayName(item.getType().toString())));
                 System.out.println("a");

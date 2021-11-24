@@ -30,7 +30,7 @@ dependencies {
     compileOnly 'org.spigotmc:spigot-api:1.18-pre5-R0.1-SNAPSHOT'
     compileOnly 'com.github.MilkBowl:VaultAPI:1.7.1'
     compileOnly 'org.projectlombok:lombok:1.18.22'
-    compileOnly 'net.essentialsx:EssentialsX:2.19.1-SNAPSHOT'
+    compileOnly 'net.essentialsx:EssentialsX:2.19.0'
     compileOnly 'me.clip:placeholderapi:2.10.10'
     compileOnly 'com.googlecode.json-simple:json-simple:1.1.1'
 

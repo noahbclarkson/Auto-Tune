@@ -37,16 +37,14 @@ public class Section {
             for (String key : shops.getKeys(false)){
                 ConfigurationSection inner = shops.getConfigurationSection(key);
                 if (inner.getString("section").equals(this.name)){
-                    this.items.add(new SectionItemData(key, inner.getString("display-name",
-                     itemNameToDisplayName(key)), CollectFirstSetting.valueOf(inner.getString("collect-first-setting", "NONE").toUpperCase())));
+                    this.items.add(new SectionItemData(key, getItemDisplayName(key), CollectFirstSetting.valueOf(inner.getString("collect-first-setting", "NONE").toUpperCase())));
                 }
             }
        }
        else{
             ConfigurationSection config = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments");
             for (String key : config.getKeys(false)){
-                this.items.add(new SectionItemData(key, config.getString("display-name",
-                itemNameToDisplayName(key)), CollectFirstSetting.valueOf(config.getString("collect-first-setting", "NONE").toUpperCase())));
+                this.items.add(new SectionItemData(key, getItemDisplayName(key), CollectFirstSetting.valueOf(config.getString("collect-first-setting", "NONE").toUpperCase())));
             }
        }
     }

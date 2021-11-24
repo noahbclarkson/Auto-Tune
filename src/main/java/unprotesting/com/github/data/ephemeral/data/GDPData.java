@@ -47,7 +47,7 @@ public class GDPData {
             try{
                 bal = EconomyFunctions.getEconomy().getBalance(player);
             }
-            catch(RuntimeException e){
+            catch(Exception e){
                 return;
             }
             server_balance += bal;

@@ -381,13 +381,9 @@ public class LocalDataCache {
     private void loadShopDataFromFile(){
         ConfigurationSection config = Main.getDataFiles().getShops().getConfigurationSection("shops");
         Set<String> set = config.getKeys(false);
-        ConcurrentHashMap<String, Double> map = new ConcurrentHashMap<String, Double>();
-        try {
-            if (Config.isReadFromCSV()){
-                map = CSVReader.readData();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        ConcurrentHashMap<String, ItemData> map = new ConcurrentHashMap<String, ItemData>();
+        if (Config.isReadFromCSV()){
+            try {map = CSVReader.readData();} catch (Exception e) {e.printStackTrace();}
         }
         for (String key : set){
             ConfigurationSection section = config.getConfigurationSection(key);
@@ -397,7 +393,14 @@ public class LocalDataCache {
             }
             ItemData data = new ItemData(section.getDouble("price", 0.0));
             if (Config.isReadFromCSV()){
-                data = new ItemData(map.get(key));
+                try{
+                    data.setPrice(map.get(key).getPrice());
+                    data.increaseBuys(map.get(key).getBuys());
+                    data.increaseSells(map.get(key).getSells());
+                }
+                catch(NullPointerException e){
+                    Logging.error("Invalid item in shops.yml: " + key + " item is not present in .csv");
+                }
             }
             MaxBuySellData mbsdata = new MaxBuySellData(section.getInt("max-buy", 9999), section.getInt("max-sell", 9999));
             MAX_PURCHASES.put(key, mbsdata);

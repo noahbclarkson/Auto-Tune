@@ -147,7 +147,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
             }
             if (item.getMaxStackSize() < amount){
                 if (Config.getBackground().equalsIgnoreCase("none")){
-                    pane.setX(k);
+                    pane.setLength(k);
                     k--;
                     continue;
                 }

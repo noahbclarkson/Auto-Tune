@@ -37,7 +37,7 @@ not-enough-money: "&cYou need %GENERAL_ITEM_PRICE% to purchase this item."
 not-enough-moneyxamount: "&cYou need %GENERAL_ITEM_PRICEXAMOUNT% to purchase x%GENERAL_ITEM_AMOUNT% of this item."
 run-out-of-buys: "&cYou have run out of buys for this item."
 not-enough-space: "&cNot enough space in inventory."
-not-unlocked: "&cYou need to unlock this item first by collecting it."
+not-unlocked: "&cYou need to unlock this item by collecting it to purchase it."
 shop-purchase: "&aPurchased x%GENERAL_ITEM_AMOUNT% of &6%GENERAL_ITEM% &afor %GENERAL_ITEM_PRICEXAMOUNT%."
 
 ##  Selling items

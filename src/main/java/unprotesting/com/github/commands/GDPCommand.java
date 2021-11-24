@@ -145,7 +145,7 @@ public class GDPCommand implements CommandExecutor{
         double inflation = Main.getCache().getGDP_DATA().getInflation();
         meta.setDisplayName(ChatColor.AQUA + "Inflation");
         meta.setLore(Arrays.asList(new String[]{
-            ChatColor.GOLD + "-> Inflation: " + Config.getCurrencySymbol() + df.format(inflation) + ".",
+            ChatColor.GOLD + "-> Inflation: " + df.format(inflation) + "%.",
             ChatColor.WHITE + "-> Inflation is the average change",
             ChatColor.WHITE + "in prices in the last 24 hours.",
         }));

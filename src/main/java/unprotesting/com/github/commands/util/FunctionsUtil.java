@@ -11,11 +11,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import unprotesting.com.github.Main;
+import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.ephemeral.data.AutosellData;
 import unprotesting.com.github.data.ephemeral.data.MessagesData;
 import unprotesting.com.github.data.ephemeral.other.Sale.SalePositionType;
 import unprotesting.com.github.economy.EconomyFunctions;
+import unprotesting.com.github.events.sync.UnlockUpdateEvent;
 
 public class FunctionsUtil {
 
@@ -25,6 +27,10 @@ public class FunctionsUtil {
         double price = Main.getCache().getItemPrice(item, false);
         int amount = item_amount;
         String[] inputs = new String[]{displayName, df.format(price), Integer.toString(amount), df.format(price*amount)};
+        if (!UnlockUpdateEvent.isUnlocked(player, item)){
+            player.sendMessage(MessagesData.getMessageString(player, "not-unlocked", inputs));
+            return;
+        }
         if (bal < price){
             player.sendMessage(MessagesData.getMessageString(player, "not-enough-money", inputs));
             return;
@@ -136,16 +142,23 @@ public class FunctionsUtil {
         if (item == null){
             return;
         }
-        if ((!Main.getCache().getITEMS().containsKey(item.getType().toString())) || item.getAmount() < 1){
+        boolean isPresent = false;
+        for (String key : Main.getDataFiles().getShops().getConfigurationSection("shops").getKeys(false)){
+            if (key.equalsIgnoreCase(item.getType().toString())){
+                isPresent = true;
+                break;
+            }
+        }
+        if (!isPresent || item.getAmount() < 1){
             if (!autosell){
-                player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", item.getType().toString()));
+                player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", Section.getItemDisplayName(item.getType().toString())));
                 System.out.println("a");
                 player.getInventory().addItem(item);
             }
             return;
         }
         if (Main.getCache().getSellsLeft(item.getType().toString(), player) < item.getAmount()){
-            player.sendMessage(MessagesData.getMessageString(player, "run-out-of-sells", item.getType().toString()));
+            player.sendMessage(MessagesData.getMessageString(player, "run-out-of-sells", Section.getItemDisplayName(item.getType().toString())));
             player.getInventory().addItem(item);
             return;
         }
@@ -170,7 +183,7 @@ public class FunctionsUtil {
                     cratio = Main.getCache().getEnchantmentRatio(ench.getName());
                 }
                 catch(NullPointerException e){
-                    player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", item.getType().toString()));
+                    player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", Section.getItemDisplayName(item.getType().toString())));
                     System.out.println("b");
                     player.getInventory().addItem(item);
                     return;
@@ -185,7 +198,7 @@ public class FunctionsUtil {
             item_price = Main.getCache().getItemPrice(item.getType().toString(), true);
         }
         catch(NullPointerException e){
-            player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", item.getType().toString()));
+            player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", Section.getItemDisplayName(item.getType().toString())));
             System.out.println("c");
             player.getInventory().addItem(item);
             return;
@@ -195,7 +208,7 @@ public class FunctionsUtil {
         fprice = getNewPriceWithDurability(fprice, item);
         if (!autosell){
             EconomyFunctions.getEconomy().depositPlayer(player, (item.getAmount()*fprice));
-            player.sendMessage(MessagesData.getMessageString(player, "sell-custom-item", new String[]{item.getType().toString(),
+            player.sendMessage(MessagesData.getMessageString(player, "sell-custom-item", new String[]{Section.getItemDisplayName(item.getType().toString()),
              df.format(item_buy_price), Integer.toString(item.getAmount()), df.format(item.getAmount()*item_buy_price),
               df.format(fprice), df.format(fprice*item.getAmount()), item.getEnchantments().toString()}));
         }

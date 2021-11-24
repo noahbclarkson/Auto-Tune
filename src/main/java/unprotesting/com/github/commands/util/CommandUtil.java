@@ -55,7 +55,7 @@ public class CommandUtil {
         return output;
     }
 
-    public static void loadGuiItemsIntoPane(List<GuiItem> items, ChestGui gui, PaginatedPane pages, List<OutlinePane> panes, String background, CommandSender sender){
+    public static void loadGuiItemsIntoPane(List<GuiItem> items, ChestGui gui, PaginatedPane pages, List<OutlinePane> panes, Material background, CommandSender sender){
         int page = 0;
         int k = 0;
         OutlinePane pane = new OutlinePane(1, 1, 7, 4);
@@ -88,13 +88,13 @@ public class CommandUtil {
         gui.show((HumanEntity)(sender));
     }
 
-    public static ChestGui getBackground(ChestGui GUI, int lines, String bItem){
+    public static ChestGui getBackground(ChestGui GUI, int lines, Material bItem){
         GUI.setOnGlobalClick(event -> event.setCancelled(true));
         OutlinePane background = new OutlinePane(0, 0, 9, lines, Priority.LOWEST);
-        if (bItem.equalsIgnoreCase("none")){
+        if (bItem == null || bItem.equals(Material.BARRIER)){
             return GUI;
         }
-        ItemStack item = new ItemStack(Material.matchMaterial(bItem));
+        ItemStack item = new ItemStack(bItem);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.MAGIC + "|");
         item.setItemMeta(meta);

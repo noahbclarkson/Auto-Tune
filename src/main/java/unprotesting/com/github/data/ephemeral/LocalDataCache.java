@@ -499,20 +499,10 @@ public class LocalDataCache {
         ConfigurationSection csection = Main.getDataFiles().getShops().getConfigurationSection("sections");
         for (String section : csection.getKeys(false)){
             ConfigurationSection icsection = csection.getConfigurationSection(section);
-            SECTIONS.add(new Section(section, 
-            icsection.getString("block", "BARRIER"), 
-            icsection.getBoolean("back-menu-button-enabled", true),
-            icsection.getInt("position", 1), 
-            icsection.getString("background", "BLACK_STAINED_GLASS_PANE"),
-            icsection.getString("display-name", "&6" + section)));
+            SECTIONS.add(new Section(icsection, section));
         }
         csection = Main.getDataFiles().getEnchantments().getConfigurationSection("config");
-        SECTIONS.add(new Section("Enchantments",
-            csection.getString("block", "ENCHANTED_BOOK"), 
-            csection.getBoolean("back-menu-button-enabled", true),
-            csection.getInt("position", 1),
-            csection.getString("background", "BLACK_STAINED_GLASS_PANE"),
-            csection.getString("display-name", "&6Enchantments")));
+        SECTIONS.add(new Section(csection, "Enchantments"));
     }
 
     private void loadGDPDataFromData(){

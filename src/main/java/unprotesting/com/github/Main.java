@@ -177,10 +177,12 @@ public class Main extends JavaPlugin{
         //  Synchronous
         Bukkit.getScheduler().runTaskTimer(this, ()
          -> Bukkit.getPluginManager().callEvent(new AutosellUpdateEvent()),
-           Config.getAutoSellUpdatePeriod(), Config.getSellPriceVariationUpdatePeriod());
+           Config.getAutoSellUpdatePeriod(), Config.getAutoSellUpdatePeriod());
         Bukkit.getScheduler().runTaskTimer(this, ()
          -> Bukkit.getPluginManager().callEvent(new TutorialSendEvent()),
            Config.getTutorialMessagePeriod()*20, Config.getTutorialMessagePeriod()*20);
+        Bukkit.getScheduler().runTaskTimer(this, ()
+         -> Bukkit.getPluginManager().callEvent(new UnlockUpdateEvent()), 60, 60);
 
         Bukkit.getServer().getPluginManager().registerEvents(new JoinMessageEventHandler(), this);
     }

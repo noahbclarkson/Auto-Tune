@@ -92,7 +92,7 @@ public class LoanCommand implements CommandExecutor{
             Main.getCache().addLoan(loanAmount, Config.getInterestRate(), player);
             return true;
         }
-        CommandUtil.loadGuiItemsIntoPane(items, gui, pages, panes, "GRAY_STAINED_GLASS_PANE", sender);
+        CommandUtil.loadGuiItemsIntoPane(items, gui, pages, panes, Material.GRAY_STAINED_GLASS_PANE, sender);
         return true;
     }
 

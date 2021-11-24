@@ -79,6 +79,7 @@ An example of a shop setup using Auto-Tune:
    - Navigate to the ```/builds/libs/``` directory and Auto-Tune-0.x.x will be there if successful.
 
   In addition all the latest builds are available under the [Actions](https://github.com/Unprotesting/Auto-Tune/actions) section of the github.
+  Simply go the latest action and download the 'artifact' file, then unzip it, and the .jar will be inside.
 
   #### Configuring config.yml
   <details>

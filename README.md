@@ -24,7 +24,7 @@ Both methods have significant issues. Vanilla being the most obvious with incred
 
 Auto-Tune aims to fix the still present problems in both methods of economies by introducing automatic dynamic pricing powered by Auto-Tune API, an API we have developed that contains various algorithms for calculating prices. Auto-Tune is a powerful, highly customizable plugin that creates a GUI-shop with server-set items that hooks into the Auto-Tune API and updates prices for items based on aggregate supply and demand. Different levels of Auto-Tune unlock access to various pricing models. However the Auto-Tune plugin contains many advanced features standalone; an integrated web-server that creates a website which displays graphs of items on the select server, automatic selling, volatility settings, sell price difference variation, and more. Our team at Auto-Tune is optimistic and passionate about Minecraft, plugin development and improving the community as a whole and are working hard at improving the plugin which is still deep in development.
 
-An example of a graph for an item created by the exponential algorithm displayed online:
+An example of a graph for an item created by the algorithm displayed online:
 
 <img src="https://github.com/Unprotesting/Auto-Tune/blob/master/.github/graph.png?raw=true" width="550"/>
 
@@ -34,13 +34,13 @@ An example of a shop setup using Auto-Tune:
 
   #### Feature List
 
-  - ```Exponential pricing model.```
+  - ```Advanced pricing model.```
   - ```Contains 7 pricing model options. [Volatility Options and algorithm, data-selection-algorithm, and more].```
-  - ```2 forced-inflation methods with individual options [Dynamic and Static Inflation, configurable update periods].```
   - ```2 integrated web-servers to display prices online in graphs [Server port settings and more].```
   - ```Configurable GUI with sizing, positioning and naming options.```
   - ```Configurable shops with options to lock price and sell-price-differences [For more look at shops.yml configuration below].```
   - ```Configurable sell-price-difference.```
+  - ```Stored detailed history of transactions.```
   - ```Sell price-difference-variation algorithm options [Update period, total time, starting-difference, ending difference].```
   - ```Player loaning including an easy loaning GUI.```
   - ```Configurable interest rates [Update period, amount and more].```
@@ -55,7 +55,7 @@ An example of a shop setup using Auto-Tune:
   - ```Configurable automatic selling command for players.```
   - ```Data export and import.```
   - ```And more!```
-  - ```Coming soon (Dynamic Interest rates, Credit scoring, updated web-server, and more (We're open to suggestions)).```
+  - ```Many more features coming soon.```
 
 ## Usage
 
@@ -63,7 +63,7 @@ An example of a shop setup using Auto-Tune:
 
    - Note: Make sure you have a valid API key.
    - Download the latest version of Auto-Tune from the resources tab for your Minecraft server's Minecraft version - Make sure the dependencies are also installed ([Vault](https://www.spigotmc.org/resources/vault.34315/) and [Essentials](https://essentialsx.net)). An optional dependency is [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/). 
-   - Put the .jar file in your minecraft ```/plugins``` folder.
+   - Put the .jar file in your Minecraft ```/plugins``` folder.
    - Restart your server.
    - Edit the ```config.yml``` file inside ```/plugins/Auto-Tune/```, and enter your API key and email (check Auto-Tune API for more).
    - Edit any other settings you want, in the ```config.yml``` file.
@@ -89,12 +89,17 @@ An example of a shop setup using Auto-Tune:
   Auto-Tune's Config.yml file:
 
 ```
+
 # ░█████╗░██╗░░░██╗████████╗░█████╗░░░░░░░████████╗██╗░░░██╗███╗░░██╗███████╗
 # ██╔══██╗██║░░░██║╚══██╔══╝██╔══██╗░░░░░░╚══██╔══╝██║░░░██║████╗░██║██╔════╝
 # ███████║██║░░░██║░░░██║░░░██║░░██║█████╗░░░██║░░░██║░░░██║██╔██╗██║█████╗░░
 # ██╔══██║██║░░░██║░░░██║░░░██║░░██║╚════╝░░░██║░░░██║░░░██║██║╚████║██╔══╝░░
 # ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗
 # ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝
+
+##  -- Auto-Tune Config File --  ##
+
+## See the wiki for info on each setting: https://github.com/Unprotesting/Auto-Tune/wiki
 
 ##  -- General Settings --  ##
 
@@ -113,30 +118,30 @@ web-server-enabled: true
 port: 8123
 
 ##  The maximum length in data points that the trade-short.html will show (this doesn't affect data)
-##  Info: When the time-period is set to 10, 144 is one day.
-maximum-short-trade-length: 144
+##  Info: When the time-period is set to 30, a maximum-short-trade-length of 48 is one day.
+maximum-short-trade-length: 50
 
 ##  Time Period in minutes
-##  Info: This should be around a tenth of the total items in your shop (i.e with 150 items this would be 15) to prevent overload
 ##  Info: When decreasing or increasing this adjust your volatility settings accordingly
-time-period: 10
+time-period: 30
 
 ##  GUI Shop Menu title
 menu-title: 'Shop'
 
 ##  GUI Shop Menu background
+##  Info: Use 'NONE' for no background
 background: 'BLACK_STAINED_GLASS_PANE'
 
 ##  How often auto-sell updates in ticks
 ##  Info: Set this higher if few players use autosell
 ##  Info: Set it lower if many players use autosell
-auto-sell-update-period: 20
+auto-sell-update-period: 10
 
 ##  How often players are shown their auto-sell profits in ticks
-auto-sell-profit-update-period: 1200
+auto-sell-profit-update-period: 600
 
 ##  Global number format
-number-format: '###,###,###,##0.00'
+number-format: '###,###,###,###,##0.00'
 
 ##  Enable Enchantments
 enable-enchantments: true
@@ -150,7 +155,7 @@ sell-price-difference: 10.0
 max-volatility: 0.5
 
 ##  Minimum Volatility per Time Period for the Fixed Volatility price calculation algorithm in economy units
-min-volatility: 0.025
+min-volatility: 0.05
 
 ##  -- Data Selection Settings --  ##
 
@@ -179,7 +184,7 @@ currency-symbol: '$'
 sell-price-difference-variation-enabled: true
 
 ##  Starting percentage sell price difference for sell price variation
-sell-price-difference-variation-start: 25.0
+sell-price-difference-variation-start: 30.0
 
 ##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 4 weeks)
 sell-price-variation-time-period: 43200
@@ -187,48 +192,30 @@ sell-price-variation-time-period: 43200
 ##  Time in minutes that the sell-price-difference updates
 sell-price-variation-update-period: 30
 
-##  Enable forced inflation in the economy
-inflation-enabled: true
-
-##  Inflation method can be Dynamic, Static or Mixed.
-##  Info: The dynamic method increases the prices of items in the economy by a percentage each time period
-##  Info: The static method adds extra values to buys
-##  Info: Mixed uses both methods
-inflation-method: 'Mixed'
-
-##  Time period in ticks between dynamic price increases
-dynamic-inflation-time-period: 2500
-
-##  Percentage increase in prices per time-period.
-dynamic-inflation-value: 0.01
-
-##  Percentage increase for buy value per price calculation update period. E.g 0.05%
-static-inflation-value: 0.05
-
 ##  Interest rate per interest-rate-update-period
 ##  Info: This is the increase in the current debt payment per-time period
-interest-rate: 0.0075
+interest-rate: 0.025
 
 ##  Time period in ticks between updates of the interest rate for users loans
 interest-rate-update-period: 1200
 
 ##  Disable the max-buy/max-sells for items
 ##  Info: Don't do this unless you know what your doing.
-##  Info: If this is enabled, it is likely to lead to exploitation on servers with under 100 total or under 10 concurrent players
+##  Info: If this is enabled, it is likely to lead to exploitation on servers with under 10 concurrent players
 disable-max-buys-sells: false
 
-##  lowest value in $ a player can go into debt
-##  For example if a player has $3000 and this is set to 1000 a player will can take out a loan up to $2000
-max-debt-value: 1000.00
+##  The lowest value in $ a player can go into debt
+##  For example if a player has $3,000 and this is set to 1000 a player can take out a loan up to $2,000
+max-debt-value: 1000.0
 
 ##  The percentage value to decrease items sold with enchantments
-##  Info: Stacked enchantments etc. can become very expensive so a number between 25% - 50% is usually fine
+##  Info: Stacked enchantments etc. can become very expensive so a number between 30% - 60% is usually fine
 ##  Info: This doesn't affect buys
-enchantment-limiter: 45.00
+enchantment-limiter: 50.0
 
 ##  The percentage value to decrease items sold with a loss in durability
 ##  Info: This is applied ON TOP of the durability algorithm to limit the exploit-ability of selling tools
-durability-limiter: 7.50
+durability-limiter: 10.0
 
 ##  -- Other Settings --
 
@@ -241,9 +228,10 @@ debug-enabled: false
 ignore-afk: true
 
 ##  Enable ChecksumHeaderBypass if you have issues with data retrieval or corruption
+##  Info: This is a very rare occurrence and should only be used if you have issues with data retrieval or corruption
 checksum-header-bypass: true
 
-##  Enable the Auto-Tune tutorial for players
+##  Enable the Auto-Tune tutorial for players (the messages that are displayed to players periodically)
 ##  Keep this on to encourage purchasing turn it off if it is distracting
 tutorial: true
 
@@ -258,7 +246,8 @@ data-location: 'plugins/Auto-Tune/'
 ##  Info: This is off by default as the default data protection will be fine for most servers
 data-transactions: false
 
-##  Read initial price data from trade.csv
+##  Read initial price data and buys/sells from trade.csv
+##  Stop server, set this to true, delete data.db, import your trade.csv, start the server, set this to false, restart server
 read-from-csv: false
 
 ```
@@ -272,6 +261,7 @@ read-from-csv: false
    Auto-Tune's Shops.yml file:
 
 ```
+
 # ░█████╗░██╗░░░██╗████████╗░█████╗░░░░░░░████████╗██╗░░░██╗███╗░░██╗███████╗  
 # ██╔══██╗██║░░░██║╚══██╔══╝██╔══██╗░░░░░░╚══██╔══╝██║░░░██║████╗░██║██╔════╝  
 # ███████║██║░░░██║░░░██║░░░██║░░██║█████╗░░░██║░░░██║░░░██║██╔██╗██║█████╗░░  
@@ -279,7 +269,9 @@ read-from-csv: false
 # ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗  
 # ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝  
 
-##  -- Auto-Tune Default Shops File --  ##
+##  -- Auto-Tune Shops File --  ##
+
+## See the wiki for info on each setting: https://github.com/Unprotesting/Auto-Tune/wiki
 
 ##  Shop sections configuration
 sections:
@@ -287,43 +279,51 @@ sections:
     ##  Block that the section image is displayed as
     block: 'IRON_ORE'
     ##  Background for sub-menu
+    ##  Use 'NONE' for no background
     background: 'GRAY_STAINED_GLASS_PANE'
     ##  Position in Main Menu GUI
     position: 10
     ##  Optional - set to disabled to disable the back button when running "/shop <shop-section>".
     ##  This wont disable the back button when running just "/shop"
     back-menu-button-enabled: true
+    ##  Set the display name for the section
+    display-name: '&6Natural Resources'
   'Blocks':
     block: 'STONE'
     position: 12
     background: 'GRAY_STAINED_GLASS_PANE'
     back-menu-button-enabled: true
+    display-name: '&6Blocks'
   'Food':
     block: 'COOKED_BEEF'
     position: 14
     background: 'GRAY_STAINED_GLASS_PANE'
     back-menu-button-enabled: true
+    display-name: '&6Food'
   'Farming':
     block: 'OAK_SAPLING'
     position: 16
     background: 'GRAY_STAINED_GLASS_PANE'
     back-menu-button-enabled: true
+    display-name: '&6Farming'
   'Tools':
     block: 'DIAMOND_PICKAXE'
     position: 20
     background: 'GRAY_STAINED_GLASS_PANE'
     back-menu-button-enabled: true
+    display-name: '&6Tools'
   'Other':
     block: 'STICK'
     position: 24
     background: 'GRAY_STAINED_GLASS_PANE'
     back-menu-button-enabled: true
+    display-name: '&6Other'
 
 ##  Set the default / starting prices for the items you want available in the shop.
-##  Info: Make sure you put a decimal point and two digits to create a double for the shop algorithm to accept and parse to a price-value.
-##  Info: Most of these values will be almost useless once the economy has started, to use these values again delete the data.db file.
+##  IMPORTANT: Thee prices of these items can't be changed once the database has been created. 
+##  IMPORTANT: To change the price of items use /at price <item-name> <double> or reset the data.db file.
 ##  Info: Material names are available here: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html.
-##  Info: To remove an item use /at remove <item-name> to remove it from the global map.
+##  IMPORTANT: Material names are case sensitive! (All caps and underscores)
 ##  Options: 'price: <double>' set the default starting price of the item.
 ##  Options: 'section: <string>' set the section of this item.
 ##  Options: 'locked: <boolean>' set the price to be locked or variable (variable by default).
@@ -332,6 +332,8 @@ sections:
 ##  Options: 'max-sell': <integer> set a maximum quantity that can be sold in a time-period.
 ##  Options: 'max-volatility: <double>' set the maximum volatility per time-period for this individual item.
 ##  Options: 'min-volatility: <double>' set the minimum volatility per time-period for this individual item.
+##  Options: 'display-name': <string>' set the display name of the item.
+##  Options: 'collect-first-setting': <string>' ('NONE'|'SERVER_WIDE'|'EACH_PLAYER') whether the item needs to be collected before it can be purchased.
 
 
   ##  Example:
@@ -344,6 +346,8 @@ sections:
   ##    max-sell: 12       <- Only 12 items can be sold each time-period - you can increase this on large servers
   ##    max-volatility: 0.25       <- Example of an item with a lower max-volatility
   ##    min-volatility: 0.05       <- Example of an item with a higher min-volatility
+  ##    display-name: '&aGrass'      <- Example of a custom display name (with a green color code)
+  ##    collect-first-setting: 'EACH_PLAYER' <- Example of a custom collect-first-setting
 
 shops:
   COAL:
@@ -881,6 +885,7 @@ shops:
     max-buy: 3
     max-sell: 4
     section: 'Tools'
+
 ```
  </details>
 
@@ -888,11 +893,13 @@ shops:
 
   #### What is Auto-Tune API
 
-Auto-Tune API is the API Auto-Tune connects to, in order to automatically calculate price data and more. In other words, it is the server that is the backbone of the dynamic pricing-model that powers Auto-Tune.
+Auto-Tune API is the API Auto-Tune connects to in order to start the server. The pricing mechanism is now local.
+It will be used in the future to perform many tasks.
+You still need an API key, for every version of Auto-Tune.
     
   #### How to get an Auto-Tune API key
 
+Auto-Tune API key's are free.
 To get an Auto-Tune API key please open a ticket on our discord:
 
 [![Discord](https://img.shields.io/discord/748222485975269508.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/bNVVPe5).
-

@@ -2,6 +2,7 @@
 ![GitHub issues](https://img.shields.io/github/issues/Unprotesting/Auto-Tune)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/Unprotesting/Auto-Tune)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/Unprotesting/Auto-Tune)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/2f6d82bd12af4ce490959be74d1b6149)](https://app.codacy.com/gh/Unprotesting/Auto-Tune?utm_source=github.com&utm_medium=referral&utm_content=Unprotesting/Auto-Tune&utm_campaign=Badge_Grade_Settings)
 [![Discord](https://img.shields.io/discord/748222485975269508.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/bNVVPe5)
 
 # Auto-Tune

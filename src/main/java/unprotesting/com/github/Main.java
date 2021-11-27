@@ -122,11 +122,11 @@ public class Main extends JavaPlugin{
         }
     }
 
-    private void setupDataFiles(){
-        dataFiles = new DataFiles(getDataFolder());
+    public static void setupDataFiles(){
+        dataFiles = new DataFiles(INSTANCE.getDataFolder());
         for (int i = 0; i < 8; i++){
             if (!dataFiles.getFiles()[i].exists()){
-                saveResource(dataFiles.getFileNames()[i], false);
+                INSTANCE.saveResource(dataFiles.getFileNames()[i], false);
             }
         }
         dataFiles.loadConfigs();

@@ -17,8 +17,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.config.Config;
@@ -43,31 +42,22 @@ import unprotesting.com.github.logging.Logging;
 
 //  Global functions file between ephemeral and persistent storage
 
+@Data
 public class LocalDataCache {
 
     //  Globally accessible caches for persistent storage
 
-    @Getter
     private ConcurrentHashMap<String, ItemData> ITEMS;
-    @Getter
     private ConcurrentHashMap<String, EnchantmentData> ENCHANTMENTS;
-    @Getter @Setter
     private List<LoanData> LOANS,
                            NEW_LOANS;
-    @Getter
     private List<TransactionData> TRANSACTIONS,
                                   NEW_TRANSACTIONS;
-    @Getter
     private ConcurrentHashMap<String, PlayerSaleData> PLAYER_SALES;
-    @Getter
     private List<Section> SECTIONS;
-    @Getter
     private ConcurrentHashMap<String, MaxBuySellData> MAX_PURCHASES;
-    @Getter
     private ConcurrentHashMap<String, Double> PERCENTAGE_CHANGES;
-    @Getter @Setter
     private GDPData GDP_DATA;
-    @Getter
     private EconomyInfoData ECONOMY_INFO;
 
     private int size;

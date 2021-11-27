@@ -27,8 +27,8 @@ web-server-enabled: true
 port: 8123
 
 ##  The maximum length in data points that the trade-short.html will show (this doesn't affect data)
-##  Info: When the time-period is set to 10, 144 is one day.
-maximum-short-trade-length: 144
+##  Info: When the time-period is set to 30, a maximum-short-trade-length of 48 is one day.
+maximum-short-trade-length: 50
 
 ##  Time Period in minutes
 ##  Info: When decreasing or increasing this adjust your volatility settings accordingly
@@ -44,13 +44,13 @@ background: 'BLACK_STAINED_GLASS_PANE'
 ##  How often auto-sell updates in ticks
 ##  Info: Set this higher if few players use autosell
 ##  Info: Set it lower if many players use autosell
-auto-sell-update-period: 20
+auto-sell-update-period: 10
 
 ##  How often players are shown their auto-sell profits in ticks
-auto-sell-profit-update-period: 1200
+auto-sell-profit-update-period: 600
 
 ##  Global number format
-number-format: '###,###,###,##0.00'
+number-format: '###,###,###,###,##0.00'
 
 ##  Enable Enchantments
 enable-enchantments: true
@@ -93,7 +93,7 @@ currency-symbol: '$'
 sell-price-difference-variation-enabled: true
 
 ##  Starting percentage sell price difference for sell price variation
-sell-price-difference-variation-start: 25.0
+sell-price-difference-variation-start: 30.0
 
 ##  Time in minutes until sell price reaches sell-price-difference set in pricing model settings (default 4 weeks)
 sell-price-variation-time-period: 43200
@@ -103,28 +103,28 @@ sell-price-variation-update-period: 30
 
 ##  Interest rate per interest-rate-update-period
 ##  Info: This is the increase in the current debt payment per-time period
-interest-rate: 0.01
+interest-rate: 0.025
 
 ##  Time period in ticks between updates of the interest rate for users loans
 interest-rate-update-period: 1200
 
 ##  Disable the max-buy/max-sells for items
 ##  Info: Don't do this unless you know what your doing.
-##  Info: If this is enabled, it is likely to lead to exploitation on servers with under 100 total or under 10 concurrent players
+##  Info: If this is enabled, it is likely to lead to exploitation on servers with under 10 concurrent players
 disable-max-buys-sells: false
 
-##  lowest value in $ a player can go into debt
-##  For example if a player has $3,000.00 and this is set to 1,000 a player can take out a loan up to $2,000.00
+##  The lowest value in $ a player can go into debt
+##  For example if a player has $3,000 and this is set to 1000 a player can take out a loan up to $2,000
 max-debt-value: 1000.0
 
 ##  The percentage value to decrease items sold with enchantments
-##  Info: Stacked enchantments etc. can become very expensive so a number between 25% - 50% is usually fine
+##  Info: Stacked enchantments etc. can become very expensive so a number between 30% - 60% is usually fine
 ##  Info: This doesn't affect buys
-enchantment-limiter: 45.00
+enchantment-limiter: 50.0
 
 ##  The percentage value to decrease items sold with a loss in durability
 ##  Info: This is applied ON TOP of the durability algorithm to limit the exploit-ability of selling tools
-durability-limiter: 7.50
+durability-limiter: 10.0
 
 ##  -- Other Settings --
 
@@ -137,9 +137,10 @@ debug-enabled: false
 ignore-afk: true
 
 ##  Enable ChecksumHeaderBypass if you have issues with data retrieval or corruption
+##  Info: This is a very rare occurrence and should only be used if you have issues with data retrieval or corruption
 checksum-header-bypass: true
 
-##  Enable the Auto-Tune tutorial for players
+##  Enable the Auto-Tune tutorial for players (the messages that are displayed to players periodically)
 ##  Keep this on to encourage purchasing turn it off if it is distracting
 tutorial: true
 
@@ -154,5 +155,6 @@ data-location: 'plugins/Auto-Tune/'
 ##  Info: This is off by default as the default data protection will be fine for most servers
 data-transactions: false
 
-##  Read initial price data from trade.csv
+##  Read initial price data and buys/sells from trade.csv
+##  Stop server, set this to true, delete data.db, import your trade.csv, start the server, set this to false, restart server
 read-from-csv: false

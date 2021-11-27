@@ -1,5 +1,6 @@
 package unprotesting.com.github.commands;
 
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
@@ -7,6 +8,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import unprotesting.com.github.Main;
@@ -14,8 +16,8 @@ import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.commands.util.CommandUtil;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.ephemeral.data.EnchantmentData;
-import unprotesting.com.github.data.ephemeral.data.GDPData;
 import unprotesting.com.github.data.ephemeral.data.ItemData;
+import unprotesting.com.github.data.ephemeral.data.MaxBuySellData;
 import unprotesting.com.github.events.async.PriceUpdateEvent;
 
 public class AutoTuneCommand implements CommandExecutor{
@@ -42,12 +44,16 @@ public class AutoTuneCommand implements CommandExecutor{
         else if (args[0].equalsIgnoreCase("price") && args.length == 3){
             return changePrice(player, args[1], args[2]);
         }
-        return true;
+        else if (args[0].equalsIgnoreCase("reload") && args.length == 1){
+            return reload(player);
+        }
+        return returnDefault(player);
     }
 
     private boolean returnDefault(Player player){
         player.sendMessage(ChatColor.GOLD + "<===== Welcome to Auto-Tune! =====>");
-        player.sendMessage(ChatColor.GOLD + "/at price <item-name>/<gdp>/<balance>/etc. <new-price> | Change the price of an item.");
+        player.sendMessage(ChatColor.GOLD + "/at price <item-name> <new-price> | Change the price of an item.");
+        player.sendMessage(ChatColor.GOLD + "/at reload | Reload all files (to update settings).");
         player.sendMessage(ChatColor.GOLD + "/at update | Force a price update.");
         return true;
     }
@@ -87,35 +93,24 @@ public class AutoTuneCommand implements CommandExecutor{
             return true;
         }
         else {
-            GDPData data = Main.getCache().getGDP_DATA();
-            if (item_name.equals("GDP")){
-                data.setGDP(price);
-                player.sendMessage(ChatColor.GREEN + "Changed GDP to " + Config.getCurrencySymbol() + new_price);
-                return true;
-            }
-            else if (item_name.equals("BALANCE")){
-                data.setBalance(price);
-                player.sendMessage(ChatColor.GREEN + "Changed Balance to " + Config.getCurrencySymbol() + new_price);
-                return true;
-            }
-            else if (item_name.equals("DEBT")){
-                data.setDebt(price);
-                player.sendMessage(ChatColor.GREEN + "Changed Debt to " + Config.getCurrencySymbol() + new_price);
-                return true;
-            }
-            else if (item_name.equals("Loss")){
-                data.setLoss(price);
-                player.sendMessage(ChatColor.GREEN + "Changed Loss to " + Config.getCurrencySymbol() + new_price);
-                return true;
-            }
-            else if (item_name.equals("GDP")){
-                data.setInflation(price);
-                player.sendMessage(ChatColor.GREEN + "Changed Inflation to " + Config.getCurrencySymbol() + new_price);
-                return true;
-            }
+            player.sendMessage(ChatColor.RED + item_name + " is not a valid input.");
+            return false;
         }
-        player.sendMessage(ChatColor.RED + item_name + " is not a valid input.");
-        return false;
+    }
+
+    private boolean reload(Player player){
+        Main.setupDataFiles();
+        ConfigurationSection config = Main.getDataFiles().getShops().getConfigurationSection("shops");
+        Set<String> set = config.getKeys(false);
+        ConcurrentHashMap<String, MaxBuySellData> maxPurchases = new ConcurrentHashMap<String, MaxBuySellData>();
+        for (String key : set){
+            ConfigurationSection section = config.getConfigurationSection(key);
+            MaxBuySellData mbsdata = new MaxBuySellData(section.getInt("max-buy", 9999), section.getInt("max-sell", 9999));
+            maxPurchases.put(key, mbsdata);
+        }
+        Main.getCache().setMAX_PURCHASES(maxPurchases);
+        player.sendMessage(ChatColor.GREEN + "Reload successful.");
+        return true;
     }
 
 }

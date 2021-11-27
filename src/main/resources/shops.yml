@@ -57,10 +57,10 @@ sections:
     display-name: '&6Other'
 
 ##  Set the default / starting prices for the items you want available in the shop.
-##  Info: Make sure you put a decimal point and two digits to create a double for the shop algorithm to accept and parse to a price-value.
-##  Info: Most of these values will be almost useless once the economy has started, to use these values again delete the data.db file.
+##  IMPORTANT: Thee prices of these items can't be changed once the database has been created. 
+##  IMPORTANT: To change the price of items use /at price <item-name> <double> or reset the data.db file.
 ##  Info: Material names are available here: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html.
-##  Info: To remove an item use /at remove <item-name> to remove it from the global map.
+##  IMPORTANT: Material names are case sensitive! (All caps and underscores)
 ##  Options: 'price: <double>' set the default starting price of the item.
 ##  Options: 'section: <string>' set the section of this item.
 ##  Options: 'locked: <boolean>' set the price to be locked or variable (variable by default).
@@ -70,9 +70,8 @@ sections:
 ##  Options: 'max-volatility: <double>' set the maximum volatility per time-period for this individual item.
 ##  Options: 'min-volatility: <double>' set the minimum volatility per time-period for this individual item.
 ##  Options: 'display-name': <string>' set the display name of the item.
-##  Options: 'collect-first-setting': <string>' ('NONE'|'SERVER_WIDE'|'EACH_PLAYER') the setting for the item to be required to be collected before it can be purchased
-##  IMPORTANT: Thee prices of these items can't be changed once the database has been created. To change the price of items use /at price <item-name> <double>
-##  or reset the data.db file.
+##  Options: 'collect-first-setting': <string>' ('NONE'|'SERVER_WIDE'|'EACH_PLAYER') whether the item needs to be collected before it can be purchased.
+
 
   ##  Example:
   ##  GRASS_BLOCK:

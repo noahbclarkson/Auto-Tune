@@ -24,7 +24,7 @@ api: ""
 commands:
     at:
       description: Change item prices and force price-updates.
-      usage: /<at> <update/price>
+      usage: /<at> <update/price/reload>
       aliases: [autotune]
     trade:
       description: Trade Online with other players.

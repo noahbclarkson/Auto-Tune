@@ -15,7 +15,7 @@ public class DataFiles {
     private File[] files;
     private final String[] filenames = {"config.yml", "shops.yml", "enchantments.yml", "playerdata.yml", "messages.yml", "web/trade.html", "web/trade-short.html", "web/favicon.ico"};
     private YamlConfiguration[] configs;
-
+    
     public DataFiles(File dataFolder){
         this.files = new File[8];
         this.configs = new YamlConfiguration[5];

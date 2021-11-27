@@ -152,7 +152,6 @@ public class FunctionsUtil {
         if (!isPresent || item.getAmount() < 1){
             if (!autosell){
                 player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", Section.getItemDisplayName(item.getType().toString())));
-                System.out.println("a");
                 player.getInventory().addItem(item);
             }
             return;
@@ -184,7 +183,6 @@ public class FunctionsUtil {
                 }
                 catch(NullPointerException e){
                     player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", Section.getItemDisplayName(item.getType().toString())));
-                    System.out.println("b");
                     player.getInventory().addItem(item);
                     return;
                 }
@@ -199,7 +197,6 @@ public class FunctionsUtil {
         }
         catch(NullPointerException e){
             player.sendMessage(MessagesData.getMessageString(player, "cannot-sell-custom", Section.getItemDisplayName(item.getType().toString())));
-            System.out.println("c");
             player.getInventory().addItem(item);
             return;
         }

@@ -50,7 +50,7 @@ commands:
       aliases: [purchase]
     transactions:
       description: View player transactions
-      usage: /transactions <page-no> | /transactions all <page-no> | /transactions <player-name> <page-no>
+      usage: /transactions | /transactions -p <player-name>
 permissions:
   at.admin:
     description: Admin commands and access to all other commands.

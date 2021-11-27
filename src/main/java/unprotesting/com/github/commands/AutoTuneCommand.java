@@ -10,6 +10,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import unprotesting.com.github.Main;
+import unprotesting.com.github.commands.objects.Section;
 import unprotesting.com.github.commands.util.CommandUtil;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.ephemeral.data.EnchantmentData;
@@ -73,7 +74,7 @@ public class AutoTuneCommand implements CommandExecutor{
             data.setPrice(price);
             ITEMS.put(item_name, data);
             Main.getCache().updatePrices(ITEMS);
-            player.sendMessage(ChatColor.GREEN + "Changed " + item_name + " to " + Config.getCurrencySymbol() + new_price);
+            player.sendMessage(ChatColor.GREEN + "Changed " + Section.getItemDisplayName(item_name) + " to " + Config.getCurrencySymbol() + new_price);
             return true;
         }
         else if (Main.getCache().getENCHANTMENTS().containsKey(item_name)){
@@ -82,7 +83,7 @@ public class AutoTuneCommand implements CommandExecutor{
             data.setPrice(price);
             ENCHANTMENTS.put(item_name, data);
             Main.getCache().updateEnchantments(ENCHANTMENTS);
-            player.sendMessage(ChatColor.GREEN + "Changed " + item_name + " to " + Config.getCurrencySymbol() + new_price);
+            player.sendMessage(ChatColor.GREEN + "Changed " + Section.getItemDisplayName(item_name) + " to " + Config.getCurrencySymbol() + new_price);
             return true;
         }
         else {

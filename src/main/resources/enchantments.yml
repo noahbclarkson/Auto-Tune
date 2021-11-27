@@ -19,13 +19,13 @@ enchantments:
   ARROW_DAMAGE:
     price: 600.00 ##  <- An added price for buying/selling an item with this enchantment
     ratio: 0.3  ##   <- Another added percentage of the item bought/sold with this enchantment
-    ##  Info: An item worth usually 100 will cost (100*0.6)+600=660
+    display-name: '&6Power' ## <- Add a custom display-name
+    ##  Info: An item worth usually 100 will cost (100*0.3)+600=630
     ##  Provides extra damage when shooting arrows from bows
     ##  sell-price-difference: 10.0  <- Add a custom sell-price-difference
     ##  locked: true <- Example of a locked item
     ##  max-volatility: 1.0 <- Add a custom max-volatility
     ##  min-volatility: 0.1 <- Add a custom min-volatility
-    display-name: '&6Power' ## <- Add a custom display-name
   ARROW_FIRE:
     price:  750.00
     ratio: 0.4

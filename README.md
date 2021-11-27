@@ -7,7 +7,7 @@
 
 # Auto-Tune
  
- ### A Powerful Minecraft Automatic-Economy Plugin for ```1.13-1.17``` with Many Features!
+ ### A Powerful Minecraft Automatic-Economy Plugin for ```1.13-1.17``` with many features!
    
   <img src="https://github.com/Unprotesting/Auto-Tune/blob/master/.github/AtLogo.png?raw=true" width="185"/>
   
@@ -62,7 +62,7 @@ An example of a shop setup using Auto-Tune:
   #### To use Auto-Tune
 
    - Note: Make sure you have a valid API key.
-   - Download the latest version of Auto-Tune from the resources tab for your Minecraft server's Minecraft version - Make sure the dependencies are also installed ([Vault](https://www.spigotmc.org/resources/vault.34315/) and [Essentials](https://essentialsx.net)). An optional dependency is [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/). 
+   - Download the latest version of Auto-Tune from the resources tab for your Minecraft server's Minecraft version - Make sure the dependencies are also installed ([Vault](https://www.spigotmc.org/resources/vault.34315/) and any economy plugin such as [Essentials](https://essentialsx.net)). An optional dependency is [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/). 
    - Put the .jar file in your Minecraft ```/plugins``` folder.
    - Restart your server.
    - Edit the ```config.yml``` file inside ```/plugins/Auto-Tune/```, and enter your API key and email (check Auto-Tune API for more).

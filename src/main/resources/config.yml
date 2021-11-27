@@ -119,7 +119,7 @@ max-debt-value: 1000.0
 
 ##  The percentage value to decrease items sold with enchantments
 ##  Info: Stacked enchantments etc. can become very expensive so a number between 30% - 60% is usually fine
-##  Info: This doesn't affect buys
+##  Info: This doesn't affect the buy-price.
 enchantment-limiter: 50.0
 
 ##  The percentage value to decrease items sold with a loss in durability
@@ -128,7 +128,7 @@ durability-limiter: 10.0
 
 ##  -- Other Settings --
 
-##  Enable debug mode for more info on price calculations
+##  Enable debug mode for more info
 debug-enabled: false
 
 ##  Ignore AFK players in price calculations/online checks

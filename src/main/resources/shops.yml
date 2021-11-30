@@ -112,6 +112,7 @@ shops:
     max-buy: 15
     max-sell: 32
     section: 'Natural Resources'
+    collect-first-setting: 'SERVER_WIDE'
   AMETHYST_SHARD:
     price: 22.00
     max-buy: 32
@@ -127,6 +128,7 @@ shops:
     max-buy: 12
     max-sell: 32
     section: 'Natural Resources'
+    collect-first-setting: 'SERVER_WIDE'
   QUARTZ:
     price: 11.00
     max-buy: 40
@@ -138,10 +140,11 @@ shops:
     max-sell: 128
     section: 'Natural Resources'
   NETHERITE_INGOT:
-    price: 8500.00
+    price: 7500.00
     max-buy: 1
     max-sell: 2
     section: 'Natural Resources'
+    collect-first-setting: 'EACH_PLAYER'
   GLOWSTONE_DUST:
     price: 4.00
     max-buy: 128
@@ -182,11 +185,13 @@ shops:
     max-buy: 20
     max-sell: 64
     section: 'Blocks'
+    collect-first-setting: 'SERVER_WIDE'
   END_STONE:
     price: 3.50
     max-buy: 80
     max-sell: 200
     section: 'Blocks'
+    collect-first-setting: 'SERVER_WIDE'
   NETHERRACK:
     price: 1.00
     max-buy: 256
@@ -292,6 +297,7 @@ shops:
     max-buy: 64
     max-sell: 200
     section: 'Farming'
+    collect-first-setting: 'SERVER_WIDE'
   FLINT:
     price: 4.00
     max-buy: 64
@@ -347,16 +353,19 @@ shops:
     max-buy: 8
     max-sell: 20
     section: 'Other'
+    collect-first-setting: 'SERVER_WIDE'
   NETHER_STAR:
-    price: 15000.00
+    price: 10000.00
     max-buy: 1
     max-sell: 1
     section: 'Other'
+    collect-first-setting: 'EACH_PLAYER'
   BLAZE_ROD:
     price: 85.00
     max-buy: 6
     max-sell: 15
     section: 'Other'
+    collect-first-setting: 'SERVER_WIDE'
   ARROW:
     price: 2.00
     max-buy: 64
@@ -512,26 +521,31 @@ shops:
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    collect-first-setting: 'SERVER_WIDE'
   DIAMOND_AXE:
     price: 250.0
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    collect-first-setting: 'SERVER_WIDE'
   DIAMOND_SWORD:
     price: 180.0
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    collect-first-setting: 'SERVER_WIDE'
   DIAMOND_SHOVEL:
     price: 110.0
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    collect-first-setting: 'SERVER_WIDE'
   DIAMOND_HOE:
     price: 110.0
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    collect-first-setting: 'SERVER_WIDE'
   LEATHER_HELMET:
     price: 22.50
     max-buy: 2
@@ -597,21 +611,25 @@ shops:
     max-buy: 2
     max-sell: 4
     section: 'Tools'
+    collect-first-setting: 'SERVER_WIDE'
   DIAMOND_CHESTPLATE:
     price: 900.00
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    collect-first-setting: 'SERVER_WIDE'
   DIAMOND_LEGGINGS:
     price: 620.50
     max-buy: 2
     max-sell: 3
     section: 'Tools'
+    collect-first-setting: 'SERVER_WIDE'
   DIAMOND_BOOTS:
     price: 350.00
     max-buy: 2
     max-sell: 4
     section: 'Tools'
+    collect-first-setting: 'SERVER_WIDE'
   FISHING_ROD:
     price: 25.00
     max-buy: 3

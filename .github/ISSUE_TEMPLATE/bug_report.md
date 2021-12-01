@@ -24,7 +24,7 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Minecraft Server Version
-1.16.4
+1.18
 
 **Plugin List
 Essentials, Vault

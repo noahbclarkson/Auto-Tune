@@ -26,10 +26,6 @@ web-server-enabled: true
 ##  Make sure to port-forward and disable firewalls for this port.
 port: 8123
 
-##  The maximum length in data points that the trade-short.html will show (this doesn't affect data)
-##  Info: When the time-period is set to 30, a maximum-short-trade-length of 48 is one day.
-maximum-short-trade-length: 50
-
 ##  Time Period in minutes
 ##  Info: When decreasing or increasing this adjust your volatility settings accordingly
 time-period: 30

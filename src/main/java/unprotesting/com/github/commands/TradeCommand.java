@@ -23,13 +23,11 @@ public class TradeCommand implements CommandExecutor{
             if (!(player.hasPermission("at.trade") || player.hasPermission("at.admin"))){CommandUtil.noPermission(player);return true;}
             String[] arr = Main.getServerIPStrings();
             player.spigot().sendMessage(createTextComponent(ChatColor.YELLOW + "View Overall Item Prices", "Click to go to " + arr[0], arr[0]));
-            player.spigot().sendMessage(createTextComponent(ChatColor.YELLOW + "View Recent Item Prices", "Click to go to " + arr[1], arr[1]));
             return true;
         }
         else{
             String[] arr = Main.getServerIPStrings();
             Logging.log("Go to: " + arr[0] + " for overall item prices.");
-            Logging.log("Go to: " + arr[1] + " for recent item prices.");
             return true;
         }
     }

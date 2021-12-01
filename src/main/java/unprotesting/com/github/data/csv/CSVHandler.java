@@ -17,12 +17,7 @@ public class CSVHandler {
 
     //  Create CSV files with all price, buy and sell data to be read by the webpage
     public static void writeCSV(){
-        try {
-            write("trade", 0);
-            write("trade-short", Config.getMaximumShortTradeLength());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        try {write("trade", 0);} catch (IOException e) {e.printStackTrace();}
     }
 
     //  Create individual CSV file

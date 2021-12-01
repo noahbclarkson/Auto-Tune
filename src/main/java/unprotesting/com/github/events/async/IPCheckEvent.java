@@ -30,11 +30,11 @@ public class IPCheckEvent extends Event{
             hostIP = in.readLine().trim();
         } catch (IOException e) {
             e.printStackTrace();
-            String official_website = "http://autotune.xyz";
-            return new String[] {official_website, official_website};
+            String error = "http://autotune.xyz";
+            return new String[] {error, error};
         }
         String base = "http://" + hostIP + ":" + Config.getPort();
-        String[] output = {base + "/trade.html", base + "/trade-short.html"};
+        String[] output = {base + "/trade.html"};
         return output;
     }
     

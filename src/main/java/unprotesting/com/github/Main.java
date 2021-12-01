@@ -124,7 +124,7 @@ public class Main extends JavaPlugin{
 
     public static void setupDataFiles(){
         dataFiles = new DataFiles(INSTANCE.getDataFolder());
-        for (int i = 0; i < 8; i++){
+        for (int i = 0; i < dataFiles.getFileNames().length; i++){
             if (!dataFiles.getFiles()[i].exists()){
                 INSTANCE.saveResource(dataFiles.getFileNames()[i], false);
             }

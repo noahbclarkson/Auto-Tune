@@ -17,7 +17,7 @@ public class Config {
  @Getter
  @Setter
  private static Integer port, timePeriod, sellPriceVariationTimePeriod, sellPriceVariationUpdatePeriod, autoSellUpdatePeriod, 
-                         autoSellProfitUpdatePeriod, maximumShortTradeLength, InterestRateUpdateRate,
+                         autoSellProfitUpdatePeriod, InterestRateUpdateRate,
                          tutorialMessagePeriod, updatePricesThreshold;
 
  @Getter
@@ -45,7 +45,6 @@ public class Config {
         Config.setReadFromCSV(getDataFiles().getConfig().getBoolean("read-from-csv", false));
         
         Config.setPort(getDataFiles().getConfig().getInt("port", 8321));
-        Config.setMaximumShortTradeLength(getDataFiles().getConfig().getInt("maximum-short-trade-length", 144));
         Config.setTimePeriod(getDataFiles().getConfig().getInt("time-period", 30));
         Config.setAutoSellUpdatePeriod(getDataFiles().getConfig().getInt("auto-sell-update-period", 20));
         Config.setAutoSellProfitUpdatePeriod(getDataFiles().getConfig().getInt("auto-sell-profit-update-period", 1200));

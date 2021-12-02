@@ -54,7 +54,7 @@ public class PriceUpdateEvent extends Event{
     private void updateItems(){
         ConcurrentHashMap<String, ItemData> ITEMS = Main.getCache().getITEMS();
         for (String item : ITEMS.keySet()){
-            if (Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getBoolean("locked")){
+            if (Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getBoolean("locked", false)){
                 continue;
             }
             ItemData data = ITEMS.get(item);
@@ -84,7 +84,7 @@ public class PriceUpdateEvent extends Event{
     private void updateEnchantments(){
         ConcurrentHashMap<String, EnchantmentData> ENCHANTMENTS = Main.getCache().getENCHANTMENTS();
         for (String item : ENCHANTMENTS.keySet()){
-            if (Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).getBoolean("locked")){
+            if (Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).getBoolean("locked", false)){
                 continue;
             }
             EnchantmentData data = ENCHANTMENTS.get(item);

@@ -377,7 +377,7 @@ public class LocalDataCache {
         }
         for (String key : set){
             ConfigurationSection section = config.getConfigurationSection(key);
-            if (!Material.matchMaterial(key).isItem()){
+            if (Material.matchMaterial(key) == null){
                 Logging.error("Invalid item in shops.yml: " + key);
                 continue;
             }

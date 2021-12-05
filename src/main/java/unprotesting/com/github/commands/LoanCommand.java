@@ -79,6 +79,10 @@ public class LoanCommand implements CommandExecutor{
             catch(NumberFormatException e){
                 return false;
             }
+            if (loanAmount < 0){
+                player.sendMessage(ChatColor.RED + "Loan amount must be greater than " + Config.getCurrencySymbol() + "0.0 to take out a loan.");
+                return true;
+            }
             double bal = EconomyFunctions.getEconomy().getBalance(player);
             if ((bal-loanAmount) < Config.getMaxDebt()){
                 if (bal < Config.getMaxDebt()){

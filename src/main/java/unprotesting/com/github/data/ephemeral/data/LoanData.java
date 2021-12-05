@@ -3,6 +3,7 @@ package unprotesting.com.github.data.ephemeral.data;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
+import java.text.DecimalFormat;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -64,7 +65,7 @@ public class LoanData extends LocalDateTimeArrayUtilizer implements Comparable<L
             Player onlinePlayer = (Player) offPlayer;
             onlinePlayer.getOpenInventory().close();
             onlinePlayer.sendMessage(ChatColor.GREEN + "Loan created on " + date.format(formatter) + " has been paid back.");
-            onlinePlayer.sendMessage(ChatColor.GREEN + Config.getCurrencySymbol() + value + " has been withdrawn from your balance.");
+            onlinePlayer.sendMessage(ChatColor.GREEN + Config.getCurrencySymbol() + new DecimalFormat(Config.getNumberFormat()).format(Double.toString(value)) + " has been withdrawn from your balance.");
             
         }
         Main.getCache().getLOANS().remove(this);

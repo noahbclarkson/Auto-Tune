@@ -23,11 +23,14 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**Minecraft Server Version
-1.18
+**Minecraft Server Version**
+1.18 etc.
 
-**Plugin List
-Essentials, Vault
+**Auto-Tune-Version**
+0.13.0 etc.
+
+**Plugin List**
+Essentials, Vault etc.
 
 **Additional context**
 Add any other context about the problem here.

@@ -115,7 +115,7 @@ public class FunctionsUtil {
         String[] inputs = new String[]{displayName, df.format(item_price), Integer.toString(item.getAmount()), df.format(item.getAmount()*item_price),
          df.format(item_price_sell), df.format(item.getAmount()*item_price_sell), enchantment, Integer.toString(level), df.format(price)};
         if (bal < price){
-            player.sendMessage(MessagesData.getMessageString(player, "enchantment-error", inputs));
+            player.sendMessage(MessagesData.getMessageString(player, "not-enough-money-enchantments", inputs));
             return;
         }
         try{

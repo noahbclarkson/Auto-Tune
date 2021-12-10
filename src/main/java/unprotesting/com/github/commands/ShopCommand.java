@@ -90,8 +90,10 @@ public class ShopCommand extends ShopFormat implements CommandExecutor{
                 list.add(ChatColor.YELLOW + "Ratio: " + df.format(Main.getCache().getEnchantmentRatio(s_item)));
                 list.add(ChatColor.YELLOW + "Price: " + Config.getCurrencySymbol() + df.format(Main.getCache().getEnchantmentPrice(s_item, false)));
             }
-            list.add(ChatColor.WHITE + "Remaining Buys: " + ChatColor.GRAY + Main.getCache().getBuysLeft(s_item, player));
-            list.add(ChatColor.WHITE + "Remaining Sells: " + ChatColor.GRAY + Main.getCache().getSellsLeft(s_item, player));
+            if (Config.isDisableMaxBuysSells()){
+                list.add(ChatColor.WHITE + "Remaining Buys: " + ChatColor.GRAY + Main.getCache().getBuysLeft(s_item, player));
+                list.add(ChatColor.WHITE + "Remaining Sells: " + ChatColor.GRAY + Main.getCache().getSellsLeft(s_item, player));
+            }
             meta.setLore(list);
             item.setItemMeta(meta);
             GuiItem gItem = new GuiItem(item, event ->{

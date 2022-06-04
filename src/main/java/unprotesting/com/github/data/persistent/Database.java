@@ -44,11 +44,8 @@ public class Database {
     private void createDB(String location){
         Maker maker = DBMaker.fileDB(location + "data.db");
         database = checkDataTransactions(checkChecksumHeaderBypass(maker))
-        .fileChannelEnable()
-        .fileMmapEnable()
         .fileMmapEnableIfSupported()
         .cleanerHackEnable()
-        .allocateStartSize(1048576)
         .closeOnJvmShutdown().make();
     }
 

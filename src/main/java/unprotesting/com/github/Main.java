@@ -71,9 +71,6 @@ public class Main extends JavaPlugin{
         if (cache != null){
             updateTimePeriod();
         }
-        if (database != null){
-            database.close();
-        }
     }
 
     @Override

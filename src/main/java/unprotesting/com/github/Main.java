@@ -165,7 +165,7 @@ public class Main extends JavaPlugin{
          -> Bukkit.getPluginManager().callEvent(new PriceUpdateEvent(true)),
           Config.getTimePeriod()*1200, Config.getTimePeriod()*1200);
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
-         -> Bukkit.getPluginManager().callEvent(new LoanUpdateEvent(true)),
+         -> Bukkit.getPluginManager().callEvent(new LoanUpdateEvent(this, true)),
            Config.getInterestRateUpdateRate(), Config.getInterestRateUpdateRate());
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, ()
          -> Bukkit.getPluginManager().callEvent(new SellPriceDifferenceUpdateEvent(true)),

@@ -114,6 +114,10 @@ public class Main extends JavaPlugin {
 
     new TimePeriod().addToMap();
     cache = new LocalDataCache();
+    if (Config.getConfig().isWebServer()) {
+      CsvHandler.writeCsv();
+    }
+    
 
   }
 

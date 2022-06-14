@@ -10,90 +10,66 @@
 
 ## See the wiki for info on each setting: https://github.com/Unprotesting/Auto-Tune/wiki
 
-##  Placeholders (Placeholder API must be installed for these to work)
-##  These placeholders can be used in other plugins
-##  %AT_GDP_GDP%, %AT_GDP_BALANCE%, %AT_GDP_DEBT%, %AT_GDP_LOSS%, %AT_GDP_INFLATION%
-##  %AT_<ITEM>_PRICE%, %AT_<ITEM>_SELLPRICE%, %AT_<ITEM>_BUYSLEFT%, %AT_<ITEM>_SELLSLEFT%,
-##  %AT_<ENCHANTMENT>_PRICE%, %AT_<ENCHANTMENT>_SELLPRICE%
-##  %AT_TOP_MOVERS_ITEM_<POSITION>%, %AT_TOP_MOVERS_CHANGE_<POSITION>%
-
-##  Local placeholders (Work without Placeholder API)
-##  These placeholders don't work outside of Auto-Tune.
-##  Look for "LOCAL-VARIABLES-ALLOWED, below".
-##  If a general placeholder is not working in game it may not be applicable for the environment
-##  %GENERAL_ITEM% - General placeholder for item-name
-##  %GENERAL_ITEM_PRICE% - General placeholder for an item price
-##  %GENERAL_ITEM_AMOUNT% - General placeholder for an item amount
-##  %GENERAL_ITEM_PRICEXAMOUNT% - General placeholder for an item-price*amount
-##  %GENERAL_ITEM_PRICE_SELL% - General placeholder for an item sell-price
-##  %GENERAL_ITEM_PRICEXAMOUNT_SELL% - General placeholder for an item-sell-price*amount
-##  %GENERAL_ENCHANTMENT% - General placeholder for enchantment-name
-##  %GENERAL_ENCHANTMENT_LEVEL% - General placeholder for enchantment level.
-##  %GENERAL_ENCHANTMENT_PRICE% - General placeholder for an enchantment price
-
 ##  Buying items
-##  LOCAL-VARIABLES-ALLOWED
-not-enough-money: "&cYou need %GENERAL_ITEM_PRICE% to purchase this item."
-not-enough-moneyxamount: "&cYou need %GENERAL_ITEM_PRICEXAMOUNT% to purchase x%GENERAL_ITEM_AMOUNT% of this item."
-run-out-of-buys: "&cYou have run out of buys for this item."
-not-enough-space: "&cNot enough space in inventory."
-not-unlocked: "&cYou need to unlock this item by collecting it to purchase it."
-shop-purchase: "&aPurchased x%GENERAL_ITEM_AMOUNT% of &6%GENERAL_ITEM% &afor %GENERAL_ITEM_PRICEXAMOUNT%."
+# Placeholders: <item>, <total>, <price>, <amount>, <balance>
+not-enough-money: "<red>You need $<total> to purchase <item>."
+run-out-of-buys: "<red>You have run out of buys for <item>."
+not-enough-space: "<red>Not enough space in inventory."
+not-unlocked: "<red>You need to unlock this item by collecting it to purchase it."
+not-in-shop: "<red>The item you are trying to purchase is not in the shop."
+shop-purchase: "<gold>Purchased <green>x<amount></green> of <item> for <green>$<total>."
 
 ##  Selling items
-##  LOCAL-VARIABLES-ALLOWED
-dont-have-item: "&cYou do not have this item."
-run-out-of-sells: "&cYou have run out of sells for this item."
-shop-sell: "&aSold x%GENERAL_ITEM_AMOUNT% of &6%GENERAL_ITEM% &afor %GENERAL_ITEM_PRICEXAMOUNT_SELL%."
+# Placeholders: <item>, <total>, <price>, <amount>, <balance>
+do-not-have-item: "<red>You do not have <item>."
+run-out-of-sells: "<red>You have run out of sells for <item>."
+shop-sell: "<gold>Sold <green>x<amount></green> of <item> for <green>$<total>."
 
 ##  Buying enchantments
-##  LOCAL-VARIABLES-ALLOWED
-hold-item-in-hand: "&cHold the item you want to enchant in your hand!"
-not-enough-money-enchantments: "&cYou need %GENERAL_ENCHANTMENT_PRICE% to purchase this enchantment."
-enchantment-error: "&cCannot enchant %GENERAL_ITEM% with enchantment."
-enchantment-purchase: "&aPurchased &6%GENERAL_ENCHANTMENT% &afor %GENERAL_ENCHANTMENT_PRICE%."
+# Placeholders: <enchantment>, <price>, <item>, <balance>
+hold-item-in-hand: "<red>Hold the item you want to enchant in your hand!"
+not-enough-money-enchantments: "<red>You need $<total> to purchase this enchantment."
+enchantment-error: "<red>Cannot enchant <item> with enchantment."
+enchantment-purchase: "<gold>Purchased <green><enchantment></green> for <green>$<total>"
 
 ##  Selling custom items
-##  LOCAL-VARIABLES-ALLOWED
-cannot-sell-custom: "&cCannot sell %GENERAL_ITEM%."
-sell-custom-item: "&aSold x%GENERAL_ITEM_AMOUNT% of &6%GENERAL_ITEM% &afor %GENERAL_ITEM_PRICEXAMOUNT_SELL%."
+# Placeholders: <item>, <price>, <item>, <balance>
+cannot-sell-custom: "<red>Cannot sell <item>."
+sell-custom-item: "<gold>Sold <green>x<amount></green> of <item> for <green>$<total>."
 
-##  Autoselling items
-##  LOCAL-VARIABLES-ALLOWED
-##  Use %GENERAL_ITEM_PRICE% to represent the money given to the player on a profit update
-autosell-profit-update: "&6Your items were sold and %GENERAL_ITEM_PRICE% has been added to your account."
+##  Auto-selling items
+# Placeholders: <total>, <balance>
+autosell-profit-update: "<gold>Your items were sold and <green>$<total></green> has been added to your account."
+
+## Loans
+# Placeholders: <total>, <interest>, <update-rate>
+loan-success: "<gold>You have taken a loan of <green>$<total></green> with an interest rate of <green>%<interest></green> per <green>$<update-rate>min(s).</green>."
 
 ##  Message when a player doesn't have permission to perform a command
-no-permission: "&eYou do not have permission to perform this command."
+no-permission: "<red>You do not have permission to perform this command."
 
 ##  Tutorial messages
 ##  These messages are displayed in this order from a player joining
 tutorial:
-  - '&6Do /shop to open the shop and start exchanging items.'
-  - '&6Do /sell to sell items quickly.'
-  - '&6Control the market! Your purchases rise prices.'
-  - '&6Control the market! Your sales lower prices.'
-  - '&6Do /autosell to sell items automatically.'
-  - '&6Do /buy to purchase custom items.'
-  - '&6Do /trade to view item prices over time.'
-  - '&6Do /loan <amount> to loan money. Do /loan to view your loans.'
-  - '&6Do /gdp to view the server GDP info.'
-  - '&6Inflation means prices for items generally rise. Put your money in assets (items) to make more money.'
-  - '&6Watch the prices of items! They can go up and down.'
-  - '&6There are big profits to be made when prices change..'
-  - '&6Loan money to take leverage of the rise in prices.'
-  - '&6Sell items that have high demand to make the most money selling.'
-  - '&6Using /autosell allows you to make money quickly and easily'
-  - '&6Using /loan to loan money allows you to invest to make even more money.'
-  - '&6Viewing prices with /trade allows you to judge the markets.'
+  - '<yellow>Do <i><click:run_command:/shop>/shop</click></i> to open the shop and start exchanging items.'
+  - '<yellow>Do <i><click:run_command:/sell>/sell</click></i> to sell items quickly.'
+  - '<yellow>Control the market! Your purchases rise prices.'
+  - '<yellow>Control the market! Your sales lower prices.'
+  - '<yellow>Do <i><click:run_command:/autosell>/autosell</click></i> to sell items automatically.'
+  - '<yellow>Do <i><click:run_command:/trade>/trade</click></i> to view item prices over time.'
+  - '<yellow>Do <i><click:run_command:/loan>/loan</click></i> to view your loans. Do /loan <amount> to loan money.'
+  - '<yellow>Do <i><click:run_command:/gdp>/gdp</click></i> to view the server GDP info.'
+  - '<yellow>Watch the prices of items! They can go up and down.'
+  - '<yellow>There are big profits to be made when prices change..'
+  - '<yellow>Loan money to buy items and take advantage of the rise in prices.'
+  - '<yellow>Sell items that have high demand to make the most money selling.'
+  - '<yellow>Using <i><click:run_command:/autosell>/autosell</click></i> allows you to make money quickly and easily'
+  - '<yellow>Using <i><click:run_command:/loan>/loan</click></i> to loan money allows you to invest to make even more money.'
+  - '<yellow>Viewing prices with <i><click:run_command:/trade>/trade</click></i> allows you to judge the markets.'
 
 ##  Join messages
 ##  These message are displayed when a player joins
+# Placeholders: <player>, <gdp>, <balance>, <loss>, <inflation>, <gdp-per-capita>, <balance-per-capita>, <loss-per-capita>, <inflation-per-capita>
 on-join:
-  - '&6 GDP: &a%AT_GDP_GDP% &7| &6Server-Balance: &a%AT_GDP_BALANCE%'
-  - '&7|&a%AT_TOP_MOVERS_CHANGE_0%&7| &a%AT_TOP_MOVERS_ITEM_0%'
-  - '&7|&a%AT_TOP_MOVERS_CHANGE_1%&7| &a%AT_TOP_MOVERS_ITEM_1%'
-  - '&7|&a%AT_TOP_MOVERS_CHANGE_2%&7| &a%AT_TOP_MOVERS_ITEM_2%'
-  - '&7|&4%AT_TOP_MOVERS_CHANGE_-0%&7| &4%AT_TOP_MOVERS_ITEM_-0%'
-  - '&7|&4%AT_TOP_MOVERS_CHANGE_-1%&7| &4%AT_TOP_MOVERS_ITEM_-1%'
-  - '&7|&4%AT_TOP_MOVERS_CHANGE_-2%&7| &4%AT_TOP_MOVERS_ITEM_-2%'
+  - '<yellow>GDP per-capita: <green><b>$<gdp-per-capita>'
+  - '<yellow>Average player balance: <green><b>$<balance-per-capita>'

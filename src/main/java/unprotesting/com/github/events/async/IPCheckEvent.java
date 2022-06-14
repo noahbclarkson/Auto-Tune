@@ -5,37 +5,55 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 
+import lombok.Getter;
+
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import lombok.Getter;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.config.Config;
 
-public class IPCheckEvent extends Event{
+public class IpCheckEvent extends Event {
 
-    @Getter
-    private final HandlerList Handlers = new HandlerList();
+  @Getter
+  private final HandlerList handlers = new HandlerList();
 
-    public IPCheckEvent(boolean isAsync){
-        super(isAsync);
-        Main.setServerIPStrings(getIP());
+  /**
+   * Checks the IP of the server.
+   */
+  public IpCheckEvent(boolean isAsync) {
+
+    super(isAsync);
+    Main.getInstance().setServerIPs(getIP());
+
+  }
+
+  /**
+   * Gets the server IPs.
+   * @return The server IPs.
+   */
+  private String[] getIP() {
+
+    String hostIP;
+
+    try {
+
+      URL whatIsmMyIp = new URL("http://checkip.amazonaws.com");
+      BufferedReader in = new BufferedReader(new InputStreamReader(whatIsmMyIp.openStream()));
+      hostIP = in.readLine().trim();
+
+    } catch (IOException e) {
+
+      Main.getInstance().getLogger().severe("Could not get the server IPs.");
+      String error = "http://autotune.xyz";
+      return new String[] { error, error };
+
     }
 
-    private String[] getIP(){
-        String hostIP;
-        try {
-            URL whatIsmMyIp = new URL("http://checkip.amazonaws.com");
-            BufferedReader in = new BufferedReader(new InputStreamReader(whatIsmMyIp.openStream()));
-            hostIP = in.readLine().trim();
-        } catch (IOException e) {
-            e.printStackTrace();
-            String error = "http://autotune.xyz";
-            return new String[] {error, error};
-        }
-        String base = "http://" + hostIP + ":" + Config.getPort();
-        String[] output = {base + "/trade.html"};
-        return output;
-    }
-    
+    String base = "http://" + hostIP + ":" + Config.getConfig().getPort();
+    String[] output = { base + "/trade.html" };
+    return output;
+
+  }
+
 }

@@ -14,13 +14,11 @@ version: 0.13.1
 author: Unprotesting
 description: Automatic Economy Plugin
 softdepend:
-  - PlaceholderAPI
-  - EssentialsX
+  - Essentials
 depend: [Vault]
 api-version: 1.14
 website: https://github.com/Unprotesting/Auto-Tune
-prefix: '[AUTO-TUNE]'
-api: ""
+prefix: 'Auto-Tune'
 commands:
     at:
       description: Change item prices and force price-updates.

@@ -1,33 +1,44 @@
 package unprotesting.com.github.localserver;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-
 import com.sun.net.httpserver.HttpServer;
 
-import unprotesting.com.github.config.Config;
-import unprotesting.com.github.logging.Logging;
+import java.net.InetSocketAddress;
 
-//  Local static HTTP server for price-data etc.
+import unprotesting.com.github.Main;
+import unprotesting.com.github.config.Config;
 
 public class LocalServer {
 
-    private HttpServer server;
-    private String base = "plugins/Auto-Tune/web";
+  private HttpServer server;
+  private String base = "plugins/Auto-Tune/web";
 
-    public LocalServer() throws IOException{
-        if (Config.isWebServer()) {
-            try{
-                server = HttpServer.create(new InetSocketAddress(Config.getPort()), 0);
-                server.createContext("/", new StaticFileHandler(base));
-                server.setExecutor(null);
-                server.start();
-                Logging.debug("Web server has started on port " + Config.getPort());
-            }
-            catch(NullPointerException | IllegalArgumentException | IllegalStateException | IOException e){
-                Logging.error("Error Creating Server on port: " + Config.getPort() + ". Please try restarting or changing your port.");
-            }
-        }
+  /**
+   * Start the local server.
+   */
+  public LocalServer() {
+
+    // If "web-server-enabled" is false, don't start the server.
+    if (!Config.getConfig().isWebServer()) {
+      return;
     }
-    
+
+    try {
+
+      server = HttpServer.create(new InetSocketAddress(Config.getConfig().getPort()), 0);
+      server.createContext("/", new StaticFileHandler(base));
+      server.setExecutor(null);
+      server.start();
+      
+      Main.getInstance().getLogger().info("Local server started on port " 
+          + Config.getConfig().getPort());
+
+    } catch (Exception e) {
+
+      Main.getInstance().getLogger().warning(
+          "Error Creating Server on port: " + Config.getConfig().getPort()
+           + ". Please try restarting or changing your port.");
+
+    }
+  }
+
 }

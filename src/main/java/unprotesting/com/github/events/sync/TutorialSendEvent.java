@@ -1,38 +1,67 @@
 package unprotesting.com.github.events.sync;
 
+import java.util.HashMap;
+import java.util.UUID;
+
+import lombok.Getter;
+
+import net.kyori.adventure.text.Component;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import lombok.Getter;
-import me.clip.placeholderapi.PlaceholderAPI;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.config.Config;
+import unprotesting.com.github.config.Messages;
 
-public class TutorialSendEvent extends Event{
+public class TutorialSendEvent extends Event {
 
-    @Getter
-    private final HandlerList Handlers = new HandlerList();
+  private static HashMap<UUID, Integer> tutorialSteps = new HashMap<>();
 
-    public TutorialSendEvent(){
-        if (Config.isTutorial()){
-            sendTutorialMessages();
-        }
+  @Getter
+  private final HandlerList handlers = new HandlerList();
+
+  /**
+   * Sends the tutorial messages.
+   */
+  public TutorialSendEvent() {
+
+    if (Config.getConfig().isTutorial()) {
+      sendTutorialMessages();
     }
 
-    private void sendTutorialMessages(){
-        for (Player player : Bukkit.getOnlinePlayers()){
-            if (player.hasPermission("at.tutorial")){
-                String uuid = player.getUniqueId().toString();
-                Main.updatePlayerTutorialData(uuid);
-                String message = Main.getMESSAGES().getTutorial().get(Main.getMESSAGES().getTutorialData().get(uuid)-1);
-                if (Main.isPlaceholderAPI()){
-                    message = PlaceholderAPI.setPlaceholders(player, message);
-                }
-                player.sendMessage(message);
-            }
+  }
+
+  private void sendTutorialMessages() {
+
+    for (Player player : Bukkit.getOnlinePlayers()) {
+
+      if (!player.hasPermission("at.tutorial")) {
+        continue;
+      }
+
+      UUID uuid = player.getUniqueId();
+
+      if (tutorialSteps.containsKey(uuid)) {
+        
+        if (tutorialSteps.get(uuid) >= Messages.getMessages().getTutorial().size()) {
+          tutorialSteps.put(uuid, 0);
+        } else {
+          tutorialSteps.put(uuid, tutorialSteps.get(uuid) + 1);
         }
+
+      } else {
+        tutorialSteps.put(uuid, 0);
+      }
+
+      Component message = Main.getInstance().getMm().deserialize(
+          Messages.getMessages().getTutorial().get(tutorialSteps.get(uuid)));
+
+      player.sendMessage(message);
+
     }
-    
+
+  }
 }

@@ -54,7 +54,7 @@ enable-enchantments: true
 ##  -- Pricing Model Settings --  ##
 
 ##  Percentage difference in sell price to buy price
-sell-price-difference: 10.0
+sell-price-difference: 15.0
 
 ##  Maximum Volatility per Time Period for the Variable Volatility price calculation algorithm as a percentage of total price
 max-volatility: 0.5
@@ -99,7 +99,7 @@ sell-price-variation-update-period: 30
 
 ##  Interest rate per interest-rate-update-period
 ##  Info: This is the increase in the current debt payment per-time period
-interest-rate: 0.025
+interest-rate: 0.05
 
 ##  Time period in ticks between updates of the interest rate for users loans
 interest-rate-update-period: 1200
@@ -114,43 +114,32 @@ disable-max-buys-sells: false
 max-debt-value: 1000.0
 
 ##  The percentage value to decrease items sold with enchantments
-##  Info: Stacked enchantments etc. can become very expensive so a number between 30% - 60% is usually fine
+##  Info: This value should be above 0 because it limits the exploit-ability of enchantments
 ##  Info: This doesn't affect the buy-price.
-enchantment-limiter: 50.0
+enchantment-limiter: 10.0
 
 ##  The percentage value to decrease items sold with a loss in durability
 ##  Info: This is applied ON TOP of the durability algorithm to limit the exploit-ability of selling tools
-durability-limiter: 10.0
+durability-limiter: 15.0
 
 ##  -- Other Settings --
-
-##  Enable debug mode for more info
-debug-enabled: false
 
 ##  Ignore AFK players in price calculations/online checks
 ##  Info: Turning this on will mean the price will only update when there's a player that is not AFK
 ##  Info: This only applies to essentials AFK and you must have essentials installed for this to work
 ignore-afk: true
 
-##  Enable ChecksumHeaderBypass if you have issues with data retrieval or corruption
-##  Info: This is a very rare occurrence and should only be used if you have issues with data retrieval or corruption
-checksum-header-bypass: true
-
 ##  Enable the Auto-Tune tutorial for players (the messages that are displayed to players periodically)
 ##  Keep this on to encourage purchasing turn it off if it is distracting
 tutorial: true
 
 ##  Time in seconds between messages
-tutorial-message-period: 325
+tutorial-message-period: 360
 
 ##  Data storage location
 data-location: 'plugins/Auto-Tune/'
 
-##  Enable transactions
-##  Info: This will result in much larger file sizes and additional transaction files but more stability and improved data-protection
-##  Info: This is off by default as the default data protection will be fine for most servers
-data-transactions: false
-
-##  Read initial price data and buys/sells from trade.csv
-##  Stop server, set this to true, delete data.db, import your trade.csv, start the server, set this to false, restart server
-read-from-csv: false
+##  The level of the logger to use
+##  Info: This is the level of logging that is outputted to the console
+##  Info: Possible values are: SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST
+log-level: 'INFO'

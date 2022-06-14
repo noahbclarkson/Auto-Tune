@@ -12,30 +12,55 @@ import org.bukkit.inventory.ItemStack;
 import unprotesting.com.github.commands.util.CommandUtil;
 import unprotesting.com.github.commands.util.FunctionsUtil;
 
-public class SellCommand implements CommandExecutor{
+public class SellCommand implements CommandExecutor {
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String sell, String[] args) {
-        if (!CommandUtil.checkIfSenderPlayer(sender)){return true;}
-        return interpretCommand(sender);
+  @Override
+  public boolean onCommand(CommandSender sender, Command command, String sell, String[] args) {
+
+    if (!CommandUtil.checkIfSenderPlayer(sender)) {
+      return true;
     }
 
-    private boolean interpretCommand(CommandSender sender){
-        Player player = CommandUtil.closeInventory(sender);
-        if (!(player.hasPermission("at.sell") || player.hasPermission("at.admin"))){CommandUtil.noPermission(player);return true;}
-        setupSellGUI(sender);
-        return true;
+    return interpretCommand(sender);
+
+  }
+
+  private boolean interpretCommand(CommandSender sender) {
+
+    Player player = CommandUtil.closeInventory(sender);
+
+    if (!(player.hasPermission("at.sell") || player.hasPermission("at.admin"))) {
+      
+      CommandUtil.noPermission(player);
+      return true;
+
     }
 
-    private void setupSellGUI(CommandSender sender){
-        Player player = CommandUtil.closeInventory(sender);
-        ChestGui gui = new ChestGui(5, "Sell Panel");
-        gui.setOnClose(event ->{
-            for (ItemStack item : gui.getInventory().getStorageContents()){
-                FunctionsUtil.sellCustomItem(player, item, false);
-            }
-        });
-        gui.show((HumanEntity)sender);
-    }
-    
+    setupSellGui(sender);
+    return true;
+
+  }
+
+  private void setupSellGui(CommandSender sender) {
+
+    Player player = CommandUtil.closeInventory(sender);
+    ChestGui gui = new ChestGui(5, "Sell Panel");
+
+    gui.setOnClose(event -> {
+
+      for (ItemStack item : gui.getInventory().getStorageContents()) {
+
+        if (item == null) {
+          continue;
+        }
+        
+        FunctionsUtil.sellCustomItem(player, item, false);
+      }
+
+    });
+
+    gui.show((HumanEntity) sender);
+
+  }
+
 }

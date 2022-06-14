@@ -1,24 +1,31 @@
 package unprotesting.com.github.commands.objects;
 
-import org.bukkit.ChatColor;
+import lombok.Data;
+import net.kyori.adventure.text.Component;
+
 import org.bukkit.Material;
 
-import lombok.Data;
 import unprotesting.com.github.commands.objects.Section.CollectFirstSetting;
 
 @Data
 public class SectionItemData {
 
-    private String name, 
-                   displayName;
-    private Material image;
-    private CollectFirstSetting setting;
+  private String name;
+  private Component displayName;
+  private Material image;
+  private CollectFirstSetting setting;
 
-    public SectionItemData(String name, String displayName, CollectFirstSetting setting) {
-        this.name = name;
-        this.image = Material.matchMaterial(name);
-        this.displayName = ChatColor.translateAlternateColorCodes('&', displayName);
-        this.setting = setting;
-    }
-    
+  /**
+   * Creates a new SectionItemData object.
+   * @param name The name of the item.
+   * @param displayName The display name of the item.
+   * @param setting The collect first setting of the item.
+   */
+  public SectionItemData(String name, Component displayName, CollectFirstSetting setting) {
+    this.name = name;
+    this.image = Material.matchMaterial(name);
+    this.displayName = displayName;
+    this.setting = setting;
+  }
+
 }

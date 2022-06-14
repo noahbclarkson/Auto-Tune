@@ -1,9 +1,11 @@
 package unprotesting.com.github.data.persistent;
 
+import lombok.Getter;
 
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.DBMaker.Maker;
+
 import org.mapdb.HTreeMap;
 import org.mapdb.Serializer;
 
@@ -11,100 +13,117 @@ import unprotesting.com.github.Main;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.persistent.timeperiods.EconomyInfoTimePeriod;
 import unprotesting.com.github.data.persistent.timeperiods.EnchantmentsTimePeriod;
-import unprotesting.com.github.data.persistent.timeperiods.GDPTimePeriod;
+import unprotesting.com.github.data.persistent.timeperiods.GdpTimePeriod;
 import unprotesting.com.github.data.persistent.timeperiods.ItemTimePeriod;
 import unprotesting.com.github.data.persistent.timeperiods.LoanTimePeriod;
 import unprotesting.com.github.data.persistent.timeperiods.TransactionsTimePeriod;
 
-//  Database object for storing all time-period object in persistent data
-
+@Getter
 public class Database {
 
-    private DB database;
-    public HTreeMap<Integer, TimePeriod> map;
+  private DB db;
+  private HTreeMap<Integer, TimePeriod> map;
 
-    @SuppressWarnings("unchecked")
-    public Database(){
-        createDB(Config.getDataLocation());
-        this.map = database.hashMap("map", Serializer.INTEGER,Serializer.JAVA).createOrOpen();
-    }
+  /**
+   * Initializes the database.
+   */
+  @SuppressWarnings("unchecked")
+  public Database() {
 
-    @SuppressWarnings("unchecked")
-    public Database(String location){
-        createDB(location);
-        this.map = database.hashMap("map", Serializer.INTEGER,Serializer.JAVA).createOrOpen();
-    }
+    createDB(Config.getConfig().getDataLocation());
+    this.map = db.hashMap("map", Serializer.INTEGER, Serializer.JAVA).createOrOpen();
 
-    public void close(){
-        map.close();
-        database.close();
-    }
+  }
 
-    //  Method to build and create or link database to file
-    private void createDB(String location){
-        Maker maker = DBMaker.fileDB(location + "data.db");
-        database = checkDataTransactions(checkChecksumHeaderBypass(maker))
+  /**
+   * Initializes the database in the specified location.
+   * @param location The location of the database.
+   */
+  @SuppressWarnings("unchecked")
+  public Database(String location) {
+
+    createDB(location);
+    this.map = db.hashMap("map", Serializer.INTEGER, Serializer.JAVA).createOrOpen();
+
+  }
+
+  // Method to build and create or link database to file
+  /**
+   * Build and create or link database to file.
+   * @param location The location of the database.
+   */
+  private void createDB(String location) {
+
+    Maker maker = DBMaker.fileDB(location + "data.db");
+
+    db = maker.checksumHeaderBypass()
         .fileMmapEnableIfSupported()
+        .fileMmapPreclearDisable()
         .cleanerHackEnable()
+        .allocateStartSize(10 * 1024 * 1024) // 25MB
+        .allocateIncrement(5 * 1024 * 1024) // 5MB
         .closeOnJvmShutdown().make();
+
+    db.getStore().fileLoad();
+
+  }
+
+  /**
+   * Save the cache to the database.
+   */
+  public void saveCacheToLastTP() {
+
+    int size = map.size() - 1;
+
+    if (size < 0) {
+      return;
     }
 
-    // Check if checksumHeaderBypass is enabled in config
-    private Maker checkChecksumHeaderBypass(Maker maker){
-        if (Config.isChecksumHeaderBypass()){
-            return maker.checksumHeaderBypass();
-        }
-        return maker;
+    TimePeriod tp = map.get(size);
+    ItemTimePeriod itemTP = tp.getItemTP();
+    String[] items = itemTP.getItems();
+    int[] buys = itemTP.getBuys();
+    int[] sells = itemTP.getSells();
+    int pos = 0;
+
+    // Loop through all items and save the buy and sell values.
+    for (String item : items) {
+      buys[pos] = buys[pos] + Main.getInstance().getCache().getItems().get(item).getBuys();
+      sells[pos] = sells[pos] + Main.getInstance().getCache().getItems().get(item).getSells();
+      itemTP.setBuys(buys);
+      itemTP.setSells(sells);
+      pos++;
     }
 
-    // Check if dataTransactions is enabled in config
-    private Maker checkDataTransactions(Maker maker){
-        if (Config.isDataTransactions()){
-            return maker.transactionEnable();
-        }
-        return maker;
+    EnchantmentsTimePeriod enchantmentsTP = tp.getEnchantmentsTP();
+    String[] enchantments = enchantmentsTP.getItems();
+    int[] enchantmentBuys = enchantmentsTP.getBuys();
+    int[] enchantmentSells = enchantmentsTP.getSells();
+    pos = 0;
+
+    // Loop through all enchantments and save the buy and sell values.
+    for (String enchantment : enchantments) {
+
+      enchantmentBuys[pos] = enchantmentBuys[pos] 
+        + Main.getInstance().getCache().getEnchantments().get(enchantment).getBuys();
+        
+      enchantmentSells[pos] = enchantmentSells[pos] 
+        + Main.getInstance().getCache().getEnchantments().get(enchantment).getSells();
+
+      enchantmentsTP.setBuys(enchantmentBuys);
+      enchantmentsTP.setSells(enchantmentSells);
+      pos++;
+
     }
 
-    public void saveCacheToLastTP(){
-        int size = map.size()-1;
-        if (size < 1){
-            return;
-        }
-        TimePeriod TP = map.get(size);
-        ItemTimePeriod ITP = TP.getItp();
-        String[] items = ITP.getItems();
-        int[] buys = ITP.getBuys();
-        int[] sells = ITP.getSells();
-        int pos = 0;
-        for (String item : items){
-            buys[pos] = buys[pos] + Main.getCache().getITEMS().get(item).getBuys();
-            sells[pos] = sells[pos] + Main.getCache().getITEMS().get(item).getSells();
-            ITP.setBuys(buys);
-            ITP.setSells(sells);
-            pos++;
-        }
-        TP.setItp(ITP);
-        EnchantmentsTimePeriod ETP = TP.getEtp();
-        String[] enchantments = ETP.getItems();
-        int[] ebuys = ETP.getBuys();
-        int[] esells = ETP.getSells();
-        pos = 0;
-        for (String enchantment : enchantments){
-            ebuys[pos] = ebuys[pos] + Main.getCache().getENCHANTMENTS().get(enchantment).getBuys();
-            esells[pos] = esells[pos] + Main.getCache().getENCHANTMENTS().get(enchantment).getSells();
-            ETP.setBuys(ebuys);
-            ETP.setSells(esells);
-            pos++;
-        }
-        TP.setEtp(ETP);
-        TP.setGtp(new GDPTimePeriod());
-        TP.setLtp(new LoanTimePeriod());
-        TP.setTtp(new TransactionsTimePeriod());
-        TP.setEitp(new EconomyInfoTimePeriod());
-        map.put(map.size()-1, TP);
-    }
+    tp.setItemTP(itemTP);
+    tp.setEnchantmentsTP(enchantmentsTP);
+    tp.setGdpTP(new GdpTimePeriod());
+    tp.setLoanTP(new LoanTimePeriod());
+    tp.setTransactionsTP(new TransactionsTimePeriod());
+    tp.setEconomyInfoTP(new EconomyInfoTimePeriod());
+    map.put(map.size() - 1, tp);
 
+  }
 
-
-    
 }

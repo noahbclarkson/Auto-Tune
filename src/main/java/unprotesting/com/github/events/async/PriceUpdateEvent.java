@@ -1,163 +1,201 @@
 package unprotesting.com.github.events.async;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.concurrent.ConcurrentHashMap;
 
+import lombok.Getter;
+
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import lombok.Getter;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.ephemeral.data.EnchantmentData;
 import unprotesting.com.github.data.ephemeral.data.ItemData;
 import unprotesting.com.github.data.persistent.Database;
 import unprotesting.com.github.data.persistent.TimePeriod;
-import unprotesting.com.github.logging.Logging;
 import unprotesting.com.github.util.UtilFunctions;
 
-public class PriceUpdateEvent extends Event{
+public class PriceUpdateEvent extends Event {
 
-    @Getter
-    private final HandlerList Handlers = new HandlerList();
+  @Getter
+  private final HandlerList handlers = new HandlerList();
 
-    public PriceUpdateEvent(boolean isAsync){
-        super(isAsync);
-        if (Main.isCorrectAPIKey()){
-            try {
-                calculateAndLoad();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+  /**
+   * Updates the prices.
+   * @param isAsync Whether the event is being run async or not.
+   */
+  public PriceUpdateEvent(boolean isAsync) {
+
+    super(isAsync);
+
+    calculateAndLoad();
+
+  }
+
+  /**
+   * Calculates the prices and loads them into the database.
+   */
+  private void calculateAndLoad() {
+
+    // If the player count is less than "update-prices-threshold" then don't update the prices.
+    if (UtilFunctions.calculatePlayerCount() < Config.getConfig().getUpdatePricesThreshold()) {
+      return;
+    }
+      
+    Main.getInstance().updateTimePeriod();
+    updateItems();
+    updateEnchantments();
+    Main.getInstance().getCache().updatePercentageChanges();
+
+  }
+
+  /**
+   * Updates the prices of all items.
+   */
+  private void updateItems() {
+
+    // Loop through all items and update them.
+    for (String item : Main.getInstance().getCache().getItems().keySet()) {
+
+      // If the item is locked then don't update it.
+      if (Main.getInstance().getDataFiles().getShops().getConfigurationSection("shops")
+          .getConfigurationSection(item).getBoolean("locked", false)) {
+
+        continue;
+
+      }
+
+      ItemData data = Main.getInstance().getCache().getItems().get(item);
+      double[] sb = loadAverageBuySellValue(item, false);
+      double[] volatility = getMaxMinVolatility("shops", item);
+      data.setPrice(UtilFunctions.calculateNewPrice(data.getPrice(), volatility, sb[0], sb[1]));
+      Main.getInstance().getCache().getItems().put(item, data);
+
     }
 
-    private void calculateAndLoad() throws InterruptedException{
-        int playerCount = UtilFunctions.calculatePlayerCount();
-        Logging.debug("Updating prices with player count: " + playerCount);
-        if (playerCount >= Config.getUpdatePricesThreshold()){
-            Main.updateTimePeriod();
-            updateItems();
-            Thread.sleep(500);
-            updateEnchantments();
-            Main.getCache().updatePercentageChanges();
-        }
-        else{
-            Logging.debug("Player count was less than threshhold: " +  Config.getUpdatePricesThreshold());
-        }
-        Logging.debug("Next update: " + LocalDateTime.now().plusMinutes(Config.getTimePeriod())
-         .format(DateTimeFormatter.ISO_LOCAL_TIME).toString());
+  }
+
+  /**
+   * Updates the prices of all enchantments.
+   */
+  private void updateEnchantments() {
+
+    // Loop through all enchantments and update them.
+    for (String item : Main.getInstance().getCache().getEnchantments().keySet()) {
+
+      // If the enchantment is locked then don't update it.
+      if (Main.getInstance().getDataFiles().getEnchantments()
+          .getConfigurationSection("enchantments." + item).getBoolean("locked", false)) {
+
+        continue;
+
+      }
+
+      EnchantmentData data = Main.getInstance().getCache().getEnchantments().get(item);
+      double[] sb = loadAverageBuySellValue(item, true);
+      double[] volatility = getMaxMinVolatility("enchantments", item);
+      data.setPrice(UtilFunctions.calculateNewPrice(data.getPrice(), volatility, sb[0], sb[1]));
+      data.setRatio(UtilFunctions.calculateNewPrice(data.getRatio(), volatility, sb[0], sb[1]));
+      Main.getInstance().getCache().getEnchantments().put(item, data);
+
     }
 
-    private void updateItems(){
-        ConcurrentHashMap<String, ItemData> ITEMS = Main.getCache().getITEMS();
-        for (String item : ITEMS.keySet()){
-            if (Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getBoolean("locked", false)){
-                continue;
-            }
-            ItemData data = ITEMS.get(item);
-            double price = data.getPrice();
-            Double[] buySellValues = loadAverageBuySellValue(item, false);
-            Double newPrice;
-            Double total = buySellValues[0]+buySellValues[1];
-            Double max_vol = Config.getMaxVolatility();
-            Double min_vol = Config.getMinVolatility();
-            max_vol = Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("max-volatility", max_vol);
-            min_vol = Main.getDataFiles().getShops().getConfigurationSection("shops").getConfigurationSection(item).getDouble("min-volatility", min_vol);
-            if (buySellValues[0] > buySellValues[1]){
-                newPrice = price + price*max_vol*0.01*(buySellValues[0]/total) + price*0.01*min_vol;
-            }
-            else if(buySellValues[0] < buySellValues[1]){
-                newPrice = price - price*max_vol*0.01*(buySellValues[1]/total) - price*0.01*min_vol;
-            }
-            else{
-                newPrice = price;
-            }
-            data.setPrice(newPrice);
-            ITEMS.put(item, data);
+  }
+
+
+
+  /**
+   * Loads the average buy and sell values for an item.
+   * @param item The item.
+   * @param isEnchantment Whether the item is an enchantment or not.
+   * @return The average buy and sell values.
+   */
+  private double[] loadAverageBuySellValue(String item, boolean isEnchantment) {
+
+    Database db = Main.getInstance().getDatabase();
+    int size = Main.getInstance().getDatabase().getMap().size();
+    int y = 1;
+    double finalBuys = 0;
+    double finalSells = 0;
+
+    // Loop through all time periods and calculate the average buy and sell values.
+    for (int i = 0; i < size; i++) {
+
+      y = (int) Math.round(Config.getConfig().getDataSelectionM() 
+          * Math.pow(i, Config.getConfig().getDataSelectionZ()) 
+          + Config.getConfig().getDataSelectionC());
+
+      TimePeriod period = db.getMap().get(size - y);
+      double buys = 0;
+      double sells = 0;
+
+      try {
+
+        // If the item is an enchantment then load the enchantment data 
+        // otherwise load the item data.
+        if (isEnchantment) {
+
+          int loc = Arrays.asList(period.getEnchantmentsTP().getItems()).indexOf(item);
+          buys = period.getEnchantmentsTP().getBuys()[loc];
+          sells = period.getEnchantmentsTP().getSells()[loc];
+
+        } else {
+
+          int loc = Arrays.asList(period.getItemTP().getItems()).indexOf(item);
+          buys = period.getItemTP().getBuys()[loc];
+          sells = period.getItemTP().getSells()[loc];
+
         }
-        Main.getCache().updatePrices(ITEMS);
+
+      } catch (NullPointerException e) {
+        
+        Main.getInstance().getLogger().severe(
+            "Error loading average buy and sell values for " + item);
+
+        break;
+
+      }
+
+      finalBuys += buys;
+      finalSells += sells;
+
     }
 
-    private void updateEnchantments(){
-        ConcurrentHashMap<String, EnchantmentData> ENCHANTMENTS = Main.getCache().getENCHANTMENTS();
-        for (String item : ENCHANTMENTS.keySet()){
-            if (Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).getBoolean("locked", false)){
-                continue;
-            }
-            EnchantmentData data = ENCHANTMENTS.get(item);
-            double price = data.getPrice();
-            double ratio = data.getRatio();
-            Double[] buySellValues = loadAverageBuySellValue(item, true);
-            Double newPrice;
-            Double newRatio;
-            Double total = buySellValues[0]+buySellValues[1];
-            Double max_vol = Config.getMaxVolatility();
-            Double min_vol = Config.getMinVolatility();
-            max_vol = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).getDouble("max-volatility", max_vol);
-            min_vol = Main.getDataFiles().getEnchantments().getConfigurationSection("enchantments." + item).getDouble("min-volatility", min_vol);
-            if (buySellValues[0] > buySellValues[1]){
-                newPrice = price + price*max_vol*0.01*(buySellValues[0]/total) + price*0.01*min_vol;
-                newRatio = ratio + price*max_vol*0.01*(buySellValues[0]/total) + ratio*0.01*min_vol;
-            }
-            else if(buySellValues[0] < buySellValues[1]){
-                newPrice = price - price*max_vol*0.01*(buySellValues[1]/total) - price*0.01*min_vol;
-                newRatio = ratio - price*max_vol*0.01*(buySellValues[1]/total) - ratio*0.01*min_vol;
-            }
-            else{
-                newPrice = price;
-                newRatio = ratio;
-            }
-            data.setPrice(newPrice);
-            data.setRatio(newRatio);
-            ENCHANTMENTS.put(item, data);
-        }
-        Main.getCache().updateEnchantments(ENCHANTMENTS);
+    double avBuy = finalBuys / y;
+    double avSell = finalSells / y;
+    return new double[] { avBuy, avSell };
+
+  }
+
+  /**
+   * Gets the max and min volatility for an item/enchantment.
+   * @param sectionName The section name. (shops or enchantments)
+   * @param item The item/enchantment.
+   * @return The max and min volatility.
+   */
+  private double[] getMaxMinVolatility(String sectionName, String item) {
+
+    Double maxVolatility = Config.getConfig().getMaxVolatility();
+    Double minVolatility = Config.getConfig().getMinVolatility();
+
+    YamlConfiguration config = Main.getInstance().getDataFiles().getShops();
+
+    if (sectionName.equals("enchantments")) {
+      config = Main.getInstance().getDataFiles().getEnchantments();
     }
 
-    private Double[] loadAverageBuySellValue(String item, boolean enchantment){
-        double x = 0;
-        int size = Main.getDatabase().map.size();
-        Database db = Main.getDatabase();
-        double final_y = 1;
-        double final_buys = 0;
-        double final_sells = 0;
-        for (;x < 1000000;){
-            double y = Config.getDataSelectionM() * Math.pow(x, Config.getDataSelectionZ()) + Config.getDataSelectionC();
-            y = Math.round(y);
-            if (y > size){
-                final_y = y;
-                break;
-            }
-            int input = (int) y;
-            TimePeriod period = db.map.get(size-input);
-            double buys = 0;
-            double sells = 0;
-            try{
-                if (enchantment){
-                    int loc = Arrays.asList(period.getEtp().getItems()).indexOf(item);
-                    buys = period.getEtp().getBuys()[loc];
-                    sells = period.getEtp().getSells()[loc];
-                }
-                if (!enchantment){
-                    int loc = Arrays.asList(period.getItp().getItems()).indexOf(item);
-                    buys = period.getItp().getBuys()[loc];
-                    sells = period.getItp().getSells()[loc];
-                }
-            }
-            catch(NullPointerException e){
-                e.printStackTrace();
-                break;
-            }
-            final_buys += buys;
-            final_sells += sells;
-            x++;
-        }
-        double avBuy = final_buys / final_y;
-        double avSell = final_sells / final_y;
-        return new Double[]{avBuy, avSell};
-    }
-    
+    maxVolatility = config.getConfigurationSection(
+        sectionName).getConfigurationSection(item).getDouble("max-volatility", maxVolatility);
+
+    minVolatility = config.getConfigurationSection(
+        sectionName).getConfigurationSection(item).getDouble("min-volatility", minVolatility);
+
+    double[] volatility = new double[2];
+    volatility[0] = maxVolatility;
+    volatility[1] = minVolatility;
+    return volatility;
+
+  }
+
 }

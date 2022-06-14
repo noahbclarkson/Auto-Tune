@@ -10,44 +10,53 @@ import unprotesting.com.github.data.ephemeral.LocalDataCache;
 import unprotesting.com.github.data.ephemeral.data.ItemData;
 import unprotesting.com.github.data.util.BuyableTimePeriodFunctions;
 
-//  Item time period object for storing item price and buy/sell data 
+@Getter
+public class ItemTimePeriod extends BuyableTimePeriodFunctions implements Serializable {
 
-public class ItemTimePeriod extends BuyableTimePeriodFunctions implements Serializable{
+  private static final long serialVersionUID = -1102531407L;
 
-    private static final long serialVersionUID = -1102531407L;
+  @Setter
+  private int[] buys;
+  @Setter
+  private int[] sells;
+  private double[] prices;
+  private String[] items;
 
-    @Getter @Setter
-    private int[] buys, 
-                  sells;
-    @Getter
-    private double[] prices;
-    @Getter
-    private String[] items;
+  /**
+   * Initializes the item time period.
+   */
+  public ItemTimePeriod() {
 
-    public ItemTimePeriod(){
-        Set<String> set = Main.getCache().getITEMS().keySet();
-        int size = set.size();
-        init(size);
-        this.buys = new int[size];
-        this.sells = new int[size];
-        this.prices = new double[size];
-        this.items = new String[size];
-        int i = 0;
-        LocalDataCache cache = Main.getCache();
-        for (String key : set){
-            ItemData data = cache.getITEMS().get(key);
-            this.items[i] = key;
-            setVars(i, data);
-            i++;
-        }
+    Set<String> set = Main.getInstance().getCache().getItems().keySet();
+    int size = set.size();
+    init(size);
+    this.buys = new int[size];
+    this.sells = new int[size];
+    this.prices = new double[size];
+    this.items = new String[size];
+    int i = 0;
+    LocalDataCache cache = Main.getInstance().getCache();
+
+    for (String key : set) {
+
+      ItemData data = cache.getItems().get(key);
+      this.items[i] = key;
+      setVars(i, data);
+      i++;
+      
     }
 
-    private void setVars(int pos, ItemData data){
-        buys[pos] = data.getBuys();
-        sells[pos] = data.getSells();
-        prices[pos] = data.getPrice();
-    }
+  }
 
+  /**
+   * Set the variables for the time period.
+   * @param pos The index of the time period.
+   * @param data The item data.
+   */
+  private void setVars(int pos, ItemData data) {
+    buys[pos] = data.getBuys();
+    sells[pos] = data.getSells();
+    prices[pos] = data.getPrice();
+  }
 
-    
 }

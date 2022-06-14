@@ -1,55 +1,65 @@
 package unprotesting.com.github.data.persistent.timeperiods;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 
 import lombok.Getter;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.data.ephemeral.data.LoanData;
 import unprotesting.com.github.data.util.LocalDateTimeArrayUtilizer;
 
-//  Loan time period object for storing loan value, interest-rate, player and date-of-creation
+@Getter 
+public class LoanTimePeriod extends LocalDateTimeArrayUtilizer implements Serializable {
 
-public class LoanTimePeriod extends LocalDateTimeArrayUtilizer implements Serializable{
+  private static final long serialVersionUID = -1102531408L;
 
-    private static final long serialVersionUID = -1102531408L;
+  private double[] values;
+  private double[] interestRates;
+  private double[] baseValues;
+  private String[] players;
+  private int[][] time;
 
-    @Getter
-    private double[] values,
-                     interest_rates,
-                     base_values;
-    @Getter
-    private String[] players;
-    @Getter
-    private int[][] time;
+  /**
+   * Initializes the loan time period.
+   */
+  public LoanTimePeriod() {
 
+    init(Main.getInstance().getCache().getNewLoans().size());
+    int i = 0;
 
-    public LoanTimePeriod(){
-        int size = Main.getCache().getNEW_LOANS().size();
-        init(size);
-        int i = 0;
-        for (LoanData data : Main.getCache().getNEW_LOANS()){
-            setVars(i, data);
-            i++;
-        }
+    for (LoanData data : Main.getInstance().getCache().getNewLoans()) {
+
+      setVars(i, data);
+      i++;
+
     }
 
-    private void setVars(int pos, LoanData data){
-        values[pos] = data.getValue();
-        interest_rates[pos] = data.getInterest_rate();
-        players[pos] = data.getPlayer();
-        LocalDateTime date = data.getDate();
-        time[pos] = dateToIntArray(date);
-        values[pos] = data.getBase_value();
-    }
+  }
 
+  /**
+   * Set the variables for the time period.
+   * @param pos The index of the time period.
+   * @param data The loan data.
+   */
+  private void setVars(int pos, LoanData data) {
 
-    private void init(int size){
-        values = new double[size];
-        interest_rates = new double[size];
-        players = new String[size];
-        time = new int[size][6];
-        base_values = new double[size];
-    }
-    
+    values[pos] = data.getValue();
+    interestRates[pos] = data.getInterestRate();
+    players[pos] = data.getPlayer();
+    time[pos] = dateToIntArray(data.getDate());
+    values[pos] = data.getBaseValue();
+
+  }
+
+  /**
+   * Initializes the time period.
+   * @param size The size of the time period.
+   */
+  private void init(int size) {
+    values = new double[size];
+    interestRates = new double[size];
+    players = new String[size];
+    time = new int[size][6];
+    baseValues = new double[size];
+  }
+
 }

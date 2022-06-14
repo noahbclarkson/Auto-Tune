@@ -3,24 +3,25 @@ package unprotesting.com.github.data.ephemeral.other;
 import lombok.Getter;
 import lombok.Setter;
 
-//  Sale class for storing sale general sale data
-
+@Getter
+@Setter
 public class Sale {
 
-    @Getter
-    private final String item;
-    @Getter @Setter
-    private int amount;
+  private final String item;
+  private int amount;
 
-    public Sale(String item, int amount){
-        this.item = item;
-        this.amount = amount;
-    }
+  /**
+   * Initializes the sale.
+   */
+  public Sale(String item, int amount) {
 
-    public enum SalePositionType{
-        BUY, SELL, EBUY, ESELL
-    }
+    this.item = item;
+    this.amount = amount;
 
+  }
 
-    
+  public enum SalePositionType {
+    BUY, SELL, EBUY, ESELL
+  }
+
 }

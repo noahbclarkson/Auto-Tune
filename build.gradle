@@ -1,54 +1,73 @@
 plugins {
-    id 'java'
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
+
+  id 'java'
+  id 'com.github.johnrengelman.shadow' version '7.1.2'
+
 }
 
 group 'unprotesting.com.github'
 version '0.13.1'
 
-targetCompatibility = '1.8'
-sourceCompatibility = '1.8'
+java {
+
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(17)
+  }
+
+}
 
 repositories {
-    mavenCentral()
-    maven { url 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/' }
-    maven { url 'https://jitpack.io' }
-    maven { url 'https://ci.ender.zone/plugin/repository/everything/' }
-    maven { url 'https://papermc.io/repo/repository/maven-public/' }
-    maven { url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
-    maven {
-        name "essentialsx-releases" 
-        url "https://repo.essentialsx.net/releases/"
-    }
+
+  mavenCentral()
+  maven { url 'https://jitpack.io' }
+  maven { url 'https://ci.ender.zone/plugin/repository/everything/' }
+  maven { url 'https://papermc.io/repo/repository/maven-public/' }
+  maven { url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
+  maven {
+    name "essentialsx-releases" 
+    url "https://repo.essentialsx.net/releases/"
+  }
+
 }
 
 dependencies {
-    implementation 'org.mapdb:mapdb:3.0.8'
-    implementation 'org.apache.httpcomponents:httpclient:4.5.13'
-    implementation 'com.github.stefvanschie.inventoryframework:IF:0.10.5'
 
-    compileOnly 'org.spigotmc:spigot-api:1.18-R0.1-SNAPSHOT'
-    compileOnly 'com.github.MilkBowl:VaultAPI:1.7.1'
-    compileOnly 'org.projectlombok:lombok:1.18.24'
-    compileOnly 'net.essentialsx:EssentialsX:2.19.4'
-    compileOnly 'me.clip:placeholderapi:2.10.10'
-    compileOnly 'com.googlecode.json-simple:json-simple:1.1.1'
+  compileOnly('com.github.milkbowl:VaultAPI:1.7.1') {
+    exclude group: "org.bukkit", module: "bukkit"
+  }
 
-    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+  implementation 'org.mapdb:mapdb:3.0.8'
+  implementation 'org.bstats:bstats-bukkit:2.2.1'
+  implementation 'com.github.stefvanschie.inventoryframework:IF:0.10.6'
 
-    testImplementation 'org.mapdb:mapdb:3.0.8'
-    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+  compileOnly 'io.papermc.paper:paper-api:1.19-R0.1-SNAPSHOT'
+  compileOnly 'net.kyori:adventure-api:4.11.0'
+  compileOnly 'net.kyori:adventure-text-minimessage:4.11.0'
+  compileOnly 'org.projectlombok:lombok:1.18.24'
+  compileOnly 'net.essentialsx:EssentialsX:2.19.4'
+
+  annotationProcessor 'org.projectlombok:lombok:1.18.24'
+
+  testImplementation 'org.mapdb:mapdb:3.0.8'
+  testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+  testRuntimeOnly 'org.junit.jupiter:junit-jupiter-api:5.8.1'
 }
 
+
 shadowJar {
-    archiveName("Auto-Tune-${project.version}.jar")
+
+  archiveName("Auto-Tune-${project.version}.jar")
+
+  relocate 'org.bstats', 'unprotesting.com.github.bstats'
+  relocate 'com.github.stefvanschie.inventoryframework', 'unprotesting.com.github.inventoryframework'
+
 }
 
 artifacts {
-    archives shadowJar
+  archives shadowJar
 }
 
 test {
-    useJUnitPlatform()
+  useJUnitPlatform()
+  maxHeapSize = '1G'
 }

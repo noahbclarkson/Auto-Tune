@@ -1,15 +1,16 @@
 package unprotesting.com.github.commands.util;
 
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import com.github.stefvanschie.inventoryframework.gui.GuiItem;
 import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
 import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
 import com.github.stefvanschie.inventoryframework.pane.StaticPane;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import net.kyori.adventure.text.Component;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -26,87 +27,117 @@ import unprotesting.com.github.config.Config;
 
 public abstract class ShopFormat {
 
-    protected boolean interpretCommand(CommandSender sender, String[] args, String permission){
-        Player player = CommandUtil.closeInventory(sender);
-        int length = args.length;
-        if (!(player.hasPermission(permission) || player.hasPermission("at.admin"))){CommandUtil.noPermission(player);return true;}
-        if (length > 1){
-            return false;
-        }
-        if (length == 0){
-            loadGUI(sender);
-            return true;
-        }
-        if (length == 1){
-            for (Section section : Main.getCache().getSECTIONS()){
-                if (args[0].replace("-", "").replace(" ", "").equalsIgnoreCase(section.getName().replace("-", "").replace(" ", ""))){
-                    loadShopPane(sender, section);
-                    return true;
-                }
-            }
-        }
-        return false;
+  protected boolean interpretCommand(CommandSender sender, String[] args, String permission) {
+
+    Player player = CommandUtil.closeInventory(sender);
+    int length = args.length;
+
+    if (!(player.hasPermission(permission) || player.hasPermission("at.admin"))) {
+      CommandUtil.noPermission(player);
+      return true;
     }
 
-    protected void loadGUI(CommandSender sender){
-        int highest = Section.getHighest(Main.getCache().getSECTIONS());
-        int lines = (highest/9)+2;
-        ChestGui gui = new ChestGui(lines, Config.getMenuTitle());
-        Material mat = Material.BARRIER;
-        if (!Config.getBackground().equalsIgnoreCase("none")){
-            mat = Material.matchMaterial(Config.getBackground());
-        }
-        gui = CommandUtil.getBackground(gui, lines, mat);
-        gui.addPane(loadSectionsPane(sender, lines));
-        gui.show((HumanEntity)(sender));
+    if (length > 1) {
+      return false;
     }
 
-    protected List<GuiItem> getListFromSection(Section section, CommandSender sender){
-        Player player = (Player)sender;
-        List<GuiItem> output = new ArrayList<GuiItem>();
-        DecimalFormat df = new DecimalFormat(Config.getNumberFormat());
-        for (SectionItemData s_item : section.getItems()){
-            GuiItem item = getGUIItem(section, s_item.getName(), s_item.getDisplayName(), player, sender, df);
-            if (item == null){
-                continue;
-            }
-            output.add(item);
-
-        }
-        return output;
+    if (length == 0) {
+      loadGui(sender);
+      return true;
     }
 
-    protected void loadShopPane(CommandSender sender, Section section){
-        CommandUtil.closeInventory(sender);
-        ChestGui gui = new ChestGui(6, Config.getMenuTitle());
-        PaginatedPane pages = new PaginatedPane(0, 0, 9, 6);
-        List<GuiItem> items = getListFromSection(section, sender);
-        List<OutlinePane> panes = new ArrayList<OutlinePane>();
-        CommandUtil.loadGuiItemsIntoPane(items, gui, pages, panes, section.getBackground(), sender);
-        if (section.isBack()){
-            gui.addPane(generateMenuBackPane(sender));
-        }
-        gui.update();
+    for (Section section : Main.getInstance().getCache().getSections()) {
+
+      if (args[0].replace("-", "").replace(" ", "")
+          .equalsIgnoreCase(section.getName().replace("-", "").replace(" ", ""))) {
+
+        loadShopPane(sender, section);
+        return true;
+
+      }
+
     }
 
-    protected StaticPane generateMenuBackPane(CommandSender sender){
-        StaticPane output = new StaticPane(0, 0, 1, 1);
-        ItemStack item = new ItemStack(Material.ARROW);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.GRAY + "MENU");
-        meta.setLore(Arrays.asList(new String[]{ChatColor.WHITE + "Click to go back to the main menu"}));
-        item.setItemMeta(meta);
-        GuiItem gItem = new GuiItem(item, event ->{
-            event.setCancelled(true);
-            event.getWhoClicked().getOpenInventory().close();
-            loadGUI(sender);
-        });
-        output.addItem(gItem, 0, 0);
-        return output;
+    return false;
+
+  }
+
+  protected void loadGui(CommandSender sender) {
+
+    int highest = Section.getHighest(Main.getInstance().getCache().getSections());
+    int lines = (highest / 9) + 2;
+    ChestGui gui = new ChestGui(lines, Config.getConfig().getMenuTitle());
+    Material mat = Material.BARRIER;
+
+    if (!Config.getConfig().getBackground().equalsIgnoreCase("none")) {
+      mat = Material.matchMaterial(Config.getConfig().getBackground());
     }
 
-    public abstract GuiItem getGUIItem(Section section, String s_item, String displayName, Player player, CommandSender sender, DecimalFormat df);
+    gui = CommandUtil.getBackground(gui, lines, mat);
+    gui.addPane(loadSectionsPane(sender, lines));
+    gui.show((HumanEntity) (sender));
 
-    public abstract StaticPane loadSectionsPane(CommandSender sender, int lines);
+  }
+
+  protected List<GuiItem> getListFromSection(Section section, CommandSender sender) {
+
+    List<GuiItem> output = new ArrayList<GuiItem>();
+
+    for (SectionItemData itemData : section.getItems()) {
+      GuiItem item = getGuiItem(section, itemData, sender);
+      if (item == null) {
+        continue;
+      }
+      output.add(item);
+
+    }
+    return output;
+  }
+
+  protected void loadShopPane(CommandSender sender, Section section) {
+
+    CommandUtil.closeInventory(sender);
+    ChestGui gui = new ChestGui(6, Config.getConfig().getMenuTitle());
+    PaginatedPane pages = new PaginatedPane(0, 0, 9, 6);
+    List<GuiItem> items = getListFromSection(section, sender);
+    List<OutlinePane> panes = new ArrayList<OutlinePane>();
+    CommandUtil.loadGuiItemsIntoPane(items, gui, pages, panes, section.getBackground(), sender);
+
+    if (section.isBack()) {
+      gui.addPane(generateMenuBackPane(sender));
+    }
+
+    gui.update();
+  }
+
+  protected StaticPane generateMenuBackPane(CommandSender sender) {
+
     
+    ItemStack item = new ItemStack(Material.ARROW);
+    ItemMeta meta = item.getItemMeta();
+    meta.displayName(Component.text((ChatColor.GRAY + "MENU")));
+
+    meta.lore(Arrays.asList(new Component[] { Component.text(ChatColor.WHITE 
+        + "Click to go back to the main menu")}));
+
+    item.setItemMeta(meta);
+    StaticPane output = new StaticPane(0, 0, 1, 1);
+
+    GuiItem guiItem = new GuiItem(item, event -> {
+
+      event.setCancelled(true);
+      event.getWhoClicked().getOpenInventory().close();
+      loadGui(sender);
+
+    });
+
+    output.addItem(guiItem, 0, 0);
+    return output;
+  }
+
+  public abstract GuiItem getGuiItem(Section section,
+      SectionItemData itemInput, CommandSender sender);
+
+  public abstract StaticPane loadSectionsPane(CommandSender sender, int lines);
+
 }

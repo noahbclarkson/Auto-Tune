@@ -12,45 +12,55 @@ import unprotesting.com.github.data.util.BuyableTimePeriodFunctions;
 
 //  Enchantment time period object for storing enchantment price, ratio and buy/sell data 
 
-public class EnchantmentsTimePeriod extends BuyableTimePeriodFunctions implements Serializable{
+@Getter
+public class EnchantmentsTimePeriod extends BuyableTimePeriodFunctions implements Serializable {
 
-    private static final long serialVersionUID = -1102531405L;
+  private static final long serialVersionUID = -1102531405L;
 
-    @Getter @Setter
-    private int[] buys, 
-                  sells;
-    @Getter
-    private double[] prices, 
-                     ratios;
-    @Getter
-    private String[] items;
+  @Setter
+  private int[] buys;
+  @Setter
+  private int[] sells;
+  private double[] prices;
+  private double[] ratios;
+  private String[] items;
 
-    public EnchantmentsTimePeriod(){
-        Set<String> set = Main.getCache().getENCHANTMENTS().keySet();
-        int size = set.size();
-        init(size);
-        this.ratios = new double[size];
-        this.prices = new double[size];
-        this.buys = new int[size];
-        this.sells = new int[size];
-        this.items = new String[size];
-        int i = 0;
-        LocalDataCache cache = Main.getCache();
-        for (String key : set){
-            EnchantmentData data = cache.getENCHANTMENTS().get(key);
-            this.items[i] = key;
-            setVars(i, data);
-            i++;
-        }
+  /**
+   * Initializes the enchantment time period.
+   */
+  public EnchantmentsTimePeriod() {
+    Set<String> set = Main.getInstance().getCache().getEnchantments().keySet();
+    int size = set.size();
+    init(size);
+    this.ratios = new double[size];
+    this.prices = new double[size];
+    this.buys = new int[size];
+    this.sells = new int[size];
+    this.items = new String[size];
+    int i = 0;
+    LocalDataCache cache = Main.getInstance().getCache();
+
+    for (String key : set) {
+      EnchantmentData data = cache.getEnchantments().get(key);
+      this.items[i] = key;
+      setVars(i, data);
+      i++;
     }
-
-    private void setVars(int pos, EnchantmentData data){
-        buys[pos] = data.getBuys();
-        sells[pos] = data.getSells();
-        prices[pos] = data.getPrice();
-        ratios[pos] = data.getRatio();
-    }
-
     
-    
+  }
+
+  /**
+   * Set the variables for the time period.
+   * @param pos The index of the time period.
+   * @param data The enchantment data.
+   */
+  private void setVars(int pos, EnchantmentData data) {
+
+    buys[pos] = data.getBuys();
+    sells[pos] = data.getSells();
+    prices[pos] = data.getPrice();
+    ratios[pos] = data.getRatio();
+
+  }
+
 }

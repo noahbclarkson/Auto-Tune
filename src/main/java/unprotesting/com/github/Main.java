@@ -91,7 +91,9 @@ public class Main extends JavaPlugin {
     setupDataFiles();
     mm = MiniMessage.miniMessage();
     UtilFunctions.setDf(new DecimalFormat(Config.getConfig().getNumberFormat()));
-    getLogger().setLevel(Level.parse(Config.getConfig().getLogLevel().toUpperCase()));
+    Level logLevel = Level.parse(Config.getConfig().getLogLevel());
+    getLogger().setLevel(logLevel);
+    getLogger().info("Log level set to " + getLogger().getLevel().toString());
     new Messages();
 
     Bukkit.getScheduler().runTaskAsynchronously(this, () ->
@@ -112,9 +114,11 @@ public class Main extends JavaPlugin {
    */
   public void updateTimePeriod() {
 
+    getLogger().config("Updating time period.");
     new TimePeriod().addToMap();
     cache = new LocalDataCache();
-    if (Config.getConfig().isWebServer()) {
+    if (Config.getConfig().isWebServerEnabled()) {
+      getLogger().fine("Writing CSV file");
       CsvHandler.writeCsv();
     }
     
@@ -128,6 +132,7 @@ public class Main extends JavaPlugin {
 
     // Check if an economy plugin is installed and if it is enabled, if it is return.
     if (EconomyFunctions.setupLocalEconomy(getServer())) {
+      getLogger().info("Found an economy plugin.");
       return;
     }
 
@@ -225,11 +230,13 @@ public class Main extends JavaPlugin {
     // If essentials is not installed, set essentialsEnabled to false and return.
     if (plugin == null) {
       setEssentialsEnabled(false);
+      getLogger().info("Essentials not found.");
       return;
     }
 
     setEssentialsEnabled(true);
     setEss((IEssentials) plugin);
+    getLogger().info("Found Essentials.");
 
   }
 

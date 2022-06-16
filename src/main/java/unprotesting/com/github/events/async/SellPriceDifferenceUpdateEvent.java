@@ -43,11 +43,14 @@ public class SellPriceDifferenceUpdateEvent extends Event {
 
     // If the new sell price difference is greater than the minimum then update it.
     if (newSpd > Main.getInstance().getDataFiles().getConfig()
-        .getDouble("sell-price-difference", 10)) {
+        .getDouble("sell-price-difference", 15)) {
 
       Main.getInstance().getCache().getEconomyInfo().updateSellPriceDifference(newSpd);
-
+      
     }
+
+    Main.getInstance().getLogger().finer("Sell price difference changed from " 
+        + spd + " to " + newSpd);
 
   }
 

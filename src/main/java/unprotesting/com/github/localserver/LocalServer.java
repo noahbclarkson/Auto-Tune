@@ -18,7 +18,7 @@ public class LocalServer {
   public LocalServer() {
 
     // If "web-server-enabled" is false, don't start the server.
-    if (!Config.getConfig().isWebServer()) {
+    if (!Config.getConfig().isWebServerEnabled()) {
       return;
     }
 

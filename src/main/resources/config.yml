@@ -12,12 +12,6 @@
 
 ##  -- General Settings --  ##
 
-##  API key given on sign-up
-api-key: 'xyz'
-
-##  Email used on sign-up
-email: 'xyz@gmail.com'
-
 ##  Enable/Disable integrated Web Server.
 ##  Info: Use /trade to view the web-server
 web-server-enabled: true

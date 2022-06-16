@@ -38,10 +38,19 @@ public class PriceUpdateEvent extends Event {
    */
   private void calculateAndLoad() {
 
+    int playerCount = UtilFunctions.calculatePlayerCount();
+
     // If the player count is less than "update-prices-threshold" then don't update the prices.
-    if (UtilFunctions.calculatePlayerCount() < Config.getConfig().getUpdatePricesThreshold()) {
+    if (playerCount < Config.getConfig().getUpdatePricesThreshold()) {
+
+      Main.getInstance().getLogger().info("Player count is less than " 
+          + Config.getConfig().getUpdatePricesThreshold()
+          + " so not updating prices.");
+
       return;
     }
+
+    Main.getInstance().getLogger().info("Calculating prices as player count is " + playerCount);
       
     Main.getInstance().updateTimePeriod();
     updateItems();
@@ -65,12 +74,20 @@ public class PriceUpdateEvent extends Event {
         continue;
 
       }
-
+      
       ItemData data = Main.getInstance().getCache().getItems().get(item);
+      double initialPrice = data.getPrice();
       double[] sb = loadAverageBuySellValue(item, false);
       double[] volatility = getMaxMinVolatility("shops", item);
       data.setPrice(UtilFunctions.calculateNewPrice(data.getPrice(), volatility, sb[0], sb[1]));
       Main.getInstance().getCache().getItems().put(item, data);
+
+      if (data.getPrice() != initialPrice) {
+
+        Main.getInstance().getLogger().info("Updated price of " 
+            + item + " from " + initialPrice + " to " + data.getPrice());
+
+      }
 
     }
 

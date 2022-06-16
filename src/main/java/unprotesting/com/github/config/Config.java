@@ -14,7 +14,7 @@ public class Config {
   @Getter
   private static Config config;
 
-  private boolean webServer;
+  private boolean webServerEnabled;
   private boolean sellPriceDifferenceVariationEnabled;
   private boolean tutorial;
   private boolean disableMaxBuysSells;
@@ -66,7 +66,7 @@ public class Config {
     FileConfiguration configF = Main.getInstance().getDataFiles().getConfig();
     setApiKey(configF.getString("apiKey", "xyz"));
     setEmail(configF.getString("email", "xyz@gmail.com"));
-    setWebServer(configF.getBoolean("web-server-enabled", true));
+    setWebServerEnabled(configF.getBoolean("web-server-enabled", true));
     setPort(configF.getInt("port", 8123));
     setTimePeriod(configF.getInt("time-period", 30));
     setMenuTitle(configF.getString("menu-title", "Shop"));

@@ -1,9 +1,9 @@
 package unprotesting.com.github.data.csv;
 
+import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import unprotesting.com.github.Main;
@@ -21,7 +21,7 @@ public class CsvHandler {
   public static void writeCsv() {
 
     try {
-      write("trade", 0);
+      write("trade.csv", 0);
     } catch (IOException e) {
       Main.getInstance().getLogger().severe("Could not write to csv file.");
     }
@@ -29,93 +29,61 @@ public class CsvHandler {
   }
 
   /**
-   * Creates a CSV file with all price, buy and sell data to be read by the webpage.
-   * @param csvName The name of the csv file.
-   * @param cutoffValue The cutoff value for the data.
-   * @throws IOException If the file could not be created.
+   * Write the latest x rows of price data.
+   * @param fileName The name of the file to write to.
+   * @param rows The number of rows to write.
    */
-  private static void write(String csvName, int cutoffValue) throws IOException {
-
-    int cutoff = cutoffValue;
-    FileWriter writer = new FileWriter("plugins/Auto-Tune/web/" + csvName + ".csv");
+  private static void write(String fileName, int rows) throws IOException {
+    FileWriter fileStream = new FileWriter(Config.getConfig().getDataLocation() + fileName);
+    BufferedWriter writer = new BufferedWriter(fileStream);
     int size = Main.getInstance().getDatabase().getMap().size();
     TimePeriod tp = Main.getInstance().getDatabase().getMap().get(size - 1);
     List<String> items = Arrays.asList(tp.getItemTP().getItems());
     List<String> enchantments = Arrays.asList(tp.getEnchantmentsTP().getItems());
+    writer.write("GDP,Balance,Debt,Loss,Inflation");
 
-    if (size < cutoff || cutoff < 3) {
-      cutoff = size;
+    if (rows == -1) {
+      rows = size;
     }
-
-    Collections.sort(items);
-    Collections.sort(enchantments);
-
+    
     for (String item : items) {
-
-      writer.write("\n" + "%" + item + "\n");
-
-      for (int i = (size - cutoff); i < size; i++) {
-
-        ItemTimePeriod itp = Main.getInstance().getDatabase().getMap().get(i).getItemTP();
-        int pos = Arrays.asList(itp.getItems()).indexOf(item);
-
-        writer.append(i + "," + itp.getPrices()[pos] + "," 
-            + itp.getBuys()[pos] + "," + itp.getSells()[pos] + "\n");
-
-      }
-
+      writer.write(item + ",");
     }
 
     if (Config.getConfig().isEnableEnchantments()) {
-
       for (String enchantment : enchantments) {
-
-        writer.write("\n" + "%" + enchantment + "\n");
-
-        for (int i = (size - cutoff); i < size; i++) {
-
-          EnchantmentsTimePeriod etp = Main.getInstance().getDatabase()
-              .getMap().get(i).getEnchantmentsTP();
-
-          int pos = Arrays.asList(etp.getItems()).indexOf(enchantment);
-
-          writer.append(i + "," + etp.getPrices()[pos] + "," 
-              + etp.getBuys()[pos] + "," + etp.getSells()[pos] + "\n");
-
-        }
-
+        writer.write(enchantment.toUpperCase() + ",");
       }
-
     }
 
-    for (int k = 0; k < 5; k++) {
+    writer.write("\n");
 
-      if (k == 0) {
-        writer.write("\n" + "%GDP" + "\n");
-      } else if (k == 1) {
-        writer.write("\n" + "%Balance" + "\n");
-      } else if (k == 2) {
-        writer.write("\n" + "%Debt" + "\n");
-      } else if (k == 3) {
-        writer.write("\n" + "%Loss" + "\n");
-      } else if (k == 4) {
-        writer.write("\n" + "%Inflation" + "\n");
+    for (int i = (size - rows); i < size; i++) {
+      GdpTimePeriod gtp = Main.getInstance().getDatabase().getMap().get(i).getGdpTP();
+
+      writer.write(gtp.getGdp() + "," 
+          + gtp.getBalance() + ","
+          + gtp.getDebt() + ","
+          + gtp.getLoss() + ","
+          + gtp.getInflation());
+
+      ItemTimePeriod itp = Main.getInstance().getDatabase().getMap().get(i).getItemTP();
+
+      EnchantmentsTimePeriod etp = Main.getInstance()
+          .getDatabase().getMap().get(i).getEnchantmentsTP();
+
+      if (itp == null) {
+        continue;
       }
 
-      for (int i = (size - cutoff); i < size; i++) {
+      for (int j = 0; j < itp.getItems().length; j++) {
+        writer.write("," + itp.getPrices()[j]);
+      }
 
-        GdpTimePeriod gtp = Main.getInstance().getDatabase().getMap().get(i).getGdpTP();
+      if (Config.getConfig().isEnableEnchantments()) {
 
-        if (k == 0) {
-          writer.write(i + "," + gtp.getGdp() + "\n");
-        } else if (k == 1) {
-          writer.write(i + "," + gtp.getBalance() + "\n");
-        } else if (k == 2) {
-          writer.write(i + "," + gtp.getDebt() + "\n");
-        } else if (k == 3) {
-          writer.write(i + "," + gtp.getLoss() + "\n");
-        } else if (k == 4) {
-          writer.write(i + "," + gtp.getInflation() + "\n");
+        for (int j = 0; j < etp.getItems().length; j++) {
+          writer.write("," + etp.getPrices()[j]);
         }
 
       }
@@ -123,7 +91,7 @@ public class CsvHandler {
     }
 
     writer.close();
-
+    
   }
 
 }

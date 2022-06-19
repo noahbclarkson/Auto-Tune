@@ -1,4 +1,4 @@
-package unprotesting.com.github.data.ephemeral.data;
+package unprotesting.com.github.data.objects;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,10 +26,10 @@ public class AutosellData {
     // If the item already exists, add the amount to the existing amount.
     // Otherwise, add the item to the data.
     if (data.containsKey(uuid)) {
-      data.put(uuid, data.get(uuid) + amount);
+      this.data.put(uuid, data.get(uuid) + amount);
       return;
     } else {
-      data.put(uuid, amount);
+      this.data.put(uuid, amount);
     }
 
   }

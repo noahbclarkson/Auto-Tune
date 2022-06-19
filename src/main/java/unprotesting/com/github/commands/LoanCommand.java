@@ -6,6 +6,9 @@ import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
 
 import java.text.DecimalFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,7 +30,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.commands.util.CommandUtil;
 import unprotesting.com.github.config.Config;
-import unprotesting.com.github.data.ephemeral.data.LoanData;
+import unprotesting.com.github.data.objects.Loan;
 import unprotesting.com.github.economy.EconomyFunctions;
 
 public class LoanCommand implements CommandExecutor {
@@ -58,23 +61,22 @@ public class LoanCommand implements CommandExecutor {
 
     ChestGui gui = new ChestGui(6, "Loans");
     PaginatedPane pages = new PaginatedPane(0, 0, 9, 6);
-    List<LoanData> loans = Main.getInstance().getCache().getLoans();
     List<OutlinePane> panes = new ArrayList<OutlinePane>();
     List<GuiItem> items;
-    String uuid = player.getUniqueId().toString();
+    UUID uuid = player.getUniqueId();
 
     if (args.length < 1) {
 
       if (!player.hasPermission("at.loan.other") && !player.hasPermission("at.admin")) {
-        items = getGuiItemsFromLoans(loans, uuid);
+        items = getGuiItemsFromLoans(uuid);
       } else {
-        items = getGuiItemsFromLoans(loans, null);
+        items = getGuiItemsFromLoans(null);
       }
 
     } else if (args[0].equals("-p")) {
 
       if (args[1].equals(player.getName())) {
-        items = getGuiItemsFromLoans(loans, uuid);
+        items = getGuiItemsFromLoans(uuid);
       } else if (!args[1].equals(player.getName())
           && (!player.hasPermission("at.loan.other") && !player.hasPermission("at.admin"))) {
 
@@ -84,7 +86,7 @@ public class LoanCommand implements CommandExecutor {
       } else {
 
         OfflinePlayer offPlayer = Bukkit.getOfflinePlayer(args[1]);
-        items = getGuiItemsFromLoans(loans, offPlayer.getUniqueId().toString());
+        items = getGuiItemsFromLoans(offPlayer.getUniqueId());
 
       }
 
@@ -128,8 +130,7 @@ public class LoanCommand implements CommandExecutor {
 
       EconomyFunctions.getEconomy().depositPlayer(player, loanAmount);
 
-      Main.getInstance().getCache().addLoan(
-          loanAmount, Config.getConfig().getInterestRate(), player);
+      Main.getInstance().getDb().addLoan(loanAmount, player);
 
       return true;
 
@@ -141,50 +142,52 @@ public class LoanCommand implements CommandExecutor {
     return true;
   }
 
-  private List<GuiItem> getGuiItemsFromLoans(List<LoanData> loans, String uuid) {
+  private List<GuiItem> getGuiItemsFromLoans(UUID uuid) {
 
     List<GuiItem> output = new ArrayList<GuiItem>();
-    Collections.sort(loans);
     DecimalFormat df = new DecimalFormat(Config.getConfig().getNumberFormat());
 
-    for (LoanData data : loans) {
+    for (long time : Main.getInstance().getDb().getLoans().keySet()) {
 
-      if (uuid != null && !data.getPlayer().equals(uuid)) {
-        continue;
+      for (Loan loan : Main.getInstance().getDb().getLoans().get(time)) {
+
+        if (uuid != null && !loan.getPlayer().equals(uuid)) {
+          continue;
+        }
+
+        ItemStack item = new ItemStack(Material.GREEN_STAINED_GLASS_PANE);
+        ItemMeta meta = item.getItemMeta();
+        OfflinePlayer player = Bukkit.getPlayer(loan.getPlayer());
+        LocalDateTime date = LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault());
+
+        meta.setDisplayName(ChatColor.GREEN 
+            + Config.getConfig().getCurrencySymbol() + df.format(loan.getValue()));
+
+        meta.setLore(Arrays.asList(new String[] {
+
+            ChatColor.WHITE + "Player: " + ChatColor.GOLD + player.getName(),
+          
+            ChatColor.WHITE + "Interest Rate: " + ChatColor.GOLD + Config.getConfig().getInterestRate()
+                + "% per " + df.format(
+                Config.getConfig().getInterestRateUpdateRate() / 1200) + "min has been created.",
+
+            ChatColor.WHITE + "Date: " + ChatColor.GOLD + date.format(formatter),
+            ChatColor.GREEN + "Click to pay-back loan!"
+
+        }));
+
+        item.setItemMeta(meta);
+
+        GuiItem guiItem = new GuiItem(item, event -> {
+
+          loan.payBackLoan();
+          event.setCancelled(true);
+
+        });
+
+        output.add(guiItem);
       }
-
-      ItemStack item = new ItemStack(Material.GREEN_STAINED_GLASS_PANE);
-      ItemMeta meta = item.getItemMeta();
-      OfflinePlayer player = Bukkit.getPlayer(UUID.fromString(data.getPlayer()));
-
-      meta.setDisplayName(ChatColor.GREEN 
-          + Config.getConfig().getCurrencySymbol() + df.format(data.getValue()));
-
-      meta.setLore(Arrays.asList(new String[] {
-
-          ChatColor.WHITE + "Player: " + ChatColor.GOLD + player.getName(),
-        
-          ChatColor.WHITE + "Interest Rate: " + ChatColor.GOLD + data.getInterestRate()
-              + "% per " + df.format(
-              Config.getConfig().getInterestRateUpdateRate() / 1200) + "min has been created.",
-
-          ChatColor.WHITE + "Date: " + ChatColor.GOLD + data.getDate().format(formatter),
-          ChatColor.GREEN + "Click to pay-back loan!"
-
-      }));
-
-      item.setItemMeta(meta);
-
-      GuiItem guiItem = new GuiItem(item, event -> {
-
-        data.payBackLoan();
-        event.setCancelled(true);
-
-      });
-
-      output.add(guiItem);
     }
-
     return output;
   }
 

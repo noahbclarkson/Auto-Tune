@@ -16,6 +16,8 @@ description: Automatic Economy Plugin
 softdepend:
   - Essentials
 depend: [Vault]
+libraries:
+  - "com.github.stefvanschie.inventoryframework:IF:0.10.6"
 api-version: 1.14
 website: https://github.com/Unprotesting/Auto-Tune
 prefix: 'Auto-Tune'

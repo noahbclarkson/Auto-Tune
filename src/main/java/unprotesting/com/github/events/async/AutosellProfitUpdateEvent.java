@@ -17,7 +17,7 @@ import org.bukkit.event.HandlerList;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.config.Messages;
-import unprotesting.com.github.data.ephemeral.data.AutosellData;
+import unprotesting.com.github.data.objects.AutosellData;
 import unprotesting.com.github.economy.EconomyFunctions;
 
 public class AutosellProfitUpdateEvent extends Event {

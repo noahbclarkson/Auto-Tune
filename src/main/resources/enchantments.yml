@@ -16,160 +16,122 @@ config:
   display-name: 'Enchantments Shop'
 
 enchantments:
-  power:
+  POWER:
     price: 300.00 ##  <- An added price for buying/selling an item with this enchantment
-    ratio: 0.15  ##   <- Another added percentage of the item bought/sold with this enchantment
     ##  Info: An item worth usually 100 will cost (100*0.3)+600=630
     ##  Provides extra damage when shooting arrows from bows
     ##  sell-price-difference: 10.0  <- Add a custom sell-price-difference
     ##  locked: true <- Example of a locked item
     ##  max-volatility: 1.0 <- Add a custom max-volatility
     ##  min-volatility: 0.1 <- Add a custom min-volatility
-  flame:
+  FLAME:
     price:  350.00
-    ratio: 0.2
     ##  Sets entities on fire when hit by arrows shot from a bow
-  infinity:
+  INFINITY:
     price: 750.00
-    ratio: 0.3
     ##  Provides infinite arrows when shooting a bow
-  punch:
+  PUNCH:
     price: 450.00
-    ratio: 0.2
     ##  Provides a knockback when an entity is hit by an arrow from a bow
-  binding_curse:
+  BINDING_CURSE:
     price: 40.00
-    ratio: 0.05
     ##  Item cannot be removed
-  channeling:
+  CHANNELING:
     price: 300.00
-    ratio: 0.5
     ##  Strikes lightning when a mob is hit with a trident if conditions are stormy
-  sharpness:
+  SHARPNESS:
     price: 350.00
-    ratio: 0.2
     ##  Increases damage against all targets
-  bane_of_arthropods:
+  BANE_OF_ARTHROPODS:
     price: 350.00
-    ratio: 0.4
     ##  Increases damage against arthropod targets
-  smite:
+  SMITE:
     price: 350.00
-    ratio: 0.2
     ##  Increases damage against undead targets
-  depth_strider:
+  DEPTH_STRIDER:
     price: 450.00
-    ratio: 0.2
     ##  Increases walking speed while in water
-  efficiency:
+  EFFICIENCY:
     price: 450.00
-    ratio: 0.2
     ##  Increases the rate at which you mine/dig
-  unbreaking:
+  UNBREAKING:
     price: 450.00
-    ratio: 0.15
     ##  Decreases the rate at which a tool looses durability
-  fire_aspect:
+  FIRE_ASPECT:
     price: 500.00
-    ratio: 0.25
     ##  When attacking a target, has a chance to set them on fire
-  frost_walker:
+  FROST_WALKER:
     price: 550.00
-    ratio: 0.25
     ##  Freezes any still water adjacent to ice / frost which player is walking on
-  impaling:
+  IMPALING:
     price: 300.00
-    ratio: 0.2
     ##  Deals more damage to mobs that live in the ocean
-  knockback:
+  KNOCKBACK:
     price: 500.00
-    ratio: 0.2
     ##  All damage to other targets will knock them back when hit
-  fortune:
+  FORTUNE:
     price: 600.00
-    ratio: 0.3
     ##  Provides a chance of gaining extra loot when destroying blocks
-  looting:
+  LOOTING:
     price: 600.00
-    ratio: 0.15
     ##  Provides a chance of gaining extra loot when killing monsters
-  loyalty:
+  LOYALTY:
     price: 550.00
-    ratio: 0.2
     ##  Causes a thrown trident to return to the player who threw it
-  luck_of_the_sea:
+  LUCK_OF_THE_SEA:
     price: 350.00
-    ratio: 0.15
     ##  Decreases odds of catching worthless junk
-  lure:
+  LURE:
     price: 250.00
-    ratio: 0.1
     ##  Increases rate of fish biting your hook
-  mending:
+  MENDING:
     price: 2000.00
-    ratio: 0.3
     ##  Allows mending the item using experience orbs
-  multishot:
+  MULTISHOT:
     price: 400.00
-    ratio: 0.1
     ##  Shoot multiple arrows from crossbows
-  respiration:
+  RESPIRATION:
     price: 300.00
-    ratio: 0.1
     ##  Decreases the rate of air loss whilst underwater
-  piercing:
+  PIERCING:
     price: 350.00
-    ratio: 0.1
     ##  Crossbow projectiles pierce entities
-  protection:
+  PROTECTION:
     price: 450.00
-    ratio: 0.15
     ##  Provides protection against environmental damage
-  blast_protection:
+  BLAST_PROTECTION:
     price: 450.00
-    ratio: 0.2
     ##  Provides protection against explosive damage
-  feather_falling:
+  FEATHER_FALLING:
     price: 450.00
-    ratio: 0.15
     ##  Provides protection against fall damage
-  fire_protection:
+  FIRE_PROTECTION:
     price: 450.00
-    ratio: 0.2
     ##  Provides protection against fire damage
-  projectile_protection:
+  PROJECTILE_PROTECTION:
     price: 450.00
-    ratio: 0.2
     ##  Provides protection against projectile damage
-  quick_charge:
+  QUICK_CHARGE:
     price: 400.00
-    ratio: 0.2
     ##  Charges crossbows quickly
-  riptide:
+  RIPTIDE:
     price: 500.00
-    ratio: 0.2
     ##  When it is rainy, launches the player in the direction their trident is thrown
-  silk_touch:
+  SILK_TOUCH:
     price: 650.00
-    ratio: 0.3
     ##  Allows blocks to drop themselves instead of fragments (for example, stone instead of cobblestone)
-  soul_speed:
+  SOUL_SPEED:
     price: 600.00
-    ratio: 0.2
     ##  Walk quicker on soul blocks
-  sweeping:
+  SWEEPING:
     price: 500.00
-    ratio: 0.2
     ##  Increases damage against targets when using a sweep attack
-  thorns:
+  THORNS:
     price: 600.00
-    ratio: 0.3
     ##  Damages the attacker
-  vanishing_curse:
+  VANISHING_CURSE:
     price: 20.00
-    ratio: 0.05
     ##  Item disappears instead of dropping
-  aqua_affinity:
+  AQUA_AFFINITY:
     price: 350.00
-    ratio: 0.15
     ##  Increases the speed at which a player may mine underwater

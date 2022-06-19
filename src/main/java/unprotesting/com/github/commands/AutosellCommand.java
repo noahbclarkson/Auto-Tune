@@ -44,7 +44,7 @@ public class AutosellCommand extends ShopFormat implements CommandExecutor {
   public StaticPane loadSectionsPane(CommandSender sender, int lines) {
     StaticPane navigationPane = new StaticPane(0, 0, 9, lines);
 
-    for (Section section : Main.getInstance().getCache().getSections()) {
+    for (Section section : Main.getInstance().getDb().getSections()) {
 
       if (section.isEnchantmentSection()) {
         continue;
@@ -99,8 +99,8 @@ public class AutosellCommand extends ShopFormat implements CommandExecutor {
 
     meta.setLore(Arrays.asList(new String[] { lore, ChatColor.WHITE + "Sell-Price: "
         + ChatColor.GOLD + Config.getConfig().getCurrencySymbol()
-        + df.format(Main.getInstance().getCache().getItemPrice(
-          item.getType().toString(), true)) }));
+        + df.format(Main.getInstance().getDb().getShop(
+          item.getType().toString()).getSellPrice()) }));
 
     item.setItemMeta(meta);
 

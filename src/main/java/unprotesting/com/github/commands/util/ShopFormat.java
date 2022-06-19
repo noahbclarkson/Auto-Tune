@@ -46,7 +46,7 @@ public abstract class ShopFormat {
       return true;
     }
 
-    for (Section section : Main.getInstance().getCache().getSections()) {
+    for (Section section : Main.getInstance().getDb().getSections()) {
 
       if (args[0].replace("-", "").replace(" ", "")
           .equalsIgnoreCase(section.getName().replace("-", "").replace(" ", ""))) {
@@ -64,7 +64,7 @@ public abstract class ShopFormat {
 
   protected void loadGui(CommandSender sender) {
 
-    int highest = Section.getHighest(Main.getInstance().getCache().getSections());
+    int highest = Section.getHighest(Main.getInstance().getDb().getSections());
     int lines = (highest / 9) + 2;
     ChestGui gui = new ChestGui(lines, Config.getConfig().getMenuTitle());
     Material mat = Material.BARRIER;

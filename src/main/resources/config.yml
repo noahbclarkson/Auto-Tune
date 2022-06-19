@@ -135,5 +135,5 @@ data-location: 'plugins/Auto-Tune/'
 
 ##  The level of the logger to use
 ##  Info: This is the level of logging that is outputted to the console
-##  Info: Possible values are: SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST
+##  Info: Possible values are: SEVERE, WARNING, INFO, CONFIG, FINE, ALL
 log-level: 'INFO'

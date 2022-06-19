@@ -29,6 +29,7 @@ import unprotesting.com.github.commands.util.CommandUtil;
 import unprotesting.com.github.commands.util.FunctionsUtil;
 import unprotesting.com.github.commands.util.ShopFormat;
 import unprotesting.com.github.config.Config;
+import unprotesting.com.github.data.objects.Shop;
 
 public class ShopCommand extends ShopFormat implements CommandExecutor {
 
@@ -45,7 +46,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor {
   public StaticPane loadSectionsPane(CommandSender sender, int lines) {
 
     StaticPane navigationPane = new StaticPane(0, 0, 9, lines);
-    for (Section section : Main.getInstance().getCache().getSections()) {
+    for (Section section : Main.getInstance().getDb().getSections()) {
 
       if (section.isEnchantmentSection() && !Config.getConfig().isEnableEnchantments()) {
         continue;
@@ -98,52 +99,37 @@ public class ShopCommand extends ShopFormat implements CommandExecutor {
 
     }
 
+    Shop shop = Main.getInstance().getDb().getShop(itemInput.getName());
     List<String> list = new ArrayList<String>();
     Player player = (Player) sender;
 
     list.add(ChatColor.GREEN + Config.getConfig().getCurrencySymbol()
-        + df.format(Main.getInstance().getCache().getItemPrice(itemInput.getName(), false)));
+        + df.format(shop.getPrice()));
 
-    if (section.isEnchantmentSection()) {
+    double change = shop.getChange();
 
-      list.clear();
-      ItemMeta meta = item.getItemMeta();
-      meta.displayName(itemInput.getDisplayName());
-      item.setItemMeta(meta);
-
-      list.add(ChatColor.GREEN + Config.getConfig().getCurrencySymbol() 
-          + df.format(getEnchantmentPriceWithHeld(itemInput.getName(), player)));
-
-    }
-
-    list.add(Main.getInstance().getCache().getChangeString(itemInput.getName()));
-
-    if (section.isEnchantmentSection()) {
-
-      list.add(ChatColor.YELLOW + "Ratio: " + df.format(
-          Main.getInstance().getCache().getEnchantmentRatio(itemInput.getName())));
-
-      list.add(ChatColor.YELLOW + "Price: " + Config.getConfig().getCurrencySymbol()
-          + df.format(Main.getInstance().getCache().getEnchantmentPrice(
-          itemInput.getName(), false)));
-
+    if (change > 0) {
+      list.add(ChatColor.GREEN
+          + df.format(change) + "%");
+    } else if (change < 0) {
+      list.add(ChatColor.RED
+          + df.format(change) + "%");
+    } else {
+      list.add(ChatColor.GRAY + "0.00%");
     }
 
     if (!Config.getConfig().isDisableMaxBuysSells()) {
 
-      int buysLeft = Main.getInstance().getCache().getPurchasesLeft(
+      int buysLeft = Main.getInstance().getDb().getPurchasesLeft(
           itemInput.getName(), player, true);
 
-      int sellsLeft = Main.getInstance().getCache().getPurchasesLeft(
+      int sellsLeft = Main.getInstance().getDb().getPurchasesLeft(
           itemInput.getName(), player, false);
 
       if (buysLeft != 99999 && sellsLeft != 99999) {
 
-        list.add(ChatColor.WHITE + "Remaining Buys: " + ChatColor.GRAY
-            + Main.getInstance().getCache().getPurchasesLeft(itemInput.getName(), player, true));
-
-        list.add(ChatColor.WHITE + "Remaining Sells: " + ChatColor.GRAY
-            + Main.getInstance().getCache().getPurchasesLeft(itemInput.getName(), player, false));
+        list.add(ChatColor.WHITE + "Remaining Buys: " + ChatColor.GRAY + buysLeft);
+        list.add(ChatColor.WHITE + "Remaining Sells: " + ChatColor.GRAY + sellsLeft);
 
       }
     
@@ -151,6 +137,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor {
 
     ItemMeta meta = item.getItemMeta();
     meta.setLore(list);
+    meta.displayName(itemInput.getDisplayName());
     item.setItemMeta(meta);
 
     GuiItem guiItem = new GuiItem(item, event -> {
@@ -165,17 +152,6 @@ public class ShopCommand extends ShopFormat implements CommandExecutor {
     return guiItem;
   }
 
-  private double getEnchantmentPriceWithHeld(String enchantment, Player player) {
-
-    ItemStack heldItem = player.getInventory().getItemInMainHand();
-    double priceI = 0;
-
-    if (heldItem != null) {
-      priceI = Main.getInstance().getCache().getItemPrice(heldItem.getType().toString(), false);
-    }
-
-    return Main.getInstance().getCache().getOverallEnchantmentPrice(enchantment, priceI, false);
-  }
 
   private void loadPurchasePane(Section section, SectionItemData item,
       CommandSender sender) {
@@ -201,33 +177,28 @@ public class ShopCommand extends ShopFormat implements CommandExecutor {
     Player player = (Player) sender;
     DecimalFormat df = new DecimalFormat(Config.getConfig().getNumberFormat());
     OutlinePane pane = new OutlinePane(1, 1, 7, 2);
+    Shop shop =  Main.getInstance().getDb().getShop(itemInput.getName());
     int k = -1;
 
     for (int amount : amounts) {
 
-      ItemStack item;
+      String itemName;
       k++;
 
-      if (!section.isEnchantmentSection()) {
-
-        item = getPurchasePaneItem(itemInput.getName(),
-            ChatColor.GREEN + "Buy for " + Config.getConfig().getCurrencySymbol() 
-            + df.format(Main.getInstance().getCache().getItemPrice(
-            itemInput.getName(), false) * amount), amount);
-
-      } else if (Config.getConfig().isEnableEnchantments()) {
-
-        item = getPurchasePaneItem("ENCHANTED_BOOK", ChatColor.GREEN + "Buy for "
-            + Config.getConfig().getCurrencySymbol() + df.format(
-            getEnchantmentPriceWithHeld(itemInput.getName(), player) * amount), amount);
-
-        ItemMeta meta = item.getItemMeta();
-        meta.displayName(itemInput.getDisplayName());
-        item.setItemMeta(meta);
-
+      if (section.isEnchantmentSection()) {
+        itemName = "ENCHANTED_BOOK";
       } else {
-        return pane;
+        itemName = itemInput.getName();
       }
+
+      ItemStack item = getPurchasePaneItem(itemName,
+            ChatColor.GREEN + "Buy for " + Config.getConfig().getCurrencySymbol() 
+            + df.format(shop.getPrice() * amount), amount);
+
+      ItemMeta meta = item.getItemMeta();
+      meta.displayName(itemInput.getDisplayName());
+      item.setItemMeta(meta);
+
 
       if (item.getMaxStackSize() < amount) {
 
@@ -258,7 +229,7 @@ public class ShopCommand extends ShopFormat implements CommandExecutor {
         if (!section.isEnchantmentSection()) {
 
           FunctionsUtil.buyItem(player, new ItemStack(
-            Material.matchMaterial(itemInput.getName()), amount));
+              Material.matchMaterial(itemInput.getName()), amount));
 
         } else {
 
@@ -277,8 +248,8 @@ public class ShopCommand extends ShopFormat implements CommandExecutor {
     for (int amount : amounts) {
 
       ItemStack item = getPurchasePaneItem(itemInput.getName(), ChatColor.RED + "Sell for "
-          + Config.getConfig().getCurrencySymbol() + df.format(
-          Main.getInstance().getCache().getItemPrice(itemInput.getName(), true) * amount), amount);
+          + Config.getConfig().getCurrencySymbol() 
+          + df.format(shop.getSellPrice() * amount), amount);
 
       if (item.getMaxStackSize() < amount) {
         continue;

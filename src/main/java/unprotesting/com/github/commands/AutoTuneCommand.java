@@ -18,7 +18,7 @@ import org.bukkit.inventory.ItemStack;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.commands.util.CommandUtil;
 import unprotesting.com.github.config.Config;
-import unprotesting.com.github.data.ephemeral.data.MaxBuySellData;
+import unprotesting.com.github.data.objects.MaxBuySellData;
 import unprotesting.com.github.events.async.PriceUpdateEvent;
 
 public class AutoTuneCommand implements CommandExecutor {
@@ -99,18 +99,9 @@ public class AutoTuneCommand implements CommandExecutor {
     itemName = itemName.toUpperCase();
     Component displayName = new ItemStack(Material.matchMaterial(itemName)).displayName();
 
-    if (Main.getInstance().getCache().getItems().containsKey(itemName)) {
+    if (Main.getInstance().getDb().getShops().containsKey(itemName)) {
 
-      Main.getInstance().getCache().getItems().get(itemName).setPrice(price);
-
-      player.sendMessage(ChatColor.GREEN + "Changed " + displayName
-          + " to " + Config.getConfig().getCurrencySymbol() + newPrice);
-
-      return true;
-
-    } else if (Main.getInstance().getCache().getEnchantments().containsKey(itemName)) {
-
-      Main.getInstance().getCache().getEnchantments().get(itemName).setPrice(price);
+      Main.getInstance().getDb().getShops().get(itemName).setPrice(price);
 
       player.sendMessage(ChatColor.GREEN + "Changed " + displayName
           + " to " + Config.getConfig().getCurrencySymbol() + newPrice);
@@ -149,7 +140,7 @@ public class AutoTuneCommand implements CommandExecutor {
 
     }
 
-    Main.getInstance().getCache().setMaxPurchases(maxPurchases);
+    Main.getInstance().getDb().setMaxPurchases(maxPurchases);
     player.sendMessage(ChatColor.GREEN + "Reload successful.");
     return true;
     

@@ -31,7 +31,7 @@ public class SellPriceDifferenceUpdateEvent extends Event {
 
   private void updateSellPriceDifference() {
 
-    double spd = Main.getInstance().getCache().getEconomyInfo().getSellPriceDifference();
+    double spd = Main.getInstance().getDb().getSpd();
 
     double fraction = Config.getConfig().getSellPriceVariationUpdatePeriod() 
         / Config.getConfig().getSellPriceVariationTimePeriod();
@@ -42,15 +42,16 @@ public class SellPriceDifferenceUpdateEvent extends Event {
     double newSpd = spd - change;
 
     // If the new sell price difference is greater than the minimum then update it.
-    if (newSpd > Main.getInstance().getDataFiles().getConfig()
-        .getDouble("sell-price-difference", 15)) {
+    if (newSpd > Config.getConfig().getSellPriceDifference()) {
 
-      Main.getInstance().getCache().getEconomyInfo().updateSellPriceDifference(newSpd);
+      Main.getInstance().getDb().getEconomyData().get("SPD").addTimePeriod(newSpd);
+
+      Main.getInstance().getLogger().info("Sell price difference changed from " 
+          + spd + " to " + newSpd);
       
     }
 
-    Main.getInstance().getLogger().finer("Sell price difference changed from " 
-        + spd + " to " + newSpd);
+
 
   }
 

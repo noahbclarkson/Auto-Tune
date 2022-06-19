@@ -25,11 +25,8 @@ import unprotesting.com.github.commands.TransactionsCommand;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.config.DataFiles;
 import unprotesting.com.github.config.Messages;
-import unprotesting.com.github.data.csv.CsvHandler;
-import unprotesting.com.github.data.ephemeral.LocalDataCache;
-import unprotesting.com.github.data.ephemeral.data.AutosellData;
-import unprotesting.com.github.data.persistent.Database;
-import unprotesting.com.github.data.persistent.TimePeriod;
+import unprotesting.com.github.data.Database;
+import unprotesting.com.github.data.objects.AutosellData;
 import unprotesting.com.github.economy.EconomyFunctions;
 import unprotesting.com.github.events.async.AutosellProfitUpdateEvent;
 import unprotesting.com.github.events.async.IpCheckEvent;
@@ -41,6 +38,7 @@ import unprotesting.com.github.events.sync.JoinMessageEventHandler;
 import unprotesting.com.github.events.sync.TutorialSendEvent;
 import unprotesting.com.github.events.sync.UnlockUpdateEvent;
 import unprotesting.com.github.localserver.LocalServer;
+import unprotesting.com.github.util.DebugLoggingProvider;
 import unprotesting.com.github.util.UtilFunctions;
 
 /**
@@ -54,8 +52,7 @@ public class Main extends JavaPlugin {
   private static Main instance;
 
   private DataFiles dataFiles;
-  private Database database;
-  private LocalDataCache cache;
+  private Database db;
   private IEssentials ess;
   private String[] serverIPs;
   private AutosellData autosellData;
@@ -69,14 +66,6 @@ public class Main extends JavaPlugin {
    */
   @Override
   public void onDisable() {
-
-    database.saveCacheToLastTP();
-
-    // Run a time period update to update the database before closing.
-    if (cache != null) {
-      updateTimePeriod();
-    }
-
   }
 
   /**
@@ -89,39 +78,22 @@ public class Main extends JavaPlugin {
     checkEconomy();
     getEssentials();
     setupDataFiles();
-    mm = MiniMessage.miniMessage();
+    this.mm = MiniMessage.miniMessage();
     UtilFunctions.setDf(new DecimalFormat(Config.getConfig().getNumberFormat()));
     Level logLevel = Level.parse(Config.getConfig().getLogLevel());
-    getLogger().setLevel(logLevel);
+    new DebugLoggingProvider().enableDebugLogging(logLevel, true);
     getLogger().info("Log level set to " + getLogger().getLevel().toString());
     new Messages();
 
     Bukkit.getScheduler().runTaskAsynchronously(this, () ->
          Bukkit.getPluginManager().callEvent(new IpCheckEvent(true)));
 
-    database = new Database();
-    cache = new LocalDataCache();
+    this.db = new Database();
     setupCommands();
     setupEvents();
-    localServer = new LocalServer();
+    this.localServer = new LocalServer();
     setAutosellData(new AutosellData());
     new Metrics(this, 9687);
-
-  }
-
-  /**
-   * Run a time period update.
-   */
-  public void updateTimePeriod() {
-
-    getLogger().config("Updating time period.");
-    new TimePeriod().addToMap();
-    cache = new LocalDataCache();
-    if (Config.getConfig().isWebServerEnabled()) {
-      getLogger().fine("Writing CSV file");
-      CsvHandler.writeCsv();
-    }
-    
 
   }
 

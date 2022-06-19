@@ -36,10 +36,10 @@ dependencies {
     exclude group: "org.bukkit", module: "bukkit"
   }
 
-  implementation 'org.mapdb:mapdb:3.0.8'
   implementation 'org.bstats:bstats-bukkit:2.2.1'
-  implementation 'com.github.stefvanschie.inventoryframework:IF:0.10.6'
+  implementation 'org.mapdb:mapdb:3.0.8'
 
+  compileOnly 'com.github.stefvanschie.inventoryframework:IF:0.10.6'
   compileOnly 'io.papermc.paper:paper-api:1.19-R0.1-SNAPSHOT'
   compileOnly 'net.kyori:adventure-api:4.11.0'
   compileOnly 'net.kyori:adventure-text-minimessage:4.11.0'
@@ -58,8 +58,8 @@ shadowJar {
 
   archiveName("Auto-Tune-${project.version}.jar")
 
-  relocate 'org.bstats', 'unprotesting.com.github.bstats'
-  relocate 'com.github.stefvanschie.inventoryframework', 'unprotesting.com.github.inventoryframework'
+  relocate "org.bstats", "com.github.unprotesting.bstats"
+  relocate "org.mapdb", "com.github.unprotesting.mapdb"
 
 }
 

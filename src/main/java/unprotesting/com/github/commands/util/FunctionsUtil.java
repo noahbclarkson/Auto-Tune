@@ -20,8 +20,11 @@ import org.jetbrains.annotations.NotNull;
 import unprotesting.com.github.Main;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.config.Messages;
-import unprotesting.com.github.data.ephemeral.data.AutosellData;
-import unprotesting.com.github.data.ephemeral.other.Sale.SalePositionType;
+import unprotesting.com.github.data.objects.AutosellData;
+import unprotesting.com.github.data.objects.Shop;
+import unprotesting.com.github.data.objects.Transaction;
+import unprotesting.com.github.data.objects.Transaction.SalePositionType;
+import unprotesting.com.github.data.objects.Transaction.TransactionType;
 import unprotesting.com.github.economy.EconomyFunctions;
 import unprotesting.com.github.events.sync.UnlockUpdateEvent;
 import unprotesting.com.github.util.UtilFunctions;
@@ -31,7 +34,7 @@ public class FunctionsUtil {
   public static void buyItem(@NotNull Player player, @NotNull ItemStack item) {
 
     double balance = EconomyFunctions.getEconomy().getBalance(player);
-    double price = Main.getInstance().getCache().getItemPrice(item.getType().toString(), false);
+    double price = Main.getInstance().getDb().getShop(item.getType().toString()).getPrice();
     int amount = item.getAmount();
     double total = price * amount;
     String itemName = item.getType().toString();
@@ -75,7 +78,7 @@ public class FunctionsUtil {
 
     }
 
-    if (Main.getInstance().getCache().getPurchasesLeft(itemName, player, true) < amount) {
+    if (Main.getInstance().getDb().getPurchasesLeft(itemName, player, true) < amount) {
   
       player.sendMessage(Main.getInstance().getMm().deserialize(
           Messages.getMessages().getRunOutOfBuys(), tagResolver));
@@ -86,7 +89,7 @@ public class FunctionsUtil {
     HashMap<Integer, ItemStack> map = player.getInventory()
         .addItem(new ItemStack(Material.matchMaterial(itemName), amount));
 
-    if ((map.size()) > 0) {
+    if (map.size() > 0) {
 
       ItemStack itemStack = (ItemStack) (Arrays.asList(map.values().toArray())).get(0);
       amount = amount - itemStack.getAmount();
@@ -116,15 +119,16 @@ public class FunctionsUtil {
     player.sendMessage(Main.getInstance().getMm().deserialize(
         Messages.getMessages().getShopPurchase(), tagResolver));
 
-    Main.getInstance().getCache().addSale(
-        player.getUniqueId(), itemName, price, amount, SalePositionType.BUY);
+    Main.getInstance().getDb().addSale(new Transaction(price, 
+        amount, player.getUniqueId(), itemName, SalePositionType.BUY, TransactionType.ITEM));
 
   }
 
   public static void sellItem(@NotNull Player player, @NotNull ItemStack item) {
   
     double balance = EconomyFunctions.getEconomy().getBalance(player);
-    double price = Main.getInstance().getCache().getItemPrice(item.getType().toString(), true);
+    Shop shop = Main.getInstance().getDb().getShop(item.getType().toString());
+    double price = shop.getSellPrice();
     int amount = item.getAmount();
     double total = price * amount;
     String itemName = item.getType().toString();
@@ -157,7 +161,7 @@ public class FunctionsUtil {
 
     }
 
-    if (Main.getInstance().getCache().getPurchasesLeft(itemName, player, false) < amount) {
+    if (Main.getInstance().getDb().getPurchasesLeft(itemName, player, false) < amount) {
   
       player.sendMessage(Main.getInstance().getMm().deserialize(
           Messages.getMessages().getRunOutOfSells(), tagResolver));
@@ -168,7 +172,7 @@ public class FunctionsUtil {
     HashMap<Integer, ItemStack> map = player.getInventory()
         .removeItem(new ItemStack(Material.matchMaterial(itemName), amount));
 
-    if ((map.size()) > 0) {
+    if (map.size() > 0) {
 
       ItemStack itemStack = (ItemStack) (Arrays.asList(map.values().toArray())).get(0);
       amount = amount - itemStack.getAmount();
@@ -198,13 +202,11 @@ public class FunctionsUtil {
     player.sendMessage(Main.getInstance().getMm().deserialize(
         Messages.getMessages().getShopSell(), tagResolver));
 
-    Main.getInstance().getCache().addSale(
-        player.getUniqueId(), itemName, price, amount, SalePositionType.SELL);
+    Main.getInstance().getDb().addSale(new Transaction(price,
+        amount, player.getUniqueId(), itemName, SalePositionType.SELL, TransactionType.ITEM));
   }
 
   public static void buyEnchantment(Player player, @NonNull String enchantment) {
-
-    Enchantment enchant = Enchantment.getByKey(NamespacedKey.minecraft(enchantment));
 
     if (!Config.getConfig().isEnableEnchantments()) {
       Main.getInstance().getLogger().info("Enchantments are disabled.");
@@ -220,15 +222,11 @@ public class FunctionsUtil {
       return;
     }
 
+    Enchantment enchant = Enchantment.getByKey(NamespacedKey.minecraft(enchantment));
     int level = 0;
     String enchantmentName = enchantment;
     double balance = EconomyFunctions.getEconomy().getBalance(player);
-
-    double itemPrice = Main.getInstance().getCache()
-        .getItemPrice(item.getType().toString(), false);
-
-    double price = Main.getInstance().getCache()
-        .getOverallEnchantmentPrice(enchantment, itemPrice, false);
+    double price = Main.getInstance().getDb().getShop(enchantment).getPrice();
 
     TagResolver tagResolver = TagResolver.resolver(
         Placeholder.parsed("enchantment", enchantmentName),
@@ -270,8 +268,8 @@ public class FunctionsUtil {
 
     EconomyFunctions.getEconomy().withdrawPlayer(player, price);
     
-    Main.getInstance().getCache().addSale(player.getUniqueId(),
-        enchantment, price, 1, SalePositionType.EBUY);
+    Main.getInstance().getDb().addSale(new Transaction(price, 1,
+        player.getUniqueId(), enchantmentName, SalePositionType.BUY, TransactionType.ENCHANTMENT));
 
     player.sendMessage(Main.getInstance().getMm().deserialize(
         Messages.getMessages().getEnchantmentPurchase(), tagResolver));
@@ -283,7 +281,8 @@ public class FunctionsUtil {
       @NonNull ItemStack item, boolean autosell) {
 
     Map<Enchantment, Integer> enchantments = item.getEnchantments();
-    double itemPrice = Main.getInstance().getCache().getItemPrice(item.getType().toString(), true);
+    Shop shop = Main.getInstance().getDb().getShop(item.getType().toString());
+    double itemPrice = shop.getSellPrice();
     int amount = item.getAmount();
     double total = itemPrice * amount;
 
@@ -291,10 +290,9 @@ public class FunctionsUtil {
 
       for (Enchantment enchantment : enchantments.keySet()) {
 
-        double enchantmentPrice = Main.getInstance().getCache().getOverallEnchantmentPrice(
-          enchantment.getKey().asString(), itemPrice, true) - itemPrice;
-
-        total += enchantmentPrice * item.getEnchantmentLevel(enchantment);
+        Shop enchantmentShop = Main.getInstance().getDb().getShop(enchantment.getKey().toString());
+        double priceE = enchantmentShop.getSellPrice();
+        total += priceE * enchantments.get(enchantment);
 
       }
 
@@ -334,7 +332,7 @@ public class FunctionsUtil {
         Placeholder.component("item", item.displayName()),
         Placeholder.parsed("amount", String.valueOf(amount)));
 
-    if (Main.getInstance().getCache().getPurchasesLeft(item.getType().toString(),
+    if (Main.getInstance().getDb().getPurchasesLeft(item.getType().toString(),
         player, false) < item.getAmount()) {
       
       player.sendMessage(Main.getInstance().getMm().deserialize(
@@ -362,14 +360,18 @@ public class FunctionsUtil {
 
     }
 
-    Main.getInstance().getCache().addSale(player.getUniqueId(), item.getType().toString(),
-        itemPrice, amount, SalePositionType.SELL);
+    Main.getInstance().getDb().addSale(new Transaction(itemPrice, amount, player.getUniqueId(),
+        item.getType().toString(), SalePositionType.SELL, TransactionType.ITEM));
     
     for (Enchantment enchantment : item.getEnchantments().keySet()) {
 
-      Main.getInstance().getCache().addSale(player.getUniqueId(), enchantment.getKey().toString(),
-          Main.getInstance().getCache().getEnchantmentPrice(enchantment.toString(), true), 
-          item.getEnchantmentLevel(enchantment), SalePositionType.ESELL);
+      Main.getInstance().getDb().addSale(new Transaction(
+          Main.getInstance().getDb().getShop(enchantment.getKey().toString()).getSellPrice(),
+          item.getEnchantments().get(enchantment),
+          player.getUniqueId(),
+          enchantment.getKey().toString(),
+          SalePositionType.SELL,
+          TransactionType.ENCHANTMENT));
 
     }
 

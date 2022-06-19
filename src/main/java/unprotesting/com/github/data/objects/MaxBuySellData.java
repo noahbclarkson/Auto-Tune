@@ -1,12 +1,12 @@
-package unprotesting.com.github.data.ephemeral.data;
+package unprotesting.com.github.data.objects;
 
 import lombok.Getter;
 
 @Getter
 public class MaxBuySellData {
 
-  private int buys;
-  private int sells;
+  private final int buys;
+  private final int sells;
 
   /**
    * Initializes the max buy sell data.

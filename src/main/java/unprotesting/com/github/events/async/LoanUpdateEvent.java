@@ -12,7 +12,7 @@ import org.bukkit.event.HandlerList;
 
 import unprotesting.com.github.Main;
 import unprotesting.com.github.config.Config;
-import unprotesting.com.github.data.ephemeral.data.LoanData;
+import unprotesting.com.github.data.objects.Loan;
 import unprotesting.com.github.economy.EconomyFunctions;
 
 public class LoanUpdateEvent extends Event {
@@ -33,29 +33,16 @@ public class LoanUpdateEvent extends Event {
 
   private void updateLoans() {
 
-    List<LoanData> output = new ArrayList<>();
-
     // Loop through all loans and update them.
-    for (LoanData loan : Main.getInstance().getCache().getLoans()) {
+    for (Loan[] loan : Main.getInstance().getDb().getLoans().values()) {
 
-      loan.setValue(loan.getValue() + loan.getValue() * 0.01 * loan.getInterestRate());
-
-      OfflinePlayer offlinePlayer = Main.getInstance().getServer()
-          .getOfflinePlayer(UUID.fromString(loan.getPlayer()));
-
-      double balance = EconomyFunctions.getEconomy().getBalance(offlinePlayer);
-
-      // If the loan is overpaid then remove it.
-      if (balance - loan.getValue() < Config.getConfig().getMaxDebt()) {
-        loan.payBackLoan();
+      for (int i = 0; i < loan.length; i++) {
+        loan[i].update();
       }
-
-      output.add(loan);
 
     }
 
-    Main.getInstance().getCache().setLoans(output);
-
   }
+
 
 }

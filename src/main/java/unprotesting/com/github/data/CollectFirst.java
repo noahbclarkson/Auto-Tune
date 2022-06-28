@@ -27,12 +27,12 @@ public class CollectFirst implements Serializable {
    * Constructor for the collect first class.
    * @param setting The collect first setting for this shop.
    */
-  protected CollectFirst(String setting) {
+  protected CollectFirst(String cfSetting) {
 
-    setting = setting.toLowerCase();
-    if (setting.equalsIgnoreCase("player")) {
+    cfSetting = cfSetting.toLowerCase();
+    if (cfSetting.equalsIgnoreCase("player")) {
       this.setting = CollectFirstSetting.PLAYER;
-    } else if (setting.equalsIgnoreCase("server")) {
+    } else if (cfSetting.equalsIgnoreCase("server")) {
       this.setting = CollectFirstSetting.SERVER;
     } else {
       this.setting = CollectFirstSetting.NONE;

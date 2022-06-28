@@ -1,92 +1,53 @@
-
-# ░█████╗░██╗░░░██╗████████╗░█████╗░░░░░░░████████╗██╗░░░██╗███╗░░██╗███████╗
-# ██╔══██╗██║░░░██║╚══██╔══╝██╔══██╗░░░░░░╚══██╔══╝██║░░░██║████╗░██║██╔════╝
-# ███████║██║░░░██║░░░██║░░░██║░░██║█████╗░░░██║░░░██║░░░██║██╔██╗██║█████╗░░
-# ██╔══██║██║░░░██║░░░██║░░░██║░░██║╚════╝░░░██║░░░██║░░░██║██║╚████║██╔══╝░░
-# ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗
-# ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝
-
-##  -- Auto-Tune Plugin File --  ##
-
-main: unprotesting.com.github.Main
+main: unprotesting.com.github.AutoTune
 name: Auto-Tune
-version: 0.13.1
-author: Unprotesting
-description: Automatic Economy Plugin
+description: "The Auto-Tune plugin is an economy plugin that automatically regulates prices based on supply and demand."
+author: "Unprotesting"
+version: "0.13.2"
 softdepend:
-  - Essentials
-depend: [Vault]
+  - "Essentials"
+depend:
+  - "Vault"
 libraries:
-  - "com.github.stefvanschie.inventoryframework:IF:0.10.6"
-api-version: 1.14
-website: https://github.com/Unprotesting/Auto-Tune
-prefix: 'Auto-Tune'
+  - "org.eclipse.collections:eclipse-collections-api:11.0.0"
+  - "org.eclipse.collections:eclipse-collections:11.0.0"
+  - "org.eclipse.collections:eclipse-collections-forkjoin:11.0.0"
+  - "com.google.guava:guava:31.1-jre"
+  - "net.jpountz.lz4:lz4:1.3.0"
+  - "org.jetbrains.kotlin:kotlin-stdlib:1.7.0"
+api-version: 1.13
+website: "https://github.com/Unprotesting/Auto-Tune"
+prefix: "Auto-Tune"
 commands:
-    at:
-      description: Change item prices and force price-updates.
-      usage: /<at> <update/price/reload>
-      aliases: [autotune]
-    trade:
-      description: Trade Online with other players.
-      usage: /<trade> 
-      aliases: [pricehistory, onlinepricehistory]
-    shop:
-      description: GUIShop alias for buy and sell commands.
-      usage: /<shop> <shop-section>
-    sell:
-      description: Sell items quickly to the shop.
-      usage: /<sell>
-    autosell:
-      description: Auto-Tune Auto Sell Command
-      usage: /<autosell>
-    loan:
-      description: Auto-Tune Auto Loan Command
-      usage: /<loan> <amount>
-    gdp:
-      description: View GDP info
-      usage: /GDP
-    buy:
-      description: Buy items not available in the shop
-      aliases: [purchase]
-    transactions:
-      description: View player transactions
-      usage: /transactions | /transactions -p <player-name>
+  shop:
+    description: "Opens the shop."
+    usage: "/shop <section-name>"
+    permission: "autotune.shop"
+    permission-message: "You don't have permission to use this command."
+  sell:
+    description: "Opens the sell menu."
+    usage: "/sell"
+    permission: "autotune.sell"
+    permission-message: "You don't have permission to use this command."
+  autosell:
+    description: "Opens the autosell menu."
+    usage: "/autosell"
+    permission: "autotune.autosell"
+    permission-message: "You don't have permission to use this command."
+  loan:
+    description: "Allows players to loan money."
+    usage: "/loan <amount>/pay"
+    permission: "autotune.loan"
+    permission-message: "You don't have permission to use this command."
 permissions:
-  at.admin:
-    description: Admin commands and access to all other commands.
-  at.autosell:
-    description: Open the auto-sell GUI and use automatic selling.
+  autotune.shop:
+    description: "Allows the user to use the shop."
     default: true
-  at.gdp:
-    description: View GDP and other server info.
+  autotune.sell:
+    description: "Allows the user to use the sell menu."
     default: true
-  at.loan:
-    description: Loan money from the bank and view loans.
+  autotune.autosell:
+    description: "Allows the user to use the autosell menu."
     default: true
-  at.loan.other:
-    description: View and interact with other players loans.
-    default: false
-  at.sell:
-    description: Open the sell GUI and sell items.
+  autotune.loan:
+    description: "Allows the user to use the loan command."
     default: true
-  at.shop:
-    description: Open the GUI shop to buy/sell items.
-    default: true
-  at.trade:
-    description: Access the integrated web-server to view item prices.
-    default: true
-  at.transactions:
-    description: View your own transactions history.
-    default: true
-  at.transactions.other:  
-    description: View all transactions.
-    default: op
-  at.tutorial:
-    description: Allow players to view tutorial messages.
-    default: true
-
-
-
-
-
-

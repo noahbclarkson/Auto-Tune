@@ -1,466 +1,287 @@
 package unprotesting.com.github.data;
 
-import lombok.Getter;
-import lombok.Setter;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-
-import java.text.DecimalFormat;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.UUID;
 
-import org.bukkit.Bukkit;
+import lombok.Getter;
+
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.entity.Player;
-import org.mapdb.BTreeMap;
+import org.bukkit.enchantments.Enchantment;
+import org.eclipse.collections.api.tuple.Pair;
+import org.eclipse.collections.impl.tuple.Tuples;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
 import org.mapdb.Serializer;
-import org.mapdb.DBMaker.Maker;
-import org.mapdb.serializer.SerializerArray;
 import org.mapdb.serializer.SerializerCompressionWrapper;
 
-import unprotesting.com.github.Main;
-import unprotesting.com.github.commands.objects.Section;
+import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.config.Config;
-import unprotesting.com.github.config.Messages;
-import unprotesting.com.github.data.objects.EconomyData;
-import unprotesting.com.github.data.objects.Loan;
-import unprotesting.com.github.data.objects.MaxBuySellData;
-import unprotesting.com.github.data.objects.Shop;
-import unprotesting.com.github.data.objects.Transaction;
-import unprotesting.com.github.data.objects.Transaction.SalePositionType;
-import unprotesting.com.github.economy.EconomyFunctions;
-import unprotesting.com.github.util.UtilFunctions;
+import unprotesting.com.github.util.EconomyUtil;
+import unprotesting.com.github.util.Format;
 
-@Getter
 public class Database {
 
-  private DB db;
-  private HTreeMap<String, Shop> shops;
-  private HTreeMap<String, EconomyData> economyData;
-  private BTreeMap<Long, Loan[]> loans;
-  private BTreeMap<Long, Transaction[]> transactions;
-  private List<Section> sections;
-  @Setter
-  private HashMap<String, MaxBuySellData> maxPurchases;
-  private List<Transaction> recentTransactions = new ArrayList<>();
+  private static Database instance;
 
-  public static final String[] ECONOMY_DATA_KEYS = {
-      "GDP", "BALANCE", "DEBT", "LOSS", "INFLATION", "POPULATION", "SPD"};
+  private static final String[] ECONOMY_DATA_KEYS = {
+    "GDP", "BALANCE", "DEBT", "LOSS", "INFLATION", "POPULATION"};
+
+  // The MapDB database.
+  private DB db;
+  // The map of item name to shop.
+  protected HTreeMap<String, Shop> shops;
+  // The map of times to Transactions
+  @Getter
+  protected HTreeMap<Long, Transaction> transactions;
+  // The map of times to Loans
+  @Getter
+  protected HTreeMap<Long, Loan> loans;
+  // The map of economy data name to economy data history.
+  protected HTreeMap<String, double[]> economyData;
+  // The map of section name to section.
+  protected HashMap<String, Section> sections;
+  // The map of a pair of shop names to a relation.
+  protected HashMap<Pair<String, String>, Relation> relations;
 
   /**
-   * Initializes the database.
+   * Constructor for the Database class.
    */
   public Database() {
-
-    createDB(Config.getConfig().getDataLocation() + "data.db");
-
-    this.shops = db.hashMap("shops")
-        .keySerializer(new SerializerCompressionWrapper<String>(Serializer.STRING))
-        .valueSerializer(new Shop.ShopSerializer())
-        .createOrOpen();
-    
-    this.economyData = db.hashMap("economyData")
-        .keySerializer(new SerializerCompressionWrapper<String>(Serializer.STRING))
-        .valueSerializer(new EconomyData.EconomyDataSerializer())
-        .createOrOpen();
-
-    SerializerArray<Loan> loanSerializer = new SerializerArray<Loan>(new Loan.LoanSerializer());
-
-    SerializerArray<Transaction> transactionSerializer = new SerializerArray<Transaction>(
-        new Transaction.TransactionSerializer());
-
-    this.loans = db.treeMap("loans")
-        .keySerializer(Serializer.LONG)
-        .valueSerializer(loanSerializer)
-        .createOrOpen();
-
-    this.transactions = db.treeMap("transactions")
-        .keySerializer(Serializer.LONG)
-        .valueSerializer(transactionSerializer)
-        .createOrOpen();
-      
-    this.loans.descendingMap();
-    this.transactions.descendingMap();
-    this.sections = new ArrayList<Section>();
-    this.maxPurchases = new HashMap<String, MaxBuySellData>();
+    instance = this;
+    createDB(AutoTune.getInstance().getDataFolder() + "/data.db");
+    this.sections = new HashMap<String, Section>();
+    createMaps();
     loadShopDefaults();
-    
-    for (String key : ECONOMY_DATA_KEYS) {
-      if (!economyData.containsKey(key)) {
-
-        economyData.put(key, new EconomyData());
-
-        if (key.equals("SPD")) {
-
-          // Use EconomyData.update() to update the economy data in the map
-          // after the initial creation.
-          economyData.get(key).update(30);
-
-        }
-
-      }
-    }
-
-    for (String key : economyData.keySet()) {
-      Main.getInstance().getLogger().info(key + ": " + economyData.get(key).getValue());
-    }
-
-    loadSectionDataFromFile();
-    updateEconomyInfo();
-
-    for (String key : economyData.keySet()) {
-      Main.getInstance().getLogger().info(key + ": " + economyData.get(key).getValue());
-    }
-
-  }
-
-
-  /**
-   * Build and create or link database to file.
-   * @param location The location of the database.
-   */
-  private void createDB(String location) {
-
-    Maker maker = DBMaker.fileDB(location);
-
-    db = maker.checksumHeaderBypass()
-        .fileMmapEnableIfSupported()
-        .fileMmapPreclearDisable()
-        .cleanerHackEnable()
-        .allocateStartSize(10 * 1024 * 1024) // 25MB
-        .allocateIncrement(5 * 1024 * 1024) // 5MB
-        .closeOnJvmShutdown().make();
-
-    db.getStore().fileLoad();
-
+    updateChanges();
+    loadSectionData();
+    loadEconomyData();
   }
 
   /**
-   * Add a new sale to related maps.
-   * @param transaction The transaction being added.
+   * Get the static instance of the database.
+   * @return The static instance of the database.
    */
-  public void addSale(Transaction transaction) {
-
-    Shop shop = shops.get(transaction.getItem());
-
-    if (shop == null) {
-      Main.getInstance().getLogger().warning("Shop not found for item: " + transaction.getItem());
-      return;
-    }
-
-    switch (transaction.getPosition()) {
-      case BUY:
-        shop.addToBuyCount(transaction.getAmount());
-        break;
-      case SELL:
-        shop.addToSellCount(transaction.getAmount());
-        double loss = transaction.getAmount() * (shop.getPrice() - transaction.getPrice());
-        economyData.get("LOSS").increase(loss);
-        break;
-      default:
-        Main.getInstance().getLogger().warning(
-            "Unknown transaction sale type: " + transaction.getType());
-        break;
-    }
-
-    transactions.put(System.currentTimeMillis(), new Transaction[]{transaction});
-    recentTransactions.add(transaction);
-    economyData.get("GDP").increase(transaction.getPrice() * transaction.getAmount());
-
+  public static Database get() {
+    return instance;
   }
 
   /**
-   * Get a shop from the database.
+   * Close the database.
    */
-  public Shop getShop(String item) {
-    return shops.get(item);
-  }
-
-  /**
-   * Add new loan to ephemeral cache.
-   * @param value The value of the loan.
-   * @param player The player who is borrowing.
-   */
-  public void addLoan(double value, OfflinePlayer player) {
-
-    Loan loan = new Loan(value, value, player.getUniqueId(), false);
-    loans.put(System.currentTimeMillis(), new Loan[]{loan});
-
-    // If the player is online then return.
-    if (!player.isOnline()) {
-      return;
+  public void close() {
+    if (db != null) {
+      db.close();
     }
-
-    Player onlinePlayer = player.getPlayer();
-    DecimalFormat df = UtilFunctions.getDf();
-    double interest = Config.getConfig().getInterestRate();
-    double minutelyUpdateRate = Config.getConfig().getInterestRateUpdateRate() / 1200;
-
-    TagResolver resolver = TagResolver.resolver(
-
-        Placeholder.unparsed("total", df.format(value)),
-        Placeholder.unparsed("interest", df.format(interest)),
-        Placeholder.unparsed("update-rate", df.format(minutelyUpdateRate))
-
-    );
-
-    Component message = Main.getInstance().getMm().deserialize(
-          Messages.getMessages().getLoanSuccess(), resolver);
-    
-    onlinePlayer.sendMessage(message);
-
   }
-
-  /**
-   * Load shop defaults.
-   */
-  public void loadShopDefaults() {
-
-    ConfigurationSection config = Main.getInstance().getDataFiles()
-        .getShops().getConfigurationSection("shops");
-
-    for (String key : config.getKeys(false)) {
-
-      key = key.toUpperCase();
-      ConfigurationSection section = config.getConfigurationSection(key);
-
-      if (Material.matchMaterial(key) == null) {
-
-        Main.getInstance().getLogger().severe("Invalid item in shops.yml: " + key);
-        continue;
-
-      }
-
-      if (section == null) {
-          
-        Main.getInstance().getLogger().severe("Invalid enchantment in enchantments.yml: " + key
-            + " (missing section)");
-
-        continue;
   
-      }
-
-      MaxBuySellData maxBuySellData = new MaxBuySellData(
-          section.getInt("max-buy", 99999), section.getInt("max-sell", 99999));
-
-      this.maxPurchases.put(key, maxBuySellData);
-
-      if (shops.containsKey(key)) {
-        shops.get(key).loadConfiguration(section);
-        continue;
-      }
-
-      shops.put(key, new Shop(section, false));
-      Main.getInstance().getLogger().config("Loaded new item into shop " + key);
-
-    }
-
-    config = Main.getInstance().getDataFiles().getEnchantments()
-        .getConfigurationSection("enchantments");
-    
-    for (String key : config.getKeys(false)) {
-
-      if (NamespacedKey.minecraft(key.toLowerCase()) == null) {
-        Main.getInstance().getLogger().severe("Invalid enchantment in enchantments.yml: " + key);
-        continue;
-      }
-
-      key = key.toUpperCase();
-      ConfigurationSection section = config.getConfigurationSection(key);
-      
-      if (shops.containsKey(key)) {
-        shops.get(key).loadConfiguration(section);
-        continue;
-      }
-
-      if (section == null) {
-
-        Main.getInstance().getLogger().severe("Invalid enchantment in enchantments.yml: " + key
-            + " (missing section)");
-
-        continue;
-      }
-
-      shops.put(key, new Shop(section, true));
-      Main.getInstance().getLogger().config("Loaded new enchantment into shop " + key);
-
-    }
-
-  }
-
-  private void loadSectionDataFromFile() {
-
-    ConfigurationSection config = Main.getInstance().getDataFiles().getShops()
-        .getConfigurationSection("sections");
-
-    // Loop through all keys in config file and add section data to map.
-    for (String key : config.getKeys(false)) {
-      sections.add(new Section(config.getConfigurationSection(key), key));
-    }
-
-    config = Main.getInstance().getDataFiles().getEnchantments().getConfigurationSection("config");
-    sections.add(new Section(config, "Enchantments"));
-
-  }
-
   /**
    * Update the percentage changes for each shop.
    */
-  public void updatePercentageChanges() {
-
-    for (Shop shop : shops.values()) {
-      shop.updatePercentageChanges(Config.getConfig().getTimePeriod());
+  public void updateChanges() {
+    for (String name : shops.keySet()) {
+      Shop shop = getShop(name);
+      shop.updateChange();
+      putShop(name, shop);
+      Format.getLog().finest(name + "'s change is now " 
+          + Format.percent(getShop(name).getChange()));
     }
-
   }
 
   /**
-   * Get the amount of buys or sells left for an item.
-   * @param item The item to get the amount of buys or sells left for.
-   * @param player The player to get the amount of buys or sells left for.
-   * @param isBuys Whether the amount of buys or sells left is being requested.
-   * @return The amount of buys or sells left for the item.
+   * Update the relations in the shop.
    */
-  public int getPurchasesLeft(String item, OfflinePlayer player, boolean isBuys) {
+  public void updateRelations() {
+    for (String name : shops.keySet()) {
+      for (String name2 : shops.keySet()) {
 
-    MaxBuySellData maxBuySellData = maxPurchases.get(item);
+        if (name.equals(name2)) {
+          continue;
+        }
 
-    if (maxBuySellData == null || Config.getConfig().isDisableMaxBuysSells()) {
-      return 99999;
+        Pair<String, String> pair = Tuples.pair(name, name2);
+        Relation relation = new Relation(getShop(name), getShop(name2));
+        relations.put(pair, relation);
+      }
     }
-
-    int max = isBuys ? maxBuySellData.getBuys() : maxBuySellData.getSells();
-    SalePositionType type = isBuys ? SalePositionType.BUY : SalePositionType.SELL;
-    List<Transaction> lastPurchases = getLastPurchases(item, player.getUniqueId(), type);
-
-    if (lastPurchases.isEmpty()) {
-      return max;
-    }
-
-    int total = 0;
-    for (Transaction transaction : lastPurchases) {
-      total += transaction.getAmount();
-    }
-
-    return max - total;
-
   }
 
   /**
-   * Get the last purchases for an item, a player, and a type.
-   * @param item The item to get the last purchases for.
-   * @param uuid The player uuid to get the last purchases for.
-   * @param type The type of purchases to get the last purchases for.
-   * @return The last purchases for the item, player, and type.
+   * Update a loan value.
+   * @param key The key of the loan.
+   * @param loan The loan to update.
    */
-  public List<Transaction> getLastPurchases(String item, UUID uuid, SalePositionType type) {
+  public void updateLoan(Long key, Loan loan) {
+    if (loans.containsKey(key)) {
+      loans.put(key, loan);
+    } else {
+      Format.getLog().severe("Tried to update a loan that doesn't exist!");
+    }
+  }
 
-    List<Transaction> lastPurchases = new ArrayList<Transaction>();
+  protected Shop getShop(String item) {
+    item = item.toLowerCase();
+
+    if (shops.get(item) == null) {
+      Format.getLog().severe("Could not find shop for " + item);
+      return null;
+    }
     
-    for (Transaction transaction : recentTransactions) {
+    return shops.get(item);
+  }
 
-      if (transaction.getItem().equalsIgnoreCase(item) && transaction.getPlayer().equals(uuid)
-            && transaction.getPosition() == type) {
+  protected void putShop(String key, Shop shop) {
+    key = key.toLowerCase();
+    if (shops.containsKey(key)) {
+      shops.put(key, shop);
+    }
+  }
 
-        lastPurchases.add(transaction);
+  protected String[] getShopNames() {
+    return shops.keySet().toArray(new String[0]);
+  }
 
+  protected int getPurchasesLeft(String item, UUID player, boolean isBuy) {
+    Shop shop = getShop(item);
+    int max = isBuy ? shop.getMaxBuys() : shop.getMaxSells();
+
+    if (isBuy) {
+      max -= shop.getRecentBuys().getOrDefault(player, 0);
+    } else {
+      max -= shop.getRecentSells().getOrDefault(player, 0);
+    }
+
+    return max;
+  }
+
+  private void createDB(String location) {
+    db = DBMaker.fileDB(location)
+        .checksumHeaderBypass()
+        .fileMmapEnableIfSupported()
+        .fileMmapPreclearDisable()
+        .cleanerHackEnable()
+        .allocateStartSize(10 * 1024 * 1024)
+        .allocateIncrement(5 * 1024 * 1024)
+        .closeOnJvmShutdown().make();
+    db.getStore().fileLoad();
+    Format.getLog().config("Database initialized at " + location);
+  }
+
+  private void loadSectionData() {
+    for (String key : Config.get().getSections().getKeys(false)) {
+      key = key.toLowerCase();
+      ConfigurationSection section = Config.get().getSections().getConfigurationSection(key);
+      sections.put(key, new Section(key, section));
+      Format.getLog().fine("Section " + key + " loaded.");
+    }
+  }
+
+  private void loadShopDefaults() {
+
+    ConfigurationSection config = Config.get().getShops();
+    
+    for (String sectionName : config.getKeys(false)) {
+
+      ConfigurationSection sectionConfig = config.getConfigurationSection(sectionName);
+
+      for (String key : config.getConfigurationSection(sectionName).getKeys(false)) {
+
+        key = key.toLowerCase();
+        Material material = Material.matchMaterial(key);
+        Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(key));
+
+        if (material == null && enchantment == null) {
+          Format.getLog().warning("Invalid shop. " 
+              + key + " is not a valid material or enchantment.");
+          continue;
+        }
+
+        boolean isEnchantment = enchantment != null;
+        ConfigurationSection section = sectionConfig.getConfigurationSection(key);
+
+        if (shops.containsKey(key)) {
+          getShop(key).loadConfiguration(section, sectionName);
+          Format.getLog().finer("Shop " + key + " loaded.");
+          continue;
+        }
+
+        shops.put(key, new Shop(section, sectionName, isEnchantment));
+
+        Format.getLog().fine("New shop " + key + " in section " + shops.get(key).getSection());
+
+      }
+      
+    }
+  }
+
+  private void loadEconomyData() {
+
+    if (economyData.isEmpty()) {
+      for (String key : ECONOMY_DATA_KEYS) {
+        economyData.put(key, new double[1]);
       }
     }
 
-    return lastPurchases;
+    EconomyDataUtil.updateEconomyData("INFLATION", calculateInflation());
+    EconomyDataUtil.updateEconomyData("POPULATION", calculatePopulation());
+    EconomyDataUtil.updateEconomyData("BALANCE", calculateBalance());
   }
 
-  /**
-   * Update the total player balance.
-   */
-  public void updateEconomyInfo() {
+  private double calculateInflation() {
+    double inflation = 0;
+    for (Shop shop : shops.values()) {
+      inflation += shop.getChange();
+    }
+    inflation /= shops.size();
+    return inflation;
+  }
 
-    double serverBalance = 0;
-    double serverPlayerCount = 0;
-
-    // Loop through all joined players.
-    for (OfflinePlayer player : Bukkit.getOfflinePlayers()) {
-
-      // If the player is null, continue.
+  private double calculatePopulation() {
+    double population = 0;
+    for (OfflinePlayer player : AutoTune.getInstance().getServer().getOfflinePlayers()) {
       if (player == null) {
         continue;
       }
-
-      try {
-        serverBalance += EconomyFunctions.getEconomy().getBalance(player);
-        serverPlayerCount++;
-      } catch (Exception e) {
-        return;
-      }
-
+      population++;
     }
-
-    Main.getInstance().getLogger().info("Server balance: " + serverBalance);
-    Main.getInstance().getLogger().info("Server player count: " + serverPlayerCount);
-    economyData.get("BALANCE").update(serverBalance);
-    economyData.get("POPULATION").update(serverPlayerCount);
-    updateDebt();
-
+    return population;
   }
 
-  /**
-   * Update the total debt.
-   */
-  private void updateDebt() {
-
-    double serverDebt = 0;
-
-    // Loop through loans and add value to server debt.
-    for (long time : loans.keySet()) {
-      Loan[] data = loans.get(time);
-      for (Loan loan : data) {
-        serverDebt += loan.getValue();
-      }
+  private double calculateBalance() {
+    double balance = 0;
+    for (OfflinePlayer player : AutoTune.getInstance().getServer().getOfflinePlayers()) {
+      balance += EconomyUtil.getEconomy().getBalance(player);
     }
-
-    Main.getInstance().getLogger().info("Server debt: " + serverDebt);
-    economyData.get("DEBT").update(serverDebt);
-
+    return balance;
   }
 
-  public double getGdp() {
-    return economyData.get("GDP").getValue();
+  private void createMaps() {
+    this.shops = db.hashMap("shops")
+        .keySerializer(new SerializerCompressionWrapper<String>(Serializer.STRING))
+        .valueSerializer(new ShopSerializer())
+        .createOrOpen();
+    Format.getLog().fine("Loaded shops map.");
+    this.transactions = db.hashMap("transactions")
+        .keySerializer(new SerializerCompressionWrapper<Long>(Serializer.LONG))
+        .valueSerializer(new TransactionSerializer())
+        .createOrOpen();
+    Format.getLog().fine("Loaded transactions map.");
+    this.loans = db.hashMap("loans")
+        .keySerializer(new SerializerCompressionWrapper<Long>(Serializer.LONG))
+        .valueSerializer(new LoanSerializer())
+        .createOrOpen();
+    Format.getLog().fine("Loaded loans map.");
+    this.economyData = db.hashMap("economyData")
+        .keySerializer(new SerializerCompressionWrapper<String>(Serializer.STRING))
+        .valueSerializer(Serializer.DOUBLE_ARRAY)
+        .createOrOpen();
+    Format.getLog().fine("Loaded economy data map.");
+    this.relations = new HashMap<>();
   }
 
-  public double getBalance() {
-    return economyData.get("BALANCE").getValue();
-  }
-
-  public double getPopulation() {
-    return economyData.get("POPULATION").getValue();
-  }
-
-  public double getDebt() {
-    return economyData.get("DEBT").getValue();
-  }
-
-  public double getSpd() {
-    return economyData.get("SPD").getValue();
-  }
-
-  public double getLoss() {
-    return economyData.get("LOSS").getValue();
-  }
-
-
-  public double getInflation() {
-    return economyData.get("INFLATION").getValue();
-  }
 
 
 }
-

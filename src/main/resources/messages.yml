@@ -1,75 +1,66 @@
-
-# ░█████╗░██╗░░░██╗████████╗░█████╗░░░░░░░████████╗██╗░░░██╗███╗░░██╗███████╗
-# ██╔══██╗██║░░░██║╚══██╔══╝██╔══██╗░░░░░░╚══██╔══╝██║░░░██║████╗░██║██╔════╝
-# ███████║██║░░░██║░░░██║░░░██║░░██║█████╗░░░██║░░░██║░░░██║██╔██╗██║█████╗░░
-# ██╔══██║██║░░░██║░░░██║░░░██║░░██║╚════╝░░░██║░░░██║░░░██║██║╚████║██╔══╝░░
-# ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗
-# ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝
-
-##  -- Auto-Tune Messages File --  ##
-
-## See the wiki for info on each setting: https://github.com/Unprotesting/Auto-Tune/wiki
-
-##  Buying items
 # Placeholders: <item>, <total>, <price>, <amount>, <balance>
-not-enough-money: "<red>You need $<total> to purchase <item>."
-run-out-of-buys: "<red>You have run out of buys for <item>."
-not-enough-space: "<red>Not enough space in inventory."
-not-unlocked: "<red>You need to unlock this item by collecting it to purchase it."
-not-in-shop: "<red>The item you are trying to purchase is not in the shop."
-shop-purchase: "<gold>Purchased <green>x<amount></green> of <item> for <green>$<total>."
+not-in-shop: "<c:#F37C3B>This item is not in the shop."
+not-enough-money: "<c:#F37C3B>You need <c:#BCFF3F><total></c:#BCFF3F> to purchase <item>."
+not-enough-space: "<c:#F37C3B>Not enough space in inventory."
+not-enough-items: "<c:#F37C3B>You don't have <c:#FFE23F><amount>x</c:#FFE23F> <item> to sell."
+not-unlocked: "<c:#F37C3B>This item is not unlocked, it must be found by the <c:#BBC0E2><collect-first-setting></c:#BBC0E2> first."
+run-out-of-buys: "<c:#F37C3B>You have run out of buys for <item>."
+run-out-of-sells: "<c:#F37C3B>You have run out of sells for <item>."
+shop-purchase: "<c:#FCCA42>Purchased <c:#3FFF82>x<amount></c:#3FFF82> of <item> for <c:#3FFF82><total>."
+shop-sell: "<c:#FCCA42>Sold <c:#3FFF82>x<amount></c:#3FFF82> of <item> for <c:#3FFF82><total>."
+hold-item-in-hand: "<c:#F37C3B>Hold the item you want to enchant in your hand!"
+enchantment-error: "<c:#F37C3B>Cannot enchant <item> with enchantment."
 
-##  Selling items
-# Placeholders: <item>, <total>, <price>, <amount>, <balance>
-do-not-have-item: "<red>You do not have <item>."
-run-out-of-sells: "<red>You have run out of sells for <item>."
-shop-sell: "<gold>Sold <green>x<amount></green> of <item> for <green>$<total>."
-
-##  Buying enchantments
-# Placeholders: <enchantment>, <price>, <item>, <balance>
-hold-item-in-hand: "<red>Hold the item you want to enchant in your hand!"
-not-enough-money-enchantments: "<red>You need $<total> to purchase this enchantment."
-enchantment-error: "<red>Cannot enchant <item> with enchantment."
-enchantment-purchase: "<gold>Purchased <green><enchantment></green> for <green>$<total>"
-
-##  Selling custom items
-# Placeholders: <item>, <price>, <item>, <balance>
-cannot-sell-custom: "<red>Cannot sell <item>."
-sell-custom-item: "<gold>Sold <green>x<amount></green> of <item> for <green>$<total>."
-
-##  Auto-selling items
 # Placeholders: <total>, <balance>
-autosell-profit-update: "<gold>Your items were sold and <green>$<total></green> has been added to your account."
+autosell-profit: "<gold>Your items were sold and <green><total></green> has been added to your account."
 
-## Loans
-# Placeholders: <total>, <interest>, <update-rate>
-loan-success: "<gold>You have taken a loan of <green>$<total></green> with an interest rate of <green>%<interest></green> per <green>$<update-rate>min(s).</green>."
+invalid-shop-section: "<c:#F37C3B>Invalid shop section."
 
-##  Message when a player doesn't have permission to perform a command
-no-permission: "<red>You do not have permission to perform this command."
+# Placeholders: <price>, <sell-price>, <buys-left>, <sells-left>, <max-buys>, <max-sells>, <change>, <collect-first-setting>
+shop-lore:
+  - "<c:#50F48C>Price: <c:#66F450><b><price>"
+  - "<c:#F86C78>Sell Price: <c:#F45066><b><sell-price>"
+  - "<gold>Buys Left: <b><gray><buys-left>/<max-buys>"
+  - "<gold>Sells Left: <b><gray><sells-left>/<max-sells>"
+  - "<gold>Change: <c:#C2D2DE><b><change>"
 
-##  Tutorial messages
-##  These messages are displayed in this order from a player joining
+# Placeholders <gdp>, <debt>, <loss>, <balance>, <inflation>, <gdp-per-capita>, <debt-per-capita>, <loss-per-capita>, <balance-per-capita>
+# The first line is the display-name, the other lines are the lore.
+shop-gdp-lore:
+  - "<c:#f1c40f>Server Economy Information"
+  - "<gold>GDP per capita: <c:#f1c40f><b><gdp-per-capita>"
+  - "<gold>Debt per capita: <c:#ff5555><b><debt-per-capita>"
+  - "<gold>Loss per capita: <c:#8fbbff><b><loss-per-capita>"
+  - "<gold>Balance per capita: <c:#82e0aa><b><balance-per-capita>"
+  - "<gold>Inflation: <c:#ff49a3><b><inflation>"
+
+# Placeholders: <price>, <sell-price>, <total-price>, <total-sell-price>, <amount>, <buys-left>, <sells-left>, <max-buys>, <max-sells>, <change>, <collect-first-setting>
+purchase-buy-lore:
+  - "<c:#50F48C>Price: <c:#66F450><b><total-price>"
+  - "<gold>Buys Left: <b><gray><buys-left>/<max-buys>"
+  - "<gold>Change: <c:#C2D2DE><b><change>"
+  - "<gray>Collect first setting: <white><collect-first-setting>"
+
+# Placeholders: <price>, <sell-price>, <total-price>, <total-sell-price>, <amount>, <buys-left>, <sells-left>, <max-buys>, <max-sells>, <change>, <collect-first-setting>
+purchase-sell-lore:
+  - "<c:#F86C78>Sell Price: <c:#F45066><b><total-sell-price>"
+  - "<gold>Sells Left: <b><gray><sells-left>/<max-sells>"
+  - "<gold>Change: <c:#C2D2DE><b><change>"
+
+# Placeholders <autosell-setting>
+autosell-lore:
+  - "<gray>Auto-sell setting: <white><b><autosell-setting>"
+
 tutorial:
   - '<yellow>Do <i><click:run_command:/shop>/shop</click></i> to open the shop and start exchanging items.'
   - '<yellow>Do <i><click:run_command:/sell>/sell</click></i> to sell items quickly.'
   - '<yellow>Control the market! Your purchases rise prices.'
   - '<yellow>Control the market! Your sales lower prices.'
   - '<yellow>Do <i><click:run_command:/autosell>/autosell</click></i> to sell items automatically.'
-  - '<yellow>Do <i><click:run_command:/trade>/trade</click></i> to view item prices over time.'
   - '<yellow>Do <i><click:run_command:/loan>/loan</click></i> to view your loans. Do /loan <amount> to loan money.'
-  - '<yellow>Do <i><click:run_command:/gdp>/gdp</click></i> to view the server GDP info.'
   - '<yellow>Watch the prices of items! They can go up and down.'
   - '<yellow>There are big profits to be made when prices change..'
   - '<yellow>Loan money to buy items and take advantage of the rise in prices.'
   - '<yellow>Sell items that have high demand to make the most money selling.'
   - '<yellow>Using <i><click:run_command:/autosell>/autosell</click></i> allows you to make money quickly and easily'
   - '<yellow>Using <i><click:run_command:/loan>/loan</click></i> to loan money allows you to invest to make even more money.'
-  - '<yellow>Viewing prices with <i><click:run_command:/trade>/trade</click></i> allows you to judge the markets.'
-
-##  Join messages
-##  These message are displayed when a player joins
-# Placeholders: <player>, <gdp>, <balance>, <loss>, <inflation>, <gdp-per-capita>, <balance-per-capita>, <loss-per-capita>, <inflation-per-capita>
-on-join:
-  - '<yellow>GDP per-capita: <green><b>$<gdp-per-capita>'
-  - '<yellow>Average player balance: <green><b>$<balance-per-capita>'

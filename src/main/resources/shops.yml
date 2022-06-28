@@ -1,642 +1,765 @@
-
-# ░█████╗░██╗░░░██╗████████╗░█████╗░░░░░░░████████╗██╗░░░██╗███╗░░██╗███████╗  
-# ██╔══██╗██║░░░██║╚══██╔══╝██╔══██╗░░░░░░╚══██╔══╝██║░░░██║████╗░██║██╔════╝  
-# ███████║██║░░░██║░░░██║░░░██║░░██║█████╗░░░██║░░░██║░░░██║██╔██╗██║█████╗░░  
-# ██╔══██║██║░░░██║░░░██║░░░██║░░██║╚════╝░░░██║░░░██║░░░██║██║╚████║██╔══╝░░  
-# ██║░░██║╚██████╔╝░░░██║░░░╚█████╔╝░░░░░░░░░██║░░░╚██████╔╝██║░╚███║███████╗  
-# ╚═╝░░╚═╝░╚═════╝░░░░╚═╝░░░░╚════╝░░░░░░░░░░╚═╝░░░░╚═════╝░╚═╝░░╚══╝╚══════╝  
-
-##  -- Auto-Tune Shops File --  ##
-
-## See the wiki for info on each setting: https://github.com/Unprotesting/Auto-Tune/wiki
-
-##  Shop sections configuration
 sections:
-  'Natural Resources':
-    ##  Block that the section image is displayed as
-    block: 'IRON_ORE'
-    ##  Background for sub-menu
-    ##  Use 'NONE' for no background
-    background: 'GRAY_STAINED_GLASS_PANE'
-    ##  Position in Main Menu GUI
-    position: 10
-    ##  Optional - set to disabled to disable the back button when running "/shop <shop-section>".
-    ##  This wont disable the back button when running just "/shop"
-    back-menu-button-enabled: true
-    ##  Set the display name for the section
-    display-name: '&6Natural Resources'
-  'Blocks':
-    block: 'STONE'
-    position: 12
-    background: 'GRAY_STAINED_GLASS_PANE'
-    back-menu-button-enabled: true
-    display-name: '&6Blocks'
-  'Food':
-    block: 'COOKED_BEEF'
-    position: 14
-    background: 'GRAY_STAINED_GLASS_PANE'
-    back-menu-button-enabled: true
-    display-name: '&6Food'
-  'Farming':
-    block: 'OAK_SAPLING'
-    position: 16
-    background: 'GRAY_STAINED_GLASS_PANE'
-    back-menu-button-enabled: true
-    display-name: '&6Farming'
-  'Tools':
-    block: 'DIAMOND_PICKAXE'
-    position: 20
-    background: 'GRAY_STAINED_GLASS_PANE'
-    back-menu-button-enabled: true
-    display-name: '&6Tools'
-  'Other':
-    block: 'STICK'
-    position: 24
-    background: 'GRAY_STAINED_GLASS_PANE'
-    back-menu-button-enabled: true
-    display-name: '&6Other'
+  ores:
+    # The display name for the section.
+    display: <b><gold>Natural Resources</gold></b>
+    # The item to use for this section.
+    image: iron_ore
+    # The x and y coordinates for the section.
+    x: 1
+    y: 1
+  blocks:
+    display: <b><gold>Blocks</gold></b>
+    image: stone
+    x: 3
+    y: 1
+  food:
+    display: <b><gold>Food</gold></b>
+    image: bread
+    x: 5
+    y: 1
+  farming:
+    display: <b><gold>Farming</gold></b>
+    image: wheat
+    x: 7
+    y: 1
+  tools:
+    display: <b><gold>Tools</gold></b>
+    image: iron_pickaxe
+    x: 2
+    y: 3
+  enchantments:
+    display: <b><gold>Enchantments</gold></b>
+    image: enchanted_book
+    x: 4
+    y: 3
+  other:
+    display: <b><gold>Misc</gold></b>
+    image: music_disc_cat
+    x: 6
+    y: 3
 
-##  Set the default / starting prices for the items you want available in the shop.
-##  IMPORTANT: Thee prices of these items can't be changed once the database has been created. 
-##  IMPORTANT: To change the price of items use /at price <item-name> <double> or reset the data.db file.
-##  Info: Material names are available here: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html.
-##  IMPORTANT: Material names are case sensitive! (All caps and underscores)
-##  Options: 'price: <double>' set the default starting price of the item.
-##  Options: 'section: <string>' set the section of this item.
-##  Options: 'locked: <boolean>' set the price to be locked or variable (variable by default).
-##  Options: 'sell-difference: <double>' set a custom sell-price-difference (default set in config).
-##  Options: 'max-buy': <integer> set a maximum quantity that can be purchased in a time-period.
-##  Options: 'max-sell': <integer> set a maximum quantity that can be sold in a time-period.
-##  Options: 'max-volatility: <double>' set the maximum volatility per time-period for this individual item.
-##  Options: 'min-volatility: <double>' set the minimum volatility per time-period for this individual item.
-##  Options: 'display-name': <string>' set the display name of the item.
-##  Options: 'collect-first-setting': <string>' ('NONE'|'SERVER_WIDE'|'EACH_PLAYER') whether the item needs to be collected before it can be purchased.
-
-
-  ##  Example:
-  ##  GRASS_BLOCK:
-  ##    price: 50.00
-  ##    section: 'Blocks'      This item will exist within the 'Blocks' shop-section
-  ##    locked: true      <- Example of a locked item
-  ##    sell-difference: 0.0    <- Example of a set sell-difference item
-  ##    max-buy: 10       <- Only 10 items can be bought each time-period - you can increase this on large servers
-  ##    max-sell: 12       <- Only 12 items can be sold each time-period - you can increase this on large servers
-  ##    max-volatility: 0.25       <- Example of an item with a lower max-volatility
-  ##    min-volatility: 0.05       <- Example of an item with a higher min-volatility
-  ##    display-name: '&aGrass'      <- Example of a custom display name (with a green color code)
-  ##    collect-first-setting: 'EACH_PLAYER' <- Example of a custom collect-first-setting
+# Format for shops:
+# diamond: -> The item id
+  # price: 400 -> The price of the item
+  # sell-price-difference: 25 -> Define a custom sell price difference.
+  # max-buy: 12 -> The maximum buys for this item per time period.
+  # max-sell: 24 -> The maximum sells for this item per time period.
+  # collect-first: player -> Whether the item needs to be collected by the player or server before it can be bought. (Default: server)
+  # update-rate: 3 -> Define a custom update rate, 3 is 3x the default time period.
 
 shops:
-  COAL:
-    price: 15.00
-    max-buy: 80
-    max-sell: 115
-    section: 'Natural Resources'
-  IRON_INGOT:
-    price: 17.00
-    max-buy: 75
-    max-sell: 100
-    section: 'Natural Resources'
-  COPPER_INGOT:
-    price: 20.00
-    max-buy: 64
-    max-sell: 80
-    section: 'Natural Resources'
-  GOLD_INGOT:
-    price: 25.00
-    max-buy: 45
-    max-sell: 75
-    section: 'Natural Resources'
-  DIAMOND:
-    price: 325.00
-    max-buy: 15
-    max-sell: 32
-    section: 'Natural Resources'
-    collect-first-setting: 'SERVER_WIDE'
-  AMETHYST_SHARD:
-    price: 22.00
-    max-buy: 32
-    max-sell: 45
-    section: 'Natural Resources'
-  LAPIS_LAZULI:
-    price: 12.00
-    max-buy: 128
-    max-sell: 256
-    section: 'Natural Resources'
-  EMERALD:
-    price: 145.00
-    max-buy: 12
-    max-sell: 32
-    section: 'Natural Resources'
-    collect-first-setting: 'SERVER_WIDE'
-  QUARTZ:
-    price: 11.00
-    max-buy: 40
-    max-sell: 125
-    section: 'Natural Resources'
-  REDSTONE:
-    price: 8.00
-    max-buy: 80
-    max-sell: 128
-    section: 'Natural Resources'
-  NETHERITE_INGOT:
-    price: 7500.00
-    max-buy: 1
-    max-sell: 2
-    section: 'Natural Resources'
-    collect-first-setting: 'EACH_PLAYER'
-  GLOWSTONE_DUST:
-    price: 4.00
-    max-buy: 128
-    max-sell: 256
-    section: 'Natural Resources'
-  DIRT:
-    price: 0.5
-    max-buy: 512
-    max-sell: 1024
-    section: 'Blocks'
-  COBBLESTONE:
-    price: 1.00
-    max-buy: 256
-    max-sell: 800
-    section: 'Blocks'
-  STONE:
-    price: 2.00
-    max-buy: 128
-    max-sell: 256
-    section: 'Blocks'
-  GRAVEL:
-    price: 3.00
-    max-buy: 128
-    max-sell: 256
-    section: 'Blocks'
-  SAND:
-    price: 1.00
-    max-buy: 128
-    max-sell: 500
-    section: 'Blocks'
-  SANDSTONE:
-    price: 4.00
-    max-buy: 100
-    max-sell: 250
-    section: 'Blocks'
-  OBSIDIAN:
-    price: 15.00
-    max-buy: 20
-    max-sell: 64
-    section: 'Blocks'
-    collect-first-setting: 'SERVER_WIDE'
-  END_STONE:
-    price: 3.50
-    max-buy: 80
-    max-sell: 200
-    section: 'Blocks'
-    collect-first-setting: 'SERVER_WIDE'
-  NETHERRACK:
-    price: 1.00
-    max-buy: 256
-    max-sell: 1024
-    section: 'Blocks'
-  WHITE_WOOL:
-    price: 6.50
-    max-buy: 64
-    max-sell: 80
-    section: 'Blocks'
-  OAK_LOG:
-    price: 8.00
-    max-buy: 90
-    max-sell: 256
-    section: 'Blocks'
-  MOSS_BLOCK:
-    price: 35.00
-    max-buy: 15
-    max-sell: 32
-    section: 'Blocks'
-  CACTUS:
-    price: 3.00
-    max-buy: 64
-    max-sell: 200
-    section: 'Farming'
-  VINE:
-    price: 2.00
-    max-buy: 64
-    max-sell: 256
-    section: 'Farming'
-  CARROT:
-    price: 4.00
-    max-buy: 80
-    max-sell: 256
-    section: 'Food'
-  MELON_SLICE:
-    price: 1.75
-    max-buy: 85
-    max-sell: 175
-    section: 'Food'
-  POTATO:
-    price: 2.25
-    max-buy: 80
-    max-sell: 120
-    section: 'Food'
-  APPLE:
-    price: 4.00
-    max-buy: 64
-    max-sell: 100
-    section: 'Food'
-  WHEAT:
-    price: 2.00
-    max-buy: 128
-    max-sell: 256
-    section: 'Farming'
-  SUGAR_CANE:
-    price: 1.50
-    max-buy: 164
-    max-sell: 256
-    section: 'Farming'
-  BEEF:
-    price: 2.50
-    max-buy: 64
-    max-sell: 150
-    section: 'Food'
-  PORKCHOP:
-    price: 2.25
-    max-buy: 64
-    max-sell: 150
-    section: 'Food'
-  CHICKEN:
-    price: 1.45
-    max-buy: 64
-    max-sell: 150
-    section: 'Food'
-  RABBIT:
-    price: 2.50
-    max-buy: 64
-    max-sell: 150
-    section: 'Food'
-  MUTTON:
-    price: 2.00
-    max-buy: 64
-    max-sell: 150
-    section: 'Food'
-  PUMPKIN:
-    price: 8.00
-    max-buy: 64
-    max-sell: 128
-    section: 'Farming'
-  COD:
-    price: 6.00
-    max-buy: 96
-    max-sell: 124
-    section: 'Food'
-  WHEAT_SEEDS:
-    price: 1.25
-    max-buy: 80
-    max-sell: 200
-    section: 'Farming'
-  NETHER_WART:
-    price: 4.00
-    max-buy: 64
-    max-sell: 200
-    section: 'Farming'
-    collect-first-setting: 'SERVER_WIDE'
-  FLINT:
-    price: 4.00
-    max-buy: 64
-    max-sell: 128
-    section: 'Other'
-  GUNPOWDER:
-    price: 12.50
-    max-buy: 64
-    max-sell: 128
-    section: 'Other'
-  LEATHER:
-    price: 20.00
-    max-buy: 64
-    max-sell: 128
-    section: 'Other'
-  INK_SAC:
-    price: 2.50
-    max-buy: 32
-    max-sell: 64
-    section: 'Other'
-  FEATHER:
-    price: 4.00
-    max-buy: 32
-    max-sell: 64
-    section: 'Other'
-  BONE:
-    price: 6.00
-    max-buy: 64
-    max-sell: 100
-    section: 'Other'
-  STRING:
-    price: 4.00
-    max-buy: 64
-    max-sell: 100
-    section: 'Other'
-  ROTTEN_FLESH:
-    price: 0.50
-    max-buy: 64
-    max-sell: 128
-    section: 'Food'
-  SPIDER_EYE:
-    price: 7.00
-    max-buy: 64
-    max-sell: 128
-    section: 'Other'
-  SLIME_BALL:
-    price: 25.00
-    max-buy: 32
-    max-sell: 64
-    section: 'Other'
-  ENDER_PEARL:
-    price: 45.00
-    max-buy: 8
-    max-sell: 20
-    section: 'Other'
-    collect-first-setting: 'SERVER_WIDE'
-  NETHER_STAR:
-    price: 10000.00
-    max-buy: 1
-    max-sell: 1
-    section: 'Other'
-    collect-first-setting: 'EACH_PLAYER'
-  BLAZE_ROD:
-    price: 85.00
-    max-buy: 6
-    max-sell: 15
-    section: 'Other'
-    collect-first-setting: 'SERVER_WIDE'
-  ARROW:
-    price: 2.00
-    max-buy: 64
-    max-sell: 128
-    section: 'Other'
-  OAK_PLANKS:
-    price: 0.5
-    max-buy: 128
-    max-sell: 256
-    section: 'Blocks'
-  BIRCH_PLANKS:
-    price: 0.5
-    max-buy: 128
-    max-sell: 256
-    section: 'Blocks'
-  SPRUCE_PLANKS:
-    price: 0.5
-    max-buy: 128
-    max-sell: 256
-    section: 'Blocks'
-  JUNGLE_PLANKS:
-    price: 0.5
-    max-buy: 128
-    max-sell: 256
-    section: 'Blocks'
-  DARK_OAK_PLANKS:
-    price: 0.5
-    max-buy: 128
-    max-sell: 256
-    section: 'Blocks'
-  ACACIA_PLANKS:
-    price: 0.5
-    max-buy: 128
-    max-sell: 256
-    section: 'Blocks'
-  OAK_SAPLING:
-    price: 2.5
-    max-buy: 32
-    max-sell: 64
-    section: 'Farming'
-  STICK:
-    price: 0.2
-    max-buy: 64
-    max-sell: 128
-    section: 'Other'
-  BOOK:
-    price: 22.0
-    max-buy: 20
-    max-sell: 32
-    section: 'Other'
-  WOODEN_PICKAXE:
-    price: 8.0
-    max-buy: 4
-    max-sell: 8
-    section: 'Tools'
-  WOODEN_AXE:
-    price: 7.5
-    max-buy: 4
-    max-sell: 8
-    section: 'Tools'
-  WOODEN_SWORD:
-    price: 6.5
-    max-buy: 4
-    max-sell: 8
-    section: 'Tools'
-  WOODEN_SHOVEL:
-    price: 3.5
-    max-buy: 4
-    max-sell: 8
-    section: 'Tools'
-  WOODEN_HOE:
-    price: 3.5
-    max-buy: 4
-    max-sell: 8
-    section: 'Tools'
-  STONE_PICKAXE:
-    price: 11.0
-    max-buy: 4
-    max-sell: 8
-    section: 'Tools'
-  STONE_AXE:
-    price: 10.5
-    max-buy: 4
-    max-sell: 8
-    section: 'Tools'
-  STONE_SWORD:
-    price: 9.0
-    max-buy: 4
-    max-sell: 8
-    section: 'Tools'
-  STONE_SHOVEL:
-    price: 5.0
-    max-buy: 4
-    max-sell: 8
-    section: 'Tools'
-  STONE_HOE:
-    price: 5.0
-    max-buy: 4
-    max-sell: 8
-    section: 'Tools'
-  GOLDEN_PICKAXE:
-    price: 12.0
-    max-buy: 3
-    max-sell: 8
-    section: 'Tools'
-  GOLDEN_AXE:
-    price: 11.5
-    max-buy: 3
-    max-sell: 8
-    section: 'Tools'
-  GOLDEN_SWORD:
-    price: 10.0
-    max-buy: 3
-    max-sell: 8
-    section: 'Tools'
-  GOLDEN_SHOVEL:
-    price: 6.0
-    max-buy: 3
-    max-sell: 8
-    section: 'Tools'
-  GOLDEN_HOE:
-    price: 6.0
-    max-buy: 3
-    max-sell: 8
-    section: 'Tools'
-  IRON_PICKAXE:
-    price: 18.0
-    max-buy: 3
-    max-sell: 6
-    section: 'Tools'
-  IRON_AXE:
-    price: 17.5
-    max-buy: 3
-    max-sell: 6
-    section: 'Tools'
-  IRON_SWORD:
-    price: 13.0
-    max-buy: 3
-    max-sell: 6
-    section: 'Tools'
-  IRON_SHOVEL:
-    price: 7.0
-    max-buy: 3
-    max-sell: 6
-    section: 'Tools'
-  IRON_HOE:
-    price: 7.0
-    max-buy: 3
-    max-sell: 6
-    section: 'Tools'
-  DIAMOND_PICKAXE:
-    price: 260.0
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-    collect-first-setting: 'SERVER_WIDE'
-  DIAMOND_AXE:
-    price: 250.0
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-    collect-first-setting: 'SERVER_WIDE'
-  DIAMOND_SWORD:
-    price: 180.0
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-    collect-first-setting: 'SERVER_WIDE'
-  DIAMOND_SHOVEL:
-    price: 110.0
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-    collect-first-setting: 'SERVER_WIDE'
-  DIAMOND_HOE:
-    price: 110.0
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-    collect-first-setting: 'SERVER_WIDE'
-  LEATHER_HELMET:
-    price: 22.50
-    max-buy: 2
-    max-sell: 4
-    section: 'Tools'
-  LEATHER_CHESTPLATE:
-    price: 46.00
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-  LEATHER_LEGGINGS:
-    price: 25.50
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-  LEATHER_BOOTS:
-    price: 20.00
-    max-buy: 2
-    max-sell: 4
-    section: 'Tools'
-  IRON_HELMET:
-    price: 45.50
-    max-buy: 2
-    max-sell: 4
-    section: 'Tools'
-  IRON_CHESTPLATE:
-    price: 86.00
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-  IRON_LEGGINGS:
-    price: 65.50
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-  IRON_BOOTS:
-    price: 38.00
-    max-buy: 2
-    max-sell: 4
-    section: 'Tools'
-  GOLDEN_HELMET:
-    price: 40.50
-    max-buy: 2
-    max-sell: 4
-    section: 'Tools'
-  GOLDEN_CHESTPLATE:
-    price: 80.00
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-  GOLDEN_LEGGINGS:
-    price: 60.50
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-  GOLDEN_BOOTS:
-    price: 30.00
-    max-buy: 2
-    max-sell: 4
-    section: 'Tools'
-  DIAMOND_HELMET:
-    price: 425.50
-    max-buy: 2
-    max-sell: 4
-    section: 'Tools'
-    collect-first-setting: 'SERVER_WIDE'
-  DIAMOND_CHESTPLATE:
-    price: 900.00
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-    collect-first-setting: 'SERVER_WIDE'
-  DIAMOND_LEGGINGS:
-    price: 620.50
-    max-buy: 2
-    max-sell: 3
-    section: 'Tools'
-    collect-first-setting: 'SERVER_WIDE'
-  DIAMOND_BOOTS:
-    price: 350.00
-    max-buy: 2
-    max-sell: 4
-    section: 'Tools'
-    collect-first-setting: 'SERVER_WIDE'
-  FISHING_ROD:
-    price: 25.00
-    max-buy: 3
-    max-sell: 4
-    section: 'Tools'
-  BOW:
-    price: 28.00
-    max-buy: 3
-    max-sell: 4
-    section: 'Tools'
+  ores:
+    coal:
+      price: 15
+      max-buy: 80
+      max-sell: 115
+    iron_ingot:
+      price: 17
+      max-buy: 75
+      max-sell: 115
+    copper_ingot:
+      price: 12
+      max-buy: 100
+      max-sell: 200
+    gold_ingot:
+      price: 25
+      max-buy: 64
+      max-sell: 100
+    diamond: 
+      price: 400
+      sell-price-difference: 25
+      max-buy: 12
+      max-sell: 24
+      collect-first: player
+      update-rate: 3
+    amethyst_shard:
+      price: 22
+      max-buy: 32
+      max-sell: 50
+    lapis_lazuli:
+      price: 12
+      max-buy: 128
+      max-sell: 256
+    emerald:
+      price: 150
+      max-buy: 16
+      max-sell: 32
+      collect-first: player
+      update-rate: 2
+    quartz:
+      price: 10
+      max-buy: 64
+      max-sell: 150
+    redstone:
+      price: 7.5
+      max-buy: 90
+      max-sell: 175
+    netherite_ingot:
+      price: 5000
+      sell-price-difference: 35
+      max-buy: 1
+      max-sell: 1
+      update-rate: 5
+      collect-first: player
+    glowstone_dust:
+      price: 3.5
+      max-buy: 128
+      max-sell: 200
+  blocks:
+    dirt:
+      price: 0.55
+      sell-price-difference: 12.5
+      max-buy: 512
+      max-sell: 1024
+      collect-first: none
+      volatility: 0.5
+    grass_block:
+      price: 5
+      max-buy: 32
+      max-sell: 64
+      collect-first-setting: player
+    cobblestone:
+      price: 0.95
+      sell-price-difference: 15
+      max-buy: 250
+      max-sell: 750
+      collect-first: none
+      volatility: 0.3
+    stone:
+      price: 2
+      max-buy: 128
+      max-sell: 256
+    gravel:
+      price: 3
+      max-buy: 128
+      max-sell: 256
+    sand:
+      price: 1.15
+      sell-price-difference: 15
+      max-buy: 300
+      max-sell: 600
+      collect-first: none
+      volatility: 0.35
+    glass:
+      price: 2.25
+      max-buy: 128
+      max-sell: 256
+    sandstone:
+      price: 4
+      max-buy: 100
+      max-sell: 225
+    obsidian:
+      price: 15
+      max-buy: 20
+      max-sell: 45
+      collect-first: player
+    end_stone:
+      price: 3.25
+      max-buy: 75
+      max-sell: 150
+    netherrack:
+      price: 0.5
+      sell-price-difference: 10
+      max-buy: 256
+      max-sell: 1024
+      volatility: 0.55
+    white_wool:
+      price: 6
+      max-buy: 64
+      max-sell: 100
+    oak_log:
+      price: 8
+      max-buy: 100
+      max-sell: 200
+      volatility: 0.35
+    oak_planks:
+      price: 1.85
+      max-buy: 256
+      max-sell: 512
+      volatility: 0.35
+    birch_log:
+      price: 9
+      max-buy: 90
+      max-sell: 200
+    birch_planks:
+      price: 2
+      max-buy: 256
+      max-sell: 512
+    spruce_log:
+      price: 9
+      max-buy: 90
+      max-sell: 200
+    spruce_planks:
+      price: 2
+      max-buy: 256
+      max-sell: 512
+    jungle_log:
+      price: 10
+      max-buy: 75
+      max-sell: 150
+    jungle_planks:
+      price: 2.15
+      max-buy: 200
+      max-sell: 400
+    acacia_log:
+      price: 9
+      max-buy: 90
+      max-sell: 200
+    acacia_planks:
+      price: 2
+      max-buy: 256
+      max-sell: 512
+    dark_oak_log:
+      price: 7.5
+      max-buy: 128
+      max-sell: 256
+    dark_oak_planks:
+      price: 1.75
+      max-buy: 256
+      max-sell: 512
+    andesite:
+      price: 1.5
+      max-buy: 128
+      max-sell: 256
+    diorite:
+      price: 1.5
+      max-buy: 128
+      max-sell: 256
+    granite:
+      price: 1.5
+      max-buy: 128
+      max-sell: 256
+    soul_sand:
+      price: 2.7
+      max-buy: 128
+      max-sell: 256
+    terracotta:
+      price: 3
+      max-buy: 128
+      max-sell: 256
+    white_terracotta:
+      price: 3.4
+      max-buy: 100
+      max-sell: 200
+    prismarine:
+      price: 4
+      max-buy: 64
+      max-sell: 128
+    prismarine_bricks:
+      price: 4.5
+      max-buy: 500
+      max-sell: 110
+    dark_prismarine:
+      price: 5.5
+      max-buy: 45
+      max-sell: 100
+    sea_lantern:
+      price: 19
+      max-buy: 10
+      max-sell: 25
+    magma_block:
+      price: 2.25
+      max-buy: 128
+      max-sell: 256
+  food:
+    carrot:
+      price: 3.75
+      max-buy: 80
+      max-sell: 256
+    melon_slice:
+      price: 1.6
+      max-buy: 100
+      max-sell: 250
+    potato:
+      price: 2.25
+      max-buy: 90
+      max-sell: 150
+    apple:
+      price: 4
+      max-buy: 64
+      max-sell: 100
+      collect-first: none
+    cooked_beef:
+      price: 5.75
+      max-buy: 32
+      max-sell: 100
+    cooked_porkchop:
+      price: 5.7
+      max-buy: 32
+      max-sell: 100
+    cooked_chicken:
+      price: 5.5
+      max-buy: 35
+      max-sell: 110
+    cooked_rabbit:
+      price: 6
+      max-buy: 32
+      max-sell: 90
+    cooked_mutton:
+      price: 5.55
+      max-buy: 32
+      max-sell: 100
+    cooked_cod:
+      price: 6.5
+      max-buy: 25
+      max-sell: 75
+    cooked_salmon:
+      price: 6.75
+      max-buy: 24
+      max-sell: 64
+  farming:
+    cactus:
+      price: 3
+      max-buy: 64
+      max-sell: 200
+    vine:
+      price: 1.9
+      max-buy: 64
+      max-sell: 256
+    wheat:
+      price: 2
+      max-buy: 128
+      max-sell: 256
+    sugar_cane:
+      price: 1.3
+      max-buy: 175
+      max-sell: 350
+    pumpkin:
+      price: 7.5
+      max-buy: 64
+      max-sell: 128
+    wheat_seeds:
+      price: 0.85
+      max-buy: 128
+      max-sell: 200
+      collect-first: none
+    nether_wart:
+      price: 4.5
+      max-buy: 64
+      max-sell: 200
+    oak_sapling:
+      price: 2.75
+      max-buy: 32
+      max-sell: 64
+
+  tools:
+    wooden_pickaxe:
+      price: 5
+      sell-price-difference: 35
+      max-buy: 4
+      max-sell: 8
+    wooden_axe:
+      price: 7.5
+      sell-price-difference: 35
+      max-buy: 4
+      max-sell: 8
+    wooden_sword:
+      price: 6
+      sell-price-difference: 35
+      max-buy: 4
+      max-sell: 8
+    wooden_shovel:
+      price: 4
+      sell-price-difference: 35
+      max-buy: 4
+      max-sell: 8
+    wooden_hoe:
+      price: 4.5
+      sell-price-difference: 35
+      max-buy: 4
+      max-sell: 8
+    stone_pickaxe:
+      price: 11
+      sell-price-difference: 35
+      max-buy: 4
+      max-sell: 8
+    stone_axe:
+      price: 10.5
+      sell-price-difference: 35
+      max-buy: 4
+      max-sell: 8
+    stone_sword:
+      price: 8.5
+      sell-price-difference: 35
+      max-buy: 4
+      max-sell: 8
+    stone_shovel:
+      price: 5.5
+      sell-price-difference: 35
+      max-buy: 4
+      max-sell: 8
+    stone_hoe:
+      price: 7.5
+      sell-price-difference: 35
+      max-buy: 4
+      max-sell: 8
+    golden_pickaxe:
+      price: 15.0
+      sell-price-difference: 35
+      max-buy: 3
+      max-sell: 8
+    golden_axe:
+      price: 14.5
+      sell-price-difference: 35
+      max-buy: 3
+      max-sell: 8
+    golden_sword:
+      price: 13.0
+      sell-price-difference: 35
+      max-buy: 3
+      max-sell: 8
+    golden_shovel:
+      price: 9.0
+      sell-price-difference: 35
+      max-buy: 3
+      max-sell: 8
+    golden_hoe:
+      price: 10
+      sell-price-difference: 35
+      max-buy: 3
+      max-sell: 8
+    fishing_rod:
+      price: 20
+      max-buy: 3
+      max-sell: 5
+    bow:
+      price: 25
+      max-buy: 3
+      max-sell: 5
+  enchantments:
+    protection:
+      price: 350
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 5
+      collect-first: player
+      update-rate: 3
+    fire_protection:
+      price: 400
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 5
+      collect-first: player
+      update-rate: 3
+    feather_falling:
+      price: 500
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 5
+      collect-first: player
+      update-rate: 3
+    blast_protection:
+      price: 400
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 5
+      collect-first: player
+      update-rate: 3
+    projectile_protection:
+      price: 400
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 5
+      collect-first: player
+      update-rate: 3
+    respiration:
+      price: 500
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 4
+      collect-first: player
+      update-rate: 3
+    aqua_affinity:
+      price: 500
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 4
+      collect-first: player
+      update-rate: 3
+    thorns:
+      price: 800
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 3
+      collect-first: player
+      update-rate: 5
+    sharpness:
+      price: 450
+      sell-price-difference: 40
+      max-buy: 3
+      max-sell: 5
+      collect-first: player
+      update-rate: 3
+    smite:
+      price: 500
+      sell-price-difference: 40
+      max-buy: 3
+      max-sell: 5
+      collect-first: player
+      update-rate: 3
+    bane_of_arthropods:
+      price: 500
+      sell-price-difference: 40
+      max-buy: 3
+      max-sell: 5
+      collect-first: player
+      update-rate: 3
+    looting:
+      price: 750
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 4
+      collect-first: player
+      update-rate: 4
+    unbreaking:
+      price: 600
+      sell-price-difference: 40
+      max-buy: 3
+      max-sell: 5
+      collect-first: player
+      update-rate: 3
+    efficiency:
+      price: 450
+      sell-price-difference: 40
+      max-buy: 4
+      max-sell: 6
+      collect-first: player
+      update-rate: 3
+    silk_touch:
+      price: 1000
+      sell-price-difference: 40
+      max-buy: 1
+      max-sell: 2
+      collect-first: player
+      update-rate: 5
+    fortune:
+      price: 950
+      sell-price-difference: 40
+      max-buy: 1
+      max-sell: 3
+      collect-first: player
+      update-rate: 4
+    power:
+      price: 650
+      sell-price-difference: 40
+      max-buy: 3
+      max-sell: 5
+      collect-first: player
+      update-rate: 3
+    punch:
+      price: 700
+      sell-price-difference: 40
+      max-buy: 3
+      max-sell: 4
+      collect-first: player
+      update-rate: 3
+    flame:
+      price: 750
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 4
+      collect-first: player
+      update-rate: 3
+    infinity:
+      price: 1250
+      sell-price-difference: 40
+      max-buy: 1
+      max-sell: 2
+      collect-first: player
+      update-rate: 5
+    luck_of_the_sea:
+      price: 400
+      sell-price-difference: 40
+      max-buy: 3
+      max-sell: 6
+      collect-first: player
+      update-rate: 3
+    mending:
+      price: 2000
+      sell-price-difference: 40
+      max-buy: 1
+      max-sell: 1
+      collect-first: player
+      update-rate: 6
+    depth_strider:
+      price: 600
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 4
+      collect-first: player
+      update-rate: 3
+    frost_walker:
+      price: 750
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 4
+      collect-first: player
+      update-rate: 4
+    soul_speed:
+      price: 725
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 4
+      collect-first: player
+      update-rate: 4
+    fire_aspect:
+      price: 650
+      sell-price-difference: 40
+      max-buy: 3
+      max-sell: 5
+      collect-first: player
+      update-rate: 3
+    impaling:
+      price: 775
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 5
+      collect-first: player
+      update-rate: 4
+    knockback:
+      price: 650
+      sell-price-difference: 40
+      max-buy: 3
+      max-sell: 6
+      collect-first: player
+      update-rate: 3
+    sweeping:
+      price: 800
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 4
+      collect-first: player
+      update-rate: 5
+    channeling:
+      price: 800
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 4
+      collect-first: player
+      update-rate: 5
+    loyalty:
+      price: 750
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 4
+      collect-first: player
+      update-rate: 5
+    riptide:
+      price: 800
+      sell-price-difference: 40
+      max-buy: 2
+      max-sell: 4
+      collect-first: player
+      update-rate: 5
+    multishot:
+      price: 650
+      sell-price-difference: 40
+      max-buy: 3
+      max-sell: 6
+      collect-first: player
+      update-rate: 4
+    piercing:
+      price: 600
+      sell-price-difference: 40
+      max-buy: 3
+      max-sell: 6
+      collect-first: player
+      update-rate: 3
+    quick_charge:
+      price: 650
+      sell-price-difference: 40
+      max-buy: 3
+      max-sell: 6
+      collect-first: player
+      update-rate: 3
+    lure:
+      price: 500
+      sell-price-difference: 40
+      max-buy: 4
+      max-sell: 8
+      collect-first: player
+      update-rate: 3
+  other:
+    flint:
+      price: 4
+      max-buy: 64
+      max-sell: 128
+    gunpowder:
+      price: 17.5
+      max-buy: 64
+      max-sell: 100
+    leather:
+      price: 15.5
+      max-buy: 64
+      max-sell: 100
+    ink_sac:
+      price: 2.5
+      max-buy: 32
+      max-sell: 45
+    feather:
+      price: 3.75
+      max-buy: 32
+      max-sell: 64
+    bone:
+      price: 6.5
+      max-buy: 64
+      max-sell: 128
+    string:
+      price: 4.5
+      max-buy: 64
+      max-sell: 128
+    rotten_flesh:
+      price: 0.35
+      sell-price-difference: 10
+      max-buy: 200
+      max-sell: 450
+      volatility: 0.45
+      collect-first: none
+    spider_eye:
+      price: 7.5
+      max-buy: 64
+      max-sell: 128
+    slime_ball:
+      price: 55
+      sell-price-difference: 25
+      max-buy: 32
+      max-sell: 64
+      collect-first: player
+    ender_pearl:
+      price: 65
+      sell-price-difference: 25
+      max-buy: 8
+      max-sell: 32
+      collect-first: player
+    nether_star:
+      price: 10000
+      sell-price-difference: 40
+      max-buy: 1
+      max-sell: 1
+      volatility: 0.2
+      update-rate: 10
+      collect-first-setting: player
+    blaze_rod:
+      price: 95
+      sell-price-difference: 27.5
+      max-buy: 6
+      max-sell: 16
+      collect-first-setting: player
+      update-rate: 2
+    arrow:
+      price: 1.45
+      max-buy: 100
+      max-sell: 200
+    stick:
+      price: 0.75
+      max-buy: 64
+      max_sell: 128
+    book:
+      price: 22.5
+      sell-price-difference: 25
+      max-buy: 20
+      max-sell: 32
+
+
+
+

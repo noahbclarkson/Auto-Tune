@@ -99,7 +99,12 @@ public class Config {
     }
 
     for (int i = 0; i < filenames.length; i++) {
-      files[i] = new File(AutoTune.getInstance().getDataFolder(), filenames[i]);
+      File file = new File(AutoTune.getInstance().getDataFolder(), filenames[i]);
+      if (!file.exists()) {
+        AutoTune.getInstance().getLogger().info("Failed to load config file: " + filenames[i]);
+        continue;
+      }
+      files[i] = file;
       configs[i] = YamlConfiguration.loadConfiguration(files[i]);
     }
 

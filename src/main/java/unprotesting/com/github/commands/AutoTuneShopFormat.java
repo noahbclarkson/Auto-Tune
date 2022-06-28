@@ -112,11 +112,11 @@ public abstract class AutoTuneShopFormat {
         }
 
         if (page != 0) {
-          pages.addPane(page, getPageSelector(player, gui, pages, page - 1, 0));
+          pages.addPane(page, getPageSelector(gui, pages, page - 1, 0));
         }
 
         if (itemsOnPage.size() == 28 && itemsOnPage.size() + page * 28 != shops.size()) {
-          pages.addPane(page, getPageSelector(player, gui, pages, page + 1, 8));
+          pages.addPane(page, getPageSelector(gui, pages, page + 1, 8));
         }
 
         pages.addPane(page, pane);
@@ -145,8 +145,7 @@ public abstract class AutoTuneShopFormat {
     return pane;
   }
 
-  private StaticPane getPageSelector(Player player, ChestGui gui, 
-      PaginatedPane pages, int page, int x) {
+  private StaticPane getPageSelector(ChestGui gui, PaginatedPane pages, int page, int x) {
     StaticPane pane = new StaticPane(x, 5, 1, 1, Priority.HIGHEST);
     ItemStack item = new ItemStack(Material.ARROW);
     item.editMeta(meta ->

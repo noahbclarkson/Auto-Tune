@@ -122,8 +122,8 @@ public class Database {
     }
   }
 
-  protected Shop getShop(String item) {
-    item = item.toLowerCase();
+  protected Shop getShop(String s) {
+    String item = s.toLowerCase();
 
     if (shops.get(item) == null) {
       Format.getLog().severe("Could not find shop for " + item);
@@ -134,9 +134,9 @@ public class Database {
   }
 
   protected void putShop(String key, Shop shop) {
-    key = key.toLowerCase();
-    if (shops.containsKey(key)) {
-      shops.put(key, shop);
+    String name = key.toLowerCase();
+    if (shops.containsKey(name)) {
+      shops.put(name, shop);
     }
   }
 

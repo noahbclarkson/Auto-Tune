@@ -43,24 +43,12 @@ public class AutoTuneInventoryCheckEvent extends Event {
   private void checkInventory(Player player) {
     UUID uuid = player.getUniqueId();
     for (ItemStack item : player.getInventory().getContents()) {
-      if (item == null) {
+
+      if (!checkIfValidShop(item)) {
         continue;
       }
-
       String name = item.getType().toString().toLowerCase();
-
-      if (!shopNames.contains(name)) {
-        continue;
-      }
-
       Shop shop = ShopUtil.getShop(name);
-
-      if (shop == null) {
-        continue;
-      }
-
-
-
       boolean autosellEnabled = Config.get().getAutosell().getBoolean(uuid + "." + name, false);
       boolean update = false;
       if (item.getEnchantments().size() > 0) {
@@ -85,9 +73,9 @@ public class AutoTuneInventoryCheckEvent extends Event {
       if (cf.getSetting().equals(CollectFirstSetting.SERVER)) {
         if (!cf.isFoundInServer()) {
           cf.setFoundInServer(true);
+          shop.setSetting(cf);
+          update = true;
         }
-        shop.setSetting(cf);
-        update = true;
       } else if (cf.getSetting().equals(CollectFirstSetting.PLAYER)) {
         cf.addPlayer(uuid);
         shop.setSetting(cf);
@@ -98,6 +86,20 @@ public class AutoTuneInventoryCheckEvent extends Event {
         ShopUtil.putShop(name, shop);
       }
     }
+  }
+
+  private boolean checkIfValidShop(ItemStack item) {
+    if (item == null) {
+      return false;
+    }
+
+    String name = item.getType().toString().toLowerCase();
+
+    if (!shopNames.contains(name)) {
+      return false;
+    }
+
+    return true;
   }
   
 }

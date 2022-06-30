@@ -8,6 +8,7 @@ import java.util.UUID;
 import lombok.Getter;
 
 import org.bukkit.Bukkit;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -43,57 +44,80 @@ public class AutoTuneInventoryCheckEvent extends Event {
   private void checkInventory(Player player) {
     UUID uuid = player.getUniqueId();
     for (ItemStack item : player.getInventory().getContents()) {
-
-      if (!checkIfValidShop(item)) {
-        continue;
-      }
-      String name = item.getType().toString().toLowerCase();
-      Shop shop = ShopUtil.getShop(name);
-      boolean autosellEnabled = Config.get().getAutosell().getBoolean(uuid + "." + name, false);
-      boolean update = false;
-      if (item.getEnchantments().size() > 0) {
-        autosellEnabled = false;
-      }
-
-      if (autosellEnabled) {
-        if (ShopUtil.getSellsLeft(player, name) - item.getAmount() < 0) {
-          continue;
-        }
-        HashMap<Integer, ItemStack> map = player.getInventory().removeItemAnySlot(item);
-        int amount = item.getAmount();
-        if (!map.isEmpty()) {
-          amount = amount - map.get(0).getAmount();
-        }
-        shop.addAutosell(uuid, amount);
-        shop.addSells(uuid, amount);
-        update = true;
-      }
-
-      CollectFirst cf = shop.getSetting();
-      if (cf.getSetting().equals(CollectFirstSetting.SERVER)) {
-        if (!cf.isFoundInServer()) {
-          cf.setFoundInServer(true);
-          shop.setSetting(cf);
-          update = true;
-        }
-      } else if (cf.getSetting().equals(CollectFirstSetting.PLAYER)) {
-        cf.addPlayer(uuid);
-        shop.setSetting(cf);
-        update = true;
-      }
-
-      if (update) {
-        ShopUtil.putShop(name, shop);
-      }
+      runUpdate(item, player, uuid);
     }
   }
 
-  private boolean checkIfValidShop(ItemStack item) {
+  private void runUpdate(ItemStack item, Player player, UUID uuid) {
+
     if (item == null) {
-      return false;
+      return;
+    }
+
+    if (item.getEnchantments().size() > 0) {
+      for (Enchantment enchantment : item.getEnchantments().keySet()) {
+        String enchantmentName = enchantment.getKey().getKey();
+        if (checkIfValidShop(enchantmentName)) {
+          Shop shop = ShopUtil.getShop(enchantmentName);
+          updateCF(enchantmentName, shop, uuid, false);
+        }
+      }
+    }
+
+    if (!checkIfValidShop(item.getType().toString())) {
+      return;
     }
 
     String name = item.getType().toString().toLowerCase();
+    Shop shop = ShopUtil.getShop(name);
+    boolean autosellEnabled = Config.get().getAutosell().getBoolean(uuid + "." + name, false);
+    boolean update = false;
+
+    if (item.getEnchantments().size() > 0) {
+      autosellEnabled = false;
+    }
+
+    if (autosellEnabled) {
+      if (ShopUtil.getSellsLeft(player, name) - item.getAmount() < 0) {
+        return;
+      }
+      HashMap<Integer, ItemStack> map = player.getInventory().removeItemAnySlot(item);
+      int amount = item.getAmount();
+      if (!map.isEmpty()) {
+        amount = amount - map.get(0).getAmount();
+      }
+      shop.addAutosell(uuid, amount);
+      shop.addSells(uuid, amount);
+      update = true;
+    }
+
+    updateCF(name, shop, uuid, update);
+
+    
+  }
+
+  private void updateCF(String name, Shop shop, UUID uuid, boolean update) {
+    CollectFirst cf = shop.getSetting();
+    if (cf.getSetting().equals(CollectFirstSetting.SERVER)) {
+      if (!cf.isFoundInServer()) {
+        cf.setFoundInServer(true);
+        shop.setSetting(cf);
+        update = true;
+      }
+    } else if (cf.getSetting().equals(CollectFirstSetting.PLAYER)) {
+      cf.addPlayer(uuid);
+      shop.setSetting(cf);
+      update = true;
+    }
+
+    if (update) {
+      ShopUtil.putShop(name, shop);
+    }
+  }
+
+  private boolean checkIfValidShop(String name) {
+
+    name = name.toLowerCase();
 
     if (!shopNames.contains(name)) {
       return false;

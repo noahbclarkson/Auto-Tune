@@ -93,7 +93,10 @@ public abstract class AutoTuneShopFormat {
           : new ItemStack(Material.matchMaterial(shopName));
       if (shops.get(shopName).isEnchantment()) {
         Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(shopName));
-        item.editMeta(meta -> meta.displayName(enchantment.displayName(1)));
+        item.editMeta(meta -> meta.displayName(Component.translatable(enchantment)));
+      } else {
+        item.editMeta(meta -> meta.displayName(
+            Component.translatable((Material.matchMaterial(shopName))).asComponent()));
       }
       item.lore(applyLore(player, shopName, 1));
       itemsOnPage.add(new GuiItem(item, event -> {

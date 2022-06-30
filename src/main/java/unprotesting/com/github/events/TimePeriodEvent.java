@@ -34,7 +34,7 @@ public class TimePeriodEvent extends Event {
     Format.getLog().config("Price update started as there are " + players + " players online.");
     updatePrices();
     Database.get().updateChanges();
-    Database.get().updateRelations();
+    // Database.get().updateRelations();
   }
 
   private void updatePrices() {

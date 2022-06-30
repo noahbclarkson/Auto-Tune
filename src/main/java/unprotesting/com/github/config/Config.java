@@ -52,6 +52,7 @@ public class Config {
   private final String enchantmentError;
   private final String autosellProfit;
   private final String invalidShopSection;
+  private final String backgroundPaneText;
 
   private final List<String> shopLore;
   private final List<String> shopGdpLore;
@@ -157,6 +158,8 @@ public class Config {
     Format.getLog().finest("Autosell profit: " + autosellProfit);
     this.invalidShopSection = configs[3].getString("invalid-shop-section");
     Format.getLog().finest("Invalid shop section: " + invalidShopSection);
+    this.backgroundPaneText = configs[3].getString("background-pane-text");
+    Format.getLog().finest("Background pane text: " + backgroundPaneText);
 
     this.shopLore = configs[3].getStringList("shop-lore");
     Format.getLog().finest("Shop lore: " + Arrays.toString(shopLore.toArray()));

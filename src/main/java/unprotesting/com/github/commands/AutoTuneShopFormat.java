@@ -12,8 +12,6 @@ import java.util.List;
 import java.util.Map;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
@@ -180,7 +178,7 @@ public abstract class AutoTuneShopFormat {
     ItemStack item = new ItemStack(Material.GOLD_INGOT);
     TagResolver r = getGdpTagResolver();
     item.editMeta(meta ->
-        Format.getComponent(Config.get().getShopGdpLore().get(0), r));
+        meta.displayName(Format.getComponent(Config.get().getShopGdpLore().get(0), r)));
     List<Component> lore = new ArrayList<>();
 
     for (int i = 1; i < Config.get().getShopGdpLore().size(); i++) {
@@ -224,7 +222,7 @@ public abstract class AutoTuneShopFormat {
 
     ItemStack item = new ItemStack(material);
     item.editMeta(meta -> 
-        meta.displayName(Component.text("|", Style.style(TextDecoration.OBFUSCATED))));
+        meta.displayName(Format.getComponent(Config.get().getBackgroundPaneText())));
     return new GuiItem(item);
   }
 

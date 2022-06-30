@@ -16,6 +16,8 @@ autosell-profit: "<gold>Your items were sold and <green><total></green> has been
 
 invalid-shop-section: "<c:#F37C3B>Invalid shop section."
 
+background-pane-text: "<obf>|</obf>"
+
 # Placeholders: <price>, <sell-price>, <buys-left>, <sells-left>, <max-buys>, <max-sells>, <change>, <collect-first-setting>
 shop-lore:
   - "<c:#50F48C>Price: <c:#66F450><b><price>"
@@ -23,6 +25,8 @@ shop-lore:
   - "<gold>Buys Left: <b><gray><buys-left>/<max-buys>"
   - "<gold>Sells Left: <b><gray><sells-left>/<max-sells>"
   - "<gold>Change: <c:#C2D2DE><b><change>"
+
+
 
 # Placeholders <gdp>, <debt>, <loss>, <balance>, <inflation>, <gdp-per-capita>, <debt-per-capita>, <loss-per-capita>, <balance-per-capita>
 # The first line is the display-name, the other lines are the lore.

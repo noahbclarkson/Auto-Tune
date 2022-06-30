@@ -1,191 +1,105 @@
 package unprotesting.com.github.commands;
 
-import com.github.stefvanschie.inventoryframework.gui.GuiItem;
-import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
-import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
-import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
-
-import java.text.DecimalFormat;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.jetbrains.annotations.NotNull;
 
-import unprotesting.com.github.Main;
-import unprotesting.com.github.commands.util.CommandUtil;
 import unprotesting.com.github.config.Config;
-import unprotesting.com.github.data.ephemeral.data.LoanData;
-import unprotesting.com.github.economy.EconomyFunctions;
+import unprotesting.com.github.data.Database;
+import unprotesting.com.github.data.Loan;
+import unprotesting.com.github.util.EconomyUtil;
+import unprotesting.com.github.util.Format;
 
 public class LoanCommand implements CommandExecutor {
 
-  private DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
   @Override
-  public boolean onCommand(CommandSender sender, Command command, String loan, String[] args) {
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, 
+      @NotNull String label, @NotNull String[] args) {
 
-    if (!CommandUtil.checkIfSenderPlayer(sender)) {
+    if (!(sender instanceof Player)) {
+      Format.sendMessage(sender, "<red>This command is for players only.");
       return true;
     }
 
-    return interpretCommand(sender, args);
-  }
+    Player player = (Player) sender;
+    if (args.length == 0) {
+      getTotalLoans(player);
+      Format.sendMessage(player, "<gold>Usage: /loan <amount>/pay");
+    } else if (args[0].equalsIgnoreCase("pay") || args[0].equalsIgnoreCase("payback")) {
+      for (Map.Entry<Long, Loan> entry : Database.get().getLoans().entrySet()) {
+        Loan loan = entry.getValue();
+        if (loan.getPlayer().equals(player.getUniqueId())) {
 
-  @Deprecated
-  private boolean interpretCommand(CommandSender sender, String[] args) {
+          if (loan.isPaid()) {
+            continue;
+          }
 
-    Player player = CommandUtil.closeInventory(sender);
-
-    if (!(player.hasPermission("at.loan") || player.hasPermission("at.admin"))) {
-
-      CommandUtil.noPermission(player);
-      return true;
-
-    }
-
-    ChestGui gui = new ChestGui(6, "Loans");
-    PaginatedPane pages = new PaginatedPane(0, 0, 9, 6);
-    List<LoanData> loans = Main.getInstance().getCache().getLoans();
-    List<OutlinePane> panes = new ArrayList<OutlinePane>();
-    List<GuiItem> items;
-    String uuid = player.getUniqueId().toString();
-
-    if (args.length < 1) {
-
-      if (!player.hasPermission("at.loan.other") && !player.hasPermission("at.admin")) {
-        items = getGuiItemsFromLoans(loans, uuid);
-      } else {
-        items = getGuiItemsFromLoans(loans, null);
-      }
-
-    } else if (args[0].equals("-p")) {
-
-      if (args[1].equals(player.getName())) {
-        items = getGuiItemsFromLoans(loans, uuid);
-      } else if (!args[1].equals(player.getName())
-          && (!player.hasPermission("at.loan.other") && !player.hasPermission("at.admin"))) {
-
-        CommandUtil.noPermission(player);
-        return true;
-
-      } else {
-
-        OfflinePlayer offPlayer = Bukkit.getOfflinePlayer(args[1]);
-        items = getGuiItemsFromLoans(loans, offPlayer.getUniqueId().toString());
-
-      }
-
-    } else {
-
-      double loanAmount;
-
-      try {
-        loanAmount = Double.parseDouble(args[0]);
-      } catch (NumberFormatException e) {
-        return false;
-      }
-
-      if (loanAmount < 0) {
-
-        player.sendMessage(ChatColor.RED  
-            + "Loan amount must be greater than " + Config.getConfig().getCurrencySymbol()
-            + "0.0 to take out a loan.");
-
-        return true;
-      }
-
-      double bal = EconomyFunctions.getEconomy().getBalance(player);
-
-      if (bal - loanAmount < Config.getConfig().getMaxDebt()) {
-
-        if (bal < Config.getConfig().getMaxDebt()) {
-
-          player.sendMessage(ChatColor.RED + "Your balance must be more than " 
-              + Config.getConfig().getCurrencySymbol() + Config.getConfig().getMaxDebt() 
-              + " to take out a loan.");
-
-          return true;
+          if (loan.payBack()) {
+            Format.sendMessage(player, "<green>You have paid back your loan of " 
+                + Format.currency(loan.getValue()) + ".");
+          } else {
+            Format.sendMessage(player, "<red>You do not have enough money to pay back your loan.");
+          }
+          Database.get().updateLoan(entry.getKey(), loan);
+      
         }
-
-        player.sendMessage(ChatColor.RED + "Your balance minus your loans cannot be less than "
-            + Config.getConfig().getCurrencySymbol() + Config.getConfig().getMaxDebt() + ".");
-
+      }
+    } else {
+      double value = 0;
+      try {
+        value = Double.parseDouble(args[0]);
+      } catch (NumberFormatException e) {
+        Format.sendMessage(player, "<red>Invalid amount.");
         return true;
       }
 
-      EconomyFunctions.getEconomy().depositPlayer(player, loanAmount);
+      if (value <= 0) {
+        Format.sendMessage(player, "<red>Invalid amount.");
+        return true;
+      }
 
-      Main.getInstance().getCache().addLoan(
-          loanAmount, Config.getConfig().getInterestRate(), player);
-
-      return true;
-
+      if (EconomyUtil.getEconomy().getBalance(player) 
+          <= value + value * 0.05 * Config.get().getInterest()) {
+        Format.sendMessage(player, "<red>You do not have enough money.");
+        return true;
+      }
+      
+      double base = value;
+      value += value * 0.01 * Config.get().getInterest();
+      Loan loan = Loan.builder()
+          .value(value)
+          .base(base)
+          .player(player.getUniqueId())
+          .paid(false)
+          .build();
+      Database.get().getLoans().put(System.currentTimeMillis(), loan);
+      EconomyUtil.getEconomy().depositPlayer(player, base);
+      getTotalLoans(player);
     }
-
-    CommandUtil.loadGuiItemsIntoPane(items, gui, pages, panes,
-        Material.GRAY_STAINED_GLASS_PANE, sender);
-
     return true;
   }
 
-  private List<GuiItem> getGuiItemsFromLoans(List<LoanData> loans, String uuid) {
+  private void getTotalLoans(Player player) {
+    UUID uuid = player.getUniqueId();
+    double total = 0;
 
-    List<GuiItem> output = new ArrayList<GuiItem>();
-    Collections.sort(loans);
-    DecimalFormat df = new DecimalFormat(Config.getConfig().getNumberFormat());
+    for (Loan loan : Database.get().getLoans().values()) {
+      if (loan.getPlayer().equals(uuid)) {
 
-    for (LoanData data : loans) {
+        if (loan.isPaid()) {
+          continue;
+        }
 
-      if (uuid != null && !data.getPlayer().equals(uuid)) {
-        continue;
+        total += loan.getValue();
       }
-
-      ItemStack item = new ItemStack(Material.GREEN_STAINED_GLASS_PANE);
-      ItemMeta meta = item.getItemMeta();
-      OfflinePlayer player = Bukkit.getPlayer(UUID.fromString(data.getPlayer()));
-
-      meta.setDisplayName(ChatColor.GREEN 
-          + Config.getConfig().getCurrencySymbol() + df.format(data.getValue()));
-
-      meta.setLore(Arrays.asList(new String[] {
-
-          ChatColor.WHITE + "Player: " + ChatColor.GOLD + player.getName(),
-        
-          ChatColor.WHITE + "Interest Rate: " + ChatColor.GOLD + data.getInterestRate()
-              + "% per " + df.format(
-              Config.getConfig().getInterestRateUpdateRate() / 1200) + "min has been created.",
-
-          ChatColor.WHITE + "Date: " + ChatColor.GOLD + data.getDate().format(formatter),
-          ChatColor.GREEN + "Click to pay-back loan!"
-
-      }));
-
-      item.setItemMeta(meta);
-
-      GuiItem guiItem = new GuiItem(item, event -> {
-
-        data.payBackLoan();
-        event.setCancelled(true);
-
-      });
-
-      output.add(guiItem);
     }
 
-    return output;
+    Format.sendMessage(player, "<green>You have " + Format.currency(total) + " in loans.");
   }
-
+  
 }

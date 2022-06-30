@@ -8,59 +8,39 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
-import unprotesting.com.github.commands.util.CommandUtil;
-import unprotesting.com.github.commands.util.FunctionsUtil;
+import unprotesting.com.github.data.PurchaseUtil;
+import unprotesting.com.github.util.Format;
 
 public class SellCommand implements CommandExecutor {
 
   @Override
-  public boolean onCommand(CommandSender sender, Command command, String sell, String[] args) {
-
-    if (!CommandUtil.checkIfSenderPlayer(sender)) {
-      return true;
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, 
+      @NotNull String label, @NotNull String[] args) {
+        
+    if (sender instanceof Player) {
+      return interpret(sender);
     }
 
-    return interpretCommand(sender);
-
-  }
-
-  private boolean interpretCommand(CommandSender sender) {
-
-    Player player = CommandUtil.closeInventory(sender);
-
-    if (!(player.hasPermission("at.sell") || player.hasPermission("at.admin"))) {
-      
-      CommandUtil.noPermission(player);
-      return true;
-
-    }
-
-    setupSellGui(sender);
+    Format.sendMessage(sender, "<red>You must be a player to use this command.");
     return true;
-
   }
 
-  private void setupSellGui(CommandSender sender) {
-
-    Player player = CommandUtil.closeInventory(sender);
+  private boolean interpret(CommandSender sender) {
+    Player player = (Player) sender;
+    player.getOpenInventory().close();
     ChestGui gui = new ChestGui(5, "Sell Panel");
-
     gui.setOnClose(event -> {
-
-      for (ItemStack item : gui.getInventory().getStorageContents()) {
-
+      for (ItemStack item : gui.getInventory().getContents()) {
         if (item == null) {
           continue;
         }
-        
-        FunctionsUtil.sellCustomItem(player, item, false);
+        PurchaseUtil.sellItemStack(item, player);
       }
-
     });
-
     gui.show((HumanEntity) sender);
-
+    return true;
   }
 
 }

@@ -40,6 +40,11 @@ Previous solutions that allow for trading between players have lacked flexibilit
 
 Not only does this assist administrators in managing a server's economy, but it also allows the server players to engage with the economy more rigorously. We have strenuously tested Auto-Tune to be fit for any environment and created systems designed to assist server admins in building the best economy possible for the specific needs of their server. Auto-Tune is a powerful and highly customizable plugin that has a feature set rich enough to satisfy any server. We at Auto-Tune are passionate and optimistic about Minecraft plugin development and building a community that loves Minecraft and economics!
 
+## 🎀 Examples
+
+### Auto-Tune Default Shop Setup
+<img src="https://github.com/Unprotesting/Auto-Tune/blob/master/.github/Auto-Tune-Shop.gif?raw=true" width="500"/>
+
 ## :computer: Usage
 
 ### :clipboard: Server setup

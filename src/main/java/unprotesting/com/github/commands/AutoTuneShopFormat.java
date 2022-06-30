@@ -148,7 +148,7 @@ public abstract class AutoTuneShopFormat {
     ItemStack item = new ItemStack(Material.ARROW);
     item.editMeta(meta ->
         meta.displayName(Format.getComponent(
-        "<b><white>Go to page " + page + 1).asComponent()));
+        "<b><white>Go to page " + (page + 1)).asComponent()));
     pane.addItem(new GuiItem(item, event -> {
       event.setCancelled(true);
       pages.setPage(page);

@@ -158,7 +158,7 @@ public class Config {
     Format.getLog().finest("Autosell profit: " + autosellProfit);
     this.invalidShopSection = configs[3].getString("invalid-shop-section");
     Format.getLog().finest("Invalid shop section: " + invalidShopSection);
-    this.backgroundPaneText = configs[3].getString("background-pane-text");
+    this.backgroundPaneText = configs[3].getString("background-pane-text", "<obf>|</obf>");
     Format.getLog().finest("Background pane text: " + backgroundPaneText);
 
     this.shopLore = configs[3].getStringList("shop-lore");

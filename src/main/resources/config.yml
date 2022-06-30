@@ -1,4 +1,4 @@
-# The default rate that prices are updated. Every price update the max-buys and sells are also reset.
+# The default rate that prices are updated (in minutes). Every price update the max-buys and sells are also reset.
 # Increase this for low player counts, decrease for high player counts.
 time-period: 10
 

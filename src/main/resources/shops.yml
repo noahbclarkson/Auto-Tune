@@ -341,7 +341,6 @@ shops:
       price: 2.75
       max-buy: 32
       max-sell: 64
-
   tools:
     wooden_pickaxe:
       price: 5
@@ -420,10 +419,12 @@ shops:
       max-sell: 8
     fishing_rod:
       price: 20
+      sell-price-difference: 35
       max-buy: 3
       max-sell: 5
     bow:
       price: 25
+      sell-price-difference: 30
       max-buy: 3
       max-sell: 5
   enchantments:

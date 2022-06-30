@@ -39,15 +39,23 @@ public class AutosellCommand extends AutoTuneShopFormat implements CommandExecut
   @Override
   protected void doShop(HumanEntity player, ChestGui gui, String shopName) {
     Shop shop = ShopUtil.getShop(shopName);
+
+    if (shop.isEnchantment()) {
+      Format.sendMessage(player, "<red>You cannot autosell enchanted items at the moment.");
+      return;
+    }
+
     Player user = (Player) player;
     UUID uuid = user.getUniqueId();
     ConfigurationSection autosell = Config.get().getAutosell();
+
     if (autosell.contains(uuid + "." + shopName)) {
       boolean value = autosell.getBoolean(uuid + "." + shopName);
       autosell.set(uuid + "." + shopName, !value);
     } else {
       autosell.set(uuid + "." + shopName, true);
     }
+    
     Config.get().setAutosell(autosell);
     Section section = ShopUtil.getSection(shop.getSection());
     gui.getPanes().clear();

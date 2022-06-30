@@ -19,7 +19,6 @@ public class Section {
 
   protected final ItemStack item;
   protected final boolean backEnabled;
-  protected final boolean enchantment;
   protected final int posX;
   protected final int posY;
   protected final Map<String, Shop> shops;
@@ -35,8 +34,7 @@ public class Section {
     item.editMeta(meta -> meta.displayName(component));
     item.getItemMeta().lore(new ArrayList<Component>());
     this.item = item;
-    this.backEnabled = section.getBoolean("back-enabled", false);
-    this.enchantment = section.getBoolean("enchantment", false);
+    this.backEnabled = section.getBoolean("back-enabled", true);
     this.posX = section.getInt("x", 0);
     this.posY = section.getInt("y", 0);
     this.shops = loadShops(name);

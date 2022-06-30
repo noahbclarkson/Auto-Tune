@@ -7,6 +7,8 @@ sections:
     # The x and y coordinates for the section.
     x: 1
     y: 1
+    # back-enabled: false -> Whether the back to sections button is enabled for this section
+    # The back-enabled option is useful for those who prefer to implement auto-tune through citizens or signs.
   blocks:
     display: <b><gold>Blocks</gold></b>
     image: stone

@@ -121,7 +121,9 @@ public abstract class AutoTuneShopFormat {
         }
 
         pages.addPane(page, pane);
-        pages.addPane(page, getBackToSectionsPane(player, gui));
+        if (section.isBackEnabled()) {
+          pages.addPane(page, getBackToSectionsPane(player, gui));
+        }
         page++;
         itemsOnPage.clear();
       }

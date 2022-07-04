@@ -171,7 +171,7 @@ public class PurchaseUtil {
     EconomyDataUtil.increaseEconomyData("LOSS", loss * amount);
     itemShop.addSells(uuid, amount);
     ShopUtil.putShop(itemName, itemShop);
-    EconomyUtil.getEconomy().withdrawPlayer(player, total);
+    EconomyUtil.getEconomy().depositPlayer(player, total);
     Format.sendMessage(player, Config.get().getShopSell(), r);
 
   }

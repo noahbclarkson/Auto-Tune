@@ -8,12 +8,24 @@ plugins {
 group 'unprotesting.com.github'
 version '0.14.0-pre-release'
 
-java {
+ext {
 
+  jettyVersion = '11.0.11'
+  essentialsVersion = '2.19.4'
+  lombokVersion = '1.18.24'
+  adventureVersion = '4.11.0'
+  paperMCVersion = '1.19-R0.1-SNAPSHOT'
+  bstatsVersion = '2.2.1'
+  mapdbVersion = '3.0.8'
+  ifVersion = '0.10.6'
+  junitVersion = '5.8.1'
+
+}
+
+java {
   toolchain {
     languageVersion = JavaLanguageVersion.of(17)
   }
-
 }
 
 repositories {
@@ -36,21 +48,23 @@ dependencies {
     exclude group: "org.bukkit", module: "bukkit"
   }
   
-  implementation 'org.bstats:bstats-bukkit:2.2.1'
-  implementation 'org.mapdb:mapdb:3.0.8'
-  implementation 'com.github.stefvanschie.inventoryframework:IF:0.10.6'
+  implementation "org.bstats:bstats-bukkit:$bstatsVersion"
+  implementation "org.mapdb:mapdb:$mapdbVersion"
+  implementation "com.github.stefvanschie.inventoryframework:IF:$ifVersion"
 
-  compileOnly 'io.papermc.paper:paper-api:1.19-R0.1-SNAPSHOT'
-  compileOnly 'net.kyori:adventure-api:4.11.0'
-  compileOnly 'net.kyori:adventure-text-minimessage:4.11.0'
-  compileOnly 'org.projectlombok:lombok:1.18.24'
-  compileOnly 'net.essentialsx:EssentialsX:2.19.4'
+  compileOnly "io.papermc.paper:paper-api:$paperMCVersion"
+  compileOnly "net.kyori:adventure-api:$adventureVersion"
+  compileOnly "net.kyori:adventure-text-minimessage:$adventureVersion"
+  compileOnly "org.projectlombok:lombok:$lombokVersion"
+  compileOnly "net.essentialsx:EssentialsX:$essentialsVersion"
+  compileOnly "org.eclipse.jetty:jetty-server:$jettyVersion"
+  compileOnly "org.eclipse.jetty:jetty-servlet:$jettyVersion"
 
-  annotationProcessor 'org.projectlombok:lombok:1.18.24'
+  annotationProcessor "org.projectlombok:lombok:$lombokVersion"
 
-  testImplementation 'org.mapdb:mapdb:3.0.8'
-  testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
-  testRuntimeOnly 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+  testImplementation "org.mapdb:mapdb:$mapdbVersion"
+  testImplementation "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+  testRuntimeOnly "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 }
 
 

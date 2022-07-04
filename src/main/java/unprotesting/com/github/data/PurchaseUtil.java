@@ -143,9 +143,11 @@ public class PurchaseUtil {
     total += price * amount;
     r = getTagResolver(item.displayName(), price, amount, balance, null);
 
-    if (ShopUtil.getSellsLeft(player, itemName) - amount < 0) {
-      Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
-      success = false;
+    if (Config.get().isEnableSellLimits()) {
+      if (ShopUtil.getSellsLeft(player, itemName) - amount < 0) {
+        Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
+        success = false;
+      }
     }
 
     r = getTagResolver(item.displayName(), total / amount, amount, balance, null);

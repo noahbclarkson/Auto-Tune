@@ -39,3 +39,9 @@ log-level: "INFO"
 
 # The locale to use for formatting.
 locale: "en_US"
+
+# If you wish to have sell & buy limits enable this
+enable-sell-limits: false
+
+# If you wish to have loans on your server, enable this
+enable-loans: false

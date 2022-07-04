@@ -51,13 +51,15 @@ public class PurchaseUtil {
       return;
     }
 
-    if (Database.get().getPurchasesLeft(name, uuid, isBuy) - amount < 0) {
-      if (isBuy) {
-        Format.sendMessage(player, Config.get().getRunOutOfBuys(), r);
-      } else {
-        Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
+    if (Config.get().isEnableSellLimits()) {
+      if (Database.get().getPurchasesLeft(name, uuid, isBuy) - amount < 0) {
+        if (isBuy) {
+          Format.sendMessage(player, Config.get().getRunOutOfBuys(), r);
+        } else {
+          Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
+        }
+        return;
       }
-      return;
     }
 
     boolean success = shop.isEnchantment() ? enchant(player, name, amount, isBuy, r)
@@ -83,7 +85,7 @@ public class PurchaseUtil {
     } else {
       EconomyUtil.getEconomy().depositPlayer(player, total);
     }
-    
+
     String message = isBuy ? Config.get().getShopPurchase() : Config.get().getShopSell();
     Format.sendMessage(player, message, r);
     double loss = shop.getPrice() * amount - total;
@@ -152,7 +154,7 @@ public class PurchaseUtil {
     }
 
     for (Enchantment enchantment : item.getEnchantments().keySet()) {
-      
+
       String name = enchantment.getKey().getKey();
       Shop shop = getAssociatedShop(player, name);
       Transaction transaction = new Transaction(price, amount, uuid, name, TransactionType.SELL);
@@ -195,7 +197,7 @@ public class PurchaseUtil {
   private static Shop getAssociatedShop(Player player, String name) {
     name = name.toLowerCase();
     Shop shop = ShopUtil.getShop(name);
-    
+
     if (shop == null) {
       Format.sendMessage(player, Config.get().getNotInShop());
       return null;
@@ -203,16 +205,16 @@ public class PurchaseUtil {
     return shop;
   }
 
-  private static boolean item(Player player, String name, int amount, 
+  private static boolean item(Player player, String name, int amount,
       boolean isBuy, TagResolver r) {
     PlayerInventory inv = player.getInventory();
     ItemStack item = new ItemStack(Material.matchMaterial(name), amount);
     HashMap<Integer, ItemStack> map = isBuy ? inv.addItem(item) : inv.removeItem(item);
-      
+
     if (map.isEmpty()) {
       return true;
     }
-        
+
     if (!isBuy) {
       ItemStack returned = map.get(0);
       returned.setAmount(amount - returned.getAmount());
@@ -226,8 +228,8 @@ public class PurchaseUtil {
     return true;
   }
 
-  private static boolean enchant(Player player, String name, int amount, 
-      boolean isBuy, TagResolver r) { 
+  private static boolean enchant(Player player, String name, int amount,
+      boolean isBuy, TagResolver r) {
     Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(name));
     ItemStack item = player.getInventory().getItemInMainHand();
 
@@ -235,10 +237,10 @@ public class PurchaseUtil {
       Format.sendMessage(player, Config.get().getHoldItemInHand(), r);
       return false;
     }
-    
+
     if (isBuy) {
       int level = item.getEnchantmentLevel(enchantment);
-      
+
       try {
         item.addEnchantment(enchantment, level + amount);
       } catch (IllegalArgumentException e) {
@@ -248,12 +250,12 @@ public class PurchaseUtil {
 
       return true;
     } else {
-      
+
       if (!item.containsEnchantment(enchantment)) {
         Format.sendMessage(player, Config.get().getHoldItemInHand(), r);
         return false;
       }
-      
+
       if (item.getEnchantmentLevel(enchantment) < amount) {
         Format.sendMessage(player, Config.get().getNotEnoughItems(), r);
         return false;
@@ -271,5 +273,5 @@ public class PurchaseUtil {
   }
 
 
-  
+
 }

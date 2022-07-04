@@ -1,4 +1,4 @@
-package unprotesting.com.github.data;
+package unprotesting.com.github.events;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -7,18 +7,33 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import lombok.Cleanup;
+import lombok.Getter;
+
+import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
 
 import unprotesting.com.github.AutoTune;
+import unprotesting.com.github.data.Shop;
+import unprotesting.com.github.data.ShopUtil;
+import unprotesting.com.github.util.Format;
 
-public class CsvHandler {
+public class CsvWriteEvent extends Event {
+  
+  @Getter
+  private final HandlerList handlers = new HandlerList();
 
   /**
-   * Write all the price data points to a csv file.
+   * Write the price data for all items to a CSV file.
+   * @param isAsync Whether the event is being run async or not.
    */
-  public static void write() {
+  public CsvWriteEvent(boolean isAsync) {
+    super(isAsync);
     try {
+      Format.getLog().config("Writing price data to CSV file.");
       writeCsv("web/data/data.csv");
+      Format.getLog().config("Price data written to data.csv");
     } catch (IOException e) {
+      Format.getLog().severe("Could not write data to csv file.");
       e.printStackTrace();
     }
   }
@@ -51,9 +66,11 @@ public class CsvHandler {
     while (dataStillPresent) {
       dataStillPresent = false;
       for (int i = 0; i < size; i++) {
-        if (shops[i].size > t) {
-          writer.write(shops[i].prices[t] + ",");
+        if (shops[i].getSize() > t) {
+          writer.write(shops[i].getPrices()[t] + ",");
           dataStillPresent = true;
+        } else {
+          writer.write(",");
         }
       }
       if (dataStillPresent) {
@@ -63,5 +80,4 @@ public class CsvHandler {
     }
   }
 
-  
 }

@@ -2,11 +2,12 @@ package unprotesting.com.github.events;
 
 import lombok.Getter;
 
+import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.config.Config;
-import unprotesting.com.github.data.CsvHandler;
 import unprotesting.com.github.data.Database;
 import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
@@ -35,7 +36,8 @@ public class TimePeriodEvent extends Event {
     Format.getLog().config("Price update started as there are " + players + " players online.");
     updatePrices();
     Database.get().updateChanges();
-    // CsvHandler.write();
+    Bukkit.getScheduler().runTaskAsynchronously(AutoTune.getInstance(), () ->
+        Bukkit.getPluginManager().callEvent(new CsvWriteEvent(true)));
     // Database.get().updateRelations();
   }
 

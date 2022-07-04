@@ -120,10 +120,12 @@ public class PurchaseUtil {
       total += price * amount;
       r = getTagResolver(item.displayName(), price, amount, balance, null);
 
-      if (ShopUtil.getSellsLeft(player, name) - amount < 0) {
-        Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
-        success = false;
-        break;
+      if (Config.get().isEnableSellLimits()) {
+        if (ShopUtil.getSellsLeft(player, name) - amount < 0) {
+          Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
+          success = false;
+          break;
+        }
       }
 
     }

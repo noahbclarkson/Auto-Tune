@@ -49,7 +49,7 @@ public abstract class AutoTuneShopFormat {
     }
 
     if (args.length == 1) {
-      if (args[0].toString().equalsIgnoreCase("reload")) {
+      if (args[0].equalsIgnoreCase("reload")) {
         if (!sender.hasPermission("autotune.admin")) {
           sender.sendMessage("You do not have permission to reload the shops.");
           return false;

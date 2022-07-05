@@ -116,14 +116,8 @@ public class AutoTuneInventoryCheckEvent extends Event {
   }
 
   private boolean checkIfValidShop(String name) {
-
     name = name.toLowerCase();
-
-    if (!shopNames.contains(name)) {
-      return false;
-    }
-
-    return true;
+    return shopNames.contains(name);
   }
   
 }

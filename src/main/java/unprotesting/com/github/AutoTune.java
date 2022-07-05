@@ -18,6 +18,7 @@ import unprotesting.com.github.events.IpCheckEvent;
 import unprotesting.com.github.events.LoanInterestEvent;
 import unprotesting.com.github.events.TimePeriodEvent;
 import unprotesting.com.github.events.TutorialEvent;
+import unprotesting.com.github.server.LocalServer;
 import unprotesting.com.github.util.EconomyUtil;
 
 @Getter
@@ -36,6 +37,7 @@ public class AutoTune extends JavaPlugin {
     setupEvents();
     setupCommands();
     new Metrics(this, 9687);
+    LocalServer.initialize();
     getLogger().info("Auto-Tune is now enabled!");
   }
 

@@ -28,5 +28,5 @@ hs_err_pid*
 # Gradle
 gradle
 .gradle
-build
+/build
 bin

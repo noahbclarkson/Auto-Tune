@@ -35,8 +35,10 @@ public class Shop implements Serializable {
   // History of sells for each time period.
   protected int[] sells;
   // History of prices for each time period.
+  @Getter
   protected double[] prices;
   // The size of the historical data.
+  @Getter
   protected int size;
   // Whether the item is an enchantment
   @Getter

@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.Database;
 import unprotesting.com.github.data.Shop;
@@ -34,6 +35,8 @@ public class TimePeriodEvent extends Event {
     Format.getLog().config("Price update started as there are " + players + " players online.");
     updatePrices();
     Database.get().updateChanges();
+    Bukkit.getScheduler().runTaskAsynchronously(AutoTune.getInstance(), () ->
+        Bukkit.getPluginManager().callEvent(new CsvWriteEvent(true)));
     // Database.get().updateRelations();
   }
 

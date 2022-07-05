@@ -99,6 +99,8 @@ public class Config {
       }
     }
 
+    saveWebFolder();
+
     for (int i = 0; i < filenames.length; i++) {
       File file = new File(AutoTune.getInstance().getDataFolder(), filenames[i]);
       if (!file.exists()) {
@@ -196,6 +198,26 @@ public class Config {
     } catch (IOException e) {
       Format.getLog().severe("Could not save playerdata configuration.");
     }
+  }
+
+  private void saveWebFolder() {
+    File webFolder = new File(AutoTune.getInstance().getDataFolder(), "web");
+    if (!webFolder.exists()) {
+      webFolder.mkdir();
+    }
+    File buildFolder = new File(webFolder, "build");
+    if (!buildFolder.exists()) {
+      buildFolder.mkdir();
+    }
+    String[] files = {"index.html", "favicon.png",
+        "global.css", "build/bundle.js", "build/bundle.js.map"};
+    for (String file : files) {
+      File webFile = new File(webFolder, file);
+      if (!webFile.exists()) {
+        AutoTune.getInstance().saveResource("web/" + file, true);
+      }
+    }
+
   }
   
 }

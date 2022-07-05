@@ -30,7 +30,7 @@ public class CsvWriteEvent extends Event {
     super(isAsync);
     try {
       Format.getLog().config("Writing price data to CSV file.");
-      writeCsv("web/data/data.csv");
+      writeCsv();
       Format.getLog().config("Price data written to data.csv");
     } catch (IOException e) {
       Format.getLog().severe("Could not write data to csv file.");
@@ -38,8 +38,12 @@ public class CsvWriteEvent extends Event {
     }
   }
 
-  private static void writeCsv(String filename) throws IOException {
-    File file = new File(AutoTune.getInstance().getDataFolder() + "/" + filename);
+  private static void writeCsv() throws IOException {
+    File dataFolder = new File(AutoTune.getInstance().getDataFolder(), "/web/data");
+    if (!dataFolder.exists()) {
+      dataFolder.mkdirs();
+    }
+    File file = new File(AutoTune.getInstance().getDataFolder() + "/web/data/data.csv");
     if (!file.exists()) {
       file.delete();
     }

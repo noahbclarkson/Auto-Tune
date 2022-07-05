@@ -37,7 +37,7 @@ public class AutoTune extends JavaPlugin {
     setupEvents();
     setupCommands();
     new Metrics(this, 9687);
-    // LocalServer.initialize();
+    LocalServer.initialize();
     getLogger().info("Auto-Tune is now enabled!");
   }
 

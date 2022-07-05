@@ -5,8 +5,9 @@ import lombok.Getter;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.servlet.ServletHandler;
+import org.eclipse.jetty.server.handler.ResourceHandler;
 
+import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.util.Format;
 
@@ -31,9 +32,12 @@ public class LocalServer {
     ServerConnector connector = new ServerConnector(server);
     connector.setPort(Config.get().getPort());
     server.setConnectors(new Connector[] {connector});
-    ServletHandler servletHandler = new ServletHandler();
-    server.setHandler(servletHandler);
-    servletHandler.addServletWithMapping(AutoTuneServlet.class, "/status");
+    ResourceHandler resourceHandler = new ResourceHandler();
+    resourceHandler.setDirAllowed(true);
+    resourceHandler.setResourceBase(
+        AutoTune.getInstance().getDataFolder().getAbsolutePath() + "/web");
+    server.setHandler(resourceHandler);
+
     try {
       server.start();
     } catch (Exception e) {
@@ -41,7 +45,10 @@ public class LocalServer {
     }
   }
 
-  void stop() {
+  /**
+   * Stop the integrated web server.
+   */
+  public void stop() {
     try {
       server.stop();
     } catch (Exception e) {

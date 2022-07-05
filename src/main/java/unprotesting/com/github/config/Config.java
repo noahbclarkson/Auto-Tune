@@ -39,7 +39,6 @@ public class Config {
   private final String logLevel;
   private final String locale;
   private final boolean enableSellLimits;
-
   private final boolean enableLoans;
 
   private final String notInShop;

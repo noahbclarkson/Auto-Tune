@@ -23,7 +23,8 @@ public class PurchaseUtil {
 
   /**
    * Purchase/sell an item from a shop.
-   * @param name The name of the shop.
+   * 
+   * @param name   The name of the shop.
    * @param player The player uuid.
    * @param amount The item to purchase.
    */
@@ -51,15 +52,14 @@ public class PurchaseUtil {
       return;
     }
 
-    if (Config.get().isEnableSellLimits()) {
-      if (Database.get().getPurchasesLeft(name, uuid, isBuy) - amount < 0) {
-        if (isBuy) {
-          Format.sendMessage(player, Config.get().getRunOutOfBuys(), r);
-        } else {
-          Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
-        }
-        return;
+    if (Config.get().isEnableSellLimits()
+        && Database.get().getPurchasesLeft(name, uuid, isBuy) - amount < 0) {
+      if (isBuy) {
+        Format.sendMessage(player, Config.get().getRunOutOfBuys(), r);
+      } else {
+        Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
       }
+      return;
     }
 
     boolean success = shop.isEnchantment() ? enchant(player, name, amount, isBuy, r)
@@ -95,7 +95,8 @@ public class PurchaseUtil {
 
   /**
    * Sell an item stack to all relevant shops.
-   * @param item The item stack to sell.
+   * 
+   * @param item   The item stack to sell.
    * @param player The player object.
    */
   public static void sellItemStack(ItemStack item, Player player) {
@@ -107,8 +108,8 @@ public class PurchaseUtil {
     TagResolver r = getTagResolver(item.displayName(), total / amount, amount, balance, null);
 
     for (Enchantment enchantment : item.getEnchantments().keySet()) {
-      String name = enchantment.getKey().getKey();
-      Shop shop = getAssociatedShop(player, name);
+      String enchantmentName = enchantment.getKey().getKey();
+      Shop shop = getAssociatedShop(player, enchantmentName);
 
       if (shop == null) {
         Format.sendMessage(player, Config.get().getNotInShop(), r);
@@ -120,12 +121,11 @@ public class PurchaseUtil {
       total += price * amount;
       r = getTagResolver(item.displayName(), price, amount, balance, null);
 
-      if (Config.get().isEnableSellLimits()) {
-        if (ShopUtil.getSellsLeft(player, name) - amount < 0) {
-          Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
-          success = false;
-          break;
-        }
+      if (Config.get().isEnableSellLimits() 
+          && ShopUtil.getSellsLeft(player, enchantmentName) - amount < 0) {
+        Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
+        success = false;
+        break;
       }
 
     }
@@ -143,11 +143,9 @@ public class PurchaseUtil {
     total += price * amount;
     r = getTagResolver(item.displayName(), price, amount, balance, null);
 
-    if (Config.get().isEnableSellLimits()) {
-      if (ShopUtil.getSellsLeft(player, itemName) - amount < 0) {
-        Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
-        success = false;
-      }
+    if (Config.get().isEnableSellLimits() && ShopUtil.getSellsLeft(player, itemName) - amount < 0) {
+      Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
+      success = false;
     }
 
     r = getTagResolver(item.displayName(), total / amount, amount, balance, null);
@@ -198,8 +196,8 @@ public class PurchaseUtil {
     return builder.build();
   }
 
-  private static Shop getAssociatedShop(Player player, String name) {
-    name = name.toLowerCase();
+  private static Shop getAssociatedShop(Player player, String itemName) {
+    String name = itemName.toLowerCase();
     Shop shop = ShopUtil.getShop(name);
 
     if (shop == null) {
@@ -275,7 +273,5 @@ public class PurchaseUtil {
 
     }
   }
-
-
 
 }

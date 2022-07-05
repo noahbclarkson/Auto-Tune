@@ -51,7 +51,9 @@ public class AutoTune extends JavaPlugin {
     getCommand("shop").setExecutor(new ShopCommand());
     getCommand("sell").setExecutor(new SellCommand());
     getCommand("autosell").setExecutor(new AutosellCommand());
-    getCommand("loan").setExecutor(new LoanCommand());
+    if (Config.get().isEnableLoans()) {
+      getCommand("loan").setExecutor(new LoanCommand());
+    }
   }
 
   private void setupEvents() {
@@ -63,16 +65,18 @@ public class AutoTune extends JavaPlugin {
         Bukkit.getPluginManager().callEvent(new AutosellProfitEvent(true)),
         1200L, 1200L);
 
-    Bukkit.getScheduler().runTaskTimerAsynchronously(this, () ->
-        Bukkit.getPluginManager().callEvent(new LoanInterestEvent(true)),
-        1200L, 1200L);
+    if (Config.get().isEnableLoans()) {
+      Bukkit.getScheduler().runTaskTimerAsynchronously(this, () ->
+                      Bukkit.getPluginManager().callEvent(new LoanInterestEvent(true)),
+              1200L, 1200L);
+    }
 
     Bukkit.getScheduler().runTaskTimerAsynchronously(this, () ->
         Bukkit.getPluginManager().callEvent(new TimePeriodEvent(true)),
         (long) (Config.get().getTimePeriod() * 1200L),
         (long) (Config.get().getTimePeriod() * 1200L));
 
-    Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> 
+    Bukkit.getScheduler().runTaskTimerAsynchronously(this, () ->
         Bukkit.getPluginManager().callEvent(new TutorialEvent(true)),
         (long) (Config.get().getTutorialUpdate() * 20),
         (long) (Config.get().getTutorialUpdate() * 20));
@@ -84,5 +88,5 @@ public class AutoTune extends JavaPlugin {
   }
 
 
-  
+
 }

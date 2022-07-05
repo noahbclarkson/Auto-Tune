@@ -12,7 +12,6 @@ import unprotesting.com.github.data.Database;
 import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
 import unprotesting.com.github.util.Format;
-import unprotesting.com.github.util.UtilFunctions;
 
 public class TimePeriodEvent extends Event {
 
@@ -25,7 +24,7 @@ public class TimePeriodEvent extends Event {
    */
   public TimePeriodEvent(boolean isAsync) {
     super(isAsync);
-    int players = UtilFunctions.calculatePlayerCount();
+    int players = Bukkit.getOnlinePlayers().size();
 
     if (players < Config.get().getMinimumPlayers()) {
       Format.getLog().config("Not enough players to start price update. (" 

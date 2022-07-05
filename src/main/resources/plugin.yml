@@ -44,6 +44,9 @@ permissions:
   autotune.shop:
     description: "Allows the user to use the shop."
     default: true
+  autotune.admin:
+    description: "Allows reloading of the shops & configuration files"
+    default: false
   autotune.sell:
     description: "Allows the user to use the sell menu."
     default: true

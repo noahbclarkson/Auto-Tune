@@ -21,8 +21,8 @@ public class Config {
   // The static instance of the config.
   private static Config config;
   // The list of config filenames.
-  private static final String[] filenames = {"config.yml", "shops.yml",
-      "playerdata.yml", "messages.yml"};
+  private static final String[] filenames = { "config.yml", "shops.yml",
+      "playerdata.yml", "messages.yml" };
   // The list of files.
   private static File[] files;
   // The list of configs.
@@ -38,6 +38,9 @@ public class Config {
   private final String background;
   private final String logLevel;
   private final String locale;
+  private final boolean enableSellLimits;
+
+  private final boolean enableLoans;
 
   private final String notInShop;
   private final String notEnoughMoney;
@@ -77,7 +80,6 @@ public class Config {
     }
   }
 
-
   private static void initializeConfig() {
     files = new File[filenames.length];
     configs = new YamlConfiguration[filenames.length];
@@ -86,6 +88,7 @@ public class Config {
 
   /**
    * Gets the config.
+   *
    * @return the config object
    */
   public static Config get() {
@@ -133,6 +136,10 @@ public class Config {
     this.locale = configs[0].getString("locale", "en_US");
     Format.loadLocale(this.locale);
     Format.getLog().finer("Locale: " + locale);
+    this.enableSellLimits = configs[0].getBoolean("enable-sell-limits", false);
+    Format.getLog().finer("Skip Max Limits: " + enableSellLimits);
+    this.enableLoans = configs[0].getBoolean("enable-loans", false);
+    Format.getLog().finer("Loans Enabled: " + enableLoans);
 
     this.notInShop = configs[3].getString("not-in-shop");
     Format.getLog().finest("Not in shop: " + notInShop);
@@ -187,6 +194,7 @@ public class Config {
 
   /**
    * Set a new configuration section for autosell data and save it.
+   *
    * @param section The new section.
    */
   public void setAutosell(ConfigurationSection section) {
@@ -217,7 +225,5 @@ public class Config {
         AutoTune.getInstance().saveResource("web/" + file, true);
       }
     }
-
   }
-  
 }

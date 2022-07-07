@@ -2,11 +2,13 @@ package unprotesting.com.github.data;
 
 import java.io.Serializable;
 import java.util.UUID;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+/**
+ * The class that represents a Loan.
+ */
 @AllArgsConstructor
 @Data
 @Builder
@@ -20,9 +22,12 @@ public class Transaction implements Serializable {
   private String item;
   private TransactionType position;
 
+  /**
+   * The type/position of the transaction.
+   */
   public static enum TransactionType {
     BUY,
     SELL
   }
-  
+
 }

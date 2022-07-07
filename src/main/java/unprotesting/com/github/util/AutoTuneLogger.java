@@ -2,12 +2,14 @@ package unprotesting.com.github.util;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import lombok.Getter;
 import lombok.Setter;
-
 import org.bukkit.plugin.java.JavaPlugin;
 
+
+/**
+ * The custom Auto-Tune logger class.
+ */
 @Getter
 @Setter
 public class AutoTuneLogger {
@@ -30,9 +32,10 @@ public class AutoTuneLogger {
 
   /**
    * Logs a message at the given level with an optional prefix.
-   * @param level the level to log at
+   *
+   * @param level   the level to log at
    * @param message the message to log
-   * @param param1 the parameters to use in the message
+   * @param param1  the parameters to use in the message
    */
   public void log(Level level, String message, Object param1) {
     if (shouldLog(level)) {
@@ -42,16 +45,16 @@ public class AutoTuneLogger {
 
   /**
    * Logs a message at the given level with optional prefixes.
-   * @param level the level to log at
+   *
+   * @param level   the level to log at
    * @param message the message to log
-   * @param params the parameters to log
+   * @param params  the parameters to log
    */
   public void log(Level level, String message, Object... params) {
     if (shouldLog(level)) {
       logger.log(Level.INFO, prefix(level, message), params);
     }
   }
-
 
   /**
    * Logs a message at the given level.

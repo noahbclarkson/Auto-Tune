@@ -1,11 +1,13 @@
 package unprotesting.com.github.data;
 
 import java.io.IOException;
-
 import org.mapdb.DataInput2;
 import org.mapdb.DataOutput2;
 import org.mapdb.Serializer;
 
+/**
+ * Serializer for loan class.
+ */
 public class LoanSerializer implements Serializer<Loan> {
 
   @Override

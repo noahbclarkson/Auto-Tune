@@ -1,12 +1,13 @@
 package unprotesting.com.github.util;
 
 import lombok.Getter;
-
 import net.milkbowl.vault.economy.Economy;
-
 import org.bukkit.Server;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
+/**
+ * The class for managing the economy.
+ */
 public class EconomyUtil {
 
   @Getter
@@ -14,6 +15,7 @@ public class EconomyUtil {
 
   /**
    * Initializes the economy.
+   *
    * @param server The server.
    * @return Whether the economy was initialized or not.
    */
@@ -28,9 +30,9 @@ public class EconomyUtil {
     if (rsp == null) {
       return false;
     }
-    
+
     economy = rsp.getProvider();
     return economy != null;
   }
-  
+
 }

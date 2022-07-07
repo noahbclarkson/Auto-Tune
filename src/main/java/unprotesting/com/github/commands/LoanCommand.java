@@ -2,19 +2,20 @@ package unprotesting.com.github.commands;
 
 import java.util.Map;
 import java.util.UUID;
-
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.Database;
 import unprotesting.com.github.data.Loan;
 import unprotesting.com.github.util.EconomyUtil;
 import unprotesting.com.github.util.Format;
 
+/**
+ * The command for creating, paying back and viewing loans.
+ */
 public class LoanCommand implements CommandExecutor {
 
   @Override

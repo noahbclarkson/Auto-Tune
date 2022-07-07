@@ -1,11 +1,9 @@
 package unprotesting.com.github;
 
 import lombok.Getter;
-
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
-
 import unprotesting.com.github.commands.AutosellCommand;
 import unprotesting.com.github.commands.LoanCommand;
 import unprotesting.com.github.commands.SellCommand;
@@ -21,7 +19,10 @@ import unprotesting.com.github.events.TutorialEvent;
 import unprotesting.com.github.server.LocalServer;
 import unprotesting.com.github.util.EconomyUtil;
 
-@Getter
+
+/**
+ * The main class of Auto-Tune.
+ */
 public class AutoTune extends JavaPlugin {
 
   @Getter
@@ -58,35 +59,33 @@ public class AutoTune extends JavaPlugin {
 
   private void setupEvents() {
 
-    Bukkit.getScheduler().runTaskAsynchronously(this, () ->
-        Bukkit.getPluginManager().callEvent(new IpCheckEvent(true)));
+    Bukkit.getScheduler().runTaskAsynchronously(this,
+        () -> Bukkit.getPluginManager().callEvent(new IpCheckEvent(true)));
 
-    Bukkit.getScheduler().runTaskTimerAsynchronously(this, () ->
-        Bukkit.getPluginManager().callEvent(new AutosellProfitEvent(true)),
+    Bukkit.getScheduler().runTaskTimerAsynchronously(this,
+        () -> Bukkit.getPluginManager().callEvent(new AutosellProfitEvent(true)),
         1200L, 1200L);
 
     if (Config.get().isEnableLoans()) {
-      Bukkit.getScheduler().runTaskTimerAsynchronously(this, () ->
-                      Bukkit.getPluginManager().callEvent(new LoanInterestEvent(true)),
-              1200L, 1200L);
+      Bukkit.getScheduler().runTaskTimerAsynchronously(this,
+          () -> Bukkit.getPluginManager().callEvent(new LoanInterestEvent(true)),
+          1200L, 1200L);
     }
 
-    Bukkit.getScheduler().runTaskTimerAsynchronously(this, () ->
-        Bukkit.getPluginManager().callEvent(new TimePeriodEvent(true)),
+    Bukkit.getScheduler().runTaskTimerAsynchronously(this,
+        () -> Bukkit.getPluginManager().callEvent(new TimePeriodEvent(true)),
         (long) (Config.get().getTimePeriod() * 1200L),
         (long) (Config.get().getTimePeriod() * 1200L));
 
-    Bukkit.getScheduler().runTaskTimerAsynchronously(this, () ->
-        Bukkit.getPluginManager().callEvent(new TutorialEvent(true)),
+    Bukkit.getScheduler().runTaskTimerAsynchronously(this,
+        () -> Bukkit.getPluginManager().callEvent(new TutorialEvent(true)),
         (long) (Config.get().getTutorialUpdate() * 20),
         (long) (Config.get().getTutorialUpdate() * 20));
 
-    Bukkit.getScheduler().runTaskTimerAsynchronously(this, () ->
-        Bukkit.getPluginManager().callEvent(new AutoTuneInventoryCheckEvent(true)),
+    Bukkit.getScheduler().runTaskTimerAsynchronously(this,
+        () -> Bukkit.getPluginManager().callEvent(new AutoTuneInventoryCheckEvent(true)),
         200L, 4L);
 
   }
-
-
 
 }

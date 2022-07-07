@@ -2,9 +2,7 @@ package unprotesting.com.github.data;
 
 import java.util.HashMap;
 import java.util.UUID;
-
 import lombok.Getter;
-
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
@@ -17,18 +15,20 @@ import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
 import org.mapdb.Serializer;
 import org.mapdb.serializer.SerializerCompressionWrapper;
-
 import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.util.EconomyUtil;
 import unprotesting.com.github.util.Format;
 
+/**
+ * The database for the plugin.
+ */
 public class Database {
 
   private static Database instance;
 
   private static final String[] ECONOMY_DATA_KEYS = {
-    "GDP", "BALANCE", "DEBT", "LOSS", "INFLATION", "POPULATION"};
+      "GDP", "BALANCE", "DEBT", "LOSS", "INFLATION", "POPULATION" };
 
   // The MapDB database.
   private DB db;
@@ -52,7 +52,7 @@ public class Database {
    */
   public Database() {
     instance = this;
-    createDB(AutoTune.getInstance().getDataFolder() + "/data.db");
+    createDb(AutoTune.getInstance().getDataFolder() + "/data.db");
     this.sections = new HashMap<String, Section>();
     createMaps();
     loadShopDefaults();
@@ -63,6 +63,7 @@ public class Database {
 
   /**
    * Get the static instance of the database.
+   *
    * @return The static instance of the database.
    */
   public static Database get() {
@@ -77,7 +78,7 @@ public class Database {
       db.close();
     }
   }
-  
+
   /**
    * Update the percentage changes for each shop.
    */
@@ -86,7 +87,7 @@ public class Database {
       Shop shop = getShop(name);
       shop.updateChange();
       putShop(name, shop);
-      Format.getLog().finest(name + "'s change is now " 
+      Format.getLog().finest(name + "'s change is now "
           + Format.percent(getShop(name).getChange()));
     }
   }
@@ -111,7 +112,8 @@ public class Database {
 
   /**
    * Update a loan value.
-   * @param key The key of the loan.
+   *
+   * @param key  The key of the loan.
    * @param loan The loan to update.
    */
   public void updateLoan(Long key, Loan loan) {
@@ -129,7 +131,7 @@ public class Database {
       Format.getLog().severe("Could not find shop for " + item);
       return null;
     }
-    
+
     return shops.get(item);
   }
 
@@ -157,7 +159,7 @@ public class Database {
     return max;
   }
 
-  private void createDB(String location) {
+  private void createDb(String location) {
     db = DBMaker.fileDB(location)
         .checksumHeaderBypass()
         .fileMmapEnableIfSupported()
@@ -182,7 +184,7 @@ public class Database {
   private void loadShopDefaults() {
 
     ConfigurationSection config = Config.get().getShops();
-    
+
     for (String sectionName : config.getKeys(false)) {
 
       ConfigurationSection sectionConfig = config.getConfigurationSection(sectionName);
@@ -194,7 +196,7 @@ public class Database {
         Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(key));
 
         if (material == null && enchantment == null) {
-          Format.getLog().warning("Invalid shop. " 
+          Format.getLog().warning("Invalid shop. "
               + key + " is not a valid material or enchantment.");
           continue;
         }
@@ -209,11 +211,10 @@ public class Database {
         }
 
         shops.put(key, new Shop(section, sectionName, isEnchantment));
-
         Format.getLog().fine("New shop " + key + " in section " + shops.get(key).getSection());
 
       }
-      
+
     }
   }
 
@@ -281,7 +282,5 @@ public class Database {
     Format.getLog().fine("Loaded economy data map.");
     this.relations = new HashMap<>();
   }
-
-
 
 }

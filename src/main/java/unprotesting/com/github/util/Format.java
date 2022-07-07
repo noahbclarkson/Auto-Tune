@@ -4,18 +4,17 @@ import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.logging.Level;
-
 import lombok.Getter;
-
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-
 import unprotesting.com.github.AutoTune;
 
+/**
+ * The class for formatting messages.
+ */
 public class Format {
 
   // The locale to use.
@@ -38,6 +37,7 @@ public class Format {
 
   /**
    * Loads the locale and formats.
+   *
    * @param localeString the locale string
    */
   public static void loadLocale(String localeString) {
@@ -64,6 +64,7 @@ public class Format {
 
   /**
    * Format a number to a currency string.
+   *
    * @param amount the amount to format
    * @return the formatted currency string
    */
@@ -73,6 +74,7 @@ public class Format {
 
   /**
    * Format a number to a percentage string.
+   *
    * @param amount the amount to format
    * @return the formatted percentage string
    */
@@ -82,6 +84,7 @@ public class Format {
 
   /**
    * Format a number to a decimal string.
+   *
    * @param amount the amount to format
    * @return the formatted decimal string
    */
@@ -91,6 +94,7 @@ public class Format {
 
   /**
    * Format a number to a number string.
+   *
    * @param amount the amount to format
    * @return the formatted number string
    */
@@ -100,6 +104,7 @@ public class Format {
 
   /**
    * Format a millis long to a date.
+   *
    * @param time the time to format
    * @return the formatted date string
    */
@@ -107,11 +112,11 @@ public class Format {
     return date.format(time);
   }
 
-
   /**
    * Send a message to a player using the MiniMessage API and a tag resolver.
-   * @param player the player to send the message to
-   * @param message the message to send
+   *
+   * @param player   the player to send the message to
+   * @param message  the message to send
    * @param resolver the tag resolver
    */
   public static void sendMessage(Player player, String message, TagResolver resolver) {
@@ -120,7 +125,8 @@ public class Format {
 
   /**
    * Send a message to a player using the MiniMessage API.
-   * @param player the player to send the message to
+   *
+   * @param player  the player to send the message to
    * @param message the message to send
    */
   public static void sendMessage(Player player, String message) {
@@ -128,9 +134,11 @@ public class Format {
   }
 
   /**
-   * Send a message to a CommandSender using the MiniMessage API and a tag resolver.
-   * @param sender The command sender
-   * @param message The message to send
+   * Send a message to a CommandSender using the MiniMessage API and a tag
+   * resolver.
+   *
+   * @param sender   The command sender
+   * @param message  The message to send
    * @param resolver The tag resolver
    */
   public static void sendMessage(CommandSender sender, String message, TagResolver resolver) {
@@ -139,7 +147,8 @@ public class Format {
 
   /**
    * Send a message to a CommandSender using the MiniMessage API.
-   * @param sender The command sender
+   *
+   * @param sender  The command sender
    * @param message The message to send
    */
   public static void sendMessage(CommandSender sender, String message) {

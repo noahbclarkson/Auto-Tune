@@ -5,25 +5,26 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
-
 import lombok.Cleanup;
 import lombok.Getter;
-
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-
 import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
 import unprotesting.com.github.util.Format;
 
+/**
+ * The event for writing price data to a CSV file.
+ */
 public class CsvWriteEvent extends Event {
-  
+
   @Getter
   private final HandlerList handlers = new HandlerList();
 
   /**
    * Write the price data for all items to a CSV file.
+   *
    * @param isAsync Whether the event is being run async or not.
    */
   public CsvWriteEvent(boolean isAsync) {
@@ -48,7 +49,8 @@ public class CsvWriteEvent extends Event {
       file.delete();
     }
     file.createNewFile();
-    @Cleanup BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+    @Cleanup
+    BufferedWriter writer = new BufferedWriter(new FileWriter(file));
     String[] shopNames = ShopUtil.getShopNames();
     // Sort shopNames alphabetically.
     Arrays.sort(shopNames);

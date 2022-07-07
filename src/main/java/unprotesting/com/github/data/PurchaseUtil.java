@@ -2,28 +2,28 @@ package unprotesting.com.github.data;
 
 import java.util.HashMap;
 import java.util.UUID;
-
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.Transaction.TransactionType;
 import unprotesting.com.github.util.EconomyUtil;
 import unprotesting.com.github.util.Format;
 
+/**
+ * A utility class for purchasing and selling items.
+ */
 public class PurchaseUtil {
 
   /**
    * Purchase/sell an item from a shop.
-   * 
+   *
    * @param name   The name of the shop.
    * @param player The player uuid.
    * @param amount The item to purchase.
@@ -95,7 +95,7 @@ public class PurchaseUtil {
 
   /**
    * Sell an item stack to all relevant shops.
-   * 
+   *
    * @param item   The item stack to sell.
    * @param player The player object.
    */
@@ -121,7 +121,7 @@ public class PurchaseUtil {
       total += price * amount;
       r = getTagResolver(item.displayName(), price, amount, balance, null);
 
-      if (Config.get().isEnableSellLimits() 
+      if (Config.get().isEnableSellLimits()
           && ShopUtil.getSellsLeft(player, enchantmentName) - amount < 0) {
         Format.sendMessage(player, Config.get().getRunOutOfSells(), r);
         success = false;

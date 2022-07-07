@@ -2,6 +2,9 @@ package unprotesting.com.github.data;
 
 import org.bukkit.OfflinePlayer;
 
+/**
+ * A utility class for interacting with shops and the database.
+ */
 public class ShopUtil {
 
   protected static String[] sectionNameCache;
@@ -17,6 +20,7 @@ public class ShopUtil {
 
   /**
    * Get the list of possible shop names.
+   *
    * @return The list of possible shop names.
    */
   public static String[] getShopNames() {
@@ -28,6 +32,7 @@ public class ShopUtil {
 
   /**
    * Get the list of possible section names.
+   *
    * @return The list of possible section names.
    */
   public static String[] getSectionNames() {
@@ -39,6 +44,7 @@ public class ShopUtil {
 
   /**
    * Get a section of the shop.
+   *
    * @param name The name of the section.
    * @return The section.
    */
@@ -69,5 +75,4 @@ public class ShopUtil {
     Database.get().transactions.put(System.currentTimeMillis(), transaction);
   }
 
-  
 }

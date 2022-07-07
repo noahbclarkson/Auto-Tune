@@ -1,11 +1,9 @@
 package unprotesting.com.github.events;
 
 import lombok.Getter;
-
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-
 import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.Database;
@@ -13,6 +11,9 @@ import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
 import unprotesting.com.github.util.Format;
 
+/**
+ * The event for updating item prices.
+ */
 public class TimePeriodEvent extends Event {
 
   @Getter
@@ -20,6 +21,7 @@ public class TimePeriodEvent extends Event {
 
   /**
    * Constructor for the TimePeriodEvent class.
+   *
    * @param isAsync Whether to run the check in a separate thread.
    */
   public TimePeriodEvent(boolean isAsync) {
@@ -27,7 +29,7 @@ public class TimePeriodEvent extends Event {
     int players = Bukkit.getOnlinePlayers().size();
 
     if (players < Config.get().getMinimumPlayers()) {
-      Format.getLog().config("Not enough players to start price update. (" 
+      Format.getLog().config("Not enough players to start price update. ("
           + players + " < " + Config.get().getMinimumPlayers() + ")");
       return;
     }
@@ -35,13 +37,13 @@ public class TimePeriodEvent extends Event {
     Format.getLog().config("Price update started as there are " + players + " players online.");
     updatePrices();
     Database.get().updateChanges();
-    Bukkit.getScheduler().runTaskAsynchronously(AutoTune.getInstance(), () ->
-        Bukkit.getPluginManager().callEvent(new CsvWriteEvent(true)));
+    Bukkit.getScheduler().runTaskAsynchronously(AutoTune.getInstance(),
+        () -> Bukkit.getPluginManager().callEvent(new CsvWriteEvent(true)));
     // Database.get().updateRelations();
   }
 
   private void updatePrices() {
-    
+
     for (String s : ShopUtil.getShopNames()) {
       Shop shop = ShopUtil.getShop(s);
       double initialPrice = shop.getPrice();
@@ -51,7 +53,7 @@ public class TimePeriodEvent extends Event {
       ShopUtil.putShop(s, shop);
 
       if (newPrice != initialPrice) {
-        Format.getLog().config("Price of " + s + " changed from " 
+        Format.getLog().config("Price of " + s + " changed from "
             + Format.currency(initialPrice) + " to " + Format.currency(newPrice));
         Format.getLog().finer("Changed by " + Format.currency(newPrice - initialPrice));
         Format.getLog().finest("Volatility: " + shop.getVolatility());

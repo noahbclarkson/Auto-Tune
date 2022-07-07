@@ -4,11 +4,13 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * The class that represents a CollectFirst.
+ */
 @AllArgsConstructor
 public class CollectFirst implements Serializable {
 
@@ -20,11 +22,13 @@ public class CollectFirst implements Serializable {
   // The list of players who have collected the item
   protected List<UUID> players;
   // Whether the item has been found anywhere on the server
-  @Getter @Setter
+  @Getter
+  @Setter
   protected boolean foundInServer;
-  
+
   /**
    * Constructor for the collect first class.
+   *
    * @param setting The collect first setting for this shop.
    */
   protected CollectFirst(String cfSetting) {
@@ -42,6 +46,9 @@ public class CollectFirst implements Serializable {
     this.foundInServer = false;
   }
 
+  /**
+   * Whether the collect first setting is for players, servers, or neither.
+   */
   public static enum CollectFirstSetting {
     PLAYER,
     SERVER,
@@ -55,12 +62,13 @@ public class CollectFirst implements Serializable {
     if (!players.contains(player)) {
       players.add(player);
     }
-    
+
   }
 
   /**
    * Whether or not the player is in the map.
    * I.e they have found this item.
+   *
    * @param player The player uuid.
    * @return Whether or not the player is in the map.
    */
@@ -68,5 +76,4 @@ public class CollectFirst implements Serializable {
     return players.contains(player);
   }
 
-  
 }

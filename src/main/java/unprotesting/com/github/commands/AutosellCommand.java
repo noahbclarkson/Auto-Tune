@@ -1,12 +1,9 @@
 package unprotesting.com.github.commands;
 
 import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
-
 import java.util.List;
 import java.util.UUID;
-
 import net.kyori.adventure.text.Component;
-
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -14,20 +11,21 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.Section;
 import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
 import unprotesting.com.github.util.Format;
 
+/**
+ * The command for auto-selling items.
+ */
 public class AutosellCommand extends AutoTuneShopFormat implements CommandExecutor {
 
-  
   @Override
   public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
       @NotNull String label, @NotNull String[] args) {
-    
+
     if (sender instanceof Player) {
       return interpret((Player) sender, args);
     }
@@ -55,7 +53,7 @@ public class AutosellCommand extends AutoTuneShopFormat implements CommandExecut
     } else {
       autosell.set(uuid + "." + shopName, true);
     }
-    
+
     Config.get().setAutosell(autosell);
     Section section = ShopUtil.getSection(shop.getSection());
     gui.getPanes().clear();
@@ -69,5 +67,5 @@ public class AutosellCommand extends AutoTuneShopFormat implements CommandExecut
   protected List<Component> applyLore(Player player, String shopName, int amount) {
     return getLore(player, shopName, Config.get().getAutosellLore(), amount);
   }
-  
+
 }

@@ -6,15 +6,12 @@ import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
 import com.github.stefvanschie.inventoryframework.pane.Pane.Priority;
 import com.github.stefvanschie.inventoryframework.pane.StaticPane;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
@@ -22,7 +19,6 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.EconomyDataUtil;
 import unprotesting.com.github.data.Section;
@@ -30,6 +26,9 @@ import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
 import unprotesting.com.github.util.Format;
 
+/**
+ * The abstract class for commands that utilize the shop format.
+ */
 public abstract class AutoTuneShopFormat {
 
   private static OutlinePane background;
@@ -67,7 +66,7 @@ public abstract class AutoTuneShopFormat {
       }
       gui.addPane(loadShopPane((Player) sender, gui, section));
     }
-    
+
     gui.show((HumanEntity) sender);
     return true;
   }
@@ -139,15 +138,15 @@ public abstract class AutoTuneShopFormat {
         itemsOnPage.clear();
       }
     }
-    
+
     return pages;
   }
 
   private StaticPane getBackToSectionsPane(Player player, ChestGui gui) {
     StaticPane pane = new StaticPane(0, 0, 1, 1, Priority.HIGHEST);
     ItemStack item = new ItemStack(Material.ARROW);
-    item.editMeta(meta ->
-        meta.displayName(Format.getComponent("<b><white>Back to menu").asComponent()));
+    item.editMeta(meta -> meta.displayName(Format.getComponent(
+        "<b><white>Back to menu").asComponent()));
     pane.addItem(new GuiItem(item, event -> {
       event.setCancelled(true);
       gui.getPanes().clear();
@@ -162,8 +161,7 @@ public abstract class AutoTuneShopFormat {
   private StaticPane getPageSelector(ChestGui gui, PaginatedPane pages, int page, int x) {
     StaticPane pane = new StaticPane(x, 5, 1, 1, Priority.HIGHEST);
     ItemStack item = new ItemStack(Material.ARROW);
-    item.editMeta(meta ->
-        meta.displayName(Format.getComponent(
+    item.editMeta(meta -> meta.displayName(Format.getComponent(
         "<b><white>Go to page " + (page + 1)).asComponent()));
     pane.addItem(new GuiItem(item, event -> {
       event.setCancelled(true);
@@ -177,8 +175,7 @@ public abstract class AutoTuneShopFormat {
     StaticPane pane = new StaticPane(0, 0, 1, 1, Priority.HIGHEST);
     ItemStack item = new ItemStack(Material.ARROW);
     Section section = ShopUtil.getSection(sectionName);
-    item.editMeta(meta ->
-        meta.displayName(section.getItem().displayName()));
+    item.editMeta(meta -> meta.displayName(section.getItem().displayName()));
     pane.addItem(new GuiItem(item, event -> {
       event.setCancelled(true);
       gui.getPanes().clear();
@@ -193,8 +190,8 @@ public abstract class AutoTuneShopFormat {
   protected StaticPane getGdpPane(Player player, ChestGui gui) {
     ItemStack item = new ItemStack(Material.GOLD_INGOT);
     TagResolver r = getGdpTagResolver();
-    item.editMeta(meta ->
-        meta.displayName(Format.getComponent(Config.get().getShopGdpLore().get(0), r)));
+    item.editMeta(meta -> meta.displayName(Format.getComponent(
+        Config.get().getShopGdpLore().get(0), r)));
     List<Component> lore = new ArrayList<>();
 
     for (int i = 1; i < Config.get().getShopGdpLore().size(); i++) {
@@ -237,8 +234,8 @@ public abstract class AutoTuneShopFormat {
     }
 
     ItemStack item = new ItemStack(material);
-    item.editMeta(meta -> 
-        meta.displayName(Format.getComponent(Config.get().getBackgroundPaneText())));
+    item.editMeta(meta -> meta.displayName(Format.getComponent(
+        Config.get().getBackgroundPaneText())));
     return new GuiItem(item);
   }
 
@@ -288,7 +285,7 @@ public abstract class AutoTuneShopFormat {
     for (String line : lore) {
       loreComponents.add(Format.getComponent(line, resolver));
     }
-      
+
     return loreComponents;
   }
 

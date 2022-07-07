@@ -4,23 +4,23 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-
 import lombok.Getter;
-
 import org.bukkit.Bukkit;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.ItemStack;
-
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.CollectFirst;
 import unprotesting.com.github.data.CollectFirst.CollectFirstSetting;
 import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
 
-
+/**
+ * The event tp check players inventories for items they have auto-sold and
+ * to update the collect first settings.
+ */
 public class AutoTuneInventoryCheckEvent extends Event {
 
   @Getter
@@ -31,6 +31,7 @@ public class AutoTuneInventoryCheckEvent extends Event {
   /**
    * Checks all online players inventories for autosell items
    * and to update collect first settings.
+   *
    * @param isAsync Whether to run this in an async task.
    */
   public AutoTuneInventoryCheckEvent(boolean isAsync) {
@@ -59,7 +60,7 @@ public class AutoTuneInventoryCheckEvent extends Event {
         String enchantmentName = enchantment.getKey().getKey();
         if (checkIfValidShop(enchantmentName)) {
           Shop shop = ShopUtil.getShop(enchantmentName);
-          updateCF(enchantmentName, shop, uuid, false);
+          updateCf(enchantmentName, shop, uuid, false);
         }
       }
     }
@@ -91,12 +92,11 @@ public class AutoTuneInventoryCheckEvent extends Event {
       update = true;
     }
 
-    updateCF(name, shop, uuid, update);
+    updateCf(name, shop, uuid, update);
 
-    
   }
 
-  private void updateCF(String name, Shop shop, UUID uuid, boolean update) {
+  private void updateCf(String name, Shop shop, UUID uuid, boolean update) {
     CollectFirst cf = shop.getSetting();
     if (cf.getSetting().equals(CollectFirstSetting.SERVER)) {
       if (!cf.isFoundInServer()) {
@@ -119,5 +119,5 @@ public class AutoTuneInventoryCheckEvent extends Event {
     name = name.toLowerCase();
     return shopNames.contains(name);
   }
-  
+
 }

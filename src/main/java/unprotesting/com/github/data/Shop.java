@@ -4,23 +4,23 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.text.Component;
-
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
-
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.CollectFirst.CollectFirstSetting;
 import unprotesting.com.github.util.Format;
 
+/**
+ * The class that represents a shop.
+ */
 @Builder
 @AllArgsConstructor
 public class Shop implements Serializable {
@@ -44,7 +44,8 @@ public class Shop implements Serializable {
   @Getter
   protected final boolean enchantment;
   // The collect first setting for this shop
-  @Getter @Setter
+  @Getter
+  @Setter
   protected CollectFirst setting;
   // The autosell data for this shop
   @Getter
@@ -88,16 +89,16 @@ public class Shop implements Serializable {
   @Getter
   protected Map<UUID, Integer> recentSells;
 
-
   /**
    * Constructor for the shop class.
-   * @param config The configuration section for the shop.
+   *
+   * @param config        The configuration section for the shop.
    * @param isEnchantment Whether the item is an enchantment.
    */
   protected Shop(ConfigurationSection config, String sectionName, boolean isEnchantment) {
     this.buys = new int[1];
     this.sells = new int[1];
-    this.prices = new double[]{config.getDouble("price")};
+    this.prices = new double[] { config.getDouble("price") };
     this.enchantment = isEnchantment;
     this.size = 1;
     this.totalBuys = 0;
@@ -111,6 +112,7 @@ public class Shop implements Serializable {
 
   /**
    * Load the non serialized data from the config.
+   *
    * @param config The config section.
    */
   protected void loadConfiguration(ConfigurationSection config, String sectionName) {
@@ -132,7 +134,7 @@ public class Shop implements Serializable {
 
     if (startPrice != prices[0]) {
       prices[size - 1] = startPrice;
-      Format.getLog().info("Price changed for " + section + " to " + startPrice 
+      Format.getLog().info("Price changed for " + section + " to " + startPrice
           + " because the price was changed in the config.");
     }
 
@@ -144,6 +146,7 @@ public class Shop implements Serializable {
 
   /**
    * Get the buy count for the last time period.
+   *
    * @return The buy count.
    */
   public int getBuyCount() {
@@ -152,6 +155,7 @@ public class Shop implements Serializable {
 
   /**
    * Get the sell count for the last time period.
+   *
    * @return The sell count.
    */
   public int getSellCount() {
@@ -160,6 +164,7 @@ public class Shop implements Serializable {
 
   /**
    * Get the price for the last time period.
+   *
    * @return The price.
    */
   public double getPrice() {
@@ -175,6 +180,7 @@ public class Shop implements Serializable {
 
   /**
    * Add to the latest buy count.
+   *
    * @param buyCount The additional buys.
    */
   public void addBuys(UUID player, int buyCount) {
@@ -188,11 +194,12 @@ public class Shop implements Serializable {
     this.buys[size - 1] = buyCount + buys[size - 1];
     Format.getLog().finer("Increased buys by " + buyCount + " to " + buys[size - 1]);
     Format.getLog().finest("Updated at time period " + (size - 1));
-    
+
   }
 
   /**
    * Add to the latest sell count.
+   *
    * @param sellCount The additional sells.
    */
   public void addSells(UUID player, int sellCount) {
@@ -217,7 +224,8 @@ public class Shop implements Serializable {
 
   /**
    * Increase the autosell count for a uuid.
-   * @param uuid The uuid.
+   *
+   * @param uuid  The uuid.
    * @param count The count.
    */
   public void addAutosell(UUID uuid, int count) {
@@ -232,6 +240,7 @@ public class Shop implements Serializable {
 
   /**
    * Calculates if a given player has unlocked this item.
+   *
    * @return Whether the player has unlocked this item.
    */
   public boolean isUnlocked(UUID player) {
@@ -253,6 +262,7 @@ public class Shop implements Serializable {
 
   /**
    * Create a new time period for the shop.
+   *
    * @param price The new price for the time period.
    */
   public void timePeriod(double price) {

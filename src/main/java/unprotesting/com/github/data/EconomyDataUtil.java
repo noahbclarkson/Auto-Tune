@@ -1,10 +1,14 @@
 package unprotesting.com.github.data;
 
+/**
+ * Utility class for the servers economy.
+ */
 public class EconomyDataUtil {
 
   /**
    * Update the economy data of ta given economy data setting.
-   * @param key The key of the economy data setting.
+   *
+   * @param key   The key of the economy data setting.
    * @param value The new value of the economy data setting.
    */
   public static void updateEconomyData(String key, double value) {
@@ -15,7 +19,8 @@ public class EconomyDataUtil {
 
   /**
    * Increase the economy data of a given economy data setting.
-   * @param key The key of the economy data setting.
+   *
+   * @param key   The key of the economy data setting.
    * @param value The value to increase the economy data setting by.
    */
   public static void increaseEconomyData(String key, double value) {
@@ -54,9 +59,4 @@ public class EconomyDataUtil {
     return data[data.length - 1];
   }
 
-
-
-
-
-  
 }

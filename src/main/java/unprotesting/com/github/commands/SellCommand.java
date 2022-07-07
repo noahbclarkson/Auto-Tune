@@ -1,7 +1,6 @@
 package unprotesting.com.github.commands;
 
 import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
-
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -9,16 +8,18 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
-
 import unprotesting.com.github.data.PurchaseUtil;
 import unprotesting.com.github.util.Format;
 
+/**
+ * The command for selling items.
+ */
 public class SellCommand implements CommandExecutor {
 
   @Override
-  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, 
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
       @NotNull String label, @NotNull String[] args) {
-        
+
     if (sender instanceof Player) {
       return interpret(sender);
     }

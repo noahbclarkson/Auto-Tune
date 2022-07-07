@@ -5,17 +5,16 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
-
 import lombok.Getter;
-
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-
 import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.util.Format;
 
+/**
+ * The class for loading and storing the configuration options.
+ */
 @Getter
-
 public class Config {
 
   // The static instance of the config.
@@ -216,8 +215,8 @@ public class Config {
     if (!buildFolder.exists()) {
       buildFolder.mkdir();
     }
-    String[] files = {"index.html", "favicon.png",
-        "global.css", "build/bundle.js", "build/bundle.js.map"};
+    String[] files = { "index.html", "favicon.png",
+        "global.css", "build/bundle.js", "build/bundle.js.map" };
     for (String file : files) {
       File webFile = new File(webFolder, file);
       if (!webFile.exists()) {

@@ -1,9 +1,13 @@
 package unprotesting.com.github.util;
 
+/**
+ * The utility class for math operations.
+ */
 public class MathUtil {
 
   /**
    * Add up all the values in an integer array.
+   *
    * @param array The array to add up
    * @return The sum of all the values in the array
    */
@@ -17,6 +21,7 @@ public class MathUtil {
 
   /**
    * Add up all the values in a double array.
+   *
    * @param array The array to add up
    * @return The sum of all the values in the array
    */
@@ -27,5 +32,5 @@ public class MathUtil {
     }
     return sum;
   }
-  
+
 }

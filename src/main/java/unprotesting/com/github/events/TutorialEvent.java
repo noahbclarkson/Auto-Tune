@@ -1,19 +1,17 @@
 package unprotesting.com.github.events;
 
 import lombok.Getter;
-
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
-
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.util.Format;
 
-
-
+/**
+ * The event for sending tutorial messages to players.
+ */
 public class TutorialEvent extends Event {
 
   @Getter
@@ -40,5 +38,5 @@ public class TutorialEvent extends Event {
     audience.sendMessage(message);
     position++;
   }
-  
+
 }

@@ -1,16 +1,17 @@
 package unprotesting.com.github.server;
 
 import lombok.Getter;
-
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.ResourceHandler;
-
 import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.util.Format;
 
+/**
+ * The class for starting the web server.
+ */
 public class LocalServer {
 
   @Getter
@@ -31,7 +32,7 @@ public class LocalServer {
     server = new Server();
     ServerConnector connector = new ServerConnector(server);
     connector.setPort(Config.get().getPort());
-    server.setConnectors(new Connector[] {connector});
+    server.setConnectors(new Connector[] { connector });
     ResourceHandler resourceHandler = new ResourceHandler();
     resourceHandler.setDirAllowed(true);
     resourceHandler.setResourceBase(
@@ -55,5 +56,5 @@ public class LocalServer {
       Format.getLog().severe("Failed to stop local server!");
     }
   }
-  
-} 
+
+}

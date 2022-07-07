@@ -4,11 +4,8 @@ import com.github.stefvanschie.inventoryframework.gui.GuiItem;
 import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
 import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.github.stefvanschie.inventoryframework.pane.Pane.Priority;
-
 import java.util.List;
-
 import net.kyori.adventure.text.Component;
-
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
@@ -19,20 +16,22 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
-
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.PurchaseUtil;
 import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
 import unprotesting.com.github.util.Format;
 
+/**
+ * The command for buying and selling items.
+ */
 public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
 
-  private static final int[] AMOUNTS = {1, 2, 4, 8, 16, 32, 64};
-  private static final int[] ENCHANTMENT_AMOUNTS = {1, 2, 3, 4, 5};
+  private static final int[] AMOUNTS = { 1, 2, 4, 8, 16, 32, 64 };
+  private static final int[] ENCHANTMENT_AMOUNTS = { 1, 2, 3, 4, 5 };
 
   @Override
-  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, 
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
       @NotNull String label, @NotNull String[] args) {
 
     if (sender instanceof Player) {
@@ -41,7 +40,7 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
 
     Format.sendMessage(sender, "<red>You must be a player to use this command.");
     return true;
-    
+
   }
 
   @Override
@@ -59,13 +58,12 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
     int length = shop.isEnchantment() ? ENCHANTMENT_AMOUNTS.length : AMOUNTS.length;
     OutlinePane pane = new OutlinePane(1, 2, length, 2, Priority.HIGHEST);
     List<String> lore = Config.get().getPurchaseBuyLore();
-    
-    Material material = shop.isEnchantment() ? Material.ENCHANTED_BOOK 
+
+    Material material = shop.isEnchantment() ? Material.ENCHANTED_BOOK
         : Material.matchMaterial(shopName);
-    
+
     int[] amounts = shop.isEnchantment() ? ENCHANTMENT_AMOUNTS : AMOUNTS;
     boolean buy = true;
-    
 
     for (int i = 0; i < 2; i++) {
       for (int amount : amounts) {
@@ -115,7 +113,7 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
       buy = false;
       lore = Config.get().getPurchaseSellLore();
     }
-    
+
     return pane;
   }
 
@@ -123,5 +121,5 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
   protected List<Component> applyLore(Player player, String shopName, int amount) {
     return getLore(player, shopName, Config.get().getShopLore(), amount);
   }
-  
+
 }

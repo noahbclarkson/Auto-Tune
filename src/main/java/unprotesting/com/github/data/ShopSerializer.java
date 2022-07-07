@@ -4,11 +4,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
 import org.mapdb.DataInput2;
 import org.mapdb.DataOutput2;
 import org.mapdb.Serializer;
 
+/**
+ * The serializer for the Shop class.
+ */
 public class ShopSerializer implements Serializer<Shop> {
 
   @Override

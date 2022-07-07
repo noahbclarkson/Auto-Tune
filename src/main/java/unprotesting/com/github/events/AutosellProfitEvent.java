@@ -2,17 +2,13 @@ package unprotesting.com.github.events;
 
 import java.util.Map;
 import java.util.UUID;
-
 import lombok.Getter;
-
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.EconomyDataUtil;
 import unprotesting.com.github.data.Shop;
@@ -22,6 +18,9 @@ import unprotesting.com.github.data.Transaction.TransactionType;
 import unprotesting.com.github.util.EconomyUtil;
 import unprotesting.com.github.util.Format;
 
+/**
+ * The event for sending a player their money from items they have auto-sold.
+ */
 public class AutosellProfitEvent extends Event {
 
   @Getter
@@ -29,6 +28,7 @@ public class AutosellProfitEvent extends Event {
 
   /**
    * Updates the autosell profit.
+   *
    * @param isAsync Whether the event is being run async or not.
    */
   public AutosellProfitEvent(boolean isAsync) {
@@ -67,7 +67,6 @@ public class AutosellProfitEvent extends Event {
         TagResolver resolver = TagResolver.resolver(
             Placeholder.parsed("total", Format.currency(total)),
             Placeholder.parsed("balance", balance));
-        
 
         if (player.isOnline()) {
           Format.sendMessage(player.getPlayer(), Config.get().getAutosellProfit(), resolver);

@@ -3,17 +3,16 @@ package unprotesting.com.github.data;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-
 import lombok.Getter;
-
 import net.kyori.adventure.text.Component;
-
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
-
 import unprotesting.com.github.util.Format;
 
+/**
+ * The class that represents a shop section.
+ */
 @Getter
 public class Section {
 
@@ -25,6 +24,7 @@ public class Section {
 
   /**
    * Constructor for the section class.
+   *
    * @param section The configuration section for the section.
    */
   protected Section(String name, ConfigurationSection section) {
@@ -58,5 +58,5 @@ public class Section {
 
     return shops;
   }
-  
+
 }

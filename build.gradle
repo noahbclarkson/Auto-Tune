@@ -18,7 +18,7 @@ ext {
   bstatsVersion = '3.0.0'
   mapdbVersion = '3.0.8'
   ifVersion = '0.10.6'
-  junitVersion = '5.8.1'
+  junitVersion = '5.8.2'
 
 }
 

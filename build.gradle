@@ -15,10 +15,10 @@ ext {
   lombokVersion = '1.18.24'
   adventureVersion = '4.11.0'
   paperMCVersion = '1.19-R0.1-SNAPSHOT'
-  bstatsVersion = '2.2.1'
+  bstatsVersion = '3.0.0'
   mapdbVersion = '3.0.8'
   ifVersion = '0.10.6'
-  junitVersion = '5.8.1'
+  junitVersion = '5.8.2'
 
 }
 

@@ -3,6 +3,7 @@ package unprotesting.com.github.data;
 import java.util.HashMap;
 import java.util.UUID;
 import lombok.Getter;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
@@ -55,10 +56,12 @@ public class Database {
     createDb(AutoTune.getInstance().getDataFolder() + "/data.db");
     this.sections = new HashMap<String, Section>();
     createMaps();
-    loadShopDefaults();
-    updateChanges();
-    loadSectionData();
-    loadEconomyData();
+    Bukkit.getScheduler().runTaskAsynchronously(AutoTune.getInstance(), () -> {
+      loadShopDefaults();
+      updateChanges();
+      loadSectionData();
+      loadEconomyData();
+    });
   }
 
   /**

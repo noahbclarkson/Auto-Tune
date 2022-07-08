@@ -6,6 +6,7 @@ import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.github.stefvanschie.inventoryframework.pane.Pane.Priority;
 import java.util.List;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
@@ -16,10 +17,12 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.PurchaseUtil;
 import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
+import unprotesting.com.github.events.TimePeriodEvent;
 import unprotesting.com.github.util.Format;
 
 /**
@@ -35,6 +38,11 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
       @NotNull String label, @NotNull String[] args) {
 
     if (sender instanceof Player) {
+      if (args.length == 1 && args[0].equalsIgnoreCase("update") 
+          && sender.hasPermission("autotune.admin")) {
+        update((Player) sender);
+        return true;
+      }
       return interpret((Player) sender, args);
     }
 
@@ -51,6 +59,13 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
     gui.addPane(getBackToShop((Player) player, gui, ShopUtil.getShop(shopName).getSection()));
     gui.addPane(getPurchasePane((Player) player, gui, shopName));
     gui.update();
+  }
+
+  private void update(Player player) {
+    Format.sendMessage(player, "<green>Updating prices...");
+    Bukkit.getScheduler().runTask(AutoTune.getInstance(), 
+        () -> Bukkit.getPluginManager().callEvent(new TimePeriodEvent(false)));
+    Format.sendMessage(player, "<green>Prices updated!");
   }
 
   private OutlinePane getPurchasePane(Player player, ChestGui gui, String shopName) {

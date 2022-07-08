@@ -26,8 +26,6 @@ shop-lore:
   - "<gold>Sells Left: <b><gray><sells-left>/<max-sells>"
   - "<gold>Change: <c:#C2D2DE><b><change>"
 
-
-
 # Placeholders <gdp>, <debt>, <loss>, <balance>, <inflation>, <gdp-per-capita>, <debt-per-capita>, <loss-per-capita>, <balance-per-capita>
 # The first line is the display-name, the other lines are the lore.
 shop-gdp-lore:
@@ -56,15 +54,15 @@ autosell-lore:
   - "<gray>Auto-sell setting: <white><b><autosell-setting>"
 
 tutorial:
-  - '<yellow>Do <i><click:run_command:/shop>/shop</click></i> to open the shop and start exchanging items.'
-  - '<yellow>Do <i><click:run_command:/sell>/sell</click></i> to sell items quickly.'
-  - '<yellow>Control the market! Your purchases rise prices.'
-  - '<yellow>Control the market! Your sales lower prices.'
-  - '<yellow>Do <i><click:run_command:/autosell>/autosell</click></i> to sell items automatically.'
-  - '<yellow>Do <i><click:run_command:/loan>/loan</click></i> to view your loans. Do /loan <amount> to loan money.'
-  - '<yellow>Watch the prices of items! They can go up and down.'
-  - '<yellow>There are big profits to be made when prices change..'
-  - '<yellow>Loan money to buy items and take advantage of the rise in prices.'
-  - '<yellow>Sell items that have high demand to make the most money selling.'
-  - '<yellow>Using <i><click:run_command:/autosell>/autosell</click></i> allows you to make money quickly and easily'
-  - '<yellow>Using <i><click:run_command:/loan>/loan</click></i> to loan money allows you to invest to make even more money.'
+  - "<yellow>Do <i><click:run_command:/shop>/shop</click></i> to open the shop and start exchanging items."
+  - "<yellow>Do <i><click:run_command:/sell>/sell</click></i> to sell items quickly."
+  - "<yellow>Control the market! Your purchases rise prices."
+  - "<yellow>Control the market! Your sales lower prices."
+  - "<yellow>Do <i><click:run_command:/autosell>/autosell</click></i> to sell items automatically."
+  - "<yellow>Do <i><click:run_command:/loan>/loan</click></i> to view your loans. Do /loan <amount> to loan money."
+  - "<yellow>Watch the prices of items! They can go up and down."
+  - "<yellow>There are big profits to be made when prices change.."
+  - "<yellow>Loan money to buy items and take advantage of the rise in prices."
+  - "<yellow>Sell items that have high demand to make the most money selling."
+  - "<yellow>Using <i><click:run_command:/autosell>/autosell</click></i> allows you to make money quickly and easily"
+  - "<yellow>Using <i><click:run_command:/loan>/loan</click></i> to loan money allows you to invest to make even more money."

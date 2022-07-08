@@ -16,10 +16,10 @@ sell-price-difference: 20
 # If your servers prices aren't changing check there are enough players online.
 minimum-players: 2
 
-# If you wish to have sell & buy limits enable this
+# If you wish to have sell & buy limits enable this.
 enable-sell-limits: true
 
-# If you wish to have loans on your server, enable this
+# If you wish to have loans on your server, enable this.
 enable-loans: false
 
 # The interest applied on loans each minute.
@@ -27,7 +27,7 @@ enable-loans: false
 # If inflation is to low you can decrease this.
 interest: 0.05
 
-# The rate that the tutorial messages are sent.
+# The rate that the tutorial messages are sent in seconds.
 # If they are getting annoying you can increase this value.
 tutorial-update: 300
 

@@ -1,15 +1,12 @@
 plugins {
-
   id 'java'
   id 'com.github.johnrengelman.shadow' version '7.1.2'
-
 }
 
 group 'unprotesting.com.github'
 version '0.14.0-pre-release'
 
 ext {
-
   jettyVersion = '11.0.11'
   essentialsVersion = '2.19.4'
   lombokVersion = '1.18.24'
@@ -19,7 +16,6 @@ ext {
   mapdbVersion = '3.0.8'
   ifVersion = '0.10.6'
   junitVersion = '5.8.2'
-
 }
 
 java {
@@ -29,7 +25,6 @@ java {
 }
 
 repositories {
-
   mavenCentral()
   maven { url 'https://jitpack.io' }
   maven { url 'https://ci.ender.zone/plugin/repository/everything/' }
@@ -39,11 +34,9 @@ repositories {
     name "essentialsx-releases" 
     url "https://repo.essentialsx.net/releases/"
   }
-
 }
 
 dependencies {
-
   compileOnly('com.github.milkbowl:VaultAPI:1.7.1') {
     exclude group: "org.bukkit", module: "bukkit"
   }
@@ -64,6 +57,7 @@ dependencies {
 
   testImplementation "org.mapdb:mapdb:$mapdbVersion"
   testImplementation "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+
   testRuntimeOnly "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 }
 
@@ -94,14 +88,8 @@ shadowJar {
   minimize()
 
   archiveName("Auto-Tune-${project.version}.jar")
-
 }
 
 artifacts {
   archives shadowJar
-}
-
-test {
-  useJUnitPlatform()
-  maxHeapSize = '1G'
 }

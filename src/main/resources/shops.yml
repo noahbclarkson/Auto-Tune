@@ -42,12 +42,13 @@ sections:
 
 # Format for shops:
 # diamond: -> The item id
-  # price: 400 -> The price of the item
-  # sell-price-difference: 25 -> Define a custom sell price difference.
-  # max-buy: 12 -> The maximum buys for this item per time period.
-  # max-sell: 24 -> The maximum sells for this item per time period.
-  # collect-first: player -> Whether the item needs to be collected by the player or server before it can be bought. (Default: server)
-  # update-rate: 3 -> Define a custom update rate, 3 is 3x the default time period.
+# price: 400 -> The price of the item
+# sell-price-difference: 25 -> Define a custom sell price difference.
+# max-buy: 12 -> The maximum buys for this item per time period.
+# max-sell: 24 -> The maximum sells for this item per time period.
+# collect-first: player -> Whether the item needs to be collected by the player or server before it can be bought. (Default: server)
+# update-rate: 3 -> Define a custom update rate, 3 is 3x the default time period.
+# locked: true -> Whether the item price is locked.
 
 shops:
   ores:
@@ -67,7 +68,7 @@ shops:
       price: 25
       max-buy: 64
       max-sell: 100
-    diamond: 
+    diamond:
       price: 400
       sell-price-difference: 25
       max-buy: 12
@@ -762,7 +763,3 @@ shops:
       sell-price-difference: 25
       max-buy: 20
       max-sell: 32
-
-
-
-

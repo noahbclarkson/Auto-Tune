@@ -19,14 +19,13 @@ import unprotesting.com.github.events.TutorialEvent;
 import unprotesting.com.github.server.LocalServer;
 import unprotesting.com.github.util.EconomyUtil;
 
-
 /**
  * The main class of Auto-Tune.
  */
 public class AutoTune extends JavaPlugin {
 
-  @Getter
   // The static instance of the plugin.
+  @Getter
   private static AutoTune instance;
 
   @Override
@@ -34,12 +33,11 @@ public class AutoTune extends JavaPlugin {
     instance = this;
     EconomyUtil.setupLocalEconomy(Bukkit.getServer());
     Config.init();
-    new Database();
     setupEvents();
+    new Database();
     setupCommands();
     new Metrics(this, 9687);
     LocalServer.initialize();
-    getLogger().info("Auto-Tune is now enabled!");
   }
 
   @Override
@@ -66,12 +64,6 @@ public class AutoTune extends JavaPlugin {
         () -> Bukkit.getPluginManager().callEvent(new AutosellProfitEvent(true)),
         1200L, 1200L);
 
-    if (Config.get().isEnableLoans()) {
-      Bukkit.getScheduler().runTaskTimerAsynchronously(this,
-          () -> Bukkit.getPluginManager().callEvent(new LoanInterestEvent(true)),
-          1200L, 1200L);
-    }
-
     Bukkit.getScheduler().runTaskTimerAsynchronously(this,
         () -> Bukkit.getPluginManager().callEvent(new TimePeriodEvent(true)),
         (long) (Config.get().getTimePeriod() * 1200L),
@@ -84,8 +76,13 @@ public class AutoTune extends JavaPlugin {
 
     Bukkit.getScheduler().runTaskTimerAsynchronously(this,
         () -> Bukkit.getPluginManager().callEvent(new AutoTuneInventoryCheckEvent(true)),
-        200L, 4L);
+        600L, 4L);
 
+    if (Config.get().isEnableLoans()) {
+      Bukkit.getScheduler().runTaskTimerAsynchronously(this,
+          () -> Bukkit.getPluginManager().callEvent(new LoanInterestEvent(true)),
+          1200L, 1200L);
+    }
   }
-
+  
 }

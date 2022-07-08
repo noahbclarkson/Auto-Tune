@@ -41,12 +41,10 @@ public class IpCheckEvent extends Event {
   }
 
   private void getIpString() throws MalformedURLException, IOException {
-
     URL whatIsmMyIp = new URL("http://checkip.amazonaws.com");
     BufferedReader in = new BufferedReader(new InputStreamReader(whatIsmMyIp.openStream()));
     String hostIp = in.readLine();
     ip = "http://" + hostIp + ":" + Config.get().getPort() + "/trade.html";
-
   }
 
 }

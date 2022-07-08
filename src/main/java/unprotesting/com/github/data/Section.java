@@ -29,6 +29,10 @@ public class Section {
    */
   protected Section(String name, ConfigurationSection section) {
     Material material = Material.matchMaterial(section.getString("image", "BARRIER"));
+    if (material == null) {
+      material = Material.BARRIER;
+      Format.getLog().severe("Invalid material for section " + name + ".");
+    }
     Component component = Format.getComponent(section.getString("display", ""));
     ItemStack item = new ItemStack(material);
     item.editMeta(meta -> meta.displayName(component));

@@ -133,9 +133,19 @@ public class Shop implements Serializable {
     double startPrice = config.getDouble("price");
 
     if (startPrice != prices[0]) {
-      prices[size - 1] = startPrice;
-      Format.getLog().info("Price changed for " + section + " to " + startPrice
-          + " because the price was changed in the config.");
+      // Check if price in prices array
+      boolean found = false;
+      for (double price : prices) {
+        if (price == startPrice) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        prices[size - 1] = startPrice;
+        Format.getLog().info("Price changed for " + section + " to " + startPrice
+            + " because the price was changed in the config.");
+      }
     }
 
     if (section == null) {
@@ -169,6 +179,15 @@ public class Shop implements Serializable {
    */
   public double getPrice() {
     return prices[size - 1];
+  }
+
+  /**
+   * Set the price for the last time period.
+   *
+   * @param price The price.
+   */
+  public void setPrice(double price) {
+    prices[size - 1] = price;
   }
 
   /**

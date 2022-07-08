@@ -20,6 +20,7 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import unprotesting.com.github.config.Config;
+import unprotesting.com.github.config.TxtHandler;
 import unprotesting.com.github.data.EconomyDataUtil;
 import unprotesting.com.github.data.Section;
 import unprotesting.com.github.data.Shop;
@@ -35,21 +36,15 @@ public abstract class AutoTuneShopFormat {
 
   protected boolean interpret(CommandSender sender, String[] args) {
 
-    if (args.length > 1) {
-      return false;
-    }
-
     ChestGui gui = new ChestGui(6, "Shop");
     gui.setOnGlobalClick(event -> event.setCancelled(true));
     getBackground(gui);
 
     if (args.length == 0) {
       gui.addPane(loadSectionsPane((Player) sender, gui));
-    }
-
-    if (args.length == 1) {
+    } else if (args.length == 1) {
       if (args[0].equalsIgnoreCase("reload")) {
-        if (!sender.hasPermission("autotune.admin")) {
+        if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
           Format.sendMessage((Player) sender, "<red>You do not have permission to reload shops.");
           return true;
         }
@@ -58,12 +53,30 @@ public abstract class AutoTuneShopFormat {
         sender.sendMessage("Shops Reloaded");
         return true;
       } else if (args[0].equalsIgnoreCase("update")) {
-        if (!sender.hasPermission("autotune.admin")) {
+        if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
           Format.sendMessage((Player) sender, "<red>You do not have permission to update shops.");
           return true;
         }
 
         ShopCommand.update((Player) sender);
+        return true;
+      } else if (args[0].equalsIgnoreCase("export")) {
+        if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
+          Format.sendMessage((Player) sender, "<red>You do not have permission to export shops.");
+          return true;
+        }
+
+        TxtHandler.exportPrices();
+        Format.sendMessage(sender, "<green>Prices exported to file.");
+        return true;
+      } else if (args[0].equalsIgnoreCase("import")) {
+        if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
+          Format.sendMessage((Player) sender, "<red>You do not have permission to import shops.");
+          return true;
+        }
+
+        TxtHandler.importPrices();
+        Format.sendMessage(sender, "<green>Prices imported from file.");
         return true;
       }
 
@@ -73,6 +86,33 @@ public abstract class AutoTuneShopFormat {
         return true;
       }
       gui.addPane(loadShopPane((Player) sender, gui, section));
+    } else if (args.length == 3) {
+      if (args[0].equalsIgnoreCase("price")) {
+        if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
+          Format.sendMessage((Player) sender, "<red>You do not have permission to set prices.");
+          return true;
+        }
+
+        Shop shop = ShopUtil.getShop(args[1]);
+
+        if (shop == null) {
+          Format.sendMessage((Player) sender, Config.get().getNotInShop());
+          return true;
+        }
+
+        try {
+          double price = Double.parseDouble(args[2]);
+          shop.setPrice(price);
+          Format.sendMessage(sender, "<green>Price set to " + price + ".");
+        } catch (Exception e) {
+          Format.sendMessage((Player) sender, "<red>Invalid price.");
+          return true;
+        }
+        return true;
+
+      }
+    } else {
+      return false;
     }
 
     gui.show((HumanEntity) sender);

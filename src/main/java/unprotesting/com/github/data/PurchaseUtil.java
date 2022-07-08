@@ -261,12 +261,15 @@ public class PurchaseUtil {
       if (item.getEnchantmentLevel(enchantment) < amount) {
         Format.sendMessage(player, Config.get().getNotEnoughItems(), r);
         return false;
-      }
-
-      if (item.getEnchantmentLevel(enchantment) == amount) {
+      } else if (item.getEnchantmentLevel(enchantment) == amount) {
         item.removeEnchantment(enchantment);
       } else {
-        item.addEnchantment(enchantment, item.getEnchantmentLevel(enchantment) - amount);
+        try {
+          item.addEnchantment(enchantment, item.getEnchantmentLevel(enchantment) - amount);
+        } catch (IllegalArgumentException e) {
+          Format.sendMessage(player, Config.get().getEnchantmentError(), r);
+          return false;
+        }
       }
 
       return true;

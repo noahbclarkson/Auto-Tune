@@ -3,8 +3,6 @@ name: Auto-Tune
 description: "The Auto-Tune plugin is an economy plugin that automatically regulates prices based on supply and demand."
 author: "Unprotesting"
 version: "0.14.0-pre-release"
-softdepend:
-  - "Essentials"
 depend:
   - "Vault"
 libraries:

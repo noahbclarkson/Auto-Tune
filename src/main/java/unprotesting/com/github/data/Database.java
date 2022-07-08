@@ -18,6 +18,7 @@ import org.mapdb.Serializer;
 import org.mapdb.serializer.SerializerCompressionWrapper;
 import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.config.Config;
+import unprotesting.com.github.config.CsvHandler;
 import unprotesting.com.github.util.EconomyUtil;
 import unprotesting.com.github.util.Format;
 
@@ -61,6 +62,7 @@ public class Database {
       updateChanges();
       loadSectionData();
       loadEconomyData();
+      CsvHandler.writePriceData();
     });
   }
 

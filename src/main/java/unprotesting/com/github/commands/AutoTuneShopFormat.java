@@ -50,12 +50,20 @@ public abstract class AutoTuneShopFormat {
     if (args.length == 1) {
       if (args[0].equalsIgnoreCase("reload")) {
         if (!sender.hasPermission("autotune.admin")) {
-          sender.sendMessage("You do not have permission to reload the shops.");
-          return false;
+          Format.sendMessage((Player) sender, "<red>You do not have permission to reload shops.");
+          return true;
         }
 
         Config.init();
         sender.sendMessage("Shops Reloaded");
+        return true;
+      } else if (args[0].equalsIgnoreCase("update")) {
+        if (!sender.hasPermission("autotune.admin")) {
+          Format.sendMessage((Player) sender, "<red>You do not have permission to update shops.");
+          return true;
+        }
+
+        ShopCommand.update((Player) sender);
         return true;
       }
 

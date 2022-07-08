@@ -28,7 +28,7 @@ public class TimePeriodEvent extends Event {
     super(isAsync);
     int players = Bukkit.getOnlinePlayers().size();
 
-    if (players < Config.get().getMinimumPlayers()) {
+    if (players < Config.get().getMinimumPlayers() && isAsync) {
       Format.getLog().config("Not enough players to start price update. ("
           + players + " < " + Config.get().getMinimumPlayers() + ")");
       return;

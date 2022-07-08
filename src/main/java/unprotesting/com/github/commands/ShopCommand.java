@@ -38,11 +38,6 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
       @NotNull String label, @NotNull String[] args) {
 
     if (sender instanceof Player) {
-      if (args.length == 1 && args[0].equalsIgnoreCase("update") 
-          && sender.hasPermission("autotune.admin")) {
-        update((Player) sender);
-        return true;
-      }
       return interpret((Player) sender, args);
     }
 
@@ -61,9 +56,9 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
     gui.update();
   }
 
-  private void update(Player player) {
+  protected static void update(Player player) {
     Format.sendMessage(player, "<green>Updating prices...");
-    Bukkit.getScheduler().runTask(AutoTune.getInstance(), 
+    Bukkit.getScheduler().runTask(AutoTune.getInstance(),
         () -> Bukkit.getPluginManager().callEvent(new TimePeriodEvent(false)));
     Format.sendMessage(player, "<green>Prices updated!");
   }

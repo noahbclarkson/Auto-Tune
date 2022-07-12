@@ -17,7 +17,7 @@ public class TutorialEvent extends Event {
   @Getter
   private final HandlerList handlers = new HandlerList();
 
-  private int position;
+  private static int position;
 
   /**
    * Sends the tutorial messages to all players.

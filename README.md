@@ -43,6 +43,7 @@ Not only does this assist administrators in managing a server's economy, but it 
 ## 🎀 Examples
 
 ### Auto-Tune Default Shop Setup
+
 <img src="https://github.com/Unprotesting/Auto-Tune/blob/master/.github/Auto-Tune-Shop.gif?raw=true" width="500"/>
 
 ## :computer: Usage

@@ -120,7 +120,7 @@ shops:
       price: 5
       max-buy: 32
       max-sell: 64
-      collect-first-setting: player
+      collect-first: player
     cobblestone:
       price: 0.95
       sell-price-difference: 15
@@ -742,13 +742,13 @@ shops:
       max-sell: 1
       volatility: 0.2
       update-rate: 10
-      collect-first-setting: player
+      collect-first: player
     blaze_rod:
       price: 95
       sell-price-difference: 27.5
       max-buy: 6
       max-sell: 16
-      collect-first-setting: player
+      collect-first: player
       update-rate: 2
     arrow:
       price: 1.45

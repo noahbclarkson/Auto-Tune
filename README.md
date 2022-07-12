@@ -50,7 +50,7 @@ Not only does this assist administrators in managing a server's economy, but it 
 
 ### :clipboard: Server setup
 
-1. Download the latest version of Auto-Tune from the [releases](https://github.com/Unprotesting/Auto-Tune/releases) tab on Github.
+1. Download the latest version of Auto-Tune from the [releases](https://github.com/Unprotesting/Auto-Tune/releases) tab on Github. Development versions can be found under the [actions](https://github.com/Unprotesting/Auto-Tune/actions) tab on Github (where each commit produces a build artifact which is the latest version of the plugin).
 2. Please use [Paper](https://papermc.io/) or a fork of Paper as your server software.
 3. Make sure the required dependencies are installed ([Vault](https://www.spigotmc.org/resources/vault.34315/) and an economy plugin such as [Essentials](https://essentialsx.net))
 4. Put the ```.jar``` files in the ```/plugins``` folder of your server.

@@ -164,6 +164,15 @@ public class Database {
     return max;
   }
 
+  protected boolean removeShop(String item) {
+    String name = item.toLowerCase();
+    if (shops.containsKey(name)) {
+      shops.remove(name);
+      return true;
+    }
+    return false;
+  }
+
   private void createDb(String location) {
     db = DBMaker.fileDB(location)
         .checksumHeaderBypass()

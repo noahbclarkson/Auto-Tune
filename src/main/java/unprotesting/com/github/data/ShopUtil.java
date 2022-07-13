@@ -75,4 +75,8 @@ public class ShopUtil {
     Database.get().transactions.put(System.currentTimeMillis(), transaction);
   }
 
+  public static boolean removeShop(String item) {
+    return Database.get().removeShop(item);
+  }
+
 }

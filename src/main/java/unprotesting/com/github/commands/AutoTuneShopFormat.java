@@ -86,6 +86,19 @@ public abstract class AutoTuneShopFormat {
         return true;
       }
       gui.addPane(loadShopPane((Player) sender, gui, section));
+    } else if (args.length == 2) {
+      if (args[0].equalsIgnoreCase("remove")) {
+        if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
+          Format.sendMessage((Player) sender, "<red>You do not have permission to remove shops.");
+          return true;
+        }
+        if (ShopUtil.removeShop(args[1].toLowerCase())) {
+          Format.sendMessage(sender, "<green>Shop removed.");
+        } else {
+          Format.sendMessage(sender, "<red>Shop not found.");
+        }
+        return true;
+      }
     } else if (args.length == 3) {
       if (args[0].equalsIgnoreCase("price")) {
         if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {

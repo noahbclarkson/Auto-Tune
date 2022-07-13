@@ -324,10 +324,20 @@ public abstract class AutoTuneShopFormat {
   protected List<Component> getLore(Player player, String shopName, List<String> lore, int amount) {
     Shop shop = ShopUtil.getShop(shopName);
     boolean autosellSetting = false;
+
     if (Config.get().getAutosell().get(player.getUniqueId() + "." + shopName) != null) {
       autosellSetting = Config.get().getAutosell().getBoolean(
           player.getUniqueId() + "." + shopName);
     }
+
+    String change = Format.percent(shop.getChange());
+
+    if (shop.getChange() > 0) {
+      change = "<green>" + change + "</green>";
+    } else if (shop.getChange() < 0) {
+      change = "<red>" + change + "</red>";
+    }
+
     List<Component> loreComponents = new ArrayList<>();
     TagResolver resolver = TagResolver.resolver(
         Placeholder.parsed("price", Format.currency(shop.getPrice())),
@@ -339,7 +349,7 @@ public abstract class AutoTuneShopFormat {
         Placeholder.parsed("sells-left", Format.number(ShopUtil.getSellsLeft(player, shopName))),
         Placeholder.parsed("max-buys", Format.number(shop.getMaxBuys())),
         Placeholder.parsed("max-sells", Format.number(shop.getMaxSells())),
-        Placeholder.parsed("change", Format.percent(shop.getChange())),
+        Placeholder.parsed("change", change),
         Placeholder.parsed("collect-first-setting", shop.getSetting().getSetting().toString()),
         Placeholder.parsed("autosell-setting", autosellSetting ? "enabled" : "disabled"));
 

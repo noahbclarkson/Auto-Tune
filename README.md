@@ -8,7 +8,7 @@
 [![Discord](https://img.shields.io/discord/748222485975269508.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/bNVVPe5)
 
 >A Powerful Minecraft Automatic-Economy Plugin for ```1.13-1.19``` with many features!
-<img src="https://github.com/Unprotesting/Auto-Tune/blob/master/.github/AtLogo.png?raw=true" width="150"/>
+<img src="https://github.com/Unprotesting/Auto-Tune/blob/master/.github/AtLogo.png?raw=true" width="100"/>
 
 ## :star: Overview
 

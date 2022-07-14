@@ -1,8 +1,11 @@
 package unprotesting.com.github.util;
 
+import lombok.experimental.UtilityClass;
+
 /**
  * The utility class for math operations.
  */
+@UtilityClass
 public class MathUtil {
 
   /**
@@ -11,7 +14,7 @@ public class MathUtil {
    * @param array The array to add up
    * @return The sum of all the values in the array
    */
-  public static int sumIntArray(int[] array) {
+  public int sumIntArray(int[] array) {
     int sum = 0;
     for (int i : array) {
       sum += i;
@@ -25,7 +28,7 @@ public class MathUtil {
    * @param array The array to add up
    * @return The sum of all the values in the array
    */
-  public static double sumDoubleArray(double[] array) {
+  public double sumDoubleArray(double[] array) {
     double sum = 0;
     for (double i : array) {
       sum += i;

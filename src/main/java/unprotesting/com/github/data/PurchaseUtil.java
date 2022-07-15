@@ -1,5 +1,8 @@
 package unprotesting.com.github.data;
 
+import java.util.HashMap;
+import java.util.Objects;
+import java.util.UUID;
 import lombok.experimental.UtilityClass;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -14,10 +17,6 @@ import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.Transaction.TransactionType;
 import unprotesting.com.github.util.EconomyUtil;
 import unprotesting.com.github.util.Format;
-
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.UUID;
 
 /**
  * A utility class for purchasing and selling items.
@@ -172,8 +171,10 @@ public class PurchaseUtil {
 
     }
 
-    private void createTransaction(int amount, double total, UUID uuid, String itemName, Shop itemShop, double price, Database database) {
-        Transaction transaction = new Transaction(price, amount, uuid, itemName, TransactionType.SELL);
+    private void createTransaction(int amount, double total, UUID uuid, String itemName,
+            Shop itemShop, double price, Database database) {
+        Transaction transaction = new Transaction(
+                price, amount, uuid, itemName, TransactionType.SELL);
         database.transactions.put(System.currentTimeMillis(), transaction);
         EconomyDataUtil.increaseEconomyData("GDP", total / 2);
         double loss = itemShop.getPrice() - itemShop.getSellPrice();
@@ -183,7 +184,7 @@ public class PurchaseUtil {
     }
 
     private TagResolver getTagResolver(Component display, double price,
-                                              int amount, double balance, CollectFirst cf) {
+            int amount, double balance, CollectFirst cf) {
         TagResolver.Builder builder = TagResolver.builder();
         builder.resolver(TagResolver.resolver(
                 Placeholder.component("item", display),
@@ -210,9 +211,10 @@ public class PurchaseUtil {
     }
 
     private boolean item(Player player, String name, int amount,
-                                boolean isBuy, TagResolver r) {
+            boolean isBuy, TagResolver r) {
         PlayerInventory inv = player.getInventory();
-        ItemStack item = new ItemStack(Objects.requireNonNull(Material.matchMaterial(name)), amount);
+        ItemStack item = new ItemStack(Objects.requireNonNull(
+            Material.matchMaterial(name)), amount);
         HashMap<Integer, ItemStack> map = isBuy ? inv.addItem(item) : inv.removeItem(item);
         if (map.isEmpty()) {
             return true;
@@ -232,7 +234,7 @@ public class PurchaseUtil {
     }
 
     private boolean enchant(Player player, String name, int amount,
-                                   boolean isBuy, TagResolver r) {
+            boolean isBuy, TagResolver r) {
         Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(name));
         ItemStack item = player.getInventory().getItemInMainHand();
 
@@ -265,7 +267,8 @@ public class PurchaseUtil {
                 item.removeEnchantment(enchantment);
             } else {
                 try {
-                    item.addEnchantment(enchantment, item.getEnchantmentLevel(enchantment) - amount);
+                    item.addEnchantment(enchantment, 
+                        item.getEnchantmentLevel(enchantment) - amount);
                 } catch (IllegalArgumentException e) {
                     Format.sendMessage(player, Config.get().getEnchantmentError(), r);
                     return false;

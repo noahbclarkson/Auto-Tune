@@ -1,5 +1,11 @@
 package unprotesting.com.github.config;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.Getter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -7,13 +13,6 @@ import org.jetbrains.annotations.NotNull;
 import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.util.AutoTuneLogger;
 import unprotesting.com.github.util.Format;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * The class for loading and storing the configuration options.
@@ -24,8 +23,8 @@ public class Config {
     // The static instance of the config.
     private static Config config;
     // The list of config filenames.
-    private static final String[] filenames = {"config.yml", "shops.yml",
-            "playerdata.yml", "messages.yml"};
+    private static final String[] filenames = { "config.yml", "shops.yml",
+        "playerdata.yml", "messages.yml" };
     // The list of files.
     private static File[] files;
     // The list of configs.
@@ -121,7 +120,7 @@ public class Config {
         this.logLevel = configs[0].getString("log-level", "INFO");
         Format.loadLogger(Level.parse(logLevel));
         AutoTuneLogger logger = Format.getLog();
-        
+
         this.timePeriod = configs[0].getDouble("time-period", 30);
         logger.finer("Time period: " + timePeriod);
         this.volatility = configs[0].getDouble("volatility", 0.5);
@@ -223,8 +222,8 @@ public class Config {
         if (!buildFolder.exists()) {
             buildFolder.mkdir();
         }
-        String[] files = {"index.html", "favicon.png",
-                "global.css", "build/bundle.js", "build/bundle.js.map"};
+        String[] files = { "index.html", "favicon.png",
+            "global.css", "build/bundle.js", "build/bundle.js.map" };
         for (String file : files) {
             File webFile = new File(webFolder, file);
             if (!webFile.exists()) {

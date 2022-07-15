@@ -1,5 +1,6 @@
 package unprotesting.com.github.events;
 
+import java.util.List;
 import lombok.Getter;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
@@ -7,8 +8,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.event.HandlerList;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.util.Format;
-
-import java.util.List;
 
 /**
  * The event for sending tutorial messages to players.

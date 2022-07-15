@@ -1,16 +1,15 @@
 package unprotesting.com.github.config;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
 import lombok.Cleanup;
 import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
 import unprotesting.com.github.util.AutoTuneLogger;
 import unprotesting.com.github.util.Format;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
 
 /**
  * Class for handling the creation of txt files.

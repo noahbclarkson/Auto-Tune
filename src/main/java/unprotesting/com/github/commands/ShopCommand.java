@@ -4,6 +4,7 @@ import com.github.stefvanschie.inventoryframework.gui.GuiItem;
 import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
 import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.github.stefvanschie.inventoryframework.pane.Pane.Priority;
+import java.util.List;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -24,8 +25,6 @@ import unprotesting.com.github.data.ShopUtil;
 import unprotesting.com.github.events.TimePeriodEvent;
 import unprotesting.com.github.util.Format;
 
-import java.util.List;
-
 /**
  * The command for buying and selling items.
  */
@@ -34,10 +33,7 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
     private static final int[] AMOUNTS = {1, 2, 4, 8, 16, 32, 64};
     private static final int[] ENCHANTMENT_AMOUNTS = {1, 2, 3, 4, 5};
 
-    private final AutoTune plugin;
-
     public ShopCommand(@NotNull AutoTune plugin) {
-        this.plugin = plugin;
         plugin.getCommand("shop").setExecutor(this);
     }
 
@@ -54,7 +50,8 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
     }
 
     @Override
-    protected void doShop(@NotNull HumanEntity player, @NotNull ChestGui gui, @NotNull String shopName) {
+    protected void doShop(@NotNull HumanEntity player, @NotNull ChestGui gui, 
+        @NotNull String shopName) {
         gui.getPanes().clear();
         getBackground(gui);
         gui.addPane(getGdpPane((Player) player, gui));
@@ -70,7 +67,8 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
         Format.sendMessage(player, "<green>Prices updated!");
     }
 
-    private OutlinePane getPurchasePane(@NotNull Player player, @NotNull ChestGui gui, @NotNull String shopName) {
+    private OutlinePane getPurchasePane(@NotNull Player player, 
+        @NotNull ChestGui gui, @NotNull String shopName) {
         Shop shop = ShopUtil.getShop(shopName);
         int length = shop.isEnchantment() ? ENCHANTMENT_AMOUNTS.length : AMOUNTS.length;
         OutlinePane pane = new OutlinePane(1, 2, length, 2, Priority.HIGHEST);
@@ -88,7 +86,8 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
                 ItemStack item = new ItemStack(material);
 
                 if (shop.isEnchantment()) {
-                    Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(shopName));
+                    Enchantment enchantment = Enchantment.getByKey(
+                        NamespacedKey.minecraft(shopName));
                     if (enchantment.getMaxLevel() < amount) {
                         GuiItem background = getBackgroundItem();
                         if (background != null) {
@@ -122,7 +121,8 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
                     gui.getPanes().clear();
                     getBackground(gui);
                     gui.addPane(getGdpPane(player, gui));
-                    gui.addPane(getBackToShop(player, gui, ShopUtil.getShop(shopName).getSection()));
+                    gui.addPane(getBackToShop(player, gui, 
+                        ShopUtil.getShop(shopName).getSection()));
                     gui.addPane(getPurchasePane(player, gui, shopName));
                     gui.update();
                 });
@@ -136,7 +136,8 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
     }
 
     @Override
-    protected List<Component> applyLore(@NotNull Player player, @NotNull String shopName, int amount) {
+    protected List<Component> applyLore(@NotNull Player player, 
+        @NotNull String shopName, int amount) {
         return getLore(player, shopName, Config.get().getShopLore(), amount);
     }
 

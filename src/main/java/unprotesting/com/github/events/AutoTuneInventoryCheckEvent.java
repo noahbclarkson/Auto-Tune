@@ -1,5 +1,9 @@
 package unprotesting.com.github.events;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -10,11 +14,6 @@ import unprotesting.com.github.data.CollectFirst;
 import unprotesting.com.github.data.CollectFirst.CollectFirstSetting;
 import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
 
 /**
  * The event tp check players inventories for items they have auto-sold and
@@ -91,7 +90,8 @@ public class AutoTuneInventoryCheckEvent extends AutoTuneEvent {
 
     }
 
-    private void updateCf(@NotNull String name, @NotNull Shop shop, @NotNull UUID uuid, boolean update) {
+    private void updateCf(@NotNull String name, @NotNull Shop shop,
+        @NotNull UUID uuid, boolean update) {
         CollectFirst cf = shop.getSetting();
         if (cf.getSetting().equals(CollectFirstSetting.SERVER)) {
             if (!cf.isFoundInServer()) {

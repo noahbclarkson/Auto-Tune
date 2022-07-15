@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
-
 import lombok.Cleanup;
 import org.bukkit.Bukkit;
 import unprotesting.com.github.AutoTune;

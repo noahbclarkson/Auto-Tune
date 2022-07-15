@@ -1,5 +1,7 @@
 package unprotesting.com.github.data;
 
+import java.util.HashMap;
+import java.util.UUID;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -21,15 +23,14 @@ import unprotesting.com.github.util.AutoTuneLogger;
 import unprotesting.com.github.util.EconomyUtil;
 import unprotesting.com.github.util.Format;
 
-import java.util.HashMap;
-import java.util.UUID;
-
 /**
  * The database for the plugin.
  */
 public class Database {
+
     private static final String[] ECONOMY_DATA_KEYS = {
-            "GDP", "BALANCE", "DEBT", "LOSS", "INFLATION", "POPULATION"};
+        "GDP", "BALANCE", "DEBT", "LOSS", "INFLATION", "POPULATION" };
+        
     private static Database instance;
 
     // The MapDB database.

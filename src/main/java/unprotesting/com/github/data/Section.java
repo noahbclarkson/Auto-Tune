@@ -1,5 +1,8 @@
 package unprotesting.com.github.data;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
@@ -7,9 +10,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
 import unprotesting.com.github.util.Format;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * The class that represents a shop section.

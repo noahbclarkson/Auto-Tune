@@ -1,6 +1,8 @@
 package unprotesting.com.github.commands;
 
 import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
+import java.util.List;
+import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -16,24 +18,18 @@ import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
 import unprotesting.com.github.util.Format;
 
-import java.util.List;
-import java.util.UUID;
-
 /**
  * The command for auto-selling items.
  */
 public class AutosellCommand extends AutoTuneShopFormat implements CommandExecutor {
 
-    private final AutoTune plugin;
-
     public AutosellCommand(@NotNull AutoTune plugin) {
-        this.plugin = plugin;
         plugin.getCommand("autosell").setExecutor(this);
     }
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
-                             @NotNull String label, @NotNull String[] args) {
+            @NotNull String label, @NotNull String[] args) {
 
         if (sender instanceof Player) {
             return interpret((Player) sender, args);
@@ -44,7 +40,8 @@ public class AutosellCommand extends AutoTuneShopFormat implements CommandExecut
     }
 
     @Override
-    protected void doShop(@NotNull HumanEntity player, @NotNull ChestGui gui, @NotNull String shopName) {
+    protected void doShop(@NotNull HumanEntity player, @NotNull ChestGui gui, 
+        @NotNull String shopName) {
         Shop shop = ShopUtil.getShop(shopName);
 
         if (shop.isEnchantment()) {
@@ -74,7 +71,8 @@ public class AutosellCommand extends AutoTuneShopFormat implements CommandExecut
     }
 
     @Override
-    protected List<Component> applyLore(@NotNull Player player, @NotNull String shopName, int amount) {
+    protected List<Component> applyLore(@NotNull Player player, @NotNull String shopName, 
+        int amount) {
         return getLore(player, shopName, Config.get().getAutosellLore(), amount);
     }
 

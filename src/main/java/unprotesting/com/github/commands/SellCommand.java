@@ -16,10 +16,7 @@ import unprotesting.com.github.util.Format;
  */
 public class SellCommand implements CommandExecutor {
 
-    private final AutoTune plugin;
-
     public SellCommand(@NotNull AutoTune plugin) {
-        this.plugin = plugin;
         plugin.getCommand("sell").setExecutor(this);
     }
 

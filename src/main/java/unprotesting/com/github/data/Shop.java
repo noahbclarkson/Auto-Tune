@@ -1,5 +1,9 @@
 package unprotesting.com.github.data;
 
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,11 +18,6 @@ import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.CollectFirst.CollectFirstSetting;
 import unprotesting.com.github.util.AutoTuneLogger;
 import unprotesting.com.github.util.Format;
-
-import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * The class that represents a shop.

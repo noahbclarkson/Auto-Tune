@@ -1,11 +1,10 @@
 package unprotesting.com.github.data;
 
+import java.io.Serializable;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-
-import java.io.Serializable;
-import java.util.UUID;
 
 /**
  * The class that represents a Loan.

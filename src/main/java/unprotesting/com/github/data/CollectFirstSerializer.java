@@ -1,14 +1,13 @@
 package unprotesting.com.github.data;
 
-import org.mapdb.DataInput2;
-import org.mapdb.DataOutput2;
-import org.mapdb.Serializer;
-import unprotesting.com.github.data.CollectFirst.CollectFirstSetting;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.mapdb.DataInput2;
+import org.mapdb.DataOutput2;
+import org.mapdb.Serializer;
+import unprotesting.com.github.data.CollectFirst.CollectFirstSetting;
 
 /**
  * Serializer for CollectFirst class.

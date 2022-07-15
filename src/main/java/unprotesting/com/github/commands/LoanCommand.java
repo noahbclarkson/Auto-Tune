@@ -1,5 +1,7 @@
 package unprotesting.com.github.commands;
 
+import java.util.Map;
+import java.util.UUID;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -12,18 +14,12 @@ import unprotesting.com.github.data.Loan;
 import unprotesting.com.github.util.EconomyUtil;
 import unprotesting.com.github.util.Format;
 
-import java.util.Map;
-import java.util.UUID;
-
 /**
  * The command for creating, paying back and viewing loans.
  */
 public class LoanCommand implements CommandExecutor {
 
-    private final AutoTune plugin;
-
     public LoanCommand(@NotNull AutoTune plugin) {
-        this.plugin = plugin;
         plugin.getCommand("loan").setExecutor(this);
     }
 
@@ -54,7 +50,8 @@ public class LoanCommand implements CommandExecutor {
                         Format.sendMessage(player, "<green>You have paid back your loan of "
                                 + Format.currency(loan.getValue()) + ".");
                     } else {
-                        Format.sendMessage(player, "<red>You do not have enough money to pay back your loan.");
+                        Format.sendMessage(player, 
+                            "<red>You do not have enough money to pay back your loan.");
                     }
                     database.updateLoan(entry.getKey(), loan);
 

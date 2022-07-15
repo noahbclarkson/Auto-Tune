@@ -1,15 +1,13 @@
 package unprotesting.com.github.events;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
 import lombok.Getter;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.util.AutoTuneLogger;
 import unprotesting.com.github.util.Format;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URL;
 
 /**
  * The event for getting the IP of the server.

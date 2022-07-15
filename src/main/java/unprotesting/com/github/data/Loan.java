@@ -1,5 +1,7 @@
 package unprotesting.com.github.data;
 
+import java.io.Serializable;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -7,9 +9,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.util.EconomyUtil;
-
-import java.io.Serializable;
-import java.util.UUID;
 
 /**
  * The class that represents a Loan.

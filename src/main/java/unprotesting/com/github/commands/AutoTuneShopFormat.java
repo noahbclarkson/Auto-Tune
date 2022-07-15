@@ -6,6 +6,10 @@ import com.github.stefvanschie.inventoryframework.pane.OutlinePane;
 import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
 import com.github.stefvanschie.inventoryframework.pane.Pane.Priority;
 import com.github.stefvanschie.inventoryframework.pane.StaticPane;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -25,11 +29,6 @@ import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
 import unprotesting.com.github.util.Format;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
 /**
  * The abstract class for commands that utilize the shop format.
  */
@@ -47,7 +46,8 @@ public abstract class AutoTuneShopFormat {
         } else if (args.length == 1) {
             if (args[0].equalsIgnoreCase("reload")) {
                 if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
-                    Format.sendMessage((Player) sender, "<red>You do not have permission to reload shops.");
+                    Format.sendMessage((Player) sender,
+                            "<red>You do not have permission to reload shops.");
                     return true;
                 }
 
@@ -56,7 +56,8 @@ public abstract class AutoTuneShopFormat {
                 return true;
             } else if (args[0].equalsIgnoreCase("update")) {
                 if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
-                    Format.sendMessage((Player) sender, "<red>You do not have permission to update shops.");
+                    Format.sendMessage((Player) sender,
+                            "<red>You do not have permission to update shops.");
                     return true;
                 }
 
@@ -64,7 +65,8 @@ public abstract class AutoTuneShopFormat {
                 return true;
             } else if (args[0].equalsIgnoreCase("export")) {
                 if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
-                    Format.sendMessage((Player) sender, "<red>You do not have permission to export shops.");
+                    Format.sendMessage((Player) sender,
+                            "<red>You do not have permission to export shops.");
                     return true;
                 }
 
@@ -73,7 +75,8 @@ public abstract class AutoTuneShopFormat {
                 return true;
             } else if (args[0].equalsIgnoreCase("import")) {
                 if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
-                    Format.sendMessage((Player) sender, "<red>You do not have permission to import shops.");
+                    Format.sendMessage((Player) sender,
+                            "<red>You do not have permission to import shops.");
                     return true;
                 }
 
@@ -91,7 +94,8 @@ public abstract class AutoTuneShopFormat {
         } else if (args.length == 2) {
             if (args[0].equalsIgnoreCase("remove")) {
                 if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
-                    Format.sendMessage((Player) sender, "<red>You do not have permission to remove shops.");
+                    Format.sendMessage((Player) sender,
+                            "<red>You do not have permission to remove shops.");
                     return true;
                 }
                 if (ShopUtil.removeShop(args[1].toLowerCase())) {
@@ -104,7 +108,8 @@ public abstract class AutoTuneShopFormat {
         } else if (args.length == 3) {
             if (args[0].equalsIgnoreCase("price")) {
                 if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
-                    Format.sendMessage((Player) sender, "<red>You do not have permission to set prices.");
+                    Format.sendMessage((Player) sender,
+                            "<red>You do not have permission to set prices.");
                     return true;
                 }
 
@@ -153,7 +158,8 @@ public abstract class AutoTuneShopFormat {
         return pane;
     }
 
-    protected PaginatedPane loadShopPane(@NotNull Player player, @NotNull ChestGui gui, @NotNull Section section) {
+    protected PaginatedPane loadShopPane(@NotNull Player player, @NotNull ChestGui gui,
+            @NotNull Section section) {
         PaginatedPane pages = new PaginatedPane(0, 0, 9, 6, Priority.HIGHEST);
         Map<String, Shop> shops = section.getShops();
         List<String> shopNames = new ArrayList<>(shops.keySet());
@@ -162,15 +168,16 @@ public abstract class AutoTuneShopFormat {
         List<GuiItem> itemsOnPage = new ArrayList<>();
 
         for (String shopName : shopNames) {
-            ItemStack item = shops.get(shopName).isEnchantment() ? new ItemStack(Material.ENCHANTED_BOOK)
+            ItemStack item = shops.get(shopName).isEnchantment()
+                    ? new ItemStack(Material.ENCHANTED_BOOK)
                     : new ItemStack(Objects.requireNonNull(Material.matchMaterial(shopName)));
-
             if (shops.get(shopName).isEnchantment()) {
                 Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(shopName));
                 item.editMeta(meta -> meta.displayName(Component.translatable(enchantment)));
             } else {
                 item.editMeta(meta -> meta.displayName(
-                        Component.translatable((Objects.requireNonNull(Material.matchMaterial(shopName)))).asComponent()));
+                        Component.translatable((Objects.requireNonNull(
+                                Material.matchMaterial(shopName)))).asComponent()));
             }
             item.lore(applyLore(player, shopName, 1));
 
@@ -223,7 +230,8 @@ public abstract class AutoTuneShopFormat {
         return pane;
     }
 
-    private StaticPane getPageSelector(@NotNull ChestGui gui, @NotNull PaginatedPane pages, int page, int x) {
+    private StaticPane getPageSelector(@NotNull ChestGui gui, @NotNull PaginatedPane pages,
+            int page, int x) {
         StaticPane pane = new StaticPane(x, 5, 1, 1, Priority.HIGHEST);
         ItemStack item = new ItemStack(Material.ARROW);
         item.editMeta(meta -> meta.displayName(Format.getComponent(
@@ -236,7 +244,8 @@ public abstract class AutoTuneShopFormat {
         return pane;
     }
 
-    protected StaticPane getBackToShop(@NotNull Player player, @NotNull ChestGui gui, @NotNull String sectionName) {
+    protected StaticPane getBackToShop(@NotNull Player player, @NotNull ChestGui gui,
+            @NotNull String sectionName) {
         StaticPane pane = new StaticPane(0, 0, 1, 1, Priority.HIGHEST);
         ItemStack item = new ItemStack(Material.ARROW);
         Section section = ShopUtil.getSection(sectionName);
@@ -303,7 +312,7 @@ public abstract class AutoTuneShopFormat {
 
     protected TagResolver getGdpTagResolver() {
         double gdp = EconomyDataUtil.getGdp();
-        double balance = EconomyDataUtil.getBalance();
+        double bal = EconomyDataUtil.getBalance();
         int capita = EconomyDataUtil.getPopulation();
         double loss = EconomyDataUtil.getLoss();
         double debt = EconomyDataUtil.getDebt();
@@ -311,26 +320,27 @@ public abstract class AutoTuneShopFormat {
 
         TagResolver.Builder builder = TagResolver.builder();
         builder.resolver(Placeholder.parsed("gdp", Format.currency(gdp)));
-        builder.resolver(Placeholder.parsed("balance", Format.currency(balance)));
+        builder.resolver(Placeholder.parsed("balance", Format.currency(bal)));
         builder.resolver(Placeholder.parsed("population", Format.number(capita)));
         builder.resolver(Placeholder.parsed("loss", Format.currency(loss)));
         builder.resolver(Placeholder.parsed("debt", Format.currency(debt)));
         builder.resolver(Placeholder.parsed("inflation", Format.percent(inflation)));
         builder.resolver(Placeholder.parsed("gdp-per-capita", Format.currency(gdp / capita)));
-        builder.resolver(Placeholder.parsed("balance-per-capita", Format.currency(balance / capita)));
+        builder.resolver(Placeholder.parsed("balance-per-capita", Format.currency(bal / capita)));
         builder.resolver(Placeholder.parsed("loss-per-capita", Format.currency(loss / capita)));
         builder.resolver(Placeholder.parsed("debt-per-capita", Format.currency(debt / capita)));
 
         return builder.build();
     }
 
-    protected List<Component> getLore(@NotNull Player player, @NotNull String shopName, @NotNull List<String> lore, int amount) {
-        Shop shop = ShopUtil.getShop(shopName);
+    protected List<Component> getLore(@NotNull Player player, @NotNull String name,
+            @NotNull List<String> lore, int amount) {
+        Shop shop = ShopUtil.getShop(name);
         boolean autosellSetting = false;
 
-        if (Config.get().getAutosell().get(player.getUniqueId() + "." + shopName) != null) {
+        if (Config.get().getAutosell().get(player.getUniqueId() + "." + name) != null) {
             autosellSetting = Config.get().getAutosell().getBoolean(
-                    player.getUniqueId() + "." + shopName);
+                    player.getUniqueId() + "." + name);
         }
 
         String change = Format.percent(shop.getChange());
@@ -342,18 +352,18 @@ public abstract class AutoTuneShopFormat {
 
         List<Component> loreComponents = new ArrayList<>();
         TagResolver resolver = TagResolver.resolver(
-                Placeholder.parsed("price", Format.currency(shop.getPrice())),
-                Placeholder.parsed("sell-price", Format.currency(shop.getSellPrice())),
-                Placeholder.parsed("total-price", Format.currency(amount * shop.getPrice())),
-                Placeholder.parsed("total-sell-price", Format.currency(amount * shop.getSellPrice())),
-                Placeholder.parsed("amount", Format.number(amount)),
-                Placeholder.parsed("buys-left", Format.number(ShopUtil.getBuysLeft(player, shopName))),
-                Placeholder.parsed("sells-left", Format.number(ShopUtil.getSellsLeft(player, shopName))),
-                Placeholder.parsed("max-buys", Format.number(shop.getMaxBuys())),
-                Placeholder.parsed("max-sells", Format.number(shop.getMaxSells())),
-                Placeholder.parsed("change", change),
-                Placeholder.parsed("collect-first-setting", shop.getSetting().getSetting().toString()),
-                Placeholder.parsed("autosell-setting", autosellSetting ? "enabled" : "disabled"));
+            Placeholder.parsed("price", Format.currency(shop.getPrice())),
+            Placeholder.parsed("sell-price", Format.currency(shop.getSellPrice())),
+            Placeholder.parsed("total-price", Format.currency(amount * shop.getPrice())),
+            Placeholder.parsed("total-sell-price", Format.currency(amount * shop.getSellPrice())),
+            Placeholder.parsed("amount", Format.number(amount)),
+            Placeholder.parsed("buys-left", Format.number(ShopUtil.getBuysLeft(player, name))),
+            Placeholder.parsed("sells-left", Format.number(ShopUtil.getSellsLeft(player, name))),
+            Placeholder.parsed("max-buys", Format.number(shop.getMaxBuys())),
+            Placeholder.parsed("max-sells", Format.number(shop.getMaxSells())),
+            Placeholder.parsed("change", change),
+            Placeholder.parsed("collect-first-setting", shop.getSetting().getSetting().toString()),
+            Placeholder.parsed("autosell-setting", autosellSetting ? "enabled" : "disabled"));
 
         for (String line : lore) {
             loreComponents.add(Format.getComponent(line, resolver));
@@ -362,8 +372,10 @@ public abstract class AutoTuneShopFormat {
         return loreComponents;
     }
 
-    protected abstract void doShop(@NotNull HumanEntity player, @NotNull ChestGui gui, @NotNull String shopName);
+    protected abstract void doShop(@NotNull HumanEntity player, @NotNull ChestGui gui, 
+        @NotNull String shopName);
 
-    protected abstract List<Component> applyLore(@NotNull Player player, @NotNull String shopName, int amount);
+    protected abstract List<Component> applyLore(@NotNull Player player, 
+        @NotNull String shopName, int amount);
 
 }

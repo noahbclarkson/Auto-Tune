@@ -1,13 +1,11 @@
 package unprotesting.com.github.util;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 
 /**
  * The custom Auto-Tune logger class.

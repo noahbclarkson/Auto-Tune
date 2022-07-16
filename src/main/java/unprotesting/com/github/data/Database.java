@@ -205,19 +205,18 @@ public class Database {
         for (String sectionName : config.getKeys(false)) {
             ConfigurationSection sectionConfig = config.getConfigurationSection(sectionName);
 
-            for (String key : config.getConfigurationSection(sectionName).getKeys(false)) {
-                key = key.toLowerCase();
+            for (String name : config.getConfigurationSection(sectionName).getKeys(false)) {
+                String key = name.toLowerCase();
                 Material material = Material.matchMaterial(key);
                 Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(key));
+                boolean isEnchantment = enchantment != null;
+                ConfigurationSection section = sectionConfig.getConfigurationSection(name);
 
-                if (material == null && enchantment == null) {
+                if (material == null && enchantment == null || section == null) {
                     logger.warning("Invalid shop. "
                             + key + " is not a valid material or enchantment.");
                     continue;
                 }
-
-                boolean isEnchantment = enchantment != null;
-                ConfigurationSection section = sectionConfig.getConfigurationSection(key);
 
                 if (shops.containsKey(key)) {
                     getShop(key).loadConfiguration(section, sectionName);

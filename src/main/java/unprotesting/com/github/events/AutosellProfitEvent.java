@@ -20,6 +20,7 @@ import unprotesting.com.github.util.Format;
  * The event for sending a player their money from items they have auto-sold.
  */
 public class AutosellProfitEvent extends AutoTuneEvent {
+    
     /**
      * Updates the autosell profit.
      *

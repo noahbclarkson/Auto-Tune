@@ -91,7 +91,7 @@ public class AutoTuneInventoryCheckEvent extends AutoTuneEvent {
     }
 
     private void updateCf(@NotNull String name, @NotNull Shop shop,
-        @NotNull UUID uuid, boolean update) {
+            @NotNull UUID uuid, boolean update) {
         CollectFirst cf = shop.getSetting();
         if (cf.getSetting().equals(CollectFirstSetting.SERVER)) {
             if (!cf.isFoundInServer()) {

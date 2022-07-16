@@ -25,7 +25,7 @@ public class LoanCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
-                             @NotNull String label, @NotNull String[] args) {
+            @NotNull String label, @NotNull String[] args) {
 
         if (!(sender instanceof Player)) {
             Format.sendMessage(sender, "<red>This command is for players only.");
@@ -50,8 +50,8 @@ public class LoanCommand implements CommandExecutor {
                         Format.sendMessage(player, "<green>You have paid back your loan of "
                                 + Format.currency(loan.getValue()) + ".");
                     } else {
-                        Format.sendMessage(player, 
-                            "<red>You do not have enough money to pay back your loan.");
+                        Format.sendMessage(player,
+                                "<red>You do not have enough money to pay back your loan.");
                     }
                     database.updateLoan(entry.getKey(), loan);
 
@@ -71,8 +71,8 @@ public class LoanCommand implements CommandExecutor {
                 return true;
             }
 
-            if (EconomyUtil.getEconomy().getBalance(player)
-                    <= value + value * 0.05 * Config.get().getInterest()) {
+            if (EconomyUtil.getEconomy().getBalance(player) 
+                <= value + value * 0.05 * Config.get().getInterest()) {
                 Format.sendMessage(player, "<red>You do not have enough money.");
                 return true;
             }

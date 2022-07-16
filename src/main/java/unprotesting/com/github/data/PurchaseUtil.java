@@ -214,7 +214,7 @@ public class PurchaseUtil {
             boolean isBuy, TagResolver r) {
         PlayerInventory inv = player.getInventory();
         ItemStack item = new ItemStack(Objects.requireNonNull(
-            Material.matchMaterial(name)), amount);
+                Material.matchMaterial(name)), amount);
         HashMap<Integer, ItemStack> map = isBuy ? inv.addItem(item) : inv.removeItem(item);
         if (map.isEmpty()) {
             return true;
@@ -267,8 +267,8 @@ public class PurchaseUtil {
                 item.removeEnchantment(enchantment);
             } else {
                 try {
-                    item.addEnchantment(enchantment, 
-                        item.getEnchantmentLevel(enchantment) - amount);
+                    item.addEnchantment(enchantment,
+                            item.getEnchantmentLevel(enchantment) - amount);
                 } catch (IllegalArgumentException e) {
                     Format.sendMessage(player, Config.get().getEnchantmentError(), r);
                     return false;

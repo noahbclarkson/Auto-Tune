@@ -1,9 +1,8 @@
 package unprotesting.com.github.events;
 
+import java.util.Map;
 import unprotesting.com.github.data.Database;
 import unprotesting.com.github.data.Loan;
-
-import java.util.Map;
 
 /**
  * The event for updating the value of a loan.

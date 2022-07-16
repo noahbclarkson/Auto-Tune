@@ -32,7 +32,7 @@ public class LocalServer {
         server = new Server();
         try (ServerConnector connector = new ServerConnector(server)) {
             connector.setPort(Config.get().getPort());
-            server.setConnectors(new Connector[]{connector});
+            server.setConnectors(new Connector[] { connector });
         }
         ResourceHandler resourceHandler = new ResourceHandler();
         resourceHandler.setDirAllowed(true);

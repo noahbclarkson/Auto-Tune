@@ -352,18 +352,21 @@ public abstract class AutoTuneShopFormat {
 
         List<Component> loreComponents = new ArrayList<>();
         TagResolver resolver = TagResolver.resolver(
-            Placeholder.parsed("price", Format.currency(shop.getPrice())),
-            Placeholder.parsed("sell-price", Format.currency(shop.getSellPrice())),
-            Placeholder.parsed("total-price", Format.currency(amount * shop.getPrice())),
-            Placeholder.parsed("total-sell-price", Format.currency(amount * shop.getSellPrice())),
-            Placeholder.parsed("amount", Format.number(amount)),
-            Placeholder.parsed("buys-left", Format.number(ShopUtil.getBuysLeft(player, name))),
-            Placeholder.parsed("sells-left", Format.number(ShopUtil.getSellsLeft(player, name))),
-            Placeholder.parsed("max-buys", Format.number(shop.getMaxBuys())),
-            Placeholder.parsed("max-sells", Format.number(shop.getMaxSells())),
-            Placeholder.parsed("change", change),
-            Placeholder.parsed("collect-first-setting", shop.getSetting().getSetting().toString()),
-            Placeholder.parsed("autosell-setting", autosellSetting ? "enabled" : "disabled"));
+                Placeholder.parsed("price", Format.currency(shop.getPrice())),
+                Placeholder.parsed("sell-price", Format.currency(shop.getSellPrice())),
+                Placeholder.parsed("total-price", Format.currency(amount * shop.getPrice())),
+                Placeholder.parsed("total-sell-price",
+                        Format.currency(amount * shop.getSellPrice())),
+                Placeholder.parsed("amount", Format.number(amount)),
+                Placeholder.parsed("buys-left", Format.number(ShopUtil.getBuysLeft(player, name))),
+                Placeholder.parsed("sells-left",
+                        Format.number(ShopUtil.getSellsLeft(player, name))),
+                Placeholder.parsed("max-buys", Format.number(shop.getMaxBuys())),
+                Placeholder.parsed("max-sells", Format.number(shop.getMaxSells())),
+                Placeholder.parsed("change", change),
+                Placeholder.parsed("collect-first-setting",
+                        shop.getSetting().getSetting().toString()),
+                Placeholder.parsed("autosell-setting", autosellSetting ? "enabled" : "disabled"));
 
         for (String line : lore) {
             loreComponents.add(Format.getComponent(line, resolver));
@@ -372,10 +375,10 @@ public abstract class AutoTuneShopFormat {
         return loreComponents;
     }
 
-    protected abstract void doShop(@NotNull HumanEntity player, @NotNull ChestGui gui, 
-        @NotNull String shopName);
+    protected abstract void doShop(@NotNull HumanEntity player, @NotNull ChestGui gui,
+            @NotNull String shopName);
 
-    protected abstract List<Component> applyLore(@NotNull Player player, 
-        @NotNull String shopName, int amount);
+    protected abstract List<Component> applyLore(@NotNull Player player,
+            @NotNull String shopName, int amount);
 
 }

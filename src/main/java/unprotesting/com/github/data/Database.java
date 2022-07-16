@@ -30,7 +30,7 @@ public class Database {
 
     private static final String[] ECONOMY_DATA_KEYS = {
         "GDP", "BALANCE", "DEBT", "LOSS", "INFLATION", "POPULATION" };
-        
+
     private static Database instance;
 
     // The MapDB database.

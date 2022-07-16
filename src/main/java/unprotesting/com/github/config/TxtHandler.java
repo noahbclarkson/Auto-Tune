@@ -46,7 +46,8 @@ public class TxtHandler {
         File file = new File(AutoTune.getInstance().getDataFolder(), "prices.txt");
         file.delete();
         file.createNewFile();
-        @Cleanup BufferedWriter writer = new BufferedWriter(new java.io.FileWriter(file));
+        @Cleanup
+        BufferedWriter writer = new BufferedWriter(new java.io.FileWriter(file));
         String[] shopNames = ShopUtil.getShopNames();
         for (String shopName : shopNames) {
             Shop shop = ShopUtil.getShop(shopName);
@@ -57,7 +58,8 @@ public class TxtHandler {
 
     private static void importPriceData() throws IOException {
         File file = new File(AutoTune.getInstance().getDataFolder(), "prices.txt");
-        @Cleanup BufferedReader reader = new BufferedReader(new java.io.FileReader(file));
+        @Cleanup
+        BufferedReader reader = new BufferedReader(new java.io.FileReader(file));
         String line;
         while ((line = reader.readLine()) != null) {
             parseLine(line);

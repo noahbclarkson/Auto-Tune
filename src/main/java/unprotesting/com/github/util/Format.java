@@ -4,7 +4,6 @@ import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.logging.Level;
-
 import lombok.Getter;
 import lombok.experimental.UtilityClass;
 import net.kyori.adventure.text.Component;
@@ -122,7 +121,8 @@ public class Format {
      * @param message  the message to send
      * @param resolver the tag resolver
      */
-    public static void sendMessage(@NotNull Player player, @NotNull String message, @NotNull TagResolver resolver) {
+    public static void sendMessage(@NotNull Player player, @NotNull String message, 
+        @NotNull TagResolver resolver) {
         player.sendMessage(miniMessage.deserialize(message, resolver));
     }
 
@@ -144,7 +144,8 @@ public class Format {
      * @param message  The message to send
      * @param resolver The tag resolver
      */
-    public static void sendMessage(@NotNull CommandSender sender, @NotNull String message, @NotNull TagResolver resolver) {
+    public static void sendMessage(@NotNull CommandSender sender, @NotNull String message,
+            @NotNull TagResolver resolver) {
         sender.sendMessage(miniMessage.deserialize(message, resolver));
     }
 

@@ -20,7 +20,7 @@ import unprotesting.com.github.util.Format;
  * The event for sending a player their money from items they have auto-sold.
  */
 public class AutosellProfitEvent extends AutoTuneEvent {
-    
+
     /**
      * Updates the autosell profit.
      *
@@ -64,7 +64,7 @@ public class AutosellProfitEvent extends AutoTuneEvent {
 
                 if (player.isOnline()) {
                     Format.sendMessage(Objects.requireNonNull(player.getPlayer()),
-                        Config.get().getAutosellProfit(), resolver);
+                            Config.get().getAutosellProfit(), resolver);
                 }
 
             }

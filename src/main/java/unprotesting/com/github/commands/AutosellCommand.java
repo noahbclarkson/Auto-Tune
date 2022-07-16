@@ -40,8 +40,8 @@ public class AutosellCommand extends AutoTuneShopFormat implements CommandExecut
     }
 
     @Override
-    protected void doShop(@NotNull HumanEntity player, @NotNull ChestGui gui, 
-        @NotNull String shopName) {
+    protected void doShop(@NotNull HumanEntity player, @NotNull ChestGui gui,
+            @NotNull String shopName) {
         Shop shop = ShopUtil.getShop(shopName);
 
         if (shop.isEnchantment()) {
@@ -71,8 +71,8 @@ public class AutosellCommand extends AutoTuneShopFormat implements CommandExecut
     }
 
     @Override
-    protected List<Component> applyLore(@NotNull Player player, @NotNull String shopName, 
-        int amount) {
+    protected List<Component> applyLore(@NotNull Player player, @NotNull String shopName,
+            int amount) {
         return getLore(player, shopName, Config.get().getAutosellLore(), amount);
     }
 

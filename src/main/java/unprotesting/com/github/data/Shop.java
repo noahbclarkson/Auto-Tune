@@ -99,7 +99,7 @@ public class Shop implements Serializable {
     protected Shop(ConfigurationSection config, String sectionName, boolean isEnchantment) {
         this.buys = new int[1];
         this.sells = new int[1];
-        this.prices = new double[]{config.getDouble("price")};
+        this.prices = new double[] { config.getDouble("price") };
         this.enchantment = isEnchantment;
         this.size = 1;
         this.totalBuys = 0;

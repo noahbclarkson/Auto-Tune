@@ -14,47 +14,48 @@ import unprotesting.com.github.util.Format;
  */
 public class LocalServer {
 
-  @Getter
-  private static LocalServer instance;
+    @Getter
+    private static LocalServer instance;
 
-  @Getter
-  private Server server;
+    @Getter
+    private Server server;
 
-  public static void initialize() {
-    instance = new LocalServer();
-    instance.start();
-  }
-
-  /**
-   * Start the integrated web server.
-   */
-  public void start() {
-    server = new Server();
-    ServerConnector connector = new ServerConnector(server);
-    connector.setPort(Config.get().getPort());
-    server.setConnectors(new Connector[] { connector });
-    ResourceHandler resourceHandler = new ResourceHandler();
-    resourceHandler.setDirAllowed(true);
-    resourceHandler.setResourceBase(
-        AutoTune.getInstance().getDataFolder().getAbsolutePath() + "/web");
-    server.setHandler(resourceHandler);
-
-    try {
-      server.start();
-    } catch (Exception e) {
-      Format.getLog().severe("Failed to start local server!");
+    public static void initialize() {
+        instance = new LocalServer();
+        instance.start();
     }
-  }
 
-  /**
-   * Stop the integrated web server.
-   */
-  public void stop() {
-    try {
-      server.stop();
-    } catch (Exception e) {
-      Format.getLog().severe("Failed to stop local server!");
+    /**
+     * Start the integrated web server.
+     */
+    public void start() {
+        server = new Server();
+        try (ServerConnector connector = new ServerConnector(server)) {
+            connector.setPort(Config.get().getPort());
+            server.setConnectors(new Connector[] { connector });
+        }
+        ResourceHandler resourceHandler = new ResourceHandler();
+        resourceHandler.setDirAllowed(true);
+        resourceHandler.setResourceBase(
+                AutoTune.getInstance().getDataFolder().getAbsolutePath() + "/web");
+        server.setHandler(resourceHandler);
+
+        try {
+            server.start();
+        } catch (Exception e) {
+            Format.getLog().severe("Failed to start local server!");
+        }
     }
-  }
+
+    /**
+     * Stop the integrated web server.
+     */
+    public void stop() {
+        try {
+            server.stop();
+        } catch (Exception e) {
+            Format.getLog().severe("Failed to stop local server!");
+        }
+    }
 
 }

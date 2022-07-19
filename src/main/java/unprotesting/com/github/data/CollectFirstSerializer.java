@@ -14,29 +14,29 @@ import unprotesting.com.github.data.CollectFirst.CollectFirstSetting;
  */
 public class CollectFirstSerializer implements Serializer<CollectFirst> {
 
-  @Override
-  public void serialize(DataOutput2 out, CollectFirst value) throws IOException {
-    out.writeUTF(value.setting.name());
-    out.writeInt(value.players.size());
+    @Override
+    public void serialize(DataOutput2 out, CollectFirst value) throws IOException {
+        out.writeUTF(value.setting.name());
+        out.writeInt(value.players.size());
 
-    for (UUID player : value.players) {
-      UUID.serialize(out, player);
+        for (UUID player : value.players) {
+            UUID.serialize(out, player);
+        }
+
+        out.writeBoolean(value.foundInServer);
     }
 
-    out.writeBoolean(value.foundInServer);
-  }
+    @Override
+    public CollectFirst deserialize(DataInput2 input, int available) throws IOException {
+        CollectFirstSetting setting = CollectFirstSetting.valueOf(input.readUTF());
+        int size = input.readInt();
+        List<UUID> players = new ArrayList<>();
 
-  @Override
-  public CollectFirst deserialize(DataInput2 input, int available) throws IOException {
-    CollectFirstSetting setting = CollectFirstSetting.valueOf(input.readUTF());
-    int size = input.readInt();
-    List<UUID> players = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            players.add(UUID.deserialize(input, available));
+        }
 
-    for (int i = 0; i < size; i++) {
-      players.add(UUID.deserialize(input, available));
+        boolean foundInServer = input.readBoolean();
+        return new CollectFirst(setting, players, foundInServer);
     }
-
-    boolean foundInServer = input.readBoolean();
-    return new CollectFirst(setting, players, foundInServer);
-  }
 }

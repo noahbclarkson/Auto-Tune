@@ -83,7 +83,22 @@ public class Database {
     public void close() {
         if (db != null) {
             db.close();
+        } else {
+            Format.getLog().warning("Database is already closed.");
         }
+    }
+
+    /**
+     * Reloads the database.
+     */
+    public void reload() {
+        loadShopDefaults();
+        updateChanges();
+        loadSectionData();
+        loadEconomyData();
+        Bukkit.getScheduler().runTaskAsynchronously(AutoTune.getInstance(), () -> {
+            CsvHandler.writePriceData();
+        });
     }
 
     /**
@@ -219,7 +234,9 @@ public class Database {
                 }
 
                 if (shops.containsKey(key)) {
-                    getShop(key).loadConfiguration(section, sectionName);
+                    Shop shop = getShop(key);
+                    shop.loadConfiguration(section, sectionName);
+                    shops.put(key, shop);
                     logger.finer("Shop " + key + " loaded.");
                     continue;
                 }

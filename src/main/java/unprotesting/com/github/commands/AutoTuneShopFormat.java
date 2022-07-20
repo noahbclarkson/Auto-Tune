@@ -51,7 +51,8 @@ public abstract class AutoTuneShopFormat {
                     return true;
                 }
 
-                Config.init();
+                sender.sendMessage("Reloading shops...");
+                ShopUtil.reload();
                 sender.sendMessage("Shops Reloaded");
                 return true;
             } else if (args[0].equalsIgnoreCase("update")) {

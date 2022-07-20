@@ -2,6 +2,7 @@ package unprotesting.com.github.data;
 
 import lombok.experimental.UtilityClass;
 import org.bukkit.OfflinePlayer;
+import unprotesting.com.github.config.Config;
 
 /**
  * A utility class for interacting with shops and the database.
@@ -78,6 +79,11 @@ public class ShopUtil {
 
     public boolean removeShop(String item) {
         return Database.get().removeShop(item);
+    }
+
+    public void reload() {
+        Config.init();
+        Database.get().reload();
     }
 
 }

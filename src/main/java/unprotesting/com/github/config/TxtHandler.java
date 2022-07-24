@@ -23,9 +23,8 @@ public class TxtHandler {
         try {
             exportPriceData();
         } catch (IOException e) {
-            AutoTuneLogger logger = Format.getLog();
-            logger.severe("Could not export prices!");
-            logger.config(e.toString());
+            Format.getLog().severe("Could not export prices!");
+            Format.getLog().config(e.toString());
         }
     }
 
@@ -36,9 +35,8 @@ public class TxtHandler {
         try {
             importPriceData();
         } catch (IOException e) {
-            AutoTuneLogger logger = Format.getLog();
-            logger.severe("Could not import prices!");
-            logger.config(e.toString());
+            Format.getLog().severe("Could not import prices!");
+            Format.getLog().config(e.toString());
         }
     }
 
@@ -76,6 +74,7 @@ public class TxtHandler {
             ShopUtil.putShop(shopName, shop);
         } catch (NumberFormatException e) {
             Format.getLog().warning("Could not parse price data for " + shopName);
+            Format.getLog().config(e.toString());
         }
     }
 

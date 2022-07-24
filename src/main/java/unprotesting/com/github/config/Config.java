@@ -76,9 +76,8 @@ public class Config {
         try {
             initializeConfig();
         } catch (Exception e) {
-            Logger logger = AutoTune.getInstance().getLogger();
-            logger.info("Failed to initialize config.");
-            logger.log(Level.SEVERE, "Config", e);
+            Format.getLog().info("Failed to initialize config.");
+            Format.getLog().config(e.toString());
         }
     }
 
@@ -209,6 +208,7 @@ public class Config {
             configs[2].save(files[2]);
         } catch (IOException e) {
             Format.getLog().severe("Could not save playerdata configuration.");
+            Format.getLog().config(e.toString());
         }
     }
 

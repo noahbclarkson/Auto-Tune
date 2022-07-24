@@ -44,6 +44,7 @@ public class LocalServer {
             server.start();
         } catch (Exception e) {
             Format.getLog().severe("Failed to start local server!");
+            Format.getLog().config(e.toString());
         }
     }
 
@@ -55,6 +56,7 @@ public class LocalServer {
             server.stop();
         } catch (Exception e) {
             Format.getLog().severe("Failed to stop local server!");
+            Format.getLog().config(e.toString());
         }
     }
 

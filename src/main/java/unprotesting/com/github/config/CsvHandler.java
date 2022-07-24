@@ -30,7 +30,7 @@ public class CsvHandler {
                 logger.config("Price data written to data.csv");
             } catch (IOException e) {
                 logger.severe("Could not write data to csv file.");
-                e.printStackTrace();
+                logger.config(e.toString());
             }
         });
     }

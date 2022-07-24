@@ -8,7 +8,6 @@ import lombok.Cleanup;
 import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
-import unprotesting.com.github.util.AutoTuneLogger;
 import unprotesting.com.github.util.Format;
 
 /**

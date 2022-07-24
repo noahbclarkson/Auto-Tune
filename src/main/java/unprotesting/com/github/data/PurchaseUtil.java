@@ -10,6 +10,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -121,6 +122,7 @@ public class PurchaseUtil {
             }
 
             double price = shop.getSellPrice() * item.getEnchantmentLevel(enchantment);
+            price = scalePriceToDurability(item, price);
             total += price * amount;
             r = getTagResolver(item.displayName(), price, amount, balance, null);
 
@@ -142,6 +144,14 @@ public class PurchaseUtil {
         }
 
         double price = itemShop.getSellPrice();
+        price = scalePriceToDurability(item, price);
+
+        if (price == 0) {
+            Format.sendMessage(player, config.getNotInShop(), r);
+            player.getInventory().addItem(item);
+            return;
+        }
+
         total += price * amount;
         r = getTagResolver(item.displayName(), price, amount, balance, null);
 
@@ -157,25 +167,23 @@ public class PurchaseUtil {
             return;
         }
 
-        Database database = Database.get();
-
         for (Enchantment enchantment : item.getEnchantments().keySet()) {
             String name = enchantment.getKey().getKey();
             Shop shop = getAssociatedShop(player, name);
-            createTransaction(amount, total, uuid, name, shop, price, database);
+            createTransaction(amount, total, uuid, name, shop, price);
         }
 
-        createTransaction(amount, total, uuid, itemName, itemShop, price, database);
+        createTransaction(amount, total, uuid, itemName, itemShop, price);
         EconomyUtil.getEconomy().depositPlayer(player, total);
         Format.sendMessage(player, config.getShopSell(), r);
 
     }
 
     private void createTransaction(int amount, double total, UUID uuid, String itemName,
-            Shop itemShop, double price, Database database) {
+            Shop itemShop, double price) {
         Transaction transaction = new Transaction(
                 price, amount, uuid, itemName, TransactionType.SELL);
-        database.transactions.put(System.currentTimeMillis(), transaction);
+        Database.get().transactions.put(System.currentTimeMillis(), transaction);
         EconomyDataUtil.increaseEconomyData("GDP", total / 2);
         double loss = itemShop.getPrice() - itemShop.getSellPrice();
         EconomyDataUtil.increaseEconomyData("LOSS", loss * amount);
@@ -216,6 +224,13 @@ public class PurchaseUtil {
         ItemStack item = new ItemStack(Objects.requireNonNull(
                 Material.matchMaterial(name)), amount);
         HashMap<Integer, ItemStack> map = isBuy ? inv.addItem(item) : inv.removeItem(item);
+
+        if (scalePriceToDurability(item, 1) == 0 && !isBuy) {
+            inv.addItem(item);
+            Format.sendMessage(player, Config.get().getNotInShop(), r);
+            return false;
+        }
+
         if (map.isEmpty()) {
             return true;
         }
@@ -288,6 +303,25 @@ public class PurchaseUtil {
             }
         }
         return true;
+    }
+
+    private double scalePriceToDurability(ItemStack item, double sellPrice) {
+        if (item.getItemMeta() instanceof Damageable) {
+            Damageable damageable = (Damageable) item.getItemMeta();
+            double durability = damageable.getHealth();
+            double maxDurability = item.getType().getMaxDurability();
+
+            if (Config.get().isDurabilityFunction()) {
+                return sellPrice * (maxDurability - durability) / maxDurability;
+            }
+
+            if (durability != maxDurability) {
+                return 0;
+            }
+
+        }
+
+        return sellPrice;
     }
 
 }

@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import lombok.Getter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -33,6 +32,7 @@ public class Config {
     private final double timePeriod;
     private final double volatility;
     private final double sellPriceDifference;
+    private final boolean durabilityFunction;
     private final Integer minimumPlayers;
     private final double interest;
     private final double tutorialUpdate;
@@ -126,6 +126,8 @@ public class Config {
         logger.finer("Volatility: " + volatility);
         this.sellPriceDifference = configs[0].getDouble("sell-price-difference", 20);
         logger.finer("Sell price difference: " + sellPriceDifference);
+        this.durabilityFunction = configs[0].getBoolean("durability-function", true);
+        logger.finer("Durability function: " + durabilityFunction);
         this.minimumPlayers = configs[0].getInt("minimum-players", 2);
         logger.finer("Minimum players: " + minimumPlayers);
         this.interest = configs[0].getDouble("interest", 0.05);

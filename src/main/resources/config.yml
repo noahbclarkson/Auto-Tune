@@ -10,6 +10,11 @@ volatility: 0.25
 # Increase this for low player counts, decrease for high player counts.
 sell-price-difference: 20
 
+# Use the durability function to allow for damaged items to be sold.
+# If this is set to true, the item's price will be scaled to its durability.
+# If this is set to false, damaged items will not be sold.
+durability-function: true
+
 # The minimum number of players required to be online to run price updates.
 # If your servers prices are all over the place this is a good option to increase.
 # It helps to limit price exploits for sensitive items.

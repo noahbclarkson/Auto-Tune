@@ -49,7 +49,6 @@ public class CsvHandler {
         @Cleanup
         BufferedWriter writer = new BufferedWriter(new FileWriter(file));
         String[] shopNames = ShopUtil.getShopNames();
-        // Sort shopNames alphabetically.
         Arrays.sort(shopNames);
         int size = shopNames.length;
         Shop[] shops = new Shop[size];

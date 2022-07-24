@@ -245,15 +245,13 @@ public class PurchaseUtil {
 
         if (isBuy) {
             int level = item.getEnchantmentLevel(enchantment);
-
-            try {
+            if (canEnchant(item, enchantment, amount)) {
                 item.addEnchantment(enchantment, level + amount);
-            } catch (IllegalArgumentException e) {
+                return true;
+            } else {
                 Format.sendMessage(player, Config.get().getEnchantmentError(), r);
                 return false;
             }
-
-            return true;
         } else {
             if (!item.containsEnchantment(enchantment)) {
                 Format.sendMessage(player, Config.get().getHoldItemInHand(), r);
@@ -274,10 +272,22 @@ public class PurchaseUtil {
                     return false;
                 }
             }
-
             return true;
-
         }
+    }
+
+    private boolean canEnchant(ItemStack item, Enchantment enchantment, int addedLevels) {
+        if (!enchantment.canEnchantItem(item)) {
+            return false;
+        } else if (item.containsEnchantment(enchantment)) {
+            return item.getEnchantmentLevel(enchantment) + addedLevels <= enchantment.getMaxLevel();
+        } 
+        for (Enchantment enchantment2 : item.getEnchantments().keySet()) {
+            if (enchantment2.conflictsWith(enchantment)) {
+                return false;
+            }
+        }
+        return true;
     }
 
 }

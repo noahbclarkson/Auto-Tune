@@ -1,80 +1,81 @@
 plugins {
-  id 'java'
-  id 'com.github.johnrengelman.shadow' version '7.1.2'
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
 group 'unprotesting.com.github'
 version '0.14.0'
 
 ext {
-  jettyVersion = '11.0.11'
-  lombokVersion = '1.18.24'
-  adventureVersion = '4.11.0'
-  paperMCVersion = '1.19-R0.1-SNAPSHOT'
-  bstatsVersion = '3.0.0'
-  mapdbVersion = '3.0.8'
-  ifVersion = '0.10.6'
-  junitVersion = '5.8.2'
-  vaultVersion = '1.7.1'
+    jettyVersion = '11.0.11'
+    lombokVersion = '1.18.24'
+    adventureVersion = '4.11.0'
+    paperMCVersion = '1.19-R0.1-SNAPSHOT'
+    bstatsVersion = '3.0.0'
+    mapdbVersion = '3.0.8'
+    ifVersion = '0.10.6'
+    junitVersion = '5.8.2'
+    vaultVersion = '1.7.1'
 }
 
 java {
-  toolchain {
-    languageVersion = JavaLanguageVersion.of(17)
-  }
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 repositories {
-  mavenCentral()
-  maven { url 'https://jitpack.io' }
-  maven { url 'https://papermc.io/repo/repository/maven-public/' }
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+    maven { url 'https://papermc.io/repo/repository/maven-public/' }
 }
 
 dependencies {
-  implementation "org.bstats:bstats-bukkit:$bstatsVersion"
-  implementation "org.mapdb:mapdb:$mapdbVersion"
-  implementation "com.github.stefvanschie.inventoryframework:IF:$ifVersion"
+    implementation "org.bstats:bstats-bukkit:$bstatsVersion"
+    implementation "org.mapdb:mapdb:$mapdbVersion"
+    implementation "com.github.stefvanschie.inventoryframework:IF:$ifVersion"
+    implementation "net.kyori:adventure-text-minimessage:$adventureVersion"
 
-  compileOnly "net.kyori:adventure-api:$adventureVersion"
-  compileOnly "net.kyori:adventure-text-minimessage:$adventureVersion"
-  compileOnly "io.papermc.paper:paper-api:$paperMCVersion"
-  compileOnly "com.github.milkbowl:VaultAPI:$vaultVersion"
-  compileOnly "org.projectlombok:lombok:$lombokVersion"
-  compileOnly "org.eclipse.jetty:jetty-server:$jettyVersion"
-  compileOnly "org.eclipse.jetty:jetty-servlet:$jettyVersion"
+    compileOnly "net.kyori:adventure-api:$adventureVersion"
+    compileOnly "io.papermc.paper:paper-api:$paperMCVersion"
+    compileOnly "com.github.milkbowl:VaultAPI:$vaultVersion"
+    compileOnly "org.projectlombok:lombok:$lombokVersion"
+    compileOnly "org.eclipse.jetty:jetty-server:$jettyVersion"
+    compileOnly "org.eclipse.jetty:jetty-servlet:$jettyVersion"
 
-  annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
 }
 
 
 shadowJar {
 
-  dependencies {
-    exclude(dependency('org.eclipse.collections:eclipse-collections-api'))
-    exclude(dependency('org.eclipse.collections:eclipse-collections'))
-    exclude(dependency('org.eclipse.collections:eclipse-collections-forkjoin'))
-    exclude(dependency('com.google.guava:guava'))
-    exclude(dependency('net.jpountz.lz4:lz4'))
-    exclude(dependency('org.jetbrains.kotlin:kotlin-stdlib'))
-    exclude(dependency('com.google.code.findbugs:jsr305'))
-    exclude(dependency('com.google.errorprone:error_prone_annotations'))
-    exclude(dependency('com.google.guava:failureaccess'))
-    exclude(dependency('com.google.guava:listenablefuture'))
-    exclude(dependency('com.google.j2objc:j2objc-annotations'))
-    exclude(dependency('org.checkerframework:checker-qual'))
-    exclude(dependency('org.jetbrains:annotations'))
-    exclude(dependency('org.jetbrains.kotlin:kotlin-stdlib-common'))
-  }
+    dependencies {
+        exclude(dependency('org.eclipse.collections:eclipse-collections-api'))
+        exclude(dependency('org.eclipse.collections:eclipse-collections'))
+        exclude(dependency('org.eclipse.collections:eclipse-collections-forkjoin'))
+        exclude(dependency('com.google.guava:guava'))
+        exclude(dependency('net.jpountz.lz4:lz4'))
+        exclude(dependency('org.jetbrains.kotlin:kotlin-stdlib'))
+        exclude(dependency('com.google.code.findbugs:jsr305'))
+        exclude(dependency('com.google.errorprone:error_prone_annotations'))
+        exclude(dependency('com.google.guava:failureaccess'))
+        exclude(dependency('com.google.guava:listenablefuture'))
+        exclude(dependency('com.google.j2objc:j2objc-annotations'))
+        exclude(dependency('org.checkerframework:checker-qual'))
+        exclude(dependency('org.jetbrains:annotations'))
+        exclude(dependency('org.jetbrains.kotlin:kotlin-stdlib-common'))
+    }
 
-  relocate "org.bstats", "unprotesting.com.github.bstats"
-  relocate "org.mapdb", "unprotesting.com.github.mapdb"
-  relocate "com.github.stefvanschie.inventoryframework", "unprotesting.com.github.inventoryframework"
+    relocate "org.bstats", "unprotesting.com.github.bstats"
+    relocate "org.mapdb", "unprotesting.com.github.mapdb"
+    relocate "com.github.stefvanschie.inventoryframework", "unprotesting.com.github.inventoryframework"
+    relocate "net.kyori", "unprotesting.com.github.kyori"
 
-  minimize()
+    minimize()
 
-  archiveName("Auto-Tune-${project.version}.jar")
+    archiveName("Auto-Tune-${project.version}.jar")
 }
 
 artifacts {
-  archives shadowJar
+    archives shadowJar
 }

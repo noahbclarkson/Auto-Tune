@@ -275,6 +275,14 @@ public class Shop implements Serializable {
         }
     }
 
+    /**
+     * Clear the most recent buys/sells.
+     */
+    public void clearRecentPurchases() {
+        recentBuys.clear();
+        recentSells.clear();
+    }
+
     private double getSpd() {
         if (customSpd != -1) {
             return customSpd;

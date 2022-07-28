@@ -3,6 +3,7 @@ package unprotesting.com.github.events;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.enchantments.Enchantment;
@@ -14,6 +15,7 @@ import unprotesting.com.github.data.CollectFirst;
 import unprotesting.com.github.data.CollectFirst.CollectFirstSetting;
 import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
+import unprotesting.com.github.util.Format;
 
 /**
  * The event tp check players inventories for items they have auto-sold and
@@ -21,7 +23,7 @@ import unprotesting.com.github.data.ShopUtil;
  */
 public class AutoTuneInventoryCheckEvent extends AutoTuneEvent {
 
-    private static List<String> shopNames;
+    public static Map<UUID, List<String>> autosellItemMaxReached = new HashMap<>();
 
     /**
      * Checks all online players inventories for autosell items
@@ -31,7 +33,6 @@ public class AutoTuneInventoryCheckEvent extends AutoTuneEvent {
      */
     public AutoTuneInventoryCheckEvent(boolean isAsync) {
         super(isAsync);
-        shopNames = Arrays.asList(ShopUtil.getShopNames());
         for (Player player : Bukkit.getOnlinePlayers()) {
             checkInventory(player);
         }
@@ -40,59 +41,88 @@ public class AutoTuneInventoryCheckEvent extends AutoTuneEvent {
     private void checkInventory(Player player) {
         UUID uuid = player.getUniqueId();
         for (ItemStack item : player.getInventory().getContents()) {
-            runUpdate(item, player, uuid);
+
+            if (item == null) {
+                continue;
+            }
+
+            runUpdate(item, player);
+
+            if (item.getEnchantments().isEmpty()) {
+                continue;
+            }
+
+            for (Enchantment enchantment : item.getEnchantments().keySet()) {
+                String name = enchantment.getKey().getKey().toLowerCase();
+                Shop shop = getShop(name);
+                updateCf(name, shop, uuid);
+            }
+
         }
     }
 
-    private void runUpdate(ItemStack item, @NotNull Player player, @NotNull UUID uuid) {
-        if (item == null) {
-            return;
-        }
-
-        if (item.getEnchantments().size() > 0) {
-            for (Enchantment enchantment : item.getEnchantments().keySet()) {
-                String enchantmentName = enchantment.getKey().getKey();
-                if (checkIfValidShop(enchantmentName)) {
-                    Shop shop = ShopUtil.getShop(enchantmentName);
-                    updateCf(enchantmentName, shop, uuid, false);
-                }
-            }
-        }
-
-        if (!checkIfValidShop(item.getType().toString())) {
-            return;
-        }
+    private void runUpdate(ItemStack item, @NotNull Player player) {
 
         String name = item.getType().toString().toLowerCase();
-        Shop shop = ShopUtil.getShop(name);
+        Shop shop = getShop(name);
+        UUID uuid = player.getUniqueId();
+        updateCf(name, shop, uuid);
         boolean autosellEnabled = Config.get().getAutosell().getBoolean(uuid + "." + name, false);
-        boolean update = false;
 
-        if (item.getEnchantments().size() > 0) {
-            autosellEnabled = false;
+        if (!autosellEnabled) {
+            return;
         }
 
-        if (autosellEnabled) {
-            if (ShopUtil.getSellsLeft(player, name) - item.getAmount() < 0) {
-                return;
+        if (ShopUtil.getSellsLeft(player, name) - item.getAmount() < 0) {
+            if (!autosellItemMaxReached.containsKey(uuid)) {
+                List<String> list = autosellItemMaxReached.get(uuid);
+                if (list == null) {
+                    list = Arrays.asList(name);
+                    autosellItemMaxReached.put(uuid, list);
+                } else {
+                    list.add(name);
+                }
+            } else {
+                List<String> list = autosellItemMaxReached.get(uuid);
+                if (!list.contains(name)) {
+                    list.add(name);
+                    Format.sendMessage(player, Config.get().getRunOutOfSells());
+                }
             }
-            HashMap<Integer, ItemStack> map = player.getInventory().removeItemAnySlot(item);
-            int amount = item.getAmount();
-            if (!map.isEmpty()) {
-                amount = amount - map.get(0).getAmount();
-            }
-            shop.addAutosell(uuid, amount);
-            shop.addSells(uuid, amount);
-            update = true;
+            return;
         }
 
-        updateCf(name, shop, uuid, update);
+        int amount = item.getAmount();
+        HashMap<Integer, ItemStack> map = player.getInventory().removeItemAnySlot();
+
+        if (!map.isEmpty()) {
+            amount = amount - map.get(0).getAmount();
+        }
+
+        shop.addAutosell(uuid, amount);
+        shop.addSells(uuid, amount);
 
     }
 
-    private void updateCf(@NotNull String name, @NotNull Shop shop,
-            @NotNull UUID uuid, boolean update) {
+    private Shop getShop(String shopName) {
+        if (shopName == null) {
+            return null;
+        }
+
+        Shop shop = ShopUtil.getShop(shopName);
+
+        if (shop == null) {
+            return null;
+        }
+
+        return shop;
+    }
+
+    private void updateCf(@NotNull String name, @NotNull Shop shop, @NotNull UUID uuid) {
+
+        boolean update = false;
         CollectFirst cf = shop.getSetting();
+
         if (cf.getSetting().equals(CollectFirstSetting.SERVER)) {
             if (!cf.isFoundInServer()) {
                 cf.setFoundInServer(true);
@@ -108,11 +138,6 @@ public class AutoTuneInventoryCheckEvent extends AutoTuneEvent {
         if (update) {
             ShopUtil.putShop(name, shop);
         }
-    }
-
-    private boolean checkIfValidShop(@NotNull String name) {
-        name = name.toLowerCase();
-        return shopNames.contains(name);
     }
 
 }

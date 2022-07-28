@@ -1,5 +1,7 @@
 package unprotesting.com.github.events;
 
+import java.util.HashMap;
+
 import org.bukkit.Bukkit;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.config.CsvHandler;
@@ -29,6 +31,7 @@ public class TimePeriodEvent extends AutoTuneEvent {
         if (players < config.getMinimumPlayers() && isAsync) {
             logger.config("Not enough players to start price update. ("
                     + players + " < " + config.getMinimumPlayers() + ")");
+            resetRecentPurchases();
             return;
         }
 
@@ -57,5 +60,15 @@ public class TimePeriodEvent extends AutoTuneEvent {
                 logger.finest("Strength: " + strength);
             }
         }
+        AutoTuneInventoryCheckEvent.autosellItemMaxReached = new HashMap<>();
+    }
+
+    private void resetRecentPurchases() {
+        for (String s : ShopUtil.getShopNames()) {
+            Shop shop = ShopUtil.getShop(s);
+            shop.clearRecentPurchases();
+            ShopUtil.putShop(s, shop);
+        }
+        AutoTuneInventoryCheckEvent.autosellItemMaxReached = new HashMap<>();
     }
 }

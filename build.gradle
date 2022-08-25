@@ -13,7 +13,7 @@ ext {
     paperMCVersion = '1.19.2-R0.1-SNAPSHOT'
     bstatsVersion = '3.0.0'
     mapdbVersion = '3.0.8'
-    ifVersion = '0.10.6'
+    ifVersion = '0.10.7'
     junitVersion = '5.8.2'
     vaultVersion = '1.7.1'
 }

@@ -139,7 +139,7 @@ public class PurchaseUtil {
         Shop itemShop = ShopUtil.getShop(itemName);
         if (itemShop == null) {
             Format.sendMessage(player, config.getNotInShop(), r);
-            player.getInventory().addItem(item);
+            returnItem(player, item);
             return;
         }
 
@@ -148,7 +148,7 @@ public class PurchaseUtil {
 
         if (price == 0) {
             Format.sendMessage(player, config.getNotInShop(), r);
-            player.getInventory().addItem(item);
+            returnItem(player, item);
             return;
         }
 
@@ -163,7 +163,7 @@ public class PurchaseUtil {
         r = getTagResolver(item.displayName(), total / amount, amount, balance, null);
 
         if (!success) {
-            player.getInventory().addItem(item);
+            returnItem(player, item);
             return;
         }
 
@@ -177,6 +177,13 @@ public class PurchaseUtil {
         EconomyUtil.getEconomy().depositPlayer(player, total);
         Format.sendMessage(player, config.getShopSell(), r);
 
+    }
+
+    private void returnItem(Player player, ItemStack item) {
+        HashMap<Integer, ItemStack> failed = player.getInventory().addItem(item);
+        if (!failed.isEmpty()) {
+            player.getWorld().dropItem(player.getLocation(), failed.get(0));
+        }
     }
 
     private void createTransaction(int amount, double total, UUID uuid, String itemName,
@@ -244,7 +251,7 @@ public class PurchaseUtil {
         }
 
         Format.sendMessage(player, Config.get().getNotEnoughSpace(), r);
-        player.getWorld().dropItemNaturally(player.getLocation(), map.get(0));
+        player.getWorld().dropItem(player.getLocation(), map.get(0));
         return true;
     }
 

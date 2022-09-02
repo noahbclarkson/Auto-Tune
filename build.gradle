@@ -34,8 +34,8 @@ dependencies {
     implementation "org.bstats:bstats-bukkit:$bstatsVersion"
     implementation "org.mapdb:mapdb:$mapdbVersion"
     implementation "com.github.stefvanschie.inventoryframework:IF:$ifVersion"
-    implementation "net.kyori:adventure-text-minimessage:$adventureVersion"
-
+    
+    compileOnly "net.kyori:adventure-text-minimessage:$adventureVersion"
     compileOnly "net.kyori:adventure-api:$adventureVersion"
     compileOnly "io.papermc.paper:paper-api:$paperMCVersion"
     compileOnly "com.github.milkbowl:VaultAPI:$vaultVersion"
@@ -69,7 +69,6 @@ shadowJar {
     relocate "org.bstats", "unprotesting.com.github.bstats"
     relocate "org.mapdb", "unprotesting.com.github.mapdb"
     relocate "com.github.stefvanschie.inventoryframework", "unprotesting.com.github.inventoryframework"
-    relocate "net.kyori", "unprotesting.com.github.kyori"
 
     minimize()
 

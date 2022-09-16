@@ -1,8 +1,5 @@
 package unprotesting.com.github.data;
 
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.UUID;
 import lombok.experimental.UtilityClass;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -18,6 +15,10 @@ import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.Transaction.TransactionType;
 import unprotesting.com.github.util.EconomyUtil;
 import unprotesting.com.github.util.Format;
+
+import java.util.HashMap;
+import java.util.Objects;
+import java.util.UUID;
 
 /**
  * A utility class for purchasing and selling items.
@@ -198,7 +199,7 @@ public class PurchaseUtil {
         ShopUtil.putShop(itemName, itemShop);
     }
 
-    private TagResolver getTagResolver(Component display, double price,
+    public TagResolver getTagResolver(Component display, double price,
             int amount, double balance, CollectFirst cf) {
         TagResolver.Builder builder = TagResolver.builder();
         builder.resolver(TagResolver.resolver(

@@ -50,7 +50,7 @@ public class AutosellProfitEvent extends AutoTuneEvent {
                 double price = shop.getSellPrice();
                 double total = price * amount;
                 OfflinePlayer player = Bukkit.getOfflinePlayer(entry.getKey());
-                EconomyUtil.getEconomy().depositPlayer(player, entry.getValue());
+                EconomyUtil.getEconomy().depositPlayer(player, total);
                 ShopUtil.addTransaction(new Transaction(
                         price, amount, entry.getKey(), s, TransactionType.SELL));
                 EconomyDataUtil.increaseEconomyData("GDP", total / 2);

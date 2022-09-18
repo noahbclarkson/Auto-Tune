@@ -65,6 +65,11 @@ public class AutoTuneInventoryCheckEvent extends AutoTuneEvent {
 
         String name = item.getType().toString().toLowerCase();
         Shop shop = getShop(name);
+
+        if (shop == null) {
+            return;
+        }
+        
         UUID uuid = player.getUniqueId();
         updateCf(name, shop, uuid);
         boolean autosellEnabled = Config.get().getAutosell().getBoolean(uuid + "." + name, false);

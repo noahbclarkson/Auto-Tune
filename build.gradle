@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'unprotesting.com.github'
-version '0.14.0'
+version '0.14.1'
 
 ext {
     jettyVersion = '11.0.12'

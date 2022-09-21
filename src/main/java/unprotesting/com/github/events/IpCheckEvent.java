@@ -36,6 +36,14 @@ public class IpCheckEvent extends AutoTuneEvent {
 
     }
 
+    /**
+     * Get the IP of the server from http://checkip.amazonaws.com.
+     * 
+     * This is required for Auto-Tune to be able to send the IP of the website to players.
+     * 
+     * Note: This is not used stored by the plugin anywhere but here and is only used to send the IP to players.
+     * @throws IOException If the IP cannot be retrieved.
+     */
     private void getIpString() throws IOException {
         URL whatIsmMyIp = new URL("http://checkip.amazonaws.com");
         BufferedReader in = new BufferedReader(new InputStreamReader(whatIsmMyIp.openStream()));

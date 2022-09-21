@@ -1,6 +1,9 @@
 package unprotesting.com.github.data;
 
 import lombok.experimental.UtilityClass;
+
+import java.util.Arrays;
+
 import org.bukkit.OfflinePlayer;
 import unprotesting.com.github.config.Config;
 
@@ -31,6 +34,16 @@ public class ShopUtil {
             shopNameCache = Database.get().getShopNames();
         }
         return shopNameCache;
+    }
+
+    /**
+     * Whether the item is in the shop.
+     * 
+     * @param item The item to check.
+     * @return Whether the item is in the shop.
+     */
+    public boolean isInShop(String item) {
+        return Arrays.asList(getSectionNames()).contains(item.toLowerCase());
     }
 
     /**

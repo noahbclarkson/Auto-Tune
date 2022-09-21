@@ -54,6 +54,11 @@ public class AutoTuneInventoryCheckEvent extends AutoTuneEvent {
 
             for (Enchantment enchantment : item.getEnchantments().keySet()) {
                 String name = enchantment.getKey().getKey().toLowerCase();
+
+                if (!ShopUtil.isInShop(name)) {
+                    continue;
+                }
+
                 Shop shop = getShop(name);
                 updateCf(name, shop, uuid);
             }
@@ -64,11 +69,12 @@ public class AutoTuneInventoryCheckEvent extends AutoTuneEvent {
     private void runUpdate(ItemStack item, @NotNull Player player) {
 
         String name = item.getType().toString().toLowerCase();
-        Shop shop = getShop(name);
 
-        if (shop == null) {
+        if (!ShopUtil.isInShop(name)) {
             return;
         }
+
+        Shop shop = getShop(name);
         
         UUID uuid = player.getUniqueId();
         updateCf(name, shop, uuid);

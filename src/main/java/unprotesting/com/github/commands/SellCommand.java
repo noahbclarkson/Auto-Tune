@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import unprotesting.com.github.AutoTune;
 import unprotesting.com.github.config.Config;
 import unprotesting.com.github.data.PurchaseUtil;
+import unprotesting.com.github.data.Shop;
 import unprotesting.com.github.data.ShopUtil;
 import unprotesting.com.github.util.EconomyUtil;
 import unprotesting.com.github.util.Format;
@@ -49,8 +50,15 @@ public class SellCommand implements CommandExecutor {
                     continue;
                 }
 
+                String itemName = item.getType().toString().toLowerCase();
+                Shop shop = ShopUtil.getShop(itemName);
+
+                if (shop == null) {
+                    continue;
+                }
+
                 if (isSellLimits) {
-                    int sellsLeft = ShopUtil.getSellsLeft(player, item.getType().toString().toLowerCase());
+                    int sellsLeft = ShopUtil.getSellsLeft(player, itemName);
                     int itemAmount = item.getAmount();
                     int amountCantSell = itemAmount - sellsLeft;
 

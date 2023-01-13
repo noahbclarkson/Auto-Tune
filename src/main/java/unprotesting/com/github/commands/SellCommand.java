@@ -54,7 +54,7 @@ public class SellCommand implements CommandExecutor {
                 Shop shop = ShopUtil.getShop(itemName, false);
 
                 if (shop == null) {
-                    player.getInventory().addItem(item);
+                    PurchaseUtil.returnItem(player, item);
                     continue;
                 }
 

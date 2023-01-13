@@ -180,7 +180,7 @@ public class PurchaseUtil {
 
     }
 
-    private void returnItem(Player player, ItemStack item) {
+    public void returnItem(Player player, ItemStack item) {
         HashMap<Integer, ItemStack> failed = player.getInventory().addItem(item);
         if (!failed.isEmpty()) {
             player.getWorld().dropItem(player.getLocation(), failed.get(0));

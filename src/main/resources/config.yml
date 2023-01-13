@@ -28,8 +28,8 @@ enable-sell-limits: true
 enable-loans: false
 
 # The interest applied on loans each minute.
-# If inflation is to high you can increase this.
-# If inflation is to low you can decrease this.
+# If inflation is too high you can increase this.
+# If inflation is too low you can decrease this.
 interest: 0.05
 
 # The rate that the tutorial messages are sent in seconds.

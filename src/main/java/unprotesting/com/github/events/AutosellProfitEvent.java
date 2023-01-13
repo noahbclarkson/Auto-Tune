@@ -33,7 +33,7 @@ public class AutosellProfitEvent extends AutoTuneEvent {
 
     private void deposit() {
         for (String s : ShopUtil.getShopNames()) {
-            Shop shop = ShopUtil.getShop(s);
+            Shop shop = ShopUtil.getShop(s, true);
             Map<UUID, Integer> autosell = shop.getAutosell();
 
             if (autosell.isEmpty()) {

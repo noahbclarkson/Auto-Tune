@@ -55,7 +55,7 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
         gui.getPanes().clear();
         getBackground(gui);
         gui.addPane(getGdpPane((Player) player, gui));
-        gui.addPane(getBackToShop((Player) player, gui, ShopUtil.getShop(shopName).getSection()));
+        gui.addPane(getBackToShop((Player) player, gui, ShopUtil.getShop(shopName, true).getSection()));
         gui.addPane(getPurchasePane((Player) player, gui, shopName));
         gui.update();
     }
@@ -69,7 +69,7 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
 
     private OutlinePane getPurchasePane(@NotNull Player player,
             @NotNull ChestGui gui, @NotNull String shopName) {
-        Shop shop = ShopUtil.getShop(shopName);
+        Shop shop = ShopUtil.getShop(shopName, true);
         int length = shop.isEnchantment() ? ENCHANTMENT_AMOUNTS.length : AMOUNTS.length;
         OutlinePane pane = new OutlinePane(1, 2, length, 2, Priority.HIGHEST);
         Config config = Config.get();
@@ -122,7 +122,7 @@ public class ShopCommand extends AutoTuneShopFormat implements CommandExecutor {
                     getBackground(gui);
                     gui.addPane(getGdpPane(player, gui));
                     gui.addPane(getBackToShop(player, gui,
-                            ShopUtil.getShop(shopName).getSection()));
+                            ShopUtil.getShop(shopName, true).getSection()));
                     gui.addPane(getPurchasePane(player, gui, shopName));
                     gui.update();
                 });

@@ -266,7 +266,9 @@ public class Shop implements Serializable {
      * @return Whether the player has unlocked this item.
      */
     public boolean isUnlocked(UUID player) {
-        if (setting.getSetting().equals(CollectFirstSetting.SERVER)) {
+        if (Config.get().isEnableCollection()) {
+            return true;
+        } else if (setting.getSetting().equals(CollectFirstSetting.SERVER)) {
             return setting.isFoundInServer();
         } else if (setting.getSetting().equals(CollectFirstSetting.PLAYER)) {
             return setting.playerFound(player);

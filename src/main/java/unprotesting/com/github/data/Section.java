@@ -47,7 +47,7 @@ public class Section {
     protected Map<String, Shop> loadShops(String sectionName) {
         Map<String, Shop> shops = new HashMap<String, Shop>();
         for (String shopName : ShopUtil.getShopNames()) {
-            Shop shop = ShopUtil.getShop(shopName);
+            Shop shop = ShopUtil.getShop(shopName, true);
 
             if (shop.getSection() == null) {
                 Format.getLog().warning("Shop " + shopName + " has no section!");

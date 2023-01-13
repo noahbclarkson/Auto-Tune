@@ -107,11 +107,11 @@ public class Database {
     public void updateChanges() {
         AutoTuneLogger logger = Format.getLog();
         for (String name : shops.keySet()) {
-            Shop shop = getShop(name);
+            Shop shop = getShop(name, true);
             shop.updateChange();
             putShop(name, shop);
             logger.finest(name + "'s change is now "
-                    + Format.percent(getShop(name).getChange()));
+                    + Format.percent(getShop(name, true).getChange()));
         }
     }
 
@@ -126,7 +126,7 @@ public class Database {
                 }
 
                 Pair<String, String> pair = Tuples.pair(name, name2);
-                Relation relation = new Relation(getShop(name), getShop(name2));
+                Relation relation = new Relation(getShop(name, true), getShop(name2, true));
                 relations.put(pair, relation);
             }
         }
@@ -146,11 +146,11 @@ public class Database {
         }
     }
 
-    protected Shop getShop(String s) {
+    protected Shop getShop(String s, boolean warn) {
         String item = s.toLowerCase();
 
         if (shops.get(item) == null) {
-            Format.getLog().severe("Could not find shop for " + item);
+            if (warn) Format.getLog().severe("Could not find shop for " + item);
             return null;
         }
 
@@ -169,7 +169,7 @@ public class Database {
     }
 
     protected int getPurchasesLeft(String item, UUID player, boolean isBuy) {
-        Shop shop = getShop(item);
+        Shop shop = getShop(item, true);
         int max = isBuy ? shop.getMaxBuys() : shop.getMaxSells();
 
         if (isBuy) {
@@ -234,7 +234,7 @@ public class Database {
                 }
 
                 if (shops.containsKey(key)) {
-                    Shop shop = getShop(key);
+                    Shop shop = getShop(key, true);
                     shop.loadConfiguration(section, sectionName);
                     shops.put(key, shop);
                     logger.finer("Shop " + key + " loaded.");

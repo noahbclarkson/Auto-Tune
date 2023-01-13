@@ -137,7 +137,7 @@ public class PurchaseUtil {
         }
 
         String itemName = item.getType().toString().toLowerCase();
-        Shop itemShop = ShopUtil.getShop(itemName);
+        Shop itemShop = ShopUtil.getShop(itemName, true);
         if (itemShop == null) {
             Format.sendMessage(player, config.getNotInShop(), r);
             returnItem(player, item);
@@ -180,7 +180,7 @@ public class PurchaseUtil {
 
     }
 
-    private void returnItem(Player player, ItemStack item) {
+    public void returnItem(Player player, ItemStack item) {
         HashMap<Integer, ItemStack> failed = player.getInventory().addItem(item);
         if (!failed.isEmpty()) {
             player.getWorld().dropItem(player.getLocation(), failed.get(0));
@@ -217,7 +217,7 @@ public class PurchaseUtil {
 
     private Shop getAssociatedShop(Player player, String itemName) {
         String name = itemName.toLowerCase();
-        Shop shop = ShopUtil.getShop(name);
+        Shop shop = ShopUtil.getShop(name, true);
         if (shop == null) {
             Format.sendMessage(player, Config.get().getNotInShop());
             return null;

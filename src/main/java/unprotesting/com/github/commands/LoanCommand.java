@@ -35,7 +35,7 @@ public class LoanCommand implements CommandExecutor {
         Player player = (Player) sender;
         if (args.length == 0) {
             getTotalLoans(player);
-            Format.sendMessage(player, "<gold>Usage: /loan <amount>/pay");
+            Format.sendMessage(player, "<gold>Usage: /loan <amount/pay>");
         } else if (args[0].equalsIgnoreCase("pay") || args[0].equalsIgnoreCase("payback")) {
             Database database = Database.get();
             for (Map.Entry<Long, Loan> entry : Database.get().getLoans().entrySet()) {

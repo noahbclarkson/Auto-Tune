@@ -24,17 +24,23 @@ minimum-players: 2
 # If you wish to have sell & buy limits enable this.
 enable-sell-limits: true
 
+# If you wish to have collection on your server, enable this.
+enable-collection: false
+
 # If you wish to have loans on your server, enable this.
 enable-loans: false
 
 # The interest applied on loans each minute.
-# If inflation is to high you can increase this.
-# If inflation is to low you can decrease this.
+# If inflation is too high you can increase this.
+# If inflation is too low you can decrease this.
 interest: 0.05
 
 # The rate that the tutorial messages are sent in seconds.
 # If they are getting annoying you can increase this value.
 tutorial-update: 300
+
+# If you wish to use the web-server, enable this.
+web-server: true
 
 # The port of the web-server.
 port: 8989

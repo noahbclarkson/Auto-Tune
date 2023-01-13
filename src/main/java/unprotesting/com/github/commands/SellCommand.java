@@ -51,9 +51,10 @@ public class SellCommand implements CommandExecutor {
                 }
 
                 String itemName = item.getType().toString().toLowerCase();
-                Shop shop = ShopUtil.getShop(itemName);
+                Shop shop = ShopUtil.getShop(itemName, false);
 
                 if (shop == null) {
+                    PurchaseUtil.returnItem(player, item);
                     continue;
                 }
 

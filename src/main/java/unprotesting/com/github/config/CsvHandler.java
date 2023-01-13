@@ -22,6 +22,7 @@ public class CsvHandler {
      * Write the price data for all items to a CSV file.
      */
     public static void writePriceData() {
+        if (!Config.get().isWebServer()) return;
         Bukkit.getScheduler().runTaskAsynchronously(AutoTune.getInstance(), () -> {
             AutoTuneLogger logger = Format.getLog();
             try {
@@ -53,7 +54,7 @@ public class CsvHandler {
         int size = shopNames.length;
         Shop[] shops = new Shop[size];
         for (int i = 0; i < size; i++) {
-            shops[i] = ShopUtil.getShop(shopNames[i]);
+            shops[i] = ShopUtil.getShop(shopNames[i], true);
         }
         for (int i = 0; i < size; i++) {
             if (i < size - 1) {

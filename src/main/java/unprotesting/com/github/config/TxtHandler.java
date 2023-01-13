@@ -47,7 +47,7 @@ public class TxtHandler {
         BufferedWriter writer = new BufferedWriter(new java.io.FileWriter(file));
         String[] shopNames = ShopUtil.getShopNames();
         for (String shopName : shopNames) {
-            Shop shop = ShopUtil.getShop(shopName);
+            Shop shop = ShopUtil.getShop(shopName, true);
             writer.write(shopName + ": " + shop.getPrice());
             writer.newLine();
         }
@@ -68,7 +68,7 @@ public class TxtHandler {
         String shopName = split[0];
         try {
             double price = Double.parseDouble(split[1]);
-            Shop shop = ShopUtil.getShop(shopName);
+            Shop shop = ShopUtil.getShop(shopName, true);
             shop.setPrice(price);
             ShopUtil.putShop(shopName, shop);
         } catch (NumberFormatException e) {

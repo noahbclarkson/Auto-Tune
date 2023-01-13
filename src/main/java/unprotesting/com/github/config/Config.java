@@ -36,11 +36,13 @@ public class Config {
     private final Integer minimumPlayers;
     private final double interest;
     private final double tutorialUpdate;
+    private final boolean webServer;
     private final Integer port;
     private final String background;
     private final String logLevel;
     private final String locale;
     private final boolean enableSellLimits;
+    private final boolean enableCollection;
     private final boolean enableLoans;
 
     private final String notInShop;
@@ -63,6 +65,8 @@ public class Config {
     private final List<String> purchaseBuyLore;
     private final List<String> purchaseSellLore;
     private final List<String> autosellLore;
+    private final List<String> help;
+    private final List<String> adminHelp;
     private final List<String> tutorial;
 
     private final ConfigurationSection shops;
@@ -134,6 +138,8 @@ public class Config {
         logger.finer("Interest: " + interest);
         this.tutorialUpdate = configs[0].getDouble("tutorial-update", 300);
         logger.finer("Tutorial update: " + tutorialUpdate);
+        this.webServer = configs[0].getBoolean("web-server", true);
+        logger.finer("Web-Server: " + webServer);
         this.port = configs[0].getInt("port", 8989);
         logger.finer("Port: " + port);
         this.background = configs[0].getString("background", "BLACK_STAINED_GLASS_PANE");
@@ -143,6 +149,8 @@ public class Config {
         logger.finer("Locale: " + locale);
         this.enableSellLimits = configs[0].getBoolean("enable-sell-limits", false);
         logger.finer("Skip Max Limits: " + enableSellLimits);
+        this.enableCollection = configs[0].getBoolean("enable-collection", true);
+        logger.finer("Collection Enabled: " + enableCollection);
         this.enableLoans = configs[0].getBoolean("enable-loans", false);
         logger.finer("Loans Enabled: " + enableLoans);
 
@@ -185,6 +193,10 @@ public class Config {
         logger.finest("Purchase sell lore: " + Arrays.toString(purchaseSellLore.toArray()));
         this.autosellLore = configs[3].getStringList("autosell-lore");
         logger.finest("Autosell lore: " + Arrays.toString(autosellLore.toArray()));
+        this.help = configs[3].getStringList("help");
+        logger.finest("Help: " + Arrays.toString(help.toArray()));
+        this.adminHelp = configs[3].getStringList("admin-help");
+        logger.finest("AdminHelp: " + Arrays.toString(adminHelp.toArray()));
         this.tutorial = configs[3].getStringList("tutorial");
         logger.finest("Tutorial: " + Arrays.toString(tutorial.toArray()));
 

@@ -120,7 +120,7 @@ public class AutoTuneInventoryCheckEvent extends AutoTuneEvent {
             return null;
         }
 
-        Shop shop = ShopUtil.getShop(shopName);
+        Shop shop = ShopUtil.getShop(shopName, true);
 
         if (shop == null) {
             return null;

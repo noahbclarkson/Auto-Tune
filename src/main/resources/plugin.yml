@@ -40,6 +40,9 @@ commands:
     permission: "autotune.loan"
     permission-message: "You don't have permission to use this command."
 permissions:
+  autotune.help:
+    description: "Allows the user to use help."
+    default: true
   autotune.shop:
     description: "Allows the user to use the shop."
     default: true

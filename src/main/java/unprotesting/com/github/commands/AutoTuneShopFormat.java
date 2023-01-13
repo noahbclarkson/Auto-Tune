@@ -37,6 +37,7 @@ public abstract class AutoTuneShopFormat {
     private static OutlinePane background;
 
     protected boolean interpret(@NotNull CommandSender sender, @NotNull String[] args) {
+        Config config = Config.get();
         ChestGui gui = new ChestGui(6, "Shop");
         gui.setOnGlobalClick(event -> event.setCancelled(true));
         getBackground(gui);
@@ -44,7 +45,27 @@ public abstract class AutoTuneShopFormat {
         if (args.length == 0) {
             gui.addPane(loadSectionsPane((Player) sender, gui));
         } else if (args.length == 1) {
-            if (args[0].equalsIgnoreCase("reload")) {
+            if (args[0].equalsIgnoreCase("help")) {
+                if (!sender.hasPermission("autotune.help") && !sender.isOp()) {
+                    Format.sendMessage((Player) sender,
+                            "<red>You do not have permission to use help.");
+                    return true;
+                }
+                for (String message : config.getHelp()) {
+                    Format.sendMessage((Player) sender, message);
+                }
+                return true;
+            } else if (args[0].equalsIgnoreCase("adminhelp")) {
+                if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
+                    Format.sendMessage((Player) sender,
+                            "<red>You do not have permission to see admin help.");
+                    return true;
+                }
+                for (String message : config.getAdminHelp()) {
+                    Format.sendMessage((Player) sender, message);
+                }
+                return true;
+            } else if (args[0].equalsIgnoreCase("reload")) {
                 if (!sender.hasPermission("autotune.admin") && !sender.isOp()) {
                     Format.sendMessage((Player) sender,
                             "<red>You do not have permission to reload shops.");

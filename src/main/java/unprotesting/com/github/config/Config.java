@@ -64,6 +64,8 @@ public class Config {
     private final List<String> purchaseBuyLore;
     private final List<String> purchaseSellLore;
     private final List<String> autosellLore;
+    private final List<String> help;
+    private final List<String> adminHelp;
     private final List<String> tutorial;
 
     private final ConfigurationSection shops;
@@ -188,6 +190,10 @@ public class Config {
         logger.finest("Purchase sell lore: " + Arrays.toString(purchaseSellLore.toArray()));
         this.autosellLore = configs[3].getStringList("autosell-lore");
         logger.finest("Autosell lore: " + Arrays.toString(autosellLore.toArray()));
+        this.help = configs[3].getStringList("help");
+        logger.finest("Tutorial: " + Arrays.toString(help.toArray()));
+        this.adminHelp = configs[3].getStringList("admin-help");
+        logger.finest("Tutorial: " + Arrays.toString(adminHelp.toArray()));
         this.tutorial = configs[3].getStringList("tutorial");
         logger.finest("Tutorial: " + Arrays.toString(tutorial.toArray()));
 

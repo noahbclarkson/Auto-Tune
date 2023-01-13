@@ -22,7 +22,7 @@ public class LocalServer {
 
     public static void initialize() {
         instance = new LocalServer();
-        instance.start();
+        if (Config.get().isWebServer()) instance.start();
     }
 
     /**

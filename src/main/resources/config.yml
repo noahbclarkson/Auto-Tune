@@ -36,6 +36,9 @@ interest: 0.05
 # If they are getting annoying you can increase this value.
 tutorial-update: 300
 
+# If you wish to use the web-server, enable this.
+web-server: true
+
 # The port of the web-server.
 port: 8989
 

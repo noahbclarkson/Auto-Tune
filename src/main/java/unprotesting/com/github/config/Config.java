@@ -36,6 +36,7 @@ public class Config {
     private final Integer minimumPlayers;
     private final double interest;
     private final double tutorialUpdate;
+    private final boolean webServer;
     private final Integer port;
     private final String background;
     private final String logLevel;
@@ -134,6 +135,8 @@ public class Config {
         logger.finer("Interest: " + interest);
         this.tutorialUpdate = configs[0].getDouble("tutorial-update", 300);
         logger.finer("Tutorial update: " + tutorialUpdate);
+        this.webServer = configs[0].getBoolean("web-server", true);
+        logger.finer("Web-Server: " + webServer);
         this.port = configs[0].getInt("port", 8989);
         logger.finer("Port: " + port);
         this.background = configs[0].getString("background", "BLACK_STAINED_GLASS_PANE");

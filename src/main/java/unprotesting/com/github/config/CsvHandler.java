@@ -54,7 +54,7 @@ public class CsvHandler {
         int size = shopNames.length;
         Shop[] shops = new Shop[size];
         for (int i = 0; i < size; i++) {
-            shops[i] = ShopUtil.getShop(shopNames[i]);
+            shops[i] = ShopUtil.getShop(shopNames[i], true);
         }
         for (int i = 0; i < size; i++) {
             if (i < size - 1) {

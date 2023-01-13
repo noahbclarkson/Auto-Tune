@@ -135,7 +135,7 @@ public abstract class AutoTuneShopFormat {
                     return true;
                 }
 
-                Shop shop = ShopUtil.getShop(args[1]);
+                Shop shop = ShopUtil.getShop(args[1], true);
 
                 if (shop == null) {
                     Format.sendMessage((Player) sender, Config.get().getNotInShop());
@@ -357,7 +357,7 @@ public abstract class AutoTuneShopFormat {
 
     protected List<Component> getLore(@NotNull Player player, @NotNull String name,
             @NotNull List<String> lore, int amount) {
-        Shop shop = ShopUtil.getShop(name);
+        Shop shop = ShopUtil.getShop(name, true);
         boolean autosellSetting = false;
 
         if (Config.get().getAutosell().get(player.getUniqueId() + "." + name) != null) {

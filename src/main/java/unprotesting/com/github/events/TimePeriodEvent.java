@@ -45,7 +45,7 @@ public class TimePeriodEvent extends AutoTuneEvent {
     private void updatePrices() {
         AutoTuneLogger logger = Format.getLog();
         for (String s : ShopUtil.getShopNames()) {
-            Shop shop = ShopUtil.getShop(s);
+            Shop shop = ShopUtil.getShop(s, true);
             double initialPrice = shop.getPrice();
             double strength = shop.strength();
             double newPrice = initialPrice + initialPrice * strength * shop.getVolatility() * 0.01;
@@ -65,7 +65,7 @@ public class TimePeriodEvent extends AutoTuneEvent {
 
     private void resetRecentPurchases() {
         for (String s : ShopUtil.getShopNames()) {
-            Shop shop = ShopUtil.getShop(s);
+            Shop shop = ShopUtil.getShop(s, true);
             shop.clearRecentPurchases();
             ShopUtil.putShop(s, shop);
         }

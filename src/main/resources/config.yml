@@ -24,6 +24,9 @@ minimum-players: 2
 # If you wish to have sell & buy limits enable this.
 enable-sell-limits: true
 
+# If you wish to have collection on your server, enable this.
+enable-collection: false
+
 # If you wish to have loans on your server, enable this.
 enable-loans: false
 

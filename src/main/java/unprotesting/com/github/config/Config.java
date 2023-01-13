@@ -42,6 +42,7 @@ public class Config {
     private final String logLevel;
     private final String locale;
     private final boolean enableSellLimits;
+    private final boolean enableCollection;
     private final boolean enableLoans;
 
     private final String notInShop;
@@ -148,6 +149,8 @@ public class Config {
         logger.finer("Locale: " + locale);
         this.enableSellLimits = configs[0].getBoolean("enable-sell-limits", false);
         logger.finer("Skip Max Limits: " + enableSellLimits);
+        this.enableCollection = configs[0].getBoolean("enable-collection", true);
+        logger.finer("Collection Enabled: " + enableCollection);
         this.enableLoans = configs[0].getBoolean("enable-loans", false);
         logger.finer("Loans Enabled: " + enableLoans);
 

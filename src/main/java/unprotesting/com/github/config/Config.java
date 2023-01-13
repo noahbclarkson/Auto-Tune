@@ -191,9 +191,9 @@ public class Config {
         this.autosellLore = configs[3].getStringList("autosell-lore");
         logger.finest("Autosell lore: " + Arrays.toString(autosellLore.toArray()));
         this.help = configs[3].getStringList("help");
-        logger.finest("Tutorial: " + Arrays.toString(help.toArray()));
+        logger.finest("Help: " + Arrays.toString(help.toArray()));
         this.adminHelp = configs[3].getStringList("admin-help");
-        logger.finest("Tutorial: " + Arrays.toString(adminHelp.toArray()));
+        logger.finest("AdminHelp: " + Arrays.toString(adminHelp.toArray()));
         this.tutorial = configs[3].getStringList("tutorial");
         logger.finest("Tutorial: " + Arrays.toString(tutorial.toArray()));
 

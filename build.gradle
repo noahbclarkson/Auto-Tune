@@ -12,7 +12,7 @@ ext {
     adventureVersion = '4.11.0'
     paperMCVersion = '1.19.3-R0.1-SNAPSHOT'
     bstatsVersion = '3.0.0'
-    mapdbVersion = '3.0.8'
+    mapdbVersion = '3.0.9'
     ifVersion = '0.10.7'
     junitVersion = '5.8.2'
     vaultVersion = '1.7.1'

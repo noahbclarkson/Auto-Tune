@@ -17,7 +17,7 @@ public class ShopUtil {
     private static String[] shopNameCache;
 
     public Shop getShop(String item, boolean warn) {
-        return Database.get().getShop(item, true);
+        return Database.get().getShop(item, warn);
     }
 
     public void putShop(String key, Shop shop) {

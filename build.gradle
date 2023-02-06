@@ -8,7 +8,7 @@ version '0.14.3'
 
 ext {
     jettyVersion = '11.0.12'
-    lombokVersion = '1.18.24'
+    lombokVersion = '1.18.26'
     adventureVersion = '4.11.0'
     paperMCVersion = '1.19.3-R0.1-SNAPSHOT'
     bstatsVersion = '3.0.0'

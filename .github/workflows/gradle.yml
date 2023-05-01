@@ -19,9 +19,9 @@ jobs:
         check-latest: true
         cache: 'gradle'
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2.2.0
+      uses: gradle/gradle-build-action@v2.4.2
     - name: Gradle Build Action
-      uses: gradle/gradle-build-action@v2.2.0
+      uses: gradle/gradle-build-action@v2.4.2
       with:
         arguments: test build
         gradle-version: '7.4'

@@ -7,7 +7,7 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/2f6d82bd12af4ce490959be74d1b6149)](https://app.codacy.com/gh/Unprotesting/Auto-Tune?utm_source=github.com&utm_medium=referral&utm_content=Unprotesting/Auto-Tune&utm_campaign=Badge_Grade_Settings)
 [![Discord](https://img.shields.io/discord/748222485975269508.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/bNVVPe5)
 
->A Powerful Minecraft Automatic-Economy Plugin for ```1.13-1.19``` with many features!
+>A Powerful Minecraft Automatic-Economy Plugin for ```1.13-1.20.2``` with many features!
 <img src="https://github.com/Unprotesting/Auto-Tune/blob/master/.github/AtLogo.png?raw=true" width="100"/>
 
 ## :star: Overview

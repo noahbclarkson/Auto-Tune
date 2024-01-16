@@ -200,6 +200,7 @@ public class Database {
                 .allocateIncrement(5 * 1024 * 1024)
                 .closeOnJvmShutdown().make();
         db.getStore().fileLoad();
+        db.getStore().compact();
         Format.getLog().config("Database initialized at " + location);
     }
 

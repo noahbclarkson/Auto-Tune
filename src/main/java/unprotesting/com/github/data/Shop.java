@@ -107,7 +107,7 @@ public class Shop implements Serializable {
         this.autosell = new HashMap<UUID, Integer>();
         this.recentBuys = new HashMap<UUID, Integer>();
         this.recentSells = new HashMap<UUID, Integer>();
-        this.setting = new CollectFirst(config.getString("collect-first", "server"));
+        this.setting = new CollectFirst(config.getString("collect-first", "none"));
         this.loadConfiguration(config, sectionName);
     }
 
@@ -206,7 +206,7 @@ public class Shop implements Serializable {
     public void addBuys(UUID player, int buyCount) {
         AutoTuneLogger logger = Format.getLog();
         if (recentBuys.containsKey(player)) {
-            recentBuys.merge(player, buyCount, Integer::sum);
+            recentBuys.merge(player, buyCount, (a, b) -> (int) a + (int) b);
             logger.finest("Recent buys: " + recentBuys.get(player));
         } else {
             recentBuys.put(player, buyCount);
@@ -225,7 +225,7 @@ public class Shop implements Serializable {
     public void addSells(UUID player, int sellCount) {
         AutoTuneLogger logger = Format.getLog();
         if (recentSells.containsKey(player)) {
-            recentSells.merge(player, sellCount, Integer::sum);
+            recentSells.merge(player, sellCount, (a, b) -> (int) a + (int) b);
             logger.finest("Recent sells: " + recentSells.get(player));
         } else {
             recentSells.put(player, sellCount);
@@ -252,7 +252,7 @@ public class Shop implements Serializable {
     public void addAutosell(UUID uuid, int count) {
         AutoTuneLogger logger = Format.getLog();
         if (autosell.containsKey(uuid)) {
-            autosell.merge(uuid, count, Integer::sum);
+            autosell.merge(uuid, count, (a, b) -> (int) a + (int) b);
             logger.finest("Autosell: " + autosell.get(uuid) + " for " + uuid);
         } else {
             autosell.put(uuid, count);

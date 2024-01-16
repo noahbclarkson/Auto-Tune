@@ -33,3 +33,6 @@ gradle
 .gradle
 /build
 bin
+
+# Classpath
+.classpath

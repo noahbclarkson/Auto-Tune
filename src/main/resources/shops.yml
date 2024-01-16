@@ -46,7 +46,7 @@ sections:
 # sell-price-difference: 25 -> Define a custom sell price difference.
 # max-buy: 12 -> The maximum buys for this item per time period.
 # max-sell: 24 -> The maximum sells for this item per time period.
-# collect-first: player -> Whether the item needs to be collected by the player or server before it can be bought. (Default: server)
+# collect-first: player -> Whether the item needs to be collected by the player or server before it can be bought. (Default: none)
 # update-rate: 3 -> Define a custom update rate, 3 is 3x the default time period.
 # locked: true -> Whether the item price is locked.
 
@@ -73,7 +73,6 @@ shops:
       sell-price-difference: 25
       max-buy: 12
       max-sell: 24
-      collect-first: player
       update-rate: 3
     amethyst_shard:
       price: 22
@@ -87,7 +86,6 @@ shops:
       price: 150
       max-buy: 16
       max-sell: 32
-      collect-first: player
       update-rate: 2
     quartz:
       price: 10
@@ -103,7 +101,6 @@ shops:
       max-buy: 1
       max-sell: 1
       update-rate: 5
-      collect-first: player
     glowstone_dust:
       price: 3.5
       max-buy: 128
@@ -114,19 +111,16 @@ shops:
       sell-price-difference: 12.5
       max-buy: 512
       max-sell: 1024
-      collect-first: none
       volatility: 0.5
     grass_block:
       price: 5
       max-buy: 32
       max-sell: 64
-      collect-first: player
     cobblestone:
       price: 0.95
       sell-price-difference: 15
       max-buy: 250
       max-sell: 750
-      collect-first: none
       volatility: 0.3
     stone:
       price: 2
@@ -141,7 +135,6 @@ shops:
       sell-price-difference: 15
       max-buy: 300
       max-sell: 600
-      collect-first: none
       volatility: 0.35
     glass:
       price: 2.25
@@ -155,7 +148,6 @@ shops:
       price: 15
       max-buy: 20
       max-sell: 45
-      collect-first: player
     end_stone:
       price: 3.25
       max-buy: 75
@@ -281,7 +273,6 @@ shops:
       price: 4
       max-buy: 64
       max-sell: 100
-      collect-first: none
     cooked_beef:
       price: 5.75
       max-buy: 32
@@ -335,7 +326,6 @@ shops:
       price: 0.85
       max-buy: 128
       max-sell: 200
-      collect-first: none
     nether_wart:
       price: 4.5
       max-buy: 64
@@ -436,252 +426,216 @@ shops:
       sell-price-difference: 40
       max-buy: 2
       max-sell: 5
-      collect-first: player
       update-rate: 3
     fire_protection:
       price: 400
       sell-price-difference: 40
       max-buy: 2
       max-sell: 5
-      collect-first: player
       update-rate: 3
     feather_falling:
       price: 500
       sell-price-difference: 40
       max-buy: 2
       max-sell: 5
-      collect-first: player
       update-rate: 3
     blast_protection:
       price: 400
       sell-price-difference: 40
       max-buy: 2
       max-sell: 5
-      collect-first: player
       update-rate: 3
     projectile_protection:
       price: 400
       sell-price-difference: 40
       max-buy: 2
       max-sell: 5
-      collect-first: player
       update-rate: 3
     respiration:
       price: 500
       sell-price-difference: 40
       max-buy: 2
       max-sell: 4
-      collect-first: player
       update-rate: 3
     aqua_affinity:
       price: 500
       sell-price-difference: 40
       max-buy: 2
       max-sell: 4
-      collect-first: player
       update-rate: 3
     thorns:
       price: 800
       sell-price-difference: 40
       max-buy: 2
       max-sell: 3
-      collect-first: player
       update-rate: 5
     sharpness:
       price: 450
       sell-price-difference: 40
       max-buy: 3
       max-sell: 5
-      collect-first: player
       update-rate: 3
     smite:
       price: 500
       sell-price-difference: 40
       max-buy: 3
       max-sell: 5
-      collect-first: player
       update-rate: 3
     bane_of_arthropods:
       price: 500
       sell-price-difference: 40
       max-buy: 3
       max-sell: 5
-      collect-first: player
       update-rate: 3
     looting:
       price: 750
       sell-price-difference: 40
       max-buy: 2
       max-sell: 4
-      collect-first: player
       update-rate: 4
     unbreaking:
       price: 600
       sell-price-difference: 40
       max-buy: 3
       max-sell: 5
-      collect-first: player
       update-rate: 3
     efficiency:
       price: 450
       sell-price-difference: 40
       max-buy: 4
       max-sell: 6
-      collect-first: player
       update-rate: 3
     silk_touch:
       price: 1000
       sell-price-difference: 40
       max-buy: 1
       max-sell: 2
-      collect-first: player
       update-rate: 5
     fortune:
       price: 950
       sell-price-difference: 40
       max-buy: 1
       max-sell: 3
-      collect-first: player
       update-rate: 4
     power:
       price: 650
       sell-price-difference: 40
       max-buy: 3
       max-sell: 5
-      collect-first: player
       update-rate: 3
     punch:
       price: 700
       sell-price-difference: 40
       max-buy: 3
       max-sell: 4
-      collect-first: player
       update-rate: 3
     flame:
       price: 750
       sell-price-difference: 40
       max-buy: 2
       max-sell: 4
-      collect-first: player
       update-rate: 3
     infinity:
       price: 1250
       sell-price-difference: 40
       max-buy: 1
       max-sell: 2
-      collect-first: player
       update-rate: 5
     luck_of_the_sea:
       price: 400
       sell-price-difference: 40
       max-buy: 3
       max-sell: 6
-      collect-first: player
       update-rate: 3
     mending:
       price: 2000
       sell-price-difference: 40
       max-buy: 1
       max-sell: 1
-      collect-first: player
       update-rate: 6
     depth_strider:
       price: 600
       sell-price-difference: 40
       max-buy: 2
       max-sell: 4
-      collect-first: player
       update-rate: 3
     frost_walker:
       price: 750
       sell-price-difference: 40
       max-buy: 2
       max-sell: 4
-      collect-first: player
       update-rate: 4
     soul_speed:
       price: 725
       sell-price-difference: 40
       max-buy: 2
       max-sell: 4
-      collect-first: player
       update-rate: 4
     fire_aspect:
       price: 650
       sell-price-difference: 40
       max-buy: 3
       max-sell: 5
-      collect-first: player
       update-rate: 3
     impaling:
       price: 775
       sell-price-difference: 40
       max-buy: 2
       max-sell: 5
-      collect-first: player
       update-rate: 4
     knockback:
       price: 650
       sell-price-difference: 40
       max-buy: 3
       max-sell: 6
-      collect-first: player
       update-rate: 3
     sweeping:
       price: 800
       sell-price-difference: 40
       max-buy: 2
       max-sell: 4
-      collect-first: player
       update-rate: 5
     channeling:
       price: 800
       sell-price-difference: 40
       max-buy: 2
       max-sell: 4
-      collect-first: player
       update-rate: 5
     loyalty:
       price: 750
       sell-price-difference: 40
       max-buy: 2
       max-sell: 4
-      collect-first: player
       update-rate: 5
     riptide:
       price: 800
       sell-price-difference: 40
       max-buy: 2
       max-sell: 4
-      collect-first: player
       update-rate: 5
     multishot:
       price: 650
       sell-price-difference: 40
       max-buy: 3
       max-sell: 6
-      collect-first: player
       update-rate: 4
     piercing:
       price: 600
       sell-price-difference: 40
       max-buy: 3
       max-sell: 6
-      collect-first: player
       update-rate: 3
     quick_charge:
       price: 650
       sell-price-difference: 40
       max-buy: 3
       max-sell: 6
-      collect-first: player
       update-rate: 3
     lure:
       price: 500
       sell-price-difference: 40
       max-buy: 4
       max-sell: 8
-      collect-first: player
       update-rate: 3
   other:
     flint:
@@ -718,7 +672,6 @@ shops:
       max-buy: 200
       max-sell: 450
       volatility: 0.45
-      collect-first: none
     spider_eye:
       price: 7.5
       max-buy: 64
@@ -728,13 +681,11 @@ shops:
       sell-price-difference: 25
       max-buy: 32
       max-sell: 64
-      collect-first: player
     ender_pearl:
       price: 65
       sell-price-difference: 25
       max-buy: 8
       max-sell: 32
-      collect-first: player
     nether_star:
       price: 10000
       sell-price-difference: 40
@@ -742,13 +693,11 @@ shops:
       max-sell: 1
       volatility: 0.2
       update-rate: 10
-      collect-first: player
     blaze_rod:
       price: 95
       sell-price-difference: 27.5
       max-buy: 6
       max-sell: 16
-      collect-first: player
       update-rate: 2
     arrow:
       price: 1.45

@@ -3,7 +3,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
-group 'unprotesting.com.github'
+group 'com.github.noahbclarkson'
 version '0.14.4'
 
 ext {
@@ -12,9 +12,10 @@ ext {
     adventureVersion = '4.15.0'
     paperMCVersion = '1.20.4-R0.1-SNAPSHOT'
     bstatsVersion = '3.0.2'
-    mapdbVersion = '3.1.0'
     ifVersion = '0.10.13'
     vaultVersion = '1.7.1'
+    sqliteConnectorVersion = '3.44.1.0'
+    itemNBTApiVersion = '2.12.2'
 }
 
 java {
@@ -31,8 +32,9 @@ repositories {
 
 dependencies {
     implementation "org.bstats:bstats-bukkit:$bstatsVersion"
-    implementation "org.mapdb:mapdb:$mapdbVersion"
     implementation "com.github.stefvanschie.inventoryframework:IF:$ifVersion"
+    implementation "org.xerial:sqlite-jdbc:$sqliteConnectorVersion"
+    implementation "de.tr7zw:item-nbt-api:$itemNBTApiVersion"
     
     compileOnly "net.kyori:adventure-text-minimessage:$adventureVersion"
     compileOnly "net.kyori:adventure-api:$adventureVersion"
@@ -48,8 +50,9 @@ dependencies {
 shadowJar {
 
     relocate "org.bstats", "unprotesting.com.github.bstats"
-    relocate "org.mapdb", "unprotesting.com.github.mapdb"
     relocate "com.github.stefvanschie.inventoryframework", "unprotesting.com.github.inventoryframework"
+    relocate "org.xerial", "unprotesting.org.xerial"
+    relocate "de.tr7zw", "unprotesting.de.tr7zw"
 
     archiveBaseName.set('Auto-Tune')
     archiveVersion.set(version)

@@ -1,60 +1,19 @@
-# The default rate that prices are updated (in minutes). Every price update the max-buys and sells are also reset.
-# Increase this for low player counts, decrease for high player counts.
-time-period: 60
+sections:
+  ores:
+    display: "<b><gold>Natural Resources</gold></b>"
+    image: "IRON_ORE"
+    pos: "1,1"
+  food:
+    display: "<b><gold>Food</gold></b>"
+    image: "APPLE"
 
-# The default maximum change in a given time-period for an item.
-# Increase this for high player counts, decrease for low player counts.
-volatility: 0.25
+shops:
+  apple:
+    display: "<orange>Apple"
+    material: "APPLE"
+    price: 2.0
 
-# The default percentage difference in the sell price from the buy price.
-# Increase this for low player counts, decrease for high player counts.
-sell-price-difference: 25
-
-# Use the durability function to allow for damaged items to be sold.
-# If this is set to true, the item's price will be scaled to its durability.
-# If this is set to false, damaged items will not be sold.
-durability-function: true
-
-# The minimum number of players required to be online to run price updates.
-# If your servers prices are all over the place this is a good option to increase.
-# It helps to limit price exploits for sensitive items.
-# If your servers prices aren't changing check there are enough players online.
-minimum-players: 2
-
-# If you wish to have sell & buy limits enable this.
-enable-sell-limits: true
-
-# If you wish to have collection on your server (requiring items to be collected
-# by each player or server wide before they can be purchased), enable this.
-enable-collection: false
-
-# If you wish to have loans on your server, enable this.
-enable-loans: false
-
-# The interest applied on loans each minute.
-# (Only applies if loans are enabled)
-# If inflation is too high you can increase this.
-# If inflation is too low you can decrease this.
-interest: 0.05
-
-# The rate that the tutorial messages are sent in seconds.
-# If they are getting annoying you can increase this value.
-tutorial-update: 300
-
-# If you wish to use the web-server, enable this.
-web-server: true
-
-# The port of the web-server.
-port: 8989
-
-# The background for GUI's.
-background: "BLACK_STAINED_GLASS_PANE"
-
-# The log level, can be one of the following:
-# SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST, ALL.
-# The default log level is INFO.
-# This will log all messages with the level or above.
-log-level: "INFO"
-
-# The locale to use for formatting.
-locale: "en_US"
+# The database url. This is an SQLite JDBC url, so it should be in the format of:
+# jdbc:sqlite:path/to/database.db
+database:
+  url: "jdbc:sqlite:plugins/Auto-Tune/data.db"

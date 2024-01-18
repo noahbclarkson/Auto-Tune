@@ -1,4 +1,4 @@
-package unprotesting.com.github.util;
+package com.github.noahbclarkson.util;
 
 import lombok.Getter;
 import lombok.experimental.UtilityClass;
@@ -6,6 +6,8 @@ import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Server;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.jetbrains.annotations.NotNull;
+
+import com.github.noahbclarkson.AutoTune;
 
 /**
  * The class for managing the economy.
@@ -26,6 +28,7 @@ public class EconomyUtil {
                 .getRegistration(Economy.class);
 
         if (rsp == null) {
+            AutoTune.getLog().severe("No economy plugin found! Please install Vault.");
             return;
         }
 

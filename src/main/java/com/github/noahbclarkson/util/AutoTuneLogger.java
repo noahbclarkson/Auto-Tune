@@ -1,4 +1,4 @@
-package unprotesting.com.github.util;
+package com.github.noahbclarkson.util;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;

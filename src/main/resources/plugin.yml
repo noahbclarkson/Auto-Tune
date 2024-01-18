@@ -1,8 +1,8 @@
-main: unprotesting.com.github.AutoTune
+main: com.github.noahbclarkson.AutoTune
 name: Auto-Tune
 description: "The Auto-Tune plugin is an economy plugin that automatically regulates prices based on supply and demand."
 author: "Unprotesting"
-version: "0.14.3"
+version: "0.14.4"
 depend:
   - "Vault"
 libraries:
@@ -10,7 +10,7 @@ libraries:
   - "org.eclipse.jetty:jetty-servlet:11.0.19"
 api-version: 1.13
 api: "1.13"
-website: "https://github.com/Unprotesting/Auto-Tune"
+website: "https://github.com/noahbclarkson/Auto-Tune"
 prefix: "Auto-Tune"
 commands:
   shop:

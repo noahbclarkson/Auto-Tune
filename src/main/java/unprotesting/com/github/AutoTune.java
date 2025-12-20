@@ -29,21 +29,33 @@ public class AutoTune extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        EconomyUtil.setupLocalEconomy(Bukkit.getServer());
-        Config.init();
+        // Delay economy setup one tick to ensure all plugins (Vault + economy) are loaded
+        Bukkit.getScheduler().runTask(this, () -> {
+            EconomyUtil.setupLocalEconomy(Bukkit.getServer());
 
-        setupEvents();
-        setupCommands();
+            if (!EconomyUtil.isReady()) {
+                getLogger().severe("Vault or compatible economy plugin not found! Disabling Auto-Tune.");
+                getServer().getPluginManager().disablePlugin(this);
+                return;
+            }
 
-        new Database();
-        new Metrics(this, 9687);
+            Config.init();
 
-        LocalServer.initialize();
+            setupEvents();
+            setupCommands();
+
+            new Database();
+            new Metrics(this, 9687);
+
+            LocalServer.initialize();
+        });
     }
 
     @Override
     public void onDisable() {
-        Database.get().close();
+        if (Database.get() != null) {
+            Database.get().close();
+        }
         getLogger().info("Auto-Tune is now disabled!");
     }
 

@@ -20,16 +20,28 @@ public class EconomyUtil {
      * Initializes the economy.
      *
      * @param server The server.
+     * @return true if economy successfully hooked, false otherwise
      */
-    public void setupLocalEconomy(@NotNull Server server) {
-        RegisteredServiceProvider<Economy> rsp = server.getServicesManager()
-                .getRegistration(Economy.class);
+    public boolean setupLocalEconomy(Server server) {
+        if (server.getPluginManager().getPlugin("Vault") == null) {
+            return false; // Vault not installed
+        }
 
+        RegisteredServiceProvider<Economy> rsp = server.getServicesManager().getRegistration(Economy.class);
         if (rsp == null) {
-            return;
+            return false; // No economy plugin hooked
         }
 
         economy = rsp.getProvider();
+        return economy != null;
+    }
+
+    public Economy getEconomy() {
+        return economy;
+    }
+
+    public boolean isReady() {
+        return economy != null;
     }
 
 }

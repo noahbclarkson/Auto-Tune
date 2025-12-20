@@ -22,6 +22,7 @@ import unprotesting.com.github.config.CsvHandler;
 import unprotesting.com.github.util.AutoTuneLogger;
 import unprotesting.com.github.util.EconomyUtil;
 import unprotesting.com.github.util.Format;
+import net.milkbowl.vault.economy.Economy;
 
 /**
  * The database for the plugin.
@@ -281,12 +282,18 @@ public class Database {
     }
 
     private double calculateBalance() {
+        Economy econ = EconomyUtil.getEconomy();
+        if (econ == null) {
+            return 0.0;
+        }
+
         double balance = 0;
         for (OfflinePlayer player : AutoTune.getInstance().getServer().getOfflinePlayers()) {
-            balance += EconomyUtil.getEconomy().getBalance(player);
+            balance += econ.getBalance(player);
         }
         return balance;
     }
+
 
     private void createMaps() {
         AutoTuneLogger logger = Format.getLog();

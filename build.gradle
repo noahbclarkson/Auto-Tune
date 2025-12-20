@@ -1,43 +1,45 @@
 plugins {
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.gradleup.shadow' version '9.3.0'
 }
 
-group 'unprotesting.com.github'
-version '0.14.4'
+group = 'unprotesting.com.github'
+version = '0.14.5'
 
 ext {
     jettyVersion = '11.0.19'
     lombokVersion = '1.18.30'
     adventureVersion = '4.15.0'
-    paperMCVersion = '1.20.4-R0.1-SNAPSHOT'
+    paperMCVersion = '1.21.10-R0.1-SNAPSHOT'
+    vaultVersion = '1.7.1'
     bstatsVersion = '3.0.2'
     mapdbVersion = '3.1.0'
     ifVersion = '0.10.13'
-    vaultVersion = '1.7.1'
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
     mavenCentral()
-    maven { url 'https://jitpack.io' }
-    maven { url 'https://papermc.io/repo/repository/maven-public/' }
+    maven { url = "https://repo.papermc.io/repository/maven-public/" }
+    maven { url = "https://jitpack.io" }
 }
 
 dependencies {
     implementation "org.bstats:bstats-bukkit:$bstatsVersion"
     implementation "org.mapdb:mapdb:$mapdbVersion"
     implementation "com.github.stefvanschie.inventoryframework:IF:$ifVersion"
-    
+
     compileOnly "net.kyori:adventure-text-minimessage:$adventureVersion"
     compileOnly "net.kyori:adventure-api:$adventureVersion"
     compileOnly "io.papermc.paper:paper-api:$paperMCVersion"
-    compileOnly "com.github.milkbowl:VaultAPI:$vaultVersion"
+    compileOnly "com.github.MilkBowl:VaultAPI:$vaultVersion"
     compileOnly "org.projectlombok:lombok:$lombokVersion"
     compileOnly "org.eclipse.jetty:jetty-server:$jettyVersion"
     compileOnly "org.eclipse.jetty:jetty-servlet:$jettyVersion"
@@ -45,13 +47,13 @@ dependencies {
     annotationProcessor "org.projectlombok:lombok:$lombokVersion"
 }
 
-shadowJar {
 
-    relocate "org.bstats", "unprotesting.com.github.bstats"
-    relocate "org.mapdb", "unprotesting.com.github.mapdb"
-    relocate "com.github.stefvanschie.inventoryframework", "unprotesting.com.github.inventoryframework"
+tasks.named("shadowJar") {
+    relocate("org.bstats", "unprotesting.com.github.bstats")
+    relocate("org.mapdb", "unprotesting.com.github.mapdb")
+    relocate("com.github.stefvanschie.inventoryframework", "unprotesting.com.github.inventoryframework")
 
-    archiveBaseName.set('Auto-Tune')
+    archiveBaseName.set("Auto-Tune")
     archiveVersion.set(version)
     archiveClassifier.set(null)
     archiveAppendix.set(null)
@@ -60,5 +62,5 @@ shadowJar {
 }
 
 artifacts {
-    archives shadowJar
+    archives tasks.named('shadowJar')
 }

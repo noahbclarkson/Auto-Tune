@@ -10,8 +10,8 @@ import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 public class AutoTuneConfig extends YamlConfiguration {
-    
-    private Path file;
+
+    private final Path file;
 
     public AutoTuneConfig(Path file) {
         this.file = file;
@@ -19,13 +19,7 @@ public class AutoTuneConfig extends YamlConfiguration {
 
     public void load() throws IOException, InvalidConfigurationException {
         try (BufferedReader reader = Files.newBufferedReader(file)) {
-            StringBuilder builder = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                builder.append(line);
-                builder.append('\n');
-            }
-            loadFromString(builder.toString());
+            load(reader);
         }
     }
 
@@ -34,7 +28,5 @@ public class AutoTuneConfig extends YamlConfiguration {
             writer.write(saveToString());
         }
     }
-
-
 
 }

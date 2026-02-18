@@ -9,9 +9,13 @@ sections:
 
 shops:
   apple:
-    display: "<orange>Apple"
+    display: "<orange>Apple</orange>"
     material: "APPLE"
     price: 2.0
+
+# The log level, can be one of:
+# SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST, ALL
+log-level: "INFO"
 
 # The database url. This is an SQLite JDBC url, so it should be in the format of:
 # jdbc:sqlite:path/to/database.db

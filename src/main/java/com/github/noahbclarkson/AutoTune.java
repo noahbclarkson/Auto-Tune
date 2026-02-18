@@ -25,8 +25,7 @@ import lombok.Getter;
 
 public class AutoTune extends JavaPlugin {
 
-    @Getter
-    private AutoTuneConfig config;
+    private AutoTuneConfig autoTuneConfig;
 
     @Getter
     private static AutoTune instance;
@@ -38,27 +37,41 @@ public class AutoTune extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
-        loadConfig();
+        loadAutoTuneConfig();
         setupLogger();
         EconomyUtil.setupLocalEconomy(Bukkit.getServer());
-        database = new AutoTuneDatabase(initDataSource());
+
+        try {
+            database = new AutoTuneDatabase(initDataSource());
+        } catch (SQLException e) {
+            log.severe("Failed to initialize database: " + e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         new Metrics(this, 9687);
     }
 
+    @Override
     public void reloadConfig() {
         try {
-            config.load();
+            autoTuneConfig.load();
         } catch (IOException | InvalidConfigurationException e) {
-            e.printStackTrace();
+            log.severe("Failed to reload config: " + e.getMessage());
         }
     }
 
+    @Override
     public void saveConfig() {
         try {
-            config.save();
+            autoTuneConfig.save();
         } catch (IOException e) {
-            e.printStackTrace();
+            log.severe("Failed to save config: " + e.getMessage());
         }
+    }
+
+    public AutoTuneConfig getAutoTuneConfig() {
+        return autoTuneConfig;
     }
 
     public static AutoTuneLogger getLog() {
@@ -69,46 +82,39 @@ public class AutoTune extends JavaPlugin {
         return instance.database;
     }
 
-    private DataSource initDataSource() {
+    private DataSource initDataSource() throws SQLException {
         SQLiteDataSource dataSource = new SQLiteDataSource();
-        dataSource.setUrl(config.getString("database.url"));
-        try (Connection connection = dataSource.getConnection()) {
-            DatabaseInitializer initializer = new DatabaseInitializer();
-            testDataSource(dataSource);
-            initializer.initializeDatabase(connection);
-            return dataSource;
-        } catch (SQLException e) {
-            log.severe("Failed to initialize database: " + e);
-            getServer().getPluginManager().disablePlugin(this);
-            return null;
-        }
-    }
+        dataSource.setUrl(autoTuneConfig.getString("database.url"));
 
-    private void testDataSource(DataSource dataSource) throws SQLException {
-        try (Connection conn = dataSource.getConnection()) {
-            if (!conn.isValid(1)) {
+        try (Connection connection = dataSource.getConnection()) {
+            if (!connection.isValid(1)) {
                 throw new SQLException("Could not establish database connection.");
             }
+
+            DatabaseInitializer initializer = new DatabaseInitializer();
+            initializer.initializeDatabase(connection);
         }
+
+        return dataSource;
     }
 
-    private void loadConfig() {
+    private void loadAutoTuneConfig() {
         Path configFile = getDataFolder().toPath().resolve("config.yml");
-        config = new AutoTuneConfig(configFile);
+        autoTuneConfig = new AutoTuneConfig(configFile);
 
         if (Files.notExists(configFile)) {
             saveResource("config.yml", false);
         }
 
         try {
-            config.load();
+            autoTuneConfig.load();
         } catch (IOException | InvalidConfigurationException e) {
             e.printStackTrace();
         }
     }
 
     private void setupLogger() {
-        String logLevel = config.getString("log-level", "INFO");
+        String logLevel = autoTuneConfig.getString("log-level", "INFO");
         log = Format.loadLogger(Level.parse(logLevel));
     }
 

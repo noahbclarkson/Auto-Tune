@@ -4,7 +4,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 import javax.sql.DataSource;
 
@@ -12,7 +11,12 @@ import com.github.noahbclarkson.AutoTune;
 
 public class AutoTuneDatabase {
 
-    private DataSource dataSource;
+    @FunctionalInterface
+    public interface ResultSetMapper<T> {
+        T map(ResultSet resultSet) throws SQLException;
+    }
+
+    private final DataSource dataSource;
 
     public AutoTuneDatabase(DataSource dataSource) {
         this.dataSource = dataSource;
@@ -20,6 +24,7 @@ public class AutoTuneDatabase {
 
     /**
      * Connect to the database
+     *
      * @return The Connection object
      * @throws SQLException if the connection fails
      */
@@ -28,14 +33,19 @@ public class AutoTuneDatabase {
     }
 
     /**
-     * Execute a query on the database
-     * @param query The sql query to execute
-     * @return The ResultSet of the query
+     * Executes a SELECT query and maps the result while JDBC resources are still open.
+     *
+     * @param query  SQL query to execute
+     * @param mapper callback for mapping the ResultSet
+     * @param params prepared statement parameters
+     * @return mapped result
      */
-    public ResultSet executeQuery(String query) {
-        try (Connection connection = connect()) {
-            Statement statement = connection.createStatement();
-            return statement.executeQuery(query);
+    public <T> T query(String query, ResultSetMapper<T> mapper, Object... params) {
+        try (Connection connection = connect(); PreparedStatement statement = connection.prepareStatement(query)) {
+            setParameters(statement, params);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return mapper.map(resultSet);
+            }
         } catch (SQLException e) {
             AutoTune.getLog().severe("Failed to execute SQL: " + query + "\nError: " + e);
             return null;
@@ -44,13 +54,13 @@ public class AutoTuneDatabase {
 
     /**
      * Execute a query on the database (INSERT, UPDATE, DELETE)
-     * @param query The sql query to execute
+     *
+     * @param query  The sql query to execute
      * @param params The parameters to set in the query
      * @return True if the query was successful
      */
     public boolean updateData(String query, Object... params) {
-        try (Connection connection = connect()) {
-            PreparedStatement statement = connection.prepareStatement(query);
+        try (Connection connection = connect(); PreparedStatement statement = connection.prepareStatement(query)) {
             setParameters(statement, params);
             return statement.executeUpdate() > 0;
         } catch (SQLException e) {

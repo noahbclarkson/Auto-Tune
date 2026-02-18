@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Locale;
 import java.util.logging.Level;
 
 import javax.sql.DataSource;
@@ -37,7 +38,12 @@ public class AutoTune extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
-        loadAutoTuneConfig();
+
+        if (!loadAutoTuneConfig()) {
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         setupLogger();
         EconomyUtil.setupLocalEconomy(Bukkit.getServer());
 
@@ -54,6 +60,11 @@ public class AutoTune extends JavaPlugin {
 
     @Override
     public void reloadConfig() {
+        if (autoTuneConfig == null) {
+            getLogger().severe("Config is not initialized; reload aborted.");
+            return;
+        }
+
         try {
             autoTuneConfig.load();
         } catch (IOException | InvalidConfigurationException e) {
@@ -63,6 +74,11 @@ public class AutoTune extends JavaPlugin {
 
     @Override
     public void saveConfig() {
+        if (autoTuneConfig == null) {
+            getLogger().severe("Config is not initialized; save aborted.");
+            return;
+        }
+
         try {
             autoTuneConfig.save();
         } catch (IOException e) {
@@ -83,8 +99,13 @@ public class AutoTune extends JavaPlugin {
     }
 
     private DataSource initDataSource() throws SQLException {
+        String databaseUrl = autoTuneConfig.getString("database.url");
+        if (databaseUrl == null || databaseUrl.isBlank()) {
+            throw new SQLException("database.url is missing from config.yml");
+        }
+
         SQLiteDataSource dataSource = new SQLiteDataSource();
-        dataSource.setUrl(autoTuneConfig.getString("database.url"));
+        dataSource.setUrl(databaseUrl);
 
         try (Connection connection = dataSource.getConnection()) {
             if (!connection.isValid(1)) {
@@ -98,7 +119,7 @@ public class AutoTune extends JavaPlugin {
         return dataSource;
     }
 
-    private void loadAutoTuneConfig() {
+    private boolean loadAutoTuneConfig() {
         Path configFile = getDataFolder().toPath().resolve("config.yml");
         autoTuneConfig = new AutoTuneConfig(configFile);
 
@@ -108,14 +129,26 @@ public class AutoTune extends JavaPlugin {
 
         try {
             autoTuneConfig.load();
+            return true;
         } catch (IOException | InvalidConfigurationException e) {
-            e.printStackTrace();
+            getLogger().log(Level.SEVERE, "Failed to load config.yml", e);
+            return false;
         }
     }
 
     private void setupLogger() {
-        String logLevel = autoTuneConfig.getString("log-level", "INFO");
-        log = Format.loadLogger(Level.parse(logLevel));
+        String configuredLevel = autoTuneConfig.getString("log-level", "INFO");
+        Level parsedLevel;
+
+        try {
+            parsedLevel = Level.parse(configuredLevel.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            getLogger().warning("Invalid log-level in config.yml: " + configuredLevel
+                    + ". Falling back to INFO.");
+            parsedLevel = Level.INFO;
+        }
+
+        log = Format.loadLogger(parsedLevel);
     }
 
 }

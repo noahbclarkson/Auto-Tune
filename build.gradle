@@ -27,7 +27,8 @@ java {
 repositories {
     mavenCentral()
     maven { url 'https://jitpack.io' }
-    maven { url 'https://papermc.io/repo/repository/maven-public/' }
+    maven { url 'https://repo.papermc.io/repository/maven-public/' }
+    maven { url 'https://repo.codemc.io/repository/maven-public/' }
 }
 
 dependencies {
@@ -35,7 +36,7 @@ dependencies {
     implementation "com.github.stefvanschie.inventoryframework:IF:$ifVersion"
     implementation "org.xerial:sqlite-jdbc:$sqliteConnectorVersion"
     implementation "de.tr7zw:item-nbt-api:$itemNBTApiVersion"
-    
+
     compileOnly "net.kyori:adventure-text-minimessage:$adventureVersion"
     compileOnly "net.kyori:adventure-api:$adventureVersion"
     compileOnly "io.papermc.paper:paper-api:$paperMCVersion"
@@ -45,6 +46,14 @@ dependencies {
     compileOnly "org.eclipse.jetty:jetty-servlet:$jettyVersion"
 
     annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation "io.papermc.paper:paper-api:$paperMCVersion"
+}
+
+test {
+    useJUnitPlatform()
 }
 
 shadowJar {

@@ -62,8 +62,8 @@ Not only does this assist administrators in managing a server's economy, but it 
 
 1. Clone the project to a local directory using ```git clone https://github.com/Unprotesting/Auto-Tune.git```.
 2. Run ```cd Auto-Tune``` to enter the Auto-Tune folder.
-3. Run ```./gradlew build``` to build the project using Gradle.
-4. Navigate to the ```/builds/libs/``` directory and ```Auto-Tune-0.x.x``` will be there if the build was successful.
+3. Run ```./gradlew test build``` to run tests and build the project using Gradle.
+4. Navigate to the ```/build/libs/``` directory and ```Auto-Tune-0.x.x.jar``` will be there if the build was successful.
 
 ### :sparkles: Contributing to the project
 

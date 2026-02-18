@@ -18,12 +18,21 @@ public class AutoTuneConfig extends YamlConfiguration {
     }
 
     public void load() throws IOException, InvalidConfigurationException {
+        if (Files.notExists(file)) {
+            throw new IOException("Config file not found: " + file);
+        }
+
         try (BufferedReader reader = Files.newBufferedReader(file)) {
             load(reader);
         }
     }
 
     public void save() throws IOException {
+        Path parent = file.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+
         try (BufferedWriter writer = Files.newBufferedWriter(file)) {
             writer.write(saveToString());
         }

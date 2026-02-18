@@ -78,7 +78,22 @@ tasks {
         dependsOn(shadowJar)
     }
 
+    val installWebDeps by registering(Exec::class) {
+        workingDir = file("web")
+        val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+        val npm = if (isWindows) "npm.cmd" else "npm"
+        val lockFile = file("web/package-lock.json")
+
+        commandLine(
+            npm,
+            if (lockFile.exists()) "ci" else "install",
+            "--no-audit",
+            "--no-fund"
+        )
+    }
+
     val buildWeb by registering(Exec::class) {
+        dependsOn(installWebDeps)
         workingDir = file("web")
         val isWindows = System.getProperty("os.name").lowercase().contains("windows")
         commandLine(if (isWindows) "npm.cmd" else "npm", "run", "export")

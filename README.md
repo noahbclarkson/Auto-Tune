@@ -32,6 +32,122 @@
 - :ballot_box_with_check: ```Tutorial to help new players```
 - :ballot_box_with_check: ```And much, much more...```
 
+## :chart_with_upwards_trend: Market Algorithm
+
+Auto-Tune uses a supply-and-demand pricing model with asymmetric spreads, player scaling, and volume-based adjustments. Every configurable interval (default: 5 minutes / 6000 ticks), the **Market Engine** recalculates all item prices and spreads.
+
+### Price Updates
+
+1. **Trade window**: All transactions within a configurable window (default: 7 days) are collected. Each transaction is **recency-weighted** — recent trades count more and older trades fade linearly to zero:
+   ```
+   weight = max(0, 1.0 - age_ms / window_ms)
+   weightedAmount = transaction_amount * weight
+   ```
+
+2. **Trade ratio**: Net buying vs selling pressure is computed:
+   ```
+   tradeRatio = (weightedBuys - weightedSells) / (weightedBuys + weightedSells)
+   ```
+   Range: `[-1.0, +1.0]`. Positive = buying pressure, negative = selling pressure.
+
+3. **Player scaling**: Price changes are damped by the online player count using a `tanh` curve:
+   ```
+   playerScaling = tanh(onlineCount * atanh(0.99) / fullEffectPlayers)
+   ```
+   At the configured `fullEffectPlayers` (default: 20), scaling reaches ~99%. At 0 players, no price changes occur.
+
+4. **Price change**: The final price change per tick is capped:
+   ```
+   priceChange = currentPrice * tradeRatio * playerScaling * (maxPriceChangePercent / 100)
+   ```
+   Default cap: **3% per tick**. There are no hard min/max price bounds — prices are purely market-driven.
+
+### BPD / SPD Spread System
+
+Buy and sell prices diverge from the base price through independent **Buy Price Deviation (BPD)** and **Sell Price Deviation (SPD)** values:
+
+```
+buyPrice  = basePrice * (1 + BPD)
+sellPrice = basePrice * (1 - SPD)
+```
+
+The spread calculation applies four adjustments in sequence:
+
+1. **Base spread** (default: 0.30 → split 0.15 / 0.15):
+   ```
+   bpd = baseSpread / 2
+   spd = baseSpread / 2
+   ```
+
+2. **Volume imbalance** — shifts spread toward the dominant trade direction:
+   ```
+   imbalance = (buyRatio - 0.5) * 2.0
+   bpd += max(0,  imbalance) * halfSpread * volumeImpact
+   spd += max(0, -imbalance) * halfSpread * volumeImpact
+   ```
+   Heavy buying → BPD widens (buying gets more expensive). Heavy selling → SPD widens (selling becomes less profitable).
+
+3. **Liquidity reduction** — frequently traded items get tighter spreads:
+   ```
+   liquidityReduction = 1.0 / (1.0 + totalWeightedVolume * liquidityCoeff)
+   bpd *= liquidityReduction
+   spd *= liquidityReduction
+   ```
+
+4. **Player count reduction** — more players → tighter spreads:
+   ```
+   playerReduction = 1.0 - playerImpact * playerScaling
+   bpd *= playerReduction
+   spd *= playerReduction
+   ```
+
+5. **Global volume multiplier** — a z-score analysis across 10 equal time buckets within the trade window:
+   - `|z| <= 1`: multiplier = 1.0 (normal activity)
+   - `z > 1` (high activity): multiplier drops toward 0.5 (tighter spreads)
+   - `z < -1` (low activity): multiplier rises toward 2.0 (wider spreads)
+
+### Price Trends
+
+Based on the last 10 price history entries:
+- **UP**: price increased > 0.5%
+- **DOWN**: price decreased > 0.5%
+- **STABLE**: change within ±0.5%
+
+### Economy Metrics
+
+Captured every 5 minutes as snapshots:
+
+| Metric | Calculation |
+|--------|-------------|
+| **GDP** | Sum of all transaction totals in the last 24 hours |
+| **Inflation** | Average price change across all items (> 1% = "High Inflation", < -1% = "Deflation") |
+| **Total Debt** | Sum of all active loan balances |
+| **Debt Per Capita** | Total debt / online player count |
+| **Transaction Volume** | Total trade volume in the last 24 hours |
+
+### Loan System
+
+- Interest rate: `baseRate * (1 + (500 - creditScore) / 1000)` when credit score modifier is enabled
+- Compounds every 24 hours (configurable)
+- Max loan amount: player's total traded value × `maxLoanMultiplier` (default: 2.0)
+- Defaulting deducts credit score points (default: 50)
+
+### Default Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `update-interval` | 6000 ticks (5 min) | Price recalculation frequency |
+| `max-price-change-percent` | 3.0% | Max base price change per tick |
+| `trade-window-days` | 7 | Time window for trade analysis |
+| `base-spread` | 0.30 (30%) | Total spread split between BPD/SPD |
+| `volume-impact` | 0.5 | Imbalance effect on spread |
+| `player-impact` | 0.7 | Player count effect on spread |
+| `liquidity-coeff` | 0.05 | High-volume spread reduction |
+| `full-effect-players` | 20 | Player count for ~99% scaling |
+| `base-interest-rate` | 0.05 (5%) | Loan interest per compound |
+
+> The `scripts/market_curves.py` script generates visualizations of all these curves and relationships.
+
 ## :question: Why use Auto-Tune
 
 Auto-Tune identifies and fixes a significant problem in Minecraft servers that has remained underdeveloped and ignored for too long. This issue is the poor implementation of an economy and markets into Minecraft.

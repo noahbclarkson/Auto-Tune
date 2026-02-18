@@ -1,60 +1,291 @@
-# The default rate that prices are updated (in minutes). Every price update the max-buys and sells are also reset.
-# Increase this for low player counts, decrease for high player counts.
-time-period: 60
+# ============================================
+# Auto-Tune Configuration
+# A dynamic economy plugin with real-time market simulation
+# ============================================
 
-# The default maximum change in a given time-period for an item.
-# Increase this for high player counts, decrease for low player counts.
-volatility: 0.25
+storage:
+  # Database type: SQLITE or MYSQL
+  type: SQLITE
 
-# The default percentage difference in the sell price from the buy price.
-# Increase this for low player counts, decrease for high player counts.
-sell-price-difference: 25
+  # MySQL/MariaDB settings (ignored if using SQLite)
+  host: localhost
+  port: 3306
+  database: autotune
+  username: root
+  password: ""
 
-# Use the durability function to allow for damaged items to be sold.
-# If this is set to true, the item's price will be scaled to its durability.
-# If this is set to false, damaged items will not be sold.
-durability-function: true
+  # Connection pool settings
+  pool:
+    maximum-size: 10
+    minimum-idle: 2
+    connection-timeout: 30000
+    idle-timeout: 600000
+    max-lifetime: 1800000
 
-# The minimum number of players required to be online to run price updates.
-# If your servers prices are all over the place this is a good option to increase.
-# It helps to limit price exploits for sensitive items.
-# If your servers prices aren't changing check there are enough players online.
-minimum-players: 2
+web:
+  # Enable the web dashboard
+  enabled: true
+  # Port for the web server
+  port: 8989
+  # Bind address (0.0.0.0 for all interfaces)
+  host: "0.0.0.0"
+  # Enable WebSocket for real-time updates
+  websocket-enabled: true
 
-# If you wish to have sell & buy limits enable this.
-enable-sell-limits: true
+economy:
+  # Currency symbol for display
+  currency-symbol: "$"
 
-# If you wish to have collection on your server (requiring items to be collected
-# by each player or server wide before they can be purchased), enable this.
-enable-collection: false
+  # How often to recalculate prices (in ticks, 20 ticks = 1 second)
+  update-interval: 6000
 
-# If you wish to have loans on your server, enable this.
-enable-loans: false
+  # Maximum price change per update cycle (as decimal, 1.5 = 1.5%)
+  # This is the maximum change when trade ratio is 100% in one direction
+  max-price-change-percent: 1.5
 
-# The interest applied on loans each minute.
-# (Only applies if loans are enabled)
-# If inflation is too high you can increase this.
-# If inflation is too low you can decrease this.
-interest: 0.05
+  # Time window for considering trades in price calculation (in days)
+  # Trades are time-weighted linearly: recent trades have more impact
+  trade-window-days: 7
 
-# The rate that the tutorial messages are sent in seconds.
-# If they are getting annoying you can increase this value.
-tutorial-update: 300
+  # Require an item to have been sold at least once before it can be bought
+  # When true, items with no sell history show "Not yet available" in the shop
+  # Individual items can override this via /shop admin setbuyable
+  require-first-sell: true
 
-# If you wish to use the web-server, enable this.
-web-server: true
+  # Slippage coefficient: larger orders get slightly worse prices
+  # Uses sqrt scaling: price adjusts by slippageCoeff * sqrt(amount) per unit
+  slippage-coeff: 0.01
 
-# The port of the web-server.
-port: 8989
+  # Sell pressure multiplier: amplifies downward price movements
+  # Values > 1.0 make prices drop faster when players sell heavily
+  # Set to 1.0 for symmetric behavior (spread imbalance already encodes sell pressure)
+  sell-pressure-multiplier: 1.0
 
-# The background for GUI's.
-background: "BLACK_STAINED_GLASS_PANE"
+  # Sector correlation: items in the same section influence each other
+  # Higher values = stronger cross-item price coupling within a section
+  sector-correlation: 0.05
 
-# The log level, can be one of the following:
-# SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST, ALL.
-# The default log level is INFO.
-# This will log all messages with the level or above.
-log-level: "INFO"
+  # Per-player rate limit multiplier for trade metric calculations
+  # Caps individual player contribution at mean * this value to prevent manipulation
+  player-rate-limit-multiplier: 3.0
 
-# The locale to use for formatting.
-locale: "en_US"
+  # Trend dampening: reduces price changes when items are on a streak
+  # dampening = 1 / (1 + streak * this value), applied to price change
+  # Only applied when the price is continuing in the streak direction (counter-moves are undampened)
+  trend-dampening: 0.05
+
+  # Minimum percentage change per tick to count as a directional move for streak tracking
+  # Changes smaller than this are classified as STABLE and decay the streak by 1
+  trend-streak-threshold-percent: 0.1
+
+  # Floor for dampening factor: dampening never reduces price changes below this fraction
+  # At 0.25, even a 100-tick streak still allows 25% of the max price change
+  trend-dampening-floor: 0.25
+
+  # Adaptive window: automatically adjusts trade window based on transaction density
+  # When true, trade-window-days becomes the base window, scaled up/down by activity
+  adaptive-window: true
+
+  # Minimum and maximum window bounds for adaptive window (in days)
+  min-window-days: 2
+  max-window-days: 7
+
+  # Maximum section group size for sector correlation
+  # Sections with more items than this are skipped to prevent server-wide cascading
+  max-sector-correlation-group-size: 20
+
+  # Spread configuration (difference between buy and sell prices)
+  # The spread is split into BPD (buy price difference) and SPD (sell price difference)
+  # which are adjusted independently based on trade volume imbalance
+  spread:
+    # Base spread percentage (0.20 = 20% total spread, split 50/50 between BPD and SPD)
+    # At 0.20: buy is 10% above base, sell is 10% below base before other reductions
+    base-spread: 0.20
+
+    # How much trade volume imbalance shifts spread to the imbalanced side
+    # Higher values = bigger spread increase on the side with more trades
+    volume-impact: 0.8
+
+    # How much player count reduces spread (higher = more reduction with players)
+    # At 0.6, spread drops to ~40% of base at full player count
+    player-impact: 0.6
+
+    # Per-item liquidity coefficient: actively traded items get tighter spreads
+    # Higher values = faster spread reduction for high-volume items
+    # Scaled by player diversity (see liquidity-full-effect-traders)
+    liquidity-coeff: 0.01
+
+    # Number of distinct traders needed for full liquidity benefit
+    # With fewer distinct traders, spread compression from volume is reduced proportionally
+    # Prevents single-player manipulation: 1 player gets 1/N of the liquidity benefit
+    liquidity-full-effect-traders: 10
+
+  # Player count scaling for price changes
+  player-scaling:
+    # Player count at which price scaling reaches ~99% effect
+    # The tanh coefficient is derived automatically: atanh(0.99) / full-effect-players
+    # At 10, even a solo player has ~26% market impact (visible feedback)
+    full-effect-players: 10
+
+loans:
+  # Enable the loan system
+  enabled: true
+
+  # Base interest rate (decimal, 0.05 = 5%)
+  # Adjusted by credit score, term length, and server inflation
+  base-interest-rate: 0.05
+
+  # Interest rate modifier based on credit score
+  # Final rate = base-rate * (1 + (500 - credit_score) / 1000)
+  credit-score-modifier: true
+
+  # Maximum loan amount multiplier (based on player's total traded value)
+  max-loan-multiplier: 2.0
+
+  # Minimum credit score required for loans
+  min-credit-score: 200
+
+  # Default loan duration in days (used when player doesn't specify)
+  default-duration-days: 7
+
+  # Minimum and maximum loan term in days
+  # Players choose their term with /loan take <amount> [days]
+  # Longer terms incur a term premium on the interest rate
+  min-term-days: 3
+  max-term-days: 30
+
+  # Extra interest rate added per day beyond min-term-days
+  # Example: 0.002 means a 30-day loan gets +5.4% added to the rate vs a 3-day loan
+  term-premium-per-day: 0.002
+
+  # Interest compounding interval in hours
+  compound-interval-hours: 24
+
+  # How often to check for overdue loans (in hours)
+  overdue-check-interval-hours: 1
+
+  # Send a warning this many hours before a loan is due
+  warning-before-due-hours: 24
+
+  # Early repayment credit bonus multiplier
+  # Bonus = base_bonus * (days_remaining / total_days) * this multiplier
+  # Higher values reward early repayment more
+  early-repayment-bonus-multiplier: 1.5
+
+  # How much server inflation affects loan interest rates
+  # Final rate *= (1 + avg_price_change% * this value)
+  # 0.0 = inflation has no effect, 1.0 = full inflation passthrough
+  inflation-rate-impact: 0.5
+
+  # Credit score penalty for defaulting
+  default-penalty: 50
+
+gui:
+  # Items per page in shop (max 45 = 5 rows x 9 columns)
+  items-per-page: 45
+
+  # Enable search functionality
+  search-enabled: true
+
+  # Search timeout in ticks (20 ticks = 1 second, 600 = 30 seconds)
+  search-timeout: 600
+
+  # Show economy stats (GDP, inflation, debt) on the shop home screen
+  show-economy-stats: true
+
+  # Show 24h price change percentage on item tooltips
+  show-24h-change: true
+
+  # Buy/sell quantity buttons shown in the buy/sell screen
+  # Values must be between 1 and 64
+  buy-quantities:
+    - 1
+    - 2
+    - 4
+    - 8
+    - 16
+    - 32
+    - 64
+
+  # GUI titles (plain text)
+  titles:
+    shop: "Auto-Tune Shop"
+    sell: "Sell Items"
+    autosell: "Autosell"
+    trends: "Market Trends"
+    transaction-history: "Your Transactions"
+    admin-transaction-history: "All Transactions"
+
+  # Color scheme using MiniMessage format
+  # Supports named colors (<green>), hex (<#55ff55>), and more
+  # See https://docs.advntr.dev/minimessage/format.html
+  colors:
+    buy-price: "<green>"
+    sell-price: "<gold>"
+    spread: "<aqua>"
+    section-name: "<gold>"
+    item-name: "<white>"
+    trend-up: "<green>"
+    trend-down: "<red>"
+    trend-stable: "<gray>"
+    positive: "<green>"
+    negative: "<red>"
+    accent: "<aqua>"
+    muted: "<dark_gray>"
+
+  # Materials for GUI buttons and borders
+  # Use Minecraft material names (e.g., DIAMOND, ARROW, BLACK_STAINED_GLASS_PANE)
+  materials:
+    border: "BLACK_STAINED_GLASS_PANE"
+    buy-button: "LIME_STAINED_GLASS_PANE"
+    sell-button: "ORANGE_STAINED_GLASS_PANE"
+    not-available: "BARRIER"
+    previous-page: "ARROW"
+    next-page: "ARROW"
+    back: "DARK_OAK_DOOR"
+    page-indicator: "PAPER"
+    search: "NAME_TAG"
+    trends: "SPYGLASS"
+    close: "BARRIER"
+    economy-stats: "GOLD_BLOCK"
+    enable-all: "LIME_DYE"
+    disable-all: "RED_DYE"
+    sell-inventory: "HOPPER"
+
+sections:
+  all:
+    display-name: "All Items"
+    icon: "CHEST"
+    priority: 0
+  ores:
+    display-name: "Ores & Minerals"
+    icon: "DIAMOND_ORE"
+    priority: 10
+  building:
+    display-name: "Building Blocks"
+    icon: "BRICKS"
+    priority: 20
+  food:
+    display-name: "Food & Farming"
+    icon: "GOLDEN_APPLE"
+    priority: 30
+  drops:
+    display-name: "Mob Drops"
+    icon: "ROTTEN_FLESH"
+    priority: 40
+  redstone:
+    display-name: "Redstone & Mechanics"
+    icon: "REDSTONE"
+    priority: 50
+  dyes:
+    display-name: "Dyes & Colors"
+    icon: "RED_DYE"
+    priority: 60
+
+debug:
+  # Enable debug logging
+  enabled: false
+
+  # Log price calculations
+  log-prices: false
+

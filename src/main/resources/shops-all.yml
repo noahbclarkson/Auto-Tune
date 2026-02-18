@@ -1,0 +1,4157 @@
+# ============================================
+# Auto-Tune Shop Items - ALL
+# ============================================
+# Complete economy preset for large servers (100+ players).
+# Contains every tradeable item in Minecraft.
+# Use with caution - a fully dynamic economy requires
+# high player counts to avoid price manipulation.
+#
+# Invalid materials are automatically skipped on load.
+#
+# To use: rename this file to shops.yml and restart.
+# Prices are starting values only - the market engine
+# adjusts them dynamically based on player trading.
+# ============================================
+
+items:
+  # === Ores & Minerals ===
+  - material: NETHERITE_BLOCK
+    price: 7500.0
+    section: ores
+  - material: DIAMOND_BLOCK
+    price: 2733.4
+    section: ores
+  - material: DEEPSLATE_DIAMOND_ORE
+    price: 1107.9
+    section: ores
+  - material: DIAMOND_ORE
+    price: 997.6
+    section: ores
+  - material: EMERALD_BLOCK
+    price: 888.5
+    section: ores
+  - material: NETHERITE_INGOT
+    price: 823.5
+    section: ores
+  - material: GOLD_BLOCK
+    price: 506.5
+    section: ores
+  - material: RAW_GOLD_BLOCK
+    price: 506.5
+    section: ores
+  - material: DEEPSLATE_EMERALD_ORE
+    price: 275.1
+    section: ores
+  - material: EMERALD_ORE
+    price: 265.3
+    section: ores
+  - material: DIAMOND
+    price: 245.9
+    section: ores
+  - material: ANCIENT_DEBRIS
+    price: 132.9
+    section: ores
+  - material: NETHERITE_SCRAP
+    price: 123.8
+    section: ores
+  - material: IRON_BLOCK
+    price: 110.2
+    section: ores
+  - material: RAW_IRON_BLOCK
+    price: 110.2
+    section: ores
+  - material: EMERALD
+    price: 79.2
+    section: ores
+  - material: DEEPSLATE_GOLD_ORE
+    price: 68.8
+    section: ores
+  - material: GOLD_ORE
+    price: 66.3
+    section: ores
+  - material: GOLD_INGOT
+    price: 45.2
+    section: ores
+  - material: RAW_GOLD
+    price: 45.2
+    section: ores
+  - material: COAL_BLOCK
+    price: 32.9
+    section: ores
+  - material: LAPIS_BLOCK
+    price: 32.9
+    section: ores
+  - material: AMETHYST_BLOCK
+    price: 28.9
+    section: ores
+  - material: DEEPSLATE_LAPIS_ORE
+    price: 26.5
+    section: ores
+  - material: LAPIS_ORE
+    price: 25.0
+    section: ores
+  - material: DEEPSLATE_REDSTONE_ORE
+    price: 22.6
+    section: ores
+  - material: NETHER_GOLD_ORE
+    price: 21.1
+    section: ores
+  - material: REDSTONE_ORE
+    price: 21.1
+    section: ores
+  - material: RAW_COPPER_BLOCK
+    price: 18.8
+    section: ores
+  - material: REDSTONE_BLOCK
+    price: 18.8
+    section: ores
+  - material: AMETHYST_CLUSTER
+    price: 16.5
+    section: ores
+  - material: DEEPSLATE_IRON_ORE
+    price: 13.5
+    section: ores
+  - material: IRON_ORE
+    price: 12.8
+    section: ores
+  - material: IRON_INGOT
+    price: 9.83
+    section: ores
+  - material: RAW_IRON
+    price: 9.83
+    section: ores
+  - material: DEEPSLATE_COAL_ORE
+    price: 7.69
+    section: ores
+  - material: DEEPSLATE_COPPER_ORE
+    price: 7.69
+    section: ores
+  - material: AMETHYST_SHARD
+    price: 6.29
+    section: ores
+  - material: COAL_ORE
+    price: 6.29
+    section: ores
+  - material: COPPER_ORE
+    price: 6.29
+    section: ores
+  - material: GOLD_NUGGET
+    price: 4.25
+    section: ores
+  - material: COAL
+    price: 2.94
+    section: ores
+  - material: LAPIS_LAZULI
+    price: 2.94
+    section: ores
+  - material: COPPER_INGOT
+    price: 1.67
+    section: ores
+  - material: RAW_COPPER
+    price: 1.67
+    section: ores
+  - material: REDSTONE
+    price: 1.67
+    section: ores
+  - material: IRON_NUGGET
+    price: 0.90
+    section: ores
+  - material: COPPER_NUGGET
+    price: 0.23
+    section: ores
+
+  # === Building Blocks ===
+  - material: WAXED_OXIDIZED_COPPER_GOLEM_STATUE
+    price: 200.0
+    section: building
+  - material: OXIDIZED_COPPER_GOLEM_STATUE
+    price: 198.1
+    section: building
+  - material: WAXED_WEATHERED_COPPER_GOLEM_STATUE
+    price: 190.5
+    section: building
+  - material: WEATHERED_COPPER_GOLEM_STATUE
+    price: 188.6
+    section: building
+  - material: RESIN_BRICK_STAIRS
+    price: 184.9
+    section: building
+  - material: WAXED_EXPOSED_COPPER_GOLEM_STATUE
+    price: 181.1
+    section: building
+  - material: EXPOSED_COPPER_GOLEM_STATUE
+    price: 179.2
+    section: building
+  - material: WAXED_COPPER_GOLEM_STATUE
+    price: 171.7
+    section: building
+  - material: COPPER_GOLEM_STATUE
+    price: 169.9
+    section: building
+  - material: BLUE_ICE
+    price: 134.7
+    section: building
+  - material: CHISELED_RESIN_BRICKS
+    price: 118.4
+    section: building
+  - material: RESIN_BRICK_WALL
+    price: 118.4
+    section: building
+  - material: RESIN_BRICKS
+    price: 118.4
+    section: building
+  - material: SEA_LANTERN
+    price: 80.0
+    section: building
+  - material: RESIN_BRICK_SLAB
+    price: 55.2
+    section: building
+  - material: WAXED_OXIDIZED_CUT_COPPER_STAIRS
+    price: 37.0
+    section: building
+  - material: OXIDIZED_CUT_COPPER_STAIRS
+    price: 35.3
+    section: building
+  - material: WAXED_WEATHERED_CUT_COPPER_STAIRS
+    price: 34.5
+    section: building
+  - material: WAXED_EXPOSED_CUT_COPPER_STAIRS
+    price: 33.7
+    section: building
+  - material: WEATHERED_CUT_COPPER_STAIRS
+    price: 32.9
+    section: building
+  - material: EXPOSED_CUT_COPPER_STAIRS
+    price: 32.1
+    section: building
+  - material: WAXED_CUT_COPPER_STAIRS
+    price: 31.3
+    section: building
+  - material: CUT_COPPER_STAIRS
+    price: 29.7
+    section: building
+  - material: RESIN_BRICK
+    price: 25.8
+    section: building
+  - material: WAXED_OXIDIZED_CHISELED_COPPER
+    price: 24.2
+    section: building
+  - material: WAXED_OXIDIZED_COPPER
+    price: 24.2
+    section: building
+  - material: WAXED_OXIDIZED_CUT_COPPER
+    price: 24.2
+    section: building
+  - material: WAXED_OXIDIZED_COPPER_GRATE
+    price: 24.2
+    section: building
+  - material: WAXED_OXIDIZED_COPPER_BULB
+    price: 24.2
+    section: building
+  - material: OXIDIZED_COPPER_BULB
+    price: 23.4
+    section: building
+  - material: WAXED_WEATHERED_COPPER_BULB
+    price: 23.4
+    section: building
+  - material: OXIDIZED_CHISELED_COPPER
+    price: 22.6
+    section: building
+  - material: OXIDIZED_COPPER
+    price: 22.6
+    section: building
+  - material: OXIDIZED_CUT_COPPER
+    price: 22.6
+    section: building
+  - material: WAXED_WEATHERED_CHISELED_COPPER
+    price: 22.6
+    section: building
+  - material: WAXED_WEATHERED_COPPER
+    price: 22.6
+    section: building
+  - material: WAXED_WEATHERED_CUT_COPPER
+    price: 22.6
+    section: building
+  - material: OXIDIZED_COPPER_GRATE
+    price: 22.6
+    section: building
+  - material: WAXED_WEATHERED_COPPER_GRATE
+    price: 22.6
+    section: building
+  - material: WAXED_EXPOSED_COPPER_BULB
+    price: 22.6
+    section: building
+  - material: CAMPFIRE
+    price: 22.6
+    section: building
+  - material: WAXED_EXPOSED_CHISELED_COPPER
+    price: 21.9
+    section: building
+  - material: WAXED_EXPOSED_COPPER
+    price: 21.9
+    section: building
+  - material: WAXED_EXPOSED_CUT_COPPER
+    price: 21.9
+    section: building
+  - material: WAXED_EXPOSED_COPPER_GRATE
+    price: 21.9
+    section: building
+  - material: WEATHERED_COPPER_BULB
+    price: 21.9
+    section: building
+  - material: WEATHERED_CHISELED_COPPER
+    price: 21.1
+    section: building
+  - material: WEATHERED_COPPER
+    price: 21.1
+    section: building
+  - material: WEATHERED_CUT_COPPER
+    price: 21.1
+    section: building
+  - material: WEATHERED_COPPER_GRATE
+    price: 21.1
+    section: building
+  - material: EXPOSED_COPPER_BULB
+    price: 21.1
+    section: building
+  - material: WAXED_COPPER_BULB
+    price: 21.1
+    section: building
+  - material: EXPOSED_CHISELED_COPPER
+    price: 20.3
+    section: building
+  - material: EXPOSED_COPPER
+    price: 20.3
+    section: building
+  - material: EXPOSED_CUT_COPPER
+    price: 20.3
+    section: building
+  - material: WAXED_COPPER_BLOCK
+    price: 20.3
+    section: building
+  - material: WAXED_CHISELED_COPPER
+    price: 20.3
+    section: building
+  - material: WAXED_CUT_COPPER
+    price: 20.3
+    section: building
+  - material: EXPOSED_COPPER_GRATE
+    price: 20.3
+    section: building
+  - material: WAXED_COPPER_GRATE
+    price: 20.3
+    section: building
+  - material: COPPER_BULB
+    price: 20.3
+    section: building
+  - material: SOUL_CAMPFIRE
+    price: 19.5
+    section: building
+  - material: COPPER_BLOCK
+    price: 18.8
+    section: building
+  - material: CHISELED_COPPER
+    price: 18.8
+    section: building
+  - material: CUT_COPPER
+    price: 18.8
+    section: building
+  - material: COPPER_GRATE
+    price: 18.8
+    section: building
+  - material: BRICK_STAIRS
+    price: 16.5
+    section: building
+  - material: REDSTONE_LAMP
+    price: 13.5
+    section: building
+  - material: OCHRE_FROGLIGHT
+    price: 13.5
+    section: building
+  - material: PEARLESCENT_FROGLIGHT
+    price: 13.5
+    section: building
+  - material: VERDANT_FROGLIGHT
+    price: 13.5
+    section: building
+  - material: WAXED_OXIDIZED_CUT_COPPER_SLAB
+    price: 12.0
+    section: building
+  - material: PACKED_ICE
+    price: 12.0
+    section: building
+  - material: WAXED_EXPOSED_CUT_COPPER_SLAB
+    price: 11.3
+    section: building
+  - material: WAXED_WEATHERED_CUT_COPPER_SLAB
+    price: 11.3
+    section: building
+  - material: BRICK_WALL
+    price: 10.6
+    section: building
+  - material: BRICKS
+    price: 10.6
+    section: building
+  - material: OXIDIZED_CUT_COPPER_SLAB
+    price: 10.6
+    section: building
+  - material: WAXED_CUT_COPPER_SLAB
+    price: 10.6
+    section: building
+  - material: SOUL_LANTERN
+    price: 10.6
+    section: building
+  - material: EXPOSED_CUT_COPPER_SLAB
+    price: 9.83
+    section: building
+  - material: WEATHERED_CUT_COPPER_SLAB
+    price: 9.83
+    section: building
+  - material: LANTERN
+    price: 9.83
+    section: building
+  - material: CUT_COPPER_SLAB
+    price: 9.11
+    section: building
+  - material: CLAY
+    price: 7.69
+    section: building
+  - material: DRIPSTONE_BLOCK
+    price: 7.69
+    section: building
+  - material: RED_NETHER_BRICK_STAIRS
+    price: 5.61
+    section: building
+  - material: WAXED_OXIDIZED_COPPER_CHAIN
+    price: 5.61
+    section: building
+  - material: END_ROD
+    price: 5.61
+    section: building
+  - material: WAXED_OXIDIZED_COPPER_LANTERN
+    price: 5.61
+    section: building
+  - material: BRICK_SLAB
+    price: 4.92
+    section: building
+  - material: WAXED_WEATHERED_COPPER_CHAIN
+    price: 4.92
+    section: building
+  - material: SMOOTH_RED_SANDSTONE_STAIRS
+    price: 4.92
+    section: building
+  - material: SMOOTH_SANDSTONE_STAIRS
+    price: 4.92
+    section: building
+  - material: JACK_O_LANTERN
+    price: 4.92
+    section: building
+  - material: GLOWSTONE
+    price: 4.92
+    section: building
+  - material: WAXED_COPPER_LANTERN
+    price: 4.92
+    section: building
+  - material: WAXED_WEATHERED_COPPER_LANTERN
+    price: 4.92
+    section: building
+  - material: OXIDIZED_COPPER_CHAIN
+    price: 4.25
+    section: building
+  - material: WAXED_EXPOSED_COPPER_CHAIN
+    price: 4.25
+    section: building
+  - material: OXIDIZED_COPPER_LANTERN
+    price: 4.25
+    section: building
+  - material: WAXED_EXPOSED_COPPER_LANTERN
+    price: 4.25
+    section: building
+  - material: CALCITE
+    price: 3.59
+    section: building
+  - material: MOSSY_STONE_BRICK_STAIRS
+    price: 3.59
+    section: building
+  - material: NETHER_BRICK_STAIRS
+    price: 3.59
+    section: building
+  - material: RED_NETHER_BRICK_WALL
+    price: 3.59
+    section: building
+  - material: RED_NETHER_BRICKS
+    price: 3.59
+    section: building
+  - material: WAXED_COPPER_CHAIN
+    price: 3.59
+    section: building
+  - material: WEATHERED_COPPER_CHAIN
+    price: 3.59
+    section: building
+  - material: MUD_BRICK_STAIRS
+    price: 3.59
+    section: building
+  - material: RED_SANDSTONE_STAIRS
+    price: 3.59
+    section: building
+  - material: SANDSTONE_STAIRS
+    price: 3.59
+    section: building
+  - material: SHROOMLIGHT
+    price: 3.59
+    section: building
+  - material: COPPER_LANTERN
+    price: 3.59
+    section: building
+  - material: WEATHERED_COPPER_LANTERN
+    price: 3.59
+    section: building
+  - material: CRACKED_NETHER_BRICKS
+    price: 2.94
+    section: building
+  - material: WAXED_OXIDIZED_COPPER_BARS
+    price: 2.94
+    section: building
+  - material: EXPOSED_COPPER_CHAIN
+    price: 2.94
+    section: building
+  - material: MYCELIUM
+    price: 2.94
+    section: building
+  - material: SMOOTH_RED_SANDSTONE
+    price: 2.94
+    section: building
+  - material: SMOOTH_SANDSTONE
+    price: 2.94
+    section: building
+  - material: EXPOSED_COPPER_LANTERN
+    price: 2.94
+    section: building
+  - material: MOSSY_COBBLESTONE_STAIRS
+    price: 2.62
+    section: building
+  - material: WAXED_WEATHERED_COPPER_BARS
+    price: 2.62
+    section: building
+  - material: MOSSY_STONE_BRICK_WALL
+    price: 2.30
+    section: building
+  - material: MOSSY_STONE_BRICKS
+    price: 2.30
+    section: building
+  - material: BRICK
+    price: 2.30
+    section: building
+  - material: CHISELED_NETHER_BRICKS
+    price: 2.30
+    section: building
+  - material: NETHER_BRICK_WALL
+    price: 2.30
+    section: building
+  - material: NETHER_BRICKS
+    price: 2.30
+    section: building
+  - material: WAXED_EXPOSED_COPPER_BARS
+    price: 2.30
+    section: building
+  - material: COPPER_CHAIN
+    price: 2.30
+    section: building
+  - material: MUD_BRICK_WALL
+    price: 2.30
+    section: building
+  - material: MUD_BRICKS
+    price: 2.30
+    section: building
+  - material: PACKED_MUD
+    price: 2.30
+    section: building
+  - material: CHISELED_RED_SANDSTONE
+    price: 2.30
+    section: building
+  - material: CUT_RED_SANDSTONE
+    price: 2.30
+    section: building
+  - material: RED_SANDSTONE
+    price: 2.30
+    section: building
+  - material: RED_SANDSTONE_WALL
+    price: 2.30
+    section: building
+  - material: CHISELED_SANDSTONE
+    price: 2.30
+    section: building
+  - material: CUT_SANDSTONE
+    price: 2.30
+    section: building
+  - material: SANDSTONE
+    price: 2.30
+    section: building
+  - material: SANDSTONE_WALL
+    price: 2.30
+    section: building
+  - material: CANDLE
+    price: 2.30
+    section: building
+  - material: REDSTONE_TORCH
+    price: 2.30
+    section: building
+  - material: SNOW_BLOCK
+    price: 2.30
+    section: building
+  - material: WAXED_COPPER_BARS
+    price: 1.80
+    section: building
+  - material: CLAY_BALL
+    price: 1.67
+    section: building
+  - material: SMOOTH_STONE
+    price: 1.67
+    section: building
+  - material: STONE_STAIRS
+    price: 1.67
+    section: building
+  - material: STONE_BRICK_STAIRS
+    price: 1.67
+    section: building
+  - material: POINTED_DRIPSTONE
+    price: 1.67
+    section: building
+  - material: MOSSY_COBBLESTONE
+    price: 1.67
+    section: building
+  - material: MOSSY_COBBLESTONE_WALL
+    price: 1.67
+    section: building
+  - material: POLISHED_TUFF_STAIRS
+    price: 1.67
+    section: building
+  - material: TUFF_BRICK_STAIRS
+    price: 1.67
+    section: building
+  - material: TUFF_STAIRS
+    price: 1.67
+    section: building
+  - material: NETHER_BRICK_FENCE
+    price: 1.67
+    section: building
+  - material: RED_NETHER_BRICK_SLAB
+    price: 1.67
+    section: building
+  - material: OXIDIZED_COPPER_BARS
+    price: 1.67
+    section: building
+  - material: PODZOL
+    price: 1.67
+    section: building
+  - material: ROOTED_DIRT
+    price: 1.67
+    section: building
+  - material: WEATHERED_COPPER_BARS
+    price: 1.37
+    section: building
+  - material: SMOOTH_RED_SANDSTONE_SLAB
+    price: 1.37
+    section: building
+  - material: SMOOTH_SANDSTONE_SLAB
+    price: 1.37
+    section: building
+  - material: STONE
+    price: 1.07
+    section: building
+  - material: CHISELED_STONE_BRICKS
+    price: 1.07
+    section: building
+  - material: CRACKED_STONE_BRICKS
+    price: 1.07
+    section: building
+  - material: STONE_BRICK_WALL
+    price: 1.07
+    section: building
+  - material: STONE_BRICKS
+    price: 1.07
+    section: building
+  - material: DEEPSLATE
+    price: 1.07
+    section: building
+  - material: CRACKED_DEEPSLATE_BRICKS
+    price: 1.07
+    section: building
+  - material: CRACKED_DEEPSLATE_TILES
+    price: 1.07
+    section: building
+  - material: MOSSY_STONE_BRICK_SLAB
+    price: 1.07
+    section: building
+  - material: CHISELED_TUFF
+    price: 1.07
+    section: building
+  - material: CHISELED_TUFF_BRICKS
+    price: 1.07
+    section: building
+  - material: POLISHED_TUFF
+    price: 1.07
+    section: building
+  - material: POLISHED_TUFF_WALL
+    price: 1.07
+    section: building
+  - material: TUFF
+    price: 1.07
+    section: building
+  - material: TUFF_BRICK_WALL
+    price: 1.07
+    section: building
+  - material: TUFF_BRICKS
+    price: 1.07
+    section: building
+  - material: TUFF_WALL
+    price: 1.07
+    section: building
+  - material: NETHER_BRICK_SLAB
+    price: 1.07
+    section: building
+  - material: EXPOSED_COPPER_BARS
+    price: 1.07
+    section: building
+  - material: GRASS_BLOCK
+    price: 1.07
+    section: building
+  - material: GRAVEL
+    price: 1.07
+    section: building
+  - material: MUD
+    price: 1.07
+    section: building
+  - material: MUD_BRICK_SLAB
+    price: 1.07
+    section: building
+  - material: CUT_RED_SANDSTONE_SLAB
+    price: 1.07
+    section: building
+  - material: RED_SANDSTONE_SLAB
+    price: 1.07
+    section: building
+  - material: CUT_SANDSTONE_SLAB
+    price: 1.07
+    section: building
+  - material: SANDSTONE_SLAB
+    price: 1.07
+    section: building
+  - material: GLOWSTONE_DUST
+    price: 1.07
+    section: building
+  - material: ICE
+    price: 1.07
+    section: building
+  - material: SNOW
+    price: 1.07
+    section: building
+  - material: SOUL_TORCH
+    price: 0.95
+    section: building
+  - material: COPPER_TORCH
+    price: 0.90
+    section: building
+  - material: COBBLESTONE_STAIRS
+    price: 0.78
+    section: building
+  - material: SMOOTH_STONE_SLAB
+    price: 0.78
+    section: building
+  - material: ANDESITE_STAIRS
+    price: 0.78
+    section: building
+  - material: POLISHED_ANDESITE_STAIRS
+    price: 0.78
+    section: building
+  - material: DEEPSLATE_BRICK_STAIRS
+    price: 0.78
+    section: building
+  - material: COBBLED_DEEPSLATE_STAIRS
+    price: 0.78
+    section: building
+  - material: POLISHED_DEEPSLATE_STAIRS
+    price: 0.78
+    section: building
+  - material: DEEPSLATE_TILE_STAIRS
+    price: 0.78
+    section: building
+  - material: DIORITE_STAIRS
+    price: 0.78
+    section: building
+  - material: POLISHED_DIORITE_STAIRS
+    price: 0.78
+    section: building
+  - material: GRANITE_STAIRS
+    price: 0.78
+    section: building
+  - material: POLISHED_GRANITE_STAIRS
+    price: 0.78
+    section: building
+  - material: MOSSY_COBBLESTONE_SLAB
+    price: 0.78
+    section: building
+  - material: COARSE_DIRT
+    price: 0.78
+    section: building
+  - material: TORCH
+    price: 0.78
+    section: building
+  - material: COPPER_BARS
+    price: 0.61
+    section: building
+  - material: COBBLESTONE
+    price: 0.50
+    section: building
+  - material: COBBLESTONE_WALL
+    price: 0.50
+    section: building
+  - material: STONE_SLAB
+    price: 0.50
+    section: building
+  - material: ANDESITE
+    price: 0.50
+    section: building
+  - material: ANDESITE_WALL
+    price: 0.50
+    section: building
+  - material: POLISHED_ANDESITE
+    price: 0.50
+    section: building
+  - material: STONE_BRICK_SLAB
+    price: 0.50
+    section: building
+  - material: CHISELED_DEEPSLATE
+    price: 0.50
+    section: building
+  - material: DEEPSLATE_BRICK_WALL
+    price: 0.50
+    section: building
+  - material: DEEPSLATE_BRICKS
+    price: 0.50
+    section: building
+  - material: COBBLED_DEEPSLATE
+    price: 0.50
+    section: building
+  - material: COBBLED_DEEPSLATE_WALL
+    price: 0.50
+    section: building
+  - material: POLISHED_DEEPSLATE
+    price: 0.50
+    section: building
+  - material: POLISHED_DEEPSLATE_WALL
+    price: 0.50
+    section: building
+  - material: DEEPSLATE_TILE_WALL
+    price: 0.50
+    section: building
+  - material: DEEPSLATE_TILES
+    price: 0.50
+    section: building
+  - material: DIORITE
+    price: 0.50
+    section: building
+  - material: DIORITE_WALL
+    price: 0.50
+    section: building
+  - material: POLISHED_DIORITE
+    price: 0.50
+    section: building
+  - material: GRANITE
+    price: 0.50
+    section: building
+  - material: GRANITE_WALL
+    price: 0.50
+    section: building
+  - material: POLISHED_GRANITE
+    price: 0.50
+    section: building
+  - material: POLISHED_TUFF_SLAB
+    price: 0.50
+    section: building
+  - material: TUFF_BRICK_SLAB
+    price: 0.50
+    section: building
+  - material: TUFF_SLAB
+    price: 0.50
+    section: building
+  - material: NETHER_BRICK
+    price: 0.50
+    section: building
+  - material: DIRT
+    price: 0.50
+    section: building
+  - material: RED_SAND
+    price: 0.50
+    section: building
+  - material: SAND
+    price: 0.50
+    section: building
+  - material: SNOWBALL
+    price: 0.50
+    section: building
+  - material: COBBLESTONE_SLAB
+    price: 0.23
+    section: building
+  - material: ANDESITE_SLAB
+    price: 0.23
+    section: building
+  - material: POLISHED_ANDESITE_SLAB
+    price: 0.23
+    section: building
+  - material: DEEPSLATE_BRICK_SLAB
+    price: 0.23
+    section: building
+  - material: COBBLED_DEEPSLATE_SLAB
+    price: 0.23
+    section: building
+  - material: POLISHED_DEEPSLATE_SLAB
+    price: 0.23
+    section: building
+  - material: DEEPSLATE_TILE_SLAB
+    price: 0.23
+    section: building
+  - material: DIORITE_SLAB
+    price: 0.23
+    section: building
+  - material: POLISHED_DIORITE_SLAB
+    price: 0.23
+    section: building
+  - material: GRANITE_SLAB
+    price: 0.23
+    section: building
+  - material: POLISHED_GRANITE_SLAB
+    price: 0.23
+    section: building
+
+  # === Wood & Logs ===
+  - material: STRIPPED_MANGROVE_WOOD
+    price: 16.5
+    section: wood
+  - material: STRIPPED_MANGROVE_LOG
+    price: 12.0
+    section: wood
+  - material: CRIMSON_HYPHAE
+    price: 9.11
+    section: wood
+  - material: STRIPPED_CRIMSON_HYPHAE
+    price: 9.11
+    section: wood
+  - material: MANGROVE_WOOD
+    price: 9.11
+    section: wood
+  - material: STRIPPED_WARPED_HYPHAE
+    price: 9.11
+    section: wood
+  - material: WARPED_HYPHAE
+    price: 9.11
+    section: wood
+  - material: PALE_OAK_WOOD
+    price: 7.69
+    section: wood
+  - material: STRIPPED_PALE_OAK_WOOD
+    price: 7.69
+    section: wood
+  - material: ACACIA_WOOD
+    price: 6.99
+    section: wood
+  - material: STRIPPED_ACACIA_WOOD
+    price: 6.99
+    section: wood
+  - material: BIRCH_WOOD
+    price: 6.99
+    section: wood
+  - material: STRIPPED_BIRCH_WOOD
+    price: 6.99
+    section: wood
+  - material: CHERRY_WOOD
+    price: 6.99
+    section: wood
+  - material: STRIPPED_CHERRY_WOOD
+    price: 6.99
+    section: wood
+  - material: DARK_OAK_WOOD
+    price: 6.99
+    section: wood
+  - material: STRIPPED_DARK_OAK_WOOD
+    price: 6.99
+    section: wood
+  - material: JUNGLE_WOOD
+    price: 6.99
+    section: wood
+  - material: STRIPPED_JUNGLE_WOOD
+    price: 6.99
+    section: wood
+  - material: OAK_WOOD
+    price: 6.99
+    section: wood
+  - material: STRIPPED_OAK_WOOD
+    price: 6.99
+    section: wood
+  - material: SPRUCE_WOOD
+    price: 6.99
+    section: wood
+  - material: STRIPPED_SPRUCE_WOOD
+    price: 6.99
+    section: wood
+  - material: CRIMSON_STEM
+    price: 6.29
+    section: wood
+  - material: STRIPPED_CRIMSON_STEM
+    price: 6.29
+    section: wood
+  - material: MANGROVE_LOG
+    price: 6.29
+    section: wood
+  - material: STRIPPED_WARPED_STEM
+    price: 6.29
+    section: wood
+  - material: WARPED_STEM
+    price: 6.29
+    section: wood
+  - material: BAMBOO_BLOCK
+    price: 5.61
+    section: wood
+  - material: STRIPPED_BAMBOO_BLOCK
+    price: 5.61
+    section: wood
+  - material: PALE_OAK_LOG
+    price: 5.61
+    section: wood
+  - material: STRIPPED_PALE_OAK_LOG
+    price: 5.61
+    section: wood
+  - material: STRIPPED_ACACIA_LOG
+    price: 4.92
+    section: wood
+  - material: ACACIA_LOG
+    price: 4.92
+    section: wood
+  - material: BIRCH_LOG
+    price: 4.92
+    section: wood
+  - material: STRIPPED_BIRCH_LOG
+    price: 4.92
+    section: wood
+  - material: CHERRY_LOG
+    price: 4.92
+    section: wood
+  - material: STRIPPED_CHERRY_LOG
+    price: 4.92
+    section: wood
+  - material: DARK_OAK_LOG
+    price: 4.92
+    section: wood
+  - material: STRIPPED_DARK_OAK_LOG
+    price: 4.92
+    section: wood
+  - material: JUNGLE_LOG
+    price: 4.92
+    section: wood
+  - material: STRIPPED_JUNGLE_LOG
+    price: 4.92
+    section: wood
+  - material: OAK_LOG
+    price: 4.92
+    section: wood
+  - material: STRIPPED_OAK_LOG
+    price: 4.92
+    section: wood
+  - material: SPRUCE_LOG
+    price: 4.92
+    section: wood
+  - material: STRIPPED_SPRUCE_LOG
+    price: 4.92
+    section: wood
+  - material: BAMBOO_MOSAIC_STAIRS
+    price: 4.25
+    section: wood
+  - material: BAMBOO_STAIRS
+    price: 4.25
+    section: wood
+  - material: CRIMSON_STAIRS
+    price: 2.94
+    section: wood
+  - material: WARPED_STAIRS
+    price: 2.94
+    section: wood
+  - material: BAMBOO_MOSAIC
+    price: 2.62
+    section: wood
+  - material: BAMBOO_PLANKS
+    price: 2.62
+    section: wood
+  - material: MANGROVE_STAIRS
+    price: 2.17
+    section: wood
+  - material: CRIMSON_PLANKS
+    price: 1.92
+    section: wood
+  - material: PALE_OAK_STAIRS
+    price: 1.92
+    section: wood
+  - material: WARPED_PLANKS
+    price: 1.92
+    section: wood
+  - material: ACACIA_STAIRS
+    price: 1.67
+    section: wood
+  - material: BIRCH_STAIRS
+    price: 1.67
+    section: wood
+  - material: CHERRY_STAIRS
+    price: 1.67
+    section: wood
+  - material: DARK_OAK_STAIRS
+    price: 1.67
+    section: wood
+  - material: JUNGLE_STAIRS
+    price: 1.67
+    section: wood
+  - material: OAK_STAIRS
+    price: 1.67
+    section: wood
+  - material: SPRUCE_STAIRS
+    price: 1.67
+    section: wood
+  - material: MANGROVE_PLANKS
+    price: 1.37
+    section: wood
+  - material: BAMBOO_MOSAIC_SLAB
+    price: 1.25
+    section: wood
+  - material: BAMBOO_SLAB
+    price: 1.25
+    section: wood
+  - material: PALE_OAK_PLANKS
+    price: 1.25
+    section: wood
+  - material: ACACIA_PLANKS
+    price: 1.07
+    section: wood
+  - material: BIRCH_PLANKS
+    price: 1.07
+    section: wood
+  - material: CHERRY_PLANKS
+    price: 1.07
+    section: wood
+  - material: DARK_OAK_PLANKS
+    price: 1.07
+    section: wood
+  - material: JUNGLE_PLANKS
+    price: 1.07
+    section: wood
+  - material: OAK_PLANKS
+    price: 1.07
+    section: wood
+  - material: SPRUCE_PLANKS
+    price: 1.07
+    section: wood
+  - material: CRIMSON_SLAB
+    price: 0.90
+    section: wood
+  - material: WARPED_SLAB
+    price: 0.90
+    section: wood
+  - material: MANGROVE_SLAB
+    price: 0.67
+    section: wood
+  - material: PALE_OAK_SLAB
+    price: 0.61
+    section: wood
+  - material: ACACIA_SLAB
+    price: 0.50
+    section: wood
+  - material: BIRCH_SLAB
+    price: 0.50
+    section: wood
+  - material: CHERRY_SLAB
+    price: 0.50
+    section: wood
+  - material: DARK_OAK_SLAB
+    price: 0.50
+    section: wood
+  - material: JUNGLE_SLAB
+    price: 0.50
+    section: wood
+  - material: OAK_SLAB
+    price: 0.50
+    section: wood
+  - material: SPRUCE_SLAB
+    price: 0.50
+    section: wood
+
+  # === Food & Cooking ===
+  - material: ENCHANTED_GOLDEN_APPLE
+    price: 2500.0
+    section: food
+  - material: GOLDEN_APPLE
+    price: 200.0
+    section: food
+  - material: CAKE
+    price: 174.5
+    section: food
+  - material: GOLDEN_CARROT
+    price: 41.9
+    section: food
+  - material: GLISTERING_MELON_SLICE
+    price: 41.9
+    section: food
+  - material: DRIED_KELP_BLOCK
+    price: 12.0
+    section: food
+  - material: HAY_BLOCK
+    price: 12.0
+    section: food
+  - material: MELON
+    price: 12.0
+    section: food
+  - material: RABBIT_STEW
+    price: 9.11
+    section: food
+  - material: APPLE
+    price: 6.29
+    section: food
+  - material: PUMPKIN_PIE
+    price: 5.61
+    section: food
+  - material: FERMENTED_SPIDER_EYE
+    price: 5.61
+    section: food
+  - material: BEETROOT_SOUP
+    price: 4.92
+    section: food
+  - material: COOKED_BEEF
+    price: 4.92
+    section: food
+  - material: COOKED_PORKCHOP
+    price: 4.92
+    section: food
+  - material: MUSHROOM_STEW
+    price: 4.92
+    section: food
+  - material: BEEF
+    price: 4.25
+    section: food
+  - material: PORKCHOP
+    price: 4.25
+    section: food
+  - material: BREAD
+    price: 3.59
+    section: food
+  - material: COOKED_CHICKEN
+    price: 3.59
+    section: food
+  - material: POPPED_CHORUS_FRUIT
+    price: 3.59
+    section: food
+  - material: COOKED_MUTTON
+    price: 3.59
+    section: food
+  - material: CHICKEN
+    price: 2.94
+    section: food
+  - material: CHORUS_FRUIT
+    price: 2.94
+    section: food
+  - material: COOKED_SALMON
+    price: 2.94
+    section: food
+  - material: MUTTON
+    price: 2.94
+    section: food
+  - material: COOKED_COD
+    price: 2.30
+    section: food
+  - material: SALMON
+    price: 2.30
+    section: food
+  - material: COOKED_RABBIT
+    price: 2.30
+    section: food
+  - material: GLOW_BERRIES
+    price: 1.67
+    section: food
+  - material: SWEET_BERRIES
+    price: 1.67
+    section: food
+  - material: PUFFERFISH
+    price: 1.67
+    section: food
+  - material: TROPICAL_FISH
+    price: 1.67
+    section: food
+  - material: COD
+    price: 1.67
+    section: food
+  - material: BAKED_POTATO
+    price: 1.67
+    section: food
+  - material: RABBIT
+    price: 1.67
+    section: food
+  - material: BLUE_EGG
+    price: 1.07
+    section: food
+  - material: BROWN_EGG
+    price: 1.07
+    section: food
+  - material: DRIED_KELP
+    price: 1.07
+    section: food
+  - material: EGG
+    price: 1.07
+    section: food
+  - material: WHEAT
+    price: 1.07
+    section: food
+  - material: CARROT
+    price: 1.07
+    section: food
+  - material: MELON_SLICE
+    price: 1.07
+    section: food
+  - material: POTATO
+    price: 1.07
+    section: food
+  - material: BEETROOT
+    price: 0.50
+    section: food
+  - material: POISONOUS_POTATO
+    price: 0.50
+    section: food
+  - material: SUGAR
+    price: 0.50
+    section: food
+  - material: COOKIE
+    price: 0.39
+    section: food
+
+  # === Mob Drops ===
+  - material: NETHER_STAR
+    price: 3340.4
+    section: drops
+  - material: CREEPER_HEAD
+    price: 1558.4
+    section: drops
+  - material: PIGLIN_HEAD
+    price: 1558.4
+    section: drops
+  - material: SKELETON_SKULL
+    price: 1558.4
+    section: drops
+  - material: ZOMBIE_HEAD
+    price: 1558.4
+    section: drops
+  - material: WITHER_SKELETON_SKULL
+    price: 568.8
+    section: drops
+  - material: RESIN_BLOCK
+    price: 280.0
+    section: drops
+  - material: OMINOUS_TRIAL_KEY
+    price: 265.3
+    section: drops
+  - material: OMINOUS_BOTTLE
+    price: 123.8
+    section: drops
+  - material: TRIAL_KEY
+    price: 79.2
+    section: drops
+  - material: SLIME_BLOCK
+    price: 70.6
+    section: drops
+  - material: GHAST_TEAR
+    price: 62.0
+    section: drops
+  - material: NAUTILUS_SHELL
+    price: 62.0
+    section: drops
+  - material: BREEZE_ROD
+    price: 53.5
+    section: drops
+  - material: GOAT_HORN
+    price: 37.0
+    section: drops
+  - material: BEE_NEST
+    price: 25.0
+    section: drops
+  - material: RESIN_CLUMP
+    price: 25.0
+    section: drops
+  - material: ARMADILLO_SCUTE
+    price: 21.1
+    section: drops
+  - material: BLAZE_ROD
+    price: 21.1
+    section: drops
+  - material: TURTLE_SCUTE
+    price: 21.1
+    section: drops
+  - material: WITHER_ROSE
+    price: 21.1
+    section: drops
+  - material: MAGMA_CREAM
+    price: 17.2
+    section: drops
+  - material: PHANTOM_MEMBRANE
+    price: 13.5
+    section: drops
+  - material: WIND_CHARGE
+    price: 12.0
+    section: drops
+  - material: ENDER_PEARL
+    price: 10.6
+    section: drops
+  - material: BLAZE_POWDER
+    price: 9.83
+    section: drops
+  - material: HONEY_BLOCK
+    price: 7.69
+    section: drops
+  - material: GUNPOWDER
+    price: 6.29
+    section: drops
+  - material: SLIME_BALL
+    price: 6.29
+    section: drops
+  - material: GLOW_INK_SAC
+    price: 6.29
+    section: drops
+  - material: HONEYCOMB_BLOCK
+    price: 4.92
+    section: drops
+  - material: LEATHER
+    price: 4.92
+    section: drops
+  - material: BONE
+    price: 2.94
+    section: drops
+  - material: FEATHER
+    price: 2.94
+    section: drops
+  - material: SPIDER_EYE
+    price: 2.94
+    section: drops
+  - material: INK_SAC
+    price: 2.94
+    section: drops
+  - material: HONEY_BOTTLE
+    price: 1.67
+    section: drops
+  - material: HONEYCOMB
+    price: 1.07
+    section: drops
+  - material: RABBIT_HIDE
+    price: 1.07
+    section: drops
+  - material: STRING
+    price: 1.07
+    section: drops
+  - material: ROTTEN_FLESH
+    price: 0.50
+    section: drops
+
+  # === Farming & Plants ===
+  - material: PITCHER_PLANT
+    price: 37.0
+    section: farming
+  - material: SPORE_BLOSSOM
+    price: 37.0
+    section: farming
+  - material: TORCHFLOWER
+    price: 28.9
+    section: farming
+  - material: PITCHER_POD
+    price: 21.1
+    section: farming
+  - material: TORCHFLOWER_SEEDS
+    price: 17.2
+    section: farming
+  - material: BONE_BLOCK
+    price: 9.83
+    section: farming
+  - material: FLOWER_POT
+    price: 7.69
+    section: farming
+  - material: CARVED_PUMPKIN
+    price: 3.59
+    section: farming
+  - material: PUMPKIN
+    price: 3.59
+    section: farming
+  - material: CHORUS_FLOWER
+    price: 2.94
+    section: farming
+  - material: MUSHROOM_STEM
+    price: 2.94
+    section: farming
+  - material: MOSS_BLOCK
+    price: 2.30
+    section: farming
+  - material: PALE_HANGING_MOSS
+    price: 2.30
+    section: farming
+  - material: PALE_MOSS_BLOCK
+    price: 2.30
+    section: farming
+  - material: TWISTING_VINES
+    price: 2.30
+    section: farming
+  - material: WEEPING_VINES
+    price: 2.30
+    section: farming
+  - material: ALLIUM
+    price: 2.30
+    section: farming
+  - material: BLUE_ORCHID
+    price: 2.30
+    section: farming
+  - material: BROWN_MUSHROOM_BLOCK
+    price: 2.30
+    section: farming
+  - material: RED_MUSHROOM_BLOCK
+    price: 2.30
+    section: farming
+  - material: LARGE_FERN
+    price: 1.67
+    section: farming
+  - material: LILY_PAD
+    price: 1.67
+    section: farming
+  - material: PINK_PETALS
+    price: 1.67
+    section: farming
+  - material: BIG_DRIPLEAF
+    price: 1.67
+    section: farming
+  - material: BROWN_MUSHROOM
+    price: 1.67
+    section: farming
+  - material: RED_MUSHROOM
+    price: 1.67
+    section: farming
+  - material: MUDDY_MANGROVE_ROOTS
+    price: 1.67
+    section: farming
+  - material: MANGROVE_PROPAGULE
+    price: 1.67
+    section: farming
+  - material: MOSS_CARPET
+    price: 1.49
+    section: farming
+  - material: PALE_MOSS_CARPET
+    price: 1.49
+    section: farming
+  - material: CACTUS_FLOWER
+    price: 1.07
+    section: farming
+  - material: CLOSED_EYEBLOSSOM
+    price: 1.07
+    section: farming
+  - material: COCOA_BEANS
+    price: 1.07
+    section: farming
+  - material: FERN
+    price: 1.07
+    section: farming
+  - material: FIREFLY_BUSH
+    price: 1.07
+    section: farming
+  - material: GLOW_LICHEN
+    price: 1.07
+    section: farming
+  - material: HANGING_ROOTS
+    price: 1.07
+    section: farming
+  - material: OPEN_EYEBLOSSOM
+    price: 1.07
+    section: farming
+  - material: VINE
+    price: 1.07
+    section: farming
+  - material: AZALEA
+    price: 1.07
+    section: farming
+  - material: FLOWERING_AZALEA
+    price: 1.07
+    section: farming
+  - material: SMALL_DRIPLEAF
+    price: 1.07
+    section: farming
+  - material: LILAC
+    price: 1.07
+    section: farming
+  - material: LILY_OF_THE_VALLEY
+    price: 1.07
+    section: farming
+  - material: ORANGE_TULIP
+    price: 1.07
+    section: farming
+  - material: PEONY
+    price: 1.07
+    section: farming
+  - material: PINK_TULIP
+    price: 1.07
+    section: farming
+  - material: ROSE_BUSH
+    price: 1.07
+    section: farming
+  - material: SUNFLOWER
+    price: 1.07
+    section: farming
+  - material: WHITE_TULIP
+    price: 1.07
+    section: farming
+  - material: ACACIA_SAPLING
+    price: 1.07
+    section: farming
+  - material: BIRCH_SAPLING
+    price: 1.07
+    section: farming
+  - material: CHERRY_SAPLING
+    price: 1.07
+    section: farming
+  - material: DARK_OAK_SAPLING
+    price: 1.07
+    section: farming
+  - material: JUNGLE_SAPLING
+    price: 1.07
+    section: farming
+  - material: OAK_SAPLING
+    price: 1.07
+    section: farming
+  - material: SPRUCE_SAPLING
+    price: 1.07
+    section: farming
+  - material: BEETROOT_SEEDS
+    price: 1.07
+    section: farming
+  - material: MELON_SEEDS
+    price: 1.07
+    section: farming
+  - material: BONE_MEAL
+    price: 0.90
+    section: farming
+  - material: PUMPKIN_SEEDS
+    price: 0.78
+    section: farming
+  - material: BAMBOO
+    price: 0.50
+    section: farming
+  - material: BUSH
+    price: 0.50
+    section: farming
+  - material: CACTUS
+    price: 0.50
+    section: farming
+  - material: DEAD_BUSH
+    price: 0.50
+    section: farming
+  - material: SHORT_DRY_GRASS
+    price: 0.50
+    section: farming
+  - material: SHORT_GRASS
+    price: 0.50
+    section: farming
+  - material: SUGAR_CANE
+    price: 0.50
+    section: farming
+  - material: TALL_DRY_GRASS
+    price: 0.50
+    section: farming
+  - material: WILDFLOWERS
+    price: 0.50
+    section: farming
+  - material: AZALEA_LEAVES
+    price: 0.50
+    section: farming
+  - material: FLOWERING_AZALEA_LEAVES
+    price: 0.50
+    section: farming
+  - material: AZURE_BLUET
+    price: 0.50
+    section: farming
+  - material: CORNFLOWER
+    price: 0.50
+    section: farming
+  - material: DANDELION
+    price: 0.50
+    section: farming
+  - material: OXEYE_DAISY
+    price: 0.50
+    section: farming
+  - material: POPPY
+    price: 0.50
+    section: farming
+  - material: RED_TULIP
+    price: 0.50
+    section: farming
+  - material: ACACIA_LEAVES
+    price: 0.50
+    section: farming
+  - material: BIRCH_LEAVES
+    price: 0.50
+    section: farming
+  - material: CHERRY_LEAVES
+    price: 0.50
+    section: farming
+  - material: DARK_OAK_LEAVES
+    price: 0.50
+    section: farming
+  - material: JUNGLE_LEAVES
+    price: 0.50
+    section: farming
+  - material: MANGROVE_LEAVES
+    price: 0.50
+    section: farming
+  - material: OAK_LEAVES
+    price: 0.50
+    section: farming
+  - material: PALE_OAK_LEAVES
+    price: 0.50
+    section: farming
+  - material: SPRUCE_LEAVES
+    price: 0.50
+    section: farming
+  - material: MANGROVE_ROOTS
+    price: 0.50
+    section: farming
+  - material: PALE_OAK_SAPLING
+    price: 0.50
+    section: farming
+  - material: WHEAT_SEEDS
+    price: 0.50
+    section: farming
+  - material: LEAF_LITTER
+    price: 0.23
+    section: farming
+
+  # === Redstone ===
+  - material: LIGHT_WEIGHTED_PRESSURE_PLATE
+    price: 96.8
+    section: redstone
+  - material: IRON_TRAPDOOR
+    price: 45.2
+    section: redstone
+  - material: STICKY_PISTON
+    price: 27.3
+    section: redstone
+  - material: TARGET
+    price: 21.1
+    section: redstone
+  - material: IRON_DOOR
+    price: 21.1
+    section: redstone
+  - material: HEAVY_WEIGHTED_PRESSURE_PLATE
+    price: 21.1
+    section: redstone
+  - material: PISTON
+    price: 19.5
+    section: redstone
+  - material: TRAPPED_CHEST
+    price: 17.2
+    section: redstone
+  - material: COMPARATOR
+    price: 14.2
+    section: redstone
+  - material: DISPENSER
+    price: 12.8
+    section: redstone
+  - material: NOTE_BLOCK
+    price: 12.8
+    section: redstone
+  - material: DAYLIGHT_DETECTOR
+    price: 12.0
+    section: redstone
+  - material: REPEATER
+    price: 11.3
+    section: redstone
+  - material: WAXED_OXIDIZED_COPPER_TRAPDOOR
+    price: 11.3
+    section: redstone
+  - material: OBSERVER
+    price: 9.83
+    section: redstone
+  - material: OXIDIZED_COPPER_TRAPDOOR
+    price: 9.83
+    section: redstone
+  - material: WAXED_WEATHERED_COPPER_TRAPDOOR
+    price: 9.83
+    section: redstone
+  - material: WAXED_OXIDIZED_COPPER_DOOR
+    price: 9.11
+    section: redstone
+  - material: BAMBOO_TRAPDOOR
+    price: 9.11
+    section: redstone
+  - material: WAXED_EXPOSED_COPPER_TRAPDOOR
+    price: 8.40
+    section: redstone
+  - material: WEATHERED_COPPER_TRAPDOOR
+    price: 8.40
+    section: redstone
+  - material: OXIDIZED_COPPER_DOOR
+    price: 7.69
+    section: redstone
+  - material: WAXED_WEATHERED_COPPER_DOOR
+    price: 7.69
+    section: redstone
+  - material: EXPOSED_COPPER_TRAPDOOR
+    price: 6.99
+    section: redstone
+  - material: WAXED_COPPER_TRAPDOOR
+    price: 6.99
+    section: redstone
+  - material: DROPPER
+    price: 6.29
+    section: redstone
+  - material: WAXED_EXPOSED_COPPER_DOOR
+    price: 6.29
+    section: redstone
+  - material: WEATHERED_COPPER_DOOR
+    price: 6.29
+    section: redstone
+  - material: CRIMSON_TRAPDOOR
+    price: 6.29
+    section: redstone
+  - material: WARPED_TRAPDOOR
+    price: 6.29
+    section: redstone
+  - material: TRIPWIRE_HOOK
+    price: 5.61
+    section: redstone
+  - material: BAMBOO_DOOR
+    price: 5.61
+    section: redstone
+  - material: BAMBOO_PRESSURE_PLATE
+    price: 5.61
+    section: redstone
+  - material: COPPER_TRAPDOOR
+    price: 5.61
+    section: redstone
+  - material: EXPOSED_COPPER_DOOR
+    price: 4.92
+    section: redstone
+  - material: WAXED_COPPER_DOOR
+    price: 4.92
+    section: redstone
+  - material: MANGROVE_TRAPDOOR
+    price: 4.92
+    section: redstone
+  - material: CRIMSON_DOOR
+    price: 4.25
+    section: redstone
+  - material: WARPED_DOOR
+    price: 4.25
+    section: redstone
+  - material: CRIMSON_PRESSURE_PLATE
+    price: 4.25
+    section: redstone
+  - material: WARPED_PRESSURE_PLATE
+    price: 4.25
+    section: redstone
+  - material: PALE_OAK_TRAPDOOR
+    price: 4.25
+    section: redstone
+  - material: COPPER_DOOR
+    price: 3.59
+    section: redstone
+  - material: ACACIA_TRAPDOOR
+    price: 3.59
+    section: redstone
+  - material: BIRCH_TRAPDOOR
+    price: 3.59
+    section: redstone
+  - material: CHERRY_TRAPDOOR
+    price: 3.59
+    section: redstone
+  - material: DARK_OAK_TRAPDOOR
+    price: 3.59
+    section: redstone
+  - material: JUNGLE_TRAPDOOR
+    price: 3.59
+    section: redstone
+  - material: OAK_TRAPDOOR
+    price: 3.59
+    section: redstone
+  - material: SPRUCE_TRAPDOOR
+    price: 3.59
+    section: redstone
+  - material: MANGROVE_DOOR
+    price: 2.94
+    section: redstone
+  - material: MANGROVE_PRESSURE_PLATE
+    price: 2.94
+    section: redstone
+  - material: BAMBOO_BUTTON
+    price: 2.62
+    section: redstone
+  - material: PALE_OAK_DOOR
+    price: 2.62
+    section: redstone
+  - material: PALE_OAK_PRESSURE_PLATE
+    price: 2.62
+    section: redstone
+  - material: ACACIA_DOOR
+    price: 2.30
+    section: redstone
+  - material: BIRCH_DOOR
+    price: 2.30
+    section: redstone
+  - material: CHERRY_DOOR
+    price: 2.30
+    section: redstone
+  - material: DARK_OAK_DOOR
+    price: 2.30
+    section: redstone
+  - material: JUNGLE_DOOR
+    price: 2.30
+    section: redstone
+  - material: OAK_DOOR
+    price: 2.30
+    section: redstone
+  - material: SPRUCE_DOOR
+    price: 2.30
+    section: redstone
+  - material: ACACIA_PRESSURE_PLATE
+    price: 2.30
+    section: redstone
+  - material: BIRCH_PRESSURE_PLATE
+    price: 2.30
+    section: redstone
+  - material: CHERRY_PRESSURE_PLATE
+    price: 2.30
+    section: redstone
+  - material: DARK_OAK_PRESSURE_PLATE
+    price: 2.30
+    section: redstone
+  - material: JUNGLE_PRESSURE_PLATE
+    price: 2.30
+    section: redstone
+  - material: OAK_PRESSURE_PLATE
+    price: 2.30
+    section: redstone
+  - material: POLISHED_BLACKSTONE_PRESSURE_PLATE
+    price: 2.30
+    section: redstone
+  - material: SPRUCE_PRESSURE_PLATE
+    price: 2.30
+    section: redstone
+  - material: STONE_PRESSURE_PLATE
+    price: 2.30
+    section: redstone
+  - material: CRIMSON_BUTTON
+    price: 1.92
+    section: redstone
+  - material: WARPED_BUTTON
+    price: 1.92
+    section: redstone
+  - material: MANGROVE_BUTTON
+    price: 1.37
+    section: redstone
+  - material: PALE_OAK_BUTTON
+    price: 1.25
+    section: redstone
+  - material: LEVER
+    price: 1.07
+    section: redstone
+  - material: ACACIA_BUTTON
+    price: 1.07
+    section: redstone
+  - material: BIRCH_BUTTON
+    price: 1.07
+    section: redstone
+  - material: CHERRY_BUTTON
+    price: 1.07
+    section: redstone
+  - material: DARK_OAK_BUTTON
+    price: 1.07
+    section: redstone
+  - material: JUNGLE_BUTTON
+    price: 1.07
+    section: redstone
+  - material: OAK_BUTTON
+    price: 1.07
+    section: redstone
+  - material: POLISHED_BLACKSTONE_BUTTON
+    price: 1.07
+    section: redstone
+  - material: SPRUCE_BUTTON
+    price: 1.07
+    section: redstone
+  - material: STONE_BUTTON
+    price: 1.07
+    section: redstone
+
+  # === Nether ===
+  - material: NETHERITE_UPGRADE_SMITHING_TEMPLATE
+    price: 1558.4
+    section: nether
+  - material: DRIED_GHAST
+    price: 611.7
+    section: nether
+  - material: CRYING_OBSIDIAN
+    price: 21.1
+    section: nether
+  - material: OBSIDIAN
+    price: 17.2
+    section: nether
+  - material: SMOOTH_QUARTZ_STAIRS
+    price: 13.5
+    section: nether
+  - material: NETHER_WART_BLOCK
+    price: 12.0
+    section: nether
+  - material: QUARTZ_STAIRS
+    price: 12.0
+    section: nether
+  - material: SMOOTH_QUARTZ
+    price: 8.40
+    section: nether
+  - material: MAGMA_BLOCK
+    price: 8.00
+    section: nether
+  - material: QUARTZ_BLOCK
+    price: 7.69
+    section: nether
+  - material: CHISELED_QUARTZ_BLOCK
+    price: 7.69
+    section: nether
+  - material: QUARTZ_BRICKS
+    price: 7.69
+    section: nether
+  - material: QUARTZ_PILLAR
+    price: 7.69
+    section: nether
+  - material: NETHER_QUARTZ_ORE
+    price: 4.25
+    section: nether
+  - material: SMOOTH_QUARTZ_SLAB
+    price: 4.25
+    section: nether
+  - material: QUARTZ_SLAB
+    price: 3.59
+    section: nether
+  - material: CRIMSON_FUNGUS
+    price: 2.30
+    section: nether
+  - material: WARPED_FUNGUS
+    price: 2.30
+    section: nether
+  - material: NETHER_SPROUTS
+    price: 1.67
+    section: nether
+  - material: SMOOTH_BASALT
+    price: 1.67
+    section: nether
+  - material: BLACKSTONE_STAIRS
+    price: 1.67
+    section: nether
+  - material: POLISHED_BLACKSTONE_STAIRS
+    price: 1.67
+    section: nether
+  - material: CRACKED_POLISHED_BLACKSTONE_BRICKS
+    price: 1.67
+    section: nether
+  - material: POLISHED_BLACKSTONE_BRICK_STAIRS
+    price: 1.67
+    section: nether
+  - material: QUARTZ
+    price: 1.67
+    section: nether
+  - material: BLACKSTONE
+    price: 1.07
+    section: nether
+  - material: BLACKSTONE_WALL
+    price: 1.07
+    section: nether
+  - material: CHISELED_POLISHED_BLACKSTONE
+    price: 1.07
+    section: nether
+  - material: POLISHED_BLACKSTONE
+    price: 1.07
+    section: nether
+  - material: POLISHED_BLACKSTONE_WALL
+    price: 1.07
+    section: nether
+  - material: POLISHED_BLACKSTONE_BRICK_WALL
+    price: 1.07
+    section: nether
+  - material: POLISHED_BLACKSTONE_BRICKS
+    price: 1.07
+    section: nether
+  - material: CRIMSON_ROOTS
+    price: 1.07
+    section: nether
+  - material: NETHER_WART
+    price: 1.07
+    section: nether
+  - material: WARPED_ROOTS
+    price: 1.07
+    section: nether
+  - material: WARPED_WART_BLOCK
+    price: 1.07
+    section: nether
+  - material: BASALT
+    price: 0.50
+    section: nether
+  - material: POLISHED_BASALT
+    price: 0.50
+    section: nether
+  - material: BLACKSTONE_SLAB
+    price: 0.50
+    section: nether
+  - material: GILDED_BLACKSTONE
+    price: 0.50
+    section: nether
+  - material: POLISHED_BLACKSTONE_SLAB
+    price: 0.50
+    section: nether
+  - material: POLISHED_BLACKSTONE_BRICK_SLAB
+    price: 0.50
+    section: nether
+  - material: CRIMSON_NYLIUM
+    price: 0.50
+    section: nether
+  - material: WARPED_NYLIUM
+    price: 0.50
+    section: nether
+  - material: NETHERRACK
+    price: 0.50
+    section: nether
+  - material: SOUL_SAND
+    price: 0.50
+    section: nether
+  - material: SOUL_SOIL
+    price: 0.50
+    section: nether
+
+  # === Ocean ===
+  - material: CONDUIT
+    price: 1107.9
+    section: ocean
+  - material: HEART_OF_THE_SEA
+    price: 465.4
+    section: ocean
+  - material: PRISMARINE_BRICK_STAIRS
+    price: 369.1
+    section: ocean
+  - material: DARK_PRISMARINE_STAIRS
+    price: 332.2
+    section: ocean
+  - material: SPONGE
+    price: 265.3
+    section: ocean
+  - material: WET_SPONGE
+    price: 265.3
+    section: ocean
+  - material: PRISMARINE_BRICKS
+    price: 236.3
+    section: ocean
+  - material: DARK_PRISMARINE
+    price: 212.4
+    section: ocean
+  - material: PRISMARINE_STAIRS
+    price: 151.3
+    section: ocean
+  - material: PRISMARINE_BRICK_SLAB
+    price: 110.2
+    section: ocean
+  - material: DARK_PRISMARINE_SLAB
+    price: 99.5
+    section: ocean
+  - material: PRISMARINE
+    price: 96.8
+    section: ocean
+  - material: PRISMARINE_WALL
+    price: 96.8
+    section: ocean
+  - material: TURTLE_EGG
+    price: 45.2
+    section: ocean
+  - material: PRISMARINE_SLAB
+    price: 45.2
+    section: ocean
+  - material: PRISMARINE_CRYSTALS
+    price: 28.9
+    section: ocean
+  - material: BRAIN_CORAL_BLOCK
+    price: 21.1
+    section: ocean
+  - material: BUBBLE_CORAL_BLOCK
+    price: 21.1
+    section: ocean
+  - material: FIRE_CORAL_BLOCK
+    price: 21.1
+    section: ocean
+  - material: HORN_CORAL_BLOCK
+    price: 21.1
+    section: ocean
+  - material: TUBE_CORAL_BLOCK
+    price: 21.1
+    section: ocean
+  - material: PRISMARINE_SHARD
+    price: 21.1
+    section: ocean
+  - material: BRAIN_CORAL_FAN
+    price: 17.2
+    section: ocean
+  - material: BUBBLE_CORAL_FAN
+    price: 17.2
+    section: ocean
+  - material: FIRE_CORAL_FAN
+    price: 17.2
+    section: ocean
+  - material: HORN_CORAL_FAN
+    price: 17.2
+    section: ocean
+  - material: TUBE_CORAL_FAN
+    price: 17.2
+    section: ocean
+  - material: BRAIN_CORAL
+    price: 13.5
+    section: ocean
+  - material: DEAD_BRAIN_CORAL_BLOCK
+    price: 13.5
+    section: ocean
+  - material: BUBBLE_CORAL
+    price: 13.5
+    section: ocean
+  - material: DEAD_BUBBLE_CORAL_BLOCK
+    price: 13.5
+    section: ocean
+  - material: DEAD_FIRE_CORAL_BLOCK
+    price: 13.5
+    section: ocean
+  - material: FIRE_CORAL
+    price: 13.5
+    section: ocean
+  - material: DEAD_HORN_CORAL_BLOCK
+    price: 13.5
+    section: ocean
+  - material: HORN_CORAL
+    price: 13.5
+    section: ocean
+  - material: DEAD_TUBE_CORAL_BLOCK
+    price: 13.5
+    section: ocean
+  - material: TUBE_CORAL
+    price: 13.5
+    section: ocean
+  - material: DEAD_BRAIN_CORAL
+    price: 9.83
+    section: ocean
+  - material: DEAD_BRAIN_CORAL_FAN
+    price: 9.83
+    section: ocean
+  - material: DEAD_BUBBLE_CORAL
+    price: 9.83
+    section: ocean
+  - material: DEAD_BUBBLE_CORAL_FAN
+    price: 9.83
+    section: ocean
+  - material: DEAD_FIRE_CORAL
+    price: 9.83
+    section: ocean
+  - material: DEAD_FIRE_CORAL_FAN
+    price: 9.83
+    section: ocean
+  - material: DEAD_HORN_CORAL
+    price: 9.83
+    section: ocean
+  - material: DEAD_HORN_CORAL_FAN
+    price: 9.83
+    section: ocean
+  - material: DEAD_TUBE_CORAL
+    price: 9.83
+    section: ocean
+  - material: DEAD_TUBE_CORAL_FAN
+    price: 9.83
+    section: ocean
+  - material: SEA_PICKLE
+    price: 2.94
+    section: ocean
+  - material: SEAGRASS
+    price: 1.07
+    section: ocean
+  - material: KELP
+    price: 0.50
+    section: ocean
+
+  # === End ===
+  - material: DRAGON_HEAD
+    price: 5859.2
+    section: end
+  - material: SHULKER_BOX
+    price: 465.4
+    section: end
+  - material: SHULKER_SHELL
+    price: 217.1
+    section: end
+  - material: ENDER_CHEST
+    price: 199.0
+    section: end
+  - material: END_CRYSTAL
+    price: 101.3
+    section: end
+  - material: DRAGON_BREATH
+    price: 28.9
+    section: end
+  - material: PURPUR_STAIRS
+    price: 5.61
+    section: end
+  - material: PURPUR_BLOCK
+    price: 3.59
+    section: end
+  - material: PURPUR_PILLAR
+    price: 3.59
+    section: end
+  - material: END_STONE_BRICK_STAIRS
+    price: 1.67
+    section: end
+  - material: PURPUR_SLAB
+    price: 1.67
+    section: end
+  - material: END_STONE
+    price: 1.07
+    section: end
+  - material: END_STONE_BRICK_WALL
+    price: 1.07
+    section: end
+  - material: END_STONE_BRICKS
+    price: 1.07
+    section: end
+  - material: END_STONE_BRICK_SLAB
+    price: 0.50
+    section: end
+
+  # === Deep Dark ===
+  - material: CALIBRATED_SCULK_SENSOR
+    price: 53.5
+    section: deep_dark
+  - material: SCULK_CATALYST
+    price: 45.2
+    section: deep_dark
+  - material: SCULK_SHRIEKER
+    price: 37.0
+    section: deep_dark
+  - material: SCULK_SENSOR
+    price: 28.9
+    section: deep_dark
+  - material: ECHO_SHARD
+    price: 25.0
+    section: deep_dark
+  - material: SCULK
+    price: 13.5
+    section: deep_dark
+  - material: SCULK_VEIN
+    price: 6.29
+    section: deep_dark
+
+  # === Utility ===
+  - material: HEAVY_CORE
+    price: 3957.7
+    section: utility
+  - material: BEACON
+    price: 3463.1
+    section: utility
+  - material: CREEPER_BANNER_PATTERN
+    price: 1558.4
+    section: utility
+  - material: LODESTONE
+    price: 840.8
+    section: utility
+  - material: GLOBE_BANNER_PATTERN
+    price: 780.5
+    section: utility
+  - material: ENCHANTING_TABLE
+    price: 643.2
+    section: utility
+  - material: SKULL_BANNER_PATTERN
+    price: 569.8
+    section: utility
+  - material: PIGLIN_BANNER_PATTERN
+    price: 568.8
+    section: utility
+  - material: MOJANG_BANNER_PATTERN
+    price: 466.4
+    section: utility
+  - material: TOTEM_OF_UNDYING
+    price: 465.4
+    section: utility
+  - material: ANVIL
+    price: 429.7
+    section: utility
+  - material: RECOVERY_COMPASS
+    price: 327.2
+    section: utility
+  - material: CREAKING_HEART
+    price: 297.6
+    section: utility
+  - material: BELL
+    price: 284.9
+    section: utility
+  - material: CHIPPED_ANVIL
+    price: 273.1
+    section: utility
+  - material: JUKEBOX
+    price: 261.5
+    section: utility
+  - material: CLOCK
+    price: 210.4
+    section: utility
+  - material: DAMAGED_ANVIL
+    price: 127.4
+    section: utility
+  - material: FLOW_BANNER_PATTERN
+    price: 123.8
+    section: utility
+  - material: GUSTER_BANNER_PATTERN
+    price: 123.8
+    section: utility
+  - material: TADPOLE_BUCKET
+    price: 107.5
+    section: utility
+  - material: HOPPER
+    price: 93.3
+    section: utility
+  - material: CAULDRON
+    price: 83.6
+    section: utility
+  - material: EXPERIENCE_BOTTLE
+    price: 79.2
+    section: utility
+  - material: CRAFTER
+    price: 78.4
+    section: utility
+  - material: BLAST_FURNACE
+    price: 72.3
+    section: utility
+  - material: MAP
+    price: 71.4
+    section: utility
+  - material: COMPASS
+    price: 64.6
+    section: utility
+  - material: AXOLOTL_BUCKET
+    price: 57.7
+    section: utility
+  - material: MILK_BUCKET
+    price: 49.3
+    section: utility
+  - material: SALMON_BUCKET
+    price: 48.5
+    section: utility
+  - material: COD_BUCKET
+    price: 47.7
+    section: utility
+  - material: PUFFERFISH_BUCKET
+    price: 47.7
+    section: utility
+  - material: TROPICAL_FISH_BUCKET
+    price: 47.7
+    section: utility
+  - material: LAVA_BUCKET
+    price: 46.8
+    section: utility
+  - material: POWDER_SNOW_BUCKET
+    price: 46.8
+    section: utility
+  - material: WATER_BUCKET
+    price: 45.2
+    section: utility
+  - material: TNT
+    price: 40.2
+    section: utility
+  - material: NAME_TAG
+    price: 37.0
+    section: utility
+  - material: LECTERN
+    price: 36.2
+    section: utility
+  - material: WAXED_OXIDIZED_COPPER_CHEST
+    price: 35.3
+    section: utility
+  - material: OXIDIZED_COPPER_CHEST
+    price: 33.7
+    section: utility
+  - material: WAXED_WEATHERED_COPPER_CHEST
+    price: 33.7
+    section: utility
+  - material: BUCKET
+    price: 32.9
+    section: utility
+  - material: BOOKSHELF
+    price: 32.9
+    section: utility
+  - material: WEATHERED_COPPER_CHEST
+    price: 32.1
+    section: utility
+  - material: WAXED_EXPOSED_COPPER_CHEST
+    price: 32.1
+    section: utility
+  - material: EXPOSED_COPPER_CHEST
+    price: 30.5
+    section: utility
+  - material: WAXED_COPPER_CHEST
+    price: 30.5
+    section: utility
+  - material: SMOKER
+    price: 28.9
+    section: utility
+  - material: COPPER_CHEST
+    price: 28.9
+    section: utility
+  - material: SMITHING_TABLE
+    price: 27.3
+    section: utility
+  - material: BREWING_STAND
+    price: 23.4
+    section: utility
+  - material: ENDER_EYE
+    price: 21.9
+    section: utility
+  - material: GLOW_ITEM_FRAME
+    price: 18.0
+    section: utility
+  - material: FLINT_AND_STEEL
+    price: 17.2
+    section: utility
+  - material: MANGROVE_HANGING_SIGN
+    price: 17.2
+    section: utility
+  - material: WRITABLE_BOOK
+    price: 14.2
+    section: utility
+  - material: STONECUTTER
+    price: 14.2
+    section: utility
+  - material: TINTED_GLASS
+    price: 14.2
+    section: utility
+  - material: IRON_CHAIN
+    price: 12.8
+    section: utility
+  - material: BEEHIVE
+    price: 12.0
+    section: utility
+  - material: FLETCHING_TABLE
+    price: 12.0
+    section: utility
+  - material: WHITE_BED
+    price: 12.0
+    section: utility
+  - material: MANGROVE_SHELF
+    price: 12.0
+    section: utility
+  - material: CRIMSON_HANGING_SIGN
+    price: 11.3
+    section: utility
+  - material: WARPED_HANGING_SIGN
+    price: 11.3
+    section: utility
+  - material: FIELD_MASONED_BANNER_PATTERN
+    price: 11.3
+    section: utility
+  - material: SPYGLASS
+    price: 10.6
+    section: utility
+  - material: CHEST
+    price: 10.6
+    section: utility
+  - material: BAMBOO_HANGING_SIGN
+    price: 10.6
+    section: utility
+  - material: PALE_OAK_HANGING_SIGN
+    price: 10.6
+    section: utility
+  - material: ITEM_FRAME
+    price: 10.6
+    section: utility
+  - material: WAXED_OXIDIZED_LIGHTNING_ROD
+    price: 10.6
+    section: utility
+  - material: CHISELED_BOOKSHELF
+    price: 9.83
+    section: utility
+  - material: ACACIA_HANGING_SIGN
+    price: 9.83
+    section: utility
+  - material: BIRCH_HANGING_SIGN
+    price: 9.83
+    section: utility
+  - material: CHERRY_HANGING_SIGN
+    price: 9.83
+    section: utility
+  - material: DARK_OAK_HANGING_SIGN
+    price: 9.83
+    section: utility
+  - material: JUNGLE_HANGING_SIGN
+    price: 9.83
+    section: utility
+  - material: OAK_HANGING_SIGN
+    price: 9.83
+    section: utility
+  - material: SPRUCE_HANGING_SIGN
+    price: 9.83
+    section: utility
+  - material: BARREL
+    price: 9.11
+    section: utility
+  - material: OXIDIZED_LIGHTNING_ROD
+    price: 9.11
+    section: utility
+  - material: WAXED_WEATHERED_LIGHTNING_ROD
+    price: 9.11
+    section: utility
+  - material: FIREWORK_STAR
+    price: 8.40
+    section: utility
+  - material: BAMBOO_FENCE_GATE
+    price: 8.40
+    section: utility
+  - material: WAXED_EXPOSED_LIGHTNING_ROD
+    price: 8.40
+    section: utility
+  - material: PAINTING
+    price: 7.69
+    section: utility
+  - material: RABBIT_FOOT
+    price: 7.69
+    section: utility
+  - material: WEATHERED_LIGHTNING_ROD
+    price: 7.69
+    section: utility
+  - material: BOOK
+    price: 6.99
+    section: utility
+  - material: CRIMSON_FENCE_GATE
+    price: 6.99
+    section: utility
+  - material: WARPED_FENCE_GATE
+    price: 6.99
+    section: utility
+  - material: EXPOSED_LIGHTNING_ROD
+    price: 6.99
+    section: utility
+  - material: WAXED_LIGHTNING_ROD
+    price: 6.99
+    section: utility
+  - material: BUNDLE
+    price: 6.29
+    section: utility
+  - material: CARTOGRAPHY_TABLE
+    price: 6.29
+    section: utility
+  - material: FIRE_CHARGE
+    price: 6.29
+    section: utility
+  - material: CRIMSON_SHELF
+    price: 6.29
+    section: utility
+  - material: WARPED_SHELF
+    price: 6.29
+    section: utility
+  - material: BAMBOO_SIGN
+    price: 6.29
+    section: utility
+  - material: LEAD
+    price: 5.61
+    section: utility
+  - material: MANGROVE_FENCE_GATE
+    price: 5.61
+    section: utility
+  - material: PALE_OAK_FENCE_GATE
+    price: 5.61
+    section: utility
+  - material: LIGHTNING_ROD
+    price: 5.61
+    section: utility
+  - material: BAMBOO_SHELF
+    price: 5.61
+    section: utility
+  - material: PALE_OAK_SHELF
+    price: 5.61
+    section: utility
+  - material: CRAFTING_TABLE
+    price: 4.92
+    section: utility
+  - material: FURNACE
+    price: 4.92
+    section: utility
+  - material: LOOM
+    price: 4.92
+    section: utility
+  - material: ACACIA_FENCE_GATE
+    price: 4.92
+    section: utility
+  - material: BIRCH_FENCE_GATE
+    price: 4.92
+    section: utility
+  - material: CHERRY_FENCE_GATE
+    price: 4.92
+    section: utility
+  - material: DARK_OAK_FENCE_GATE
+    price: 4.92
+    section: utility
+  - material: JUNGLE_FENCE_GATE
+    price: 4.92
+    section: utility
+  - material: OAK_FENCE_GATE
+    price: 4.92
+    section: utility
+  - material: SPRUCE_FENCE_GATE
+    price: 4.92
+    section: utility
+  - material: ACACIA_SHELF
+    price: 4.92
+    section: utility
+  - material: BIRCH_SHELF
+    price: 4.92
+    section: utility
+  - material: CHERRY_SHELF
+    price: 4.92
+    section: utility
+  - material: DARK_OAK_SHELF
+    price: 4.92
+    section: utility
+  - material: JUNGLE_SHELF
+    price: 4.92
+    section: utility
+  - material: OAK_SHELF
+    price: 4.92
+    section: utility
+  - material: SPRUCE_SHELF
+    price: 4.92
+    section: utility
+  - material: COMPOSTER
+    price: 4.25
+    section: utility
+  - material: GRINDSTONE
+    price: 4.25
+    section: utility
+  - material: BAMBOO_FENCE
+    price: 4.25
+    section: utility
+  - material: CRIMSON_SIGN
+    price: 4.25
+    section: utility
+  - material: WARPED_SIGN
+    price: 4.25
+    section: utility
+  - material: CHARCOAL
+    price: 3.59
+    section: utility
+  - material: IRON_BARS
+    price: 3.59
+    section: utility
+  - material: CRIMSON_FENCE
+    price: 3.59
+    section: utility
+  - material: WARPED_FENCE
+    price: 3.59
+    section: utility
+  - material: MANGROVE_SIGN
+    price: 3.59
+    section: utility
+  - material: FLINT
+    price: 2.94
+    section: utility
+  - material: PALE_OAK_SIGN
+    price: 2.87
+    section: utility
+  - material: ACACIA_SIGN
+    price: 2.55
+    section: utility
+  - material: BIRCH_SIGN
+    price: 2.55
+    section: utility
+  - material: CHERRY_SIGN
+    price: 2.55
+    section: utility
+  - material: DARK_OAK_SIGN
+    price: 2.55
+    section: utility
+  - material: JUNGLE_SIGN
+    price: 2.55
+    section: utility
+  - material: OAK_SIGN
+    price: 2.55
+    section: utility
+  - material: SPRUCE_SIGN
+    price: 2.55
+    section: utility
+  - material: COBWEB
+    price: 2.30
+    section: utility
+  - material: MANGROVE_FENCE
+    price: 2.30
+    section: utility
+  - material: FIREWORK_ROCKET
+    price: 2.11
+    section: utility
+  - material: PALE_OAK_FENCE
+    price: 2.11
+    section: utility
+  - material: ACACIA_FENCE
+    price: 1.92
+    section: utility
+  - material: BIRCH_FENCE
+    price: 1.92
+    section: utility
+  - material: CHERRY_FENCE
+    price: 1.92
+    section: utility
+  - material: DARK_OAK_FENCE
+    price: 1.92
+    section: utility
+  - material: JUNGLE_FENCE
+    price: 1.92
+    section: utility
+  - material: OAK_FENCE
+    price: 1.92
+    section: utility
+  - material: SPRUCE_FENCE
+    price: 1.92
+    section: utility
+  - material: BORDURE_INDENTED_BANNER_PATTERN
+    price: 1.67
+    section: utility
+  - material: LADDER
+    price: 1.31
+    section: utility
+  - material: GLASS_BOTTLE
+    price: 1.07
+    section: utility
+  - material: FLOWER_BANNER_PATTERN
+    price: 1.07
+    section: utility
+  - material: BOWL
+    price: 0.78
+    section: utility
+  - material: SCAFFOLDING
+    price: 0.72
+    section: utility
+  - material: PAPER
+    price: 0.50
+    section: utility
+  - material: STICK
+    price: 0.50
+    section: utility
+
+  # === Transport ===
+  - material: ELYTRA
+    price: 3957.7
+    section: transport
+  - material: HOPPER_MINECART
+    price: 161.5
+    section: transport
+  - material: TNT_MINECART
+    price: 104.9
+    section: transport
+  - material: CHEST_MINECART
+    price: 71.4
+    section: transport
+  - material: FURNACE_MINECART
+    price: 64.6
+    section: transport
+  - material: MINECART
+    price: 57.7
+    section: transport
+  - material: POWERED_RAIL
+    price: 46.0
+    section: transport
+  - material: SADDLE
+    price: 28.1
+    section: transport
+  - material: BAMBOO_CHEST_RAFT
+    price: 28.1
+    section: transport
+  - material: BLACK_HARNESS
+    price: 26.5
+    section: transport
+  - material: GRAY_HARNESS
+    price: 25.8
+    section: transport
+  - material: LIGHT_BLUE_HARNESS
+    price: 25.8
+    section: transport
+  - material: MAGENTA_HARNESS
+    price: 25.8
+    section: transport
+  - material: BROWN_HARNESS
+    price: 24.2
+    section: transport
+  - material: CYAN_HARNESS
+    price: 24.2
+    section: transport
+  - material: GREEN_HARNESS
+    price: 24.2
+    section: transport
+  - material: LIME_HARNESS
+    price: 24.2
+    section: transport
+  - material: ORANGE_HARNESS
+    price: 24.2
+    section: transport
+  - material: BLUE_HARNESS
+    price: 23.4
+    section: transport
+  - material: LIGHT_GRAY_HARNESS
+    price: 23.4
+    section: transport
+  - material: PINK_HARNESS
+    price: 23.4
+    section: transport
+  - material: PURPLE_HARNESS
+    price: 23.4
+    section: transport
+  - material: RED_HARNESS
+    price: 23.4
+    section: transport
+  - material: YELLOW_HARNESS
+    price: 23.4
+    section: transport
+  - material: WHITE_HARNESS
+    price: 22.6
+    section: transport
+  - material: MANGROVE_CHEST_BOAT
+    price: 20.3
+    section: transport
+  - material: PALE_OAK_CHEST_BOAT
+    price: 19.5
+    section: transport
+  - material: ACACIA_CHEST_BOAT
+    price: 18.0
+    section: transport
+  - material: BIRCH_CHEST_BOAT
+    price: 18.0
+    section: transport
+  - material: CHERRY_CHEST_BOAT
+    price: 18.0
+    section: transport
+  - material: DARK_OAK_CHEST_BOAT
+    price: 18.0
+    section: transport
+  - material: JUNGLE_CHEST_BOAT
+    price: 18.0
+    section: transport
+  - material: OAK_CHEST_BOAT
+    price: 18.0
+    section: transport
+  - material: SPRUCE_CHEST_BOAT
+    price: 18.0
+    section: transport
+  - material: BAMBOO_RAFT
+    price: 15.7
+    section: transport
+  - material: DETECTOR_RAIL
+    price: 11.3
+    section: transport
+  - material: ACTIVATOR_RAIL
+    price: 10.6
+    section: transport
+  - material: MANGROVE_BOAT
+    price: 8.40
+    section: transport
+  - material: PALE_OAK_BOAT
+    price: 7.69
+    section: transport
+  - material: ACACIA_BOAT
+    price: 6.29
+    section: transport
+  - material: BIRCH_BOAT
+    price: 6.29
+    section: transport
+  - material: CHERRY_BOAT
+    price: 6.29
+    section: transport
+  - material: DARK_OAK_BOAT
+    price: 6.29
+    section: transport
+  - material: JUNGLE_BOAT
+    price: 6.29
+    section: transport
+  - material: OAK_BOAT
+    price: 6.29
+    section: transport
+  - material: SPRUCE_BOAT
+    price: 6.29
+    section: transport
+  - material: RAIL
+    price: 3.59
+    section: transport
+
+  # === Tools ===
+  - material: NETHERITE_AXE
+    price: 3463.1
+    section: tools
+  - material: NETHERITE_PICKAXE
+    price: 3463.1
+    section: tools
+  - material: NETHERITE_HOE
+    price: 3096.3
+    section: tools
+  - material: NETHERITE_SHOVEL
+    price: 2853.9
+    section: tools
+  - material: DIAMOND_AXE
+    price: 825.7
+    section: tools
+  - material: DIAMOND_PICKAXE
+    price: 825.7
+    section: tools
+  - material: DIAMOND_HOE
+    price: 529.3
+    section: tools
+  - material: DIAMOND_SHOVEL
+    price: 247.9
+    section: tools
+  - material: GOLDEN_AXE
+    price: 153.1
+    section: tools
+  - material: GOLDEN_PICKAXE
+    price: 153.1
+    section: tools
+  - material: GOLDEN_HOE
+    price: 98.6
+    section: tools
+  - material: GOLDEN_SHOVEL
+    price: 46.8
+    section: tools
+  - material: IRON_AXE
+    price: 34.5
+    section: tools
+  - material: IRON_PICKAXE
+    price: 34.5
+    section: tools
+  - material: IRON_HOE
+    price: 22.6
+    section: tools
+  - material: SHEARS
+    price: 21.1
+    section: tools
+  - material: IRON_SHOVEL
+    price: 11.3
+    section: tools
+  - material: COPPER_AXE
+    price: 6.99
+    section: tools
+  - material: COPPER_PICKAXE
+    price: 6.99
+    section: tools
+  - material: WARPED_FUNGUS_ON_A_STICK
+    price: 6.99
+    section: tools
+  - material: CARROT_ON_A_STICK
+    price: 5.61
+    section: tools
+  - material: WOODEN_AXE
+    price: 4.92
+    section: tools
+  - material: COPPER_HOE
+    price: 4.92
+    section: tools
+  - material: WOODEN_PICKAXE
+    price: 4.92
+    section: tools
+  - material: FISHING_ROD
+    price: 4.25
+    section: tools
+  - material: WOODEN_HOE
+    price: 3.59
+    section: tools
+  - material: STONE_AXE
+    price: 2.94
+    section: tools
+  - material: STONE_PICKAXE
+    price: 2.94
+    section: tools
+  - material: COPPER_SHOVEL
+    price: 2.94
+    section: tools
+  - material: STONE_HOE
+    price: 2.30
+    section: tools
+  - material: WOODEN_SHOVEL
+    price: 2.30
+    section: tools
+  - material: STONE_SHOVEL
+    price: 1.67
+    section: tools
+
+  # === Weapons ===
+  - material: MACE
+    price: 4082.3
+    section: weapons
+  - material: NETHERITE_SWORD
+    price: 3096.3
+    section: weapons
+  - material: NETHERITE_SPEAR
+    price: 2853.9
+    section: weapons
+  - material: DIAMOND_SWORD
+    price: 528.2
+    section: weapons
+  - material: TRIDENT
+    price: 465.4
+    section: weapons
+  - material: DIAMOND_SPEAR
+    price: 247.9
+    section: weapons
+  - material: GOLDEN_SWORD
+    price: 97.7
+    section: weapons
+  - material: GOLDEN_SPEAR
+    price: 46.8
+    section: weapons
+  - material: CROSSBOW
+    price: 21.9
+    section: weapons
+  - material: IRON_SWORD
+    price: 21.9
+    section: weapons
+  - material: IRON_SPEAR
+    price: 11.3
+    section: weapons
+  - material: BOW
+    price: 5.61
+    section: weapons
+  - material: COPPER_SWORD
+    price: 4.25
+    section: weapons
+  - material: SPECTRAL_ARROW
+    price: 3.59
+    section: weapons
+  - material: COPPER_SPEAR
+    price: 2.94
+    section: weapons
+  - material: WOODEN_SWORD
+    price: 2.94
+    section: weapons
+  - material: WOODEN_SPEAR
+    price: 2.30
+    section: weapons
+  - material: STONE_SPEAR
+    price: 1.67
+    section: weapons
+  - material: STONE_SWORD
+    price: 1.67
+    section: weapons
+  - material: ARROW
+    price: 1.55
+    section: weapons
+
+  # === Armor ===
+  - material: NETHERITE_NAUTILUS_ARMOR
+    price: 5345.7
+    section: armor
+  - material: NETHERITE_CHESTPLATE
+    price: 4963.5
+    section: armor
+  - material: NETHERITE_LEGGINGS
+    price: 4710.1
+    section: armor
+  - material: NETHERITE_HELMET
+    price: 4082.3
+    section: armor
+  - material: NETHERITE_BOOTS
+    price: 3709.7
+    section: armor
+  - material: NETHERITE_HORSE_ARMOR
+    price: 3709.7
+    section: armor
+  - material: DIAMOND_NAUTILUS_ARMOR
+    price: 2493.9
+    section: armor
+  - material: DIAMOND_CHESTPLATE
+    price: 2374.8
+    section: armor
+  - material: SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 2374.8
+    section: armor
+  - material: TIDE_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 2374.8
+    section: armor
+  - material: WARD_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 2374.8
+    section: armor
+  - material: DIAMOND_LEGGINGS
+    price: 2138.5
+    section: armor
+  - material: BOLT_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 2138.5
+    section: armor
+  - material: FLOW_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 2138.5
+    section: armor
+  - material: EYE_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 1788.4
+    section: armor
+  - material: HOST_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 1788.4
+    section: armor
+  - material: SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 1788.4
+    section: armor
+  - material: VEX_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 1788.4
+    section: armor
+  - material: DIAMOND_HELMET
+    price: 1444.5
+    section: armor
+  - material: RIB_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 1331.4
+    section: armor
+  - material: SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 1331.4
+    section: armor
+  - material: SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 1331.4
+    section: armor
+  - material: WILD_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 1331.4
+    section: armor
+  - material: DIAMOND_BOOTS
+    price: 1107.9
+    section: armor
+  - material: RAISER_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 1107.9
+    section: armor
+  - material: SHAPER_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 1107.9
+    section: armor
+  - material: WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 1107.9
+    section: armor
+  - material: DIAMOND_HORSE_ARMOR
+    price: 997.6
+    section: armor
+  - material: GOLDEN_NAUTILUS_ARMOR
+    price: 932.0
+    section: armor
+  - material: COAST_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 834.3
+    section: armor
+  - material: DUNE_ARMOR_TRIM_SMITHING_TEMPLATE
+    price: 834.3
+    section: armor
+  - material: GOLDEN_CHESTPLATE
+    price: 445.0
+    section: armor
+  - material: IRON_NAUTILUS_ARMOR
+    price: 434.8
+    section: armor
+  - material: GOLDEN_LEGGINGS
+    price: 384.2
+    section: armor
+  - material: GOLDEN_HELMET
+    price: 265.3
+    section: armor
+  - material: GOLDEN_HORSE_ARMOR
+    price: 265.3
+    section: armor
+  - material: GOLDEN_BOOTS
+    price: 207.6
+    section: armor
+  - material: COPPER_NAUTILUS_ARMOR
+    price: 202.8
+    section: armor
+  - material: IRON_HORSE_ARMOR
+    price: 151.3
+    section: armor
+  - material: WOLF_ARMOR
+    price: 151.3
+    section: armor
+  - material: TURTLE_HELMET
+    price: 123.8
+    section: armor
+  - material: CHAINMAIL_CHESTPLATE
+    price: 96.8
+    section: armor
+  - material: IRON_CHESTPLATE
+    price: 96.8
+    section: armor
+  - material: CHAINMAIL_LEGGINGS
+    price: 83.6
+    section: armor
+  - material: IRON_LEGGINGS
+    price: 83.6
+    section: armor
+  - material: COPPER_HORSE_ARMOR
+    price: 70.6
+    section: armor
+  - material: IRON_HELMET
+    price: 57.7
+    section: armor
+  - material: CHAINMAIL_HELMET
+    price: 53.5
+    section: armor
+  - material: CHAINMAIL_BOOTS
+    price: 49.3
+    section: armor
+  - material: LEATHER_CHESTPLATE
+    price: 48.5
+    section: armor
+  - material: IRON_BOOTS
+    price: 45.2
+    section: armor
+  - material: LEATHER_LEGGINGS
+    price: 41.9
+    section: armor
+  - material: LEATHER_HORSE_ARMOR
+    price: 41.9
+    section: armor
+  - material: LEATHER_HELMET
+    price: 28.9
+    section: armor
+  - material: LEATHER_BOOTS
+    price: 22.6
+    section: armor
+  - material: SHIELD
+    price: 18.8
+    section: armor
+  - material: COPPER_CHESTPLATE
+    price: 16.5
+    section: armor
+  - material: COPPER_LEGGINGS
+    price: 14.2
+    section: armor
+  - material: COPPER_HELMET
+    price: 9.83
+    section: armor
+  - material: COPPER_BOOTS
+    price: 7.69
+    section: armor
+  - material: ARMOR_STAND
+    price: 4.92
+    section: armor
+
+  # === Archaeology ===
+  - material: SNIFFER_EGG
+    price: 364.1
+    section: archaeology
+  - material: DANGER_POTTERY_SHERD
+    price: 70.6
+    section: archaeology
+  - material: FRIEND_POTTERY_SHERD
+    price: 70.6
+    section: archaeology
+  - material: HEART_POTTERY_SHERD
+    price: 70.6
+    section: archaeology
+  - material: HEARTBREAK_POTTERY_SHERD
+    price: 70.6
+    section: archaeology
+  - material: HOWL_POTTERY_SHERD
+    price: 70.6
+    section: archaeology
+  - material: MOURNER_POTTERY_SHERD
+    price: 70.6
+    section: archaeology
+  - material: PLENTY_POTTERY_SHERD
+    price: 70.6
+    section: archaeology
+  - material: SHEAF_POTTERY_SHERD
+    price: 70.6
+    section: archaeology
+  - material: BLADE_POTTERY_SHERD
+    price: 53.5
+    section: archaeology
+  - material: BREWER_POTTERY_SHERD
+    price: 53.5
+    section: archaeology
+  - material: BURN_POTTERY_SHERD
+    price: 53.5
+    section: archaeology
+  - material: FLOW_POTTERY_SHERD
+    price: 53.5
+    section: archaeology
+  - material: GUSTER_POTTERY_SHERD
+    price: 53.5
+    section: archaeology
+  - material: SCRAPE_POTTERY_SHERD
+    price: 53.5
+    section: archaeology
+  - material: SHELTER_POTTERY_SHERD
+    price: 53.5
+    section: archaeology
+  - material: SNORT_POTTERY_SHERD
+    price: 53.5
+    section: archaeology
+  - material: ANGLER_POTTERY_SHERD
+    price: 37.0
+    section: archaeology
+  - material: ARCHER_POTTERY_SHERD
+    price: 37.0
+    section: archaeology
+  - material: ARMS_UP_POTTERY_SHERD
+    price: 37.0
+    section: archaeology
+  - material: EXPLORER_POTTERY_SHERD
+    price: 37.0
+    section: archaeology
+  - material: MINER_POTTERY_SHERD
+    price: 37.0
+    section: archaeology
+  - material: PRIZE_POTTERY_SHERD
+    price: 37.0
+    section: archaeology
+  - material: SKULL_POTTERY_SHERD
+    price: 37.0
+    section: archaeology
+  - material: DECORATED_POT
+    price: 10.6
+    section: archaeology
+  - material: BRUSH
+    price: 5.61
+    section: archaeology
+
+  # === Music Discs ===
+  - material: MUSIC_DISC_5
+    price: 134.7
+    section: discs
+  - material: MUSIC_DISC_RELIC
+    price: 123.8
+    section: discs
+  - material: MUSIC_DISC_TEARS
+    price: 123.8
+    section: discs
+  - material: MUSIC_DISC_CREATOR_MUSIC_BOX
+    price: 114.7
+    section: discs
+  - material: MUSIC_DISC_OTHERSIDE
+    price: 114.7
+    section: discs
+  - material: MUSIC_DISC_CREATOR
+    price: 105.8
+    section: discs
+  - material: MUSIC_DISC_LAVA_CHICKEN
+    price: 105.8
+    section: discs
+  - material: MUSIC_DISC_PRECIPICE
+    price: 105.8
+    section: discs
+  - material: MUSIC_DISC_WAIT
+    price: 105.8
+    section: discs
+  - material: MUSIC_DISC_MELLOHI
+    price: 96.8
+    section: discs
+  - material: MUSIC_DISC_BLOCKS
+    price: 88.0
+    section: discs
+  - material: MUSIC_DISC_CHIRP
+    price: 88.0
+    section: discs
+  - material: MUSIC_DISC_FAR
+    price: 88.0
+    section: discs
+  - material: MUSIC_DISC_MALL
+    price: 88.0
+    section: discs
+  - material: MUSIC_DISC_STAL
+    price: 88.0
+    section: discs
+  - material: MUSIC_DISC_STRAD
+    price: 88.0
+    section: discs
+  - material: MUSIC_DISC_WARD
+    price: 88.0
+    section: discs
+  - material: MUSIC_DISC_11
+    price: 79.2
+    section: discs
+  - material: MUSIC_DISC_13
+    price: 79.2
+    section: discs
+  - material: MUSIC_DISC_CAT
+    price: 79.2
+    section: discs
+  - material: MUSIC_DISC_PIGSTEP
+    price: 79.2
+    section: discs
+  - material: DISC_FRAGMENT_5
+    price: 12.0
+    section: discs
+
+  # === Dyed Items ===
+  - material: BLACK_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: BLUE_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: BROWN_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: CYAN_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: GRAY_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: GREEN_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: LIGHT_BLUE_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: LIGHT_GRAY_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: LIME_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: MAGENTA_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: ORANGE_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: PINK_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: PURPLE_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: RED_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: WHITE_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: YELLOW_SHULKER_BOX
+    price: 465.4
+    section: dyed
+  - material: BLACK_BANNER
+    price: 41.1
+    section: dyed
+  - material: LIGHT_BLUE_BANNER
+    price: 36.2
+    section: dyed
+  - material: MAGENTA_BANNER
+    price: 36.2
+    section: dyed
+  - material: GRAY_BANNER
+    price: 33.7
+    section: dyed
+  - material: BROWN_BANNER
+    price: 26.5
+    section: dyed
+  - material: GREEN_BANNER
+    price: 26.5
+    section: dyed
+  - material: LIME_BANNER
+    price: 26.5
+    section: dyed
+  - material: ORANGE_BANNER
+    price: 26.5
+    section: dyed
+  - material: CYAN_BANNER
+    price: 24.2
+    section: dyed
+  - material: BLACK_BED
+    price: 23.4
+    section: dyed
+  - material: BLUE_BANNER
+    price: 21.9
+    section: dyed
+  - material: LIGHT_GRAY_BANNER
+    price: 21.9
+    section: dyed
+  - material: PINK_BANNER
+    price: 21.9
+    section: dyed
+  - material: PURPLE_BANNER
+    price: 21.9
+    section: dyed
+  - material: RED_BANNER
+    price: 21.9
+    section: dyed
+  - material: YELLOW_BANNER
+    price: 21.9
+    section: dyed
+  - material: LIGHT_BLUE_BED
+    price: 21.1
+    section: dyed
+  - material: MAGENTA_BED
+    price: 21.1
+    section: dyed
+  - material: GRAY_BED
+    price: 20.3
+    section: dyed
+  - material: WHITE_BANNER
+    price: 17.2
+    section: dyed
+  - material: BROWN_BED
+    price: 16.5
+    section: dyed
+  - material: GREEN_BED
+    price: 16.5
+    section: dyed
+  - material: LIME_BED
+    price: 16.5
+    section: dyed
+  - material: ORANGE_BED
+    price: 16.5
+    section: dyed
+  - material: CYAN_BED
+    price: 15.7
+    section: dyed
+  - material: BLUE_BED
+    price: 14.2
+    section: dyed
+  - material: LIGHT_GRAY_BED
+    price: 14.2
+    section: dyed
+  - material: PINK_BED
+    price: 14.2
+    section: dyed
+  - material: PURPLE_BED
+    price: 14.2
+    section: dyed
+  - material: RED_BED
+    price: 14.2
+    section: dyed
+  - material: YELLOW_BED
+    price: 14.2
+    section: dyed
+  - material: BLACK_BUNDLE
+    price: 9.83
+    section: dyed
+  - material: GRAY_BUNDLE
+    price: 9.11
+    section: dyed
+  - material: LIGHT_BLUE_BUNDLE
+    price: 9.11
+    section: dyed
+  - material: MAGENTA_BUNDLE
+    price: 9.11
+    section: dyed
+  - material: BROWN_BUNDLE
+    price: 7.69
+    section: dyed
+  - material: CYAN_BUNDLE
+    price: 7.69
+    section: dyed
+  - material: GREEN_BUNDLE
+    price: 7.69
+    section: dyed
+  - material: LIME_BUNDLE
+    price: 7.69
+    section: dyed
+  - material: ORANGE_BUNDLE
+    price: 7.69
+    section: dyed
+  - material: WHITE_BUNDLE
+    price: 7.69
+    section: dyed
+  - material: BLUE_BUNDLE
+    price: 6.99
+    section: dyed
+  - material: LIGHT_GRAY_BUNDLE
+    price: 6.99
+    section: dyed
+  - material: PINK_BUNDLE
+    price: 6.99
+    section: dyed
+  - material: PURPLE_BUNDLE
+    price: 6.99
+    section: dyed
+  - material: RED_BUNDLE
+    price: 6.99
+    section: dyed
+  - material: YELLOW_BUNDLE
+    price: 6.99
+    section: dyed
+  - material: BLACK_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: BLUE_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: BROWN_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: CYAN_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: GRAY_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: GREEN_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: LIGHT_BLUE_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: LIGHT_GRAY_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: LIME_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: MAGENTA_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: ORANGE_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: PINK_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: PURPLE_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: RED_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: WHITE_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: YELLOW_GLAZED_TERRACOTTA
+    price: 6.29
+    section: dyed
+  - material: BLACK_CANDLE
+    price: 5.61
+    section: dyed
+  - material: BLACK_WOOL
+    price: 5.61
+    section: dyed
+  - material: GRAY_CANDLE
+    price: 4.92
+    section: dyed
+  - material: LIGHT_BLUE_CANDLE
+    price: 4.92
+    section: dyed
+  - material: MAGENTA_CANDLE
+    price: 4.92
+    section: dyed
+  - material: GRAY_WOOL
+    price: 4.92
+    section: dyed
+  - material: LIGHT_BLUE_WOOL
+    price: 4.92
+    section: dyed
+  - material: MAGENTA_WOOL
+    price: 4.92
+    section: dyed
+  - material: BROWN_CANDLE
+    price: 3.59
+    section: dyed
+  - material: CYAN_CANDLE
+    price: 3.59
+    section: dyed
+  - material: GREEN_CANDLE
+    price: 3.59
+    section: dyed
+  - material: LIME_CANDLE
+    price: 3.59
+    section: dyed
+  - material: ORANGE_CANDLE
+    price: 3.59
+    section: dyed
+  - material: WHITE_CANDLE
+    price: 3.59
+    section: dyed
+  - material: BROWN_WOOL
+    price: 3.59
+    section: dyed
+  - material: CYAN_WOOL
+    price: 3.59
+    section: dyed
+  - material: GREEN_WOOL
+    price: 3.59
+    section: dyed
+  - material: LIME_WOOL
+    price: 3.59
+    section: dyed
+  - material: ORANGE_WOOL
+    price: 3.59
+    section: dyed
+  - material: BLACK_CARPET
+    price: 3.59
+    section: dyed
+  - material: LIGHT_BLUE_CARPET
+    price: 3.59
+    section: dyed
+  - material: MAGENTA_CARPET
+    price: 3.59
+    section: dyed
+  - material: BLUE_CANDLE
+    price: 2.94
+    section: dyed
+  - material: LIGHT_GRAY_CANDLE
+    price: 2.94
+    section: dyed
+  - material: PINK_CANDLE
+    price: 2.94
+    section: dyed
+  - material: PURPLE_CANDLE
+    price: 2.94
+    section: dyed
+  - material: RED_CANDLE
+    price: 2.94
+    section: dyed
+  - material: YELLOW_CANDLE
+    price: 2.94
+    section: dyed
+  - material: BLACK_DYE
+    price: 2.94
+    section: dyed
+  - material: BLUE_WOOL
+    price: 2.94
+    section: dyed
+  - material: LIGHT_GRAY_WOOL
+    price: 2.94
+    section: dyed
+  - material: PINK_WOOL
+    price: 2.94
+    section: dyed
+  - material: PURPLE_WOOL
+    price: 2.94
+    section: dyed
+  - material: RED_WOOL
+    price: 2.94
+    section: dyed
+  - material: YELLOW_WOOL
+    price: 2.94
+    section: dyed
+  - material: GRAY_CARPET
+    price: 2.94
+    section: dyed
+  - material: BLACK_TERRACOTTA
+    price: 2.74
+    section: dyed
+  - material: GRAY_TERRACOTTA
+    price: 2.62
+    section: dyed
+  - material: LIGHT_BLUE_TERRACOTTA
+    price: 2.62
+    section: dyed
+  - material: MAGENTA_TERRACOTTA
+    price: 2.62
+    section: dyed
+  - material: BROWN_TERRACOTTA
+    price: 2.49
+    section: dyed
+  - material: GREEN_TERRACOTTA
+    price: 2.49
+    section: dyed
+  - material: LIME_TERRACOTTA
+    price: 2.49
+    section: dyed
+  - material: ORANGE_TERRACOTTA
+    price: 2.49
+    section: dyed
+  - material: WHITE_TERRACOTTA
+    price: 2.49
+    section: dyed
+  - material: BLUE_TERRACOTTA
+    price: 2.42
+    section: dyed
+  - material: CYAN_TERRACOTTA
+    price: 2.42
+    section: dyed
+  - material: LIGHT_GRAY_TERRACOTTA
+    price: 2.42
+    section: dyed
+  - material: PINK_TERRACOTTA
+    price: 2.42
+    section: dyed
+  - material: PURPLE_TERRACOTTA
+    price: 2.42
+    section: dyed
+  - material: RED_TERRACOTTA
+    price: 2.42
+    section: dyed
+  - material: YELLOW_TERRACOTTA
+    price: 2.42
+    section: dyed
+  - material: LIGHT_BLUE_DYE
+    price: 2.30
+    section: dyed
+  - material: MAGENTA_DYE
+    price: 2.30
+    section: dyed
+  - material: TERRACOTTA
+    price: 2.30
+    section: dyed
+  - material: WHITE_WOOL
+    price: 2.30
+    section: dyed
+  - material: BROWN_CARPET
+    price: 2.30
+    section: dyed
+  - material: GREEN_CARPET
+    price: 2.30
+    section: dyed
+  - material: LIME_CARPET
+    price: 2.30
+    section: dyed
+  - material: ORANGE_CARPET
+    price: 2.30
+    section: dyed
+  - material: CYAN_CARPET
+    price: 2.11
+    section: dyed
+  - material: GRAY_DYE
+    price: 1.98
+    section: dyed
+  - material: BLUE_CARPET
+    price: 1.92
+    section: dyed
+  - material: LIGHT_GRAY_CARPET
+    price: 1.92
+    section: dyed
+  - material: PINK_CARPET
+    price: 1.92
+    section: dyed
+  - material: PURPLE_CARPET
+    price: 1.92
+    section: dyed
+  - material: RED_CARPET
+    price: 1.92
+    section: dyed
+  - material: YELLOW_CARPET
+    price: 1.92
+    section: dyed
+  - material: BLACK_STAINED_GLASS
+    price: 1.49
+    section: dyed
+  - material: WHITE_CARPET
+    price: 1.49
+    section: dyed
+  - material: GRAY_STAINED_GLASS
+    price: 1.37
+    section: dyed
+  - material: LIGHT_BLUE_STAINED_GLASS
+    price: 1.37
+    section: dyed
+  - material: MAGENTA_STAINED_GLASS
+    price: 1.37
+    section: dyed
+  - material: BROWN_STAINED_GLASS
+    price: 1.25
+    section: dyed
+  - material: GREEN_STAINED_GLASS
+    price: 1.25
+    section: dyed
+  - material: LIME_STAINED_GLASS
+    price: 1.25
+    section: dyed
+  - material: ORANGE_STAINED_GLASS
+    price: 1.25
+    section: dyed
+  - material: WHITE_STAINED_GLASS
+    price: 1.25
+    section: dyed
+  - material: BLACK_CONCRETE_POWDER
+    price: 1.19
+    section: dyed
+  - material: BLUE_STAINED_GLASS
+    price: 1.19
+    section: dyed
+  - material: CYAN_STAINED_GLASS
+    price: 1.19
+    section: dyed
+  - material: LIGHT_GRAY_STAINED_GLASS
+    price: 1.19
+    section: dyed
+  - material: PINK_STAINED_GLASS
+    price: 1.19
+    section: dyed
+  - material: PURPLE_STAINED_GLASS
+    price: 1.19
+    section: dyed
+  - material: RED_STAINED_GLASS
+    price: 1.19
+    section: dyed
+  - material: YELLOW_STAINED_GLASS
+    price: 1.19
+    section: dyed
+  - material: BLACK_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: BLUE_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: BROWN_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: CYAN_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: GRAY_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: GRAY_CONCRETE_POWDER
+    price: 1.07
+    section: dyed
+  - material: GREEN_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: LIGHT_BLUE_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: LIGHT_BLUE_CONCRETE_POWDER
+    price: 1.07
+    section: dyed
+  - material: LIGHT_GRAY_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: LIME_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: MAGENTA_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: MAGENTA_CONCRETE_POWDER
+    price: 1.07
+    section: dyed
+  - material: ORANGE_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: PINK_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: PURPLE_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: RED_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: WHITE_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: YELLOW_CONCRETE
+    price: 1.07
+    section: dyed
+  - material: BROWN_DYE
+    price: 1.07
+    section: dyed
+  - material: GREEN_DYE
+    price: 1.07
+    section: dyed
+  - material: LIME_DYE
+    price: 1.07
+    section: dyed
+  - material: ORANGE_DYE
+    price: 1.07
+    section: dyed
+  - material: WHITE_DYE
+    price: 1.07
+    section: dyed
+  - material: GLASS
+    price: 1.07
+    section: dyed
+  - material: BROWN_CONCRETE_POWDER
+    price: 0.95
+    section: dyed
+  - material: GREEN_CONCRETE_POWDER
+    price: 0.95
+    section: dyed
+  - material: LIME_CONCRETE_POWDER
+    price: 0.95
+    section: dyed
+  - material: ORANGE_CONCRETE_POWDER
+    price: 0.95
+    section: dyed
+  - material: WHITE_CONCRETE_POWDER
+    price: 0.95
+    section: dyed
+  - material: BLUE_CONCRETE_POWDER
+    price: 0.90
+    section: dyed
+  - material: CYAN_CONCRETE_POWDER
+    price: 0.90
+    section: dyed
+  - material: LIGHT_GRAY_CONCRETE_POWDER
+    price: 0.90
+    section: dyed
+  - material: PINK_CONCRETE_POWDER
+    price: 0.90
+    section: dyed
+  - material: PURPLE_CONCRETE_POWDER
+    price: 0.90
+    section: dyed
+  - material: RED_CONCRETE_POWDER
+    price: 0.90
+    section: dyed
+  - material: YELLOW_CONCRETE_POWDER
+    price: 0.90
+    section: dyed
+  - material: CYAN_DYE
+    price: 0.78
+    section: dyed
+  - material: BLACK_STAINED_GLASS_PANE
+    price: 0.72
+    section: dyed
+  - material: LIGHT_BLUE_STAINED_GLASS_PANE
+    price: 0.67
+    section: dyed
+  - material: MAGENTA_STAINED_GLASS_PANE
+    price: 0.67
+    section: dyed
+  - material: GRAY_STAINED_GLASS_PANE
+    price: 0.61
+    section: dyed
+  - material: BLUE_DYE
+    price: 0.50
+    section: dyed
+  - material: LIGHT_GRAY_DYE
+    price: 0.50
+    section: dyed
+  - material: PINK_DYE
+    price: 0.50
+    section: dyed
+  - material: PURPLE_DYE
+    price: 0.50
+    section: dyed
+  - material: RED_DYE
+    price: 0.50
+    section: dyed
+  - material: YELLOW_DYE
+    price: 0.50
+    section: dyed
+  - material: BROWN_STAINED_GLASS_PANE
+    price: 0.50
+    section: dyed
+  - material: CYAN_STAINED_GLASS_PANE
+    price: 0.50
+    section: dyed
+  - material: GREEN_STAINED_GLASS_PANE
+    price: 0.50
+    section: dyed
+  - material: LIME_STAINED_GLASS_PANE
+    price: 0.50
+    section: dyed
+  - material: ORANGE_STAINED_GLASS_PANE
+    price: 0.50
+    section: dyed
+  - material: WHITE_STAINED_GLASS_PANE
+    price: 0.50
+    section: dyed
+  - material: BLUE_STAINED_GLASS_PANE
+    price: 0.45
+    section: dyed
+  - material: LIGHT_GRAY_STAINED_GLASS_PANE
+    price: 0.45
+    section: dyed
+  - material: PINK_STAINED_GLASS_PANE
+    price: 0.45
+    section: dyed
+  - material: PURPLE_STAINED_GLASS_PANE
+    price: 0.45
+    section: dyed
+  - material: RED_STAINED_GLASS_PANE
+    price: 0.45
+    section: dyed
+  - material: YELLOW_STAINED_GLASS_PANE
+    price: 0.45
+    section: dyed
+  - material: GLASS_PANE
+    price: 0.39
+    section: dyed

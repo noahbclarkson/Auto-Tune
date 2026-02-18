@@ -1,0 +1,351 @@
+package com.noahblclarkson.autotune.config;
+
+import com.noahblclarkson.autotune.AutoTune;
+import com.noahblclarkson.autotune.config.AutoTuneConfig.*;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.jetbrains.annotations.NotNull;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ConfigManager {
+
+    private final AutoTune plugin;
+    private final MiniMessage miniMessage;
+
+    private AutoTuneConfig config;
+    private FileConfiguration messagesConfig;
+    private String messagePrefix;
+
+    public ConfigManager(AutoTune plugin) {
+        this.plugin = plugin;
+        this.miniMessage = MiniMessage.miniMessage();
+    }
+
+    public void load() throws IOException {
+        plugin.saveDefaultConfig();
+        plugin.reloadConfig();
+
+        saveResourceIfMissing("messages.yml");
+        saveResourceIfMissing("shops.yml");
+
+        FileConfiguration cfg = plugin.getConfig();
+        this.config = parseConfig(cfg);
+
+        File messagesFile = new File(plugin.getDataFolder(), "messages.yml");
+        this.messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
+        this.messagePrefix = messagesConfig.getString("prefix", "<gray>[AutoTune]</gray> ");
+    }
+
+    private void saveResourceIfMissing(String name) {
+        File file = new File(plugin.getDataFolder(), name);
+        if (!file.exists()) {
+            plugin.saveResource(name, false);
+        }
+    }
+
+    private AutoTuneConfig parseConfig(FileConfiguration cfg) {
+        return new AutoTuneConfig(
+                parseStorageConfig(cfg.getConfigurationSection("storage")),
+                parseWebConfig(cfg.getConfigurationSection("web")),
+                parseEconomyConfig(cfg.getConfigurationSection("economy")),
+                parseLoanConfig(cfg.getConfigurationSection("loans")),
+                parseGuiConfig(cfg.getConfigurationSection("gui")),
+                parseDebugConfig(cfg.getConfigurationSection("debug"))
+        );
+    }
+
+    private StorageConfig parseStorageConfig(ConfigurationSection section) {
+        if (section == null) {
+            return new StorageConfig(
+                    StorageConfig.StorageType.SQLITE,
+                    "localhost", 3306, "autotune", "root", "",
+                    StorageConfig.PoolConfig.defaults()
+            );
+        }
+
+        StorageConfig.StorageType type;
+        try {
+            type = StorageConfig.StorageType.valueOf(
+                    section.getString("type", "SQLITE").toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            type = StorageConfig.StorageType.SQLITE;
+        }
+
+        ConfigurationSection poolSection = section.getConfigurationSection("pool");
+        StorageConfig.PoolConfig pool = poolSection != null
+                ? new StorageConfig.PoolConfig(
+                poolSection.getInt("maximum-size", 10),
+                poolSection.getInt("minimum-idle", 2),
+                poolSection.getLong("connection-timeout", 30000),
+                poolSection.getLong("idle-timeout", 600000),
+                poolSection.getLong("max-lifetime", 1800000)
+        )
+                : StorageConfig.PoolConfig.defaults();
+
+        return new StorageConfig(
+                type,
+                section.getString("host", "localhost"),
+                section.getInt("port", 3306),
+                section.getString("database", "autotune"),
+                section.getString("username", "root"),
+                section.getString("password", ""),
+                pool
+        );
+    }
+
+    private WebConfig parseWebConfig(ConfigurationSection section) {
+        if (section == null) {
+            return WebConfig.defaults();
+        }
+        return new WebConfig(
+                section.getBoolean("enabled", true),
+                section.getInt("port", 8989),
+                section.getString("host", "0.0.0.0"),
+                section.getBoolean("websocket-enabled", true)
+        );
+    }
+
+    private EconomyConfig parseEconomyConfig(ConfigurationSection section) {
+        if (section == null) {
+            return EconomyConfig.defaults();
+        }
+
+        ConfigurationSection spreadSection = section.getConfigurationSection("spread");
+        SpreadConfig spreadConfig = spreadSection != null
+                ? new SpreadConfig(
+                spreadSection.getDouble("base-spread", 0.20),
+                spreadSection.getDouble("volume-impact", 0.8),
+                spreadSection.getDouble("player-impact", 0.6),
+                spreadSection.getDouble("liquidity-coeff", 0.01),
+                spreadSection.getInt("liquidity-full-effect-traders", 10)
+        )
+                : SpreadConfig.defaults();
+
+        ConfigurationSection playerScalingSection = section.getConfigurationSection("player-scaling");
+        PlayerScalingConfig playerScalingConfig = playerScalingSection != null
+                ? new PlayerScalingConfig(
+                playerScalingSection.getInt("full-effect-players", 10)
+        )
+                : PlayerScalingConfig.defaults();
+
+        return new EconomyConfig(
+                section.getString("currency-symbol", "$"),
+                section.getLong("update-interval", 6000),
+                section.getDouble("max-price-change-percent", 1.5),
+                section.getInt("trade-window-days", 7),
+                section.getBoolean("require-first-sell", true),
+                section.getDouble("slippage-coeff", 0.01),
+                section.getDouble("sell-pressure-multiplier", 1.0),
+                section.getDouble("sector-correlation", 0.05),
+                section.getDouble("player-rate-limit-multiplier", 3.0),
+                section.getDouble("trend-dampening", 0.05),
+                section.getDouble("trend-streak-threshold-percent", 0.1),
+                section.getDouble("trend-dampening-floor", 0.25),
+                section.getBoolean("adaptive-window", true),
+                section.getInt("min-window-days", 2),
+                section.getInt("max-window-days", 7),
+                section.getInt("max-sector-correlation-group-size", 20),
+                spreadConfig,
+                playerScalingConfig
+        );
+    }
+
+    private LoanConfig parseLoanConfig(ConfigurationSection section) {
+        if (section == null) {
+            return LoanConfig.defaults();
+        }
+        return new LoanConfig(
+                section.getBoolean("enabled", true),
+                section.getDouble("base-interest-rate", 0.05),
+                section.getBoolean("credit-score-modifier", true),
+                section.getDouble("max-loan-multiplier", 2.0),
+                section.getInt("min-credit-score", 200),
+                section.getInt("default-duration-days", 7),
+                section.getInt("min-term-days", 3),
+                section.getInt("max-term-days", 30),
+                section.getDouble("term-premium-per-day", 0.002),
+                section.getInt("compound-interval-hours", 24),
+                section.getInt("overdue-check-interval-hours", 1),
+                section.getInt("warning-before-due-hours", 24),
+                section.getDouble("early-repayment-bonus-multiplier", 1.5),
+                section.getDouble("inflation-rate-impact", 0.5),
+                section.getInt("default-penalty", 50)
+        );
+    }
+
+    private GuiConfig parseGuiConfig(ConfigurationSection section) {
+        if (section == null) {
+            return GuiConfig.defaults();
+        }
+
+        ConfigurationSection titlesSection = section.getConfigurationSection("titles");
+        TitlesConfig titles = titlesSection != null
+                ? new TitlesConfig(
+                titlesSection.getString("shop", "Auto-Tune Shop"),
+                titlesSection.getString("sell", "Sell Items"),
+                titlesSection.getString("autosell", "Autosell"),
+                titlesSection.getString("trends", "Market Trends"),
+                titlesSection.getString("transaction-history", "Your Transactions"),
+                titlesSection.getString("admin-transaction-history", "All Transactions")
+        )
+                : TitlesConfig.defaults();
+
+        ConfigurationSection colorsSection = section.getConfigurationSection("colors");
+        ColorsConfig colors = colorsSection != null
+                ? new ColorsConfig(
+                colorsSection.getString("buy-price", "<green>"),
+                colorsSection.getString("sell-price", "<gold>"),
+                colorsSection.getString("spread", "<aqua>"),
+                colorsSection.getString("section-name", "<gold>"),
+                colorsSection.getString("item-name", "<white>"),
+                colorsSection.getString("trend-up", "<green>"),
+                colorsSection.getString("trend-down", "<red>"),
+                colorsSection.getString("trend-stable", "<gray>"),
+                colorsSection.getString("positive", "<green>"),
+                colorsSection.getString("negative", "<red>"),
+                colorsSection.getString("accent", "<aqua>"),
+                colorsSection.getString("muted", "<dark_gray>")
+        )
+                : ColorsConfig.defaults();
+
+        ConfigurationSection materialsSection = section.getConfigurationSection("materials");
+        MaterialsConfig materials = materialsSection != null
+                ? new MaterialsConfig(
+                materialsSection.getString("border", "BLACK_STAINED_GLASS_PANE"),
+                materialsSection.getString("buy-button", "LIME_STAINED_GLASS_PANE"),
+                materialsSection.getString("sell-button", "ORANGE_STAINED_GLASS_PANE"),
+                materialsSection.getString("not-available", "BARRIER"),
+                materialsSection.getString("previous-page", "ARROW"),
+                materialsSection.getString("next-page", "ARROW"),
+                materialsSection.getString("back", "DARK_OAK_DOOR"),
+                materialsSection.getString("page-indicator", "PAPER"),
+                materialsSection.getString("search", "NAME_TAG"),
+                materialsSection.getString("trends", "SPYGLASS"),
+                materialsSection.getString("close", "BARRIER"),
+                materialsSection.getString("economy-stats", "GOLD_BLOCK"),
+                materialsSection.getString("enable-all", "LIME_DYE"),
+                materialsSection.getString("disable-all", "RED_DYE"),
+                materialsSection.getString("sell-inventory", "HOPPER")
+        )
+                : MaterialsConfig.defaults();
+
+        List<Integer> buyQuantities = section.getIntegerList("buy-quantities");
+        if (buyQuantities.isEmpty()) {
+            buyQuantities = List.of(1, 2, 4, 8, 16, 32, 64);
+        } else {
+            buyQuantities = buyQuantities.stream()
+                    .filter(q -> q >= 1 && q <= 64)
+                    .distinct()
+                    .sorted()
+                    .toList();
+            if (buyQuantities.isEmpty()) {
+                buyQuantities = List.of(1, 2, 4, 8, 16, 32, 64);
+            }
+        }
+
+        return new GuiConfig(
+                section.getInt("items-per-page", 45),
+                section.getBoolean("search-enabled", true),
+                section.getInt("search-timeout", 600),
+                section.getBoolean("show-economy-stats", true),
+                section.getBoolean("show-24h-change", true),
+                titles,
+                colors,
+                materials,
+                buyQuantities
+        );
+    }
+
+    private DebugConfig parseDebugConfig(ConfigurationSection section) {
+        if (section == null) {
+            return DebugConfig.defaults();
+        }
+        return new DebugConfig(
+                section.getBoolean("enabled", false),
+                section.getBoolean("log-prices", false)
+        );
+    }
+
+    public YamlConfiguration loadShopsConfig() {
+        File shopsFile = new File(plugin.getDataFolder(), "shops.yml");
+        return YamlConfiguration.loadConfiguration(shopsFile);
+    }
+
+    @NotNull
+    public AutoTuneConfig getConfig() {
+        return config;
+    }
+
+    @NotNull
+    public Component getMessage(String path, Map<String, String> placeholders) {
+        String template = messagesConfig.getString(path, "<red>Missing message: " + path);
+
+        TagResolver.Builder resolvers = TagResolver.builder();
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            resolvers.resolver(Placeholder.parsed(entry.getKey(), entry.getValue()));
+        }
+
+        return miniMessage.deserialize(messagePrefix + template, resolvers.build());
+    }
+
+    @NotNull
+    public Component getMessage(String path) {
+        return getMessage(path, new HashMap<>());
+    }
+
+    @NotNull
+    public Component getMessageRaw(String path, Map<String, String> placeholders) {
+        String template = messagesConfig.getString(path, "<red>Missing message: " + path);
+
+        TagResolver.Builder resolvers = TagResolver.builder();
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            resolvers.resolver(Placeholder.parsed(entry.getKey(), entry.getValue()));
+        }
+
+        return miniMessage.deserialize(template, resolvers.build());
+    }
+
+    @NotNull
+    public TextColor resolveColor(String miniMessageColor) {
+        if (miniMessageColor == null || miniMessageColor.isEmpty()) {
+            return NamedTextColor.WHITE;
+        }
+        try {
+            Component parsed = miniMessage.deserialize(miniMessageColor + ".");
+            TextColor color = parsed.color();
+            return color != null ? color : NamedTextColor.WHITE;
+        } catch (Exception e) {
+            return NamedTextColor.WHITE;
+        }
+    }
+
+    @NotNull
+    public Material resolveMaterial(String name, Material fallback) {
+        if (name == null || name.isEmpty()) {
+            return fallback;
+        }
+        Material mat = Material.matchMaterial(name);
+        return mat != null ? mat : fallback;
+    }
+
+    public String formatCurrency(double amount) {
+        return config.economy().currencySymbol() + String.format("%.2f", amount);
+    }
+
+    public String formatCurrency(java.math.BigDecimal amount) {
+        return formatCurrency(amount.doubleValue());
+    }
+}

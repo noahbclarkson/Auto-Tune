@@ -23,6 +23,14 @@ public final class ItemSerializer {
         }
 
         ItemMeta meta = itemStack.getItemMeta();
+
+        // If no distinguishing metadata is present, hash the same way as getMaterialHash()
+        // so that plain vanilla items (which Paper always wraps in an ItemMeta) correctly
+        // resolve to the shop's material-based entries.
+        if (!meta.hasDisplayName() && !meta.hasLore() && !meta.hasEnchants() && !meta.hasCustomModelData()) {
+            return getMaterialHash(itemStack.getType());
+        }
+
         StringBuilder sb = new StringBuilder();
         sb.append(itemStack.getType().name());
 

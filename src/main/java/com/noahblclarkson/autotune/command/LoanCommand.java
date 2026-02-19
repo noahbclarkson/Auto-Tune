@@ -97,6 +97,11 @@ public class LoanCommand {
             return;
         }
 
+        if (amount <= 0) {
+            sender.sendMessage(configManager.getMessage("general.invalid-amount"));
+            return;
+        }
+
         AutoTuneConfig.LoanConfig config = configManager.getConfig().loans();
         int clampedDays = Math.max(config.minTermDays(), Math.min(days, config.maxTermDays()));
 
@@ -136,6 +141,12 @@ public class LoanCommand {
             sender.sendMessage(configManager.getMessage("general.player-only"));
             return;
         }
+
+        if (amount <= 0) {
+            sender.sendMessage(configManager.getMessage("general.invalid-amount"));
+            return;
+        }
+
         loanManager.repayLoanAsync(player, BigDecimal.valueOf(amount)).thenAccept(result ->
                 databaseManager.runOnMain(() -> {
                     if (result == null) {

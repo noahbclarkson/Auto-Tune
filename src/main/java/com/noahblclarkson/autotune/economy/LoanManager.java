@@ -118,6 +118,10 @@ public class LoanManager {
             return LoanResult.error("Loans are disabled");
         }
 
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return LoanResult.error("Loan amount must be positive");
+        }
+
         int clampedTerm = Math.max(config.minTermDays(), Math.min(termDays, config.maxTermDays()));
 
         PlayerData playerData = playerRepository.getOrCreate(playerId, playerName);
@@ -155,6 +159,10 @@ public class LoanManager {
     }
 
     public CompletableFuture<LoanResult> repayLoanAsync(@NotNull Player player, @NotNull BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return CompletableFuture.completedFuture(LoanResult.error("Repayment amount must be positive"));
+        }
+
         UUID playerId = player.getUniqueId();
         String playerName = player.getName();
 
@@ -182,8 +190,6 @@ public class LoanManager {
                             return;
                         }
 
-                        BigDecimal overpayment = amount.subtract(loan.currentBalance()).max(BigDecimal.ZERO);
-
                         Loan updated = loan.makePayment(paymentAmount);
                         databaseManager.runAsync(() -> {
                                     loanRepository.update(updated);
@@ -194,13 +200,7 @@ public class LoanManager {
                                                 Math.min(PlayerData.MAX_CREDIT_SCORE, playerData.creditScore() + creditBonus));
                                     }
                                 })
-                                .thenRun(() -> {
-                                    if (overpayment.compareTo(BigDecimal.ZERO) > 0) {
-                                        databaseManager.runOnMain(() ->
-                                                economy.depositPlayer(player, overpayment.doubleValue()));
-                                    }
-                                    future.complete(LoanResult.repaymentSuccess(updated, paymentAmount));
-                                })
+                                .thenRun(() -> future.complete(LoanResult.repaymentSuccess(updated, paymentAmount)))
                                 .exceptionally(ex -> {
                                     plugin.getLogger().log(Level.WARNING, "Failed to process loan repayment", ex);
                                     future.complete(LoanResult.error("Database error"));

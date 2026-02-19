@@ -44,7 +44,9 @@ interface EconomyChartProps {
 
 export function EconomyChart({ history }: EconomyChartProps) {
   const [period, setPeriod] = useState<Period>('7d');
-  const [activeMetrics, setActiveMetrics] = useState<Set<Metric>>(new Set(['gdp', 'averagePriceChange']));
+  const [activeMetrics, setActiveMetrics] = useState<Set<Metric>>(
+    new Set<Metric>(['gdp', 'averagePriceChange']),
+  );
 
   const filteredData = useMemo(() => {
     const cutoff = Date.now() - PERIOD_MS[period];

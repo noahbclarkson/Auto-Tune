@@ -145,8 +145,12 @@ public class AutosellManager {
         int totalSold = 0;
         BigDecimal totalEarned = BigDecimal.ZERO;
 
-        for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
-            ItemStack stack = player.getInventory().getItem(slot);
+        // Use getStorageContents() (slots 0-35) to avoid accidentally iterating
+        // over armor slots (36-39) and the off-hand slot (40) which getSize()
+        // would include for a PlayerInventory.
+        ItemStack[] storageContents = player.getInventory().getStorageContents();
+        for (int slot = 0; slot < storageContents.length; slot++) {
+            ItemStack stack = storageContents[slot];
             if (stack == null || stack.getType().isAir()) {
                 continue;
             }

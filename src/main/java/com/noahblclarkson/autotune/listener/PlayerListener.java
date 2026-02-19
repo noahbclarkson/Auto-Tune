@@ -81,12 +81,21 @@ public class PlayerListener implements Listener {
         Duration timeUntilDue = Duration.between(Instant.now(), loan.dueDate());
 
         if (timeUntilDue.isNegative()) {
-            player.sendMessage(configManager.getMessage("loan.defaulted",
-                    Map.of("penalty", String.valueOf(configManager.getConfig().loans().defaultPenalty()))));
+            // Loan is past due but not yet processed by the scheduled job (still ACTIVE).
+            // Don't send the "defaulted" message (no credit penalty has been applied yet) —
+            // instead warn that the loan is overdue and will be processed on next tick.
+            player.sendMessage(configManager.getMessage("loan.overdue",
+                    Map.of("amount", configManager.formatCurrency(loan.currentBalance()))));
         } else if (timeUntilDue.toDays() <= 3) {
+            // Format time remaining the same way LoanManager.processWarnings() does,
+            // using the "time_left" key that messages.yml expects.
+            long hoursRemaining = timeUntilDue.toHours();
+            String timeLeft = hoursRemaining >= 24
+                    ? (hoursRemaining / 24) + " day" + (hoursRemaining / 24 != 1 ? "s" : "")
+                    : hoursRemaining + " hour" + (hoursRemaining != 1 ? "s" : "");
             player.sendMessage(configManager.getMessage("loan.warning-due", Map.of(
                     "amount", configManager.formatCurrency(loan.currentBalance()),
-                    "days", String.valueOf(timeUntilDue.toDays())
+                    "time_left", timeLeft
             )));
         }
     }

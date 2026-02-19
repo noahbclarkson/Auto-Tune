@@ -62,6 +62,7 @@ loan:
   no-active-loan: "<yellow>You don't have any active loans."
   interest-applied: "<yellow>Interest applied to your loan. New balance: <gold><balance></gold>"
   warning-due: "<gold>\u26A0 Your loan balance of <gold><amount></gold> is due in <yellow><time_left></yellow>!"
+  overdue: "<red>\u26A0 Your loan is overdue! Balance: <gold><amount></gold>. Log back in regularly — it will be processed soon."
   defaulted: "<red>Your loan has defaulted! Credit score reduced by <gold><penalty></gold> points."
   credit-score: "<gray>Your credit score: <gold><score></gold>"
 

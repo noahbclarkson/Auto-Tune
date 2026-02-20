@@ -16,13 +16,13 @@ export function PricePreview({ buyPrice, sellPrice, basePrice, bpd, spd }: Price
   const profitMargin = ((buyPrice - sellPrice) / basePrice) * 100;
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-      <h3 className="text-lg font-semibold text-white border-b border-gray-800 pb-3 mb-6">
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+      <h3 className="text-base sm:text-lg font-semibold text-white border-b border-gray-800 pb-3 mb-4 sm:mb-6">
         Calculated Prices
       </h3>
 
       {/* Main Price Display */}
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-6 mb-4 sm:mb-6">
         {/* Buy Price */}
         <div className="bg-green-950/30 border border-green-800/50 rounded-lg p-4 text-center">
           <div className="flex items-center justify-center gap-2 text-green-400 mb-2">

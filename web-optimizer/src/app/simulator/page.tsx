@@ -21,21 +21,21 @@ export default function SimulatorPage() {
   }, [basePrice, buyRatio, onlinePlayers, zScore, weightedVolume, config]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
           Price Simulator
         </h1>
-        <p className="text-gray-400">
+        <p className="text-sm sm:text-base text-gray-400">
           Experiment with market parameters to see how Auto-Tune calculates prices.
           Adjust the sliders and watch the prices update in real-time.
         </p>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left: Parameters */}
+      {/* Main Grid — stacks on mobile, side-by-side on lg */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
+        {/* Parameters panel — full width on mobile, 1/3 on large */}
         <div className="lg:col-span-1">
           <ParameterPanel
             config={config}
@@ -53,8 +53,8 @@ export default function SimulatorPage() {
           />
         </div>
 
-        {/* Right: Results */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Results — full width on mobile, 2/3 on large */}
+        <div className="lg:col-span-2 space-y-5 sm:space-y-6">
           {/* Price Preview */}
           <PricePreview
             buyPrice={prices.buyPrice}
@@ -77,11 +77,11 @@ export default function SimulatorPage() {
       </div>
 
       {/* Explanation */}
-      <div className="mt-8 bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-3">
+      <div className="mt-6 sm:mt-8 bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-white mb-3">
           Understanding the Results
         </h3>
-        <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-400">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-400">
           <div>
             <h4 className="font-medium text-gray-300 mb-2">Price Calculation</h4>
             <ul className="space-y-1">

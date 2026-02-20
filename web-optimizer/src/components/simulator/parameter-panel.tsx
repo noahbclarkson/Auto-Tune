@@ -51,6 +51,69 @@ function Slider({ label, value, onChange, min, max, step, format, description }:
   );
 }
 
+// ---------------------------------------------------------------------------
+// Preset Scenarios
+// ---------------------------------------------------------------------------
+
+interface PresetScenario {
+  name: string;
+  emoji: string;
+  description: string;
+  basePrice: number;
+  buyRatio: number;
+  onlinePlayers: number;
+  zScore: number;
+  weightedVolume: number;
+  config: MarketConfig;
+}
+
+const PRESETS: PresetScenario[] = [
+  {
+    name: 'New Server',
+    emoji: '🌱',
+    description: 'Low player base, minimal trading history',
+    basePrice: 100,
+    buyRatio: 0.35,
+    onlinePlayers: 3,
+    zScore: -0.5,
+    weightedVolume: 50,
+    config: { ...DEFAULT_CONFIG },
+  },
+  {
+    name: 'Established Market',
+    emoji: '⚖️',
+    description: 'Healthy server with balanced buy/sell activity',
+    basePrice: 250,
+    buyRatio: 0.52,
+    onlinePlayers: 40,
+    zScore: 0.2,
+    weightedVolume: 1500,
+    config: { ...DEFAULT_CONFIG },
+  },
+  {
+    name: 'Economy Crash',
+    emoji: '📉',
+    description: 'Panic selling — everyone is selling, high volatility',
+    basePrice: 100,
+    buyRatio: 0.85,
+    onlinePlayers: 25,
+    zScore: 2.5,
+    weightedVolume: 300,
+    config: { ...DEFAULT_CONFIG, baseSpread: 0.45, volumeImpact: 0.7 },
+  },
+  {
+    name: 'Economy Boom',
+    emoji: '🚀',
+    description: 'Peak activity — many players, lots of buying',
+    basePrice: 500,
+    buyRatio: 0.2,
+    onlinePlayers: 80,
+    zScore: 1.8,
+    weightedVolume: 4000,
+    config: { ...DEFAULT_CONFIG, playerImpact: 0.85 },
+  },
+];
+
 export function ParameterPanel({
   config,
   setConfig,
@@ -69,13 +132,51 @@ export function ParameterPanel({
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
+  const applyPreset = (preset: PresetScenario) => {
+    setBasePrice(preset.basePrice);
+    setBuyRatio(preset.buyRatio);
+    setOnlinePlayers(preset.onlinePlayers);
+    setZScore(preset.zScore);
+    setWeightedVolume(preset.weightedVolume);
+    setConfig(preset.config);
+  };
+
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6">
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6 space-y-6">
       <h3 className="text-lg font-semibold text-white border-b border-gray-800 pb-3">
         Market Parameters
       </h3>
 
-      {/* Trade State */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Preset Scenarios                                                     */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-medium text-emerald-400 uppercase tracking-wider">
+          Quick Presets
+        </h4>
+        <div className="grid grid-cols-2 gap-2">
+          {PRESETS.map((preset) => (
+            <button
+              key={preset.name}
+              onClick={() => applyPreset(preset)}
+              title={preset.description}
+              className="flex flex-col items-start p-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-emerald-700 transition-all text-left group"
+            >
+              <span className="text-base leading-none mb-1">{preset.emoji}</span>
+              <span className="text-xs font-medium text-gray-200 group-hover:text-emerald-400 leading-tight">
+                {preset.name}
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500">
+          Click a preset to instantly load that scenario, then fine-tune the sliders below.
+        </p>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Trade State Sliders                                                 */}
+      {/* ------------------------------------------------------------------ */}
       <div className="space-y-4">
         <h4 className="text-sm font-medium text-emerald-400 uppercase tracking-wider">
           Trade State
@@ -137,7 +238,9 @@ export function ParameterPanel({
         />
       </div>
 
-      {/* Spread Configuration */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Spread Configuration                                                */}
+      {/* ------------------------------------------------------------------ */}
       <div className="space-y-4">
         <h4 className="text-sm font-medium text-emerald-400 uppercase tracking-wider">
           Spread Config

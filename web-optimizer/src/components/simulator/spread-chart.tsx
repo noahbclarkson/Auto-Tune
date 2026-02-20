@@ -41,16 +41,16 @@ export function SpreadChart({
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Spread vs Buy Ratio */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">
           Spread vs Buy Ratio
         </h3>
-        <p className="text-sm text-gray-400 mb-4">
+        <p className="text-sm text-gray-400 mb-3 sm:mb-4">
           How buy and sell spreads change as the buy/sell ratio shifts from all sells to all buys.
         </p>
-        <div className="h-64">
+        <div className="h-48 sm:h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={spreadData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -113,14 +113,14 @@ export function SpreadChart({
       </div>
 
       {/* Price Simulation */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">
           Price Simulation Over Time
         </h3>
-        <p className="text-sm text-gray-400 mb-4">
+        <p className="text-sm text-gray-400 mb-3 sm:mb-4">
           Simulated price evolution over 50 ticks (~4 hours at 5-min intervals) with the current buy ratio.
         </p>
-        <div className="h-64">
+        <div className="h-48 sm:h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={priceData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />

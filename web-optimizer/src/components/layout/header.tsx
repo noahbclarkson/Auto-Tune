@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Github, Calculator, Home, BookOpen } from 'lucide-react';
+import { Github, Calculator, Home, BookOpen, DollarSign } from 'lucide-react';
 
 export function Header() {
   return (
@@ -31,6 +31,14 @@ export function Header() {
             >
               <BookOpen className="w-4 h-4" />
               <span className="hidden sm:inline text-sm">How It Works</span>
+            </Link>
+            <Link
+              href="/true-prices"
+              className="flex items-center gap-1.5 text-gray-300 hover:text-emerald-500 transition-colors"
+              title="True Prices"
+            >
+              <DollarSign className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">True Prices</span>
             </Link>
             <Link
               href="/simulator"

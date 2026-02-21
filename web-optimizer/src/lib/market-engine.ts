@@ -1,32 +1,43 @@
 /**
- * Auto-Tune Market Engine - JavaScript Port
- * 
- * Ported from Python: scripts/market_curves.py
- * 
- * This implements the complete market pricing algorithm used by the Auto-Tune
- * Minecraft Paper plugin for adaptive market pricing.
+ * Auto-Tune Market Engine - TypeScript Port
+ *
+ * Mirrors the Java MarketEngine (src/main/java/.../manager/MarketEngine.java)
+ * and Rust simulation (scripts/market-simulation/src/engine.rs).
+ *
+ * Default values match the Rust simulation defaults (config.rs).
  */
 
-// Precomputed constant for tanh scaling
-const ATANH_099 = Math.atanh(0.99); // ~2.6467
+// Precomputed constant: atanh(0.99) ≈ 2.6467
+const ATANH_099 = Math.atanh(0.99);
 
 export interface MarketConfig {
-  baseSpread: number;          // 0.30 - base spread between buy/sell
-  volumeImpact: number;        // 0.5 - how much buy/sell imbalance affects spread
-  playerImpact: number;        // 0.7 - how much player count reduces spread
-  fullEffectPlayers: number;   // 20 - players needed for 99% effect
-  maxPriceChangePercent: number; // 3.0 - max price change per tick
-  liquidityCoeff: number;      // 0.05 - per-item liquidity coefficient
-  tradeWindowDays: number;     // 7 - days for recency weighting
+  /** Base spread between buy/sell (0.20 = 20%). */
+  baseSpread: number;
+  /** How much buy/sell imbalance widens the spread asymmetrically. */
+  volumeImpact: number;
+  /** How much player count compresses spreads (0–1). */
+  playerImpact: number;
+  /** Players needed for ~99% of the spread reduction effect. */
+  fullEffectPlayers: number;
+  /** Max price change per market tick (%). */
+  maxPriceChangePercent: number;
+  /** Liquidity coefficient controlling how fast spreads tighten with volume. */
+  liquidityCoeff: number;
+  /** Distinct-trader count at which the full liquidity coefficient applies. */
+  liquidityFullEffectTraders: number;
+  /** Window for recency-weighted trade history (days). */
+  tradeWindowDays: number;
 }
 
+/** Defaults match the Rust simulation (scripts/market-simulation/src/config.rs). */
 export const DEFAULT_CONFIG: MarketConfig = {
-  baseSpread: 0.30,
-  volumeImpact: 0.5,
-  playerImpact: 0.7,
-  fullEffectPlayers: 20,
-  maxPriceChangePercent: 3.0,
-  liquidityCoeff: 0.05,
+  baseSpread: 0.20,
+  volumeImpact: 0.8,
+  playerImpact: 0.6,
+  fullEffectPlayers: 10,
+  maxPriceChangePercent: 1.5,
+  liquidityCoeff: 0.01,
+  liquidityFullEffectTraders: 10,
   tradeWindowDays: 7,
 };
 
@@ -54,114 +65,108 @@ export function playerScaling(
 
 /**
  * Calculate spread multiplier from z-score of recent bucket volume.
- * 
- * |z| <= 1: multiplier = 1.0 (normal spread)
- * z = +2: multiplier = 0.5 (half spread - high activity)
- * z = -2: multiplier = 2.0 (double spread - low activity)
- * 
- * Linear interpolation between 1-2 SD, capped beyond 2 SD.
- * 
- * @param z - Z-score of recent bucket volume
- * @returns Multiplier to apply to spread
+ *
+ * |z| ≤ 1  → 1.0 (normal)
+ * z  = +2  → 0.8 (high activity — 20% reduction)
+ * z  = -2  → 1.3 (low activity  — 30% increase)
+ *
+ * Mirrors Java MarketEngine.calculateGlobalVolumeMultiplier and
+ * Rust engine.rs MarketEngine::calculate_global_volume_multiplier.
  */
 export function globalVolumeMultiplier(z: number): number {
-  // Flat zone: |z| <= 1
-  if (Math.abs(z) <= 1.0) {
-    return 1.0;
-  }
-  
-  // High volume (z > 1): reduce spread
+  if (Math.abs(z) <= 1.0) return 1.0;
+
   if (z > 1.0) {
-    const t = Math.min(z - 1.0, 1.0); // Clamp to 0-1
-    return 1.0 - 0.5 * t; // Goes from 1.0 to 0.5
+    const t = Math.min(z - 1.0, 1.0);
+    return 1.0 - 0.2 * t; // 1.0 → 0.8
   }
-  
-  // Low volume (z < -1): increase spread
-  const t = Math.min(-z - 1.0, 1.0); // Clamp to 0-1
-  return 1.0 + t; // Goes from 1.0 to 2.0
+
+  const t = Math.min(-z - 1.0, 1.0);
+  return 1.0 + 0.3 * t; // 1.0 → 1.3
 }
 
 /**
- * Per-item liquidity reduction: tighter spreads for heavily traded items.
- * 
- * Uses a simple inverse function: 1 / (1 + volume * coeff)
- * As volume increases, the result approaches 0.
- * 
+ * Per-item liquidity reduction scaled by distinct trader count.
+ *
+ * The effective coefficient is scaled proportionally to how many unique traders
+ * are active (capped at fullEffectTraders), so items with more unique participants
+ * get tighter spreads faster.
+ *
+ * Mirrors Java MarketEngine.calculateSpread and Rust engine.rs.
+ *
  * @param totalWeightedVolume - Sum of weighted buy + sell volumes
- * @param liquidityCoeff - Coefficient controlling reduction rate
- * @returns Multiplier to apply to spread (0-1)
+ * @param distinctTraders     - Number of unique traders in the window
+ * @param liquidityCoeff      - Base coefficient from config
+ * @param liquidityFullEffectTraders - Trader count for full coefficient effect
  */
 export function liquidityReduction(
   totalWeightedVolume: number,
-  liquidityCoeff: number = DEFAULT_CONFIG.liquidityCoeff
+  distinctTraders: number = 1,
+  liquidityCoeff: number = DEFAULT_CONFIG.liquidityCoeff,
+  liquidityFullEffectTraders: number = DEFAULT_CONFIG.liquidityFullEffectTraders,
 ): number {
-  return 1.0 / (1.0 + totalWeightedVolume * liquidityCoeff);
+  const clampedTraders = Math.min(distinctTraders, liquidityFullEffectTraders);
+  const effectiveCoeff =
+    liquidityFullEffectTraders > 0
+      ? (liquidityCoeff / liquidityFullEffectTraders) * clampedTraders
+      : 0;
+  return 1.0 / (1.0 + totalWeightedVolume * effectiveCoeff);
 }
 
 /**
  * Calculate BPD (Buy Price Delta) and SPD (Sell Price Delta).
- * 
- * This is the core spread calculation that considers:
- * 1. Base spread (e.g., 30%)
- * 2. Volume imbalance (buy/sell ratio)
- * 3. Player count scaling
- * 4. Global volume adjustment (z-score)
- * 5. Per-item liquidity
- * 
- * @param buyRatio - Fraction of trades that are buys (0-1)
- * @param onlineCount - Current online player count
- * @param zScore - Z-score of recent market activity
+ *
+ * Pipeline (matches Java + Rust):
+ *   1. Base half-spread
+ *   2. Volume imbalance shift
+ *   3. Per-item liquidity reduction (trader-scaled)
+ *   4. Player count reduction
+ *   5. Global volume multiplier (z-score)
+ *
+ * @param buyRatio            - Fraction of trades that are buys (0–1)
+ * @param onlineCount         - Current online player count
+ * @param zScore              - Z-score of recent market activity
  * @param totalWeightedVolume - Weighted volume for liquidity calc
- * @param config - Market configuration parameters
- * @returns Object with bpd and spd (both as decimals, e.g., 0.15 = 15%)
+ * @param distinctTraders     - Unique traders contributing to volume
+ * @param config              - Market configuration parameters
  */
 export function calculateSpread(
   buyRatio: number,
   onlineCount: number,
   zScore: number,
   totalWeightedVolume: number,
-  config: MarketConfig = DEFAULT_CONFIG
+  distinctTraders: number = 1,
+  config: MarketConfig = DEFAULT_CONFIG,
 ): { bpd: number; spd: number } {
-  // Start with half-spread each side
   const halfSpread = config.baseSpread / 2.0;
-  
-  // Calculate imbalance: -1 (all sells) to +1 (all buys)
   const imbalance = (buyRatio - 0.5) * 2.0;
-  
-  // Apply volume impact to spread asymmetry
-  // More buys → higher BPD, more sells → higher SPD
+
   let bpd = halfSpread + Math.max(0, imbalance) * halfSpread * config.volumeImpact;
   let spd = halfSpread + Math.max(0, -imbalance) * halfSpread * config.volumeImpact;
-  
-  // Apply per-item liquidity reduction
-  const liq = liquidityReduction(totalWeightedVolume, config.liquidityCoeff);
+
+  const liq = liquidityReduction(
+    totalWeightedVolume,
+    distinctTraders,
+    config.liquidityCoeff,
+    config.liquidityFullEffectTraders,
+  );
   bpd *= liq;
   spd *= liq;
-  
-  // Apply player count scaling (more players = tighter spreads)
+
   const ps = playerScaling(onlineCount, config.fullEffectPlayers);
   const playerFactor = 1.0 - config.playerImpact * ps;
   bpd *= playerFactor;
   spd *= playerFactor;
-  
-  // Apply global volume multiplier
+
   const gvm = globalVolumeMultiplier(zScore);
   bpd *= gvm;
   spd *= gvm;
-  
+
   return { bpd, spd };
 }
 
 /**
  * Calculate buy and sell prices given base price and market conditions.
- * 
- * @param basePrice - The item's base/reference price
- * @param buyRatio - Fraction of trades that are buys (0-1)
- * @param onlineCount - Current online player count
- * @param zScore - Z-score of recent market activity
- * @param totalWeightedVolume - Weighted volume for liquidity calc
- * @param config - Market configuration parameters
- * @returns Object with buyPrice, sellPrice, bpd, spd
  */
 export function calculatePrices(
   basePrice: number,
@@ -169,16 +174,12 @@ export function calculatePrices(
   onlineCount: number,
   zScore: number,
   totalWeightedVolume: number,
-  config: MarketConfig = DEFAULT_CONFIG
+  distinctTraders: number = 1,
+  config: MarketConfig = DEFAULT_CONFIG,
 ): { buyPrice: number; sellPrice: number; bpd: number; spd: number } {
   const { bpd, spd } = calculateSpread(
-    buyRatio,
-    onlineCount,
-    zScore,
-    totalWeightedVolume,
-    config
+    buyRatio, onlineCount, zScore, totalWeightedVolume, distinctTraders, config,
   );
-  
   return {
     buyPrice: basePrice * (1 + bpd),
     sellPrice: basePrice * (1 - spd),
@@ -244,31 +245,62 @@ export function simulatePrice(
 
 /**
  * Generate spread curve data for visualization.
- * 
- * @param config - Market configuration
- * @param onlineCount - Player count to use
- * @param zScore - Z-score to use
- * @param totalWeightedVolume - Volume to use
- * @returns Array of { buyRatio, bpd, spd, totalSpread } objects
+ *
+ * @param config              - Market configuration
+ * @param onlineCount         - Player count to use
+ * @param zScore              - Z-score to use
+ * @param totalWeightedVolume - Volume to use for liquidity calc
+ * @param distinctTraders     - Unique trader count for liquidity calc
  */
 export function generateSpreadCurve(
   config: MarketConfig = DEFAULT_CONFIG,
   onlineCount: number = 10,
   zScore: number = 0,
-  totalWeightedVolume: number = 0
+  totalWeightedVolume: number = 0,
+  distinctTraders: number = 5,
 ): Array<{ buyRatio: number; bpd: number; spd: number; totalSpread: number }> {
-  const points: Array<{ buyRatio: number; bpd: number; spd: number; totalSpread: number }> = [];
-  
+  const points = [];
   for (let i = 0; i <= 100; i++) {
     const buyRatio = i / 100;
-    const { bpd, spd } = calculateSpread(buyRatio, onlineCount, zScore, totalWeightedVolume, config);
-    points.push({
-      buyRatio,
-      bpd: bpd * 100, // Convert to percentage
-      spd: spd * 100,
-      totalSpread: (bpd + spd) * 100,
-    });
+    const { bpd, spd } = calculateSpread(
+      buyRatio, onlineCount, zScore, totalWeightedVolume, distinctTraders, config,
+    );
+    points.push({ buyRatio, bpd: bpd * 100, spd: spd * 100, totalSpread: (bpd + spd) * 100 });
   }
-  
   return points;
+}
+
+/**
+ * Returns the multiplicative contribution of each spread factor.
+ * Useful for building a breakdown panel in the UI.
+ */
+export function getSpreadFactors(
+  buyRatio: number,
+  onlineCount: number,
+  zScore: number,
+  totalWeightedVolume: number,
+  distinctTraders: number = 1,
+  config: MarketConfig = DEFAULT_CONFIG,
+) {
+  const halfSpread = config.baseSpread / 2.0;
+  const imbalance = (buyRatio - 0.5) * 2.0;
+
+  // BPD after imbalance step
+  const bpdAfterImbalance = halfSpread + Math.max(0, imbalance) * halfSpread * config.volumeImpact;
+
+  const liq = liquidityReduction(
+    totalWeightedVolume, distinctTraders, config.liquidityCoeff, config.liquidityFullEffectTraders,
+  );
+  const ps = playerScaling(onlineCount, config.fullEffectPlayers);
+  const playerFactor = 1.0 - config.playerImpact * ps;
+  const gvm = globalVolumeMultiplier(zScore);
+
+  return {
+    baseHalfSpread: halfSpread * 100,
+    imbalanceMultiplier: halfSpread > 0 ? bpdAfterImbalance / halfSpread : 1,
+    liquidityFactor: liq,
+    playerFactor,
+    globalVolumeFactor: gvm,
+    playerScalingPct: ps * 100,
+  };
 }

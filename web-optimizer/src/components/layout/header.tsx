@@ -1,54 +1,61 @@
 'use client';
 
 import Link from 'next/link';
-import { Github, Calculator, Home, BookOpen } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Github, BarChart2, Home, BookOpen, TrendingUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const NAV = [
+  { href: '/', label: 'Home', icon: Home },
+  { href: '/how-it-works', label: 'How It Works', icon: BookOpen },
+  { href: '/simulator', label: 'Simulator', icon: BarChart2 },
+];
 
 export function Header() {
+  const pathname = usePathname();
+
   return (
-    <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
+    <header className="sticky top-0 z-50 border-b border-gray-800/60 bg-gray-950/80 backdrop-blur-md">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14 sm:h-16">
+        <div className="flex items-center justify-between h-14">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 text-emerald-500 font-bold text-lg sm:text-xl shrink-0">
-            <Calculator className="w-5 h-5 sm:w-6 sm:h-6" />
-            <span>Auto-Tune</span>
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-7 h-7 rounded-md bg-emerald-600/20 border border-emerald-600/40 flex items-center justify-center group-hover:bg-emerald-600/30 transition-colors">
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+            </div>
+            <span className="font-bold text-white tracking-tight">
+              Auto<span className="text-emerald-400">-Tune</span>
+            </span>
           </Link>
-          
-          {/* Nav links */}
-          <div className="flex items-center gap-3 sm:gap-6">
-            <Link
-              href="/"
-              className="flex items-center gap-1.5 text-gray-300 hover:text-emerald-500 transition-colors"
-              title="Home"
-            >
-              <Home className="w-4 h-4" />
-              <span className="hidden sm:inline text-sm">Home</span>
-            </Link>
-            <Link
-              href="/how-it-works"
-              className="flex items-center gap-1.5 text-gray-300 hover:text-emerald-500 transition-colors"
-              title="How It Works"
-            >
-              <BookOpen className="w-4 h-4" />
-              <span className="hidden sm:inline text-sm">How It Works</span>
-            </Link>
-            <Link
-              href="/simulator"
-              className="flex items-center gap-1.5 text-gray-300 hover:text-emerald-500 transition-colors"
-              title="Simulator"
-            >
-              <Calculator className="w-4 h-4" />
-              <span className="hidden sm:inline text-sm">Simulator</span>
-            </Link>
+
+          {/* Nav */}
+          <div className="flex items-center gap-1">
+            {NAV.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors',
+                    active
+                      ? 'bg-emerald-600/15 text-emerald-400 border border-emerald-600/30'
+                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60',
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">{label}</span>
+                </Link>
+              );
+            })}
             <a
               href="https://github.com/Aetheraudios/Auto-Tune"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-gray-300 hover:text-emerald-500 transition-colors"
-              title="GitHub"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800/60 transition-colors ml-1"
             >
-              <Github className="w-4 h-4" />
-              <span className="hidden sm:inline text-sm">GitHub</span>
+              <Github className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">GitHub</span>
             </a>
           </div>
         </div>

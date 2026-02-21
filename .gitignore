@@ -64,3 +64,6 @@ web/.env*.local
 
 # AI
 .claude
+# Rust
+target/
+

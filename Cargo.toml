@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "price-solver",
+    "api-server",
+]
+resolver = "2"

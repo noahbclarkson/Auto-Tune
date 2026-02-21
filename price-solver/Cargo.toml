@@ -1,0 +1,16 @@
+[package]
+name = "price-solver"
+version = "0.1.0"
+edition = "2021"
+description = "Least-squares solver for true item prices from cross-server ratio matrices"
+license = "MIT"
+repository = "https://github.com/noahbclarkson/Auto-Tune"
+
+[dependencies]
+nalgebra = "0.32"
+anyhow = "1.0"
+thiserror = "1"
+tracing = "0.1"
+
+[dev-dependencies]
+approx = "0.5"

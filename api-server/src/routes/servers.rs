@@ -82,10 +82,18 @@ pub async fn list_servers(pool: web::Data<PgPool>) -> impl Responder {
     match result {
         Ok(rows) => {
             use sqlx::Row;
-            let servers: Vec<Server> = rows
-                .into_iter()
-                .map(|r| Server {
-                    id: r.try_get("id").unwrap_or_else(|_| Uuid::new_v4()),
+            let mut servers: Vec<Server> = Vec::new();
+            for r in rows {
+                let id = match r.try_get::<Uuid, _>("id") {
+                    Ok(v) => v,
+                    Err(e) => {
+                        tracing::error!("skipping corrupt row in list_servers (id): {e}");
+                        continue;
+                    }
+                };
+                
+                servers.push(Server {
+                    id,
                     name: r.try_get::<String, _>("name").unwrap_or_default(),
                     player_count: r.try_get::<i32, _>("player_count").unwrap_or(0),
                     created_at: r
@@ -96,8 +104,8 @@ pub async fn list_servers(pool: web::Data<PgPool>) -> impl Responder {
                         .unwrap_or_else(|_| Utc::now()),
                     last_submission_at: r.try_get::<Option<DateTime<Utc>>, _>("last_submission_at").ok().flatten(),
                     last_submission_item_count: r.try_get::<Option<i32>, _>("last_submission_item_count").ok().flatten(),
-                })
-                .collect();
+                });
+            }
             HttpResponse::Ok().json(servers)
         }
         Err(e) => {

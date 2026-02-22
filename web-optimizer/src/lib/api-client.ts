@@ -32,6 +32,16 @@ export interface PriceHistoryResponse {
   history: PriceHistoryPoint[];
 }
 
+export interface ManagedServer {
+  id: string;
+  name: string;
+  player_count: number;
+  created_at: string;
+  last_seen: string;
+  last_submission_at?: string | null;
+  last_submission_item_count?: number | null;
+}
+
 export interface ExchangeRate {
   server_id: string;
   name: string;
@@ -98,6 +108,10 @@ export async function fetchTruePrices(): Promise<ApiResult<TruePricesResponse>> 
 export async function fetchPriceHistory(item: string): Promise<ApiResult<PriceHistoryResponse>> {
   const encodedItem = encodeURIComponent(item);
   return fetchJson<PriceHistoryResponse>(`/prices/history/${encodedItem}`);
+}
+
+export async function fetchServers(): Promise<ApiResult<ManagedServer[]>> {
+  return fetchJson<ManagedServer[]>("/servers");
 }
 
 export async function fetchExchangeRates(): Promise<ApiResult<ExchangeRatesResponse>> {

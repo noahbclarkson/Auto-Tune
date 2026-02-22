@@ -13,6 +13,8 @@ pub struct Server {
     pub player_count: i32,
     pub created_at: DateTime<Utc>,
     pub last_seen: DateTime<Utc>,
+    pub last_submission_at: Option<DateTime<Utc>>,
+    pub last_submission_item_count: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]

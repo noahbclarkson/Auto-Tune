@@ -56,7 +56,25 @@ pub async fn register_server(
 /// GET /api/servers
 pub async fn list_servers(pool: web::Data<PgPool>) -> impl Responder {
     let result = sqlx::query(
-        "SELECT id, name, player_count, created_at, last_seen FROM servers ORDER BY last_seen DESC",
+        r#"
+        SELECT
+            s.id,
+            s.name,
+            s.player_count,
+            s.created_at,
+            s.last_seen,
+            ps.submitted_at AS last_submission_at,
+            COALESCE(array_length(ps.item_names, 1), 0) AS last_submission_item_count
+        FROM servers s
+        LEFT JOIN LATERAL (
+            SELECT submitted_at, item_names
+            FROM price_submissions
+            WHERE server_id = s.id
+            ORDER BY submitted_at DESC
+            LIMIT 1
+        ) ps ON TRUE
+        ORDER BY s.last_seen DESC
+        "#,
     )
     .fetch_all(pool.get_ref())
     .await;
@@ -76,6 +94,8 @@ pub async fn list_servers(pool: web::Data<PgPool>) -> impl Responder {
                     last_seen: r
                         .try_get::<DateTime<Utc>, _>("last_seen")
                         .unwrap_or_else(|_| Utc::now()),
+                    last_submission_at: r.try_get::<Option<DateTime<Utc>>, _>("last_submission_at").ok().flatten(),
+                    last_submission_item_count: r.try_get::<Option<i32>, _>("last_submission_item_count").ok().flatten(),
                 })
                 .collect();
             HttpResponse::Ok().json(servers)

@@ -36,13 +36,9 @@ async fn main() -> Result<()> {
     let database_url = std::env::var("DATABASE_URL")
         .expect("DATABASE_URL environment variable must be set");
 
-    let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_owned());
-    let port: u16 = std::env::var("PORT")
-        .ok()
-        .and_then(|p| p.parse().ok())
-        .unwrap_or(8080);
+    let bind_addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_owned());
 
-    tracing::info!(host, port, "starting Auto-Tune price API");
+    tracing::info!(bind_addr, "starting Auto-Tune price API");
 
     // Database setup
     let pool = db::create_pool(&database_url).await?;
@@ -74,7 +70,7 @@ async fn main() -> Result<()> {
                     .route("/prices", web::post().to(submit_prices)),
             )
     })
-    .bind((host.as_str(), port))?
+    .bind(&bind_addr)?
     .run()
     .await?;
 

@@ -24,6 +24,8 @@ repositories {
 }
 
 dependencies {
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+
     // Paper API
     compileOnly("io.papermc.paper:paper-api:${property("paperVersion")}")
 
@@ -150,4 +152,8 @@ tasks {
 tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-processing"))
     options.errorprone.disableWarningsInGeneratedCode = true
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

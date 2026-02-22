@@ -1,40 +1,42 @@
-import { PriceCalculator } from "@/components/prices/price-calculator";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
+import { PriceCalculator } from '@/components/prices/price-calculator';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 
 export const metadata = {
-  title: "True Prices | Auto-Tune",
-  description: "Cross-server price discovery using least-squares optimization on ratio matrices",
+  title: 'True Prices | Auto-Tune',
+  description:
+    'Cross-server price discovery using least-squares optimization on ratio matrices',
 };
 
 export default function TruePricesPage() {
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-gray-950 text-white">
       <Header />
-      <main className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold text-emerald-400 mb-4">
-            True Price Calculator
-          </h1>
-          <p className="text-slate-400 mb-8 text-lg">
-            Calculate &quot;true&quot; item prices from cross-server ratio matrices using
-            least-squares optimization. No matter how servers scale their prices,
-            the ratios reveal the real relative value.
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mb-8">
+          <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">
+            Data Engine
           </p>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8">
-            <h2 className="text-xl font-semibold text-emerald-400 mb-4">How It Works</h2>
-            <ol className="list-decimal list-inside space-y-2 text-slate-300">
-              <li>Each server provides a ratio matrix: r[i][j] = price_i / price_j</li>
-              <li>We aggregate ratios across servers using geometric mean in log-space</li>
-              <li>Build a least-squares system: x_i - x_j = log(r_ij)</li>
-              <li>Anchor one item (e.g., dirt = $0.10) to set absolute scale</li>
-              <li>Solve and exponentiate to get true prices</li>
-            </ol>
-          </div>
-
-          <PriceCalculator />
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">True Prices</h1>
+          <p className="text-gray-400 max-w-3xl text-sm sm:text-base leading-relaxed">
+            Auto-Tune combines price ratios from multiple servers and solves a constrained
+            least-squares system to estimate globally consistent item values.
+          </p>
         </div>
+
+        <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-5 mb-8">
+          <h2 className="text-sm font-semibold text-emerald-400 uppercase tracking-wide mb-2">
+            How the true-prices model works
+          </h2>
+          <p className="text-gray-300 text-sm leading-relaxed">
+            Each server contributes a ratio matrix where every value expresses one item relative
+            to another. We aggregate those ratios in log-space, solve the best-fit graph of
+            relative prices, then anchor one item to an absolute value so the whole market has a
+            practical price scale.
+          </p>
+        </div>
+
+        <PriceCalculator />
       </main>
       <Footer />
     </div>

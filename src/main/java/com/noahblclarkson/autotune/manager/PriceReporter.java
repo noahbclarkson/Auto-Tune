@@ -133,7 +133,7 @@ public class PriceReporter {
         httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenAccept(response -> {
                     if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                        accumulators.clear();
+                        accumulators.keySet().removeAll(snapshot.keySet());
                         plugin.getLogger().fine("Submitted " + itemNames.size() + " item prices to api-server.");
                     } else {
                         plugin.getLogger().warning("Price reporter submit failed: HTTP " + response.statusCode() + " - " + response.body());

@@ -7,6 +7,7 @@ import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.ShopManager;
+import com.noahblclarkson.autotune.manager.PriceReporter;
 import com.noahblclarkson.autotune.model.CartItem;
 import com.noahblclarkson.autotune.model.PlayerData;
 import com.noahblclarkson.autotune.model.ShopItem;
@@ -33,6 +34,7 @@ public class EconomyManager {
     private final MarketEngine marketEngine;
     private final PlayerRepository playerRepository;
     private final TransactionRepository transactionRepository;
+    private final PriceReporter priceReporter;
 
     @Inject
     public EconomyManager(
@@ -41,7 +43,8 @@ public class EconomyManager {
             ShopManager shopManager,
             MarketEngine marketEngine,
             PlayerRepository playerRepository,
-            TransactionRepository transactionRepository
+            TransactionRepository transactionRepository,
+            PriceReporter priceReporter
     ) {
         this.economy = economy;
         this.databaseManager = databaseManager;
@@ -49,6 +52,7 @@ public class EconomyManager {
         this.marketEngine = marketEngine;
         this.playerRepository = playerRepository;
         this.transactionRepository = transactionRepository;
+        this.priceReporter = priceReporter;
     }
 
     public double getBalance(@NotNull Player player) {
@@ -106,6 +110,7 @@ public class EconomyManager {
                     .build();
 
             transactionRepository.insert(transaction);
+            priceReporter.recordTransaction(item, transaction);
             playerRepository.addTransaction(playerId, totalPrice, true);
             marketEngine.recordBuy(item.id(), amount);
 
@@ -143,6 +148,7 @@ public class EconomyManager {
                     .build();
 
             transactionRepository.insert(transaction);
+            priceReporter.recordTransaction(item, transaction);
             playerRepository.addTransaction(playerId, totalPrice, false);
             marketEngine.recordSell(item.id(), amount);
             shopManager.invalidateBuyableCache(item.id());
@@ -171,6 +177,7 @@ public class EconomyManager {
                     .build();
 
             transactionRepository.insert(transaction);
+            priceReporter.recordTransaction(item, transaction);
             playerRepository.addTransaction(playerId, totalPrice, false);
             marketEngine.recordSell(item.id(), amount);
             shopManager.invalidateBuyableCache(item.id());
@@ -258,6 +265,7 @@ public class EconomyManager {
                         .build();
 
                 transactionRepository.insert(transaction);
+                priceReporter.recordTransaction(cartItem.shopItem(), transaction);
 
                 if (cartItem.isBuying()) {
                     marketEngine.recordBuy(cartItem.shopItem().id(), cartItem.quantity());

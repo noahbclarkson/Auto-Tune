@@ -289,3 +289,10 @@ debug:
   # Log price calculations
   log-prices: false
 
+
+price-reporter:
+  enabled: true
+  api-url: "https://prices.auto-tune.io"
+  api-key: "your-server-api-key"
+  server-id: "your-server-uuid"
+  report-interval-minutes: 5

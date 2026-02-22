@@ -1,4 +1,4 @@
-use actix_web::{middleware::Logger, web, App, HttpServer};
+use actix_web::{middleware::Logger, web, App, HttpResponse, HttpServer, Responder};
 use anyhow::Result;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -14,6 +14,13 @@ use routes::{
     prices::{get_price_history, get_true_prices, submit_prices},
     servers::{list_servers, register_server},
 };
+
+async fn health() -> impl Responder {
+    HttpResponse::Ok().json(serde_json::json!({
+        "status": "ok",
+        "version": env!("CARGO_PKG_VERSION")
+    }))
+}
 
 #[actix_web::main]
 async fn main() -> Result<()> {
@@ -47,6 +54,7 @@ async fn main() -> Result<()> {
         App::new()
             .app_data(pool_data.clone())
             .wrap(Logger::default())
+            .route("/health", web::get().to(health))
             // Public endpoints
             .route("/api/servers/register", web::post().to(register_server))
             .route("/api/servers", web::get().to(list_servers))

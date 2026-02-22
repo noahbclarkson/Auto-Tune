@@ -117,17 +117,25 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
             }
         }
 
-        // One-step inference for missing cross-pairs
+        // One-step inference for missing cross-pairs using geometric mean of all valid bridges
         for i in 0..n {
             for j in 0..n {
                 if matrix[i][j] == 1.0 && i != j {
+                    let mut valid_bridges = Vec::new();
                     for k in 0..n {
                         let ik = matrix[i][k];
                         let kj = matrix[k][j];
-                        if ik != 1.0 && kj != 1.0 && ik.is_finite() && kj.is_finite() {
-                            matrix[i][j] = ik * kj;
-                            break;
+                        if ik != 1.0 && kj != 1.0 && ik.is_finite() && kj.is_finite() && ik > 0.0 && kj > 0.0 {
+                            valid_bridges.push(ik * kj);
                         }
+                    }
+                    if !valid_bridges.is_empty() {
+                        let mut sum_log = 0.0;
+                        for &v in &valid_bridges {
+                            sum_log += v.ln();
+                        }
+                        let mean_log = sum_log / (valid_bridges.len() as f64);
+                        matrix[i][j] = mean_log.exp();
                     }
                 }
             }

@@ -1,7 +1,30 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
-const features = [
+const accentMap = {
+  emerald: {
+    tag: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    code: 'text-emerald-300',
+    bar: 'bg-emerald-600/20 border-emerald-600/30',
+    stat: 'text-emerald-400',
+  },
+  sky: {
+    tag: 'text-sky-400 bg-sky-950/60 border-sky-800/50',
+    code: 'text-sky-300',
+    bar: 'bg-sky-600/20 border-sky-600/30',
+    stat: 'text-sky-400',
+  },
+  amber: {
+    tag: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
+    code: 'text-amber-300',
+    bar: 'bg-amber-600/20 border-amber-600/30',
+    stat: 'text-amber-400',
+  },
+} as const;
+
+type AccentKey = keyof typeof accentMap;
+
+const features: { tag: string; title: string; description: string; stat: { label: string; value: string }; code: string; accent: AccentKey }[] = [
   {
     tag: 'PRICING',
     title: 'Supply & Demand Pricing',
@@ -30,27 +53,6 @@ const features = [
     accent: 'amber',
   },
 ];
-
-const accentMap = {
-  emerald: {
-    tag: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
-    code: 'text-emerald-300',
-    bar: 'bg-emerald-600/20 border-emerald-600/30',
-    stat: 'text-emerald-400',
-  },
-  sky: {
-    tag: 'text-sky-400 bg-sky-950/60 border-sky-800/50',
-    code: 'text-sky-300',
-    bar: 'bg-sky-600/20 border-sky-600/30',
-    stat: 'text-sky-400',
-  },
-  amber: {
-    tag: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
-    code: 'text-amber-300',
-    bar: 'bg-amber-600/20 border-amber-600/30',
-    stat: 'text-amber-400',
-  },
-} as const;
 
 export function FeatureCards() {
   return (

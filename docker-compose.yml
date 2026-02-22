@@ -1,0 +1,37 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: autotune
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-autotune_dev}
+      POSTGRES_DB: autotune
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autotune"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api-server:
+    build:
+      context: .
+      dockerfile: api-server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://autotune:${POSTGRES_PASSWORD:-autotune_dev}@postgres:5432/autotune
+      BIND_ADDR: 0.0.0.0:8080
+      RUST_LOG: ${RUST_LOG:-info}
+    ports:
+      - "${API_PORT:-8080}:8080"
+
+volumes:
+  postgres_data:

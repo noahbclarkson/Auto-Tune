@@ -1,34 +1,53 @@
-import { Calculator } from 'lucide-react';
+import Link from 'next/link';
+import { TrendingUp, Github, ExternalLink } from 'lucide-react';
 
 export function Footer() {
   return (
-    <footer className="bg-gray-900 border-t border-gray-800 py-8">
+    <footer className="border-t border-gray-800/60 bg-gray-950 py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-gray-400">
-            <Calculator className="w-5 h-5 text-emerald-500" />
-            <span>Auto-Tune — Adaptive Market Pricing for Minecraft</span>
+        <div className="flex flex-col md:flex-row items-start justify-between gap-8">
+          {/* Brand */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded bg-emerald-600/20 border border-emerald-600/30 flex items-center justify-center">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+              </div>
+              <span className="font-bold text-white text-sm">
+                Auto<span className="text-emerald-400">-Tune</span>
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
+              Adaptive market pricing engine for Minecraft Paper servers.
+              Supply, demand, and player activity drive the economy.
+            </p>
           </div>
-          
-          <div className="flex items-center gap-6 text-sm text-gray-500">
-            <a 
+
+          {/* Links */}
+          <div className="flex flex-col gap-2 text-sm">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Links</p>
+            <a
               href="https://github.com/Aetheraudios/Auto-Tune"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-emerald-500 transition-colors"
+              className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-colors"
             >
+              <Github className="w-3.5 h-3.5" />
               GitHub
             </a>
-            <a
-              href="https://www.spigotmc.org/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-emerald-500 transition-colors"
-            >
-              SpigotMC
-            </a>
-            <span>© 2024 Auto-Tune</span>
+            <Link href="/simulator" className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-colors">
+              <ExternalLink className="w-3.5 h-3.5" />
+              Simulator
+            </Link>
+            <Link href="/how-it-works" className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-colors">
+              <ExternalLink className="w-3.5 h-3.5" />
+              How It Works
+            </Link>
           </div>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-gray-800/40 flex items-center justify-between">
+          <p className="text-xs text-gray-600">© 2025 Auto-Tune. MIT License.</p>
+          <p className="text-xs text-gray-600">Paper 1.21.4 · Java 21</p>
         </div>
       </div>
     </footer>

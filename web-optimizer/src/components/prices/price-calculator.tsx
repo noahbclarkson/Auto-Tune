@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { submitServerPrices } from "@/lib/api-client";
 
 interface ServerData {
   id: string;
@@ -45,23 +46,39 @@ export function PriceCalculator() {
   const [result, setResult] = useState<PriceResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [liveServerId, setLiveServerId] = useState("");
+  const [liveApiKey, setLiveApiKey] = useState("");
+  const [livePlayerCount, setLivePlayerCount] = useState(20);
+  const [selectedServerIndex, setSelectedServerIndex] = useState(0);
+  const [submitStatus, setSubmitStatus] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const liveApiEnabled = Boolean(process.env.NEXT_PUBLIC_API_URL);
+
   const addItem = () => {
     const newItem = `Item ${items.length + 1}`;
     const newItems = [...items, newItem];
     setItems(newItems);
 
-    setServers(servers.map((server) => {
-      const n = newItems.length;
-      const newRatios = Array(n).fill(0).map((_, i) =>
-        Array(n).fill(0).map((_, j) => {
-          if (i < server.ratios.length && j < server.ratios.length) {
-            return server.ratios[i][j];
-          }
-          return i === j ? 1.0 : 0.0;
-        })
-      );
-      return { ...server, ratios: newRatios };
-    }));
+    setServers(
+      servers.map((server) => {
+        const n = newItems.length;
+        const newRatios = Array(n)
+          .fill(0)
+          .map((_, i) =>
+            Array(n)
+              .fill(0)
+              .map((__, j) => {
+                if (i < server.ratios.length && j < server.ratios.length) {
+                  return server.ratios[i][j];
+                }
+                return i === j ? 1.0 : 0.0;
+              }),
+          );
+        return { ...server, ratios: newRatios };
+      }),
+    );
   };
 
   const removeItem = (index: number) => {
@@ -70,12 +87,14 @@ export function PriceCalculator() {
     const newItems = items.filter((_, i) => i !== index);
     setItems(newItems);
 
-    setServers(servers.map((server) => ({
-      ...server,
-      ratios: server.ratios
-        .filter((_, i) => i !== index)
-        .map((row) => row.filter((_, j) => j !== index)),
-    })));
+    setServers(
+      servers.map((server) => ({
+        ...server,
+        ratios: server.ratios
+          .filter((_, i) => i !== index)
+          .map((row) => row.filter((__, j) => j !== index)),
+      })),
+    );
 
     if (anchorItem >= newItems.length) {
       setAnchorItem(0);
@@ -83,15 +102,17 @@ export function PriceCalculator() {
   };
 
   const updateRatio = (serverIndex: number, i: number, j: number, value: number) => {
-    setServers(servers.map((server, sIdx) => {
-      if (sIdx !== serverIndex) return server;
-      const newRatios = server.ratios.map((row) => [...row]);
-      newRatios[i][j] = value;
-      if (value > 0) {
-        newRatios[j][i] = 1.0 / value;
-      }
-      return { ...server, ratios: newRatios };
-    }));
+    setServers(
+      servers.map((server, sIdx) => {
+        if (sIdx !== serverIndex) return server;
+        const newRatios = server.ratios.map((row) => [...row]);
+        newRatios[i][j] = value;
+        if (value > 0) {
+          newRatios[j][i] = 1.0 / value;
+        }
+        return { ...server, ratios: newRatios };
+      }),
+    );
   };
 
   const calculatePrices = () => {
@@ -101,7 +122,9 @@ export function PriceCalculator() {
       for (let i = 0; i < server.ratios.length; i++) {
         for (let j = 0; j < server.ratios[i].length; j++) {
           if (i !== j && server.ratios[i][j] <= 0) {
-            setError(`Invalid ratio at ${server.name}: ${items[i]}/${items[j]} = ${server.ratios[i][j]}`);
+            setError(
+              `Invalid ratio at ${server.name}: ${items[i]}/${items[j]} = ${server.ratios[i][j]}`,
+            );
             return;
           }
         }
@@ -113,7 +136,9 @@ export function PriceCalculator() {
     const weights = servers.map((s) => s.weight);
     const wSum = weights.reduce((a, b) => a + b, 0);
 
-    const aggLogR: number[][] = Array(n).fill(0).map(() => Array(n).fill(0));
+    const aggLogR: number[][] = Array(n)
+      .fill(0)
+      .map(() => Array(n).fill(0));
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
         if (i === j) {
@@ -131,7 +156,9 @@ export function PriceCalculator() {
     const numEdges = (n * (n - 1)) / 2;
     const rows = numEdges + 1;
 
-    const A: number[][] = Array(rows).fill(0).map(() => Array(n).fill(0));
+    const A: number[][] = Array(rows)
+      .fill(0)
+      .map(() => Array(n).fill(0));
     const b: number[] = Array(rows).fill(0);
 
     let k = 0;
@@ -161,6 +188,36 @@ export function PriceCalculator() {
     }
   };
 
+  const submitToLiveApi = async () => {
+    setSubmitStatus(null);
+    setSubmitError(null);
+
+    if (!liveServerId || !liveApiKey) {
+      setSubmitError("Enter your live server ID and API key first.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const selectedServer = servers[selectedServerIndex];
+    const response = await submitServerPrices({
+      serverId: liveServerId,
+      apiKey: liveApiKey,
+      itemNames: items,
+      ratioMatrix: selectedServer.ratios,
+      playerCount: livePlayerCount,
+    });
+    setIsSubmitting(false);
+
+    if (response.error) {
+      setSubmitError(response.error);
+      return;
+    }
+
+    setSubmitStatus(
+      `Uploaded ${response.data?.items_processed ?? items.length} items from ${selectedServer.name} to the live API.`,
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-6">
@@ -172,7 +229,7 @@ export function PriceCalculator() {
         <div className="flex flex-wrap gap-2 mb-4">
           {items.map((item, i) => (
             <button
-              key={i}
+              key={item}
               onClick={() => setAnchorItem(i)}
               className={`px-3 py-1 rounded-full text-sm font-medium transition-colors border ${
                 i === anchorItem
@@ -229,17 +286,19 @@ export function PriceCalculator() {
                   <thead>
                     <tr>
                       <th className="px-2 py-1 text-gray-500"></th>
-                      {items.map((item, j) => (
-                        <th key={j} className="px-2 py-1 text-gray-400 font-medium">{item}</th>
+                      {items.map((item) => (
+                        <th key={`${server.id}-${item}`} className="px-2 py-1 text-gray-400 font-medium">
+                          {item}
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((rowItem, i) => (
-                      <tr key={i}>
+                      <tr key={`${server.id}-${rowItem}`}>
                         <td className="px-2 py-1 text-gray-400 font-medium">{rowItem}</td>
-                        {items.map((_, j) => (
-                          <td key={j} className="px-1 py-1">
+                        {items.map((__, j) => (
+                          <td key={`${server.id}-${i}-${j}`} className="px-1 py-1">
                             <input
                               type="number"
                               value={server.ratios[i]?.[j] ?? 1}
@@ -261,12 +320,72 @@ export function PriceCalculator() {
         </div>
       </div>
 
-      <button
-        onClick={calculatePrices}
-        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 px-6 rounded-lg text-lg font-medium transition-colors shadow-lg shadow-emerald-600/20"
-      >
-        Calculate True Prices
-      </button>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <button
+          onClick={calculatePrices}
+          className="w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white py-3 px-6 rounded-lg text-lg font-medium transition-colors shadow-lg shadow-emerald-600/20"
+        >
+          Calculate True Prices (Local)
+        </button>
+
+        {liveApiEnabled && (
+          <button
+            onClick={submitToLiveApi}
+            disabled={isSubmitting}
+            className="w-full bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 disabled:opacity-60 text-white py-3 px-6 rounded-lg text-lg font-medium transition-colors shadow-lg shadow-indigo-600/20"
+          >
+            {isSubmitting ? "Submitting to Live API..." : "Submit Matrix to Live API"}
+          </button>
+        )}
+      </div>
+
+      {liveApiEnabled && (
+        <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-white mb-1">Live API Upload</h3>
+          <p className="text-sm text-gray-400 mb-4">
+            Optional: push one matrix to your api-server using your registered server credentials.
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input
+              type="text"
+              value={liveServerId}
+              onChange={(e) => setLiveServerId(e.target.value)}
+              placeholder="Server ID (UUID)"
+              className="px-3 py-2 bg-gray-950 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <input
+              type="password"
+              value={liveApiKey}
+              onChange={(e) => setLiveApiKey(e.target.value)}
+              placeholder="API key"
+              className="px-3 py-2 bg-gray-950 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <select
+              value={selectedServerIndex}
+              onChange={(e) => setSelectedServerIndex(parseInt(e.target.value, 10))}
+              className="px-3 py-2 bg-gray-950 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {servers.map((server, idx) => (
+                <option key={server.id} value={idx}>
+                  Upload matrix: {server.name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              value={livePlayerCount}
+              onChange={(e) => setLivePlayerCount(parseInt(e.target.value, 10) || 0)}
+              min="0"
+              className="px-3 py-2 bg-gray-950 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Player count"
+            />
+          </div>
+
+          {submitError && <p className="text-red-300 text-sm mt-3">{submitError}</p>}
+          {submitStatus && <p className="text-emerald-300 text-sm mt-3">{submitStatus}</p>}
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-950/30 border border-red-900/60 rounded-lg p-4">
@@ -280,7 +399,7 @@ export function PriceCalculator() {
           <div className="grid gap-3">
             {result.prices.map((price, i) => (
               <div
-                key={i}
+                key={`${result.items[i]}-${i}`}
                 className={`flex justify-between items-center p-3 rounded-lg border ${
                   i === result.anchorItem
                     ? "bg-emerald-600/10 border-emerald-600/30"
@@ -304,7 +423,9 @@ export function PriceCalculator() {
 }
 
 function solveNormalEquations(A: number[][], b: number[], n: number): number[] {
-  const AtA: number[][] = Array(n).fill(0).map(() => Array(n).fill(0));
+  const AtA: number[][] = Array(n)
+    .fill(0)
+    .map(() => Array(n).fill(0));
   const Atb: number[] = Array(n).fill(0);
 
   const rows = A.length;

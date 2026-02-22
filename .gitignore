@@ -51,11 +51,11 @@ Thumbs.db
 run/
 *.db
 
-# Web frontend
-web/node_modules/
-web/.next/
-web/out/
-web/.env*.local
+# Environment variables
+.env
+.env.*
+!.env.example
+
 
 # Misc
 *.swp

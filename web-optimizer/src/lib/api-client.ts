@@ -118,6 +118,16 @@ export async function fetchExchangeRates(): Promise<ApiResult<ExchangeRatesRespo
   return fetchJson<ExchangeRatesResponse>("/servers/exchange-rates");
 }
 
+export async function registerServer(
+  name: string,
+  playerCount: number,
+): Promise<ApiResult<{ id: string; api_key: string }>> {
+  return fetchJson<{ id: string; api_key: string }>("/servers/register", {
+    method: "POST",
+    body: JSON.stringify({ name, player_count: playerCount }),
+  });
+}
+
 export async function submitServerPrices(
   payload: SubmitServerPricesRequest,
 ): Promise<ApiResult<SubmitServerPricesResponse>> {

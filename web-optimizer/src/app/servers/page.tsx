@@ -1,6 +1,7 @@
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { ServerCard } from '@/components/servers/server-card';
+import { RegisterServerModal } from '@/components/servers/register-server-modal';
 import { fetchServers, hasConfiguredApiUrl } from '@/lib/api-client';
 
 export const metadata = {
@@ -22,6 +23,9 @@ export default async function ServersPage() {
           <p className="text-gray-400 max-w-3xl text-sm sm:text-base leading-relaxed">
             Track server availability and inspect the most recent price-submission activity.
           </p>
+          <div className="mt-4">
+            <RegisterServerModal />
+          </div>
         </div>
 
         {servers.length > 0 ? (

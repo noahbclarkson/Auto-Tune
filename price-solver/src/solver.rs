@@ -290,7 +290,7 @@ mod tests {
         let prices = vec![1.0, 2.0, 4.0, 8.0];
         let ratios = make_ratio_matrix(&prices);
         let result = compute_prices_from_servers(&[ratios], None, 0, 1.0).unwrap();
-        for (i, (&expected, computed)) in prices.iter().zip(result.iter()).enumerate() {
+        for (_, (&expected, computed)) in prices.iter().zip(result.iter()).enumerate() {
             assert_relative_eq!(*computed, expected, epsilon = 0.01);
         }
     }

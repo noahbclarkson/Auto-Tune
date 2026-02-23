@@ -39,7 +39,7 @@ fn test_single_server_powers_of_two() {
     let result = compute_prices_from_servers(&[ratios], None, 0, 1.0).unwrap();
 
     assert_eq!(result.len(), 4);
-    for (i, (&expected, computed)) in true_prices.iter().zip(result.iter()).enumerate() {
+    for (&expected, computed) in true_prices.iter().zip(result.iter()) {
         assert_relative_eq!(*computed, expected, epsilon = 0.01);
     }
 }
@@ -82,7 +82,7 @@ fn test_five_servers_with_slight_disagreement() {
     let result = compute_prices_from_servers(&servers, None, 0, 1.0).unwrap();
 
     // With consistent data from 5 servers, should be very accurate
-    for (i, (&expected, computed)) in true_prices.iter().zip(result.iter()).enumerate() {
+    for (&expected, computed) in true_prices.iter().zip(result.iter()) {
         assert_relative_eq!(*computed, expected, epsilon = 0.001);
     }
 }

@@ -43,15 +43,15 @@ function RateRow({ rate }: { rate: ExchangeRate }) {
 
   return (
     <tr className="border-b border-gray-800/40 hover:bg-gray-800/20 transition-colors">
-      <td className="py-3 px-4 text-gray-100 font-medium">{rate.name}</td>
+      <td className="py-3 px-4 text-gray-100 font-medium max-w-[8rem] truncate">{rate.name}</td>
       <td className="py-3 px-4">
         <span className={`font-mono font-semibold ${deviationColor}`}>{formatRate(rate.rate)}</span>
         <span className={`ml-2 text-xs ${deviationColor}`}>
           ({deviationSign}{deviation}%)
         </span>
       </td>
-      <td className="py-3 px-4 text-gray-300">{rate.player_count.toLocaleString()}</td>
-      <td className="py-3 px-4 text-gray-400 text-sm">{new Date(rate.last_seen).toLocaleString()}</td>
+      <td className="py-3 px-4 text-gray-300 hidden sm:table-cell">{rate.player_count.toLocaleString()}</td>
+      <td className="py-3 px-4 text-gray-400 text-sm hidden md:table-cell">{new Date(rate.last_seen).toLocaleString()}</td>
       <td className="py-3 px-4">
         <span className={`text-xs px-2.5 py-1 rounded-full border ${status.className}`}>
           {status.label}
@@ -61,8 +61,58 @@ function RateRow({ rate }: { rate: ExchangeRate }) {
   );
 }
 
+// ─── Error fallback ────────────────────────────────────────────────────────────
+// Shown when the API is unreachable or returns a non-OK response. Keeps users
+// informed and guides them to retry rather than landing on a generic error page.
+
+function ApiErrorFallback({ detail }: { detail?: string | null }) {
+  return (
+    <div className="bg-gray-900/50 border border-red-800/40 rounded-xl p-8 text-center">
+      <p className="text-3xl mb-3">⚠️</p>
+      <p className="text-gray-100 font-semibold text-lg mb-2">Exchange rate data unavailable</p>
+      <p className="text-gray-400 text-sm mb-4 max-w-md mx-auto">
+        We couldn&apos;t reach the pricing service right now. This is usually a temporary issue —
+        please refresh the page to try again.
+      </p>
+      {detail && (
+        <p className="text-red-400/70 text-xs font-mono bg-red-950/30 border border-red-800/30 rounded px-3 py-2 mb-4 max-w-lg mx-auto break-all">
+          {detail}
+        </p>
+      )}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-2">
+        {/* Full-page reload — works server-side without client JS */}
+        <a
+          href="/exchange-rates"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600/20 border border-emerald-600/40 text-emerald-400 text-sm hover:bg-emerald-600/30 transition-colors"
+        >
+          🔄 Retry
+        </a>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-700/30 border border-gray-700/50 text-gray-300 text-sm hover:bg-gray-700/50 transition-colors"
+        >
+          ← Back to home
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────────
+
 export default async function ExchangeRatesPage() {
-  const result = await fetchExchangeRates();
+  // Wrap the fetch in a top-level try/catch so any unexpected throw (e.g. a
+  // misconfigured environment) still renders a helpful UI instead of the
+  // Next.js generic error boundary.
+  let result: Awaited<ReturnType<typeof fetchExchangeRates>>;
+  try {
+    result = await fetchExchangeRates();
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : 'Unexpected error';
+    result = { data: null, error: detail };
+  }
+
+  const apiError = result.error !== null && result.data === null;
   const rates = result.data?.rates ?? [];
   const base = result.data?.base ?? 'true_prices';
   const hasData = rates.length > 0;
@@ -88,14 +138,18 @@ export default async function ExchangeRatesPage() {
         </div>
 
         {/* Context link */}
-        <div className="mb-6 flex items-center gap-2 text-sm text-gray-500">
+        <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-gray-500">
           <span>Want to see individual servers?</span>
           <Link href="/servers" className="text-emerald-400 hover:underline">
             View all registered servers →
           </Link>
         </div>
 
-        {hasData ? (
+        {/* ── Content ── */}
+        {apiError ? (
+          // API unreachable or returned an error — show friendly fallback
+          <ApiErrorFallback detail={result.error} />
+        ) : hasData ? (
           <>
             {/* Bar chart */}
             <ExchangeRateChart rates={rates} />
@@ -113,8 +167,8 @@ export default async function ExchangeRatesPage() {
                     <tr className="border-b border-gray-800/60 text-left">
                       <th className="py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide">Server</th>
                       <th className="py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide">Rate</th>
-                      <th className="py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide">Players</th>
-                      <th className="py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide">Last Seen</th>
+                      <th className="py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide hidden sm:table-cell">Players</th>
+                      <th className="py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide hidden md:table-cell">Last Seen</th>
                       <th className="py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
                     </tr>
                   </thead>
@@ -128,6 +182,7 @@ export default async function ExchangeRatesPage() {
             </div>
           </>
         ) : (
+          // API succeeded but no rates computed yet
           <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-8 text-center">
             <p className="text-2xl mb-3">📊</p>
             <p className="text-gray-200 font-medium mb-2">No exchange rate data yet</p>
@@ -140,9 +195,6 @@ export default async function ExchangeRatesPage() {
             >
               View registered servers
             </Link>
-            {result.error && (
-              <p className="text-amber-300 text-xs mt-4">{result.error}</p>
-            )}
           </div>
         )}
       </main>

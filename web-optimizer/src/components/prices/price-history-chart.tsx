@@ -22,14 +22,14 @@ export function PriceHistoryChart({ item, points }: PriceHistoryChartProps) {
 
   return (
     <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-6 mb-8">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-1 mb-4">
         <h2 className="text-sm font-semibold text-emerald-400 uppercase tracking-wide">
           Price History: {item}
         </h2>
         <span className="text-xs text-gray-500">{chartData.length} snapshots</span>
       </div>
 
-      <div className="h-72 w-full">
+      <div className="h-52 sm:h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 6, right: 18, left: 8, bottom: 4 }}>
             <defs>
@@ -44,7 +44,7 @@ export function PriceHistoryChart({ item, points }: PriceHistoryChartProps) {
               stroke="#9ca3af"
               tick={{ fill: '#9ca3af', fontSize: 12 }}
               tickFormatter={(value: number) => `$${value.toFixed(2)}`}
-              width={84}
+              width={64}
             />
             <Tooltip
               contentStyle={{

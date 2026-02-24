@@ -260,12 +260,12 @@ export function PriceCalculator() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <label className="text-gray-400 text-sm">Anchor Price for &quot;{items[anchorItem]}&quot;:</label>
+          <label className="text-gray-400 text-sm shrink-0">Anchor Price for &quot;{items[anchorItem]}&quot;:</label>
           <input
             type="number"
             value={anchorPrice}
             onChange={(e) => setAnchorPrice(parseFloat(e.target.value) || 0.01)}
-            className="w-32 px-3 py-2 bg-gray-950 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-32 min-w-0 px-3 py-2 bg-gray-950 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
             step="0.01"
             min="0.01"
           />
@@ -400,14 +400,14 @@ export function PriceCalculator() {
             {result.prices.map((price, i) => (
               <div
                 key={`${result.items[i]}-${i}`}
-                className={`flex justify-between items-center p-3 rounded-lg border ${
+                className={`flex justify-between items-center gap-3 p-3 rounded-lg border ${
                   i === result.anchorItem
                     ? "bg-emerald-600/10 border-emerald-600/30"
                     : "bg-gray-950/70 border-gray-800/60"
                 }`}
               >
-                <span className="text-gray-300">{result.items[i]}</span>
-                <span className={`font-mono text-lg ${i === result.anchorItem ? "text-emerald-400" : "text-white"}`}>
+                <span className="text-gray-300 min-w-0 truncate">{result.items[i]}</span>
+                <span className={`font-mono text-lg shrink-0 ${i === result.anchorItem ? "text-emerald-400" : "text-white"}`}>
                   ${price.toFixed(2)}
                 </span>
               </div>

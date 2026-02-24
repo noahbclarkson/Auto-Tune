@@ -41,14 +41,14 @@ export function ExchangeRateChart({ rates }: ExchangeRateChartProps) {
 
   return (
     <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-6 mb-8">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-y-1 mb-4">
         <h2 className="text-sm font-semibold text-emerald-400 uppercase tracking-wide">
           Rate vs True Prices
         </h2>
         <span className="text-xs text-gray-500">{rates.length} server{rates.length !== 1 ? 's' : ''}</span>
       </div>
 
-      <div className="h-72 w-full">
+      <div className="h-52 sm:h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 18, left: 8, bottom: 40 }}>
             <CartesianGrid stroke="#1f2937" strokeDasharray="4 4" vertical={false} />

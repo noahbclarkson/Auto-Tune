@@ -57,9 +57,9 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
   return (
     <>
       <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-6 mb-6">
-        <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-4">
           <h2 className="text-sm font-semibold text-emerald-400 uppercase tracking-wide">Live True Prices</h2>
-          <p className="text-xs text-gray-500">Click an item to view its history</p>
+          <p className="text-xs text-gray-500">Tap an item to view its history</p>
         </div>
 
         <div className="overflow-x-auto">
@@ -68,8 +68,8 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
               <tr className="border-b border-gray-800/80">
                 <th className="text-left py-2 pr-4 text-gray-400 font-medium">Item</th>
                 <th className="text-left py-2 pr-4 text-gray-400 font-medium">Price</th>
-                <th className="text-left py-2 pr-4 text-gray-400 font-medium">Confidence</th>
-                <th className="text-left py-2 text-gray-400 font-medium">Servers</th>
+                <th className="text-left py-2 pr-4 text-gray-400 font-medium hidden sm:table-cell">Confidence</th>
+                <th className="text-left py-2 text-gray-400 font-medium hidden sm:table-cell">Servers</th>
               </tr>
             </thead>
             <tbody>
@@ -85,8 +85,8 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
                   >
                     <td className="py-2 pr-4 text-gray-200">{entry.item}</td>
                     <td className="py-2 pr-4 text-white font-mono">${entry.price.toFixed(2)}</td>
-                    <td className="py-2 pr-4 text-gray-300">{(entry.confidence * 100).toFixed(1)}%</td>
-                    <td className="py-2 text-gray-300">{entry.servers}</td>
+                    <td className="py-2 pr-4 text-gray-300 hidden sm:table-cell">{(entry.confidence * 100).toFixed(1)}%</td>
+                    <td className="py-2 text-gray-300 hidden sm:table-cell">{entry.servers}</td>
                   </tr>
                 );
               })}

@@ -66,6 +66,7 @@ function RateRow({ rate }: { rate: ExchangeRate }) {
 // informed and guides them to retry rather than landing on a generic error page.
 
 function ApiErrorFallback({ detail }: { detail?: string | null }) {
+  const isDev = process.env.NODE_ENV !== 'production';
   return (
     <div className="bg-gray-900/50 border border-red-800/40 rounded-xl p-8 text-center">
       <p className="text-3xl mb-3">⚠️</p>
@@ -74,9 +75,11 @@ function ApiErrorFallback({ detail }: { detail?: string | null }) {
         We couldn&apos;t reach the pricing service right now. This is usually a temporary issue —
         please refresh the page to try again.
       </p>
-      {detail && (
+      {/* Raw error detail is intentionally hidden from public UI in production.
+          Full diagnostics are written to the server console (see ExchangeRatesPage). */}
+      {isDev && detail && (
         <p className="text-red-400/70 text-xs font-mono bg-red-950/30 border border-red-800/30 rounded px-3 py-2 mb-4 max-w-lg mx-auto break-all">
-          {detail}
+          [dev] {detail}
         </p>
       )}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-2">
@@ -108,11 +111,17 @@ export default async function ExchangeRatesPage() {
   try {
     result = await fetchExchangeRates();
   } catch (err) {
-    const detail = err instanceof Error ? err.message : 'Unexpected error';
+    const detail = err instanceof Error ? err.message : String(err);
+    // Log full diagnostics server-side; never expose raw error in public UI.
+    console.error('[exchange-rates] fetchExchangeRates threw unexpectedly:', detail, err);
     result = { data: null, error: detail };
   }
 
   const apiError = result.error !== null && result.data === null;
+  if (apiError) {
+    // Log the API-level error for server diagnostics (not forwarded to the client UI).
+    console.error('[exchange-rates] API returned an error:', result.error);
+  }
   const rates = result.data?.rates ?? [];
   const base = result.data?.base ?? 'true_prices';
   const hasData = rates.length > 0;

@@ -85,16 +85,31 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<ApiResult
       cache: "no-store",
     });
 
+    const bodyText = await response.text();
+
     if (!response.ok) {
-      const errorText = await response.text();
       return {
         data: null,
-        error: errorText || `Request failed with status ${response.status}`,
+        error: bodyText || `Request failed with status ${response.status}`,
       };
     }
 
-    const payload = (await response.json()) as T;
-    return { data: payload, error: null };
+    if (!bodyText.trim()) {
+      return {
+        data: null,
+        error: "API returned an empty response body",
+      };
+    }
+
+    try {
+      const payload = JSON.parse(bodyText) as T;
+      return { data: payload, error: null };
+    } catch {
+      return {
+        data: null,
+        error: "API returned invalid JSON",
+      };
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown network error";
     return { data: null, error: message };
@@ -106,7 +121,15 @@ export async function fetchTruePrices(): Promise<ApiResult<TruePricesResponse>> 
 }
 
 export async function fetchPriceHistory(item: string): Promise<ApiResult<PriceHistoryResponse>> {
-  const encodedItem = encodeURIComponent(item);
+  const normalizedItem = item.trim();
+  if (!normalizedItem) {
+    return {
+      data: null,
+      error: "Item name is required",
+    };
+  }
+
+  const encodedItem = encodeURIComponent(normalizedItem);
   return fetchJson<PriceHistoryResponse>(`/prices/history/${encodedItem}`);
 }
 

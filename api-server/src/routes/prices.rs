@@ -192,3 +192,149 @@ pub async fn get_price_history(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::{
+        body::to_bytes,
+        dev::Service,
+        http::StatusCode,
+        test,
+        web, App, HttpMessage,
+    };
+    use sqlx::postgres::PgPoolOptions;
+    use std::time::Duration;
+
+    fn lazy_test_pool() -> PgPool {
+        PgPoolOptions::new()
+            .acquire_timeout(Duration::from_millis(150))
+            .connect_lazy("postgres://invalid:invalid@127.0.0.1:1/invalid")
+            .expect("failed to create lazy test pool")
+    }
+
+    #[actix_web::test]
+    async fn submit_prices_rejects_non_square_ratio_matrix() {
+        let server_id = Uuid::new_v4();
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(lazy_test_pool()))
+                .wrap_fn(move |req, srv| {
+                    req.extensions_mut().insert(AuthenticatedServer { server_id });
+                    srv.call(req)
+                })
+                .route("/api/servers/{server_id}/prices", web::post().to(submit_prices)),
+        )
+        .await;
+
+        let request = SubmitPricesRequest {
+            item_names: vec!["Dirt".to_owned(), "Cobblestone".to_owned()],
+            ratio_matrix: vec![vec![1.0, 0.5]],
+            player_count: 12,
+        };
+
+        let req = test::TestRequest::post()
+            .uri(&format!("/api/servers/{server_id}/prices"))
+            .set_json(&request)
+            .to_request();
+
+        let resp = app.call(req).await.expect("request should complete");
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        let body = to_bytes(resp.into_body()).await.expect("read body");
+        let body_text = String::from_utf8(body.to_vec()).expect("utf8 body");
+        assert!(body_text.contains("ratio_matrix row count must equal item_names length"));
+    }
+
+    #[actix_web::test]
+    async fn submit_prices_valid_payload_reaches_storage_layer() {
+        let server_id = Uuid::new_v4();
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(lazy_test_pool()))
+                .wrap_fn(move |req, srv| {
+                    req.extensions_mut().insert(AuthenticatedServer { server_id });
+                    srv.call(req)
+                })
+                .route("/api/servers/{server_id}/prices", web::post().to(submit_prices)),
+        )
+        .await;
+
+        let request = SubmitPricesRequest {
+            item_names: vec!["Dirt".to_owned(), "Cobblestone".to_owned()],
+            ratio_matrix: vec![vec![1.0, 0.5], vec![2.0, 1.0]],
+            player_count: 8,
+        };
+
+        let req = test::TestRequest::post()
+            .uri(&format!("/api/servers/{server_id}/prices"))
+            .set_json(&request)
+            .to_request();
+
+        let resp = app.call(req).await.expect("request should complete");
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+
+        let body = to_bytes(resp.into_body()).await.expect("read body");
+        let body_text = String::from_utf8(body.to_vec()).expect("utf8 body");
+        assert!(body_text.contains("failed to store price data"));
+    }
+
+    #[actix_web::test]
+    async fn submit_prices_success_when_database_available() {
+        let database_url = match std::env::var("TEST_DATABASE_URL") {
+            Ok(v) if !v.trim().is_empty() => v,
+            _ => return,
+        };
+
+        let pool = PgPoolOptions::new()
+            .max_connections(1)
+            .connect(&database_url)
+            .await
+            .expect("connect TEST_DATABASE_URL");
+
+        crate::db::run_migrations(&pool)
+            .await
+            .expect("apply migrations");
+
+        let server_id = Uuid::new_v4();
+        sqlx::query(
+            "INSERT INTO servers (id, name, api_key_hash, player_count) VALUES ($1, $2, $3, 0)",
+        )
+        .bind(server_id)
+        .bind(format!("test-server-{server_id}"))
+        .bind("test-hash")
+        .execute(&pool)
+        .await
+        .expect("insert server");
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(pool.clone()))
+                .wrap_fn(move |req, srv| {
+                    req.extensions_mut().insert(AuthenticatedServer { server_id });
+                    srv.call(req)
+                })
+                .route("/api/servers/{server_id}/prices", web::post().to(submit_prices)),
+        )
+        .await;
+
+        let request = SubmitPricesRequest {
+            item_names: vec!["Dirt".to_owned(), "Cobblestone".to_owned()],
+            ratio_matrix: vec![vec![1.0, 0.5], vec![2.0, 1.0]],
+            player_count: 21,
+        };
+
+        let req = test::TestRequest::post()
+            .uri(&format!("/api/servers/{server_id}/prices"))
+            .set_json(&request)
+            .to_request();
+
+        let resp = app.call(req).await.expect("request should complete");
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body = to_bytes(resp.into_body()).await.expect("read body");
+        let body_text = String::from_utf8(body.to_vec()).expect("utf8 body");
+        assert!(body_text.contains("\"success\":true"));
+        assert!(body_text.contains("\"items_processed\":2"));
+    }
+}

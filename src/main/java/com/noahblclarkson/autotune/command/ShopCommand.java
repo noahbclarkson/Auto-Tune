@@ -307,7 +307,7 @@ public class ShopCommand {
             return;
         }
 
-        databaseManager.runAsync(() -> {
+        var unused = databaseManager.runAsync(() -> {
             ShopItem added = shopManager.addCustomItemWithData(itemInHand, BigDecimal.valueOf(price), section);
             databaseManager.runOnMain(() ->
                     player.sendMessage(configManager.getMessage("admin.custom-item-added", Map.of(

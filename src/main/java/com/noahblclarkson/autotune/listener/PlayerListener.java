@@ -69,7 +69,7 @@ public class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerQuit(PlayerQuitEvent event) {
         autosellManager.unloadPlayer(event.getPlayer().getUniqueId());
-        databaseManager.runAsync(() -> playerRepository.updateLastSeen(event.getPlayer().getUniqueId()));
+        var unused = databaseManager.runAsync(() -> playerRepository.updateLastSeen(event.getPlayer().getUniqueId()));
     }
 
     private void checkLoanWarning(Player player, Optional<Loan> activeLoan) {

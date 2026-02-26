@@ -166,7 +166,7 @@ public class EconomyManager {
             return TransactionResult.economyError();
         }
 
-        databaseManager.runAsync(() -> {
+        var unused = databaseManager.runAsync(() -> {
             Transaction transaction = Transaction.builder()
                     .playerUuid(playerId)
                     .itemId(item.id())

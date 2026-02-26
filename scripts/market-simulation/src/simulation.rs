@@ -262,7 +262,7 @@ impl Simulation {
                 && player.balance < 50.0
                 && player.credit_score >= self.config.loans.min_credit_score
             {
-                use rand::Rng;
+                use rand::RngExt;
                 if rng.random::<f64>() < 0.1 {
                     let max_loan = (player.total_traded * self.config.loans.max_loan_multiplier)
                         .max(100.0);
@@ -293,7 +293,7 @@ impl Simulation {
                     .iter_mut()
                     .find(|l| l.player_index == player_idx && l.status == LoanStatus::Active)
                 {
-                    use rand::Rng;
+                    use rand::RngExt;
                     if player.balance > loan.current_balance * 1.5 && rng.random::<f64>() < 0.3 {
                         let payment = loan.current_balance;
                         loan.make_payment(payment);

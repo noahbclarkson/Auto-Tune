@@ -389,8 +389,8 @@ public class LoanManager {
             return loan.currentBalance().divide(BigDecimal.valueOf(periodsRemaining), 2, RoundingMode.HALF_UP);
         }
 
-        double payment = balance * rate * Math.pow(1 + rate, periodsRemaining)
-                / (Math.pow(1 + rate, periodsRemaining) - 1);
+        double payment = balance * rate * Math.pow(1 + rate, (double) periodsRemaining)
+                / (Math.pow(1 + rate, (double) periodsRemaining) - 1);
 
         return BigDecimal.valueOf(payment).setScale(2, RoundingMode.HALF_UP);
     }

@@ -821,8 +821,7 @@ fn draw_prices_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                     .map(|(x, &y)| [x as f64, log_y(y)])
                     .collect();
                 plot_ui.line(
-                    Line::new(points)
-                        .name(&item.name)
+                    Line::new(&item.name, points)
                         .color(item_color(i)),
                 );
             }
@@ -837,8 +836,7 @@ fn draw_prices_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                         .map(|(x, &y)| [x as f64, log_y(y)])
                         .collect();
                     plot_ui.line(
-                        Line::new(buy_points)
-                            .name(format!("{} Buy", item.name))
+                        Line::new(format!("{} Buy", item.name), buy_points)
                             .color(egui::Color32::from_rgba_premultiplied(46, 213, 115, 128))
                             .style(egui_plot::LineStyle::dashed_dense()),
                     );
@@ -850,8 +848,7 @@ fn draw_prices_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                         .map(|(x, &y)| [x as f64, log_y(y)])
                         .collect();
                     plot_ui.line(
-                        Line::new(sell_points)
-                            .name(format!("{} Sell", item.name))
+                        Line::new(format!("{} Sell", item.name), sell_points)
                             .color(egui::Color32::from_rgba_premultiplied(255, 107, 107, 128))
                             .style(egui_plot::LineStyle::dashed_dense()),
                     );
@@ -892,8 +889,7 @@ fn draw_spreads_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, heigh
                 .map(|(x, &y)| [x as f64, y * 100.0])
                 .collect();
             plot_ui.line(
-                Line::new(bpd_points)
-                    .name("BPD %")
+                Line::new("BPD %", bpd_points)
                     .color(egui::Color32::from_rgb(46, 213, 115)),
             );
 
@@ -904,8 +900,7 @@ fn draw_spreads_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, heigh
                 .map(|(x, &y)| [x as f64, y * 100.0])
                 .collect();
             plot_ui.line(
-                Line::new(spd_points)
-                    .name("SPD %")
+                Line::new("SPD %", spd_points)
                     .color(egui::Color32::from_rgb(255, 107, 107)),
             );
 
@@ -917,8 +912,7 @@ fn draw_spreads_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, heigh
                 .map(|(x, (&b, &s))| [x as f64, (b + s) * 100.0])
                 .collect();
             plot_ui.line(
-                Line::new(total_spread)
-                    .name("Total Spread %")
+                Line::new("Total Spread %", total_spread)
                     .color(egui::Color32::from_rgb(255, 230, 109))
                     .style(egui_plot::LineStyle::dashed_dense()),
             );
@@ -939,8 +933,7 @@ fn draw_spreads_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, heigh
                 .map(|(x, (&p, &b))| [x as f64, p * (1.0 + b)])
                 .collect();
             plot_ui.line(
-                Line::new(buy_points)
-                    .name("Buy Price")
+                Line::new("Buy Price", buy_points)
                     .color(egui::Color32::from_rgb(46, 213, 115)),
             );
 
@@ -951,8 +944,7 @@ fn draw_spreads_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, heigh
                 .map(|(x, &y)| [x as f64, y])
                 .collect();
             plot_ui.line(
-                Line::new(base_points)
-                    .name("Base Price")
+                Line::new("Base Price", base_points)
                     .color(item_color(gui.focused_item)),
             );
 
@@ -964,8 +956,7 @@ fn draw_spreads_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, heigh
                 .map(|(x, (&p, &s))| [x as f64, p * (1.0 - s)])
                 .collect();
             plot_ui.line(
-                Line::new(sell_points)
-                    .name("Sell Price")
+                Line::new("Sell Price", sell_points)
                     .color(egui::Color32::from_rgb(255, 107, 107)),
             );
         });
@@ -993,8 +984,7 @@ fn draw_volume_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                 .map(|(x, &y)| Bar::new(x as f64, y as f64).width(0.8))
                 .collect();
             plot_ui.bar_chart(
-                BarChart::new(buy_bars)
-                    .name("Buy Volume")
+                BarChart::new("Buy Volume", buy_bars)
                     .color(egui::Color32::from_rgb(46, 213, 115)),
             );
 
@@ -1005,8 +995,7 @@ fn draw_volume_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                 .map(|(x, &y)| Bar::new(x as f64, -(y as f64)).width(0.8))
                 .collect();
             plot_ui.bar_chart(
-                BarChart::new(sell_bars)
-                    .name("Sell Volume")
+                BarChart::new("Sell Volume", sell_bars)
                     .color(egui::Color32::from_rgb(255, 107, 107)),
             );
         });
@@ -1036,8 +1025,7 @@ fn draw_economy_chart(ui: &mut egui::Ui, sim: &Simulation, height: f32) {
                 .map(|(x, s)| [x as f64, s.gdp])
                 .collect();
             plot_ui.line(
-                Line::new(gdp_points)
-                    .name("GDP (24h buy volume)")
+                Line::new("GDP (24h buy volume)", gdp_points)
                     .color(egui::Color32::from_rgb(46, 213, 115)),
             );
 
@@ -1048,8 +1036,7 @@ fn draw_economy_chart(ui: &mut egui::Ui, sim: &Simulation, height: f32) {
                 .map(|(x, s)| [x as f64, s.total_debt])
                 .collect();
             plot_ui.line(
-                Line::new(debt_points)
-                    .name("Total Debt")
+                Line::new("Total Debt", debt_points)
                     .color(egui::Color32::from_rgb(255, 107, 107)),
             );
 
@@ -1060,8 +1047,7 @@ fn draw_economy_chart(ui: &mut egui::Ui, sim: &Simulation, height: f32) {
                 .map(|(x, s)| [x as f64, s.avg_price_change])
                 .collect();
             plot_ui.line(
-                Line::new(inflation_points)
-                    .name("Avg Price Change %")
+                Line::new("Avg Price Change %", inflation_points)
                     .color(egui::Color32::from_rgb(255, 230, 109)),
             );
         });
@@ -1091,8 +1077,7 @@ fn draw_detail_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                 .map(|(x, &y)| [x as f64, y])
                 .collect();
             plot_ui.line(
-                Line::new(price_points)
-                    .name("Base Price")
+                Line::new("Base Price", price_points)
                     .color(item_color(gui.focused_item)),
             );
 
@@ -1104,8 +1089,7 @@ fn draw_detail_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                     .map(|(x, &y)| [x as f64, y])
                     .collect();
                 plot_ui.line(
-                    Line::new(buy_points)
-                        .name("Buy Price")
+                    Line::new("Buy Price", buy_points)
                         .color(egui::Color32::from_rgb(46, 213, 115)),
                 );
 
@@ -1116,8 +1100,7 @@ fn draw_detail_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                     .map(|(x, &y)| [x as f64, y])
                     .collect();
                 plot_ui.line(
-                    Line::new(sell_points)
-                        .name("Sell Price")
+                    Line::new("Sell Price", sell_points)
                         .color(egui::Color32::from_rgb(255, 107, 107)),
                 );
             }
@@ -1136,8 +1119,7 @@ fn draw_detail_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                 .map(|(x, &y)| Bar::new(x as f64, y as f64).width(0.8))
                 .collect();
             plot_ui.bar_chart(
-                BarChart::new(buy_bars)
-                    .name("Buy Vol")
+                BarChart::new("Buy Vol", buy_bars)
                     .color(egui::Color32::from_rgb(46, 213, 115)),
             );
 
@@ -1148,8 +1130,7 @@ fn draw_detail_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                 .map(|(x, &y)| Bar::new(x as f64, -(y as f64)).width(0.8))
                 .collect();
             plot_ui.bar_chart(
-                BarChart::new(sell_bars)
-                    .name("Sell Vol")
+                BarChart::new("Sell Vol", sell_bars)
                     .color(egui::Color32::from_rgb(255, 107, 107)),
             );
         });

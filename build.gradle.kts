@@ -12,9 +12,8 @@ group = property("group") as String
 version = property("version") as String
 
 java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
-    }
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
@@ -64,7 +63,7 @@ dependencies {
 }
 
 pmd {
-    toolVersion = "6.55.0"
+    toolVersion = "7.14.0"
     isConsoleOutput = true
     // Use PMD's built-in category rulesets (no custom file needed)
     ruleSets = listOf(
@@ -151,7 +150,7 @@ tasks {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-processing"))
+    options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-processing", "-Xlint:-classfile"))
     options.errorprone.disableWarningsInGeneratedCode = true
 }
 

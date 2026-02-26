@@ -1,28 +1,29 @@
 [package]
 name = "api-server"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Auto-Tune price discovery API server"
 
 [dependencies]
-actix-web = "4.4"
-sqlx = { version = "0.7.4", features = [
+actix-web = "4"
+sqlx = { version = "0.8", features = [
     "postgres",
-    "runtime-tokio-native-tls",
+    "runtime-tokio",
+    "tls-rustls",
     "uuid",
     "chrono",
     "json",
 ] }
-tokio = { version = "1.35", features = ["full"] }
-uuid = { version = "1.6", features = ["v4", "serde"] }
-chrono = { version = "0.4.31", features = ["serde"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-sha2 = "0.10.8"
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
 hex = "0.4"
-rand = "0.8"
-anyhow = "1.0"
-thiserror = "1"
+rand = "0.10"
+anyhow = "1"
+thiserror = "2"
 tracing = "0.1"
 tracing-actix-web = "0.7"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

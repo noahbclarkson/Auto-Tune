@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use rand::Rng;
+use rand::RngExt;
 use rand_distr::{Distribution, Normal};
 
 use crate::engine::{ItemState, PriceTrendDirection};

@@ -4,7 +4,7 @@
 //! Only the SHA-256 hash of the key is stored. Validation uses constant-time
 //! comparison to prevent timing attacks.
 
-use rand::Rng;
+use rand::RngExt;
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
@@ -26,7 +26,7 @@ use uuid::Uuid;
 
 /// Generate a new random API key (32 random bytes, hex-encoded → 64 chars).
 pub fn generate_api_key() -> String {
-    let bytes: [u8; 32] = rand::thread_rng().gen();
+    let bytes: [u8; 32] = rand::rng().random();
     hex::encode(bytes)
 }
 

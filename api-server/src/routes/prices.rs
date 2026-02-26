@@ -280,11 +280,10 @@ mod tests {
     }
 
     #[actix_web::test]
+    #[ignore = "requires database"]
     async fn submit_prices_success_when_database_available() {
-        let database_url = match std::env::var("TEST_DATABASE_URL") {
-            Ok(v) if !v.trim().is_empty() => v,
-            _ => return,
-        };
+        let database_url = std::env::var("TEST_DATABASE_URL")
+            .expect("TEST_DATABASE_URL must be set for integration tests");
 
         let pool = PgPoolOptions::new()
             .max_connections(1)
@@ -338,3 +337,4 @@ mod tests {
         assert!(body_text.contains("\"items_processed\":2"));
     }
 }
+fn dummy_test_fix() {}

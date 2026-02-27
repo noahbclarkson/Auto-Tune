@@ -10,6 +10,7 @@ public record AutoTuneConfig(
         @NotNull EconomyConfig economy,
         @NotNull LoanConfig loans,
         @NotNull GuiConfig gui,
+        @NotNull PriceReporterConfig priceReporter,
         @NotNull DebugConfig debug
 ) {
 
@@ -228,6 +229,18 @@ public record AutoTuneConfig(
                     "BARRIER", "GOLD_BLOCK",
                     "LIME_DYE", "RED_DYE", "HOPPER"
             );
+        }
+    }
+
+    public record PriceReporterConfig(
+            boolean enabled,
+            @NotNull String apiUrl,
+            @NotNull String apiKey,
+            @NotNull String serverId,
+            long reportIntervalMinutes
+    ) {
+        public static PriceReporterConfig defaults() {
+            return new PriceReporterConfig(true, "https://prices.auto-tune.io", "your-server-api-key", "your-server-uuid", 5);
         }
     }
 

@@ -2,13 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Github, BarChart2, Home, BookOpen, TrendingUp } from 'lucide-react';
+import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/how-it-works', label: 'How It Works', icon: BookOpen },
   { href: '/simulator', label: 'Simulator', icon: BarChart2 },
+  { href: '/true-prices', label: 'True Prices', icon: DollarSign },
+  { href: '/servers', label: 'Servers', icon: Server },
+  { href: '/exchange-rates', label: 'Exchange Rates', icon: TrendingUp },
 ];
 
 export function Header() {
@@ -21,7 +24,7 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
             <div className="w-7 h-7 rounded-md bg-emerald-600/20 border border-emerald-600/40 flex items-center justify-center group-hover:bg-emerald-600/30 transition-colors">
-              <TrendingUp className="w-4 h-4 text-emerald-400" />
+              <DollarSign className="w-4 h-4 text-emerald-400" />
             </div>
             <span className="font-bold text-white tracking-tight">
               Auto<span className="text-emerald-400">-Tune</span>
@@ -49,7 +52,7 @@ export function Header() {
               );
             })}
             <a
-              href="https://github.com/Aetheraudios/Auto-Tune"
+              href="https://github.com/noahbclarkson/Auto-Tune"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800/60 transition-colors ml-1"

@@ -9,6 +9,7 @@ import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
+import com.noahblclarkson.autotune.manager.PriceReporter;
 import com.noahblclarkson.autotune.web.WebServer;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 
@@ -23,12 +24,14 @@ public class TaskScheduler {
     private final LoanManager loanManager;
     private final EconomyMetricsManager economyMetricsManager;
     private final Provider<WebServer> webServerProvider;
+    private final PriceReporter priceReporter;
 
     private ScheduledTask marketTask;
     private ScheduledTask loanInterestTask;
     private ScheduledTask loanOverdueTask;
     private ScheduledTask loanWarningTask;
     private ScheduledTask economySnapshotTask;
+    private ScheduledTask priceReporterTask;
 
     @Inject
     public TaskScheduler(
@@ -37,7 +40,8 @@ public class TaskScheduler {
             MarketEngine marketEngine,
             LoanManager loanManager,
             EconomyMetricsManager economyMetricsManager,
-            Provider<WebServer> webServerProvider
+            Provider<WebServer> webServerProvider,
+            PriceReporter priceReporter
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -45,12 +49,14 @@ public class TaskScheduler {
         this.loanManager = loanManager;
         this.economyMetricsManager = economyMetricsManager;
         this.webServerProvider = webServerProvider;
+        this.priceReporter = priceReporter;
     }
 
     public void start() {
         startMarketTask();
         startLoanTasks();
         startEconomySnapshotTask();
+        startPriceReporterTask();
         plugin.getLogger().info("Scheduled tasks started.");
     }
 
@@ -69,6 +75,9 @@ public class TaskScheduler {
         }
         if (economySnapshotTask != null) {
             economySnapshotTask.cancel();
+        }
+        if (priceReporterTask != null) {
+            priceReporterTask.cancel();
         }
         plugin.getLogger().info("Scheduled tasks stopped.");
     }
@@ -163,4 +172,25 @@ public class TaskScheduler {
                 TimeUnit.MINUTES
         );
     }
+    private void startPriceReporterTask() {
+        if (!priceReporter.isEnabled()) {
+            return;
+        }
+
+        long intervalMinutes = priceReporter.getIntervalMinutes();
+        priceReporterTask = plugin.getServer().getAsyncScheduler().runAtFixedRate(
+                plugin,
+                task -> {
+                    try {
+                        priceReporter.submitSnapshot();
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Error in price reporter task: " + e.getMessage());
+                    }
+                },
+                intervalMinutes,
+                intervalMinutes,
+                TimeUnit.MINUTES
+        );
+    }
+
 }

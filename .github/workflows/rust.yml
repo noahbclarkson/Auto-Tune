@@ -1,0 +1,46 @@
+name: Rust CI
+
+on:
+  push:
+    paths:
+      - 'api-server/**'
+      - 'price-solver/**'
+    branches: [ master, rewrite-2, feature/*, fix/* ]
+  pull_request:
+    paths:
+      - 'api-server/**'
+      - 'price-solver/**'
+    branches: [ master, rewrite-2 ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
+        
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.93.0
+          components: clippy, rustfmt
+          
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+        
+      - name: Clippy check
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        
+      - name: Build
+        run: cargo build --workspace --verbose
+        
+      - name: Run tests
+        run: cargo test --workspace --verbose

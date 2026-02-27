@@ -63,6 +63,7 @@ public class ConfigManager {
                 parseEconomyConfig(cfg.getConfigurationSection("economy")),
                 parseLoanConfig(cfg.getConfigurationSection("loans")),
                 parseGuiConfig(cfg.getConfigurationSection("gui")),
+                parsePriceReporterConfig(cfg.getConfigurationSection("price-reporter")),
                 parseDebugConfig(cfg.getConfigurationSection("debug"))
         );
     }
@@ -266,6 +267,19 @@ public class ConfigManager {
                 colors,
                 materials,
                 buyQuantities
+        );
+    }
+
+    private PriceReporterConfig parsePriceReporterConfig(ConfigurationSection section) {
+        if (section == null) {
+            return PriceReporterConfig.defaults();
+        }
+        return new PriceReporterConfig(
+                section.getBoolean("enabled", true),
+                section.getString("api-url", "https://prices.auto-tune.io"),
+                section.getString("api-key", "your-server-api-key"),
+                section.getString("server-id", "your-server-uuid"),
+                section.getLong("report-interval-minutes", 5)
         );
     }
 

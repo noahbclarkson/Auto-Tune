@@ -94,7 +94,7 @@ public class AutosellManager {
         }
 
         boolean finalNewState = newState;
-        databaseManager.runAsync(() -> autosellRepository.setItemEnabled(uuid, itemId, finalNewState));
+        var unused = databaseManager.runAsync(() -> autosellRepository.setItemEnabled(uuid, itemId, finalNewState));
 
         Optional<ShopItem> item = shopManager.getItemById(itemId);
         String itemName = item.map(ShopItem::getDisplayNameOrMaterial).orElse("Unknown Item");
@@ -110,7 +110,7 @@ public class AutosellManager {
 
         playerEnabledItems.put(uuid, new HashSet<>(allItemIds));
 
-        databaseManager.runAsync(() -> autosellRepository.enableAllItems(uuid, allItemIds));
+        var unused = databaseManager.runAsync(() -> autosellRepository.enableAllItems(uuid, allItemIds));
         player.sendMessage(configManager.getMessage("autosell.all-enabled"));
     }
 
@@ -118,7 +118,7 @@ public class AutosellManager {
         UUID uuid = player.getUniqueId();
         playerEnabledItems.put(uuid, new HashSet<>());
 
-        databaseManager.runAsync(() -> autosellRepository.disableAllItems(uuid));
+        var unused = databaseManager.runAsync(() -> autosellRepository.disableAllItems(uuid));
         player.sendMessage(configManager.getMessage("autosell.all-disabled"));
     }
 

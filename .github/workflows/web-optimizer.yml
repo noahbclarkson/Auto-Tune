@@ -1,0 +1,35 @@
+name: Web Optimizer CI
+
+on:
+  push:
+    paths:
+      - 'web-optimizer/**'
+    branches: [ master, rewrite-2, feature/*, fix/* ]
+  pull_request:
+    paths:
+      - 'web-optimizer/**'
+    branches: [ master, rewrite-2 ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./web-optimizer
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './web-optimizer/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build

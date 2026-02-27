@@ -337,4 +337,3 @@ mod tests {
         assert!(body_text.contains("\"items_processed\":2"));
     }
 }
-fn dummy_test_fix() {}

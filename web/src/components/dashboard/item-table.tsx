@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/ui/pagination';
@@ -71,7 +71,7 @@ export function ItemTable({
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  useMemo(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [search, activeSection, sortField, sortDir]);
 

@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
-import { StatsCards } from '@/components/dashboard/stats-cards';
 import { EconomyChart } from '@/components/economy/economy-chart';
 import { VolumeMultiplierGauge } from '@/components/economy/volume-multiplier-gauge';
 import { Card, CardContent } from '@/components/ui/card';

@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatLargeCurrency, formatPercent } from '@/lib/format';
+import { formatLargeCurrency } from '@/lib/format';
 import type { LoanStatsDto } from '@/lib/api';
 
 interface LoansStatsBarProps {

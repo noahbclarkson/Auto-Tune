@@ -1038,7 +1038,9 @@ mod tests {
 
         let fills = engine.get_fills();
         assert_eq!(fills.len(), 1);
-        assert_eq!(fills[0].sell_order_id, engine.get_order_book("DIAMOND").0[0].id);
+        // The buy order should be fully filled
+        let (buys, _) = engine.get_order_book("DIAMOND");
+        assert_eq!(buys.len(), 0); // Buy order is fully filled
 
         // alice1 should be filled, alice2 should still be open
         let (_, sells) = engine.get_order_book("DIAMOND");
@@ -1082,6 +1084,7 @@ mod tests {
                 t1,
             )
             .unwrap();
+        let buy_id = buy.id;
 
         // Should have one fill for 10
         let fills = engine.get_fills();
@@ -1089,7 +1092,7 @@ mod tests {
         assert_eq!(fills[0].quantity, 10);
 
         // Bob's order should be partially filled
-        let buy = engine.get_order(&buy.id).unwrap();
+        let buy = engine.get_order(&buy_id).unwrap();
         assert_eq!(buy.status, OrderStatus::PartiallyFilled);
         assert_eq!(buy.remaining_quantity, 5);
 
@@ -1114,7 +1117,7 @@ mod tests {
         assert_eq!(fills[1].quantity, 5);
 
         // Bob should now be fully filled
-        let buy = engine.get_order(&buy.id).unwrap();
+        let buy = engine.get_order(&buy_id).unwrap();
         assert_eq!(buy.status, OrderStatus::Filled);
         assert_eq!(buy.remaining_quantity, 0);
     }

@@ -41,6 +41,14 @@ const server = http.createServer((req, res) => {
 
   if (path === '/health') return json(res, 200, { status: 'ok', mode: 'mock' });
   if (path === '/api/items') return json(res, 200, items);
+
+  const itemDetail = path.match(/^\/api\/items\/(\d+)$/);
+  if (itemDetail) {
+    const id = Number(itemDetail[1]);
+    const item = items.find(i => i.id === id);
+    if (item) return json(res, 200, item);
+    return json(res, 404, { error: 'Item not found', id });
+  }
   if (path === '/api/stats') return json(res, 200, { totalItems: items.length, onlinePlayers: 17, serverName: 'Local E2E', timestamp: now });
   if (path === '/api/prices') return json(res, 200, Object.fromEntries(items.map(i => [i.id, i.price])));
   if (path === '/api/spreads') return json(res, 200, Object.fromEntries(items.map(i => [i.id, { bpd: i.bpd, spd: i.spd }])));

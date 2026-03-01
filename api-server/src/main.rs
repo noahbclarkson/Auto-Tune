@@ -4,6 +4,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 
 mod auth;
 mod db;
+mod matching;
 mod models;
 mod price_computer;
 mod routes;

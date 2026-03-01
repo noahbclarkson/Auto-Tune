@@ -6,7 +6,7 @@ description = "Auto-Tune price discovery API server"
 
 [dependencies]
 actix-web = "4"
-sqlx = { version = "0.8", features = [
+sqlx = { version = "0.7", features = [
     "postgres",
     "runtime-tokio",
     "tls-rustls",
@@ -21,7 +21,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
 hex = "0.4"
-rand = "0.10"
+rand = "0.8"
 anyhow = "1"
 thiserror = "2"
 tracing = "0.1"

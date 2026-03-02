@@ -1,5 +1,7 @@
 use actix_web::{middleware::Logger, web, App, HttpResponse, HttpServer, Responder};
 use anyhow::Result;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 mod auth;
@@ -10,8 +12,10 @@ mod price_computer;
 mod routes;
 
 use auth::ApiKeyAuth;
+use matching::MatchingEngine;
 use routes::{
     exchange::get_exchange_rates,
+    orders::{cancel_order, get_orderbook, list_orders, place_order},
     prices::{get_price_history, get_true_prices, submit_prices},
     servers::{list_servers, register_server},
 };
@@ -47,9 +51,14 @@ async fn main() -> Result<()> {
 
     let pool_data = web::Data::new(pool);
 
+    // Initialize matching engine for auction house
+    let matching_engine = Arc::new(RwLock::new(MatchingEngine::new()));
+    let engine_data = web::Data::new(matching_engine);
+
     HttpServer::new(move || {
         App::new()
             .app_data(pool_data.clone())
+            .app_data(engine_data.clone())
             .wrap(Logger::default())
             .route("/health", web::get().to(health))
             // Public endpoints
@@ -64,6 +73,11 @@ async fn main() -> Result<()> {
                 "/api/servers/exchange-rates",
                 web::get().to(get_exchange_rates),
             )
+            // Auction house endpoints
+            .route("/api/orders", web::post().to(place_order))
+            .route("/api/orders", web::get().to(list_orders))
+            .route("/api/orders/{id}", web::delete().to(cancel_order))
+            .route("/api/orderbook/{item_id}", web::get().to(get_orderbook))
             // Authenticated endpoints
             .service(
                 web::scope("/api/servers/{server_id}")

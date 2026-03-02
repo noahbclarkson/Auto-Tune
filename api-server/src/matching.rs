@@ -551,6 +551,17 @@ impl MatchingEngine {
         &self.fills
     }
 
+    /// Get all orders (optionally filtered by player_id)
+    pub fn get_all_orders(&self, player_id: Option<&str>) -> Vec<&Order> {
+        self.orders
+            .values()
+            .filter(|o| {
+                o.is_active()
+                    && player_id.map_or(true, |pid| o.player_id == pid)
+            })
+            .collect()
+    }
+
     /// Cancel an order
     pub fn cancel_order(&mut self, order_id: Uuid, player_id: &str) -> Result<Order, MatchError> {
         // First, verify ownership and check if cancellable

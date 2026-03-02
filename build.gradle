@@ -7,7 +7,7 @@ group 'unprotesting.com.github'
 version '0.14.4'
 
 ext {
-    jettyVersion = '11.0.19'
+    jettyVersion = '11.0.26'
     lombokVersion = '1.18.30'
     adventureVersion = '4.15.0'
     paperMCVersion = '1.20.4-R0.1-SNAPSHOT'

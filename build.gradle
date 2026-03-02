@@ -11,7 +11,7 @@ ext {
     lombokVersion = '1.18.30'
     adventureVersion = '4.15.0'
     paperMCVersion = '1.20.4-R0.1-SNAPSHOT'
-    bstatsVersion = '3.0.2'
+    bstatsVersion = '3.2.1'
     mapdbVersion = '3.1.0'
     ifVersion = '0.10.13'
     vaultVersion = '1.7.1'

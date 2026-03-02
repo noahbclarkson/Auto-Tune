@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "ws": "^8.19.0"
+  }
+}

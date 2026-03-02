@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import http from 'node:http';
 import { URL } from 'node:url';
+import { WebSocketServer } from 'ws';
 
 const port = Number(process.env.PORT || 8989);
 const now = Date.now();
@@ -107,3 +108,33 @@ const server = http.createServer((req, res) => {
 server.listen(port, () => {
   console.log(`[mock-web-api] listening on :${port}`);
 });
+
+// WebSocket server for real-time price updates
+const wss = new WebSocketServer({ server, path: '/ws/market' });
+
+wss.on('connection', (ws) => {
+  console.log('[mock-web-api] WebSocket client connected to /ws/market');
+  
+  // Send initial prices
+  const sendPrices = () => {
+    const prices = Object.fromEntries(items.map(i => [i.id, i.price + (Math.random() - 0.5) * 10]));
+    ws.send(JSON.stringify({ type: 'price_update', timestamp: Date.now(), prices }));
+  };
+  
+  sendPrices();
+  
+  // Send updates every 5 seconds
+  const interval = setInterval(sendPrices, 5000);
+  
+  ws.on('close', () => {
+    clearInterval(interval);
+    console.log('[mock-web-api] WebSocket client disconnected');
+  });
+  
+  ws.on('error', (err) => {
+    clearInterval(interval);
+    console.error('[mock-web-api] WebSocket error:', err.message);
+  });
+});
+
+console.log('[mock-web-api] WebSocket server ready at /ws/market');

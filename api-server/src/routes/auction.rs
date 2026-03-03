@@ -1,5 +1,4 @@
 use actix_web::{web, HttpResponse};
-use serde::{Deserialize, Serialize};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(web::scope("/api/auction").route("/status", web::get().to(auction_status)));

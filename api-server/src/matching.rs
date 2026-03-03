@@ -128,6 +128,7 @@ impl Order {
     }
 
     /// How much has been filled so far
+    #[allow(dead_code)]
     pub fn filled_quantity(&self) -> i32 {
         self.quantity - self.remaining_quantity
     }
@@ -179,6 +180,7 @@ pub enum MatchError {
     #[error("Order is not active (status: {0})")]
     OrderNotActive(String),
 
+    #[allow(dead_code)]
     #[error("Player {player_id} cannot match against their own order {order_id}")]
     SelfMatch { player_id: String, order_id: Uuid },
 
@@ -547,6 +549,7 @@ impl MatchingEngine {
     }
 
     /// Get an order by ID
+    #[allow(dead_code)]
     pub fn get_order(&self, id: &Uuid) -> Option<&Order> {
         self.orders.get(id)
     }
@@ -569,6 +572,7 @@ impl MatchingEngine {
     }
 
     /// Get all fills
+    #[allow(dead_code)]
     pub fn get_fills(&self) -> &[OrderFill] {
         &self.fills
     }
@@ -594,7 +598,7 @@ impl MatchingEngine {
     pub fn get_all_orders(&self, player_id: Option<&str>) -> Vec<&Order> {
         self.orders
             .values()
-            .filter(|o| o.is_active() && player_id.map_or(true, |pid| o.player_id == pid))
+            .filter(|o| o.is_active() && player_id.is_none_or(|pid| o.player_id == pid))
             .collect()
     }
 

@@ -64,7 +64,7 @@ pub fn aggregate_ratios(
                     let mut sorted: Vec<f64> = valid.iter().map(|(_, v)| *v).collect();
                     sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
                     let cnt = sorted.len();
-                    if cnt % 2 == 0 {
+                    if cnt & 1 == 0 {
                         (sorted[cnt / 2 - 1] + sorted[cnt / 2]) / 2.0
                     } else {
                         sorted[cnt / 2]

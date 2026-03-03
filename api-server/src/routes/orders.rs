@@ -340,7 +340,7 @@ pub async fn get_trade_history(
             query
                 .item_id
                 .as_ref()
-                .map_or(true, |filter| item_id == filter)
+                .is_none_or(|filter| item_id == filter)
         })
         .map(|(fill, item_id, buyer_id, seller_id)| TradeRecord {
             id: fill.id,

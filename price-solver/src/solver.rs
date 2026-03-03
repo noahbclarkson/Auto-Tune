@@ -189,6 +189,7 @@ pub fn compute_prices_with_config(
 
     // Count valid edges (i < j where ratio is valid)
     let mut edges: Vec<(usize, usize, f64)> = Vec::new();
+    #[allow(clippy::needless_range_loop)]
     for i in 0..n {
         for j in (i + 1)..n {
             let log_r = agg_log_r[i][j];
@@ -246,6 +247,7 @@ mod tests {
     fn make_ratio_matrix(prices: &[f64]) -> Vec<Vec<f64>> {
         let n = prices.len();
         let mut r = vec![vec![1.0; n]; n];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..n {
             for j in 0..n {
                 r[i][j] = prices[i] / prices[j];

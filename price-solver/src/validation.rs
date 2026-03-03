@@ -43,6 +43,7 @@ pub fn validate_ratio_matrix(matrix: &[Vec<f64>]) -> Result<(), ValidationError>
         return Err(ValidationError::EmptyMatrix);
     }
 
+    #[allow(clippy::needless_range_loop)]
     for i in 0..n {
         let row = &matrix[i];
         if row.len() != n {

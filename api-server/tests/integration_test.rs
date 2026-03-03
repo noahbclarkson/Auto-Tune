@@ -43,7 +43,7 @@ async fn test_place_buy_order_success() {
     let server_id = Uuid::new_v4();
     let req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "player1",
@@ -75,7 +75,7 @@ async fn test_place_sell_order_success() {
     let server_id = Uuid::new_v4();
     let req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "IRON_INGOT",
             "player_id": "player2",
@@ -100,7 +100,7 @@ async fn test_place_order_invalid_price() {
     let server_id = Uuid::new_v4();
     let req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "player1",
@@ -121,7 +121,7 @@ async fn test_place_order_invalid_quantity() {
     let server_id = Uuid::new_v4();
     let req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "player1",
@@ -142,7 +142,7 @@ async fn test_place_order_invalid_side() {
     let server_id = Uuid::new_v4();
     let req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "player1",
@@ -163,7 +163,7 @@ async fn test_place_order_negative_price() {
     let server_id = Uuid::new_v4();
     let req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "player1",
@@ -186,7 +186,7 @@ async fn test_place_order_matching() {
     // Place a sell order
     let sell_req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "seller",
@@ -202,7 +202,7 @@ async fn test_place_order_matching() {
     // Place a buy order that should match
     let buy_req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "buyer",
@@ -233,7 +233,7 @@ async fn test_cancel_order_success() {
     let server_id = Uuid::new_v4();
     let place_req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "player1",
@@ -280,7 +280,7 @@ async fn test_cancel_order_wrong_player() {
     let server_id = Uuid::new_v4();
     let place_req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "player1",
@@ -311,7 +311,7 @@ async fn test_cancel_order_missing_player_id() {
     let server_id = Uuid::new_v4();
     let place_req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "player1",
@@ -346,7 +346,7 @@ async fn test_cancel_already_filled_order() {
     // Place sell order
     let sell_req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "seller",
@@ -363,7 +363,7 @@ async fn test_cancel_already_filled_order() {
     // Place buy order that fully matches
     let buy_req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "buyer",
@@ -401,7 +401,7 @@ async fn test_list_all_orders() {
     for i in 0..3 {
         let req = test::TestRequest::post()
             .uri("/api/orders")
-            .set_json(&json!({
+            .set_json(json!({
                 "server_id": server_id,
                 "item_id": format!("ITEM_{}", i),
                 "player_id": format!("player{}", i),
@@ -434,7 +434,7 @@ async fn test_list_orders_by_player() {
     for i in 0..3 {
         let req = test::TestRequest::post()
             .uri("/api/orders")
-            .set_json(&json!({
+            .set_json(json!({
                 "server_id": server_id,
                 "item_id": "DIAMOND",
                 "player_id": format!("player{}", i),
@@ -469,7 +469,7 @@ async fn test_list_orders_excludes_non_active() {
     // Place and cancel an order
     let place_req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "player1",
@@ -541,7 +541,7 @@ async fn test_get_orderbook_with_orders() {
     for i in 0..3 {
         let req = test::TestRequest::post()
             .uri("/api/orders")
-            .set_json(&json!({
+            .set_json(json!({
                 "server_id": server_id,
                 "item_id": "DIAMOND",
                 "player_id": format!("buyer{}", i),
@@ -557,7 +557,7 @@ async fn test_get_orderbook_with_orders() {
     for i in 0..2 {
         let req = test::TestRequest::post()
             .uri("/api/orders")
-            .set_json(&json!({
+            .set_json(json!({
                 "server_id": server_id,
                 "item_id": "DIAMOND",
                 "player_id": format!("seller{}", i),
@@ -617,7 +617,7 @@ async fn test_get_orderbook_aggregation() {
     for i in 0..3 {
         let req = test::TestRequest::post()
             .uri("/api/orders")
-            .set_json(&json!({
+            .set_json(json!({
                 "server_id": server_id,
                 "item_id": "DIAMOND",
                 "player_id": format!("buyer{}", i),
@@ -655,7 +655,7 @@ async fn test_get_orderbook_different_items() {
     // Place orders for DIAMOND
     let req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "player1",
@@ -669,7 +669,7 @@ async fn test_get_orderbook_different_items() {
     // Place orders for IRON_INGOT
     let req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "IRON_INGOT",
             "player_id": "player2",
@@ -711,7 +711,7 @@ async fn test_get_orderbook_excludes_filled_orders() {
     // Place a sell order
     let sell_req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "seller",
@@ -725,7 +725,7 @@ async fn test_get_orderbook_excludes_filled_orders() {
     // Place a buy order that matches fully
     let buy_req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "buyer",
@@ -756,7 +756,7 @@ async fn test_get_orderbook_partial_fill() {
     // Place a sell order for 10
     let sell_req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "seller",
@@ -770,7 +770,7 @@ async fn test_get_orderbook_partial_fill() {
     // Place a buy order for 5 (partial fill)
     let buy_req = test::TestRequest::post()
         .uri("/api/orders")
-        .set_json(&json!({
+        .set_json(json!({
             "server_id": server_id,
             "item_id": "DIAMOND",
             "player_id": "buyer",

@@ -331,7 +331,10 @@ async fn test_cancel_order_missing_player_id() {
         .to_request();
 
     let cancel_resp = test::call_service(&app, cancel_req).await;
-    assert_eq!(cancel_resp.status(), actix_web::http::StatusCode::BAD_REQUEST);
+    assert_eq!(
+        cancel_resp.status(),
+        actix_web::http::StatusCode::BAD_REQUEST
+    );
 }
 
 #[actix_web::test]
@@ -378,7 +381,10 @@ async fn test_cancel_already_filled_order() {
         .to_request();
 
     let cancel_resp = test::call_service(&app, cancel_req).await;
-    assert_eq!(cancel_resp.status(), actix_web::http::StatusCode::BAD_REQUEST);
+    assert_eq!(
+        cancel_resp.status(),
+        actix_web::http::StatusCode::BAD_REQUEST
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -408,9 +414,7 @@ async fn test_list_all_orders() {
     }
 
     // List all orders
-    let list_req = test::TestRequest::get()
-        .uri("/api/orders")
-        .to_request();
+    let list_req = test::TestRequest::get().uri("/api/orders").to_request();
 
     let list_resp = test::call_service(&app, list_req).await;
     assert!(list_resp.status().is_success());
@@ -486,9 +490,7 @@ async fn test_list_orders_excludes_non_active() {
     test::call_service(&app, cancel_req).await;
 
     // List orders - should be empty
-    let list_req = test::TestRequest::get()
-        .uri("/api/orders")
-        .to_request();
+    let list_req = test::TestRequest::get().uri("/api/orders").to_request();
 
     let list_resp = test::call_service(&app, list_req).await;
     let body: serde_json::Value = test::read_body_json(list_resp).await;
@@ -499,9 +501,7 @@ async fn test_list_orders_excludes_non_active() {
 async fn test_list_orders_empty() {
     let app = test::init_service(create_test_app()).await;
 
-    let list_req = test::TestRequest::get()
-        .uri("/api/orders")
-        .to_request();
+    let list_req = test::TestRequest::get().uri("/api/orders").to_request();
 
     let list_resp = test::call_service(&app, list_req).await;
     assert!(list_resp.status().is_success());
@@ -590,14 +590,20 @@ async fn test_get_orderbook_with_orders() {
     for i in 0..buys.len() - 1 {
         let price1 = buys[i]["price"].as_f64().unwrap();
         let price2 = buys[i + 1]["price"].as_f64().unwrap();
-        assert!(price1 >= price2, "Buy orders should be sorted by price descending");
+        assert!(
+            price1 >= price2,
+            "Buy orders should be sorted by price descending"
+        );
     }
 
     // Verify sell orders are sorted by price ascending (lowest first)
     for i in 0..sells.len() - 1 {
         let price1 = sells[i]["price"].as_f64().unwrap();
         let price2 = sells[i + 1]["price"].as_f64().unwrap();
-        assert!(price1 <= price2, "Sell orders should be sorted by price ascending");
+        assert!(
+            price1 <= price2,
+            "Sell orders should be sorted by price ascending"
+        );
     }
 }
 
@@ -632,7 +638,7 @@ async fn test_get_orderbook_aggregation() {
     let body: serde_json::Value = test::read_body_json(resp).await;
 
     let buys = body["buys"].as_array().unwrap();
-    
+
     // Should aggregate into one price level
     assert_eq!(buys.len(), 1);
     assert_eq!(buys[0]["price"], 100.0);

@@ -60,10 +60,12 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
         let item_names: Vec<String> = row.try_get("item_names").context("reading item_names")?;
         let matrix_json: serde_json::Value =
             row.try_get("ratio_matrix_json").context("reading matrix")?;
-        let player_count: i32 = row.try_get("player_count").context("reading player_count")?;
+        let player_count: i32 = row
+            .try_get("player_count")
+            .context("reading player_count")?;
 
-        let ratio_matrix: Vec<Vec<f64>> = serde_json::from_value(matrix_json)
-            .context("parsing ratio_matrix_json")?;
+        let ratio_matrix: Vec<Vec<f64>> =
+            serde_json::from_value(matrix_json).context("parsing ratio_matrix_json")?;
 
         submissions.push(Submission {
             item_names,
@@ -99,10 +101,9 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
 
         for (local_i, name_i) in sub.item_names.iter().enumerate() {
             for (local_j, name_j) in sub.item_names.iter().enumerate() {
-                if let (Some(&gi), Some(&gj)) = (
-                    item_idx.get(name_i.as_str()),
-                    item_idx.get(name_j.as_str()),
-                ) {
+                if let (Some(&gi), Some(&gj)) =
+                    (item_idx.get(name_i.as_str()), item_idx.get(name_j.as_str()))
+                {
                     let val = sub
                         .ratio_matrix
                         .get(local_i)
@@ -125,7 +126,13 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
                     for k in 0..n {
                         let ik = matrix[i][k];
                         let kj = matrix[k][j];
-                        if ik != 1.0 && kj != 1.0 && ik.is_finite() && kj.is_finite() && ik > 0.0 && kj > 0.0 {
+                        if ik != 1.0
+                            && kj != 1.0
+                            && ik.is_finite()
+                            && kj.is_finite()
+                            && ik > 0.0
+                            && kj > 0.0
+                        {
                             valid_bridges.push(ik * kj);
                         }
                     }
@@ -155,9 +162,14 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
         ..Default::default()
     };
 
-    let prices =
-        compute_prices_with_config(&server_matrices, Some(&server_weights), anchor_idx, anchor_p, config)
-            .map_err(|e| anyhow::anyhow!("solver error: {e}"))?;
+    let prices = compute_prices_with_config(
+        &server_matrices,
+        Some(&server_weights),
+        anchor_idx,
+        anchor_p,
+        config,
+    )
+    .map_err(|e| anyhow::anyhow!("solver error: {e}"))?;
 
     // Write results
     let num_servers = submissions.len() as i32;

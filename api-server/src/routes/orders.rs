@@ -14,7 +14,10 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 use crate::matching::{MatchError, MatchingEngine, NewOrder, Order, OrderSide, TICK_SIZE};
-use crate::models::{ErrorResponse, OrderBookDepthResponse, DepthLevel, TradeHistoryResponse, TradeRecord, TradeHistoryQuery};
+use crate::models::{
+    DepthLevel, ErrorResponse, OrderBookDepthResponse, TradeHistoryQuery, TradeHistoryResponse,
+    TradeRecord,
+};
 
 /// Shared state for the matching engine
 pub type MatchingEngineState = Arc<RwLock<MatchingEngine>>;
@@ -209,7 +212,11 @@ pub async fn get_orderbook(
             orders,
         })
         .collect();
-    buy_levels.sort_by(|a, b| b.price.partial_cmp(&a.price).unwrap_or(std::cmp::Ordering::Equal));
+    buy_levels.sort_by(|a, b| {
+        b.price
+            .partial_cmp(&a.price)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     let mut sell_levels: Vec<OrderBookEntry> = sell_levels
         .into_values()
@@ -219,7 +226,11 @@ pub async fn get_orderbook(
             orders,
         })
         .collect();
-    sell_levels.sort_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(std::cmp::Ordering::Equal));
+    sell_levels.sort_by(|a, b| {
+        a.price
+            .partial_cmp(&b.price)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     HttpResponse::Ok().json(OrderBookResponse {
         item_id,
@@ -267,7 +278,11 @@ pub async fn get_orderbook_depth(
             order_count,
         })
         .collect();
-    bids.sort_by(|a, b| b.price.partial_cmp(&a.price).unwrap_or(std::cmp::Ordering::Equal));
+    bids.sort_by(|a, b| {
+        b.price
+            .partial_cmp(&a.price)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     let mut asks: Vec<DepthLevel> = sell_levels
         .into_values()
@@ -277,7 +292,11 @@ pub async fn get_orderbook_depth(
             order_count,
         })
         .collect();
-    asks.sort_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(std::cmp::Ordering::Equal));
+    asks.sort_by(|a, b| {
+        a.price
+            .partial_cmp(&b.price)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     // Calculate market summary
     let (spread, mid_price) = match (bids.first(), asks.first()) {
@@ -318,7 +337,10 @@ pub async fn get_trade_history(
     let mut trades: Vec<TradeRecord> = fills_with_items
         .into_iter()
         .filter(|(_, item_id, _, _)| {
-            query.item_id.as_ref().map_or(true, |filter| item_id == filter)
+            query
+                .item_id
+                .as_ref()
+                .map_or(true, |filter| item_id == filter)
         })
         .map(|(fill, item_id, buyer_id, seller_id)| TradeRecord {
             id: fill.id,

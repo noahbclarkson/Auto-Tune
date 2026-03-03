@@ -86,9 +86,7 @@ pub fn extract_bearer_token(req: &ServiceRequest) -> Result<String, AuthError> {
         .get("Authorization")
         .ok_or(AuthError::MissingHeader)?;
 
-    let value = header
-        .to_str()
-        .map_err(|_| AuthError::InvalidFormat)?;
+    let value = header.to_str().map_err(|_| AuthError::InvalidFormat)?;
 
     let token = value
         .strip_prefix("Bearer ")

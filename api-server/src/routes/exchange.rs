@@ -28,10 +28,9 @@ pub async fn get_exchange_rates(pool: web::Data<PgPool>) -> impl Responder {
     };
 
     // Get true prices for reference
-    let true_prices_result =
-        sqlx::query("SELECT item_name, price FROM true_prices")
-            .fetch_all(pool.get_ref())
-            .await;
+    let true_prices_result = sqlx::query("SELECT item_name, price FROM true_prices")
+        .fetch_all(pool.get_ref())
+        .await;
 
     let true_prices = match true_prices_result {
         Ok(p) if !p.is_empty() => p,

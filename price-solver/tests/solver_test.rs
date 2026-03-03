@@ -22,7 +22,13 @@ fn add_noise(matrix: Vec<Vec<f64>>, noise: f64) -> Vec<Vec<f64>> {
         .map(|(i, row)| {
             row.into_iter()
                 .enumerate()
-                .map(|(j, r)| if i == j { 1.0 } else { r * (1.0 + noise * (i as f64 - j as f64) * 0.01) })
+                .map(|(j, r)| {
+                    if i == j {
+                        1.0
+                    } else {
+                        r * (1.0 + noise * (i as f64 - j as f64) * 0.01)
+                    }
+                })
                 .collect()
         })
         .collect()
@@ -60,7 +66,7 @@ fn test_two_servers_scaled_differently() {
     // Both servers have the same relative prices but different absolute scales
     // Relative: [1, 3, 9]
     let server_a = make_ratio_matrix(&[100.0, 300.0, 900.0]); // scale 100
-    let server_b = make_ratio_matrix(&[5.0, 15.0, 45.0]);     // scale 5
+    let server_b = make_ratio_matrix(&[5.0, 15.0, 45.0]); // scale 5
 
     let result = compute_prices_from_servers(&[server_a, server_b], None, 0, 1.0).unwrap();
 
@@ -75,9 +81,7 @@ fn test_five_servers_with_slight_disagreement() {
     let true_prices = vec![1.0, 2.0, 5.0, 10.0, 3.0];
 
     // Generate 5 server ratio matrices, each with tiny noise
-    let servers: Vec<Vec<Vec<f64>>> = (0..5)
-        .map(|_| make_ratio_matrix(&true_prices))
-        .collect();
+    let servers: Vec<Vec<Vec<f64>>> = (0..5).map(|_| make_ratio_matrix(&true_prices)).collect();
 
     let result = compute_prices_from_servers(&servers, None, 0, 1.0).unwrap();
 
@@ -108,7 +112,8 @@ fn test_weighted_servers_prefer_higher_weight() {
 
     // Weight server A much more strongly
     let weights = vec![10.0, 1.0];
-    let result = compute_prices_from_servers(&[server_a, server_b], Some(&weights), 0, 10.0).unwrap();
+    let result =
+        compute_prices_from_servers(&[server_a, server_b], Some(&weights), 0, 10.0).unwrap();
 
     // Result for item 1 should be much closer to 20.0 (server A) than 50.0 (server B)
     assert!(
@@ -128,14 +133,14 @@ fn test_sparse_ratios_zeros_as_missing() {
 
     // Server A: has item 0 vs 1 ratios but uses 0.0 (missing) for item 2
     let mut server_a = make_ratio_matrix(&true_prices);
-    server_a[0][2] = 0.0;  // mark as missing
+    server_a[0][2] = 0.0; // mark as missing
     server_a[2][0] = 0.0;
     server_a[1][2] = 0.0;
     server_a[2][1] = 0.0;
 
     // Server B: has item 1 vs 2 ratios but uses 0.0 for item 0
     let mut server_b = make_ratio_matrix(&true_prices);
-    server_b[0][1] = 0.0;  // mark as missing
+    server_b[0][1] = 0.0; // mark as missing
     server_b[1][0] = 0.0;
     server_b[0][2] = 0.0;
     server_b[2][0] = 0.0;
@@ -161,7 +166,10 @@ fn test_validate_valid_matrix() {
 fn test_validate_not_square() {
     let matrix = vec![vec![1.0, 2.0], vec![0.5, 1.0, 3.0]];
     let result = validate_ratio_matrix(&matrix);
-    assert!(result.is_err(), "Expected validation error for non-square matrix");
+    assert!(
+        result.is_err(),
+        "Expected validation error for non-square matrix"
+    );
 }
 
 // --- Error path tests ---

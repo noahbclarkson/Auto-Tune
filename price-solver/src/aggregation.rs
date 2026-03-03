@@ -92,17 +92,15 @@ mod tests {
 
     #[test]
     fn test_geometric_mean() {
-        let server_a = vec![
-            vec![1.0, 2.0],
-            vec![0.5, 1.0],
-        ];
-        let server_b = vec![
-            vec![1.0, 4.0],
-            vec![0.25, 1.0],
-        ];
+        let server_a = vec![vec![1.0, 2.0], vec![0.5, 1.0]];
+        let server_b = vec![vec![1.0, 4.0], vec![0.25, 1.0]];
 
         let weights = vec![1.0, 1.0];
-        let agg = aggregate_ratios(&[server_a, server_b], &weights, AggregationMethod::GeometricMean);
+        let agg = aggregate_ratios(
+            &[server_a, server_b],
+            &weights,
+            AggregationMethod::GeometricMean,
+        );
 
         // Geometric mean of 2 and 4 = sqrt(8) ≈ 2.83
         assert!((agg[0][1].exp() - 2.83).abs() < 0.1);
@@ -111,12 +109,7 @@ mod tests {
     #[test]
     fn test_median() {
         let servers: Vec<Vec<Vec<f64>>> = (0..5)
-            .map(|i| {
-                vec![
-                    vec![1.0, (i + 1) as f64],
-                    vec![1.0 / (i + 1) as f64, 1.0],
-                ]
-            })
+            .map(|i| vec![vec![1.0, (i + 1) as f64], vec![1.0 / (i + 1) as f64, 1.0]])
             .collect();
 
         let weights = vec![1.0; 5];

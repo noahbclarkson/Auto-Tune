@@ -27,13 +27,12 @@ pub async fn register_server(
     let raw_key = generate_api_key();
     let key_hash = hash_api_key(&raw_key);
 
-    let result = sqlx::query(
-        "INSERT INTO servers (name, api_key_hash) VALUES ($1, $2) RETURNING id",
-    )
-    .bind(&name)
-    .bind(&key_hash)
-    .fetch_one(pool.get_ref())
-    .await;
+    let result =
+        sqlx::query("INSERT INTO servers (name, api_key_hash) VALUES ($1, $2) RETURNING id")
+            .bind(&name)
+            .bind(&key_hash)
+            .fetch_one(pool.get_ref())
+            .await;
 
     match result {
         Ok(row) => {
@@ -91,7 +90,7 @@ pub async fn list_servers(pool: web::Data<PgPool>) -> impl Responder {
                         continue;
                     }
                 };
-                
+
                 servers.push(Server {
                     id,
                     name: r.try_get::<String, _>("name").unwrap_or_default(),
@@ -102,8 +101,14 @@ pub async fn list_servers(pool: web::Data<PgPool>) -> impl Responder {
                     last_seen: r
                         .try_get::<DateTime<Utc>, _>("last_seen")
                         .unwrap_or_else(|_| Utc::now()),
-                    last_submission_at: r.try_get::<Option<DateTime<Utc>>, _>("last_submission_at").ok().flatten(),
-                    last_submission_item_count: r.try_get::<Option<i32>, _>("last_submission_item_count").ok().flatten(),
+                    last_submission_at: r
+                        .try_get::<Option<DateTime<Utc>>, _>("last_submission_at")
+                        .ok()
+                        .flatten(),
+                    last_submission_item_count: r
+                        .try_get::<Option<i32>, _>("last_submission_item_count")
+                        .ok()
+                        .flatten(),
                 });
             }
             HttpResponse::Ok().json(servers)

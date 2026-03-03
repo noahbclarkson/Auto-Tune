@@ -14,11 +14,14 @@ mod routes;
 use auth::ApiKeyAuth;
 use matching::MatchingEngine;
 use routes::{
+    auction::configure as configure_auction,
     exchange::get_exchange_rates,
-    orders::{cancel_order, get_orderbook, get_orderbook_depth, get_trade_history, list_orders, place_order},
+    orders::{
+        cancel_order, get_orderbook, get_orderbook_depth, get_trade_history, list_orders,
+        place_order,
+    },
     prices::{get_price_history, get_true_prices, submit_prices},
     servers::{list_servers, register_server},
-    auction::configure as configure_auction,
 };
 
 async fn health() -> impl Responder {
@@ -39,8 +42,8 @@ async fn main() -> Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let database_url = std::env::var("DATABASE_URL")
-        .expect("DATABASE_URL environment variable must be set");
+    let database_url =
+        std::env::var("DATABASE_URL").expect("DATABASE_URL environment variable must be set");
 
     let bind_addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_owned());
 
@@ -80,7 +83,10 @@ async fn main() -> Result<()> {
             .route("/api/orders", web::get().to(list_orders))
             .route("/api/orders/{id}", web::delete().to(cancel_order))
             .route("/api/orderbook/{item_id}", web::get().to(get_orderbook))
-            .route("/api/orderbook/{item_id}/depth", web::get().to(get_orderbook_depth))
+            .route(
+                "/api/orderbook/{item_id}/depth",
+                web::get().to(get_orderbook_depth),
+            )
             .route("/api/trades", web::get().to(get_trade_history))
             // Authenticated endpoints
             .service(

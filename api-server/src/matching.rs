@@ -18,19 +18,19 @@ pub fn validate_tick_size(price: f64) -> Result<(), MatchError> {
     if price <= 0.0 {
         return Err(MatchError::InvalidPrice);
     }
-    
+
     // Check if price is a multiple of tick size (with floating point tolerance)
     let scaled = price / TICK_SIZE;
     let rounded = scaled.round();
     let diff = (scaled - rounded).abs();
-    
+
     if diff > 1e-9 {
         return Err(MatchError::InvalidTickSize {
             price,
             tick_size: TICK_SIZE,
         });
     }
-    
+
     Ok(())
 }
 
@@ -193,9 +193,9 @@ pub enum MatchError {
 /// Wrapper for ordering buy orders: highest price first, then oldest first
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct BuyOrderKey {
-    price: i64,        // Inverted so higher prices sort first
-    created_at: i64,   // Nanoseconds since epoch
-    order_id: Uuid,    // Tie-breaker for deterministic ordering
+    price: i64,      // Inverted so higher prices sort first
+    created_at: i64, // Nanoseconds since epoch
+    order_id: Uuid,  // Tie-breaker for deterministic ordering
 }
 
 impl Ord for BuyOrderKey {
@@ -219,9 +219,9 @@ impl PartialOrd for BuyOrderKey {
 /// Wrapper for ordering sell orders: lowest price first, then oldest first
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct SellOrderKey {
-    price: i64,        // Normal order: lower prices sort first
-    created_at: i64,   // Nanoseconds since epoch
-    order_id: Uuid,    // Tie-breaker
+    price: i64,      // Normal order: lower prices sort first
+    created_at: i64, // Nanoseconds since epoch
+    order_id: Uuid,  // Tie-breaker
 }
 
 impl Ord for SellOrderKey {
@@ -266,13 +266,13 @@ fn timestamp_to_sort_key(ts: DateTime<Utc>) -> i64 {
 pub struct MatchingEngine {
     /// All orders by ID
     orders: std::collections::HashMap<Uuid, Order>,
-    
+
     /// Buy side order books per item: sorted by price (desc) then time (asc)
     buy_books: std::collections::HashMap<String, BTreeMap<BuyOrderKey, Uuid>>,
-    
+
     /// Sell side order books per item: sorted by price (asc) then time (asc)
     sell_books: std::collections::HashMap<String, BTreeMap<SellOrderKey, Uuid>>,
-    
+
     /// Fill records
     fills: Vec<OrderFill>,
 }
@@ -309,10 +309,10 @@ impl MatchingEngine {
         if new_order.price <= 0.0 {
             return Err(MatchError::InvalidPrice);
         }
-        
+
         // Validate tick size
         validate_tick_size(new_order.price)?;
-        
+
         // Validate quantity
         if new_order.quantity <= 0 {
             return Err(MatchError::InvalidQuantity);
@@ -386,10 +386,10 @@ impl MatchingEngine {
     /// Match orders with a specific timestamp (useful for testing)
     pub fn match_orders_at(&mut self, item_id: &str, now: DateTime<Utc>) -> Vec<OrderFill> {
         let mut fills = Vec::new();
-        
+
         let buy_book = self.buy_books.get(item_id);
         let sell_book = self.sell_books.get(item_id);
-        
+
         // Need both sides to match
         let (Some(buy_book), Some(sell_book)) = (buy_book, sell_book) else {
             return fills;
@@ -526,12 +526,7 @@ impl MatchingEngine {
         if let Some(buy_book) = self.buy_books.get_mut(item_id) {
             let filled_keys: Vec<_> = buy_book
                 .iter()
-                .filter(|(_, id)| {
-                    self.orders
-                        .get(id)
-                        .map(|o| !o.is_active())
-                        .unwrap_or(true)
-                })
+                .filter(|(_, id)| self.orders.get(id).map(|o| !o.is_active()).unwrap_or(true))
                 .map(|(k, _)| k.clone())
                 .collect();
             for key in filled_keys {
@@ -542,12 +537,7 @@ impl MatchingEngine {
         if let Some(sell_book) = self.sell_books.get_mut(item_id) {
             let filled_keys: Vec<_> = sell_book
                 .iter()
-                .filter(|(_, id)| {
-                    self.orders
-                        .get(id)
-                        .map(|o| !o.is_active())
-                        .unwrap_or(true)
-                })
+                .filter(|(_, id)| self.orders.get(id).map(|o| !o.is_active()).unwrap_or(true))
                 .map(|(k, _)| k.clone())
                 .collect();
             for key in filled_keys {
@@ -582,7 +572,7 @@ impl MatchingEngine {
     pub fn get_fills(&self) -> &[OrderFill] {
         &self.fills
     }
-    
+
     /// Get fills with item_id information (for trade history)
     pub fn get_fills_with_items(&self) -> Vec<(OrderFill, String, String, String)> {
         self.fills
@@ -590,7 +580,12 @@ impl MatchingEngine {
             .filter_map(|fill| {
                 let buy_order = self.orders.get(&fill.buy_order_id)?;
                 let sell_order = self.orders.get(&fill.sell_order_id)?;
-                Some((fill.clone(), buy_order.item_id.clone(), buy_order.player_id.clone(), sell_order.player_id.clone()))
+                Some((
+                    fill.clone(),
+                    buy_order.item_id.clone(),
+                    buy_order.player_id.clone(),
+                    sell_order.player_id.clone(),
+                ))
             })
             .collect()
     }
@@ -599,10 +594,7 @@ impl MatchingEngine {
     pub fn get_all_orders(&self, player_id: Option<&str>) -> Vec<&Order> {
         self.orders
             .values()
-            .filter(|o| {
-                o.is_active()
-                    && player_id.map_or(true, |pid| o.player_id == pid)
-            })
+            .filter(|o| o.is_active() && player_id.map_or(true, |pid| o.player_id == pid))
             .collect()
     }
 
@@ -630,7 +622,7 @@ impl MatchingEngine {
         let order = self.orders.get_mut(&order_id).unwrap();
         order.status = OrderStatus::Cancelled;
         let item_id = order.item_id.clone();
-        
+
         // Remove from order books
         self.cleanup_filled_orders(&item_id);
 

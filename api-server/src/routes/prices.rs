@@ -84,13 +84,11 @@ pub async fn submit_prices(
             .json(ErrorResponse::new("failed to store price data"));
     }
 
-    let _ = sqlx::query(
-        "UPDATE servers SET last_seen = NOW(), player_count = $1 WHERE id = $2",
-    )
-    .bind(body.player_count)
-    .bind(path_server_id)
-    .execute(pool.get_ref())
-    .await;
+    let _ = sqlx::query("UPDATE servers SET last_seen = NOW(), player_count = $1 WHERE id = $2")
+        .bind(body.player_count)
+        .bind(path_server_id)
+        .execute(pool.get_ref())
+        .await;
 
     let pool_clone = pool.get_ref().clone();
     tokio::spawn(async move {
@@ -149,10 +147,7 @@ pub async fn get_true_prices(pool: web::Data<PgPool>) -> impl Responder {
 }
 
 /// GET /api/prices/history/:item
-pub async fn get_price_history(
-    pool: web::Data<PgPool>,
-    path: web::Path<String>,
-) -> impl Responder {
+pub async fn get_price_history(pool: web::Data<PgPool>, path: web::Path<String>) -> impl Responder {
     let item_name = path.into_inner();
 
     let result = sqlx::query(

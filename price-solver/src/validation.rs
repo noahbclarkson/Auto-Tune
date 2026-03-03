@@ -6,7 +6,11 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum ValidationError {
     #[error("Matrix dimension mismatch: expected {expected}x{expected}, got row {row} with {cols} columns")]
-    DimensionMismatch { expected: usize, row: usize, cols: usize },
+    DimensionMismatch {
+        expected: usize,
+        row: usize,
+        cols: usize,
+    },
 
     #[error("Invalid ratio at [{i}][{j}]: {value}. All ratios must be positive.")]
     InvalidRatio { i: usize, j: usize, value: f64 },
@@ -15,7 +19,12 @@ pub enum ValidationError {
     InvalidDiagonal { i: usize, j: usize, value: f64 },
 
     #[error("Matrix is not reciprocal: r[{i}][{j}]={rij} but r[{j}][{i}]={rji}")]
-    NotReciprocal { i: usize, j: usize, rij: f64, rji: f64 },
+    NotReciprocal {
+        i: usize,
+        j: usize,
+        rij: f64,
+        rji: f64,
+    },
 
     #[error("Empty matrix")]
     EmptyMatrix,
@@ -49,20 +58,12 @@ pub fn validate_ratio_matrix(matrix: &[Vec<f64>]) -> Result<(), ValidationError>
 
             // Check positivity
             if val <= 0.0 {
-                return Err(ValidationError::InvalidRatio {
-                    i,
-                    j,
-                    value: val,
-                });
+                return Err(ValidationError::InvalidRatio { i, j, value: val });
             }
 
             // Check diagonal
             if i == j && (val - 1.0).abs() > 0.001 {
-                return Err(ValidationError::InvalidDiagonal {
-                    i,
-                    j,
-                    value: val,
-                });
+                return Err(ValidationError::InvalidDiagonal { i, j, value: val });
             }
 
             // Check reciprocity (tolerance for floating point)
@@ -85,7 +86,9 @@ pub fn validate_ratio_matrix(matrix: &[Vec<f64>]) -> Result<(), ValidationError>
 }
 
 /// Validate multiple ratio matrices have consistent dimensions
-pub fn validate_consistent_dimensions(matrices: &[Vec<Vec<f64>>]) -> Result<usize, ValidationError> {
+pub fn validate_consistent_dimensions(
+    matrices: &[Vec<Vec<f64>>],
+) -> Result<usize, ValidationError> {
     if matrices.is_empty() {
         return Err(ValidationError::EmptyMatrix);
     }
@@ -121,10 +124,7 @@ mod tests {
 
     #[test]
     fn test_negative_value() {
-        let matrix = vec![
-            vec![1.0, -2.0],
-            vec![-0.5, 1.0],
-        ];
+        let matrix = vec![vec![1.0, -2.0], vec![-0.5, 1.0]];
         assert!(matches!(
             validate_ratio_matrix(&matrix),
             Err(ValidationError::InvalidRatio { .. })
@@ -145,10 +145,7 @@ mod tests {
 
     #[test]
     fn test_wrong_diagonal() {
-        let matrix = vec![
-            vec![2.0, 1.0],
-            vec![1.0, 1.0],
-        ];
+        let matrix = vec![vec![2.0, 1.0], vec![1.0, 1.0]];
         assert!(matches!(
             validate_ratio_matrix(&matrix),
             Err(ValidationError::InvalidDiagonal { .. })

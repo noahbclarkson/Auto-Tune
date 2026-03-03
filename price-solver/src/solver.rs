@@ -125,7 +125,10 @@ pub fn compute_prices_with_config(
     }
 
     if anchor_item >= n {
-        return Err(SolverError::AnchorOutOfBounds { index: anchor_item, n });
+        return Err(SolverError::AnchorOutOfBounds {
+            index: anchor_item,
+            n,
+        });
     }
 
     // Validate matrix dimensions and ratio values
@@ -148,7 +151,11 @@ pub fn compute_prices_with_config(
             for (j, &r) in row.iter().enumerate() {
                 // Only validate off-diagonal entries that are meant to be real ratios
                 if i != j && r > 0.0 && !r.is_finite() {
-                    return Err(SolverError::InvalidRatio { row: i, col: j, value: r });
+                    return Err(SolverError::InvalidRatio {
+                        row: i,
+                        col: j,
+                        value: r,
+                    });
                 }
             }
         }
@@ -208,7 +215,12 @@ pub fn compute_prices_with_config(
     a_data[anchor_row * n + anchor_item] = w;
     b_data[anchor_row] = anchor_price.ln() * w;
 
-    debug!("Built {}×{} least-squares system ({} edges)", num_rows, n, edges.len());
+    debug!(
+        "Built {}×{} least-squares system ({} edges)",
+        num_rows,
+        n,
+        edges.len()
+    );
 
     let a = DMatrix::from_row_slice(num_rows, n, &a_data);
     let b = DVector::from_vec(b_data);
@@ -217,10 +229,7 @@ pub fn compute_prices_with_config(
     let ata = a.transpose() * &a;
     let atb = a.transpose() * &b;
 
-    let x = ata
-        .lu()
-        .solve(&atb)
-        .ok_or(SolverError::SingularMatrix)?;
+    let x = ata.lu().solve(&atb).ok_or(SolverError::SingularMatrix)?;
 
     let prices: Vec<f64> = x.iter().map(|v| v.exp()).collect();
 
@@ -272,16 +281,15 @@ mod tests {
 
         // Weight server A more heavily (0.9 vs 0.1)
         let weights = vec![0.9, 0.1];
-        let result = compute_prices_from_servers(
-            &[server_a, server_b],
-            Some(&weights),
-            0,
-            10.0,
-        )
-        .unwrap();
+        let result =
+            compute_prices_from_servers(&[server_a, server_b], Some(&weights), 0, 10.0).unwrap();
 
         // Result should be much closer to server A's price (20.0) than server B's (25.0)
-        assert!(result[1] < 21.5, "Expected result close to 20.0, got {}", result[1]);
+        assert!(
+            result[1] < 21.5,
+            "Expected result close to 20.0, got {}",
+            result[1]
+        );
     }
 
     #[test]

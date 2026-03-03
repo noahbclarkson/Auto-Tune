@@ -15,7 +15,7 @@ use auth::ApiKeyAuth;
 use matching::MatchingEngine;
 use routes::{
     exchange::get_exchange_rates,
-    orders::{cancel_order, get_orderbook, list_orders, place_order},
+    orders::{cancel_order, get_orderbook, get_orderbook_depth, get_trade_history, list_orders, place_order},
     prices::{get_price_history, get_true_prices, submit_prices},
     servers::{list_servers, register_server},
 };
@@ -78,6 +78,8 @@ async fn main() -> Result<()> {
             .route("/api/orders", web::get().to(list_orders))
             .route("/api/orders/{id}", web::delete().to(cancel_order))
             .route("/api/orderbook/{item_id}", web::get().to(get_orderbook))
+            .route("/api/orderbook/{item_id}/depth", web::get().to(get_orderbook_depth))
+            .route("/api/trades", web::get().to(get_trade_history))
             // Authenticated endpoints
             .service(
                 web::scope("/api/servers/{server_id}")

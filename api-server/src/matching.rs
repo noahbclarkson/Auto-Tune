@@ -10,6 +10,30 @@ use std::collections::BTreeMap;
 use thiserror::Error;
 use uuid::Uuid;
 
+/// Minimum price increment (tick size) - prices must be multiples of this value
+pub const TICK_SIZE: f64 = 0.01;
+
+/// Validate that a price is a valid multiple of the tick size
+pub fn validate_tick_size(price: f64) -> Result<(), MatchError> {
+    if price <= 0.0 {
+        return Err(MatchError::InvalidPrice);
+    }
+    
+    // Check if price is a multiple of tick size (with floating point tolerance)
+    let scaled = price / TICK_SIZE;
+    let rounded = scaled.round();
+    let diff = (scaled - rounded).abs();
+    
+    if diff > 1e-9 {
+        return Err(MatchError::InvalidTickSize {
+            price,
+            tick_size: TICK_SIZE,
+        });
+    }
+    
+    Ok(())
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -157,6 +181,9 @@ pub enum MatchError {
 
     #[error("Player {player_id} cannot match against their own order {order_id}")]
     SelfMatch { player_id: String, order_id: Uuid },
+
+    #[error("Invalid tick size: price {price} is not a multiple of {tick_size}")]
+    InvalidTickSize { price: f64, tick_size: f64 },
 }
 
 // ---------------------------------------------------------------------------
@@ -278,10 +305,15 @@ impl MatchingEngine {
         new_order: NewOrder,
         created_at: DateTime<Utc>,
     ) -> Result<Order, MatchError> {
-        // Validate
+        // Validate price
         if new_order.price <= 0.0 {
             return Err(MatchError::InvalidPrice);
         }
+        
+        // Validate tick size
+        validate_tick_size(new_order.price)?;
+        
+        // Validate quantity
         if new_order.quantity <= 0 {
             return Err(MatchError::InvalidQuantity);
         }
@@ -549,6 +581,18 @@ impl MatchingEngine {
     /// Get all fills
     pub fn get_fills(&self) -> &[OrderFill] {
         &self.fills
+    }
+    
+    /// Get fills with item_id information (for trade history)
+    pub fn get_fills_with_items(&self) -> Vec<(OrderFill, String, String, String)> {
+        self.fills
+            .iter()
+            .filter_map(|fill| {
+                let buy_order = self.orders.get(&fill.buy_order_id)?;
+                let sell_order = self.orders.get(&fill.sell_order_id)?;
+                Some((fill.clone(), buy_order.item_id.clone(), buy_order.player_id.clone(), sell_order.player_id.clone()))
+            })
+            .collect()
     }
 
     /// Get all orders (optionally filtered by player_id)

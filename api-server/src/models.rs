@@ -116,3 +116,58 @@ impl ErrorResponse {
         Self { error: msg.into() }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Order book depth
+// ---------------------------------------------------------------------------
+
+/// A single price level in the order book depth
+#[derive(Debug, Serialize)]
+pub struct DepthLevel {
+    pub price: f64,
+    pub quantity: i32,
+    pub order_count: i32,
+}
+
+/// Order book depth response with market summary
+#[derive(Debug, Serialize)]
+pub struct OrderBookDepthResponse {
+    pub item_id: String,
+    pub tick_size: f64,
+    pub bids: Vec<DepthLevel>,
+    pub asks: Vec<DepthLevel>,
+    pub spread: Option<f64>,
+    pub mid_price: Option<f64>,
+    pub total_bid_quantity: i32,
+    pub total_ask_quantity: i32,
+}
+
+// ---------------------------------------------------------------------------
+// Trade history
+// ---------------------------------------------------------------------------
+
+/// A single trade/fill record
+#[derive(Debug, Serialize)]
+pub struct TradeRecord {
+    pub id: Uuid,
+    pub item_id: String,
+    pub price: f64,
+    pub quantity: i32,
+    pub buyer_id: String,
+    pub seller_id: String,
+    pub executed_at: DateTime<Utc>,
+}
+
+/// Query parameters for trade history
+#[derive(Debug, Deserialize)]
+pub struct TradeHistoryQuery {
+    pub item_id: Option<String>,
+    pub limit: Option<i32>,
+}
+
+/// Trade history response
+#[derive(Debug, Serialize)]
+pub struct TradeHistoryResponse {
+    pub trades: Vec<TradeRecord>,
+    pub count: usize,
+}

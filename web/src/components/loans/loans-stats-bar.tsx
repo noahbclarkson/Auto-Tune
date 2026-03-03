@@ -33,7 +33,7 @@ export function LoansStatsBar({ stats }: LoansStatsBarProps) {
       <Card>
         <CardContent className="p-4 text-center">
           <p className="text-sm text-muted-foreground">Overdue</p>
-          <p className="text-xl font-bold text-foreground">
+          <div className="text-xl font-bold text-foreground">
             {stats.overdueCount > 0 ? (
               <Badge variant="destructive" className="text-sm">
                 {stats.overdueCount}
@@ -41,7 +41,7 @@ export function LoansStatsBar({ stats }: LoansStatsBarProps) {
             ) : (
               '0'
             )}
-          </p>
+          </div>
         </CardContent>
       </Card>
     </div>

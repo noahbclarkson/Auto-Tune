@@ -123,6 +123,7 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
             for j in 0..n {
                 if matrix[i][j] == 1.0 && i != j {
                     let mut valid_bridges = Vec::new();
+                    #[allow(clippy::needless_range_loop)]
                     for k in 0..n {
                         let ik = matrix[i][k];
                         let kj = matrix[k][j];

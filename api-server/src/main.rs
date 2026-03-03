@@ -18,6 +18,7 @@ use routes::{
     orders::{cancel_order, get_orderbook, get_orderbook_depth, get_trade_history, list_orders, place_order},
     prices::{get_price_history, get_true_prices, submit_prices},
     servers::{list_servers, register_server},
+    auction::configure as configure_auction,
 };
 
 async fn health() -> impl Responder {
@@ -74,6 +75,7 @@ async fn main() -> Result<()> {
                 web::get().to(get_exchange_rates),
             )
             // Auction house endpoints
+            .configure(configure_auction)
             .route("/api/orders", web::post().to(place_order))
             .route("/api/orders", web::get().to(list_orders))
             .route("/api/orders/{id}", web::delete().to(cancel_order))

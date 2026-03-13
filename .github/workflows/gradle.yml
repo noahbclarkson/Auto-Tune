@@ -22,7 +22,7 @@ jobs:
       uses: gradle/gradle-build-action@v2.11.1
       with:
         arguments: test build
-        gradle-version: '7.6'
+        gradle-version: '8.5'
     - uses: actions/upload-artifact@v4.1.0
       with:
         name: 'Auto-Tune-Artifact'

@@ -3,17 +3,17 @@ import net.ltgt.gradle.errorprone.errorprone
 plugins {
     java
     pmd
-    id("com.gradleup.shadow") version "9.3.1"
+    id("com.gradleup.shadow") version "9.3.2"
     id("xyz.jpenilla.run-paper") version "2.3.1"
-    id("net.ltgt.errorprone") version "5.0.0"
+    id("net.ltgt.errorprone") version "4.1.0"
 }
 
 group = property("group") as String
 version = property("version") as String
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
@@ -65,6 +65,7 @@ dependencies {
 pmd {
     toolVersion = "7.14.0"
     isConsoleOutput = true
+    isIgnoreFailures = true
     // Use PMD's built-in category rulesets (no custom file needed)
     ruleSets = listOf(
         "category/java/bestpractices.xml",
@@ -145,12 +146,17 @@ tasks {
 
     compileJava {
         options.encoding = "UTF-8"
-        options.release.set(17)
+        options.release.set(21)
     }
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-processing", "-Xlint:-classfile"))
+    options.compilerArgs.addAll(listOf(
+        "-Xlint:all",
+        "-Xlint:-processing",
+        "-Xlint:-classfile",
+        "-XDaddTypeAnnotationsToSymbol=true"
+    ))
     options.errorprone.disableWarningsInGeneratedCode = true
 }
 

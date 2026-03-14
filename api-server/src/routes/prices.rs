@@ -191,13 +191,7 @@ pub async fn get_price_history(pool: web::Data<PgPool>, path: web::Path<String>)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use actix_web::{
-        body::to_bytes,
-        dev::Service,
-        http::StatusCode,
-        test,
-        web, App, HttpMessage,
-    };
+    use actix_web::{body::to_bytes, dev::Service, http::StatusCode, test, web, App, HttpMessage};
     use sqlx::postgres::PgPoolOptions;
     use std::time::Duration;
 
@@ -215,10 +209,14 @@ mod tests {
             App::new()
                 .app_data(web::Data::new(lazy_test_pool()))
                 .wrap_fn(move |req, srv| {
-                    req.extensions_mut().insert(AuthenticatedServer { server_id });
+                    req.extensions_mut()
+                        .insert(AuthenticatedServer { server_id });
                     srv.call(req)
                 })
-                .route("/api/servers/{server_id}/prices", web::post().to(submit_prices)),
+                .route(
+                    "/api/servers/{server_id}/prices",
+                    web::post().to(submit_prices),
+                ),
         )
         .await;
 
@@ -248,10 +246,14 @@ mod tests {
             App::new()
                 .app_data(web::Data::new(lazy_test_pool()))
                 .wrap_fn(move |req, srv| {
-                    req.extensions_mut().insert(AuthenticatedServer { server_id });
+                    req.extensions_mut()
+                        .insert(AuthenticatedServer { server_id });
                     srv.call(req)
                 })
-                .route("/api/servers/{server_id}/prices", web::post().to(submit_prices)),
+                .route(
+                    "/api/servers/{server_id}/prices",
+                    web::post().to(submit_prices),
+                ),
         )
         .await;
 
@@ -306,10 +308,14 @@ mod tests {
             App::new()
                 .app_data(web::Data::new(pool.clone()))
                 .wrap_fn(move |req, srv| {
-                    req.extensions_mut().insert(AuthenticatedServer { server_id });
+                    req.extensions_mut()
+                        .insert(AuthenticatedServer { server_id });
                     srv.call(req)
                 })
-                .route("/api/servers/{server_id}/prices", web::post().to(submit_prices)),
+                .route(
+                    "/api/servers/{server_id}/prices",
+                    web::post().to(submit_prices),
+                ),
         )
         .await;
 

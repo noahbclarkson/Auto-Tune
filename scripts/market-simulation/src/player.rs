@@ -141,9 +141,7 @@ impl PlayerAgent {
         agent.init_preferences(item_count);
 
         for i in 0..item_count {
-            agent
-                .inventory
-                .insert(i, rng.random_range(5..20));
+            agent.inventory.insert(i, rng.random_range(5..20));
         }
         agent
     }
@@ -260,7 +258,8 @@ impl PlayerAgent {
         let mut rng = rand::rng();
         for (i, &base) in base_prices.iter().enumerate().take(item_count) {
             let stddev = base * 0.15;
-            let normal = Normal::new(base, stddev).unwrap_or_else(|_| Normal::new(base, 1.0).unwrap());
+            let normal =
+                Normal::new(base, stddev).unwrap_or_else(|_| Normal::new(base, 1.0).unwrap());
             let perceived: f64 = normal.sample(&mut rng).max(base * 0.5);
             self.perceived_values.insert(i, perceived);
         }
@@ -278,7 +277,12 @@ impl PlayerAgent {
         base_perceived / (1.0 + qty as f64 * self.inventory_saturation)
     }
 
-    pub fn decide(&mut self, items: &[ItemState], record: bool, slippage_coeff: f64) -> DecisionResult {
+    pub fn decide(
+        &mut self,
+        items: &[ItemState],
+        record: bool,
+        slippage_coeff: f64,
+    ) -> DecisionResult {
         let mut rng = rand::rng();
         let mut decisions = Vec::new();
         let mut logs = Vec::new();
@@ -349,14 +353,19 @@ impl PlayerAgent {
                 continue;
             }
 
-            let base_perceived = self.perceived_values.get(&i).copied().unwrap_or(items[i].price);
+            let base_perceived = self
+                .perceived_values
+                .get(&i)
+                .copied()
+                .unwrap_or(items[i].price);
             let perceived = self.effective_perceived(i, base_perceived);
             let buy_price = items[i].buy_price();
             let sell_price = items[i].sell_price();
 
             if buy_price < perceived * (1.0 - self.buy_threshold) && self.balance > buy_price {
                 let max_affordable = (self.balance / buy_price).floor() as i32;
-                let risk_adjusted_max = ((self.max_trade_amount as f64) * self.risk_tolerance).ceil() as i32;
+                let risk_adjusted_max =
+                    ((self.max_trade_amount as f64) * self.risk_tolerance).ceil() as i32;
                 let amount = rng.random_range(1..=risk_adjusted_max.min(max_affordable).max(1));
                 let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                 let cost = buy_price * slippage * amount as f64;

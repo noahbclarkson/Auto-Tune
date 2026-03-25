@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::config::SimConfig;
 use crate::engine::{MarketEngine, Transaction, TransactionType};
-use crate::loan::{calculate_interest_rate, Loan, LoanStatus};
+use crate::loan::{Loan, LoanStatus, calculate_interest_rate};
 use crate::player::{Archetype, DecisionLog, PlayerAgent};
 use crate::recorder::{DataRecorder, LoanEventData, TickSnapshot};
 
@@ -75,8 +75,7 @@ impl Simulation {
         let base_prices: Vec<f64> = self.config.items.iter().map(|i| i.base_price).collect();
         for _ in 0..count {
             self.next_player_id += 1;
-            let player =
-                PlayerAgent::new_random(self.next_player_id, item_count, &base_prices);
+            let player = PlayerAgent::new_random(self.next_player_id, item_count, &base_prices);
             self.players.push(player);
         }
     }
@@ -131,7 +130,8 @@ impl Simulation {
                 if decision.is_buy {
                     self.engine.record_buy(decision.item_index, decision.amount);
                 } else {
-                    self.engine.record_sell(decision.item_index, decision.amount);
+                    self.engine
+                        .record_sell(decision.item_index, decision.amount);
                 }
 
                 tick_transactions.push(tx);
@@ -150,8 +150,12 @@ impl Simulation {
             self.transactions.pop_front();
         }
 
-        self.engine
-            .tick(online_count, &self.config, self.current_tick, &self.transactions);
+        self.engine.tick(
+            online_count,
+            &self.config,
+            self.current_tick,
+            &self.transactions,
+        );
 
         let loan_events = self.process_loans();
         let player_loan_events = self.process_player_loans(online_count);
@@ -181,10 +185,9 @@ impl Simulation {
                 recorder.record_loan_events(&all_loan_events);
             }
 
-            if capture_economy
-                && let Some(econ) = self.economy_snapshots.last() {
-                    recorder.record_economy_snapshot(econ);
-                }
+            if capture_economy && let Some(econ) = self.economy_snapshots.last() {
+                recorder.record_economy_snapshot(econ);
+            }
         }
     }
 
@@ -264,12 +267,11 @@ impl Simulation {
             {
                 use rand::RngExt;
                 if rng.random::<f64>() < 0.1 {
-                    let max_loan = (player.total_traded * self.config.loans.max_loan_multiplier)
-                        .max(100.0);
+                    let max_loan =
+                        (player.total_traded * self.config.loans.max_loan_multiplier).max(100.0);
                     let amount = max_loan * 0.5;
                     let rate = calculate_interest_rate(player.credit_score, &self.config);
-                    let loan =
-                        Loan::new(player_idx, amount, rate, self.current_tick, &self.config);
+                    let loan = Loan::new(player_idx, amount, rate, self.current_tick, &self.config);
                     self.players[player_idx].balance += amount;
                     if recording {
                         events.push(LoanEventData {
@@ -299,8 +301,7 @@ impl Simulation {
                         loan.make_payment(payment);
                         self.players[player_idx].balance -= payment;
                         let event_type = if loan.status == LoanStatus::Paid {
-                            let bonus =
-                                (loan.principal / 100.0).min(50.0) as i32;
+                            let bonus = (loan.principal / 100.0).min(50.0) as i32;
                             self.players[player_idx].credit_score =
                                 (self.players[player_idx].credit_score + bonus).min(1000);
                             "Paid"
@@ -395,9 +396,10 @@ impl Simulation {
 
     pub fn apply_config(&mut self, config: SimConfig) {
         if let Some(recorder) = &mut self.recorder
-            && let Ok(json) = serde_json::to_string(&config) {
-                recorder.record_config_change(self.current_tick, &json);
-            }
+            && let Ok(json) = serde_json::to_string(&config)
+        {
+            recorder.record_config_change(self.current_tick, &json);
+        }
         self.config = config;
         self.config_dirty = false;
     }
@@ -411,8 +413,7 @@ impl Simulation {
         let base_prices: Vec<f64> = self.config.items.iter().map(|i| i.base_price).collect();
         for _ in 0..20 {
             self.next_player_id += 1;
-            let mut farmer =
-                PlayerAgent::new_farmer(self.next_player_id, item_count, &base_prices);
+            let mut farmer = PlayerAgent::new_farmer(self.next_player_id, item_count, &base_prices);
             for i in 0..item_count {
                 farmer.inventory.insert(i, 100);
             }
@@ -450,8 +451,7 @@ impl Simulation {
         let base_prices: Vec<f64> = self.config.items.iter().map(|i| i.base_price).collect();
         for _ in 0..20 {
             self.next_player_id += 1;
-            let mut buyer =
-                PlayerAgent::new_hoarder(self.next_player_id, item_count, &base_prices);
+            let mut buyer = PlayerAgent::new_hoarder(self.next_player_id, item_count, &base_prices);
             buyer.balance = 500_000.0;
             buyer.buy_threshold = 0.0;
             buyer.activity_rate = 0.9;

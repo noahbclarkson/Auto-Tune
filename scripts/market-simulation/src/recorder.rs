@@ -389,7 +389,11 @@ impl DataRecorder {
                 tick: snapshot.tick,
                 player_id: log.player_id,
                 item_index: log.item_index,
-                action: if log.is_buy { "Buy".to_string() } else { "Sell".to_string() },
+                action: if log.is_buy {
+                    "Buy".to_string()
+                } else {
+                    "Sell".to_string()
+                },
                 amount: log.amount,
                 price_per_unit: log.price_per_unit,
                 total_cost: log.total_cost,
@@ -590,11 +594,7 @@ impl DataRecorder {
                  VALUES (?1, ?2, ?3)",
             )?;
             for row in &self.batch.config_changes {
-                stmt.execute(params![
-                    self.session_id,
-                    row.tick as i64,
-                    row.config_json,
-                ])?;
+                stmt.execute(params![self.session_id, row.tick as i64, row.config_json,])?;
             }
         }
 

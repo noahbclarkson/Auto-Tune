@@ -257,7 +257,8 @@ impl MarketEngine {
             } else if tick_dir != PriceTrendDirection::Stable && tick_dir != prev_dir {
                 self.items[item_idx].trend_streak = 1;
             } else {
-                self.items[item_idx].trend_streak = self.items[item_idx].trend_streak.saturating_sub(1);
+                self.items[item_idx].trend_streak =
+                    self.items[item_idx].trend_streak.saturating_sub(1);
             }
 
             if tick_dir != PriceTrendDirection::Stable {
@@ -334,7 +335,9 @@ impl MarketEngine {
         let player_scaling = Self::calculate_player_scaling(online_count, config);
         let scaled_ratio = trade_ratio * player_scaling;
 
-        let max_change_percent = config.items.get(item_idx)
+        let max_change_percent = config
+            .items
+            .get(item_idx)
             .and_then(|ic| ic.max_price_change_override)
             .unwrap_or(config.economy.max_price_change_percent)
             / 100.0;
@@ -372,7 +375,9 @@ impl MarketEngine {
         global_volume_multiplier: f64,
         config: &SimConfig,
     ) -> SpreadResult {
-        let base_spread = config.items.get(item_idx)
+        let base_spread = config
+            .items
+            .get(item_idx)
             .and_then(|ic| ic.base_spread_override)
             .unwrap_or(config.spread.base_spread);
         let half_spread = base_spread / 2.0;
@@ -391,7 +396,8 @@ impl MarketEngine {
 
         let full_effect_traders = config.spread.liquidity_full_effect_traders.max(1) as f64;
         let clamped_traders = (metrics.distinct_traders as f64).min(full_effect_traders);
-        let effective_coeff = (config.spread.liquidity_coeff / full_effect_traders) * clamped_traders;
+        let effective_coeff =
+            (config.spread.liquidity_coeff / full_effect_traders) * clamped_traders;
         let liquidity_reduction = 1.0 / (1.0 + total_weighted * effective_coeff);
         bpd *= liquidity_reduction;
         spd *= liquidity_reduction;

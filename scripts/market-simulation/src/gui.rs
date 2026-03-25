@@ -135,9 +135,10 @@ fn draw_top_bar(ctx: &egui::Context, sim: &mut Simulation, gui: &mut GuiState) {
                 );
                 if ui.button("Stop").clicked() {
                     if let Some(recorder) = &mut sim.recorder
-                        && let Err(e) = recorder.finalize() {
-                            gui.recording_error = Some(format!("{e}"));
-                        }
+                        && let Err(e) = recorder.finalize()
+                    {
+                        gui.recording_error = Some(format!("{e}"));
+                    }
                     sim.recorder = None;
                     gui.recording = false;
                 }
@@ -188,11 +189,7 @@ fn draw_left_sidebar(ctx: &egui::Context, sim: &mut Simulation, gui: &mut GuiSta
         });
 }
 
-fn slider_with_help(
-    ui: &mut egui::Ui,
-    slider: egui::Slider<'_>,
-    tooltip: &str,
-) -> bool {
+fn slider_with_help(ui: &mut egui::Ui, slider: egui::Slider<'_>, tooltip: &str) -> bool {
     let changed = ui.horizontal(|ui| {
         let r = ui.add(slider).changed();
         help(ui, tooltip);
@@ -238,15 +235,13 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
     );
     changed |= slider_with_help(
         ui,
-        egui::Slider::new(&mut cfg.economy.trade_window_days, 1..=30)
-            .text("Trade Window (days)"),
+        egui::Slider::new(&mut cfg.economy.trade_window_days, 1..=30).text("Trade Window (days)"),
         &tip,
     );
 
     changed |= slider_with_help(
         ui,
-        egui::Slider::new(&mut cfg.economy.slippage_coeff, 0.0..=0.05)
-            .text("Slippage Coeff"),
+        egui::Slider::new(&mut cfg.economy.slippage_coeff, 0.0..=0.05).text("Slippage Coeff"),
         "Large trades pay more per unit (sqrt scaling).\n\n\
         cost = price * (1 + coeff * sqrt(amount)) * amount\n\
         At 0.01, buying 64 units costs 8% more per unit.\n\
@@ -325,8 +320,7 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
     );
     changed |= slider_with_help(
         ui,
-        egui::Slider::new(&mut cfg.economy.trend_dampening, 0.0..=1.0)
-            .text("Trend Dampening"),
+        egui::Slider::new(&mut cfg.economy.trend_dampening, 0.0..=1.0).text("Trend Dampening"),
         &tip,
     );
 
@@ -349,13 +343,19 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
     );
 
     ui.horizontal(|ui| {
-        if ui.checkbox(&mut cfg.economy.adaptive_window, "Adaptive Window").changed() {
+        if ui
+            .checkbox(&mut cfg.economy.adaptive_window, "Adaptive Window")
+            .changed()
+        {
             changed = true;
         }
-        help(ui, "Automatically scales the trade window based on transaction density.\n\n\
+        help(
+            ui,
+            "Automatically scales the trade window based on transaction density.\n\n\
             Low activity = wider window (captures more history).\n\
             High activity = narrower window (more responsive).\n\
-            Target density: 100 transactions/day.");
+            Target density: 100 transactions/day.",
+        );
     });
 
     if cfg.economy.adaptive_window {
@@ -367,8 +367,11 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
         );
         changed |= slider_with_help(
             ui,
-            egui::Slider::new(&mut cfg.economy.min_window_days, 1..=cfg.economy.trade_window_days)
-                .text("Min Window (days)"),
+            egui::Slider::new(
+                &mut cfg.economy.min_window_days,
+                1..=cfg.economy.trade_window_days,
+            )
+            .text("Min Window (days)"),
             &tip,
         );
 
@@ -378,8 +381,11 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
         );
         changed |= slider_with_help(
             ui,
-            egui::Slider::new(&mut cfg.economy.max_window_days, cfg.economy.trade_window_days..=30)
-                .text("Max Window (days)"),
+            egui::Slider::new(
+                &mut cfg.economy.max_window_days,
+                cfg.economy.trade_window_days..=30,
+            )
+            .text("Max Window (days)"),
             &tip,
         );
     }
@@ -395,13 +401,14 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
         Example: $100 item\n\
         Buy @ ${:.2}, Sell @ ${:.2} (before other factors)",
         cfg.spread.base_spread,
-        1.0 + half, 1.0 - half,
-        100.0 * (1.0 + half), 100.0 * (1.0 - half),
+        1.0 + half,
+        1.0 - half,
+        100.0 * (1.0 + half),
+        100.0 * (1.0 - half),
     );
     changed |= slider_with_help(
         ui,
-        egui::Slider::new(&mut cfg.spread.base_spread, 0.01..=2.0)
-            .text("Base Spread"),
+        egui::Slider::new(&mut cfg.spread.base_spread, 0.01..=2.0).text("Base Spread"),
         &tip,
     );
 
@@ -420,8 +427,7 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
     );
     changed |= slider_with_help(
         ui,
-        egui::Slider::new(&mut cfg.spread.volume_impact, 0.0..=2.0)
-            .text("Volume Impact"),
+        egui::Slider::new(&mut cfg.spread.volume_impact, 0.0..=2.0).text("Volume Impact"),
         &tip,
     );
 
@@ -441,8 +447,7 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
     );
     changed |= slider_with_help(
         ui,
-        egui::Slider::new(&mut cfg.spread.player_impact, 0.0..=1.0)
-            .text("Player Impact"),
+        egui::Slider::new(&mut cfg.spread.player_impact, 0.0..=1.0).text("Player Impact"),
         &tip,
     );
 
@@ -456,14 +461,16 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
         1 trader,  vol=100: effectiveCoeff={:.5}, reduction={:.3}\n\
         5 traders, vol=100: effectiveCoeff={:.5}, reduction={:.3}\n\
         {fet:.0} traders, vol=100: effectiveCoeff={:.5}, reduction={:.3}",
-        lc / fet * 1.0, 1.0 / (1.0 + 100.0 * lc / fet * 1.0),
-        lc / fet * 5.0, 1.0 / (1.0 + 100.0 * lc / fet * 5.0),
-        lc / fet * fet, 1.0 / (1.0 + 100.0 * lc / fet * fet),
+        lc / fet * 1.0,
+        1.0 / (1.0 + 100.0 * lc / fet * 1.0),
+        lc / fet * 5.0,
+        1.0 / (1.0 + 100.0 * lc / fet * 5.0),
+        lc / fet * fet,
+        1.0 / (1.0 + 100.0 * lc / fet * fet),
     );
     changed |= slider_with_help(
         ui,
-        egui::Slider::new(&mut cfg.spread.liquidity_coeff, 0.0..=0.5)
-            .text("Liquidity Coeff"),
+        egui::Slider::new(&mut cfg.spread.liquidity_coeff, 0.0..=0.5).text("Liquidity Coeff"),
         &tip,
     );
 
@@ -525,16 +532,19 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
         Score 100: {:.0}% * (1 + 0.4)  = {:.1}%\n\n\
         Applied every {ci} hours ({} ticks).",
         br * 100.0,
-        br * 100.0, br * 0.8 * 100.0,
-        br * 100.0, br * 100.0,
-        br * 100.0, br * 1.2 * 100.0,
-        br * 100.0, br * 1.4 * 100.0,
+        br * 100.0,
+        br * 0.8 * 100.0,
+        br * 100.0,
+        br * 100.0,
+        br * 100.0,
+        br * 1.2 * 100.0,
+        br * 100.0,
+        br * 1.4 * 100.0,
         ci as u64 * 12,
     );
     changed |= slider_with_help(
         ui,
-        egui::Slider::new(&mut cfg.loans.base_interest_rate, 0.01..=0.5)
-            .text("Interest Rate"),
+        egui::Slider::new(&mut cfg.loans.base_interest_rate, 0.01..=0.5).text("Interest Rate"),
         &tip,
     );
 
@@ -552,8 +562,7 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
     );
     changed |= slider_with_help(
         ui,
-        egui::Slider::new(&mut cfg.loans.compound_interval_hours, 1..=168)
-            .text("Compound (hours)"),
+        egui::Slider::new(&mut cfg.loans.compound_interval_hours, 1..=168).text("Compound (hours)"),
         &tip,
     );
 
@@ -567,8 +576,7 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
     );
     changed |= slider_with_help(
         ui,
-        egui::Slider::new(&mut cfg.loans.default_duration_days, 1..=30)
-            .text("Duration (days)"),
+        egui::Slider::new(&mut cfg.loans.default_duration_days, 1..=30).text("Duration (days)"),
         &tip,
     );
 
@@ -585,8 +593,7 @@ fn draw_config_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
     );
     changed |= slider_with_help(
         ui,
-        egui::Slider::new(&mut cfg.loans.default_penalty, 10..=200)
-            .text("Default Penalty"),
+        egui::Slider::new(&mut cfg.loans.default_penalty, 10..=200).text("Default Penalty"),
         &tip,
     );
 
@@ -645,15 +652,9 @@ fn draw_item_selection(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiSta
                 ui.checkbox(&mut gui.selected_items[i], "");
             }
 
-            let label = format!(
-                "{}: ${:.2}",
-                item.name, item.price
-            );
+            let label = format!("{}: ${:.2}", item.name, item.price);
 
-            if ui
-                .selectable_label(gui.focused_item == i, label)
-                .clicked()
-            {
+            if ui.selectable_label(gui.focused_item == i, label).clicked() {
                 gui.focused_item = i;
             }
 
@@ -692,10 +693,7 @@ fn draw_item_selection(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiSta
             }
             if let Some(ref mut val) = item_cfg.max_price_change_override {
                 changed |= ui
-                    .add(
-                        egui::Slider::new(val, 0.1..=20.0)
-                            .text("Max Price Change %"),
-                    )
+                    .add(egui::Slider::new(val, 0.1..=20.0).text("Max Price Change %"))
                     .changed();
             } else {
                 ui.add_enabled(
@@ -718,8 +716,7 @@ fn draw_item_selection(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiSta
         ui.horizontal(|ui| {
             if ui.checkbox(&mut has_spread, "").changed() {
                 if has_spread {
-                    item_cfg.base_spread_override =
-                        Some(gui.pending_config.spread.base_spread);
+                    item_cfg.base_spread_override = Some(gui.pending_config.spread.base_spread);
                 } else {
                     item_cfg.base_spread_override = None;
                 }
@@ -727,10 +724,7 @@ fn draw_item_selection(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiSta
             }
             if let Some(ref mut val) = item_cfg.base_spread_override {
                 changed |= ui
-                    .add(
-                        egui::Slider::new(val, 0.01..=2.0)
-                            .text("Base Spread"),
-                    )
+                    .add(egui::Slider::new(val, 0.01..=2.0).text("Base Spread"))
                     .changed();
             } else {
                 ui.add_enabled(
@@ -795,11 +789,7 @@ fn log_price_formatter(mark: GridMark, _range: &std::ops::RangeInclusive<f64>) -
 }
 
 fn log_y(price: f64) -> f64 {
-    if price > 0.0 {
-        price.log10()
-    } else {
-        -2.0
-    }
+    if price > 0.0 { price.log10() } else { -2.0 }
 }
 
 fn draw_prices_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height: f32) {
@@ -820,10 +810,7 @@ fn draw_prices_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                     .enumerate()
                     .map(|(x, &y)| [x as f64, log_y(y)])
                     .collect();
-                plot_ui.line(
-                    Line::new(&item.name, points)
-                        .color(item_color(i)),
-                );
+                plot_ui.line(Line::new(&item.name, points).color(item_color(i)));
             }
 
             if gui.focused_item < sim.engine.items.len() {
@@ -888,10 +875,8 @@ fn draw_spreads_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, heigh
                 .enumerate()
                 .map(|(x, &y)| [x as f64, y * 100.0])
                 .collect();
-            plot_ui.line(
-                Line::new("BPD %", bpd_points)
-                    .color(egui::Color32::from_rgb(46, 213, 115)),
-            );
+            plot_ui
+                .line(Line::new("BPD %", bpd_points).color(egui::Color32::from_rgb(46, 213, 115)));
 
             let spd_points: PlotPoints = item
                 .spd_history
@@ -899,10 +884,8 @@ fn draw_spreads_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, heigh
                 .enumerate()
                 .map(|(x, &y)| [x as f64, y * 100.0])
                 .collect();
-            plot_ui.line(
-                Line::new("SPD %", spd_points)
-                    .color(egui::Color32::from_rgb(255, 107, 107)),
-            );
+            plot_ui
+                .line(Line::new("SPD %", spd_points).color(egui::Color32::from_rgb(255, 107, 107)));
 
             let total_spread: PlotPoints = item
                 .bpd_history
@@ -933,8 +916,7 @@ fn draw_spreads_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, heigh
                 .map(|(x, (&p, &b))| [x as f64, p * (1.0 + b)])
                 .collect();
             plot_ui.line(
-                Line::new("Buy Price", buy_points)
-                    .color(egui::Color32::from_rgb(46, 213, 115)),
+                Line::new("Buy Price", buy_points).color(egui::Color32::from_rgb(46, 213, 115)),
             );
 
             let base_points: PlotPoints = item
@@ -943,10 +925,7 @@ fn draw_spreads_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, heigh
                 .enumerate()
                 .map(|(x, &y)| [x as f64, y])
                 .collect();
-            plot_ui.line(
-                Line::new("Base Price", base_points)
-                    .color(item_color(gui.focused_item)),
-            );
+            plot_ui.line(Line::new("Base Price", base_points).color(item_color(gui.focused_item)));
 
             let sell_points: PlotPoints = item
                 .price_history
@@ -956,8 +935,7 @@ fn draw_spreads_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, heigh
                 .map(|(x, (&p, &s))| [x as f64, p * (1.0 - s)])
                 .collect();
             plot_ui.line(
-                Line::new("Sell Price", sell_points)
-                    .color(egui::Color32::from_rgb(255, 107, 107)),
+                Line::new("Sell Price", sell_points).color(egui::Color32::from_rgb(255, 107, 107)),
             );
         });
 }
@@ -984,8 +962,7 @@ fn draw_volume_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                 .map(|(x, &y)| Bar::new(x as f64, y as f64).width(0.8))
                 .collect();
             plot_ui.bar_chart(
-                BarChart::new("Buy Volume", buy_bars)
-                    .color(egui::Color32::from_rgb(46, 213, 115)),
+                BarChart::new("Buy Volume", buy_bars).color(egui::Color32::from_rgb(46, 213, 115)),
             );
 
             let sell_bars: Vec<Bar> = item
@@ -1008,7 +985,10 @@ fn draw_economy_chart(ui: &mut egui::Ui, sim: &Simulation, height: f32) {
             ui.label(format!("GDP: ${:.0}", snap.gdp));
             ui.label(format!("Debt: ${:.0}", snap.total_debt));
             ui.label(format!("Inflation: {:.2}%", snap.avg_price_change));
-            ui.label(format!("Online: {}/{}", snap.online_players, snap.total_players));
+            ui.label(format!(
+                "Online: {}/{}",
+                snap.online_players, snap.total_players
+            ));
         });
     }
 
@@ -1036,8 +1016,7 @@ fn draw_economy_chart(ui: &mut egui::Ui, sim: &Simulation, height: f32) {
                 .map(|(x, s)| [x as f64, s.total_debt])
                 .collect();
             plot_ui.line(
-                Line::new("Total Debt", debt_points)
-                    .color(egui::Color32::from_rgb(255, 107, 107)),
+                Line::new("Total Debt", debt_points).color(egui::Color32::from_rgb(255, 107, 107)),
             );
 
             let inflation_points: PlotPoints = sim
@@ -1076,10 +1055,7 @@ fn draw_detail_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                 .enumerate()
                 .map(|(x, &y)| [x as f64, y])
                 .collect();
-            plot_ui.line(
-                Line::new("Base Price", price_points)
-                    .color(item_color(gui.focused_item)),
-            );
+            plot_ui.line(Line::new("Base Price", price_points).color(item_color(gui.focused_item)));
 
             if !item.buy_price_history.is_empty() {
                 let buy_points: PlotPoints = item
@@ -1089,8 +1065,7 @@ fn draw_detail_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                     .map(|(x, &y)| [x as f64, y])
                     .collect();
                 plot_ui.line(
-                    Line::new("Buy Price", buy_points)
-                        .color(egui::Color32::from_rgb(46, 213, 115)),
+                    Line::new("Buy Price", buy_points).color(egui::Color32::from_rgb(46, 213, 115)),
                 );
 
                 let sell_points: PlotPoints = item
@@ -1119,8 +1094,7 @@ fn draw_detail_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                 .map(|(x, &y)| Bar::new(x as f64, y as f64).width(0.8))
                 .collect();
             plot_ui.bar_chart(
-                BarChart::new("Buy Vol", buy_bars)
-                    .color(egui::Color32::from_rgb(46, 213, 115)),
+                BarChart::new("Buy Vol", buy_bars).color(egui::Color32::from_rgb(46, 213, 115)),
             );
 
             let sell_bars: Vec<Bar> = item
@@ -1130,8 +1104,7 @@ fn draw_detail_chart(ui: &mut egui::Ui, sim: &Simulation, gui: &GuiState, height
                 .map(|(x, &y)| Bar::new(x as f64, -(y as f64)).width(0.8))
                 .collect();
             plot_ui.bar_chart(
-                BarChart::new("Sell Vol", sell_bars)
-                    .color(egui::Color32::from_rgb(255, 107, 107)),
+                BarChart::new("Sell Vol", sell_bars).color(egui::Color32::from_rgb(255, 107, 107)),
             );
         });
 }
@@ -1173,9 +1146,7 @@ fn draw_player_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
             .count();
         ui.label(format!("Active Loans: {active_loans}"));
 
-        if gui.selected_player.is_some()
-            && ui.button("Deselect Player").clicked()
-        {
+        if gui.selected_player.is_some() && ui.button("Deselect Player").clicked() {
             gui.selected_player = None;
         }
     });
@@ -1201,23 +1172,24 @@ fn draw_player_panel(ui: &mut egui::Ui, sim: &mut Simulation, gui: &mut GuiState
                     for (idx, player) in sim.players.iter().enumerate() {
                         let is_selected = gui.selected_player == Some(idx);
 
-                        if ui
-                            .selectable_label(is_selected, &player.name)
-                            .clicked()
-                        {
+                        if ui.selectable_label(is_selected, &player.name).clicked() {
                             gui.selected_player = if is_selected { None } else { Some(idx) };
                         }
 
                         ui.label(player.archetype.label());
                         ui.label(format!("${:.0}", player.balance));
 
-                        let inventory_value: f64 = player.inventory.iter().map(|(&item_idx, &qty)| {
-                            if item_idx < sim.engine.items.len() {
-                                sim.engine.items[item_idx].sell_price() * qty as f64
-                            } else {
-                                0.0
-                            }
-                        }).sum();
+                        let inventory_value: f64 = player
+                            .inventory
+                            .iter()
+                            .map(|(&item_idx, &qty)| {
+                                if item_idx < sim.engine.items.len() {
+                                    sim.engine.items[item_idx].sell_price() * qty as f64
+                                } else {
+                                    0.0
+                                }
+                            })
+                            .sum();
                         let net_worth = player.balance + inventory_value;
                         let nw_color = if net_worth >= 0.0 {
                             egui::Color32::from_rgb(46, 213, 115)

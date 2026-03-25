@@ -1,9 +1,11 @@
--- Auto-Tune Database Schema v2
+-- Auto-Tune Database Schema v1 (consolidated)
 -- Redesigned market engine with time-weighted trades and per-item autosell
 -- Supports both SQLite and MySQL/MariaDB
 
 -- Items table: Stores all tradeable items
 -- price is the single source of truth - it changes based on trade history
+-- Note: no maxPrice/minPrice caps - the engine's maxPriceChangePercent, trend
+-- dampening, adaptive windows, and sector correlation manage volatility naturally.
 CREATE TABLE IF NOT EXISTS at_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     material VARCHAR(64) NOT NULL,

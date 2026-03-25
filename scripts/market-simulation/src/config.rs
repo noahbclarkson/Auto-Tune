@@ -53,6 +53,12 @@ pub struct LoanConfig {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ArchetypeConfig {
+    pub archetype: String,
+    pub count: usize,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ItemConfig {
     pub name: String,
     pub base_price: f64,

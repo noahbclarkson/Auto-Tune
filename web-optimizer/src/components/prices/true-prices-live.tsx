@@ -17,10 +17,22 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
   const [history, setHistory] = useState<PriceHistoryPoint[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyReloadKey, setHistoryReloadKey] = useState(0);
+
+  useEffect(() => {
+    const hasSelection = selectedItem ? prices.some((entry) => entry.item === selectedItem) : false;
+    if (!hasSelection) {
+      setSelectedItem(prices[0]?.item ?? null);
+      setHistory([]);
+      setHistoryError(null);
+    }
+  }, [prices, selectedItem]);
 
   useEffect(() => {
     if (!selectedItem) {
       setHistory([]);
+      setHistoryError(null);
+      setIsLoadingHistory(false);
       return;
     }
 
@@ -52,7 +64,7 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
     return () => {
       cancelled = true;
     };
-  }, [selectedItem]);
+  }, [selectedItem, historyReloadKey]);
 
   return (
     <>
@@ -103,7 +115,14 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
             </div>
           ) : historyError ? (
             <div className="bg-gray-900/50 border border-red-900/40 rounded-xl p-6 mb-8 text-sm text-red-300">
-              Failed to load history: {historyError}
+              <p>Failed to load history: {historyError}</p>
+              <button
+                type="button"
+                className="mt-3 inline-flex items-center rounded-md border border-red-700/70 px-3 py-1.5 text-xs font-medium text-red-100 hover:bg-red-900/40"
+                onClick={() => setHistoryReloadKey((value) => value + 1)}
+              >
+                Retry
+              </button>
             </div>
           ) : history.length === 0 ? (
             <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-6 mb-8 text-sm text-gray-400">

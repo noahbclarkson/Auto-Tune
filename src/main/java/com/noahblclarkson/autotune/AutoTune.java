@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.logging.Level;
 
-public final class AutoTune extends JavaPlugin {
+public class AutoTune extends JavaPlugin {
 
     private static AutoTune instance;
 

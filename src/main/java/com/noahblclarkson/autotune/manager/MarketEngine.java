@@ -2,7 +2,6 @@ package com.noahblclarkson.autotune.manager;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.ItemRepository;
@@ -38,7 +37,7 @@ public class MarketEngine {
     private static final BigDecimal PRICE_FLOOR = new BigDecimal("0.01");
     private static final double TARGET_TX_DENSITY_PER_DAY = 100.0;
 
-    private final AutoTune plugin;
+    private final PluginAdapter adapter;
     private final ConfigManager configManager;
     private final ItemRepository itemRepository;
     private final TransactionRepository transactionRepository;
@@ -55,13 +54,13 @@ public class MarketEngine {
 
     @Inject
     public MarketEngine(
-            AutoTune plugin,
+            PluginAdapter adapter,
             ConfigManager configManager,
             ItemRepository itemRepository,
             TransactionRepository transactionRepository,
             PriceOverrideRepository priceOverrideRepository
     ) {
-        this.plugin = plugin;
+        this.adapter = adapter;
         this.configManager = configManager;
         this.itemRepository = itemRepository;
         this.transactionRepository = transactionRepository;
@@ -76,7 +75,7 @@ public class MarketEngine {
     public void loadOverrideCache() {
         overrideCache.clear();
         overrideCache.putAll(priceOverrideRepository.getActiveOverrides());
-        plugin.getLogger().info("Loaded " + overrideCache.size() + " active price overrides.");
+        adapter.getLogger().info("Loaded " + overrideCache.size() + " active price overrides.");
     }
 
     public void reload() {
@@ -91,7 +90,7 @@ public class MarketEngine {
 
     public void tick() {
         AutoTuneConfig.EconomyConfig economyConfig = configManager.getConfig().economy();
-        int onlineCount = plugin.getServer().getOnlinePlayers().size();
+        int onlineCount = adapter.getOnlineCount();
         boolean frozen = configManager.isMarketFrozen();
 
         try {
@@ -229,14 +228,14 @@ public class MarketEngine {
 
             if (configManager.getConfig().debug().logPrices()) {
                 String status = frozen ? "FROZEN" : "active";
-                plugin.getLogger().info("Market tick completed. Updated " + items.size() + " prices (" + status + ", window=" + windowDays + "d).");
+                adapter.getLogger().info("Market tick completed. Updated " + items.size() + " prices (" + status + ", window=" + windowDays + "d).");
             }
         } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Error during market tick", e);
+            adapter.getLogger().log(Level.SEVERE, "Error during market tick", e);
         }
     }
 
-    private void updateTrendStreak(int itemId, BigDecimal newPrice, BigDecimal oldPrice) {
+    void updateTrendStreak(int itemId, BigDecimal newPrice, BigDecimal oldPrice) {
         if (oldPrice.compareTo(BigDecimal.ZERO) == 0) {
             trendDirectionCache.put(itemId, PriceTrend.Direction.STABLE);
             trendStreakCache.put(itemId, 0);
@@ -330,7 +329,7 @@ public class MarketEngine {
         return new TradeMetrics(weightedBuys, weightedSells, buyCount, sellCount, distinctPlayers.size());
     }
 
-    private BigDecimal calculateNewPrice(
+    BigDecimal calculateNewPrice(
             ShopItem item,
             TradeMetrics metrics,
             int onlineCount,
@@ -376,7 +375,7 @@ public class MarketEngine {
         return currentPrice.add(priceChange);
     }
 
-    private double calculatePlayerScaling(int onlineCount, AutoTuneConfig.EconomyConfig config) {
+    double calculatePlayerScaling(int onlineCount, AutoTuneConfig.EconomyConfig config) {
         if (onlineCount == 0) {
             return 0;
         }
@@ -386,7 +385,7 @@ public class MarketEngine {
         return Math.tanh(onlineCount * coefficient);
     }
 
-    private SpreadResult calculateSpread(
+    SpreadResult calculateSpread(
             ShopItem item,
             TradeMetrics metrics,
             int onlineCount,
@@ -687,13 +686,13 @@ public class MarketEngine {
     }
 
     public record SpreadResult(BigDecimal bpd, BigDecimal spd) {
-        private static final SpreadResult DEFAULT = new SpreadResult(
+        static final SpreadResult DEFAULT = new SpreadResult(
                 BigDecimal.valueOf(0.15).setScale(5, RoundingMode.HALF_UP),
                 BigDecimal.valueOf(0.15).setScale(5, RoundingMode.HALF_UP)
         );
     }
 
-    private record TradeMetrics(
+    record TradeMetrics(
             double weightedBuys,
             double weightedSells,
             int buyCount,

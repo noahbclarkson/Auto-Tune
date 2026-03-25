@@ -13,6 +13,8 @@ import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
+import com.noahblclarkson.autotune.manager.DefaultPluginAdapter;
+import com.noahblclarkson.autotune.manager.PluginAdapter;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -28,6 +30,7 @@ public class AutoTuneModule extends AbstractModule {
     protected void configure() {
         bind(AutoTune.class).toInstance(plugin);
         bind(JavaPlugin.class).toInstance(plugin);
+        bind(PluginAdapter.class).toInstance(new DefaultPluginAdapter(plugin));
     }
 
     @Provides

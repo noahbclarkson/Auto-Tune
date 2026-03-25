@@ -28,10 +28,13 @@ repositories {
 
 dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("org.mockito:mockito-core:4.11.0")
+    testImplementation("org.mockito:mockito-junit-jupiter:4.11.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.2")
 
     // Paper API
     compileOnly("io.papermc.paper:paper-api:${property("paperVersion")}")
+    testImplementation("io.papermc.paper:paper-api:${property("paperVersion")}")
 
     // Vault API (economy integration)
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")

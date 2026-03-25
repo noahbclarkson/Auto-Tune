@@ -121,6 +121,39 @@ export function EconomyPanel({ apiBase }: EconomyPanelProps) {
             </div>
           </div>
         )}
+
+        {/* Debt-to-GDP ratio */}
+        {gdp && debt && debt.totalDebt > 0 && gdp.gdp > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Debt / GDP</p>
+              <span className="text-xs font-semibold text-foreground">
+                {((debt.totalDebt / gdp.gdp) * 100).toFixed(1)}%
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(100, (debt.totalDebt / gdp.gdp) * 100)}%`,
+                  backgroundColor:
+                    debt.totalDebt / gdp.gdp > 1
+                      ? 'hsl(var(--destructive))'
+                      : debt.totalDebt / gdp.gdp > 0.5
+                      ? 'hsl(38 92% 50%)' // amber
+                      : 'hsl(var(--primary))',
+                }}
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              {debt.totalDebt / gdp.gdp > 1
+                ? 'Debt exceeds GDP — recovery needed'
+                : debt.totalDebt / gdp.gdp > 0.5
+                ? 'Elevated debt level — monitor closely'
+                : 'Healthy debt ratio'}
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

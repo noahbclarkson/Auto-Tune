@@ -137,14 +137,17 @@ Captured every 5 minutes as snapshots:
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `update-interval` | 6000 ticks (5 min) | Price recalculation frequency |
-| `max-price-change-percent` | 3.0% | Max base price change per tick |
+| `max-price-change-percent` | 1.5% | Max base price change per tick |
 | `trade-window-days` | 7 | Time window for trade analysis |
-| `base-spread` | 0.30 (30%) | Total spread split between BPD/SPD |
-| `volume-impact` | 0.5 | Imbalance effect on spread |
-| `player-impact` | 0.7 | Player count effect on spread |
-| `liquidity-coeff` | 0.05 | High-volume spread reduction |
-| `full-effect-players` | 20 | Player count for ~99% scaling |
-| `base-interest-rate` | 0.05 (5%) | Loan interest per compound |
+| `base-spread` | 0.20 (20%) | Total spread split between BPD/SPD |
+| `spread.volume-impact` | 0.8 | Imbalance effect on spread |
+| `spread.player-impact` | 0.6 | Player count effect on spread |
+| `spread.liquidity-coeff` | 0.01 | High-volume spread reduction |
+| `spread.liquidity-full-effect-traders` | 10 | Traders needed for full liquidity effect |
+| `player-scaling.full-effect-players` | 10 | Player count for ~99% spread scaling |
+| `loans.base-interest-rate` | 0.05 (5%) | Loan interest per compound |
+| `loans.compound-interval-hours` | 24 | Hours between interest compounds |
+| `loans.debt-gdp-circuit-breaker-ratio` | 10.0 | Pauses interest when debt exceeds GDP × this |
 
 > The `scripts/market_curves.py` script generates visualizations of all these curves and relationships.
 

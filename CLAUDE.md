@@ -23,7 +23,9 @@ python scripts/market_curves.py
 
 The `build` task depends on `shadowJar`, which relocates all dependencies under `com.noahblclarkson.autotune.lib.*`. The `buildWeb` task runs `npm run export` in `web/` and copies the static output into `src/main/resources/web/` before `processResources`.
 
-There are no unit tests in this project. Validation is done via the Rust market simulation and manual testing on a Paper server. All three market engine implementations (Java `MarketEngine.java`, Rust `scripts/market-simulation/src/engine.rs`, TypeScript `web-optimizer/src/lib/market-engine.ts`) must stay in sync — same default values, same formulas.
+There are unit tests in `src/test/java/` using JUnit 5 + Mockito 4. MarketEngine has comprehensive tests (36 tests). See `MarketEngineTest.java`.
+
+Validation is also done via the Rust market simulation and manual testing on a Paper server. All three market engine implementations (Java `MarketEngine.java`, Rust `scripts/market-simulation/src/engine.rs`, TypeScript `web-optimizer/src/lib/market-engine.ts`) must stay in sync — same default values, same formulas.
 
 ## Architecture
 
@@ -57,6 +59,8 @@ onDisable: WebServer stop -> TaskScheduler stop -> DatabaseManager shutdown
 SQLite (default) or MariaDB. Schema versioned manually via `at_schema_version` table (not Flyway). Migrations in `src/main/resources/db/` (V1 = initial schema, V2 = per-item market engine overrides). All async DB ops go through `DatabaseManager.supplyAsync()`/`runAsync()` with main-thread callbacks via `runOnMain()`. SQLite uses a single-thread executor; MySQL uses pool-sized executor.
 
 ### Market Engine (`MarketEngine.java`)
+
+> **Unit testing note:** `MarketEngine` depends on `PluginAdapter` (not directly on `AutoTune`) so it can be tested without a live server. See `PluginAdapter.java` and `DefaultPluginAdapter.java`. Run tests with `./gradlew test`.
 
 The most complex component. Core concepts:
 

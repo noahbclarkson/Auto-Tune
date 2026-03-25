@@ -19,6 +19,8 @@ public record ShopItem(
         @Nullable String itemData,
         @Nullable Double maxPriceChangeOverride,
         @Nullable Double baseSpreadOverride,
+        @Nullable BigDecimal maxPrice,
+        @Nullable BigDecimal minPrice,
         @NotNull Instant createdAt,
         @NotNull Instant updatedAt
 ) {
@@ -40,6 +42,8 @@ public record ShopItem(
                 .itemData(itemData)
                 .maxPriceChangeOverride(maxPriceChangeOverride)
                 .baseSpreadOverride(baseSpreadOverride)
+                .maxPrice(maxPrice)
+                .minPrice(minPrice)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt);
     }
@@ -82,6 +86,8 @@ public record ShopItem(
         private String itemData;
         private Double maxPriceChangeOverride;
         private Double baseSpreadOverride;
+        private BigDecimal maxPrice;
+        private BigDecimal minPrice;
         private Instant createdAt = Instant.now();
         private Instant updatedAt = Instant.now();
 
@@ -140,6 +146,16 @@ public record ShopItem(
             return this;
         }
 
+        public Builder maxPrice(BigDecimal maxPrice) {
+            this.maxPrice = maxPrice;
+            return this;
+        }
+
+        public Builder minPrice(BigDecimal minPrice) {
+            this.minPrice = minPrice;
+            return this;
+        }
+
         public Builder createdAt(Instant createdAt) {
             this.createdAt = createdAt;
             return this;
@@ -155,6 +171,7 @@ public record ShopItem(
                     id, material, itemHash, displayName, price,
                     section, enabled, buyable, itemData,
                     maxPriceChangeOverride, baseSpreadOverride,
+                    maxPrice, minPrice,
                     createdAt, updatedAt
             );
         }

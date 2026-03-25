@@ -2,6 +2,7 @@ package com.noahblclarkson.autotune.economy;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
@@ -24,10 +25,12 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 @Singleton
 public class EconomyManager {
 
+    private final AutoTune plugin;
     private final Economy economy;
     private final DatabaseManager databaseManager;
     private final ShopManager shopManager;
@@ -38,6 +41,7 @@ public class EconomyManager {
 
     @Inject
     public EconomyManager(
+            AutoTune plugin,
             Economy economy,
             DatabaseManager databaseManager,
             ShopManager shopManager,
@@ -46,6 +50,7 @@ public class EconomyManager {
             TransactionRepository transactionRepository,
             PriceReporter priceReporter
     ) {
+        this.plugin = plugin;
         this.economy = economy;
         this.databaseManager = databaseManager;
         this.shopManager = shopManager;
@@ -166,22 +171,29 @@ public class EconomyManager {
             return TransactionResult.economyError();
         }
 
-        var unused = databaseManager.runAsync(() -> {
-            Transaction transaction = Transaction.builder()
-                    .playerUuid(playerId)
-                    .itemId(item.id())
-                    .type(TransactionType.SELL)
-                    .amount(amount)
-                    .pricePerUnit(pricePerUnit)
-                    .totalPrice(totalPrice)
-                    .build();
+        // Persist transaction to DB before returning. Using supplyAsync + join to keep
+        // the synchronous UX of processSellImmediate while ensuring data integrity.
+        try {
+            databaseManager.supplyAsync(() -> {
+                Transaction transaction = Transaction.builder()
+                        .playerUuid(playerId)
+                        .itemId(item.id())
+                        .type(TransactionType.SELL)
+                        .amount(amount)
+                        .pricePerUnit(pricePerUnit)
+                        .totalPrice(totalPrice)
+                        .build();
 
-            transactionRepository.insert(transaction);
-            priceReporter.recordTransaction(item, transaction);
-            playerRepository.addTransaction(playerId, totalPrice, false);
-            marketEngine.recordSell(item.id(), amount);
-            shopManager.invalidateBuyableCache(item.id());
-        });
+                transactionRepository.insert(transaction);
+                priceReporter.recordTransaction(item, transaction);
+                playerRepository.addTransaction(playerId, totalPrice, false);
+                marketEngine.recordSell(item.id(), amount);
+                shopManager.invalidateBuyableCache(item.id());
+                return null;
+            }).join();
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Failed to persist sell transaction for " + player.getName(), e);
+        }
 
         return TransactionResult.success(TransactionType.SELL, amount, totalPrice);
     }

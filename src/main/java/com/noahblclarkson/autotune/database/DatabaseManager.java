@@ -90,7 +90,12 @@ public class DatabaseManager {
     private void runMigrations() throws SQLException {
         runMigration("db/V1__Initial_Schema.sql");
         ensureSchemaVersionTable();
-        setSchemaVersion(1);
+
+        int currentVersion = getSchemaVersion();
+        if (currentVersion < 2) {
+            runMigration("db/V2__add_price_floor_ceiling.sql");
+            setSchemaVersion(2);
+        }
 
         plugin.getLogger().info("Database schema initialized (version " + getSchemaVersion() + ").");
     }

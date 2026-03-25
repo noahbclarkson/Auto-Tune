@@ -131,10 +131,11 @@ public record AutoTuneConfig(
             int warningBeforeDueHours,
             double earlyRepaymentBonusMultiplier,
             double inflationRateImpact,
-            int defaultPenalty
+            int defaultPenalty,
+            double debtGdpCircuitBreakerRatio
     ) {
         public static LoanConfig defaults() {
-            return new LoanConfig(true, 0.05, true, 2.0, 200, 7, 3, 30, 0.002, 24, 1, 24, 1.5, 0.5, 50);
+            return new LoanConfig(true, 0.05, true, 2.0, 200, 7, 3, 30, 0.002, 24, 1, 24, 1.5, 0.5, 50, 10.0);
         }
     }
 

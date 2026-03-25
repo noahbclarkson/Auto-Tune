@@ -18,6 +18,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
@@ -39,6 +40,7 @@ public class LoanManager {
     private final LoanRepository loanRepository;
     private final PlayerRepository playerRepository;
     private final EconomySnapshotRepository snapshotRepository;
+    private volatile boolean interestCircuitOpen = false;
 
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
 
@@ -247,6 +249,31 @@ public class LoanManager {
     public void processInterest() {
         LoanConfig config = configManager.getConfig().loans();
         Duration compoundInterval = Duration.ofHours(config.compoundIntervalHours());
+
+        // Circuit breaker: skip interest if system debt exceeds GDP × threshold.
+        // Simulation showed debt can grow 1000x when player count drops — this
+        // prevents unbounded compound growth from destabilizing the economy.
+        Optional<EconomySnapshot> latestSnapshot = snapshotRepository.findLatest();
+        if (latestSnapshot.isPresent()) {
+            BigDecimal gdp = latestSnapshot.get().gdp();
+            BigDecimal totalDebt = BigDecimal.ZERO;
+            for (Loan l : loanRepository.findAllActive()) {
+                totalDebt = totalDebt.add(l.currentBalance());
+            }
+            if (gdp.compareTo(BigDecimal.ZERO) > 0) {
+                double debtGdpRatio = totalDebt.divide(gdp, MathContext.DECIMAL128).doubleValue();
+                if (debtGdpRatio > config.debtGdpCircuitBreakerRatio()) {
+                    if (!interestCircuitOpen) {
+                        plugin.getLogger().warning("[Auto-Tune] Loan circuit breaker OPEN — debt/gdp ratio "
+                                + String.format("%.1f", debtGdpRatio) + " exceeds threshold "
+                                + config.debtGdpCircuitBreakerRatio() + ". Interest accrual paused.");
+                        interestCircuitOpen = true;
+                    }
+                    return;
+                }
+            }
+        }
+        interestCircuitOpen = false;
 
         List<Loan> activeLoans = loanRepository.findAllActive();
         Instant now = Instant.now();

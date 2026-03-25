@@ -91,10 +91,12 @@ public class DatabaseManager {
         runMigration("db/V1__Initial_Schema.sql");
         ensureSchemaVersionTable();
 
+        // Single consolidated schema (V1) — no incremental add/remove migrations.
+        // Fresh installs: version starts at 1 from getSchemaVersion() default.
+        // Existing installs: already at version 1 or higher, no re-running needed.
         int currentVersion = getSchemaVersion();
-        if (currentVersion < 2) {
-            runMigration("db/V2__add_price_floor_ceiling.sql");
-            setSchemaVersion(2);
+        if (currentVersion < 1) {
+            setSchemaVersion(1);
         }
 
         plugin.getLogger().info("Database schema initialized (version " + getSchemaVersion() + ").");

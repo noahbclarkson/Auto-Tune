@@ -183,7 +183,8 @@ public class ConfigManager {
                 section.getInt("warning-before-due-hours", 24),
                 section.getDouble("early-repayment-bonus-multiplier", 1.5),
                 section.getDouble("inflation-rate-impact", 0.5),
-                section.getInt("default-penalty", 50)
+                section.getInt("default-penalty", 50),
+                section.getDouble("debt-gdp-circuit-breaker-ratio", 10.0)
         );
     }
 

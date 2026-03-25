@@ -1238,6 +1238,9 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                         Archetype::Trader => egui::Color32::from_rgb(255, 230, 109),
                         Archetype::Hoarder => egui::Color32::from_rgb(162, 155, 254),
                         Archetype::Exploiter => egui::Color32::from_rgb(255, 107, 107),
+                        Archetype::Newbie => egui::Color32::from_rgb(255, 183, 77),
+                        Archetype::AFKFarmer => egui::Color32::from_rgb(99, 179, 237),
+                        Archetype::GuildBuyer => egui::Color32::from_rgb(255, 118, 117),
                     };
                     ui.colored_label(archetype_color, player.archetype.label());
                 });
@@ -1670,6 +1673,28 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                             (1.0 + player.sell_threshold) * 100.0
                         ));
                         ui.label("Infrequent, balanced. Low online rate.");
+                    }
+                    Archetype::Newbie => {
+                        ui.label("New player: buys basics even at slight premium.");
+                        ui.label("Almost never sells (hoards early gains).");
+                        ui.label(format!("Low credit score ({}).", player.credit_score));
+                    }
+                    Archetype::AFKFarmer => {
+                        ui.label("Mostly offline — comes online briefly to dump inventory.");
+                        ui.label(format!(
+                            "Massive gather_rate ({:.1}), huge max_trade_amount ({})",
+                            player.gather_rate, player.max_trade_amount
+                        ));
+                        ui.label("Sells at near-zero margin. High inventory saturation.");
+                    }
+                    Archetype::GuildBuyer => {
+                        ui.label("Guild-backed buyer: maintains stock for members.");
+                        ui.label(format!(
+                            "Buy threshold={:.1}%, sell threshold={:.1}% (guild markup)",
+                            player.buy_threshold * 100.0,
+                            player.sell_threshold * 100.0
+                        ));
+                        ui.label("Buys heavily to keep guild inventory stocked.");
                     }
                 }
 

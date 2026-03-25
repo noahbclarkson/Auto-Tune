@@ -5,6 +5,7 @@ mod loan;
 mod player;
 mod recorder;
 mod simulation;
+mod sweep;
 
 use std::path::PathBuf;
 use std::time::Instant;
@@ -207,6 +208,9 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
     archetype_map.insert("Trader".into(), Archetype::Trader);
     archetype_map.insert("Hoarder".into(), Archetype::Hoarder);
     archetype_map.insert("Exploiter".into(), Archetype::Exploiter);
+    archetype_map.insert("Newbie".into(), Archetype::Newbie);
+    archetype_map.insert("AFKFarmer".into(), Archetype::AFKFarmer);
+    archetype_map.insert("GuildBuyer".into(), Archetype::GuildBuyer);
 
     for player_cfg in &scenario.players {
         let archetype = archetype_map
@@ -567,6 +571,13 @@ fn main() -> eframe::Result<()> {
         println!("  low-player       - 3 players, 14 days");
         println!("  spread-stability - Farmer/Trader mix, 10 days");
         println!("  all              - Run all scenarios and compare");
+        println!("  sweep            - Parameter sweep across engine parameter space");
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--sweep" {
+        let config = crate::sweep::SweepConfig::default();
+        crate::sweep::run_sweep(&config);
         return Ok(());
     }
 

@@ -12,6 +12,15 @@ pub enum Archetype {
     Trader,
     Hoarder,
     Exploiter,
+    /// Brand new player — buys lots of cheap basics, sells almost nothing.
+    /// High variance behavior; represents fresh server population.
+    Newbie,
+    /// Mostly offline (low online_prob) but when online dumps huge quantities
+    /// of gathered items. Represents passive resource generators.
+    AFKFarmer,
+    /// Guild bulk buyer — wants to maintain target inventory for members,
+    /// buys heavily when stock is low, rarely sells.
+    GuildBuyer,
 }
 
 impl Archetype {
@@ -22,6 +31,9 @@ impl Archetype {
             Self::Trader => "Trader",
             Self::Hoarder => "Hoarder",
             Self::Exploiter => "Exploiter",
+            Self::Newbie => "Newbie",
+            Self::AFKFarmer => "AFKFarmer",
+            Self::GuildBuyer => "GuildBuyer",
         }
     }
 }
@@ -238,19 +250,164 @@ impl PlayerAgent {
         agent
     }
 
+    /// New players: low budget, buy heavily of basics (high price), sell nothing.
+    /// High variance in decisions. Represent fresh server joiners.
+    pub fn new_newbie(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
+        let mut rng = rand::rng();
+        // Newbies start with modest budget
+        let budget = rng.random_range(100.0..500.0);
+
+        let mut agent = Self {
+            id: index,
+            name: format!("Newbie-{index}"),
+            archetype: Archetype::Newbie,
+            balance: budget,
+            // Newbies come and go unpredictably
+            online_probability: rng.random_range(0.15..0.35),
+            // But when online, quite active
+            activity_rate: rng.random_range(0.3..0.6),
+            // Will buy even at slight premium — eager to get items
+            buy_threshold: rng.random_range(0.0..0.05),
+            // Never sells (new players hoard what they get)
+            sell_threshold: rng.random_range(0.4..0.7),
+            max_trade_amount: rng.random_range(1..8),
+            risk_tolerance: rng.random_range(0.2..0.5),
+            // Newbies gather some but use even more
+            inventory_saturation: rng.random_range(0.02..0.06),
+            gather_rate: rng.random_range(0.1..0.2),
+            usage_rate: rng.random_range(0.2..0.4),
+            perceived_values: HashMap::new(),
+            preferences: HashMap::new(),
+            inventory: HashMap::new(),
+            credit_score: 300, // Low credit — new account
+            total_traded: 0.0,
+            online: false,
+            total_trades: 0,
+        };
+        agent.init_perceived_values(item_count, base_prices);
+        // Newbies prefer cheap basic items
+        agent.init_newbie_preferences(item_count);
+        agent
+    }
+
+    /// AFK Farmer: mostly offline (low online_prob) but when online dumps huge
+    /// quantities of gathered items. Represents passive resource generators.
+    pub fn new_afk_farmer(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
+        let mut rng = rand::rng();
+        let budget = rng.random_range(50.0..300.0);
+
+        let mut agent = Self {
+            id: index,
+            name: format!("AFKFarmer-{index}"),
+            archetype: Archetype::AFKFarmer,
+            balance: budget,
+            // Very rarely online
+            online_probability: rng.random_range(0.05..0.15),
+            // When online, very active — dumps inventory
+            activity_rate: rng.random_range(0.8..1.0),
+            buy_threshold: rng.random_range(0.3..0.5), // Almost never buys
+            sell_threshold: rng.random_range(0.0..0.03), // Sells at tiny margin
+            max_trade_amount: rng.random_range(50..200), // Huge dump sizes
+            risk_tolerance: rng.random_range(0.1..0.3),
+            // Accumulates a LOT of inventory while AFK
+            inventory_saturation: rng.random_range(0.3..0.6),
+            // Gathers rapidly while online
+            gather_rate: rng.random_range(1.0..3.0),
+            // Almost no usage
+            usage_rate: rng.random_range(0.0..0.02),
+            perceived_values: HashMap::new(),
+            preferences: HashMap::new(),
+            inventory: HashMap::new(),
+            credit_score: 500,
+            total_traded: 0.0,
+            online: false,
+            total_trades: 0,
+        };
+        agent.init_perceived_values(item_count, base_prices);
+        // AFK farmers prefer cheap gathered items (building blocks, ores, drops)
+        agent.init_afk_preferences(item_count);
+        agent
+    }
+
+    /// Guild Buyer: maintains a target inventory for guild members.
+    /// Buys heavily when stock is low, rarely sells (guild benefit).
+    pub fn new_guild_buyer(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
+        let mut rng = rand::rng();
+        let budget = rng.random_range(50000.0..200000.0);
+
+        let mut agent = Self {
+            id: index,
+            name: format!("GuildBuyer-{index}"),
+            archetype: Archetype::GuildBuyer,
+            balance: budget,
+            online_probability: rng.random_range(0.6..0.9),
+            activity_rate: rng.random_range(0.6..0.9),
+            // Sells only at high premium (guild markup)
+            buy_threshold: rng.random_range(0.0..0.03),
+            sell_threshold: rng.random_range(0.5..0.8),
+            max_trade_amount: rng.random_range(20..100),
+            risk_tolerance: rng.random_range(0.4..0.7),
+            // Needs to keep substantial stock for members
+            inventory_saturation: rng.random_range(0.3..0.6),
+            // Gathers moderately
+            gather_rate: rng.random_range(0.05..0.15),
+            // Provides to guild — low personal use
+            usage_rate: rng.random_range(0.0..0.05),
+            perceived_values: HashMap::new(),
+            preferences: HashMap::new(),
+            inventory: HashMap::new(),
+            credit_score: 700, // Good credit — guild backed
+            total_traded: 0.0,
+            online: false,
+            total_trades: 0,
+        };
+        agent.init_perceived_values(item_count, base_prices);
+        agent.init_preferences(item_count);
+        // Pre-fill some inventory to represent guild stock
+        for i in 0..item_count {
+            agent.inventory.insert(i, rng.random_range(10..50));
+        }
+        agent
+    }
+
+    fn init_newbie_preferences(&mut self, item_count: usize) {
+        // Newbies strongly prefer cheap, basic items (low base_price)
+        let mut rng = rand::rng();
+        for i in 0..item_count {
+            // Higher preference for cheaper items
+            let pref = rng.random_range(0.5..1.0);
+            self.preferences.insert(i, pref);
+        }
+    }
+
+    fn init_afk_preferences(&mut self, item_count: usize) {
+        // AFK farmers focus on gatherable items: building materials, ores, basic drops
+        let mut rng = rand::rng();
+        for i in 0..item_count {
+            let pref = rng.random_range(0.3..0.8);
+            self.preferences.insert(i, pref);
+        }
+    }
+
     pub fn new_random(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
         let mut rng = rand::rng();
         let roll: f64 = rng.random();
-        if roll < 0.3 {
+        if roll < 0.25 {
             Self::new_casual(index, item_count, base_prices)
-        } else if roll < 0.5 {
+        } else if roll < 0.45 {
             Self::new_farmer(index, item_count, base_prices)
-        } else if roll < 0.7 {
+        } else if roll < 0.60 {
             Self::new_trader(index, item_count, base_prices)
-        } else if roll < 0.9 {
+        } else if roll < 0.75 {
             Self::new_hoarder(index, item_count, base_prices)
-        } else {
+        } else if roll < 0.85 {
             Self::new_exploiter(index, item_count, base_prices)
+        } else if roll < 0.92 {
+            Self::new_newbie(index, item_count, base_prices)
+        } else if roll < 0.97 {
+            Self::new_afk_farmer(index, item_count, base_prices)
+        } else {
+            Self::new_guild_buyer(index, item_count, base_prices)
         }
     }
 

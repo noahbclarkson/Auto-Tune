@@ -6,8 +6,8 @@ import { AppProvider } from '@/context/app-context';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Auto-Tune Dashboard',
-  description: 'Real-time Minecraft economy dashboard',
+  title: 'Auto-Tune — Market Dashboard',
+  description: 'Real-time Minecraft economy dashboard powered by Auto-Tune adaptive pricing',
 };
 
 const themeScript = `

@@ -8,14 +8,15 @@
     --foreground: 224 71% 4%;
     --card: 0 0% 100%;
     --card-foreground: 224 71% 4%;
-    --primary: 220 70% 50%;
+    /* Auto-Tune brand: emerald primary */
+    --primary: 160 84% 39%;
     --primary-foreground: 210 20% 98%;
     --secondary: 220 14% 96%;
     --secondary-foreground: 220 9% 46%;
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
-    --accent: 220 14% 96%;
-    --accent-foreground: 224 71% 4%;
+    --accent: 160 60% 94%;
+    --accent-foreground: 160 84% 20%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 20% 98%;
     --border: 220 13% 91%;
@@ -27,14 +28,15 @@
     --foreground: 210 20% 98%;
     --card: 224 71% 8%;
     --card-foreground: 210 20% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 224 71% 4%;
+    /* Auto-Tune brand: emerald primary in dark */
+    --primary: 160 84% 50%;
+    --primary-foreground: 160 50% 8%;
     --secondary: 215 28% 17%;
     --secondary-foreground: 210 20% 98%;
     --muted: 215 28% 17%;
     --muted-foreground: 217 10% 64%;
-    --accent: 215 28% 17%;
-    --accent-foreground: 210 20% 98%;
+    --accent: 160 50% 12%;
+    --accent-foreground: 160 84% 55%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 20% 98%;
     --border: 224 71% 14%;

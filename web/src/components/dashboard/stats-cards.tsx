@@ -51,10 +51,10 @@ export function StatsCards({
   const cards = [
     {
       label: 'Total Items',
-      value: totalItems.toString(),
+      value: totalItems.toLocaleString(),
       icon: Package,
-      color: 'text-blue-600 dark:text-blue-400',
-      bg: 'bg-blue-50 dark:bg-blue-900/30',
+      color: 'text-primary dark:text-primary',
+      bg: 'bg-primary/10 dark:bg-primary/20',
       trend: null,
     },
     {

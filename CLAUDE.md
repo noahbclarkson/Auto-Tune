@@ -71,6 +71,20 @@ The most complex component. Core concepts:
 
 Next.js 14 + TypeScript + Tailwind + Recharts. Built as static export. Dashboard components in `web/src/components/dashboard/` (price-chart, economy-panel, item-table, stats-cards, transaction-feed). Item detail components in `web/src/components/items/` (item-detail-header with material/metadata, item-stats-row with spread-bar visualization, item-transactions-table, price-chart with OHLC candlesticks). The Gradle `buildWeb` task compiles and copies output before JAR packaging.
 
+Brand colors: `--primary` is emerald (HUSL 160°), not blue. The light/dark theme toggle persists via localStorage.
+
+### Web-Optimizer Frontend (`web-optimizer/`)
+
+Standalone Next.js 14 app (not bundled in the plugin). Used by server admins worldwide to explore true prices, compare servers, and simulate spread scenarios. Routes:
+- `/` — Landing page (hero, algorithm preview, dynamic economy section, feature cards, how-it-works CTA)
+- `/simulator` — Spread/price simulator with 5-factor market engine, real-time chart, and preset scenarios
+- `/true-prices` — Live true-price feed with server filtering and material browser
+- `/exchange-rates` — Per-server price multiplier vs true-price baseline (bar chart + table)
+- `/servers` — Network overview of registered servers
+- `/how-it-works` — Full technical breakdown with formulas
+
+Uses dark emerald theme (emerald-400 primary accent). Public — no auth required by default (set `NEXT_PUBLIC_API_URL` for live data).
+
 ### Rust Market Simulation (`scripts/market-simulation/`)
 
 Standalone egui GUI app that mirrors the Java MarketEngine exactly (same constants, same formulas). Used for testing parameter changes visually. Features 5 player archetypes (Casual, Farmer, Trader, Hoarder, Exploiter) with distinct trading behaviors. Includes SQLite recording for data export. Build with `cargo build --release`, run with `cargo run --release`.
@@ -107,4 +121,15 @@ Player trades → Java Plugin (EconomyManager)
               True Prices → web-optimizer/ (public landing + simulator)
 ```
 
-Key gap: The auction house in the Rust API server (`api-server/`) must eventually move to an in-game Java GUI feature. Remove from API once the Java version is built.
+## Key Integration Points
+
+- **Plugin → API Server**: `PriceReporter` HTTP POST pushes item prices to the Rust API server every 5 min
+- **API Server → True Prices**: Rust `market_server` computes log-space least-squares true prices
+- **API Server → web-optimizer**: `web-optimizer/` fetches via `lib/api-client.ts` (fetch with error/resilience)
+- **Plugin → web/**: Bundled static Next.js dashboard served by Javalin on port 8989
+
+## Active Engineering Roles
+
+- **Plugin Engineer** — Java Paper plugin, market engine, economy logic
+- **Simulation Lab** — Rust market simulation (egui) and parameter exploration
+- **Web & Ecosystem** — `web/` dashboard polish, `web-optimizer/` public frontend, documentation, ecosystem integration

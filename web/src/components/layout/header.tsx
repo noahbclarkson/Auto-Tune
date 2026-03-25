@@ -4,36 +4,78 @@ import { Badge } from '@/components/ui/badge';
 import { NavLink } from '@/components/layout/nav-link';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { LiveIndicator } from '@/components/dashboard/live-indicator';
-import { Activity, Users } from 'lucide-react';
+import { TrendingUp, Users } from 'lucide-react';
 
 interface HeaderProps {
   totalItems: number;
   onlinePlayers: number;
 }
 
+/** Inline SVG Auto-Tune logo — a stylised price chart with a pulse line. */
+function LogoMark() {
+  return (
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 28 28"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="shrink-0"
+    >
+      {/* Background card */}
+      <rect x="1" y="1" width="26" height="26" rx="6" fill="currentColor" className="text-primary/10" stroke="currentColor" strokeWidth="1" strokeOpacity="0.3" />
+      {/* Grid lines */}
+      <line x1="4" y1="20" x2="24" y2="20" stroke="currentColor" strokeWidth="0.75" strokeOpacity="0.2" className="text-primary" />
+      <line x1="4" y1="14" x2="24" y2="14" stroke="currentColor" strokeWidth="0.75" strokeOpacity="0.12" className="text-primary" />
+      {/* Bar chart */}
+      <rect x="5" y="16" width="3" height="6" rx="1" fill="currentColor" className="text-primary" fillOpacity="0.4" />
+      <rect x="10" y="12" width="3" height="10" rx="1" fill="currentColor" className="text-primary" fillOpacity="0.55" />
+      <rect x="15" y="9" width="3" height="13" rx="1" fill="currentColor" className="text-primary" fillOpacity="0.7" />
+      <rect x="20" y="6" width="3" height="16" rx="1" fill="currentColor" className="text-primary" />
+      {/* Pulse line overlay */}
+      <polyline
+        points="6.5,15.5 11.5,11.5 16.5,8.5 21.5,5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="text-primary"
+      />
+    </svg>
+  );
+}
+
 export function Header({ totalItems, onlinePlayers }: HeaderProps) {
   return (
-    <header className="border-b border-border bg-card">
-      <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            <Activity className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold text-foreground">Auto-Tune</h1>
-          </div>
-          <nav className="hidden md:flex items-center gap-4">
-            <NavLink href="/">Dashboard</NavLink>
-            <NavLink href="/items/">Items</NavLink>
-            <NavLink href="/economy/">Economy</NavLink>
-            <NavLink href="/loans/">Loans</NavLink>
-            <NavLink href="/leaderboard/">Leaderboard</NavLink>
-            <NavLink href="/compare/">Compare</NavLink>
-          </nav>
-        </div>
+    <header className="border-b border-border bg-card/80 backdrop-blur-sm">
+      <div className="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between">
+        {/* Brand */}
         <div className="flex items-center gap-3">
+          <LogoMark />
+          <div className="flex flex-col leading-none">
+            <span className="text-base font-bold text-foreground tracking-tight">Auto<span className="text-primary">Tune</span></span>
+            <span className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase mt-0.5">Market Engine</span>
+          </div>
+
+          <div className="hidden md:flex items-center gap-1 ml-6 pl-6 border-l border-border">
+            <nav className="flex items-center gap-1">
+              <NavLink href="/">Dashboard</NavLink>
+              <NavLink href="/items/">Items</NavLink>
+              <NavLink href="/economy/">Economy</NavLink>
+              <NavLink href="/loans/">Loans</NavLink>
+              <NavLink href="/leaderboard/">Leaderboard</NavLink>
+              <NavLink href="/compare/">Compare</NavLink>
+            </nav>
+          </div>
+        </div>
+
+        {/* Status */}
+        <div className="flex items-center gap-2">
           <LiveIndicator />
-          <Badge variant="outline" className="gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            {totalItems} items
+          <Badge variant="outline" className="gap-1.5 hidden sm:flex">
+            <TrendingUp className="h-3 w-3 text-primary" />
+            {totalItems.toLocaleString()} items
           </Badge>
           <Badge variant="outline" className="gap-1.5">
             <Users className="h-3 w-3" />

@@ -222,11 +222,15 @@ public class MarketEngine {
         } else if (newDir != PriceTrend.Direction.STABLE && newDir != prevDir) {
             trendStreakCache.put(itemId, 1);
         } else {
-            trendStreakCache.merge(itemId, -1, (a, b) -> Math.max(0, a + b));
+            // STABLE resets the streak — flat prices break streaks, which is correct behavior
+            trendStreakCache.put(itemId, 0);
         }
 
         if (newDir != PriceTrend.Direction.STABLE) {
             trendDirectionCache.put(itemId, newDir);
+        } else {
+            // Clear direction when stable so next move is treated as fresh, not a reversal
+            trendDirectionCache.remove(itemId);
         }
     }
 

@@ -423,12 +423,14 @@ public class WebServer {
                         ))
         );
 
-        String json = gson.toJson(message);
-        wsClients.removeIf(ctx -> {
+        final String json = gson.toJson(message);
+        @SuppressWarnings("PMD.AvoidCatchingGenericException")
+        boolean removed = wsClients.removeIf(ctx -> {
             try {
                 ctx.send(json);
                 return false;
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
+                // Dead or disconnected WebSocket — remove from active set
                 return true;
             }
         });

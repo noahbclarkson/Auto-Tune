@@ -4,6 +4,7 @@ mod gui;
 mod loan;
 mod player;
 mod recorder;
+mod regression;
 mod simulation;
 mod sweep;
 
@@ -578,6 +579,18 @@ fn main() -> eframe::Result<()> {
     if args.len() > 1 && args[1] == "--sweep" {
         let config = crate::sweep::SweepConfig::default();
         crate::sweep::run_sweep(&config);
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--regression" {
+        let update = args.contains(&"--update".to_string());
+        let baseline_dir = std::path::PathBuf::from("regression-baselines");
+        let scenarios: Vec<Scenario> = vec![
+            Scenario::standard(),
+            Scenario::spread_stability(),
+            Scenario::low_player(),
+        ];
+        crate::regression::run_regression_test(&scenarios, &baseline_dir, update);
         return Ok(());
     }
 

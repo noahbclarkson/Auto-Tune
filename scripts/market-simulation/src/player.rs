@@ -1,7 +1,50 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use rand::RngExt;
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 use rand_distr::{Distribution, Normal};
+
+/// Thread-local seeded RNG for deterministic regression testing.
+/// Set via `set_global_seeded_rng()` and cleared via `clear_global_seeded_rng()`.
+thread_local! {
+    static GLOBAL_SEEDED_RNG: RefCell<Option<StdRng>> = const { RefCell::new(None) };
+}
+
+/// Set the thread-local seeded RNG for deterministic runs.
+pub fn set_global_seeded_rng(seed: u64) {
+    GLOBAL_SEEDED_RNG.with(|cell| *cell.borrow_mut() = Some(StdRng::seed_from_u64(seed)));
+}
+
+/// Clear the thread-local seeded RNG (restore normal randomness).
+pub fn clear_global_seeded_rng() {
+    GLOBAL_SEEDED_RNG.with(|cell| *cell.borrow_mut() = None);
+}
+
+/// Get next random f64: uses seeded RNG if set, else global RNG.
+pub fn rng_next() -> f64 {
+    GLOBAL_SEEDED_RNG.with(|cell| {
+        let mut cell = cell.borrow_mut();
+        if let Some(ref mut rng) = *cell {
+            rng.random()
+        } else {
+            rand::rng().random()
+        }
+    })
+}
+
+/// Get next random value from range: uses seeded RNG if set, else global RNG.
+pub fn rng_range<R: rand::distr::uniform::SampleRange<T>, T>(range: R) -> T {
+    GLOBAL_SEEDED_RNG.with(|cell| {
+        let mut cell = cell.borrow_mut();
+        if let Some(ref mut rng) = *cell {
+            rng.random_range(range)
+        } else {
+            rand::rng().random_range(range)
+        }
+    })
+}
 
 use crate::engine::{ItemState, PriceTrendDirection};
 
@@ -440,16 +483,15 @@ impl PlayerAgent {
         record: bool,
         slippage_coeff: f64,
     ) -> DecisionResult {
-        let mut rng = rand::rng();
         let mut decisions = Vec::new();
         let mut logs = Vec::new();
 
-        self.online = rng.random::<f64>() < self.online_probability;
+        self.online = rng_next() < self.online_probability;
         if !self.online {
             return DecisionResult { decisions, logs };
         }
 
-        if rng.random::<f64>() > self.activity_rate {
+        if rng_next() > self.activity_rate {
             return DecisionResult { decisions, logs };
         }
 
@@ -460,7 +502,7 @@ impl PlayerAgent {
             } else {
                 1.0
             };
-            if rng.random::<f64>() < self.gather_rate * price_incentive {
+            if rng_next() < self.gather_rate * price_incentive {
                 *self.inventory.entry(i).or_insert(0) += 1;
             }
         }
@@ -469,7 +511,7 @@ impl PlayerAgent {
             let qty = self.inventory.get(&i).copied().unwrap_or(0);
             if qty > 0 {
                 let pref = self.preferences.get(&i).copied().unwrap_or(0.5);
-                if rng.random::<f64>() < self.usage_rate * pref {
+                if rng_next() < self.usage_rate * pref {
                     *self.inventory.entry(i).or_insert(0) -= 1;
                 }
             }
@@ -506,7 +548,7 @@ impl PlayerAgent {
 
         for &i in &item_indices {
             let preference = self.preferences.get(&i).copied().unwrap_or(0.5);
-            if rng.random::<f64>() > preference {
+            if rng_next() > preference {
                 continue;
             }
 
@@ -523,7 +565,7 @@ impl PlayerAgent {
                 let max_affordable = (self.balance / buy_price).floor() as i32;
                 let risk_adjusted_max =
                     ((self.max_trade_amount as f64) * self.risk_tolerance).ceil() as i32;
-                let amount = rng.random_range(1..=risk_adjusted_max.min(max_affordable).max(1));
+                let amount = rng_range(1..=risk_adjusted_max.min(max_affordable).max(1));
                 let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                 let cost = buy_price * slippage * amount as f64;
                 if cost <= self.balance {
@@ -559,7 +601,7 @@ impl PlayerAgent {
             } else if sell_price > perceived * (1.0 + self.sell_threshold) {
                 let have = self.inventory.get(&i).copied().unwrap_or(0);
                 if have > 0 {
-                    let amount = rng.random_range(1..=have.min(self.max_trade_amount).max(1));
+                    let amount = rng_range(1..=have.min(self.max_trade_amount).max(1));
                     let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                     let revenue = sell_price / slippage * amount as f64;
                     let balance_before = self.balance;
@@ -594,7 +636,6 @@ impl PlayerAgent {
             }
         }
     }
-
     fn decide_exploiter(
         &mut self,
         items: &[ItemState],

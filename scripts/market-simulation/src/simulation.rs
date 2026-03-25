@@ -3,7 +3,9 @@ use std::collections::VecDeque;
 use crate::config::SimConfig;
 use crate::engine::{MarketEngine, Transaction, TransactionType};
 use crate::loan::{Loan, LoanStatus, calculate_interest_rate};
-use crate::player::{Archetype, DecisionLog, PlayerAgent};
+use crate::player::{
+    Archetype, DecisionLog, PlayerAgent, clear_global_seeded_rng, set_global_seeded_rng,
+};
 use crate::recorder::{DataRecorder, LoanEventData, TickSnapshot};
 
 const MAX_TRANSACTIONS: usize = 50_000;
@@ -52,6 +54,15 @@ impl Simulation {
             recorder: None,
             next_player_id: 0,
         }
+    }
+
+    /// Create a simulation with a seeded RNG for deterministic regression testing.
+    /// The seed is set thread-locally during construction so player setup is reproducible.
+    pub fn new_seeded(config: SimConfig, seed: u64) -> Self {
+        set_global_seeded_rng(seed);
+        let sim = Self::new(config);
+        clear_global_seeded_rng();
+        sim
     }
 
     pub fn add_player(&mut self, archetype: Archetype) {

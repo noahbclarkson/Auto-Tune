@@ -257,12 +257,13 @@ impl MarketEngine {
             } else if tick_dir != PriceTrendDirection::Stable && tick_dir != prev_dir {
                 self.items[item_idx].trend_streak = 1;
             } else {
-                self.items[item_idx].trend_streak =
-                    self.items[item_idx].trend_streak.saturating_sub(1);
+                self.items[item_idx].trend_streak = 0;
             }
 
             if tick_dir != PriceTrendDirection::Stable {
                 self.items[item_idx].trend_direction = tick_dir;
+            } else {
+                self.items[item_idx].trend_direction = PriceTrendDirection::Stable;
             }
 
             let display_trend = self.calculate_price_trend(item_idx);

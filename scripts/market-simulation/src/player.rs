@@ -6,8 +6,8 @@ use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand_distr::{Distribution, Normal};
 
-/// Thread-local seeded RNG for deterministic regression testing.
-/// Set via `set_global_seeded_rng()` and cleared via `clear_global_seeded_rng()`.
+// Thread-local seeded RNG for deterministic regression testing.
+// Set via `set_global_seeded_rng()` and cleared via `clear_global_seeded_rng()`.
 thread_local! {
     static GLOBAL_SEEDED_RNG: RefCell<Option<StdRng>> = const { RefCell::new(None) };
 }
@@ -35,7 +35,12 @@ pub fn rng_next() -> f64 {
 }
 
 /// Get next random value from range: uses seeded RNG if set, else global RNG.
-pub fn rng_range<R: rand::distr::uniform::SampleRange<T>, T>(range: R) -> T {
+pub fn rng_range<
+    R: rand::distr::uniform::SampleRange<T>,
+    T: rand::distr::uniform::SampleUniform,
+>(
+    range: R,
+) -> T {
     GLOBAL_SEEDED_RNG.with(|cell| {
         let mut cell = cell.borrow_mut();
         if let Some(ref mut rng) = *cell {
@@ -537,8 +542,6 @@ impl PlayerAgent {
         logs: &mut Vec<DecisionLog>,
         slippage_coeff: f64,
     ) {
-        let mut rng = rand::rng();
-
         let mut item_indices: Vec<usize> = (0..items.len()).collect();
         item_indices.sort_by(|a, b| {
             let pa = self.preferences.get(a).copied().unwrap_or(0.5);

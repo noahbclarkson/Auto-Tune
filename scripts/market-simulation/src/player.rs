@@ -1,10 +1,31 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
+use rand::Rng;
 use rand::RngExt;
 use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand_distr::{Distribution, Normal};
+
+// Implement TryRng<Error=Infallible> for SeededRng so Normal::sample() works.
+// The blanket impl `impl<R> Rng for R where R: TryRng<Error=Infallible>` then
+// automatically provides the Rng trait (next_u32, next_u64, fill_bytes).
+impl rand::TryRng for SeededRng {
+    type Error = std::convert::Infallible;
+
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+        Ok(Self::with(|rng| rng.next_u32()))
+    }
+
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+        Ok(Self::with(|rng| rng.next_u64()))
+    }
+
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Self::Error> {
+        Self::with(|rng| rng.fill_bytes(dest));
+        Ok(())
+    }
+}
 
 // Thread-local RNG for deterministic regression testing.
 // This covers BOTH rng_next() calls AND rand::rng() calls made by player factories.
@@ -57,6 +78,43 @@ pub fn rng_range<
 }
 
 use crate::engine::{ItemState, PriceTrendDirection};
+
+/// Wrapper that routes all RNG calls through the seeded thread-local RNG.
+/// Replacing `let mut rng = rand::rng()` with `let mut rng = SeededRng` ensures
+/// player factory parameters are deterministic in regression runs.
+struct SeededRng;
+
+impl SeededRng {
+    /// Access the thread-local RNG, or fall back to the global `rand::rng()`.
+    fn with<R, F>(f: F) -> R
+    where
+        F: for<'a> FnOnce(&'a mut StdRng) -> R,
+    {
+        GLOBAL_SEEDED_RNG.with(|cell| {
+            let mut cell = cell.borrow_mut();
+            match &mut *cell {
+                Some(rng) => f(rng),
+                None => {
+                    // Not seeded — fall back to real randomness
+                    let mut fallback = rand::rng();
+                    let mut fallback_std = StdRng::from_rng(&mut fallback);
+                    f(&mut fallback_std)
+                }
+            }
+        })
+    }
+
+    #[inline]
+    fn random<T: rand::distr::uniform::SampleUniform + PartialOrd>(&mut self, range: std::ops::Range<T>) -> T {
+        Self::with(|rng| rng.random_range(range))
+    }
+
+    /// Sample from a RangeInclusive.
+    #[inline]
+    fn random_inclusive(&mut self, range: std::ops::RangeInclusive<i32>) -> i32 {
+        Self::with(|rng| rng.random_range(range))
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Archetype {
@@ -146,23 +204,23 @@ pub struct PlayerAgent {
 
 impl PlayerAgent {
     pub fn new_casual(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
-        let mut rng = rand::rng();
-        let budget = rng.random_range(500.0..2000.0);
+        let mut rng = SeededRng;
+        let budget = rng.random(500.0..2000.0);
 
         let mut agent = Self {
             id: index,
             name: format!("Casual-{index}"),
             archetype: Archetype::Casual,
             balance: budget,
-            online_probability: rng.random_range(0.1..0.3),
-            activity_rate: rng.random_range(0.05..0.15),
-            buy_threshold: rng.random_range(0.05..0.15),
-            sell_threshold: rng.random_range(0.1..0.25),
-            max_trade_amount: rng.random_range(1..10),
-            risk_tolerance: rng.random_range(0.3..0.7),
-            inventory_saturation: rng.random_range(0.03..0.07),
-            gather_rate: rng.random_range(0.05..0.15),
-            usage_rate: rng.random_range(0.15..0.30),
+            online_probability: rng.random(0.1..0.3),
+            activity_rate: rng.random(0.05..0.15),
+            buy_threshold: rng.random(0.05..0.15),
+            sell_threshold: rng.random(0.1..0.25),
+            max_trade_amount: rng.random(1..10),
+            risk_tolerance: rng.random(0.3..0.7),
+            inventory_saturation: rng.random(0.03..0.07),
+            gather_rate: rng.random(0.05..0.15),
+            usage_rate: rng.random(0.15..0.30),
             perceived_values: HashMap::new(),
             preferences: HashMap::new(),
             inventory: HashMap::new(),
@@ -177,23 +235,23 @@ impl PlayerAgent {
     }
 
     pub fn new_farmer(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
-        let mut rng = rand::rng();
-        let budget = rng.random_range(200.0..1000.0);
+        let mut rng = SeededRng;
+        let budget = rng.random(200.0..1000.0);
 
         let mut agent = Self {
             id: index,
             name: format!("Farmer-{index}"),
             archetype: Archetype::Farmer,
             balance: budget,
-            online_probability: rng.random_range(0.3..0.6),
-            activity_rate: rng.random_range(0.2..0.4),
-            buy_threshold: rng.random_range(0.2..0.4),
-            sell_threshold: rng.random_range(0.0..0.05),
-            max_trade_amount: rng.random_range(5..30),
-            risk_tolerance: rng.random_range(0.2..0.5),
-            inventory_saturation: rng.random_range(0.02..0.05),
-            gather_rate: rng.random_range(0.3..0.5),
-            usage_rate: rng.random_range(0.05..0.12),
+            online_probability: rng.random(0.3..0.6),
+            activity_rate: rng.random(0.2..0.4),
+            buy_threshold: rng.random(0.2..0.4),
+            sell_threshold: rng.random(0.0..0.05),
+            max_trade_amount: rng.random(5..30),
+            risk_tolerance: rng.random(0.2..0.5),
+            inventory_saturation: rng.random(0.02..0.05),
+            gather_rate: rng.random(0.3..0.5),
+            usage_rate: rng.random(0.05..0.12),
             perceived_values: HashMap::new(),
             preferences: HashMap::new(),
             inventory: HashMap::new(),
@@ -206,29 +264,29 @@ impl PlayerAgent {
         agent.init_preferences(item_count);
 
         for i in 0..item_count {
-            agent.inventory.insert(i, rng.random_range(5..20));
+            agent.inventory.insert(i, rng.random(5..20));
         }
         agent
     }
 
     pub fn new_trader(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
-        let mut rng = rand::rng();
-        let budget = rng.random_range(5000.0..20000.0);
+        let mut rng = SeededRng;
+        let budget = rng.random(5000.0..20000.0);
 
         let mut agent = Self {
             id: index,
             name: format!("Trader-{index}"),
             archetype: Archetype::Trader,
             balance: budget,
-            online_probability: rng.random_range(0.5..0.8),
-            activity_rate: rng.random_range(0.5..0.8),
-            buy_threshold: rng.random_range(0.02..0.08),
-            sell_threshold: rng.random_range(0.02..0.08),
-            max_trade_amount: rng.random_range(1..15),
-            risk_tolerance: rng.random_range(0.5..0.9),
-            inventory_saturation: rng.random_range(0.08..0.15),
-            gather_rate: rng.random_range(0.02..0.08),
-            usage_rate: rng.random_range(0.03..0.08),
+            online_probability: rng.random(0.5..0.8),
+            activity_rate: rng.random(0.5..0.8),
+            buy_threshold: rng.random(0.02..0.08),
+            sell_threshold: rng.random(0.02..0.08),
+            max_trade_amount: rng.random(1..15),
+            risk_tolerance: rng.random(0.5..0.9),
+            inventory_saturation: rng.random(0.08..0.15),
+            gather_rate: rng.random(0.02..0.08),
+            usage_rate: rng.random(0.03..0.08),
             perceived_values: HashMap::new(),
             preferences: HashMap::new(),
             inventory: HashMap::new(),
@@ -243,23 +301,23 @@ impl PlayerAgent {
     }
 
     pub fn new_hoarder(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
-        let mut rng = rand::rng();
-        let budget = rng.random_range(3000.0..10000.0);
+        let mut rng = SeededRng;
+        let budget = rng.random(3000.0..10000.0);
 
         let mut agent = Self {
             id: index,
             name: format!("Hoarder-{index}"),
             archetype: Archetype::Hoarder,
             balance: budget,
-            online_probability: rng.random_range(0.2..0.4),
-            activity_rate: rng.random_range(0.1..0.3),
-            buy_threshold: rng.random_range(0.0..0.05),
-            sell_threshold: rng.random_range(0.3..0.5),
-            max_trade_amount: rng.random_range(5..25),
-            risk_tolerance: rng.random_range(0.6..0.9),
-            inventory_saturation: rng.random_range(0.005..0.02),
-            gather_rate: rng.random_range(0.08..0.15),
-            usage_rate: rng.random_range(0.02..0.05),
+            online_probability: rng.random(0.2..0.4),
+            activity_rate: rng.random(0.1..0.3),
+            buy_threshold: rng.random(0.0..0.05),
+            sell_threshold: rng.random(0.3..0.5),
+            max_trade_amount: rng.random(5..25),
+            risk_tolerance: rng.random(0.6..0.9),
+            inventory_saturation: rng.random(0.005..0.02),
+            gather_rate: rng.random(0.08..0.15),
+            usage_rate: rng.random(0.02..0.05),
             perceived_values: HashMap::new(),
             preferences: HashMap::new(),
             inventory: HashMap::new(),
@@ -274,23 +332,23 @@ impl PlayerAgent {
     }
 
     pub fn new_exploiter(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
-        let mut rng = rand::rng();
-        let budget = rng.random_range(20000.0..100000.0);
+        let mut rng = SeededRng;
+        let budget = rng.random(20000.0..100000.0);
 
         let mut agent = Self {
             id: index,
             name: format!("Exploiter-{index}"),
             archetype: Archetype::Exploiter,
             balance: budget,
-            online_probability: rng.random_range(0.8..0.95),
-            activity_rate: rng.random_range(0.8..1.0),
+            online_probability: rng.random(0.8..0.95),
+            activity_rate: rng.random(0.8..1.0),
             buy_threshold: 0.0,
             sell_threshold: 0.0,
-            max_trade_amount: rng.random_range(10..50),
+            max_trade_amount: rng.random(10..50),
             risk_tolerance: 1.0,
-            inventory_saturation: rng.random_range(0.04..0.08),
-            gather_rate: rng.random_range(0.01..0.05),
-            usage_rate: rng.random_range(0.01..0.03),
+            inventory_saturation: rng.random(0.04..0.08),
+            gather_rate: rng.random(0.01..0.05),
+            usage_rate: rng.random(0.01..0.03),
             perceived_values: HashMap::new(),
             preferences: HashMap::new(),
             inventory: HashMap::new(),
@@ -306,9 +364,9 @@ impl PlayerAgent {
     /// New players: low budget, buy heavily of basics (high price), sell nothing.
     /// High variance in decisions. Represent fresh server joiners.
     pub fn new_newbie(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
-        let mut rng = rand::rng();
+        let mut rng = SeededRng;
         // Newbies start with modest budget
-        let budget = rng.random_range(100.0..500.0);
+        let budget = rng.random(100.0..500.0);
 
         let mut agent = Self {
             id: index,
@@ -316,19 +374,19 @@ impl PlayerAgent {
             archetype: Archetype::Newbie,
             balance: budget,
             // Newbies come and go unpredictably
-            online_probability: rng.random_range(0.15..0.35),
+            online_probability: rng.random(0.15..0.35),
             // But when online, quite active
-            activity_rate: rng.random_range(0.3..0.6),
+            activity_rate: rng.random(0.3..0.6),
             // Will buy even at slight premium — eager to get items
-            buy_threshold: rng.random_range(0.0..0.05),
+            buy_threshold: rng.random(0.0..0.05),
             // Never sells (new players hoard what they get)
-            sell_threshold: rng.random_range(0.4..0.7),
-            max_trade_amount: rng.random_range(1..8),
-            risk_tolerance: rng.random_range(0.2..0.5),
+            sell_threshold: rng.random(0.4..0.7),
+            max_trade_amount: rng.random(1..8),
+            risk_tolerance: rng.random(0.2..0.5),
             // Newbies gather some but use even more
-            inventory_saturation: rng.random_range(0.02..0.06),
-            gather_rate: rng.random_range(0.1..0.2),
-            usage_rate: rng.random_range(0.2..0.4),
+            inventory_saturation: rng.random(0.02..0.06),
+            gather_rate: rng.random(0.1..0.2),
+            usage_rate: rng.random(0.2..0.4),
             perceived_values: HashMap::new(),
             preferences: HashMap::new(),
             inventory: HashMap::new(),
@@ -346,8 +404,8 @@ impl PlayerAgent {
     /// AFK Farmer: mostly offline (low online_prob) but when online dumps huge
     /// quantities of gathered items. Represents passive resource generators.
     pub fn new_afk_farmer(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
-        let mut rng = rand::rng();
-        let budget = rng.random_range(50.0..300.0);
+        let mut rng = SeededRng;
+        let budget = rng.random(50.0..300.0);
 
         let mut agent = Self {
             id: index,
@@ -355,19 +413,19 @@ impl PlayerAgent {
             archetype: Archetype::AFKFarmer,
             balance: budget,
             // Very rarely online
-            online_probability: rng.random_range(0.05..0.15),
+            online_probability: rng.random(0.05..0.15),
             // When online, very active — dumps inventory
-            activity_rate: rng.random_range(0.8..1.0),
-            buy_threshold: rng.random_range(0.3..0.5), // Almost never buys
-            sell_threshold: rng.random_range(0.0..0.03), // Sells at tiny margin
-            max_trade_amount: rng.random_range(50..200), // Huge dump sizes
-            risk_tolerance: rng.random_range(0.1..0.3),
+            activity_rate: rng.random(0.8..1.0),
+            buy_threshold: rng.random(0.3..0.5), // Almost never buys
+            sell_threshold: rng.random(0.0..0.03), // Sells at tiny margin
+            max_trade_amount: rng.random(50..200), // Huge dump sizes
+            risk_tolerance: rng.random(0.1..0.3),
             // Accumulates a LOT of inventory while AFK
-            inventory_saturation: rng.random_range(0.3..0.6),
+            inventory_saturation: rng.random(0.3..0.6),
             // Gathers rapidly while online
-            gather_rate: rng.random_range(1.0..3.0),
+            gather_rate: rng.random(1.0..3.0),
             // Almost no usage
-            usage_rate: rng.random_range(0.0..0.02),
+            usage_rate: rng.random(0.0..0.02),
             perceived_values: HashMap::new(),
             preferences: HashMap::new(),
             inventory: HashMap::new(),
@@ -385,27 +443,27 @@ impl PlayerAgent {
     /// Guild Buyer: maintains a target inventory for guild members.
     /// Buys heavily when stock is low, rarely sells (guild benefit).
     pub fn new_guild_buyer(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
-        let mut rng = rand::rng();
-        let budget = rng.random_range(50000.0..200000.0);
+        let mut rng = SeededRng;
+        let budget = rng.random(50000.0..200000.0);
 
         let mut agent = Self {
             id: index,
             name: format!("GuildBuyer-{index}"),
             archetype: Archetype::GuildBuyer,
             balance: budget,
-            online_probability: rng.random_range(0.6..0.9),
-            activity_rate: rng.random_range(0.6..0.9),
+            online_probability: rng.random(0.6..0.9),
+            activity_rate: rng.random(0.6..0.9),
             // Sells only at high premium (guild markup)
-            buy_threshold: rng.random_range(0.0..0.03),
-            sell_threshold: rng.random_range(0.5..0.8),
-            max_trade_amount: rng.random_range(20..100),
-            risk_tolerance: rng.random_range(0.4..0.7),
+            buy_threshold: rng.random(0.0..0.03),
+            sell_threshold: rng.random(0.5..0.8),
+            max_trade_amount: rng.random(20..100),
+            risk_tolerance: rng.random(0.4..0.7),
             // Needs to keep substantial stock for members
-            inventory_saturation: rng.random_range(0.3..0.6),
+            inventory_saturation: rng.random(0.3..0.6),
             // Gathers moderately
-            gather_rate: rng.random_range(0.05..0.15),
+            gather_rate: rng.random(0.05..0.15),
             // Provides to guild — low personal use
-            usage_rate: rng.random_range(0.0..0.05),
+            usage_rate: rng.random(0.0..0.05),
             perceived_values: HashMap::new(),
             preferences: HashMap::new(),
             inventory: HashMap::new(),
@@ -418,33 +476,33 @@ impl PlayerAgent {
         agent.init_preferences(item_count);
         // Pre-fill some inventory to represent guild stock
         for i in 0..item_count {
-            agent.inventory.insert(i, rng.random_range(10..50));
+            agent.inventory.insert(i, rng.random(10..50));
         }
         agent
     }
 
     fn init_newbie_preferences(&mut self, item_count: usize) {
         // Newbies strongly prefer cheap, basic items (low base_price)
-        let mut rng = rand::rng();
+        let mut rng = SeededRng;
         for i in 0..item_count {
             // Higher preference for cheaper items
-            let pref = rng.random_range(0.5..1.0);
+            let pref = rng.random(0.5..1.0);
             self.preferences.insert(i, pref);
         }
     }
 
     fn init_afk_preferences(&mut self, item_count: usize) {
         // AFK farmers focus on gatherable items: building materials, ores, basic drops
-        let mut rng = rand::rng();
+        let mut rng = SeededRng;
         for i in 0..item_count {
-            let pref = rng.random_range(0.3..0.8);
+            let pref = rng.random(0.3..0.8);
             self.preferences.insert(i, pref);
         }
     }
 
     pub fn new_random(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
-        let mut rng = rand::rng();
-        let roll: f64 = rng.random();
+        let mut rng = SeededRng;
+        let roll: f64 = rng.random(0.0..1.0);
         if roll < 0.25 {
             Self::new_casual(index, item_count, base_prices)
         } else if roll < 0.45 {
@@ -465,7 +523,7 @@ impl PlayerAgent {
     }
 
     fn init_perceived_values(&mut self, item_count: usize, base_prices: &[f64]) {
-        let mut rng = rand::rng();
+        let mut rng = SeededRng;
         for (i, &base) in base_prices.iter().enumerate().take(item_count) {
             let stddev = base * 0.15;
             let normal =
@@ -476,9 +534,9 @@ impl PlayerAgent {
     }
 
     fn init_preferences(&mut self, item_count: usize) {
-        let mut rng = rand::rng();
+        let mut rng = SeededRng;
         for i in 0..item_count {
-            self.preferences.insert(i, rng.random_range(0.1..1.0));
+            self.preferences.insert(i, rng.random(0.1..1.0));
         }
     }
 
@@ -652,11 +710,11 @@ impl PlayerAgent {
         logs: &mut Vec<DecisionLog>,
         slippage_coeff: f64,
     ) {
-        let mut rng = rand::rng();
+        let mut rng = SeededRng;
 
         for (i, item) in items.iter().enumerate() {
             let preference = self.preferences.get(&i).copied().unwrap_or(0.5);
-            if rng.random::<f64>() > preference {
+            if rng.random(0.0..1.0) > preference {
                 continue;
             }
 
@@ -669,7 +727,7 @@ impl PlayerAgent {
                     if self.balance > buy_price {
                         let max_affordable = (self.balance / buy_price).floor() as i32;
                         let amount =
-                            rng.random_range(1..=self.max_trade_amount.min(max_affordable).max(1));
+                            rng.random_inclusive(1..=self.max_trade_amount.min(max_affordable).max(1));
                         let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                         let cost = buy_price * slippage * amount as f64;
                         if cost <= self.balance {
@@ -708,7 +766,7 @@ impl PlayerAgent {
                     let have = self.inventory.get(&i).copied().unwrap_or(0);
                     if have > 0 {
                         let sell_price = item.sell_price();
-                        let amount = rng.random_range(1..=have.min(self.max_trade_amount).max(1));
+                        let amount = rng.random_inclusive(1..=have.min(self.max_trade_amount).max(1));
                         let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                         let revenue = sell_price / slippage * amount as f64;
                         let balance_before = self.balance;

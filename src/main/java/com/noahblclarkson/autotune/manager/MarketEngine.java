@@ -162,18 +162,8 @@ public class MarketEngine {
             for (ShopItem item : items) {
                 BigDecimal finalPrice = newPrices.get(item.id());
 
-                // Apply hard floor ($0.01 minimum)
+                // Apply hard floor ($0.01 minimum — prevents zero/negative prices, not an economic cap)
                 finalPrice = finalPrice.max(PRICE_FLOOR);
-
-                // Apply per-item price ceiling (hard cap on how high prices can go)
-                if (item.maxPrice() != null && finalPrice.compareTo(item.maxPrice()) > 0) {
-                    finalPrice = item.maxPrice();
-                }
-
-                // Apply per-item price floor (hard cap on how low prices can go)
-                if (item.minPrice() != null && finalPrice.compareTo(item.minPrice()) < 0) {
-                    finalPrice = item.minPrice();
-                }
 
                 finalPrice = finalPrice.setScale(2, RoundingMode.HALF_UP);
                 SpreadResult spread = newSpreads.get(item.id());

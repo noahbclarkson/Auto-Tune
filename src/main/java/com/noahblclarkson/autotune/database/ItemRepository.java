@@ -34,9 +34,6 @@ public class ItemRepository {
         double baseSpreadRaw = rs.getDouble("base_spread_override");
         Double baseSpreadOverride = rs.wasNull() ? null : baseSpreadRaw;
 
-        BigDecimal maxPrice = rs.getBigDecimal("max_price");
-        BigDecimal minPrice = rs.getBigDecimal("min_price");
-
         return ShopItem.builder()
                 .id(rs.getInt("id"))
                 .material(Material.valueOf(rs.getString("material")))
@@ -49,15 +46,13 @@ public class ItemRepository {
                 .itemData(rs.getString("item_data"))
                 .maxPriceChangeOverride(maxPriceChangeOverride)
                 .baseSpreadOverride(baseSpreadOverride)
-                .maxPrice(maxPrice)
-                .minPrice(minPrice)
                 .createdAt(rs.getTimestamp("created_at").toInstant())
                 .updatedAt(rs.getTimestamp("updated_at").toInstant())
                 .build();
     }
 
     private static final String SELECT_COLUMNS =
-            "id, material, item_hash, display_name, price, section, enabled, buyable, item_data, max_price_change_override, base_spread_override, max_price, min_price, created_at, updated_at";
+            "id, material, item_hash, display_name, price, section, enabled, buyable, item_data, max_price_change_override, base_spread_override, created_at, updated_at";
 
     public List<ShopItem> findAll() {
         return jdbi.withHandle(handle ->
@@ -135,24 +130,6 @@ public class ItemRepository {
                 handle.createUpdate("UPDATE at_items SET item_data = :itemData, updated_at = :updatedAt WHERE id = :id")
                         .bind("id", itemId)
                         .bind("itemData", itemData)
-                        .bind("updatedAt", Timestamp.from(Instant.now()))
-                        .execute());
-    }
-
-    public void updateMaxPrice(int itemId, @Nullable BigDecimal maxPrice) {
-        jdbi.useHandle(handle ->
-                handle.createUpdate("UPDATE at_items SET max_price = :maxPrice, updated_at = :updatedAt WHERE id = :id")
-                        .bind("id", itemId)
-                        .bind("maxPrice", maxPrice)
-                        .bind("updatedAt", Timestamp.from(Instant.now()))
-                        .execute());
-    }
-
-    public void updateMinPrice(int itemId, @Nullable BigDecimal minPrice) {
-        jdbi.useHandle(handle ->
-                handle.createUpdate("UPDATE at_items SET min_price = :minPrice, updated_at = :updatedAt WHERE id = :id")
-                        .bind("id", itemId)
-                        .bind("minPrice", minPrice)
                         .bind("updatedAt", Timestamp.from(Instant.now()))
                         .execute());
     }

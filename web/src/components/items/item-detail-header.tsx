@@ -10,15 +10,18 @@ interface ItemDetailHeaderProps {
 }
 
 export function ItemDetailHeader({ item, trend }: ItemDetailHeaderProps) {
+  const spreadPct = ((item.bpd + item.spd) * 100).toFixed(2);
+
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-3">
+      {/* Title row */}
+      <div className="flex items-center gap-3 flex-wrap">
         <h2 className="text-2xl font-bold text-foreground">{item.displayName}</h2>
-        <Badge variant="secondary" className="capitalize">
+        <Badge variant="secondary" className="capitalize text-[11px]">
           {item.section}
         </Badge>
         {item.buyable === false && (
-          <Badge variant="warning">Sell Only</Badge>
+          <Badge variant="warning" className="text-[11px]">Sell Only</Badge>
         )}
         {trend && (
           <Badge
@@ -29,38 +32,62 @@ export function ItemDetailHeader({ item, trend }: ItemDetailHeaderProps) {
                 ? 'destructive'
                 : 'secondary'
             }
+            className="text-[11px]"
           >
-            {trend.direction} {trend.streak > 0 && `(${trend.streak})`}
+            {trend.direction}
+            {trend.streak > 1 && ` ×${trend.streak}`}
           </Badge>
         )}
       </div>
-      <div className="flex items-center gap-6 text-sm text-muted-foreground">
-        <span>
-          Base: <span className="font-medium text-foreground">{formatCurrency(item.price)}</span>
-        </span>
-        <span>
-          Buy:{' '}
-          <span className="font-medium text-emerald-600 dark:text-emerald-400">
+
+      {/* Material + ID */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+        <span className="bg-muted px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider">{item.material}</span>
+        <span className="text-muted-foreground/50">ID: {item.id}</span>
+      </div>
+
+      {/* Price row */}
+      <div className="flex items-center gap-5 text-sm flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground">Base</span>
+          <span className="font-semibold text-foreground font-mono">{formatCurrency(item.price)}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+          <span className="text-muted-foreground">Buy</span>
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
             {formatCurrency(item.buyPrice)}
           </span>
-        </span>
-        <span>
-          Sell:{' '}
-          <span className="font-medium text-amber-600 dark:text-amber-400">
+          <span className="text-[11px] text-muted-foreground/70">
+            (+{(item.bpd * 100).toFixed(2)}%)
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />
+          <span className="text-muted-foreground">Sell</span>
+          <span className="font-semibold text-amber-600 dark:text-amber-400 font-mono">
             {formatCurrency(item.sellPrice)}
           </span>
-        </span>
-        <span
-          className={`font-medium ${
+          <span className="text-[11px] text-muted-foreground/70">
+            (-{(item.spd * 100).toFixed(2)}%)
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground">24h</span>
+          <span className={`font-semibold font-mono ${
             item.change24h > 0
               ? 'text-emerald-600 dark:text-emerald-400'
               : item.change24h < 0
               ? 'text-red-500 dark:text-red-400'
-              : ''
-          }`}
-        >
-          {formatPercent(item.change24h)} (24h)
-        </span>
+              : 'text-foreground'
+          }`}>
+            {item.change24h > 0 ? '+' : ''}{formatPercent(item.change24h)}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground">Spread</span>
+          <span className="font-semibold text-foreground font-mono">{spreadPct}%</span>
+        </div>
       </div>
     </div>
   );

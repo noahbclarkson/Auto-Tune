@@ -4,10 +4,13 @@
 ![GitHub issues](https://img.shields.io/github/issues/Unprotesting/Auto-Tune)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/Unprotesting/Auto-Tune)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/Unprotesting/Auto-Tune)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/2f6d82bd12af4ce490959be74d1b6149)](https://app.codacy.com/gh/Unprotesting/Auto-Tune?utm_source=github.com&utm_medium=referral&utm_content=Unprotesting/Auto-Tune&utm_campaign=Badge_Grade_Settings)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/2f6d82bd12af4ce490959be74d1b6149)](https://app.codacy.com/gh/Unprotesting/Auto-Tune&utm_source=github.com&utm_medium=referral&utm_content=Unprotesting/Auto-Tune&utm_campaign=Badge_Grade_Settings)
 [![Discord](https://img.shields.io/discord/748222485975269508.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/bNVVPe5)
 
->A Powerful Minecraft Automatic-Economy Plugin for ```1.20.4``` with many features!
+> **Active development is on the `rewrite-2` branch.** The `main` branch contains the stable release.
+> The rewrite-2 branch is a near-complete rebuild of Auto-Tune with a redesigned market engine,
+> Guice DI, Javalin web server, bundled Next.js dashboard, enchantment pricing, loan circuit breakers,
+> and a cross-server price solver. Not all features are complete — see PLAN.md for status.
 <img src="https://github.com/Unprotesting/Auto-Tune/blob/master/.github/AtLogo.png?raw=true" width="100"/>
 
 ## :star: Overview
@@ -54,7 +57,7 @@ Auto-Tune uses a supply-and-demand pricing model with asymmetric spreads, player
    ```
    playerScaling = tanh(onlineCount * atanh(0.99) / fullEffectPlayers)
    ```
-   At the configured `fullEffectPlayers` (default: 20), scaling reaches ~99%. At 0 players, no price changes occur.
+   At the configured `fullEffectPlayers` (default: 10), scaling reaches ~99%. At 0 players, no price changes occur.
 
 4. **Price change**: The final price change per tick is capped:
    ```
@@ -73,7 +76,7 @@ sellPrice = basePrice * (1 - SPD)
 
 The spread calculation applies four adjustments in sequence:
 
-1. **Base spread** (default: 0.30 → split 0.15 / 0.15):
+1. **Base spread** (default: 0.20 → split 0.10 / 0.10):
    ```
    bpd = baseSpread / 2
    spd = baseSpread / 2
@@ -179,10 +182,35 @@ Not only does this assist administrators in managing a server's economy, but it 
 
 ### :hammer: Building from source
 
-1. Clone the project to a local directory using ```git clone https://github.com/Unprotesting/Auto-Tune.git```.
-2. Run ```cd Auto-Tune``` to enter the Auto-Tune folder.
-3. Run ```./gradlew build``` to build the project using Gradle.
-4. Navigate to the ```/builds/libs/``` directory and ```Auto-Tune-0.x.x``` will be there if the build was successful.
+> **Note:** This project targets **Java 21**. The build requires a full JDK (not JRE).
+
+1. Clone the project (use `rewrite-2` branch for latest development):
+   ```bash
+   git clone -b rewrite-2 https://github.com/noahbclarkson/Auto-Tune.git
+   cd Auto-Tune
+   ```
+2. Install a Java 21 JDK (e.g. [Eclipse Temurin](https://adoptium.net/) or your system package manager).
+3. Build:
+   ```bash
+   ./gradlew build   # Java plugin (outputs to build/libs/)
+   ```
+   The plugin JAR bundles the web dashboard automatically (Next.js static export → shadow JAR).
+4. For Rust components (API server, price solver, market simulation):
+   ```bash
+   cargo build --release    # from the repo root
+   ```
+
+### :globe_with_meridians: Web Dashboard & Optimizer
+
+The plugin bundles a **Next.js dashboard** (`web/`) served by the built-in Javalin web server at `http://your-server:8989`. It shows live prices, trends, GDP, loans, and more with WebSocket updates.
+
+For server admins, the **Auto-Tune Page** (`web-optimizer/`) is a public-facing site with:
+- **True Prices** — cross-server price discovery via least-squares optimization
+- **Exchange Rates** — per-server deviation from the global baseline
+- **Interactive Simulator** — experiment with any market parameter combination
+- **Server Explorer** — inspect registered servers and their submission status
+
+Deploy the optimizer to Vercel with one command — see `web-optimizer/README.md`.
 
 ### :sparkles: Contributing to the project
 

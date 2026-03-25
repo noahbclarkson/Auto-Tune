@@ -9,7 +9,7 @@ import { TransactionFeed } from '@/components/dashboard/transaction-feed';
 import { MarketHealthBar } from '@/components/dashboard/market-health-bar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { api, type ItemDto, type Stats, type TrendDto } from '@/lib/api';
+import { api, type ItemDto, type Stats, type TrendDto, type EconomySnapshotDto } from '@/lib/api';
 import { formatCurrency, formatPercent } from '@/lib/format';
 
 export default function Home() {
@@ -19,16 +19,18 @@ export default function Home() {
   const [gdp, setGdp] = useState<number | null>(null);
   const [inflation, setInflation] = useState<number | null>(null);
   const [trends, setTrends] = useState<TrendDto[]>([]);
+  const [history, setHistory] = useState<EconomySnapshotDto[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [itemsData, statsData, gdpData, inflationData, trendsData] = await Promise.all([
+      const [itemsData, statsData, gdpData, inflationData, trendsData, historyData] = await Promise.all([
         api.items.list(apiBase),
         api.stats(apiBase),
         api.economy.gdp(apiBase).catch(() => null),
         api.economy.inflation(apiBase).catch(() => null),
         api.economy.trends(apiBase).catch(() => []),
+        api.economy.history(apiBase, 30).catch(() => []),
       ]);
 
       setItems(itemsData);
@@ -38,6 +40,7 @@ export default function Home() {
       if (gdpData) setGdp(gdpData.gdp);
       if (inflationData) setInflation(inflationData.averagePriceChange);
       setTrends(trendsData as TrendDto[]);
+      setHistory((historyData as EconomySnapshotDto[]).reverse());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to connect to server');
     }
@@ -71,6 +74,8 @@ export default function Home() {
           onlinePlayers={stats?.onlinePlayers ?? 0}
           gdp={gdp}
           inflation={inflation}
+          gdpHistory={history}
+          inflationHistory={history}
         />
 
         <MarketHealthBar

@@ -5,6 +5,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.AutosellRepository;
+import com.noahblclarkson.autotune.database.AuctionRepository;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.ItemRepository;
@@ -87,5 +88,11 @@ public class AutoTuneModule extends AbstractModule {
     @Singleton
     public PriceOverrideRepository providePriceOverrideRepository(DatabaseManager databaseManager) {
         return new PriceOverrideRepository(databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public AuctionRepository provideAuctionRepository(DatabaseManager databaseManager) {
+        return new AuctionRepository(databaseManager);
     }
 }

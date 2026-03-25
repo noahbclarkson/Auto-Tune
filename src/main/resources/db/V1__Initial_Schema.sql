@@ -165,3 +165,41 @@ CREATE TABLE IF NOT EXISTS at_price_overrides (
     set_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(item_id) REFERENCES at_items(id) ON DELETE CASCADE
 );
+
+-- Auction orders: Persistent limit order book for in-game player-to-player trading.
+-- Price-time priority matching (highest buy / lowest sell first).
+CREATE TABLE IF NOT EXISTS at_auction_orders (
+    id VARCHAR(36) PRIMARY KEY,
+    player_uuid VARCHAR(36) NOT NULL,
+    material VARCHAR(64) NOT NULL,
+    item_data TEXT DEFAULT NULL,
+    price DECIMAL(20, 2) NOT NULL,
+    original_quantity INTEGER NOT NULL,
+    remaining_quantity INTEGER NOT NULL,
+    side VARCHAR(4) NOT NULL,
+    status VARCHAR(16) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    filled_at DATETIME DEFAULT NULL,
+    FOREIGN KEY(player_uuid) REFERENCES at_players(uuid) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_auction_orders_player ON at_auction_orders(player_uuid);
+CREATE INDEX IF NOT EXISTS idx_auction_orders_material ON at_auction_orders(material);
+CREATE INDEX IF NOT EXISTS idx_auction_orders_side ON at_auction_orders(side);
+CREATE INDEX IF NOT EXISTS idx_auction_orders_status ON at_auction_orders(status);
+
+-- Auction fills: Completed matches between buy and sell orders.
+CREATE TABLE IF NOT EXISTS at_auction_fills (
+    id VARCHAR(36) PRIMARY KEY,
+    buy_order_id VARCHAR(36) NOT NULL,
+    sell_order_id VARCHAR(36) NOT NULL,
+    quantity INTEGER NOT NULL,
+    price DECIMAL(20, 2) NOT NULL,
+    filled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(buy_order_id) REFERENCES at_auction_orders(id) ON DELETE CASCADE,
+    FOREIGN KEY(sell_order_id) REFERENCES at_auction_orders(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_auction_fills_buy ON at_auction_fills(buy_order_id);
+CREATE INDEX IF NOT EXISTS idx_auction_fills_sell ON at_auction_fills(sell_order_id);

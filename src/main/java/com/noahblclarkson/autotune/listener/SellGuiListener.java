@@ -68,14 +68,17 @@ public class SellGuiListener implements Listener {
                 continue;
             }
 
-            Optional<ShopItem> shopItemOpt = shopManager.getItemByStack(stack);
+            Optional<ShopItem> shopItemOpt = shopManager.matchSellItem(stack);
             if (shopItemOpt.isEmpty()) {
+                // Item not in shop — return it to the player instead of losing it
                 returnItem(player, stack);
                 continue;
             }
 
             ShopItem shopItem = shopItemOpt.get();
-            EconomyManager.TransactionResult result = economyManager.processSellImmediate(player, shopItem, stack.getAmount());
+            // Pass the actual ItemStack so enchantment pricing can be applied
+            EconomyManager.TransactionResult result = economyManager.processSellImmediate(
+                    player, shopItem, stack.getAmount(), stack);
 
             if (result.success()) {
                 totalItemsSold += result.amount();

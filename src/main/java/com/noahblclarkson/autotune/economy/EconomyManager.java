@@ -3,6 +3,7 @@ package com.noahblclarkson.autotune.economy;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
+import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
@@ -14,12 +15,14 @@ import com.noahblclarkson.autotune.model.PlayerData;
 import com.noahblclarkson.autotune.model.ShopItem;
 import com.noahblclarkson.autotune.model.Transaction;
 import com.noahblclarkson.autotune.model.Transaction.TransactionType;
+import com.noahblclarkson.autotune.util.EnchantmentPricing;
 import com.noahblclarkson.autotune.util.ItemSerializer;
+import org.bukkit.inventory.ItemStack;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -38,6 +41,7 @@ public class EconomyManager {
     private final PlayerRepository playerRepository;
     private final TransactionRepository transactionRepository;
     private final PriceReporter priceReporter;
+    private final ConfigManager configManager;
 
     @Inject
     public EconomyManager(
@@ -48,7 +52,8 @@ public class EconomyManager {
             MarketEngine marketEngine,
             PlayerRepository playerRepository,
             TransactionRepository transactionRepository,
-            PriceReporter priceReporter
+            PriceReporter priceReporter,
+            ConfigManager configManager
     ) {
         this.plugin = plugin;
         this.economy = economy;
@@ -58,6 +63,7 @@ public class EconomyManager {
         this.playerRepository = playerRepository;
         this.transactionRepository = transactionRepository;
         this.priceReporter = priceReporter;
+        this.configManager = configManager;
     }
 
     public double getBalance(@NotNull Player player) {
@@ -163,8 +169,37 @@ public class EconomyManager {
     }
 
     public TransactionResult processSellImmediate(@NotNull Player player, @NotNull ShopItem item, int amount) {
+        return processSellImmediate(player, item, amount, null);
+    }
+
+    /**
+     * Sells items from the player's inventory synchronously.
+     * If itemStack is provided and has enchantments, an enchantment price multiplier is applied.
+     */
+    public TransactionResult processSellImmediate(
+            @NotNull Player player,
+            @NotNull ShopItem item,
+            int amount,
+            @Nullable ItemStack itemStack
+    ) {
         java.util.UUID playerId = player.getUniqueId();
-        BigDecimal pricePerUnit = marketEngine.getSellPrice(item, amount);
+        BigDecimal basePricePerUnit = marketEngine.getSellPrice(item, amount);
+
+        // Apply enchantment multiplier if the item has enchantments
+        BigDecimal pricePerUnit;
+        if (itemStack != null) {
+            double enchantMult = EnchantmentPricing.getMultiplier(itemStack,
+                    configManager.getConfig().enchantment());
+            if (enchantMult > 1.0) {
+                pricePerUnit = EnchantmentPricing.applyMultiplier(basePricePerUnit, enchantMult);
+            } else {
+                pricePerUnit = basePricePerUnit;
+            }
+        } else {
+            pricePerUnit = basePricePerUnit;
+        }
+
+        final BigDecimal finalPricePerUnit = pricePerUnit;
         BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
 
         if (!deposit(player, totalPrice.doubleValue())) {
@@ -173,6 +208,7 @@ public class EconomyManager {
 
         // Persist transaction to DB before returning. Using supplyAsync + join to keep
         // the synchronous UX of processSellImmediate while ensuring data integrity.
+        final BigDecimal finalTotalPrice = totalPrice;
         try {
             databaseManager.supplyAsync(() -> {
                 Transaction transaction = Transaction.builder()
@@ -180,13 +216,13 @@ public class EconomyManager {
                         .itemId(item.id())
                         .type(TransactionType.SELL)
                         .amount(amount)
-                        .pricePerUnit(pricePerUnit)
-                        .totalPrice(totalPrice)
+                        .pricePerUnit(finalPricePerUnit)
+                        .totalPrice(finalTotalPrice)
                         .build();
 
                 transactionRepository.insert(transaction);
                 priceReporter.recordTransaction(item, transaction);
-                playerRepository.addTransaction(playerId, totalPrice, false);
+                playerRepository.addTransaction(playerId, finalTotalPrice, false);
                 marketEngine.recordSell(item.id(), amount);
                 shopManager.invalidateBuyableCache(item.id());
                 return null;

@@ -158,6 +158,32 @@ public final class ShopManager {
         return Optional.empty();
     }
 
+    /**
+     * Finds the best shop item match for a player's item stack.
+     * Tries exact hash match first (enchanted items with dedicated shop entries).
+     * Falls back to base material match so enchanted items can still be sold
+     * at the base material price (enchantment premium applied separately).
+     *
+     * @return the matched ShopItem, or empty if the base material isn't in the shop
+     */
+    public Optional<ShopItem> matchSellItem(@NotNull ItemStack itemStack) {
+        // Try exact match first (item has dedicated shop entry)
+        Optional<ShopItem> exact = getItemByStack(itemStack);
+        if (exact.isPresent()) {
+            return exact;
+        }
+
+        // Fall back to base material (handles enchanted items not in shop)
+        String materialHash = ItemSerializer.getMaterialHash(itemStack.getType());
+        ShopItem materialMatch = hashToItemCache.get(materialHash);
+        if (materialMatch != null) {
+            return Optional.of(materialMatch);
+        }
+
+        // Try DB as last resort
+        return itemRepository.findByHash(materialHash);
+    }
+
     public Optional<ShopItem> getItemByMaterial(@NotNull Material material) {
         String hash = ItemSerializer.getMaterialHash(material);
         ShopItem cached = hashToItemCache.get(hash);

@@ -57,7 +57,7 @@ public class AutosellListener implements Listener {
         }
 
         event.setCancelled(true);
-        EconomyManager.TransactionResult result = autosellManager.sellPickup(player, shopItem, stack.getAmount());
+        EconomyManager.TransactionResult result = autosellManager.sellPickup(player, shopItem, stack, stack.getAmount());
         if (result != null && result.success()) {
             event.getItem().remove();
             autosellManager.sendAutosellActionBar(player, shopItem, result.amount(), result.totalPrice());
@@ -98,7 +98,7 @@ public class AutosellListener implements Listener {
                 continue;
             }
 
-            Optional<ShopItem> shopItemOpt = shopManager.getItemByStack(stack);
+            Optional<ShopItem> shopItemOpt = shopManager.matchSellItem(stack);
             if (shopItemOpt.isEmpty()) {
                 continue;
             }
@@ -109,7 +109,7 @@ public class AutosellListener implements Listener {
             }
 
             int amount = stack.getAmount();
-            EconomyManager.TransactionResult result = autosellManager.sellPickup(player, shopItem, amount);
+            EconomyManager.TransactionResult result = autosellManager.sellPickup(player, shopItem, stack, amount);
 
             if (result != null && result.success()) {
                 player.getInventory().setItem(slot, null);

@@ -64,7 +64,8 @@ public class ConfigManager {
                 parseLoanConfig(cfg.getConfigurationSection("loans")),
                 parseGuiConfig(cfg.getConfigurationSection("gui")),
                 parsePriceReporterConfig(cfg.getConfigurationSection("price-reporter")),
-                parseDebugConfig(cfg.getConfigurationSection("debug"))
+                parseDebugConfig(cfg.getConfigurationSection("debug")),
+                parseEnchantmentConfig(cfg.getConfigurationSection("enchantment"))
         );
     }
 
@@ -362,5 +363,45 @@ public class ConfigManager {
 
     public String formatCurrency(java.math.BigDecimal amount) {
         return formatCurrency(amount.doubleValue());
+    }
+
+    private EnchantmentConfig parseEnchantmentConfig(ConfigurationSection section) {
+        if (section == null) {
+            return EnchantmentConfig.defaults();
+        }
+
+        boolean enabled = section.getBoolean("enabled", true);
+        Map<String, List<Double>> multipliers = new HashMap<>();
+
+        // Start with defaults, then overlay any config overrides
+        Map<String, List<Double>> defaults = EnchantmentConfig.defaults().enchantmentMultipliers();
+        for (Map.Entry<String, List<Double>> entry : defaults.entrySet()) {
+            String key = entry.getKey();
+            if (section.contains("multipliers." + key)) {
+                List<Double> override = section.getDoubleList("multipliers." + key);
+                if (!override.isEmpty()) {
+                    multipliers.put(key, override);
+                }
+            } else {
+                multipliers.put(key, entry.getValue());
+            }
+        }
+
+        // Allow new enchantments to be added via config
+        if (section.contains("multipliers")) {
+            ConfigurationSection multSection = section.getConfigurationSection("multipliers");
+            if (multSection != null) {
+                for (String enchant : multSection.getKeys(false)) {
+                    if (!multipliers.containsKey(enchant)) {
+                        List<Double> vals = section.getDoubleList("multipliers." + enchant);
+                        if (!vals.isEmpty()) {
+                            multipliers.put(enchant, vals);
+                        }
+                    }
+                }
+            }
+        }
+
+        return new EnchantmentConfig(enabled, multipliers);
     }
 }

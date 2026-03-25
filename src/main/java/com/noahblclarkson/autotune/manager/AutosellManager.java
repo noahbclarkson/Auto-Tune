@@ -129,9 +129,10 @@ public class AutosellManager {
     public EconomyManager.TransactionResult sellPickup(
             @NotNull Player player,
             @NotNull ShopItem item,
+            @NotNull ItemStack itemStack,
             int amount
     ) {
-        return economyManager.processSellImmediate(player, item, amount);
+        return economyManager.processSellImmediate(player, item, amount, itemStack);
     }
 
     public int sellInventory(@NotNull Player player) {
@@ -155,7 +156,7 @@ public class AutosellManager {
                 continue;
             }
 
-            Optional<ShopItem> shopItemOpt = shopManager.getItemByStack(stack);
+            Optional<ShopItem> shopItemOpt = shopManager.matchSellItem(stack);
             if (shopItemOpt.isEmpty()) {
                 continue;
             }
@@ -166,7 +167,9 @@ public class AutosellManager {
             }
 
             int amount = stack.getAmount();
-            EconomyManager.TransactionResult result = economyManager.processSellImmediate(player, shopItem, amount);
+            // Pass the ItemStack so enchantment pricing can apply the premium
+            EconomyManager.TransactionResult result = economyManager.processSellImmediate(
+                    player, shopItem, amount, stack);
 
             if (result != null && result.success()) {
                 player.getInventory().setItem(slot, null);

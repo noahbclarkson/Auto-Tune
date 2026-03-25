@@ -2,7 +2,9 @@ package com.noahblclarkson.autotune.config;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public record AutoTuneConfig(
         @NotNull StorageConfig storage,
@@ -11,7 +13,8 @@ public record AutoTuneConfig(
         @NotNull LoanConfig loans,
         @NotNull GuiConfig gui,
         @NotNull PriceReporterConfig priceReporter,
-        @NotNull DebugConfig debug
+        @NotNull DebugConfig debug,
+        @NotNull EnchantmentConfig enchantment
 ) {
 
     public record StorageConfig(
@@ -251,6 +254,94 @@ public record AutoTuneConfig(
     ) {
         public static DebugConfig defaults() {
             return new DebugConfig(false, false);
+        }
+    }
+
+    /**
+     * Enchantment pricing config — controls price multipliers for enchanted items.
+     * Each entry maps an enchantment name to per-level multipliers.
+     * E.g. EFFICIENCY → [1.3, 1.7, 2.2, 3.0] means Efficiency I ×1.3, II ×1.7, etc.
+     */
+    public record EnchantmentConfig(
+            boolean enabled,
+            @NotNull Map<String, List<Double>> enchantmentMultipliers
+    ) {
+        public static EnchantmentConfig defaults() {
+            Map<String, List<Double>> defaults = new HashMap<>();
+            // Sharpness — weapons get meaningful premium
+            defaults.put("SHARPNESS", List.of(1.25, 1.60, 2.00, 2.50, 3.00));
+            // Efficiency — tools benefit from faster mining
+            defaults.put("EFFICIENCY", List.of(1.30, 1.70, 2.20, 3.00, 4.00));
+            // Unbreaking — durability saving is valuable
+            defaults.put("UNBREAKING", List.of(1.10, 1.25, 1.50));
+            // Protection — armor effectiveness
+            defaults.put("PROTECTION", List.of(1.20, 1.50, 1.90, 2.40));
+            // Power — bow damage
+            defaults.put("POWER", List.of(1.30, 1.70, 2.20, 2.80, 3.50));
+            // Flame — embeds value in arrows
+            defaults.put("FLAME", List.of(1.15, 1.40));
+            // Infinity — infinite arrows
+            defaults.put("INFINITY", List.of(2.00));
+            // Fortune — significant mining/farming premium
+            defaults.put("FORTUNE", List.of(1.50, 2.00, 3.00));
+            // Looting — mob loot premium
+            defaults.put("LOOTING", List.of(1.30, 1.80, 2.50));
+            // Lure — fishing
+            defaults.put("LURE", List.of(1.20, 1.50, 2.00));
+            // Luck of the Sea — fishing
+            defaults.put("LUCK_OF_THE_SEA", List.of(1.20, 1.50, 2.00));
+            // Respiration — underwater breathing
+            defaults.put("RESPIRATION", List.of(1.10, 1.25, 1.50));
+            // Aqua Affinity — mining underwater
+            defaults.put("AQUA_AFFINITY", List.of(1.10, 1.25, 1.50));
+            // Thorns — armor damage
+            defaults.put("THORNS", List.of(1.20, 1.50, 2.00));
+            // Fire Protection
+            defaults.put("FIRE_PROTECTION", List.of(1.20, 1.50, 1.90, 2.40));
+            // Blast Protection
+            defaults.put("BLAST_PROTECTION", List.of(1.20, 1.50, 1.90, 2.40));
+            // Projectile Protection
+            defaults.put("PROJECTILE_PROTECTION", List.of(1.20, 1.50, 1.90, 2.40));
+            // Feather Falling
+            defaults.put("FEATHER_FALLING", List.of(1.15, 1.35, 1.60, 1.90));
+            // Depth Strider
+            defaults.put("DEPTH_STRIDER", List.of(1.15, 1.40, 1.70));
+            // Frost Walker
+            defaults.put("FROST_WALKER", List.of(1.20, 1.50));
+            // Riptide
+            defaults.put("RIPTIDE", List.of(1.20, 1.60, 2.20));
+            // Loyalty
+            defaults.put("LOYALTY", List.of(1.10, 1.30, 1.60));
+            // Impaling
+            defaults.put("IMPALING", List.of(1.20, 1.50, 1.90, 2.40));
+            // Channeling
+            defaults.put("CHANNELING", List.of(1.10));
+            // Multishot
+            defaults.put("MULTISHOT", List.of(1.50));
+            // Quick Charge
+            defaults.put("QUICK_CHARGE", List.of(1.15, 1.35, 1.60));
+            // Piercing
+            defaults.put("PIERCING", List.of(1.15, 1.40, 1.70));
+            // Mending
+            defaults.put("MENDING", List.of(1.50));
+            // Soul Speed
+            defaults.put("SOUL_SPEED", List.of(1.20, 1.50, 2.00));
+            // Swift Sneak
+            defaults.put("SWIFT_SNEAK", List.of(1.30, 1.70, 2.20));
+            // Sweeping Edge
+            defaults.put("SWEEPING_EDGE", List.of(1.20, 1.50, 2.00));
+            // Knockback
+            defaults.put("KNOCKBACK", List.of(1.10, 1.25, 1.50));
+            // Fire Aspect
+            defaults.put("FIRE_ASPECT", List.of(1.20, 1.50));
+            // Punch
+            defaults.put("PUNCH", List.of(1.20, 1.50));
+            // Bane of Arthropods
+            defaults.put("BANE_OF_ARTHROPODS", List.of(1.15, 1.35, 1.60, 1.90));
+            // Smite
+            defaults.put("SMITE", List.of(1.15, 1.35, 1.60, 1.90));
+            // Infinity-like rarity (enchants with no level)
+            return new EnchantmentConfig(true, defaults);
         }
     }
 }

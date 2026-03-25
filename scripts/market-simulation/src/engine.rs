@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 
 use crate::config::{SimConfig, TICKS_PER_DAY};
 
@@ -185,7 +185,7 @@ impl MarketEngine {
 
         let sector_correlation = config.economy.sector_correlation;
         if sector_correlation > 0.0001 && self.items.len() > 1 {
-            let mut section_changes: HashMap<&str, Vec<(usize, f64)>> = HashMap::new();
+            let mut section_changes: BTreeMap<&str, Vec<(usize, f64)>> = BTreeMap::new();
             for (i, item_config) in config.items.iter().enumerate() {
                 if i >= old_prices.len() {
                     break;
@@ -585,10 +585,15 @@ fn calculate_trade_metrics(
     let mean_per_player = total_all / distinct_traders as f64;
     let cap = mean_per_player * rate_limit_multiplier;
 
+    // Collect and sort by player ID for deterministic floating-point accumulation.
+    // HashMap iteration order is non-deterministic across runs (random hash seed),
+    // but player IDs (keys) are sequential and deterministic.
+    let mut player_metrics: Vec<_> = per_player.into_iter().collect();
+    player_metrics.sort_by_key(|(id, _)| *id);
+
     let mut weighted_buys = 0.0;
     let mut weighted_sells = 0.0;
-
-    for &(buys, sells) in per_player.values() {
+    for (_, (buys, sells)) in player_metrics {
         let player_total = buys + sells;
         if player_total <= cap {
             weighted_buys += buys;

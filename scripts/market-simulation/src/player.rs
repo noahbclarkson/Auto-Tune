@@ -6,23 +6,28 @@ use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand_distr::{Distribution, Normal};
 
-// Thread-local seeded RNG for deterministic regression testing.
-// Set via `set_global_seeded_rng()` and cleared via `clear_global_seeded_rng()`.
+// Thread-local RNG for deterministic regression testing.
+// This covers BOTH rng_next() calls AND rand::rng() calls made by player factories.
 thread_local! {
     static GLOBAL_SEEDED_RNG: RefCell<Option<StdRng>> = const { RefCell::new(None) };
 }
 
 /// Set the thread-local seeded RNG for deterministic runs.
+/// Also seeds the rand crate's thread-rng so player factory rand::rng() calls are deterministic.
 pub fn set_global_seeded_rng(seed: u64) {
-    GLOBAL_SEEDED_RNG.with(|cell| *cell.borrow_mut() = Some(StdRng::seed_from_u64(seed)));
+    // Seed our own RNG
+    GLOBAL_SEEDED_RNG.with(|cell| {
+        *cell.borrow_mut() = Some(StdRng::seed_from_u64(seed));
+    });
 }
 
-/// Clear the thread-local seeded RNG (restore normal randomness).
+/// Clear the seeded RNG (restore normal randomness).
+#[allow(dead_code)]
 pub fn clear_global_seeded_rng() {
     GLOBAL_SEEDED_RNG.with(|cell| *cell.borrow_mut() = None);
 }
 
-/// Get next random f64: uses seeded RNG if set, else global RNG.
+/// Get next random f64.
 pub fn rng_next() -> f64 {
     GLOBAL_SEEDED_RNG.with(|cell| {
         let mut cell = cell.borrow_mut();
@@ -34,7 +39,7 @@ pub fn rng_next() -> f64 {
     })
 }
 
-/// Get next random value from range: uses seeded RNG if set, else global RNG.
+/// Get next random value from range.
 pub fn rng_range<
     R: rand::distr::uniform::SampleRange<T>,
     T: rand::distr::uniform::SampleUniform,

@@ -3,9 +3,7 @@ use std::collections::VecDeque;
 use crate::config::SimConfig;
 use crate::engine::{MarketEngine, Transaction, TransactionType};
 use crate::loan::{Loan, LoanStatus, calculate_interest_rate};
-use crate::player::{
-    Archetype, DecisionLog, PlayerAgent, clear_global_seeded_rng, set_global_seeded_rng,
-};
+use crate::player::{Archetype, DecisionLog, PlayerAgent, rng_next, set_global_seeded_rng};
 use crate::recorder::{DataRecorder, LoanEventData, TickSnapshot};
 
 const MAX_TRANSACTIONS: usize = 50_000;
@@ -58,11 +56,12 @@ impl Simulation {
 
     /// Create a simulation with a seeded RNG for deterministic regression testing.
     /// The seed is set thread-locally during construction so player setup is reproducible.
+    /// Create a simulation with a seeded RNG for deterministic regression testing.
+    /// The seed is set thread-locally and remains active for the entire simulation run
+    /// to ensure fully deterministic behavior (including during simulation ticks).
     pub fn new_seeded(config: SimConfig, seed: u64) -> Self {
         set_global_seeded_rng(seed);
-        let sim = Self::new(config);
-        clear_global_seeded_rng();
-        sim
+        Self::new(config)
     }
 
     pub fn add_player(&mut self, archetype: Archetype) {
@@ -262,7 +261,6 @@ impl Simulation {
         }
 
         let recording = self.recorder.is_some();
-        let mut rng = rand::rng();
 
         for player_idx in 0..self.players.len() {
             let player = &self.players[player_idx];
@@ -278,39 +276,37 @@ impl Simulation {
             if !has_active_loan
                 && player.balance < 50.0
                 && player.credit_score >= self.config.loans.min_credit_score
+                && rng_next() < 0.1
             {
-                use rand::RngExt;
-                if rng.random::<f64>() < 0.1 {
-                    let max_loan =
-                        (player.total_traded * self.config.loans.max_loan_multiplier).max(100.0);
-                    let amount = max_loan * 0.5;
-                    let rate = calculate_interest_rate(player.credit_score, &self.config);
-                    let loan = Loan::new(player_idx, amount, rate, self.current_tick, &self.config);
-                    self.players[player_idx].balance += amount;
-                    if recording {
-                        events.push(LoanEventData {
-                            tick: self.current_tick,
-                            player_id: player_idx,
-                            event_type: "Taken",
-                            principal: amount,
-                            balance: amount,
-                            rate,
-                            amount,
-                        });
-                    }
-                    self.loans.push(loan);
+                let max_loan =
+                    (player.total_traded * self.config.loans.max_loan_multiplier).max(100.0);
+                let amount = max_loan * 0.5;
+                let rate = calculate_interest_rate(player.credit_score, &self.config);
+                let loan = Loan::new(player_idx, amount, rate, self.current_tick, &self.config);
+                self.players[player_idx].balance += amount;
+                if recording {
+                    events.push(LoanEventData {
+                        tick: self.current_tick,
+                        player_id: player_idx,
+                        event_type: "Taken",
+                        principal: amount,
+                        balance: amount,
+                        rate,
+                        amount,
+                    });
                 }
+                self.loans.push(loan);
             }
 
             if has_active_loan {
                 let player = &self.players[player_idx];
+                #[allow(clippy::collapsible_if)]
                 if let Some(loan) = self
                     .loans
                     .iter_mut()
                     .find(|l| l.player_index == player_idx && l.status == LoanStatus::Active)
                 {
-                    use rand::RngExt;
-                    if player.balance > loan.current_balance * 1.5 && rng.random::<f64>() < 0.3 {
+                    if player.balance > loan.current_balance * 1.5 && rng_next() < 0.3 {
                         let payment = loan.current_balance;
                         loan.make_payment(payment);
                         self.players[player_idx].balance -= payment;

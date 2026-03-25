@@ -10,6 +10,7 @@ import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
+import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -80,5 +81,11 @@ public class AutoTuneModule extends AbstractModule {
     @Singleton
     public EconomySnapshotRepository provideEconomySnapshotRepository(DatabaseManager databaseManager) {
         return new EconomySnapshotRepository(databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public PriceOverrideRepository providePriceOverrideRepository(DatabaseManager databaseManager) {
+        return new PriceOverrideRepository(databaseManager);
     }
 }

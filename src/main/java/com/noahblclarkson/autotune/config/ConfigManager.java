@@ -28,6 +28,7 @@ public class ConfigManager {
     private AutoTuneConfig config;
     private FileConfiguration messagesConfig;
     private String messagePrefix;
+    private volatile boolean marketFrozen;
 
     public ConfigManager(AutoTune plugin) {
         this.plugin = plugin;
@@ -42,6 +43,7 @@ public class ConfigManager {
         saveResourceIfMissing("shops.yml");
 
         FileConfiguration cfg = plugin.getConfig();
+        this.marketFrozen = cfg.getBoolean("market-frozen", false);
         this.config = parseConfig(cfg);
 
         File messagesFile = new File(plugin.getDataFolder(), "messages.yml");
@@ -65,7 +67,8 @@ public class ConfigManager {
                 parseGuiConfig(cfg.getConfigurationSection("gui")),
                 parsePriceReporterConfig(cfg.getConfigurationSection("price-reporter")),
                 parseDebugConfig(cfg.getConfigurationSection("debug")),
-                parseEnchantmentConfig(cfg.getConfigurationSection("enchantment"))
+                parseEnchantmentConfig(cfg.getConfigurationSection("enchantment")),
+                this.marketFrozen
         );
     }
 
@@ -363,6 +366,26 @@ public class ConfigManager {
 
     public String formatCurrency(java.math.BigDecimal amount) {
         return formatCurrency(amount.doubleValue());
+    }
+
+    /**
+     * Whether the market engine is frozen (prices will not update).
+     * Persisted to config.yml so it survives restarts.
+     */
+    public boolean isMarketFrozen() {
+        return marketFrozen;
+    }
+
+    /**
+     * Freeze or unfreeze the market. Freezing stops price updates;
+     * the engine still records trades and updates spreads normally.
+     */
+    public void setMarketFrozen(boolean frozen) {
+        this.marketFrozen = frozen;
+        plugin.getConfig().set("market-frozen", frozen);
+        plugin.saveConfig();
+        // Refresh the config object so getConfig() returns the updated record
+        this.config = parseConfig(plugin.getConfig());
     }
 
     private EnchantmentConfig parseEnchantmentConfig(ConfigurationSection section) {

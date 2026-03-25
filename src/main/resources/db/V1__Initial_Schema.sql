@@ -154,3 +154,14 @@ CREATE TABLE IF NOT EXISTS at_economy_snapshots (
 );
 
 CREATE INDEX IF NOT EXISTS idx_economy_snapshots_timestamp ON at_economy_snapshots(timestamp);
+
+-- Price overrides: Admin-set manual prices that bypass the market engine.
+-- NULL expires_at means the override is permanent.
+CREATE TABLE IF NOT EXISTS at_price_overrides (
+    item_id INTEGER PRIMARY KEY,
+    price DECIMAL(20, 2) NOT NULL,
+    expires_at DATETIME DEFAULT NULL,
+    set_by VARCHAR(36) DEFAULT NULL,
+    set_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(item_id) REFERENCES at_items(id) ON DELETE CASCADE
+);

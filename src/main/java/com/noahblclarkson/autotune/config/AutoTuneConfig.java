@@ -14,7 +14,8 @@ public record AutoTuneConfig(
         @NotNull GuiConfig gui,
         @NotNull PriceReporterConfig priceReporter,
         @NotNull DebugConfig debug,
-        @NotNull EnchantmentConfig enchantment
+        @NotNull EnchantmentConfig enchantment,
+        boolean marketFrozen
 ) {
 
     public record StorageConfig(

@@ -6,8 +6,10 @@ import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.ItemRepository;
+import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.model.PriceHistory;
+import com.noahblclarkson.autotune.model.PriceOverride;
 import com.noahblclarkson.autotune.model.ShopItem;
 import com.noahblclarkson.autotune.model.Transaction;
 
@@ -21,6 +23,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,6 +42,7 @@ public class MarketEngine {
     private final ConfigManager configManager;
     private final ItemRepository itemRepository;
     private final TransactionRepository transactionRepository;
+    private final PriceOverrideRepository priceOverrideRepository;
 
     private final Map<Integer, BigDecimal> priceCache = new ConcurrentHashMap<>();
     private final Map<Integer, SpreadResult> spreadCache = new ConcurrentHashMap<>();
@@ -46,6 +50,7 @@ public class MarketEngine {
     private final Map<Integer, Integer> tickSellVolume = new ConcurrentHashMap<>();
     private final Map<Integer, PriceTrend.Direction> trendDirectionCache = new ConcurrentHashMap<>();
     private final Map<Integer, Integer> trendStreakCache = new ConcurrentHashMap<>();
+    private final Map<Integer, PriceOverride> overrideCache = new ConcurrentHashMap<>();
     private volatile double lastGlobalVolumeMultiplier = 1.0;
 
     @Inject
@@ -53,12 +58,25 @@ public class MarketEngine {
             AutoTune plugin,
             ConfigManager configManager,
             ItemRepository itemRepository,
-            TransactionRepository transactionRepository
+            TransactionRepository transactionRepository,
+            PriceOverrideRepository priceOverrideRepository
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.itemRepository = itemRepository;
         this.transactionRepository = transactionRepository;
+        this.priceOverrideRepository = priceOverrideRepository;
+        loadOverrideCache();
+    }
+
+    /**
+     * Load active price overrides from the database into memory.
+     * Called on startup and whenever overrides are modified.
+     */
+    public void loadOverrideCache() {
+        overrideCache.clear();
+        overrideCache.putAll(priceOverrideRepository.getActiveOverrides());
+        plugin.getLogger().info("Loaded " + overrideCache.size() + " active price overrides.");
     }
 
     public void reload() {
@@ -68,11 +86,13 @@ public class MarketEngine {
         tickSellVolume.clear();
         trendDirectionCache.clear();
         trendStreakCache.clear();
+        loadOverrideCache();
     }
 
     public void tick() {
         AutoTuneConfig.EconomyConfig economyConfig = configManager.getConfig().economy();
         int onlineCount = plugin.getServer().getOnlinePlayers().size();
+        boolean frozen = configManager.isMarketFrozen();
 
         try {
             List<ShopItem> items = itemRepository.findAll();
@@ -100,16 +120,29 @@ public class MarketEngine {
 
             for (ShopItem item : items) {
                 TradeMetrics metrics = itemMetrics.get(item.id());
-                BigDecimal newPrice = calculateNewPrice(item, metrics, onlineCount, economyConfig);
                 SpreadResult spread = calculateSpread(item, metrics, onlineCount, globalVolumeMultiplier, economyConfig);
-
-                newPrices.put(item.id(), newPrice);
                 newSpreads.put(item.id(), spread);
+
+                // When market is frozen, keep current prices (no calculation)
+                if (frozen) {
+                    newPrices.put(item.id(), item.price());
+                    continue;
+                }
+
+                // When item has a price override, use it directly (no engine calculation)
+                PriceOverride over = overrideCache.get(item.id());
+                if (over != null && !over.isExpired()) {
+                    newPrices.put(item.id(), over.price().setScale(2, RoundingMode.HALF_UP));
+                    continue;
+                }
+
+                BigDecimal newPrice = calculateNewPrice(item, metrics, onlineCount, economyConfig);
+                newPrices.put(item.id(), newPrice);
             }
 
-            // Pass 2: Sectoral correlation
+            // Pass 2: Sectoral correlation (only when not frozen)
             double sectorCorrelation = economyConfig.sectorCorrelation();
-            if (sectorCorrelation > 0.0001) {
+            if (!frozen && sectorCorrelation > 0.0001) {
                 Map<String, List<ShopItem>> sectionGroups = new HashMap<>();
                 for (ShopItem item : items) {
                     sectionGroups.computeIfAbsent(item.section(), k -> new ArrayList<>()).add(item);
@@ -164,30 +197,39 @@ public class MarketEngine {
 
                 // Apply hard floor ($0.01 minimum — prevents zero/negative prices, not an economic cap)
                 finalPrice = finalPrice.max(PRICE_FLOOR);
-
                 finalPrice = finalPrice.setScale(2, RoundingMode.HALF_UP);
+
                 SpreadResult spread = newSpreads.get(item.id());
 
                 priceCache.put(item.id(), finalPrice);
                 spreadCache.put(item.id(), spread);
 
-                itemRepository.updatePrice(item.id(), finalPrice);
+                // When frozen, don't overwrite the DB price — just update the in-memory cache
+                if (!frozen) {
+                    itemRepository.updatePrice(item.id(), finalPrice);
+                }
 
                 int buyVol = tickBuyVolume.getOrDefault(item.id(), 0);
                 int sellVol = tickSellVolume.getOrDefault(item.id(), 0);
                 itemRepository.recordPriceHistory(
                         item.id(), finalPrice, buyVol, sellVol, spread.bpd(), spread.spd());
 
-                updateTrendStreak(item.id(), finalPrice, item.price());
+                // When frozen, skip trend streak updates (price didn't change)
+                if (!frozen) {
+                    updateTrendStreak(item.id(), finalPrice, item.price());
+                }
             }
 
             tickBuyVolume.clear();
             tickSellVolume.clear();
 
-            computeAndStoreRatios(items);
+            if (!frozen) {
+                computeAndStoreRatios(items);
+            }
 
             if (configManager.getConfig().debug().logPrices()) {
-                plugin.getLogger().info("Market tick completed. Updated " + items.size() + " prices (window=" + windowDays + "d).");
+                String status = frozen ? "FROZEN" : "active";
+                plugin.getLogger().info("Market tick completed. Updated " + items.size() + " prices (" + status + ", window=" + windowDays + "d).");
             }
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Error during market tick", e);
@@ -552,6 +594,41 @@ public class MarketEngine {
 
     public double getGlobalVolumeMultiplier() {
         return lastGlobalVolumeMultiplier;
+    }
+
+    /**
+     * Returns a snapshot of currently active (non-expired) price overrides.
+     */
+    public Map<Integer, PriceOverride> getActiveOverrides() {
+        return Map.copyOf(overrideCache);
+    }
+
+    /**
+     * Returns the active override for a specific item, if any.
+     */
+    public Optional<PriceOverride> getOverride(int itemId) {
+        return Optional.ofNullable(overrideCache.get(itemId));
+    }
+
+    /**
+     * Returns true if the market is currently frozen.
+     */
+    public boolean isFrozen() {
+        return configManager.isMarketFrozen();
+    }
+
+    /**
+     * Freeze or unfreeze the market.
+     */
+    public void setFrozen(boolean frozen) {
+        configManager.setMarketFrozen(frozen);
+    }
+
+    /**
+     * Refresh the override cache after a DB change.
+     */
+    public void refreshOverrideCache() {
+        loadOverrideCache();
     }
 
     public PriceTrend getPriceTrend(int itemId) {

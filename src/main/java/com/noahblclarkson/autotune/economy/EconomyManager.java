@@ -10,6 +10,7 @@ import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.manager.PriceReporter;
+import com.noahblclarkson.autotune.manager.TreasuryService;
 import com.noahblclarkson.autotune.model.CartItem;
 import com.noahblclarkson.autotune.model.PlayerData;
 import com.noahblclarkson.autotune.model.ShopItem;
@@ -25,6 +26,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -42,6 +44,7 @@ public class EconomyManager {
     private final TransactionRepository transactionRepository;
     private final PriceReporter priceReporter;
     private final ConfigManager configManager;
+    private final TreasuryService treasuryService;
 
     @Inject
     public EconomyManager(
@@ -53,7 +56,8 @@ public class EconomyManager {
             PlayerRepository playerRepository,
             TransactionRepository transactionRepository,
             PriceReporter priceReporter,
-            ConfigManager configManager
+            ConfigManager configManager,
+            TreasuryService treasuryService
     ) {
         this.plugin = plugin;
         this.economy = economy;
@@ -64,6 +68,7 @@ public class EconomyManager {
         this.transactionRepository = transactionRepository;
         this.priceReporter = priceReporter;
         this.configManager = configManager;
+        this.treasuryService = treasuryService;
     }
 
     public double getBalance(@NotNull Player player) {
@@ -94,8 +99,12 @@ public class EconomyManager {
         BigDecimal pricePerUnit = marketEngine.getBuyPrice(item, amount);
         BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
 
-        if (!hasBalance(player, totalPrice.doubleValue())) {
-            return CompletableFuture.completedFuture(TransactionResult.insufficientFunds(totalPrice));
+        // Collect buy tax before checking balance — player pays item cost + tax
+        BigDecimal taxAmount = treasuryService.collectBuyTax(totalPrice);
+        BigDecimal totalWithTax = totalPrice.add(taxAmount);
+
+        if (!hasBalance(player, totalWithTax.doubleValue())) {
+            return CompletableFuture.completedFuture(TransactionResult.insufficientFunds(totalWithTax));
         }
 
         int emptySlots = countEmptySlots(player);
@@ -107,6 +116,8 @@ public class EconomyManager {
         // Process atomically: DB write first, then money withdrawal, then inventory.
         // This ensures the transaction record is the first thing that succeeds.
         // If DB write fails, nothing changes (no money taken, no items given).
+        // Tax is collected before withdrawal — it comes out of player's balance.
+        final BigDecimal finalTaxAmount = taxAmount;
         return databaseManager.supplyAsync(() -> {
             // 1. Persist transaction record
             Transaction transaction = Transaction.builder()
@@ -123,19 +134,15 @@ public class EconomyManager {
             playerRepository.addTransaction(playerId, totalPrice, true);
             marketEngine.recordBuy(item.id(), amount);
 
-            // 2. Withdraw money — must succeed before giving items
-            if (!withdraw(player, totalPrice.doubleValue())) {
-                // Rare: economy provider error. Transaction is recorded but player
-                // wasn't charged. Log for admin review — don't give items.
-                plugin.getLogger().warning("[Auto-Tune] Failed to withdraw " + totalPrice
+            // 2. Withdraw total (item cost + tax) — must succeed before giving items
+            if (!withdraw(player, totalWithTax.doubleValue())) {
+                plugin.getLogger().warning("[Auto-Tune] Failed to withdraw " + totalWithTax
                         + " from " + player.getName() + " after buy transaction was recorded. "
                         + "Player should not have received items.");
                 return TransactionResult.economyError();
             }
 
-            // 3. Give items — last step. If this fails, money was taken but player
-            //    didn't get items. This is unavoidable without a two-phase commit,
-            //    but is strictly better than items being given with no record.
+            // 3. Give items — last step.
             giveItems(player, item, amount);
 
             return TransactionResult.success(TransactionType.BUY, amount, totalPrice);
@@ -154,6 +161,10 @@ public class EconomyManager {
         BigDecimal pricePerUnit = marketEngine.getSellPrice(item, amount);
         BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
 
+        // Collect sell tax from proceeds before calculating net to player
+        BigDecimal taxAmount = treasuryService.collectSellTax(totalPrice);
+        BigDecimal netProceeds = totalPrice.subtract(taxAmount);
+
         // Process atomically: DB write first (source of truth), then inventory modification.
         // This prevents item loss if the DB write fails — inventory is only touched after
         // the transaction is safely persisted. On DB failure nothing changes.
@@ -166,21 +177,18 @@ public class EconomyManager {
                     .type(TransactionType.SELL)
                     .amount(amount)
                     .pricePerUnit(pricePerUnit)
-                    .totalPrice(totalPrice)
+                    .totalPrice(netProceeds)  // record net to player (tax goes to treasury)
                     .build();
 
             transactionRepository.insert(transaction);
             priceReporter.recordTransaction(item, transaction);
-            playerRepository.addTransaction(playerId, totalPrice, false);
+            playerRepository.addTransaction(playerId, netProceeds, false);
             marketEngine.recordSell(item.id(), amount);
             shopManager.invalidateBuyableCache(item.id());
 
-            // 2. Deposit money — must succeed for inventory to be modified
-            if (!deposit(player, totalPrice.doubleValue())) {
-                // Money deposit failed (rare: player offline or economy provider error).
-                // Transaction is recorded but player didn't get paid. This is the safer
-                // alternative to losing items with no record.
-                plugin.getLogger().warning("[Auto-Tune] Failed to deposit " + totalPrice
+            // 2. Deposit net proceeds to player — must succeed for inventory to be modified
+            if (!deposit(player, netProceeds.doubleValue())) {
+                plugin.getLogger().warning("[Auto-Tune] Failed to deposit " + netProceeds
                         + " to " + player.getName() + " after sell transaction was recorded. "
                         + "Player should contact an admin.");
                 return TransactionResult.economyError();
@@ -189,15 +197,13 @@ public class EconomyManager {
             // 3. Remove items from inventory — last because it's the only step that
             //    can fail without affecting economy consistency (player has the money)
             if (!removeItems(player, item, amount)) {
-                // Items couldn't be removed from inventory. This shouldn't happen
-                // since we pre-validated, but handle it: items are given back.
                 plugin.getLogger().warning("[Auto-Tune] Failed to remove sell items from "
                         + player.getName() + "'s inventory after payment. Restoring funds.");
-                withdraw(player, totalPrice.doubleValue());
+                withdraw(player, netProceeds.doubleValue());
                 return TransactionResult.error("Failed to remove items from inventory");
             }
 
-            return TransactionResult.success(TransactionType.SELL, amount, totalPrice);
+            return TransactionResult.success(TransactionType.SELL, amount, netProceeds);
         });
     }
 
@@ -240,6 +246,10 @@ public class EconomyManager {
 
         BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
 
+        // Collect sell tax from proceeds before calculating net to player
+        BigDecimal taxAmount = treasuryService.collectSellTax(totalPrice);
+        BigDecimal netProceeds = totalPrice.subtract(taxAmount);
+
         // Step 1: Remove items from inventory FIRST.
         // If this fails, we abort without touching money or DB.
         // Clone the inventory contents so we can restore on failure.
@@ -248,8 +258,8 @@ public class EconomyManager {
             return TransactionResult.insufficientItems(countItems(player, item));
         }
 
-        // Step 2: Deposit money — only after items are safely removed.
-        if (!deposit(player, totalPrice.doubleValue())) {
+        // Step 2: Deposit net proceeds — only after items are safely removed.
+        if (!deposit(player, netProceeds.doubleValue())) {
             // Rare: economy provider error. Restore items to player's inventory.
             player.getInventory().setStorageContents(preRemoval);
             return TransactionResult.economyError();
@@ -261,7 +271,7 @@ public class EconomyManager {
         // admin review but still report success to the player (items are gone,
         // money is with them, which is the better outcome than items+gifts+broken ledger).
         final BigDecimal finalPricePerUnit = pricePerUnit;
-        final BigDecimal finalTotalPrice = totalPrice;
+        final BigDecimal finalNetProceeds = netProceeds;
         try {
             databaseManager.supplyAsync(() -> {
                 Transaction transaction = Transaction.builder()
@@ -270,12 +280,12 @@ public class EconomyManager {
                         .type(TransactionType.SELL)
                         .amount(amount)
                         .pricePerUnit(finalPricePerUnit)
-                        .totalPrice(finalTotalPrice)
+                        .totalPrice(finalNetProceeds)
                         .build();
 
                 transactionRepository.insert(transaction);
                 priceReporter.recordTransaction(item, transaction);
-                playerRepository.addTransaction(playerId, finalTotalPrice, false);
+                playerRepository.addTransaction(playerId, finalNetProceeds, false);
                 marketEngine.recordSell(item.id(), amount);
                 shopManager.invalidateBuyableCache(item.id());
                 return null;
@@ -286,11 +296,11 @@ public class EconomyManager {
             // Log for admin review — no user-facing error so they don't panic.
             plugin.getLogger().log(Level.WARNING,
                     "[Auto-Tune] DB write failed after sell for " + player.getName()
-                            + " (amount=" + amount + ", price=" + totalPrice + "). "
+                            + " (amount=" + amount + ", net=" + netProceeds + "). "
                             + "Money deposited but transaction not recorded. Manual DB review may be needed.", e);
         }
 
-        return TransactionResult.success(TransactionType.SELL, amount, totalPrice);
+        return TransactionResult.success(TransactionType.SELL, amount, netProceeds);
     }
 
     public CompletableFuture<TransactionResult> processCartAsync(@NotNull Player player, @NotNull List<CartItem> cart) {
@@ -317,7 +327,12 @@ public class EconomyManager {
             }
         }
 
-        BigDecimal netCost = totalBuyCost.subtract(totalSellProfit);
+        // Pre-calculate tax totals (collected once, stored for DB phase)
+        BigDecimal totalBuyTax = treasuryService.collectBuyTax(totalBuyCost);
+        BigDecimal totalSellTax = treasuryService.collectSellTax(totalSellProfit);
+
+        // Net cost = (buyCost + buyTax) - (sellProfit - sellTax)
+        BigDecimal netCost = (totalBuyCost.add(totalBuyTax)).subtract(totalSellProfit.subtract(totalSellTax));
 
         if (netCost.compareTo(BigDecimal.ZERO) > 0 && !hasBalance(player, netCost.doubleValue())) {
             return CompletableFuture.completedFuture(TransactionResult.insufficientFunds(netCost));
@@ -349,11 +364,14 @@ public class EconomyManager {
         final BigDecimal finalNetCost = netCost;
         return databaseManager.supplyAsync(() -> {
             // Phase 1: Record all transactions to DB (atomic — all or nothing)
+            // Taxes were already collected during pre-validation; record gross amounts in DB.
             for (CartItem cartItem : cart) {
                 BigDecimal actualPricePerUnit = cartItem.isBuying()
                         ? marketEngine.getBuyPrice(cartItem.shopItem(), cartItem.quantity())
                         : marketEngine.getSellPrice(cartItem.shopItem(), cartItem.quantity());
                 BigDecimal actualTotalPrice = actualPricePerUnit.multiply(BigDecimal.valueOf(cartItem.quantity()));
+                // Record the actual sale price (treasury already has the tax from pre-validation).
+                // For a mixed cart, net to player is handled via finalNetCost below.
 
                 Transaction transaction = Transaction.builder()
                         .playerUuid(playerId)

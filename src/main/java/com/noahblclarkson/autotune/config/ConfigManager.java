@@ -69,6 +69,7 @@ public class ConfigManager {
                 parseDebugConfig(cfg.getConfigurationSection("debug")),
                 parseEnchantmentConfig(cfg.getConfigurationSection("enchantment")),
                 parseCleanupConfig(cfg.getConfigurationSection("cleanup")),
+                parseTaxConfig(cfg.getConfigurationSection("tax")),
                 this.marketFrozen
         );
     }
@@ -457,5 +458,18 @@ public class ConfigManager {
 
         return new CleanupConfig(txConfig, histConfig, snapConfig,
                 section.getInt("cleanup-interval-hours", 24));
+    }
+
+    private TaxConfig parseTaxConfig(ConfigurationSection section) {
+        if (section == null) {
+            return TaxConfig.defaults();
+        }
+        return new TaxConfig(
+                section.getBoolean("enabled", false),
+                section.getDouble("buy-tax-percent", 0.0),
+                section.getDouble("sell-tax-percent", 0.0),
+                section.getDouble("auction-tax-percent", 0.0),
+                section.getDouble("loan-interest-tax-percent", 0.0)
+        );
     }
 }

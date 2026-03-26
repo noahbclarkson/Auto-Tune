@@ -10,6 +10,7 @@ import com.noahblclarkson.autotune.model.AuctionFill;
 import com.noahblclarkson.autotune.model.AuctionOrder;
 import com.noahblclarkson.autotune.model.AuctionOrder.OrderSide;
 import com.noahblclarkson.autotune.model.AuctionOrder.OrderStatus;
+import com.noahblclarkson.autotune.manager.TreasuryService;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
@@ -39,6 +40,7 @@ public class AuctionManager {
     private final AuctionRepository auctionRepo;
     private final PlayerRepository playerRepo;
     private final AuctionMatchingEngine matchingEngine;
+    private final TreasuryService treasuryService;
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
 
     @Inject
@@ -47,7 +49,8 @@ public class AuctionManager {
             Economy economy,
             ConfigManager configManager,
             AuctionRepository auctionRepo,
-            PlayerRepository playerRepo
+            PlayerRepository playerRepo,
+            TreasuryService treasuryService
     ) {
         this.plugin = plugin;
         this.economy = economy;
@@ -55,6 +58,7 @@ public class AuctionManager {
         this.auctionRepo = auctionRepo;
         this.playerRepo = playerRepo;
         this.matchingEngine = new AuctionMatchingEngine();
+        this.treasuryService = treasuryService;
     }
 
     /**
@@ -299,14 +303,15 @@ public class AuctionManager {
             int newRemaining = sell.remainingQuantity() - fill.quantity();
             auctionRepo.update(sell.withRemainingQuantity(Math.max(0, newRemaining)));
 
-            // Credit seller's Vault balance — this is the core fix for the escrow gap.
-            // The buyer's funds were already withdrawn in placeBuyOrderAsync; now the
-            // seller gets their proceeds.
-            BigDecimal proceeds = fill.price().multiply(BigDecimal.valueOf(fill.quantity()));
+            // Calculate seller's proceeds and deduct auction tax before crediting.
+            BigDecimal grossProceeds = fill.price().multiply(BigDecimal.valueOf(fill.quantity()));
+            BigDecimal taxAmount = treasuryService.collectAuctionTax(grossProceeds);
+            BigDecimal netProceeds = grossProceeds.subtract(taxAmount);
+
             Bukkit.getScheduler().runTask(plugin, () -> {
                 try {
                     Player seller = Bukkit.getPlayer(sell.playerUuid());
-                    economy.depositPlayer(seller, proceeds.doubleValue());
+                    economy.depositPlayer(seller, netProceeds.doubleValue());
                 } catch (Exception e) {
                     plugin.getLogger().log(Level.SEVERE,
                             "Failed to credit seller " + sell.playerUuid() + " for fill " + fill.id(), e);
@@ -384,13 +389,15 @@ public class AuctionManager {
             // If player is offline they receive nothing (same as chest shops).
             // These are best-effort — log failures but don't fail the DB write.
 
-            // Credit seller.
+            // Credit seller (after auction tax deduction).
             sellOpt.ifPresent(sell -> {
-                BigDecimal proceeds = execPrice.multiply(BigDecimal.valueOf(quantity));
+                BigDecimal grossProceeds = execPrice.multiply(BigDecimal.valueOf(quantity));
+                BigDecimal taxAmount = treasuryService.collectAuctionTax(grossProceeds);
+                BigDecimal netProceeds = grossProceeds.subtract(taxAmount);
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     try {
                         Player seller = Bukkit.getPlayer(sell.playerUuid());
-                        economy.depositPlayer(seller, proceeds.doubleValue());
+                        economy.depositPlayer(seller, netProceeds.doubleValue());
                     } catch (Exception e) {
                         plugin.getLogger().log(Level.SEVERE,
                                 "Failed to credit seller " + sell.playerUuid() + " for fill " + fillId, e);

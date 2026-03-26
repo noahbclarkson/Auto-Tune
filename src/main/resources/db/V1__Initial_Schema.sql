@@ -155,6 +155,33 @@ CREATE TABLE IF NOT EXISTS at_economy_snapshots (
 
 CREATE INDEX IF NOT EXISTS idx_economy_snapshots_timestamp ON at_economy_snapshots(timestamp);
 
+-- Treasury: server-wide tax accumulator
+-- Tax config in config.yml controls which transactions are taxed and at what rate.
+-- The at_treasury table holds the accumulated balance.
+CREATE TABLE IF NOT EXISTS at_treasury (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    balance DECIMAL(20, 2) NOT NULL DEFAULT 0,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Price alerts: player notifications when an item's price crosses a threshold
+CREATE TABLE IF NOT EXISTS at_price_alerts (
+    id VARCHAR(36) PRIMARY KEY,
+    player_uuid VARCHAR(36) NOT NULL,
+    item_id INTEGER NOT NULL,
+    alert_type VARCHAR(16) NOT NULL,
+    target_price DECIMAL(20, 2) NOT NULL,
+    enabled BOOLEAN DEFAULT TRUE,
+    triggered_at DATETIME DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(player_uuid) REFERENCES at_players(uuid) ON DELETE CASCADE,
+    FOREIGN KEY(item_id) REFERENCES at_items(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_alerts_player ON at_price_alerts(player_uuid);
+CREATE INDEX IF NOT EXISTS idx_alerts_item ON at_price_alerts(item_id);
+CREATE INDEX IF NOT EXISTS idx_alerts_enabled ON at_price_alerts(enabled);
+
 -- Price overrides: Admin-set manual prices that bypass the market engine.
 -- NULL expires_at means the override is permanent.
 CREATE TABLE IF NOT EXISTS at_price_overrides (

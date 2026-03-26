@@ -16,6 +16,7 @@ public record AutoTuneConfig(
         @NotNull DebugConfig debug,
         @NotNull EnchantmentConfig enchantment,
         @NotNull CleanupConfig cleanup,
+        @NotNull TaxConfig tax,
         boolean marketFrozen
 ) {
 
@@ -287,6 +288,28 @@ public record AutoTuneConfig(
                     RetentionConfig.defaults(true, 30),
                     24
             );
+        }
+    }
+
+    /**
+     * Transaction tax config — a percentage of every trade is collected as tax
+     * and accumulated in the server treasury.
+     *
+     * Tax is deducted from the player's cost/proceeds before the transaction.
+     * The treasury accumulates these amounts and can be withdrawn by admins.
+     *
+     * Default: disabled (all rates 0.0).
+     * Enable by setting at least one tax rate > 0 in config.yml.
+     */
+    public record TaxConfig(
+            boolean enabled,
+            double buyTaxPercent,
+            double sellTaxPercent,
+            double auctionTaxPercent,
+            double loanInterestTaxPercent
+    ) {
+        public static TaxConfig defaults() {
+            return new TaxConfig(false, 0.0, 0.0, 0.0, 0.0);
         }
     }
 

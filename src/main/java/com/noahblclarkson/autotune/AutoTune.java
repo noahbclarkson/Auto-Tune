@@ -15,6 +15,7 @@ import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
+import com.noahblclarkson.autotune.manager.TreasuryService;
 import com.noahblclarkson.autotune.task.TaskScheduler;
 import com.noahblclarkson.autotune.web.WebServer;
 import net.milkbowl.vault.economy.Economy;
@@ -39,6 +40,7 @@ public class AutoTune extends JavaPlugin {
     private AutosellManager autosellManager;
     private EconomyMetricsManager economyMetricsManager;
     private PriceAlertManager priceAlertManager;
+    private TreasuryService treasuryService;
     private CommandManager commandManager;
     private TaskScheduler taskScheduler;
     private WebServer webServer;
@@ -90,6 +92,8 @@ public class AutoTune extends JavaPlugin {
         economyMetricsManager = injector.getInstance(EconomyMetricsManager.class);
         priceAlertManager = injector.getInstance(PriceAlertManager.class);
         priceAlertManager.initialize();
+        treasuryService = injector.getInstance(TreasuryService.class);
+        treasuryService.start();
         taskScheduler = injector.getInstance(TaskScheduler.class);
 
         // Register commands
@@ -129,6 +133,10 @@ public class AutoTune extends JavaPlugin {
 
         if (taskScheduler != null) {
             taskScheduler.stop();
+        }
+
+        if (treasuryService != null) {
+            treasuryService.shutdown();
         }
 
         if (databaseManager != null) {

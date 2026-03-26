@@ -10,6 +10,7 @@ import com.noahblclarkson.autotune.economy.EconomyManager.TransactionResult;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.PriceReporter;
 import com.noahblclarkson.autotune.manager.ShopManager;
+import com.noahblclarkson.autotune.manager.TreasuryService;
 import com.noahblclarkson.autotune.model.ShopItem;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -75,6 +76,7 @@ class EconomyManagerTest {
                 AutoTuneConfig.DebugConfig.defaults(),
                 AutoTuneConfig.EnchantmentConfig.defaults(),
                 AutoTuneConfig.CleanupConfig.defaults(),
+                AutoTuneConfig.TaxConfig.defaults(),
                 false);
         when(cm.getConfig()).thenReturn(cfg);
         return cm;
@@ -103,13 +105,15 @@ class EconomyManagerTest {
 
     private static EconomyManager makeManager(DatabaseManager db, ShopManager shop,
                                              MarketEngine engine, PlayerRepository playerRepo,
-                                             TransactionRepository txRepo, PriceReporter reporter) {
+                                             TransactionRepository txRepo, PriceReporter reporter,
+                                             TreasuryService treasuryService) {
         return new EconomyManager(
                 mock(AutoTune.class),
                 new FakeEconomy(),
                 db, shop, engine,
                 playerRepo, txRepo, reporter,
-                makeConfigManager());
+                makeConfigManager(),
+                treasuryService);
     }
 
     // ── processSellImmediate tests ─────────────────────────────────────────────
@@ -135,7 +139,7 @@ class EconomyManagerTest {
 
             EconomyManager mgr = makeManager(db, mock(ShopManager.class), engine,
                     mock(PlayerRepository.class), mock(TransactionRepository.class),
-                    mock(PriceReporter.class));
+                    mock(PriceReporter.class), mock(TreasuryService.class));
 
             Player player = mockPlayer();
             ShopItem item = mockShopItem();
@@ -175,7 +179,7 @@ class EconomyManagerTest {
                     mock(AutoTune.class), failingEconomy,
                     syncDbManager(), mock(ShopManager.class), engine,
                     mock(PlayerRepository.class), mock(TransactionRepository.class),
-                    mock(PriceReporter.class), makeConfigManager());
+                    mock(PriceReporter.class), makeConfigManager(), mock(TreasuryService.class));
 
             Player player = mockPlayer();
             ShopItem item = mockShopItem();
@@ -211,7 +215,7 @@ class EconomyManagerTest {
 
             EconomyManager mgr = makeManager(db, shop, engine,
                     mock(PlayerRepository.class), mock(TransactionRepository.class),
-                    mock(PriceReporter.class));
+                    mock(PriceReporter.class), mock(TreasuryService.class));
 
             Player player = mockPlayer();
             ShopItem item = mockShopItem();
@@ -232,7 +236,7 @@ class EconomyManagerTest {
 
             EconomyManager mgr = makeManager(db, shop, mock(MarketEngine.class),
                     mock(PlayerRepository.class), mock(TransactionRepository.class),
-                    mock(PriceReporter.class));
+                    mock(PriceReporter.class), mock(TreasuryService.class));
 
             Player player = mockPlayer();
             ShopItem item = mockShopItem();
@@ -267,7 +271,7 @@ class EconomyManagerTest {
 
             EconomyManager mgr = makeManager(db, mock(ShopManager.class), engine,
                     mock(PlayerRepository.class), mock(TransactionRepository.class),
-                    mock(PriceReporter.class));
+                    mock(PriceReporter.class), mock(TreasuryService.class));
 
             Player player = mockPlayer();
             ShopItem item = mockShopItem();
@@ -291,7 +295,7 @@ class EconomyManagerTest {
         void getBalance() {
             EconomyManager mgr = makeManager(syncDbManager(), mock(ShopManager.class),
                     mock(MarketEngine.class), mock(PlayerRepository.class),
-                    mock(TransactionRepository.class), mock(PriceReporter.class));
+                    mock(TransactionRepository.class), mock(PriceReporter.class), mock(TreasuryService.class));
             // FakeEconomy: getBalance returns 0
             assertEquals(0.0, mgr.getBalance(mockPlayer()), 0.001);
         }
@@ -301,7 +305,7 @@ class EconomyManagerTest {
         void hasBalance() {
             EconomyManager mgr = makeManager(syncDbManager(), mock(ShopManager.class),
                     mock(MarketEngine.class), mock(PlayerRepository.class),
-                    mock(TransactionRepository.class), mock(PriceReporter.class));
+                    mock(TransactionRepository.class), mock(PriceReporter.class), mock(TreasuryService.class));
             // FakeEconomy.has() always returns true
             assertTrue(mgr.hasBalance(mockPlayer(), 1000));
         }
@@ -311,7 +315,7 @@ class EconomyManagerTest {
         void withdraw() {
             EconomyManager mgr = makeManager(syncDbManager(), mock(ShopManager.class),
                     mock(MarketEngine.class), mock(PlayerRepository.class),
-                    mock(TransactionRepository.class), mock(PriceReporter.class));
+                    mock(TransactionRepository.class), mock(PriceReporter.class), mock(TreasuryService.class));
             assertTrue(mgr.withdraw(mockPlayer(), 50));
         }
 
@@ -320,7 +324,7 @@ class EconomyManagerTest {
         void deposit() {
             EconomyManager mgr = makeManager(syncDbManager(), mock(ShopManager.class),
                     mock(MarketEngine.class), mock(PlayerRepository.class),
-                    mock(TransactionRepository.class), mock(PriceReporter.class));
+                    mock(TransactionRepository.class), mock(PriceReporter.class), mock(TreasuryService.class));
             assertTrue(mgr.deposit(mockPlayer(), 50));
         }
     }

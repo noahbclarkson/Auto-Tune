@@ -105,7 +105,10 @@ impl SeededRng {
     }
 
     #[inline]
-    fn random<T: rand::distr::uniform::SampleUniform + PartialOrd>(&mut self, range: std::ops::Range<T>) -> T {
+    fn random<T: rand::distr::uniform::SampleUniform + PartialOrd>(
+        &mut self,
+        range: std::ops::Range<T>,
+    ) -> T {
         Self::with(|rng| rng.random_range(range))
     }
 
@@ -726,8 +729,8 @@ impl PlayerAgent {
                     let buy_price = item.buy_price();
                     if self.balance > buy_price {
                         let max_affordable = (self.balance / buy_price).floor() as i32;
-                        let amount =
-                            rng.random_inclusive(1..=self.max_trade_amount.min(max_affordable).max(1));
+                        let amount = rng
+                            .random_inclusive(1..=self.max_trade_amount.min(max_affordable).max(1));
                         let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                         let cost = buy_price * slippage * amount as f64;
                         if cost <= self.balance {
@@ -766,7 +769,8 @@ impl PlayerAgent {
                     let have = self.inventory.get(&i).copied().unwrap_or(0);
                     if have > 0 {
                         let sell_price = item.sell_price();
-                        let amount = rng.random_inclusive(1..=have.min(self.max_trade_amount).max(1));
+                        let amount =
+                            rng.random_inclusive(1..=have.min(self.max_trade_amount).max(1));
                         let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                         let revenue = sell_price / slippage * amount as f64;
                         let balance_before = self.balance;

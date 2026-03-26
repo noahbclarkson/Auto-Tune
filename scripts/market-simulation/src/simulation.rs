@@ -31,6 +31,9 @@ pub struct Simulation {
     pub tick_accumulator: f64,
     pub config_dirty: bool,
     pub recorder: Option<DataRecorder>,
+    /// Tracks whether the loan interest circuit breaker is currently open.
+    /// When true, interest accrual is paused until debt/GDP drops below threshold.
+    interest_circuit_open: bool,
     next_player_id: usize,
 }
 
@@ -50,6 +53,7 @@ impl Simulation {
             tick_accumulator: 0.0,
             config_dirty: false,
             recorder: None,
+            interest_circuit_open: false,
             next_player_id: 0,
         }
     }
@@ -208,6 +212,76 @@ impl Simulation {
         let compound_interval = self.config.compound_interval_ticks();
         let recording = self.recorder.is_some();
         let mut events = Vec::new();
+
+        // Circuit breaker: check debt/GDP ratio before applying any interest
+        let threshold = self.config.loans.debt_gdp_circuit_breaker_ratio;
+        if threshold > 0.0 {
+            let total_debt: f64 = self
+                .loans
+                .iter()
+                .filter(|l| l.status == LoanStatus::Active)
+                .map(|l| l.current_balance)
+                .sum();
+            let gdp_window = 288u64;
+            let window_start = self.current_tick.saturating_sub(gdp_window);
+            let gdp: f64 = self
+                .transactions
+                .iter()
+                .filter(|tx| tx.tick >= window_start && tx.tx_type == TransactionType::Buy)
+                .map(|tx| tx.total_price)
+                .sum();
+
+            let ratio = if gdp > 0.0 {
+                total_debt / gdp
+            } else {
+                f64::MAX
+            };
+            if ratio > threshold {
+                if !self.interest_circuit_open {
+                    // Log state transition on first tick circuit opens
+                    if recording {
+                        eprintln!(
+                            "[SIMULATION] Loan circuit breaker OPEN at tick {} — debt/GDP ratio {:.1}x > {:.1}x. Interest paused.",
+                            self.current_tick, ratio, threshold
+                        );
+                    }
+                }
+                self.interest_circuit_open = true;
+                // Circuit is open: skip interest accrual but still process defaults
+                for loan in &mut self.loans {
+                    if loan.status != LoanStatus::Active {
+                        continue;
+                    }
+                    if loan.is_overdue(self.current_tick) {
+                        loan.mark_defaulted();
+                        if recording {
+                            events.push(LoanEventData {
+                                tick: self.current_tick,
+                                player_id: loan.player_index,
+                                event_type: "Defaulted",
+                                principal: loan.principal,
+                                balance: loan.current_balance,
+                                rate: loan.interest_rate,
+                                amount: 0.0,
+                            });
+                        }
+                        if let Some(player) = self.players.get_mut(loan.player_index) {
+                            player.credit_score =
+                                (player.credit_score - self.config.loans.default_penalty).max(0);
+                        }
+                    }
+                }
+                return events;
+            } else {
+                if self.interest_circuit_open && recording {
+                    eprintln!(
+                        "[SIMULATION] Loan circuit breaker CLOSED at tick {} — debt/GDP ratio {:.1}x < {:.1}x.",
+                        self.current_tick, ratio, threshold
+                    );
+                }
+                self.interest_circuit_open = false;
+            }
+        }
 
         for loan in &mut self.loans {
             if loan.status != LoanStatus::Active {

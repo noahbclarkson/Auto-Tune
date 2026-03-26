@@ -50,6 +50,9 @@ pub struct LoanConfig {
     pub default_duration_days: i32,
     pub compound_interval_hours: i32,
     pub default_penalty: i32,
+    /// Pause interest accrual when system debt exceeds this many times the GDP.
+    /// Set to 0.0 to disable. Java equivalent: MarketEngineConfig.debtGdpCircuitBreakerRatio.
+    pub debt_gdp_circuit_breaker_ratio: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -132,6 +135,7 @@ impl Default for LoanConfig {
             default_duration_days: 7,
             compound_interval_hours: 24,
             default_penalty: 50,
+            debt_gdp_circuit_breaker_ratio: 10.0,
         }
     }
 }

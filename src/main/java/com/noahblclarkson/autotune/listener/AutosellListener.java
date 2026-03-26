@@ -2,10 +2,13 @@ package com.noahblclarkson.autotune.listener;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.economy.EconomyManager;
 import com.noahblclarkson.autotune.manager.AutosellManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.model.ShopItem;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -23,11 +26,13 @@ public class AutosellListener implements Listener {
 
     private final AutosellManager autosellManager;
     private final ShopManager shopManager;
+    private final ConfigManager configManager;
 
     @Inject
-    public AutosellListener(AutosellManager autosellManager, ShopManager shopManager) {
+    public AutosellListener(AutosellManager autosellManager, ShopManager shopManager, ConfigManager configManager) {
         this.autosellManager = autosellManager;
         this.shopManager = shopManager;
+        this.configManager = configManager;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -56,11 +61,17 @@ public class AutosellListener implements Listener {
             return;
         }
 
+        // Check minimum price threshold
+        if (!passesMinimumPrice(shopItem)) {
+            return;
+        }
+
         event.setCancelled(true);
         EconomyManager.TransactionResult result = autosellManager.sellPickup(player, shopItem, stack, stack.getAmount());
         if (result != null && result.success()) {
             event.getItem().remove();
             autosellManager.sendAutosellActionBar(player, shopItem, result.amount(), result.totalPrice());
+            playPickupSound(player);
         } else {
             event.setCancelled(false);
         }
@@ -88,9 +99,6 @@ public class AutosellListener implements Listener {
         int totalSold = 0;
         BigDecimal totalEarned = BigDecimal.ZERO;
 
-        // Use getStorageContents() (slots 0-35) to avoid accidentally iterating
-        // over armor slots (36-39) and the off-hand slot (40) which getSize()
-        // would include for a PlayerInventory.
         ItemStack[] storageContents = player.getInventory().getStorageContents();
         for (int slot = 0; slot < storageContents.length; slot++) {
             ItemStack stack = storageContents[slot];
@@ -108,11 +116,20 @@ public class AutosellListener implements Listener {
                 continue;
             }
 
+            // Check minimum price threshold
+            if (!passesMinimumPrice(shopItem)) {
+                continue;
+            }
+
             int amount = stack.getAmount();
             EconomyManager.TransactionResult result = autosellManager.sellPickup(player, shopItem, stack, amount);
 
             if (result != null && result.success()) {
-                player.getInventory().setItem(slot, null);
+                // Don't manually clear the slot here — sellPickup calls processSellImmediate
+                // which removes items from the player's *real* inventory directly.
+                // Clearing the slot in our copy would incorrectly null out restored items
+                // if a DB failure caused processSellImmediate to restore them.
+                // The sellPickup call already updated the real inventory; leave our copy alone.
                 totalSold += result.amount();
                 totalEarned = totalEarned.add(result.totalPrice());
             }
@@ -120,6 +137,45 @@ public class AutosellListener implements Listener {
 
         if (totalSold > 0) {
             autosellManager.sendAutosellActionBar(player, totalSold, totalEarned);
+            playInventorySellSound(player);
+        }
+    }
+
+    /**
+     * Returns true if the item's current sell price is at or above the minimum threshold.
+     */
+    private boolean passesMinimumPrice(ShopItem shopItem) {
+        double minPrice = configManager.getConfig().autosell().minimumPrice();
+        if (minPrice <= 0.0) {
+            return true; // disabled
+        }
+        BigDecimal sellPrice = shopManager.getSellPrice(shopItem);
+        return sellPrice.doubleValue() >= minPrice;
+    }
+
+    private void playPickupSound(Player player) {
+        String soundName = configManager.getConfig().autosell().soundOnPickup();
+        if (soundName == null || soundName.isBlank() || soundName.equalsIgnoreCase("NONE")) {
+            return;
+        }
+        try {
+            Sound sound = Sound.valueOf(soundName.toUpperCase(java.util.Locale.ROOT));
+            player.playSound(player.getLocation(), sound, SoundCategory.MASTER, 0.5f, 1.0f);
+        } catch (IllegalArgumentException ignored) {
+            // Invalid sound name — silently skip
+        }
+    }
+
+    private void playInventorySellSound(Player player) {
+        String soundName = configManager.getConfig().autosell().soundOnInventorySell();
+        if (soundName == null || soundName.isBlank() || soundName.equalsIgnoreCase("NONE")) {
+            return;
+        }
+        try {
+            Sound sound = Sound.valueOf(soundName.toUpperCase(java.util.Locale.ROOT));
+            player.playSound(player.getLocation(), sound, SoundCategory.MASTER, 0.8f, 1.2f);
+        } catch (IllegalArgumentException ignored) {
+            // Invalid sound name — silently skip
         }
     }
 }

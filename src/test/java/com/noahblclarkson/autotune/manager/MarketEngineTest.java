@@ -66,6 +66,7 @@ class MarketEngineTest {
                 AutoTuneConfig.LoanConfig.defaults(),
                 AutoTuneConfig.GuiConfig.defaults(),
                 AutoTuneConfig.PriceReporterConfig.defaults(),
+                AutoTuneConfig.AutosellConfig.defaults(),
                 AutoTuneConfig.DebugConfig.defaults(),
                 AutoTuneConfig.EnchantmentConfig.defaults(),
                 AutoTuneConfig.CleanupConfig.defaults(),

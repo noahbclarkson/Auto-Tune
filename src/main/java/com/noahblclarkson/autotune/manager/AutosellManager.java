@@ -143,6 +143,7 @@ public class AutosellManager {
             return 0;
         }
 
+        double minPrice = configManager.getConfig().autosell().minimumPrice();
         int totalSold = 0;
         BigDecimal totalEarned = BigDecimal.ZERO;
 
@@ -164,8 +165,16 @@ public class AutosellManager {
                 continue;
             }
 
+            // Skip items below minimum price threshold
+            if (minPrice > 0.0) {
+                BigDecimal sellPrice = shopManager.getSellPrice(shopItem);
+                if (sellPrice.doubleValue() < minPrice) {
+                    continue;
+                }
+            }
+
             int amount = stack.getAmount();
-            // processSellImmediate now handles item removal + money deposit + DB write
+            // processSellImmediate handles item removal + money deposit + DB write
             // atomically. It removes items first, deposits money, then writes to DB.
             // If DB write fails, it restores items and returns economyError.
             // In that case we stop the loop — partial completion would confuse players.

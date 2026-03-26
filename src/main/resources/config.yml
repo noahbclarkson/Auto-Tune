@@ -298,6 +298,26 @@ price-reporter:
   report-interval-minutes: 5
 
 # ============================================
+# Autosell
+# Automatic selling when players pick up items or close their inventory.
+# ============================================
+autosell:
+  # Minimum sell price threshold — items below this price are NOT autosold.
+  # Set to 0 to sell everything. Prevents cheap items (cobblestone, etc.)
+  # from spamming action bar messages and sounds.
+  minimum-price: 0.01
+
+  # Minecraft sound played when an item is autosold on pickup.
+  # Use "NONE" to disable. Recommended: ENTITY_ITEM_PICKUP, ENTITY_EXPERIENCE_ORB_PICKUP
+  sound-on-pickup: "ENTITY_ITEM_PICKUP"
+
+  # Minecraft sound played after selling inventory via the autosell GUI
+  # button or inventory-close trigger.
+  # Use "NONE" to disable. Recommended: UI_LOOT_YOUR_FILLED_CONTAINER,
+  # BLOCK_NOTE_BLOCK_PLING
+  sound-on-inventory-sell: "UI_LOOT_YOUR_FILLED_CONTAINER"
+
+# ============================================
 # Database Cleanup
 # Prevents unbounded growth of transaction history and snapshots.
 # Disable any section by setting enabled: false, or set retention-days: 0

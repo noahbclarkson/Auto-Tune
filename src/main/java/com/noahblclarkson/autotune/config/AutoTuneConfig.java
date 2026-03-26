@@ -13,6 +13,7 @@ public record AutoTuneConfig(
         @NotNull LoanConfig loans,
         @NotNull GuiConfig gui,
         @NotNull PriceReporterConfig priceReporter,
+        @NotNull AutosellConfig autosell,
         @NotNull DebugConfig debug,
         @NotNull EnchantmentConfig enchantment,
         @NotNull CleanupConfig cleanup,
@@ -248,6 +249,31 @@ public record AutoTuneConfig(
     ) {
         public static PriceReporterConfig defaults() {
             return new PriceReporterConfig(true, "https://prices.auto-tune.io", "your-server-api-key", "your-server-uuid", 5);
+        }
+    }
+
+    /**
+     * Autosell configuration — controls automatic selling behavior when
+     * players pick up items or close their inventory.
+     *
+     * minimumPrice: items are not autosold if their current sell price is below
+     * this threshold. Set to 0 to sell everything. Prevents spamming cheap
+     * items (e.g., cobblestone at $0.01) from filling up action bars.
+     *
+     * soundOnPickup: Minecraft sound played when an item is autosold on pickup.
+     * Use "NONE" to disable. Recommended: ENTITY_ITEM_PICKUP.
+     *
+     * soundOnInventorySell: Minecraft sound played after selling inventory via
+     * the autosell GUI button or inventory-close trigger.
+     * Use "NONE" to disable. Recommended: UI_LOOT_YOUR_FILLED_CONTAINER.
+     */
+    public record AutosellConfig(
+            double minimumPrice,
+            @NotNull String soundOnPickup,
+            @NotNull String soundOnInventorySell
+    ) {
+        public static AutosellConfig defaults() {
+            return new AutosellConfig(0.01, "ENTITY_ITEM_PICKUP", "UI_LOOT_YOUR_FILLED_CONTAINER");
         }
     }
 

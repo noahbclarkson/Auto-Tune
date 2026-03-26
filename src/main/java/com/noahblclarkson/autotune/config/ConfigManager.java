@@ -66,6 +66,7 @@ public class ConfigManager {
                 parseLoanConfig(cfg.getConfigurationSection("loans")),
                 parseGuiConfig(cfg.getConfigurationSection("gui")),
                 parsePriceReporterConfig(cfg.getConfigurationSection("price-reporter")),
+                parseAutosellConfig(cfg.getConfigurationSection("autosell")),
                 parseDebugConfig(cfg.getConfigurationSection("debug")),
                 parseEnchantmentConfig(cfg.getConfigurationSection("enchantment")),
                 parseCleanupConfig(cfg.getConfigurationSection("cleanup")),
@@ -287,6 +288,17 @@ public class ConfigManager {
                 section.getString("api-key", "your-server-api-key"),
                 section.getString("server-id", "your-server-uuid"),
                 section.getLong("report-interval-minutes", 5)
+        );
+    }
+
+    private AutosellConfig parseAutosellConfig(ConfigurationSection section) {
+        if (section == null) {
+            return AutosellConfig.defaults();
+        }
+        return new AutosellConfig(
+                section.getDouble("minimum-price", 0.01),
+                section.getString("sound-on-pickup", "ENTITY_ITEM_PICKUP"),
+                section.getString("sound-on-inventory-sell", "UI_LOOT_YOUR_FILLED_CONTAINER")
         );
     }
 

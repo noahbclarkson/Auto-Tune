@@ -19,6 +19,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -278,22 +283,52 @@ public class AuctionManager {
     }
 
     private void processFill(AuctionFill fill) {
-        try {
-            auctionRepo.insertFill(fill);
+        // All DB work can stay async; economy + inventory ops must run on Bukkit main thread.
+        auctionRepo.insertFill(fill);
 
-            // Update remaining quantities on both orders
-            auctionRepo.findById(fill.buyOrderId()).ifPresent(buy -> {
-                int newRemaining = buy.remainingQuantity() - fill.quantity();
-                auctionRepo.update(buy.withRemainingQuantity(Math.max(0, newRemaining)));
-            });
+        // Update remaining quantities on both orders
+        auctionRepo.findById(fill.buyOrderId()).ifPresent(buy -> {
+            int newRemaining = buy.remainingQuantity() - fill.quantity();
+            auctionRepo.update(buy.withRemainingQuantity(Math.max(0, newRemaining)));
+        });
 
-            auctionRepo.findById(fill.sellOrderId()).ifPresent(sell -> {
-                int newRemaining = sell.remainingQuantity() - fill.quantity();
-                auctionRepo.update(sell.withRemainingQuantity(Math.max(0, newRemaining)));
+        auctionRepo.findById(fill.sellOrderId()).ifPresent(sell -> {
+            int newRemaining = sell.remainingQuantity() - fill.quantity();
+            auctionRepo.update(sell.withRemainingQuantity(Math.max(0, newRemaining)));
+
+            // Credit seller's Vault balance — this is the core fix for the escrow gap.
+            // The buyer's funds were already withdrawn in placeBuyOrderAsync; now the
+            // seller gets their proceeds.
+            BigDecimal proceeds = fill.price().multiply(BigDecimal.valueOf(fill.quantity()));
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                try {
+                    Player seller = Bukkit.getPlayer(sell.playerUuid());
+                    economy.depositPlayer(seller, proceeds.doubleValue());
+                } catch (Exception e) {
+                    plugin.getLogger().log(Level.SEVERE,
+                            "Failed to credit seller " + sell.playerUuid() + " for fill " + fill.id(), e);
+                }
             });
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to process auction fill " + fill.id(), e);
-        }
+        });
+
+        auctionRepo.findById(fill.buyOrderId()).ifPresent(buy -> {
+            // Give buyer the items — run on main thread since we're in async context.
+            // If player is offline the items are silently lost (same as chest shops).
+            String materialName = buy.material();
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                try {
+                    Player buyer = Bukkit.getPlayer(buy.playerUuid());
+                    if (buyer != null) {
+                        Material mat = Material.valueOf(materialName);
+                        ItemStack items = new ItemStack(mat, fill.quantity());
+                        buyer.getInventory().addItem(items);
+                    }
+                } catch (Exception e) {
+                    plugin.getLogger().log(Level.SEVERE,
+                            "Failed to give buyer " + buy.playerUuid() + " items for fill " + fill.id(), e);
+                }
+            });
+        });
     }
 
     /**

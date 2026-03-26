@@ -513,10 +513,10 @@ mod tests {
         let server_a = make_ratio_matrix(&[10.0, 20.0, 40.0]);
         let mut server_b = make_ratio_matrix(&[10.0, 20.0, 40.0]);
         // Add 10% noise to off-diagonal
-        for i in 0..3 {
-            for j in 0..3 {
+        for (i, row) in server_b.iter_mut().enumerate().take(3) {
+            for (j, cell) in row.iter_mut().enumerate().take(3) {
                 if i != j {
-                    server_b[i][j] *= 1.10;
+                    *cell *= 1.10;
                 }
             }
         }
@@ -531,27 +531,25 @@ mod tests {
 
     #[test]
     fn test_confidence_range() {
-        for servers in [1, 3, 10] {
-            for items in [5, 20, 100] {
-                let ratios = vec![vec![1.0_f64; items]; items];
-                // Perfect diagonal matrices = zero residual → quality=1.0
-                let result = compute_prices_with_quality(
-                    &[ratios],
-                    None,
-                    0,
-                    10.0,
-                    PriceSolverConfig {
-                        min_servers: 1,
-                        ..Default::default()
-                    },
+        for items in [5, 20, 100] {
+            let ratios = vec![vec![1.0_f64; items]; items];
+            // Perfect diagonal matrices = zero residual → quality=1.0
+            let result = compute_prices_with_quality(
+                &[ratios],
+                None,
+                0,
+                10.0,
+                PriceSolverConfig {
+                    min_servers: 1,
+                    ..Default::default()
+                },
+            );
+            if let Ok(r) = result {
+                assert!(
+                    (0.0..=1.0).contains(&r.confidence()),
+                    "confidence out of range: {}",
+                    r.confidence()
                 );
-                if let Ok(r) = result {
-                    assert!(
-                        (0.0..=1.0).contains(&r.confidence()),
-                        "confidence out of range: {}",
-                        r.confidence()
-                    );
-                }
             }
         }
     }

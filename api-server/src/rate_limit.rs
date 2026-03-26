@@ -100,9 +100,7 @@ impl RateLimiter {
         let mut buckets = self.inner.write().await;
 
         // Lazy cleanup: remove entries that haven't been used in idle_timeout
-        buckets.retain(|_, b| {
-            b.last_refill.elapsed() < self.cfg.idle_timeout
-        });
+        buckets.retain(|_, b| b.last_refill.elapsed() < self.cfg.idle_timeout);
 
         let bucket = buckets.entry(ip.to_owned()).or_insert_with(|| Bucket {
             tokens: self.cfg.capacity,
@@ -115,8 +113,7 @@ impl RateLimiter {
             RateLimitResult::Allowed
         } else {
             RateLimitResult::Limited {
-                retry_after_secs: (((1.0 - bucket.tokens) / self.cfg.refill_per_sec)
-                    .ceil() as u64)
+                retry_after_secs: (((1.0 - bucket.tokens) / self.cfg.refill_per_sec).ceil() as u64)
                     .max(1),
             }
         }

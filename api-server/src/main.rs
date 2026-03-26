@@ -14,7 +14,7 @@ mod routes;
 
 use auth::ApiKeyAuth;
 use matching::MatchingEngine;
-use rate_limit::{RateLimiter, RateLimitConfig};
+use rate_limit::{RateLimitConfig, RateLimiter};
 use routes::{
     auction::configure as configure_auction,
     exchange::get_exchange_rates,

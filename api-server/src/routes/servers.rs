@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::{
     auth::{generate_api_key, hash_api_key},
     models::{ErrorResponse, RegisterServerRequest, RegisterServerResponse, Server},
-    rate_limit::{client_ip, RateLimiter, RateLimitResult},
+    rate_limit::{client_ip, RateLimitResult, RateLimiter},
 };
 
 /// POST /api/servers/register

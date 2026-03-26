@@ -16,7 +16,7 @@ use crate::{
         SubmitPricesResponse, TruePriceEntry, TruePricesResponse,
     },
     price_computer::recompute_true_prices,
-    rate_limit::{client_ip, RateLimiter, RateLimitResult},
+    rate_limit::{client_ip, RateLimitResult, RateLimiter},
 };
 
 /// POST /api/servers/:id/prices

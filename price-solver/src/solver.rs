@@ -58,7 +58,8 @@ impl SolveResult {
     pub fn confidence(&self) -> f64 {
         let q = self.quality.clamp(0.0, 1.0);
         // Server bonus: each additional server adds ~10% of the remaining gap to 1.0
-        let server_bonus = 0.1 * (1.0 - q) * ((self.num_servers.saturating_sub(1)) as f64).min(3.0) / 3.0;
+        let server_bonus =
+            0.1 * (1.0 - q) * ((self.num_servers.saturating_sub(1)) as f64).min(3.0) / 3.0;
         // Item coverage bonus (plateaus at 50 items)
         let item_bonus = 0.05 * (1.0 - q) * ((self.num_items as f64 / 50.0).min(1.0));
         (q + server_bonus + item_bonus).clamp(0.0, 1.0)
@@ -383,11 +384,7 @@ pub fn compute_prices_with_quality(
 
     debug!(
         "quality={:.4} residual_rms={:.6} edges={} servers={} items={}",
-        quality,
-        residual_rms,
-        num_edges,
-        m,
-        n
+        quality, residual_rms, num_edges, m, n
     );
 
     Ok(SolveResult {
@@ -503,8 +500,8 @@ mod tests {
         // Perfect ratios — residual should be essentially zero → quality=1.0
         let prices = vec![10.0, 20.0, 40.0];
         let ratios = make_ratio_matrix(&prices);
-        let result = compute_prices_with_quality(&[ratios], None, 0, 10.0, Default::default())
-            .unwrap();
+        let result =
+            compute_prices_with_quality(&[ratios], None, 0, 10.0, Default::default()).unwrap();
         assert_relative_eq!(result.quality, 1.0, epsilon = 0.001);
         assert!(result.residual_rms < 0.001);
         assert!(result.confidence() > 0.95);

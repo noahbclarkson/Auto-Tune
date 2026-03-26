@@ -81,6 +81,7 @@ class LoanManagerTest {
                 AutoTuneConfig.PriceReporterConfig.defaults(),
                 AutoTuneConfig.DebugConfig.defaults(),
                 AutoTuneConfig.EnchantmentConfig.defaults(),
+                AutoTuneConfig.CleanupConfig.defaults(),
                 false
         );
     }

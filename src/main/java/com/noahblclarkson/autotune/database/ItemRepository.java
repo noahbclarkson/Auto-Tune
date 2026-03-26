@@ -295,4 +295,22 @@ public class ItemRepository {
                         .bind("id", id)
                         .execute());
     }
+
+    /**
+     * Delete market history rows older than the given cutoff.
+     * Returns the number of rows deleted.
+     */
+    public int deleteMarketHistoryOlderThan(Instant cutoff) {
+        return jdbi.withHandle(handle ->
+                handle.createUpdate("DELETE FROM at_market_history WHERE timestamp < :cutoff")
+                        .bind("cutoff", Timestamp.from(cutoff))
+                        .execute());
+    }
+
+    public long countMarketHistory() {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("SELECT COUNT(*) FROM at_market_history")
+                        .mapTo(Long.class)
+                        .one());
+    }
 }

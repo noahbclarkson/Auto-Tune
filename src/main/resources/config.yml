@@ -296,3 +296,31 @@ price-reporter:
   api-key: "your-server-api-key"
   server-id: "your-server-uuid"
   report-interval-minutes: 5
+
+# ============================================
+# Database Cleanup
+# Prevents unbounded growth of transaction history and snapshots.
+# Disable any section by setting enabled: false, or set retention-days: 0
+# to skip cleanup entirely.
+# ============================================
+cleanup:
+  # How often to run cleanup (in hours). Set to 0 to disable.
+  cleanup-interval-hours: 24
+
+  # Trade transactions — kept slightly longer than the trade window
+  # so the market engine can still reference them for price calculations.
+  transactions:
+    enabled: true
+    retention-days: 14
+
+  # Price/volume history for charts — shorter retention is fine
+  # since the web dashboard only shows recent sparklines.
+  market-history:
+    enabled: true
+    retention-days: 7
+
+  # Economy-wide snapshots used by the dashboard — keep enough for
+  # trend charts; excess is pruned by count to ensure chart continuity.
+  economy-snapshots:
+    enabled: true
+    retention-days: 30

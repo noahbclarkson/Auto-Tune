@@ -7,6 +7,7 @@ import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.economy.LoanManager;
+import com.noahblclarkson.autotune.manager.DatabaseCleanupManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
@@ -27,6 +28,7 @@ public class TaskScheduler {
     private final Provider<WebServer> webServerProvider;
     private final PriceReporter priceReporter;
     private final PriceAlertManager priceAlertManager;
+    private final DatabaseCleanupManager cleanupManager;
 
     private ScheduledTask marketTask;
     private ScheduledTask loanInterestTask;
@@ -35,6 +37,7 @@ public class TaskScheduler {
     private ScheduledTask economySnapshotTask;
     private ScheduledTask priceReporterTask;
     private ScheduledTask alertCheckTask;
+    private ScheduledTask cleanupTask;
 
     @Inject
     public TaskScheduler(
@@ -45,7 +48,8 @@ public class TaskScheduler {
             EconomyMetricsManager economyMetricsManager,
             Provider<WebServer> webServerProvider,
             PriceReporter priceReporter,
-            PriceAlertManager priceAlertManager
+            PriceAlertManager priceAlertManager,
+            DatabaseCleanupManager cleanupManager
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -55,6 +59,7 @@ public class TaskScheduler {
         this.webServerProvider = webServerProvider;
         this.priceReporter = priceReporter;
         this.priceAlertManager = priceAlertManager;
+        this.cleanupManager = cleanupManager;
     }
 
     public void start() {
@@ -63,6 +68,7 @@ public class TaskScheduler {
         startEconomySnapshotTask();
         startPriceReporterTask();
         startAlertCheckTask();
+        startCleanupTask();
         plugin.getLogger().info("Scheduled tasks started.");
     }
 
@@ -87,6 +93,9 @@ public class TaskScheduler {
         }
         if (alertCheckTask != null) {
             alertCheckTask.cancel();
+        }
+        if (cleanupTask != null) {
+            cleanupTask.cancel();
         }
         plugin.getLogger().info("Scheduled tasks stopped.");
     }
@@ -218,4 +227,26 @@ public class TaskScheduler {
         );
     }
 
+    private void startCleanupTask() {
+        int intervalHours = configManager.getConfig().cleanup().cleanupIntervalHours();
+        if (intervalHours <= 0) {
+            plugin.getLogger().info("Database cleanup is disabled (interval <= 0).");
+            return;
+        }
+
+        // Run once shortly after startup, then at the configured interval
+        cleanupTask = plugin.getServer().getAsyncScheduler().runAtFixedRate(
+                plugin,
+                task -> {
+                    try {
+                        cleanupManager.runCleanup();
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Error during database cleanup: " + e.getMessage());
+                    }
+                },
+                1,
+                intervalHours,
+                TimeUnit.HOURS
+        );
+    }
 }

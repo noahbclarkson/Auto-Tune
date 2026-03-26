@@ -89,4 +89,39 @@ public class EconomySnapshotRepository {
                         .map((rs, ctx) -> mapSnapshot(rs))
                         .findFirst());
     }
+
+    /**
+     * Delete economy snapshots older than the given cutoff.
+     * Returns the number of rows deleted.
+     */
+    public int deleteOlderThan(Instant cutoff) {
+        return jdbi.withHandle(handle ->
+                handle.createUpdate("DELETE FROM at_economy_snapshots WHERE timestamp < :cutoff")
+                        .bind("cutoff", Timestamp.from(cutoff))
+                        .execute());
+    }
+
+    /**
+     * Keep only the most recent N snapshots, deleting all older ones.
+     * Returns the number of rows deleted.
+     */
+    public int keepMostRecentN(int n) {
+        return jdbi.withHandle(handle ->
+                handle.createUpdate("""
+                                DELETE FROM at_economy_snapshots
+                                WHERE id NOT IN (
+                                    SELECT id FROM at_economy_snapshots
+                                    ORDER BY timestamp DESC LIMIT :n
+                                )
+                                """)
+                        .bind("n", n)
+                        .execute());
+    }
+
+    public long count() {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("SELECT COUNT(*) FROM at_economy_snapshots")
+                        .mapTo(Long.class)
+                        .one());
+    }
 }

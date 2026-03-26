@@ -235,4 +235,22 @@ public class TransactionRepository {
                         .mapTo(Long.class)
                         .one());
     }
+
+    /**
+     * Delete transactions older than the given cutoff.
+     * Returns the number of rows deleted.
+     */
+    public int deleteOlderThan(Instant cutoff) {
+        return jdbi.withHandle(handle ->
+                handle.createUpdate("DELETE FROM at_transactions WHERE timestamp < :cutoff")
+                        .bind("cutoff", Timestamp.from(cutoff))
+                        .execute());
+    }
+
+    public long count() {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("SELECT COUNT(*) FROM at_transactions")
+                        .mapTo(Long.class)
+                        .one());
+    }
 }

@@ -68,6 +68,7 @@ public class ConfigManager {
                 parsePriceReporterConfig(cfg.getConfigurationSection("price-reporter")),
                 parseDebugConfig(cfg.getConfigurationSection("debug")),
                 parseEnchantmentConfig(cfg.getConfigurationSection("enchantment")),
+                parseCleanupConfig(cfg.getConfigurationSection("cleanup")),
                 this.marketFrozen
         );
     }
@@ -426,5 +427,35 @@ public class ConfigManager {
         }
 
         return new EnchantmentConfig(enabled, multipliers);
+    }
+
+    private CleanupConfig parseCleanupConfig(ConfigurationSection section) {
+        if (section == null) {
+            return CleanupConfig.defaults();
+        }
+
+        ConfigurationSection txSection = section.getConfigurationSection("transactions");
+        AutoTuneConfig.CleanupConfig.RetentionConfig txConfig = txSection != null
+                ? new AutoTuneConfig.CleanupConfig.RetentionConfig(
+                txSection.getBoolean("enabled", true),
+                txSection.getInt("retention-days", 14))
+                : AutoTuneConfig.CleanupConfig.RetentionConfig.defaults(true, 14);
+
+        ConfigurationSection histSection = section.getConfigurationSection("market-history");
+        AutoTuneConfig.CleanupConfig.RetentionConfig histConfig = histSection != null
+                ? new AutoTuneConfig.CleanupConfig.RetentionConfig(
+                histSection.getBoolean("enabled", true),
+                histSection.getInt("retention-days", 7))
+                : AutoTuneConfig.CleanupConfig.RetentionConfig.defaults(true, 7);
+
+        ConfigurationSection snapSection = section.getConfigurationSection("economy-snapshots");
+        AutoTuneConfig.CleanupConfig.RetentionConfig snapConfig = snapSection != null
+                ? new AutoTuneConfig.CleanupConfig.RetentionConfig(
+                snapSection.getBoolean("enabled", true),
+                snapSection.getInt("retention-days", 30))
+                : AutoTuneConfig.CleanupConfig.RetentionConfig.defaults(true, 30);
+
+        return new CleanupConfig(txConfig, histConfig, snapConfig,
+                section.getInt("cleanup-interval-hours", 24));
     }
 }

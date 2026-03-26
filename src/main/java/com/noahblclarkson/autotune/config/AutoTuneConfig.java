@@ -15,6 +15,7 @@ public record AutoTuneConfig(
         @NotNull PriceReporterConfig priceReporter,
         @NotNull DebugConfig debug,
         @NotNull EnchantmentConfig enchantment,
+        @NotNull CleanupConfig cleanup,
         boolean marketFrozen
 ) {
 
@@ -263,6 +264,32 @@ public record AutoTuneConfig(
      * Each entry maps an enchantment name to per-level multipliers.
      * E.g. EFFICIENCY → [1.3, 1.7, 2.2, 3.0] means Efficiency I ×1.3, II ×1.7, etc.
      */
+    /**
+     * Database cleanup config — controls retention policies to prevent unbounded growth.
+     * Each table is pruned independently based on age thresholds.
+     */
+    public record CleanupConfig(
+            @NotNull RetentionConfig transactions,
+            @NotNull RetentionConfig marketHistory,
+            @NotNull RetentionConfig economySnapshots,
+            int cleanupIntervalHours
+    ) {
+        public record RetentionConfig(boolean enabled, int retentionDays) {
+            public static RetentionConfig defaults(boolean enabled, int days) {
+                return new RetentionConfig(enabled, days);
+            }
+        }
+
+        public static CleanupConfig defaults() {
+            return new CleanupConfig(
+                    RetentionConfig.defaults(true, 14),
+                    RetentionConfig.defaults(true, 7),
+                    RetentionConfig.defaults(true, 30),
+                    24
+            );
+        }
+    }
+
     public record EnchantmentConfig(
             boolean enabled,
             @NotNull Map<String, List<Double>> enchantmentMultipliers

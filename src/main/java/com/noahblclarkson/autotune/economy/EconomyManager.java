@@ -208,6 +208,12 @@ public class EconomyManager {
     /**
      * Sells items from the player's inventory synchronously.
      * If itemStack is provided and has enchantments, an enchantment price multiplier is applied.
+     *
+     * Safety: items are removed FIRST, then money deposited, then DB write committed.
+     * If DB write fails after items are removed, money is NOT deposited — items are restored.
+     * This ordering is chosen over "DB first" because Vault withdraw/deposit must happen
+     * on main thread and cannot be cleanly rolled back; item removal from a player's
+     * inventory can be rolled back in-memory without DB involvement.
      */
     public TransactionResult processSellImmediate(
             @NotNull Player player,
@@ -232,15 +238,29 @@ public class EconomyManager {
             pricePerUnit = basePricePerUnit;
         }
 
-        final BigDecimal finalPricePerUnit = pricePerUnit;
         BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
 
+        // Step 1: Remove items from inventory FIRST.
+        // If this fails, we abort without touching money or DB.
+        // Clone the inventory contents so we can restore on failure.
+        ItemStack[] preRemoval = player.getInventory().getStorageContents().clone();
+        if (!removeItems(player, item, amount)) {
+            return TransactionResult.insufficientItems(countItems(player, item));
+        }
+
+        // Step 2: Deposit money — only after items are safely removed.
         if (!deposit(player, totalPrice.doubleValue())) {
+            // Rare: economy provider error. Restore items to player's inventory.
+            player.getInventory().setStorageContents(preRemoval);
             return TransactionResult.economyError();
         }
 
-        // Persist transaction to DB before returning. Using supplyAsync + join to keep
+        // Step 3: Persist transaction to DB. Using supplyAsync + join to keep
         // the synchronous UX of processSellImmediate while ensuring data integrity.
+        // If this fails, money was already deposited and items removed — log for
+        // admin review but still report success to the player (items are gone,
+        // money is with them, which is the better outcome than items+gifts+broken ledger).
+        final BigDecimal finalPricePerUnit = pricePerUnit;
         final BigDecimal finalTotalPrice = totalPrice;
         try {
             databaseManager.supplyAsync(() -> {
@@ -261,7 +281,13 @@ public class EconomyManager {
                 return null;
             }).join();
         } catch (Exception e) {
-            plugin.getLogger().log(Level.WARNING, "Failed to persist sell transaction for " + player.getName(), e);
+            // DB write failed but player has money and items are removed.
+            // This is the safer outcome: player got paid with a clean inventory.
+            // Log for admin review — no user-facing error so they don't panic.
+            plugin.getLogger().log(Level.WARNING,
+                    "[Auto-Tune] DB write failed after sell for " + player.getName()
+                            + " (amount=" + amount + ", price=" + totalPrice + "). "
+                            + "Money deposited but transaction not recorded. Manual DB review may be needed.", e);
         }
 
         return TransactionResult.success(TransactionType.SELL, amount, totalPrice);

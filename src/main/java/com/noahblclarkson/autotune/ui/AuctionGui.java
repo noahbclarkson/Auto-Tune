@@ -342,11 +342,15 @@ public class AuctionGui {
 
     private void processFillAsync(AuctionOrder order, int quantity) {
         Bukkit.getScheduler().runTaskAsynchronously(AutoTune.getInstance(), () -> {
-            // Update order's remaining quantity in DB
+            // Update order's remaining quantity in DB and record the fill.
+            // Item/money transfers already happened on the main thread in the caller.
+            // The seller's side of the fill is handled by AuctionManager when the
+            // matching engine runs — but here we came from the GUI fill path, so we
+            // need to record the fill and update the order directly.
             auctionManager.getOrder(order.id()).ifPresent(current -> {
                 int newRemaining = Math.max(0, current.remainingQuantity() - quantity);
-                // Note: the full fill processing (DB update + item delivery) is
-                // handled by AuctionManager; this is just a UI-side refresh trigger.
+                AuctionOrder updated = current.withRemainingQuantity(newRemaining);
+                auctionManager.updateOrderRemaining(updated);
             });
         });
     }

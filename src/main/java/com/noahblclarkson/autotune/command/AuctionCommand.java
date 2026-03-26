@@ -18,6 +18,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.entity.Player;
 import org.incendo.cloud.annotations.Argument;
 import org.incendo.cloud.annotations.Command;
@@ -124,16 +125,18 @@ public class AuctionCommand {
         var held = item.clone();
         held.setAmount(quantity);
 
+        // Remove items from hand BEFORE async call to ensure atomicity.
+        // If the async DB write fails, we restore them.
+        player.getInventory().getItemInMainHand().setAmount(available - quantity);
+        ItemStack toRestore = held.clone();
+
         player.sendMessage(Component.text("Placing sell order for " + quantity + "× " + formatMaterial(held.getType().name())
                 + " at " + configManager.formatCurrency(price) + " each..."));
 
-        auctionManager.placeSellOrderAsync(player, held, quantity, price)
+        auctionManager.placeSellOrderAsync(player, held.getType(), quantity, price)
                 .orTimeout(10, TimeUnit.SECONDS)
                 .thenAccept(result -> {
                     if (result.success()) {
-                        // Remove items from hand
-                        player.getInventory().getItemInMainHand().setAmount(available - quantity);
-
                         player.sendMessage(Component.text("✓ " + result.message(), NamedTextColor.GREEN));
 
                         // Show fills if any
@@ -147,6 +150,8 @@ public class AuctionCommand {
                             }
                         }
                     } else {
+                        // DB write failed — restore items to player's hand
+                        player.getInventory().addItem(toRestore);
                         player.sendMessage(Component.text("✗ " + result.message(), NamedTextColor.RED));
                     }
                 });

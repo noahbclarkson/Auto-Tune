@@ -60,11 +60,12 @@ public class AuctionManager {
 
     /**
      * Place a sell order (player listing items for sale).
-     * Deducts items from player's hand. Matches immediately against existing buy orders.
+     * Items must be removed from the player's hand BEFORE calling this.
+     * Matches immediately against existing buy orders.
      */
     public CompletableFuture<AuctionResult> placeSellOrderAsync(
             @NotNull Player player,
-            @NotNull ItemStack item,
+            @NotNull Material material,
             int quantity,
             @NotNull BigDecimal pricePerUnit
     ) {
@@ -79,9 +80,6 @@ public class AuctionManager {
                 return AuctionResult.error("Price must be a multiple of " + TICK_SIZE);
             }
 
-            Material material = item.getType();
-            String itemData = null; // For future: serialize enchants, etc.
-
             UUID playerId = player.getUniqueId();
             Object lock = playerLocks.computeIfAbsent(playerId, k -> new Object());
             synchronized (lock) {
@@ -89,7 +87,6 @@ public class AuctionManager {
                 AuctionOrder order = AuctionOrder.builder()
                         .playerUuid(playerId)
                         .material(material.name())
-                        .itemData(itemData)
                         .price(pricePerUnit)
                         .originalQuantity(quantity)
                         .remainingQuantity(quantity)
@@ -200,8 +197,9 @@ public class AuctionManager {
                 if (remainingUnfilled > 0) {
                     AuctionOrder openOrder = order.withRemainingQuantity(remainingUnfilled);
                     auctionRepo.insert(openOrder);
-                    // Refund the portion that wasn't filled (already withdrawn, just insert)
-                    // Actually the full amount was withdrawn; escrow stays until filled or cancelled
+                    // The full cost was withdrawn upfront; the remaining escrowed funds
+                    // stay in escrow until this buy order is filled or cancelled.
+                    // Cancellation (cancelOrderAsync) handles the refund.
                 }
 
                 if (totalFilled > 0) {
@@ -295,6 +293,18 @@ public class AuctionManager {
             });
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to process auction fill " + fill.id(), e);
+        }
+    }
+
+    /**
+     * Update order's remaining quantity. Called from GUI path where matching
+     * engine is not involved (GUI directly fills an existing order).
+     */
+    public void updateOrderRemaining(@NotNull AuctionOrder order) {
+        try {
+            auctionRepo.update(order);
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to update auction order " + order.id(), e);
         }
     }
 

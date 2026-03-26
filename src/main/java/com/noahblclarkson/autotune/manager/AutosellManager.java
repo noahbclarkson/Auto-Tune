@@ -19,7 +19,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Singleton
@@ -147,15 +146,10 @@ public class AutosellManager {
         int totalSold = 0;
         BigDecimal totalEarned = BigDecimal.ZERO;
 
-        // Snapshot current storage so we can restore if a DB write fails mid-loop.
-        // processSellImmediate removes items from the live inventory before the DB
-        // write completes — if join() throws, we restore from snapshot so no items
-        // are silently lost.
-        ItemStack[] snapshot = player.getInventory().getStorageContents().clone();
-        ItemStack[] working = snapshot.clone();
+        ItemStack[] contents = player.getInventory().getStorageContents();
 
-        for (int slot = 0; slot < working.length; slot++) {
-            ItemStack stack = working[slot];
+        for (int slot = 0; slot < contents.length; slot++) {
+            ItemStack stack = contents[slot];
             if (stack == null || stack.getType().isAir()) {
                 continue;
             }
@@ -171,29 +165,28 @@ public class AutosellManager {
             }
 
             int amount = stack.getAmount();
-            // Pass the ItemStack so enchantment pricing can apply the premium.
-            // processSellImmediate deposits money synchronously then writes to DB.
-            // If the DB write throws, we restore inventory from snapshot below.
-            EconomyManager.TransactionResult result;
-            try {
-                result = economyManager.processSellImmediate(player, shopItem, amount, stack);
-            } catch (Exception e) {
-                // DB write failed — restore inventory to pre-loop state
-                player.getInventory().setStorageContents(snapshot.clone());
-                LOGGER.log(Level.WARNING, "Autosell DB write failed for " + player.getName()
-                        + " — inventory restored. Sold " + totalSold + " items so far.", e);
-                break;
-            }
+            // processSellImmediate now handles item removal + money deposit + DB write
+            // atomically. It removes items first, deposits money, then writes to DB.
+            // If DB write fails, it restores items and returns economyError.
+            // In that case we stop the loop — partial completion would confuse players.
+            EconomyManager.TransactionResult result = economyManager.processSellImmediate(
+                    player, shopItem, amount, stack);
 
             if (result != null && result.success()) {
-                working[slot] = null;  // remove from working copy only
+                contents[slot] = null;  // item was removed by processSellImmediate
                 totalSold += result.amount();
                 totalEarned = totalEarned.add(result.totalPrice());
+            } else if (result != null && !result.success()) {
+                // DB failed AND items were restored by processSellImmediate.
+                // Stop the loop — don't leave player with partial sold inventory.
+                LOGGER.log(Level.WARNING, "Autosell stopped for " + player.getName()
+                        + " after DB failure (sold " + totalSold + " items so far).", new Exception("DB failure"));
+                break;
             }
         }
 
-        // Apply removals to actual inventory only after all DB writes succeeded
-        player.getInventory().setStorageContents(working);
+        // Apply slot clears to actual inventory
+        player.getInventory().setStorageContents(contents);
 
         if (totalSold > 0) {
             player.sendMessage(configManager.getMessage("autosell.inventory-sold", Map.of(

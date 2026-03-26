@@ -1,3 +1,4 @@
+mod analyzer;
 mod config;
 mod engine;
 mod gui;
@@ -897,6 +898,8 @@ Usage:
   market-simulation                  # Launch GUI
   market-simulation --headless       # Run default scenario headlessly
   market-simulation --headless <scenario> [--output DIR]
+  market-simulation --analyze <path/to/simulation.db>
+  market-simulation --analyze-dir <path/to/sim-output/>
   market-simulation --list-scenarios
 
 Scenarios:
@@ -1011,6 +1014,24 @@ fn main() -> eframe::Result<()> {
                 eprintln!("Error: {}", e);
                 std::process::exit(1);
             }
+        }
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--analyze" {
+        let db_path = args.get(2).expect("Usage: --analyze <path-to-simulation.db>");
+        if let Err(e) = crate::analyzer::analyze_db(std::path::Path::new(db_path)) {
+            eprintln!("Analysis error: {e}");
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--analyze-dir" {
+        let dir_path = args.get(2).expect("Usage: --analyze-dir <path-to-sim-output-dir>");
+        if let Err(e) = crate::analyzer::analyze_dir(std::path::Path::new(dir_path)) {
+            eprintln!("Analysis error: {e}");
+            std::process::exit(1);
         }
         return Ok(());
     }

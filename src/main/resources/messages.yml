@@ -50,6 +50,9 @@ autosell:
   all-disabled: "<red>Autosell disabled for all items."
   sold: "<green>Autosold <gold><amount>x <item></gold> for <gold><price></gold>"
   inventory-sold: "<green>Sold <gold><amount></gold> items from inventory for <gold><price></gold>!"
+  minprice-set: "<green>Autosell minimum price for <gold><item></gold> set to <gold><price></gold>."
+  minprice-reset: "<yellow>Autosell minimum price for <gold><item></gold> reset to global default."
+  minprice-invalid: "<red>Minimum price must be 0 or greater."
 
 # Loan messages
 loan:

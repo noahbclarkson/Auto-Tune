@@ -62,7 +62,7 @@ public class AutosellListener implements Listener {
         }
 
         // Check minimum price threshold
-        if (!passesMinimumPrice(shopItem)) {
+        if (!passesMinimumPrice(player, shopItem)) {
             return;
         }
 
@@ -117,7 +117,7 @@ public class AutosellListener implements Listener {
             }
 
             // Check minimum price threshold
-            if (!passesMinimumPrice(shopItem)) {
+            if (!passesMinimumPrice(player, shopItem)) {
                 continue;
             }
 
@@ -143,14 +143,15 @@ public class AutosellListener implements Listener {
 
     /**
      * Returns true if the item's current sell price is at or above the minimum threshold.
+     * Uses the player's per-item override if set, otherwise falls back to the global config minimum.
      */
-    private boolean passesMinimumPrice(ShopItem shopItem) {
-        double minPrice = configManager.getConfig().autosell().minimumPrice();
-        if (minPrice <= 0.0) {
+    private boolean passesMinimumPrice(Player player, ShopItem shopItem) {
+        double effectiveMinPrice = autosellManager.getEffectiveMinPrice(player.getUniqueId(), shopItem.id());
+        if (effectiveMinPrice <= 0.0) {
             return true; // disabled
         }
         BigDecimal sellPrice = shopManager.getSellPrice(shopItem);
-        return sellPrice.doubleValue() >= minPrice;
+        return sellPrice.doubleValue() >= effectiveMinPrice;
     }
 
     private void playPickupSound(Player player) {

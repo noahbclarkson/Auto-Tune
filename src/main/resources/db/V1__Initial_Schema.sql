@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS at_autosell_items (
     player_uuid VARCHAR(36) NOT NULL,
     item_id INTEGER NOT NULL,
     enabled BOOLEAN DEFAULT TRUE,
+    min_price DECIMAL(20, 2) DEFAULT NULL,
     PRIMARY KEY(player_uuid, item_id),
     FOREIGN KEY(player_uuid) REFERENCES at_players(uuid) ON DELETE CASCADE,
     FOREIGN KEY(item_id) REFERENCES at_items(id) ON DELETE CASCADE

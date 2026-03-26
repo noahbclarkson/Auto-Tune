@@ -133,13 +133,15 @@ public class AutosellGui {
         Set<Integer> enabledItems = autosellManager.getEnabledItems(player.getUniqueId());
 
         for (ShopItem item : items) {
-            guiItems.add(createAutosellItemGui(item, enabledItems.contains(item.id())));
+            java.math.BigDecimal perItemMin = autosellManager.getMinPrice(player.getUniqueId(), item.id())
+                    .orElse(null);
+            guiItems.add(createAutosellItemGui(item, enabledItems.contains(item.id()), perItemMin));
         }
 
         itemsPane.populateWithGuiItems(guiItems);
     }
 
-    private GuiItem createAutosellItemGui(ShopItem shopItem, boolean enabled) {
+    private GuiItem createAutosellItemGui(ShopItem shopItem, boolean enabled, java.math.BigDecimal perItemMinPrice) {
         ColorsConfig colors = configManager.getConfig().gui().colors();
 
         ItemStack display = new ItemStack(shopItem.material());
@@ -172,6 +174,12 @@ public class AutosellGui {
                     .decoration(TextDecoration.ITALIC, false));
             lore.add(Component.text("This item will be auto-sold", positiveColor)
                     .decoration(TextDecoration.ITALIC, false));
+            // Show per-item min price if set
+            if (perItemMinPrice != null) {
+                lore.add(Component.text("Min price: ", mutedColor)
+                        .append(Component.text(configManager.formatCurrency(perItemMinPrice), positiveColor))
+                        .decoration(TextDecoration.ITALIC, false));
+            }
         } else {
             lore.add(Component.text("Status: ", mutedColor)
                     .append(Component.text("DISABLED", negativeColor).decoration(TextDecoration.BOLD, true))

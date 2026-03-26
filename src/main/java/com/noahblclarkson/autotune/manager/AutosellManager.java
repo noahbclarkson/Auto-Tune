@@ -66,6 +66,19 @@ public class AutosellManager {
         playerEnabledItems.remove(uuid);
     }
 
+    /**
+     * Returns the effective minimum price for an item.
+     * Returns the player's per-item override if set, otherwise the global config minimum.
+     */
+    public double getEffectiveMinPrice(@NotNull UUID uuid, int itemId) {
+        Optional<BigDecimal> perItem = databaseManager.supplyAsync(
+                () -> autosellRepository.getMinPrice(uuid, itemId)).join();
+        if (perItem.isPresent() && perItem.get().doubleValue() > 0.0) {
+            return perItem.get().doubleValue();
+        }
+        return configManager.getConfig().autosell().minimumPrice();
+    }
+
     public boolean isItemEnabled(@NotNull UUID uuid, int itemId) {
         Set<Integer> enabled = playerEnabledItems.get(uuid);
         return enabled != null && enabled.contains(itemId);
@@ -143,7 +156,6 @@ public class AutosellManager {
             return 0;
         }
 
-        double minPrice = configManager.getConfig().autosell().minimumPrice();
         int totalSold = 0;
         BigDecimal totalEarned = BigDecimal.ZERO;
 
@@ -165,10 +177,11 @@ public class AutosellManager {
                 continue;
             }
 
-            // Skip items below minimum price threshold
-            if (minPrice > 0.0) {
+            // Skip items below minimum price threshold (per-item override or global)
+            double effectiveMinPrice = getEffectiveMinPrice(uuid, shopItem.id());
+            if (effectiveMinPrice > 0.0) {
                 BigDecimal sellPrice = shopManager.getSellPrice(shopItem);
-                if (sellPrice.doubleValue() < minPrice) {
+                if (sellPrice.doubleValue() < effectiveMinPrice) {
                     continue;
                 }
             }
@@ -221,5 +234,50 @@ public class AutosellManager {
                 "amount", String.valueOf(totalAmount),
                 "price", configManager.formatCurrency(totalPrice)
         )));
+    }
+
+    /**
+     * Set a per-item minimum price threshold for autosell.
+     * Players who don't set a per-item threshold use the global config minimum.
+     */
+    public void setMinPrice(@NotNull Player player, int itemId, double minPrice) {
+        if (minPrice < 0) {
+            player.sendMessage(configManager.getMessage("autosell.minprice-invalid"));
+            return;
+        }
+        UUID uuid = player.getUniqueId();
+        BigDecimal price = minPrice == 0 ? null : BigDecimal.valueOf(minPrice);
+        autosellRepository.setMinPrice(uuid, itemId, price);
+
+        Optional<ShopItem> item = shopManager.getItemById(itemId);
+        String itemName = item.map(ShopItem::getDisplayNameOrMaterial).orElse("Unknown Item");
+
+        if (price == null) {
+            player.sendMessage(configManager.getMessage("autosell.minprice-reset", Map.of("item", itemName)));
+        } else {
+            player.sendMessage(configManager.getMessage("autosell.minprice-set", Map.of(
+                    "item", itemName,
+                    "price", configManager.formatCurrency(price)
+            )));
+        }
+    }
+
+    /**
+     * Remove a per-item minimum price threshold (reverts to global config).
+     */
+    public void removeMinPrice(@NotNull Player player, int itemId) {
+        UUID uuid = player.getUniqueId();
+        autosellRepository.removeMinPrice(uuid, itemId);
+
+        Optional<ShopItem> item = shopManager.getItemById(itemId);
+        String itemName = item.map(ShopItem::getDisplayNameOrMaterial).orElse("Unknown Item");
+        player.sendMessage(configManager.getMessage("autosell.minprice-reset", Map.of("item", itemName)));
+    }
+
+    /**
+     * Get the per-item minimum price for display (empty Optional if using global).
+     */
+    public Optional<BigDecimal> getMinPrice(@NotNull UUID uuid, int itemId) {
+        return autosellRepository.getMinPrice(uuid, itemId);
     }
 }

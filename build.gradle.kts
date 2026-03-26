@@ -24,6 +24,7 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://jitpack.io")
+    maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
 }
 
 dependencies {
@@ -39,6 +40,9 @@ dependencies {
     // Vault API (economy integration)
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
     testImplementation("com.github.MilkBowl:VaultAPI:1.7.1")
+
+    // PlaceholderAPI (optional — exposes prices, trends, economy stats as placeholders)
+    compileOnly("me.clip:placeholderapi:2.11.6")
 
     // Command Framework - Cloud
     implementation("org.incendo:cloud-core:${property("cloudCoreVersion")}")

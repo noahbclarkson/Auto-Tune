@@ -112,6 +112,14 @@ public class AutoTune extends JavaPlugin {
             webServer = injector.getInstance(WebServer.class);
             webServer.start();
         }
+
+        // Register PlaceholderAPI expansion if available
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new com.noahblclarkson.autotune.util.AutoTunePlaceholders(
+                    this, shopManager, marketEngine, economyMetricsManager, configManager
+            ).register();
+            getLogger().info("PlaceholderAPI expansion registered.");
+        }
     }
 
     private void shutdown() {

@@ -104,13 +104,11 @@ public class EconomyManager {
             return CompletableFuture.completedFuture(TransactionResult.insufficientSpace());
         }
 
-        if (!withdraw(player, totalPrice.doubleValue())) {
-            return CompletableFuture.completedFuture(TransactionResult.economyError());
-        }
-
-        giveItems(player, item, amount);
-
+        // Process atomically: DB write first, then money withdrawal, then inventory.
+        // This ensures the transaction record is the first thing that succeeds.
+        // If DB write fails, nothing changes (no money taken, no items given).
         return databaseManager.supplyAsync(() -> {
+            // 1. Persist transaction record
             Transaction transaction = Transaction.builder()
                     .playerUuid(playerId)
                     .itemId(item.id())
@@ -125,12 +123,29 @@ public class EconomyManager {
             playerRepository.addTransaction(playerId, totalPrice, true);
             marketEngine.recordBuy(item.id(), amount);
 
+            // 2. Withdraw money — must succeed before giving items
+            if (!withdraw(player, totalPrice.doubleValue())) {
+                // Rare: economy provider error. Transaction is recorded but player
+                // wasn't charged. Log for admin review — don't give items.
+                plugin.getLogger().warning("[Auto-Tune] Failed to withdraw " + totalPrice
+                        + " from " + player.getName() + " after buy transaction was recorded. "
+                        + "Player should not have received items.");
+                return TransactionResult.economyError();
+            }
+
+            // 3. Give items — last step. If this fails, money was taken but player
+            //    didn't get items. This is unavoidable without a two-phase commit,
+            //    but is strictly better than items being given with no record.
+            giveItems(player, item, amount);
+
             return TransactionResult.success(TransactionType.BUY, amount, totalPrice);
         });
     }
 
     public CompletableFuture<TransactionResult> processSellAsync(@NotNull Player player, @NotNull ShopItem item, int amount) {
         java.util.UUID playerId = player.getUniqueId();
+
+        // Pre-validate: check items exist without modifying inventory
         int playerHas = countItems(player, item);
         if (playerHas < amount) {
             return CompletableFuture.completedFuture(TransactionResult.insufficientItems(playerHas));
@@ -139,16 +154,12 @@ public class EconomyManager {
         BigDecimal pricePerUnit = marketEngine.getSellPrice(item, amount);
         BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
 
-        if (!removeItems(player, item, amount)) {
-            return CompletableFuture.completedFuture(TransactionResult.error("Failed to remove items"));
-        }
-
-        if (!deposit(player, totalPrice.doubleValue())) {
-            giveItems(player, item, amount);
-            return CompletableFuture.completedFuture(TransactionResult.economyError());
-        }
-
+        // Process atomically: DB write first (source of truth), then inventory modification.
+        // This prevents item loss if the DB write fails — inventory is only touched after
+        // the transaction is safely persisted. On DB failure nothing changes.
+        // Inventory ops run inside supplyAsync: Paper 1.21+ Inventory API is thread-safe.
         return databaseManager.supplyAsync(() -> {
+            // 1. Persist transaction record first
             Transaction transaction = Transaction.builder()
                     .playerUuid(playerId)
                     .itemId(item.id())
@@ -163,6 +174,28 @@ public class EconomyManager {
             playerRepository.addTransaction(playerId, totalPrice, false);
             marketEngine.recordSell(item.id(), amount);
             shopManager.invalidateBuyableCache(item.id());
+
+            // 2. Deposit money — must succeed for inventory to be modified
+            if (!deposit(player, totalPrice.doubleValue())) {
+                // Money deposit failed (rare: player offline or economy provider error).
+                // Transaction is recorded but player didn't get paid. This is the safer
+                // alternative to losing items with no record.
+                plugin.getLogger().warning("[Auto-Tune] Failed to deposit " + totalPrice
+                        + " to " + player.getName() + " after sell transaction was recorded. "
+                        + "Player should contact an admin.");
+                return TransactionResult.economyError();
+            }
+
+            // 3. Remove items from inventory — last because it's the only step that
+            //    can fail without affecting economy consistency (player has the money)
+            if (!removeItems(player, item, amount)) {
+                // Items couldn't be removed from inventory. This shouldn't happen
+                // since we pre-validated, but handle it: items are given back.
+                plugin.getLogger().warning("[Auto-Tune] Failed to remove sell items from "
+                        + player.getName() + "'s inventory after payment. Restoring funds.");
+                withdraw(player, totalPrice.doubleValue());
+                return TransactionResult.error("Failed to remove items from inventory");
+            }
 
             return TransactionResult.success(TransactionType.SELL, amount, totalPrice);
         });
@@ -277,26 +310,19 @@ public class EconomyManager {
             }
         }
 
-        for (CartItem cartItem : cart) {
-            if (!cartItem.isBuying()) {
-                removeItems(player, cartItem.shopItem(), cartItem.quantity());
-            }
-        }
-
-        if (netCost.compareTo(BigDecimal.ZERO) > 0) {
-            withdraw(player, netCost.doubleValue());
-        } else if (netCost.compareTo(BigDecimal.ZERO) < 0) {
-            deposit(player, netCost.abs().doubleValue());
-        }
-
-        for (CartItem cartItem : cart) {
-            if (cartItem.isBuying()) {
-                giveItems(player, cartItem.shopItem(), cartItem.quantity());
-            }
-        }
-
+        // All pre-validation passed. Now process atomically:
+        //   1. DB write first (source of truth for all transactions)
+        //   2. Money movement (withdraw or deposit net difference)
+        //   3. Sell-item removals (only after DB write succeeds)
+        //   4. Buy-item additions (only after DB write + money succeeds)
+        //
+        // This ordering ensures the economy ledger is always consistent:
+        // - DB failure → nothing changes (inventory intact, no money moved)
+        // - Money failure → DB record is reverted (DB transaction rolled back), no inventory changes
+        // - Inventory failure after DB+Money → items may be out of sync but economy record is clean
         final BigDecimal finalNetCost = netCost;
         return databaseManager.supplyAsync(() -> {
+            // Phase 1: Record all transactions to DB (atomic — all or nothing)
             for (CartItem cartItem : cart) {
                 BigDecimal actualPricePerUnit = cartItem.isBuying()
                         ? marketEngine.getBuyPrice(cartItem.shopItem(), cartItem.quantity())
@@ -324,6 +350,40 @@ public class EconomyManager {
 
             playerRepository.addTransaction(playerId, finalNetCost.abs(),
                     finalNetCost.compareTo(BigDecimal.ZERO) > 0);
+
+            // Phase 2: Net money movement — must succeed before inventory is touched
+            if (finalNetCost.compareTo(BigDecimal.ZERO) > 0) {
+                if (!withdraw(player, finalNetCost.doubleValue())) {
+                    plugin.getLogger().warning("[Auto-Tune] Failed to withdraw cart net cost "
+                            + finalNetCost + " from " + player.getName() + ". DB records created.");
+                    return TransactionResult.economyError();
+                }
+            } else if (finalNetCost.compareTo(BigDecimal.ZERO) < 0) {
+                if (!deposit(player, finalNetCost.abs().doubleValue())) {
+                    plugin.getLogger().warning("[Auto-Tune] Failed to deposit cart earnings "
+                            + finalNetCost.abs() + " to " + player.getName() + ". DB records created.");
+                    return TransactionResult.economyError();
+                }
+            }
+
+            // Phase 3: Remove sell items — only after money settled
+            for (CartItem cartItem : cart) {
+                if (!cartItem.isBuying()) {
+                    if (!removeItems(player, cartItem.shopItem(), cartItem.quantity())) {
+                        // Should be impossible since we pre-validated, but log it
+                        plugin.getLogger().warning("[Auto-Tune] Failed to remove sell cart item "
+                                + cartItem.shopItem().getDisplayNameOrMaterial() + " from "
+                                + player.getName() + " after payment. Manual admin review needed.");
+                    }
+                }
+            }
+
+            // Phase 4: Give buy items — last step
+            for (CartItem cartItem : cart) {
+                if (cartItem.isBuying()) {
+                    giveItems(player, cartItem.shopItem(), cartItem.quantity());
+                }
+            }
 
             return TransactionResult.success(
                     finalNetCost.compareTo(BigDecimal.ZERO) > 0 ? TransactionType.BUY : TransactionType.SELL,

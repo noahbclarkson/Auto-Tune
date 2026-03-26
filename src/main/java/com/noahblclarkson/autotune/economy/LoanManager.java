@@ -400,7 +400,8 @@ public class LoanManager {
         PlayerData playerData = playerRepository.findByUuid(playerUuid).orElse(null);
 
         int creditScore = playerData != null ? playerData.creditScore() : PlayerData.DEFAULT_CREDIT_SCORE;
-        return calculateInterestRate(creditScore, termDays, config);
+        int clampedDays = Math.min(termDays, config.maxTermDays());
+        return calculateInterestRate(creditScore, clampedDays, config);
     }
 
     public BigDecimal getAmortizationPayment(Loan loan) {

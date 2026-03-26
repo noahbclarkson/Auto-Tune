@@ -38,6 +38,7 @@ dependencies {
 
     // Vault API (economy integration)
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
+    testImplementation("com.github.MilkBowl:VaultAPI:1.7.1")
 
     // Command Framework - Cloud
     implementation("org.incendo:cloud-core:${property("cloudCoreVersion")}")

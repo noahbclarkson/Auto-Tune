@@ -71,6 +71,17 @@ The most complex component. Core concepts:
 - **Trade window**: recency-weighted transactions over configurable window (adaptive mode scales 1-7 days targeting 100 tx/day)
 - **Caching**: ConcurrentHashMap caches for prices, spreads, trend direction/streak, per-tick volumes; cleared on `reload()`
 
+### Auction House
+
+The auction house matching engine and in-game GUI are fully implemented in the Java plugin (rewrite-2). The Rust API server no longer has auction functionality — that concern is handled entirely by the plugin.
+
+Components:
+- `AuctionMatchingEngine.java` — price-time priority, maker price execution, fill generation
+- `AuctionManager.java` — order placement, fill processing, escrow for buy orders
+- `AuctionRepository.java` — JDBI CRUD for `at_auction_orders` + `at_auction_fills` tables
+- `AuctionCommand.java` — Cloud command `/auction` (browse, sell, buy, my, cancel, history)
+- `AuctionGui.java` — 6-row chest GUI with sell/buy columns, click-to-fill, cancel
+
 ### Web Frontend (`web/`)
 
 Next.js 14 + TypeScript + Tailwind + Recharts. Built as static export. Dashboard components in `web/src/components/dashboard/` (price-chart, economy-panel, item-table, stats-cards, transaction-feed). Item detail components in `web/src/components/items/` (item-detail-header with material/metadata, item-stats-row with spread-bar visualization, item-transactions-table, price-chart with OHLC candlesticks). The Gradle `buildWeb` task compiles and copies output before JAR packaging.
@@ -131,6 +142,7 @@ Player trades → Java Plugin (EconomyManager)
 - **API Server → True Prices**: Rust `market_server` computes log-space least-squares true prices
 - **API Server → web-optimizer**: `web-optimizer/` fetches via `lib/api-client.ts` (fetch with error/resilience)
 - **Plugin → web/**: Bundled static Next.js dashboard served by Javalin on port 8989
+- **Auction house**: Implemented in Java plugin (rewrite-2). No auction functionality remains in Rust API server.
 
 ## Active Engineering Roles
 

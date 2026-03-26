@@ -9,11 +9,14 @@
 ### Added
 - **`docs/ARCHITECTURE.md`** — Full system architecture guide covering all components, data flows, tech stack, and design decisions
 - **`docs/CHANGELOG.md`** — This file
+- **`docs/CONTRIBUTING.md`** — Development setup, repo layout, code standards for Java/Rust/TS, staying in sync guide (three engine implementations), branch policy, conventional commits, PR checklist, important caveats
 - **Simulator Stability Forecast** (`web-optimizer/`) — New `StabilityForecast` component wired into the price simulator. Shows a stability score (0–100%) based on current parameters, with condition-specific warnings (extreme buy ratios, low players, high z-scores, thin liquidity). Grounded in the 840-config simulation dataset showing all tested configs were stable.
 - **Sector correlation test** (`--correlation-test` CLI flag) — Treatment vs control simulation comparing sector_correlation=0.05 vs 0.0. Verifies within-section price co-movement using Pearson correlation.
 
 ### Fixed
 - **README.md badges** — Corrected GitHub repo URL from `Unprotesting/Auto-Tune` to `noahbclarkson/Auto-Tune`. Removed dead Codacy badge.
+- **README.md logo** — Fixed image URL to point to `noahbclarkson/Auto-Tune` on the `rewrite-2` branch (was `master`).
+- **`web-optimizer` API default port** — `api-client.ts` `DEFAULT_API_URL` was `http://localhost:3001` (no service running there). Changed to `http://localhost:8080` (matches the Rust API server bind address). Would cause silent fetch failures for local deployments without `NEXT_PUBLIC_API_URL` set.
 - **Auction house removed from Rust API server** — `matching.rs` (1260+ lines), `routes/orders.rs` deleted. Auction routes now return 410 Gone. Auction house is fully implemented as in-game `/auction` command in the Java plugin.
 
 ---

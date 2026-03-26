@@ -10,7 +10,7 @@
 > The rewrite-2 branch is a near-complete rebuild of Auto-Tune with a redesigned market engine,
 > Guice DI, Javalin web server, bundled Next.js dashboard, enchantment pricing, loan circuit breakers,
 > and a cross-server price solver. Not all features are complete — see PLAN.md for status.
-<img src="https://github.com/Unprotesting/Auto-Tune/blob/master/.github/AtLogo.png?raw=true" width="100"/>
+<img src="https://github.com/noahbclarkson/Auto-Tune/blob/rewrite-2/.github/AtLogo.png?raw=true" width="100"/>
 
 ## :star: Overview
 

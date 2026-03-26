@@ -23,12 +23,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
 @Singleton
 public class PriceReporter {
 
     private static final MathContext MC = new MathContext(10, RoundingMode.HALF_UP);
+    private static final int MAX_QUEUED = 5;
+    private static final int MAX_RETRIES = 3;
 
     private final AutoTune plugin;
     private final ConfigManager configManager;
@@ -38,6 +41,9 @@ public class PriceReporter {
             .build();
 
     private final ConcurrentMap<Integer, PriceAccumulator> accumulators = new ConcurrentHashMap<>();
+    /** Bounded retry queue for failed submissions. Each entry carries its own payload so the
+     *  accumulators are not cleared until the retry succeeds. */
+    private final ConcurrentLinkedQueue<QueuedSubmission> retryQueue = new ConcurrentLinkedQueue<>();
 
     @Inject
     public PriceReporter(AutoTune plugin, ConfigManager configManager) {
@@ -65,6 +71,7 @@ public class PriceReporter {
         });
     }
 
+    /** Called by the market tick scheduler (every getIntervalMinutes()). */
     public void submitSnapshot() {
         if (!isEnabled()) {
             return;
@@ -80,8 +87,73 @@ public class PriceReporter {
             return;
         }
 
-        Map<Integer, PriceAccumulator> snapshot = new LinkedHashMap<>(accumulators);
+        Map<Integer, PriceAccumulator> snapshot = buildSnapshot();
+        if (snapshot == null) {
+            return;
+        }
 
+        SubmitPayload payload = buildPayload(snapshot, cfg);
+        if (payload == null) {
+            return;
+        }
+
+        sendWithRetry(payload, snapshot, cfg);
+    }
+
+    /** Drains the retry queue, attempting each queued submission once.
+     *  Called every 1 minute by the task scheduler. */
+    public void drainRetryQueue() {
+        if (!isEnabled()) {
+            return;
+        }
+
+        AutoTuneConfig.PriceReporterConfig cfg = configManager.getConfig().priceReporter();
+        if (cfg.apiKey().isBlank() || cfg.serverId().isBlank()) {
+            return;
+        }
+
+        // Examine entries without consuming them until we find one due for retry
+        List<QueuedSubmission> retryNow = new ArrayList<>();
+        List<QueuedSubmission> keep = new ArrayList<>();
+
+        for (QueuedSubmission entry : retryQueue) {
+            if (entry.retryCount >= MAX_RETRIES) {
+                plugin.getLogger().warning("Price reporter giving up on submission after "
+                        + MAX_RETRIES + " attempts. Items: " + entry.itemNames);
+                continue; // drop
+            }
+            retryNow.add(entry);
+        }
+
+        if (retryNow.isEmpty()) {
+            return;
+        }
+
+        plugin.getLogger().fine("Retrying " + retryNow.size() + " queued price submissions.");
+
+        for (QueuedSubmission queued : retryNow) {
+            retryQueue.remove(queued);
+            // Build a fresh payload snapshot keyed only by the queued item names
+            Map<Integer, PriceAccumulator> freshSnapshot = new LinkedHashMap<>();
+            for (Map.Entry<Integer, PriceAccumulator> e : accumulators.entrySet()) {
+                if (queued.itemNames.contains(e.getValue().itemName)) {
+                    freshSnapshot.put(e.getKey(), e.getValue());
+                }
+            }
+            if (!freshSnapshot.isEmpty()) {
+                sendWithRetry(queued.payload, freshSnapshot, cfg);
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+
+    private Map<Integer, PriceAccumulator> buildSnapshot() {
+        if (accumulators.isEmpty()) {
+            return null;
+        }
+
+        Map<Integer, PriceAccumulator> snapshot = new LinkedHashMap<>(accumulators);
         List<Integer> itemIds = new ArrayList<>(snapshot.keySet());
         List<String> itemNames = new ArrayList<>();
         List<BigDecimal> basePrices = new ArrayList<>();
@@ -100,7 +172,29 @@ public class PriceReporter {
         }
 
         if (itemNames.size() < 2) {
-            return;
+            return null;
+        }
+
+        return snapshot;
+    }
+
+    private SubmitPayload buildPayload(Map<Integer, PriceAccumulator> snapshot,
+                                       AutoTuneConfig.PriceReporterConfig cfg) {
+        List<String> itemNames = new ArrayList<>();
+        List<BigDecimal> basePrices = new ArrayList<>();
+
+        for (Map.Entry<Integer, PriceAccumulator> entry : snapshot.entrySet()) {
+            PriceAccumulator stats = entry.getValue();
+            BigDecimal representative = stats.representativePrice();
+            if (representative.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            itemNames.add(stats.itemName);
+            basePrices.add(representative);
+        }
+
+        if (itemNames.size() < 2) {
+            return null;
         }
 
         List<List<Double>> ratioMatrix = new ArrayList<>();
@@ -118,7 +212,12 @@ public class PriceReporter {
         }
 
         int onlinePlayers = plugin.getServer().getOnlinePlayers().size();
-        SubmitPayload payload = new SubmitPayload(itemNames, ratioMatrix, onlinePlayers);
+        return new SubmitPayload(itemNames, ratioMatrix, onlinePlayers);
+    }
+
+    private void sendWithRetry(SubmitPayload payload,
+                               Map<Integer, PriceAccumulator> snapshot,
+                               AutoTuneConfig.PriceReporterConfig cfg) {
 
         String baseUrl = cfg.apiUrl().replaceAll("/$", "");
         String endpoint = baseUrl + "/api/servers/" + cfg.serverId() + "/prices";
@@ -134,16 +233,36 @@ public class PriceReporter {
                 .thenAccept(response -> {
                     if (response.statusCode() >= 200 && response.statusCode() < 300) {
                         accumulators.keySet().removeAll(snapshot.keySet());
-                        plugin.getLogger().fine("Submitted " + itemNames.size() + " item prices to api-server.");
+                        plugin.getLogger().fine("Submitted " + payload.item_names().size()
+                                + " item prices to api-server.");
                     } else {
-                        plugin.getLogger().warning("Price reporter submit failed: HTTP " + response.statusCode() + " - " + response.body());
+                        plugin.getLogger().warning("Price reporter submit failed: HTTP "
+                                + response.statusCode() + " - " + response.body());
+                        enqueueForRetry(payload, snapshot);
                     }
                 })
                 .exceptionally(error -> {
                     plugin.getLogger().warning("Price reporter submit failed: " + error.getMessage());
+                    enqueueForRetry(payload, snapshot);
                     return null;
                 });
     }
+
+    private void enqueueForRetry(SubmitPayload payload,
+                                 Map<Integer, PriceAccumulator> snapshot) {
+        // Evict oldest if full
+        while (retryQueue.size() >= MAX_QUEUED) {
+            QueuedSubmission evicted = retryQueue.poll();
+            if (evicted != null) {
+                plugin.getLogger().fine("Retry queue full — dropping oldest: " + evicted.itemNames);
+            }
+        }
+        retryQueue.add(new QueuedSubmission(payload, 0));
+        plugin.getLogger().fine("Queued " + payload.item_names().size()
+                + " item prices for retry (attempt 1/" + MAX_RETRIES + ").");
+    }
+
+    // -------------------------------------------------------------------------
 
     private static final class PriceAccumulator {
         private final String itemName;
@@ -180,6 +299,13 @@ public class PriceReporter {
                 return buyAvg.add(sellAvg).divide(BigDecimal.valueOf(2), MC);
             }
             return buyAvg.compareTo(BigDecimal.ZERO) > 0 ? buyAvg : sellAvg;
+        }
+    }
+
+    /** A failed submission waiting for retry. */
+    private record QueuedSubmission(SubmitPayload payload, int retryCount) {
+        QueuedSubmission withRetry() {
+            return new QueuedSubmission(payload, retryCount + 1);
         }
     }
 

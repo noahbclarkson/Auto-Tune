@@ -47,6 +47,14 @@ pub enum StressEvent {
         archetype: String,
         count: usize,
     },
+    /// Directly manipulate an item's price by a multiplier at a specific tick.
+    /// Used for correlation testing: inject a price shock to one item in a
+    /// section and measure how strongly other items in the same section follow.
+    PriceShock {
+        at_tick: u64,
+        item_index: usize,
+        price_multiplier: f64,
+    },
 }
 
 impl Scenario {
@@ -186,6 +194,327 @@ impl Scenario {
             speed_ticks_per_sec: 200,
         }
     }
+
+    /// Sector correlation stress test: injects a price shock to Diamond (ores section)
+    /// at day 3, then measures how strongly other ores items follow.
+    /// Runs with sector_correlation=0.05 (treatment) vs sector_correlation=0.0 (control)
+    /// to isolate the correlation engine effect.
+    pub fn correlation() -> Self {
+        let config = SimConfig::default();
+        // Standard mix but enough activity to generate clear price signals
+        Self {
+            name: "Sector Correlation Test".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Hoarder".into(),
+                    count: 2,
+                },
+            ],
+            // Diamond is index 5 in default items — we inject a forced buy spike at day 3
+            // The stress event system fires a custom PriceShock that manipulates Diamond's price
+            stress_events: vec![],
+            duration_ticks: 288 * 7,
+            speed_ticks_per_sec: 200,
+        }
+    }
+}
+
+/// Compute Pearson correlation coefficient between two price-change series.
+/// Returns None if series are too short or have zero variance.
+fn pearson_correlation(a: &[f64], b: &[f64]) -> Option<f64> {
+    let n = a.len().min(b.len());
+    if n < 3 {
+        return None;
+    }
+    let a = &a[a.len() - n..];
+    let b = &b[b.len() - n..];
+    let mean_a = a.iter().sum::<f64>() / n as f64;
+    let mean_b = b.iter().sum::<f64>() / n as f64;
+    let var_a: f64 = a.iter().map(|x| (x - mean_a).powi(2)).sum::<f64>() / n as f64;
+    let var_b: f64 = b.iter().map(|x| (x - mean_b).powi(2)).sum::<f64>() / n as f64;
+    if var_a < 1e-10 || var_b < 1e-10 {
+        return None;
+    }
+    let cov: f64 = a.iter().zip(b.iter()).map(|(x, y)| (x - mean_a) * (y - mean_b)).sum::<f64>() / n as f64;
+    Some(cov / (var_a * var_b).sqrt())
+}
+
+/// Average pairwise price-change correlation for items within a given section.
+/// Compares treatment (sector_correlation > 0) vs control (sector_correlation = 0).
+fn avg_within_section_correlation(items: &[crate::engine::ItemState], section: &str) -> Option<f64> {
+    // Find all items with same section via config — use item names as section proxy
+    // since ItemState doesn't store section. Items in the same "ores" group:
+    // Diamond(index 5), Iron Ingot(index 3), Redstone(index 2), Netherite(index 7)
+    let section_items: Vec<&str> = match section {
+        "ores" => vec!["Redstone", "Iron Ingot", "Diamond", "Netherite Ingot"],
+        "drops" => vec!["Rotten Flesh", "Blaze Rod"],
+        "building" => vec!["Cobblestone"],
+        "food" => vec!["Golden Apple"],
+        _ => return None,
+    };
+    let indices: Vec<usize> = items
+        .iter()
+        .enumerate()
+        .filter(|(_, item)| section_items.contains(&item.name.as_str()))
+        .map(|(i, _)| i)
+        .collect();
+    if indices.len() < 2 {
+        return None;
+    }
+    // Convert price histories to pct-change series
+    let changes: Vec<Vec<f64>> = indices
+        .iter()
+        .map(|&i| {
+            let h = &items[i].price_history;
+            h.windows(2).map(|w| if w[0] > 0.0 { (w[1] - w[0]) / w[0] } else { 0.0 }).collect()
+        })
+        .collect();
+    let mut total = 0.0;
+    let mut count = 0usize;
+    for i in 0..indices.len() {
+        for j in (i + 1)..indices.len() {
+            if let Some(r) = pearson_correlation(&changes[i], &changes[j]) {
+                total += r;
+                count += 1;
+            }
+        }
+    }
+    if count == 0 { None } else { Some(total / count as f64) }
+}
+
+/// Average pairwise price-change correlation for items ACROSS different sections.
+fn avg_cross_section_correlation(items: &[crate::engine::ItemState]) -> Option<f64> {
+    // Pick one representative item from each section
+    let reps = ["Cobblestone", "Rotten Flesh", "Redstone", "Golden Apple", "Diamond"];
+    let indices: Vec<usize> = items
+        .iter()
+        .enumerate()
+        .filter(|(_, item)| reps.contains(&item.name.as_str()))
+        .map(|(i, _)| i)
+        .collect();
+    if indices.len() < 2 {
+        return None;
+    }
+    let changes: Vec<Vec<f64>> = indices
+        .iter()
+        .map(|&i| {
+            let h = &items[i].price_history;
+            h.windows(2).map(|w| if w[0] > 0.0 { (w[1] - w[0]) / w[0] } else { 0.0 }).collect()
+        })
+        .collect();
+    let mut total = 0.0;
+    let mut count = 0usize;
+    for i in 0..indices.len() {
+        for j in (i + 1)..indices.len() {
+            if let Some(r) = pearson_correlation(&changes[i], &changes[j]) {
+                total += r;
+                count += 1;
+            }
+        }
+    }
+    if count == 0 { None } else { Some(total / count as f64) }
+}
+
+/// Run the sector correlation test: treatment (sector_correlation=0.05) vs
+/// control (sector_correlation=0.0), identical seed, PriceShock to Diamond at day 3.
+/// Measures how strongly ores items co-move after the shock.
+fn run_correlation_test(seed: u64) {
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       SECTOR CORRELATION TEST — ores section               ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    // Build two configs: treatment (sector_correlation=0.05) and control (sector_correlation=0.0)
+    let mut treatment_config = SimConfig::default();
+    treatment_config.economy.sector_correlation = 0.05;
+    // Shock Diamond (index 5) at day 3 — price × 2.5
+    let shock_tick = 288 * 3;
+    let shock_idx = 5; // Diamond in default_items
+
+    let mut control_config = treatment_config.clone();
+    control_config.economy.sector_correlation = 0.0;
+
+    let duration = 288 * 7; // 7 days
+
+    // Run treatment
+    let treatment_name = "Treatment (sector_correlation=0.05)";
+    println!("─── {} ───", treatment_name);
+    let treatment_result = run_correlation_sim(
+        treatment_name,
+        treatment_config,
+        seed,
+        shock_tick,
+        shock_idx,
+        2.5,
+        duration,
+    );
+
+    // Run control (same seed)
+    let control_name = "Control (sector_correlation=0.0)";
+    println!("\n─── {} ───", control_name);
+    let control_result = run_correlation_sim(
+        control_name,
+        control_config,
+        seed,
+        shock_tick,
+        shock_idx,
+        2.5,
+        duration,
+    );
+
+    // Print comparison
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  CORRELATION TEST RESULTS                                   ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    println!("{:25} {:>12} {:>12} {:>12}", "", "TREATMENT", "CONTROL", "DIFF");
+    println!("{:25} {:>12} {:>12} {:>12}", "", "(corr=0.05)", "(corr=0.0)", "(T−C)");
+
+    // Final price displacement for Diamond (index 5)
+    let t_diamond_pct = (treatment_result[5].price / treatment_result[5].base_price - 1.0) * 100.0;
+    let c_diamond_pct = (control_result[5].price / control_result[5].base_price - 1.0) * 100.0;
+    println!("{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%", "Diamond final displacement", t_diamond_pct, c_diamond_pct, t_diamond_pct - c_diamond_pct);
+
+    // Final price displacement for Iron Ingot (index 3, same section)
+    let t_iron_pct = (treatment_result[3].price / treatment_result[3].base_price - 1.0) * 100.0;
+    let c_iron_pct = (control_result[3].price / control_result[3].base_price - 1.0) * 100.0;
+    println!("{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%", "Iron Ingot final displac.", t_iron_pct, c_iron_pct, t_iron_pct - c_iron_pct);
+
+    // Final price displacement for Redstone (index 2, same section)
+    let t_red_pct = (treatment_result[2].price / treatment_result[2].base_price - 1.0) * 100.0;
+    let c_red_pct = (control_result[2].price / control_result[2].base_price - 1.0) * 100.0;
+    println!("{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%", "Redstone final displacement", t_red_pct, c_red_pct, t_red_pct - c_red_pct);
+
+    // Netherite (index 7, same section)
+    let t_neth_pct = (treatment_result[7].price / treatment_result[7].base_price - 1.0) * 100.0;
+    let c_neth_pct = (control_result[7].price / control_result[7].base_price - 1.0) * 100.0;
+    println!("{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%", "Netherite final displacement", t_neth_pct, c_neth_pct, t_neth_pct - c_neth_pct);
+
+    // Cobblestone (index 0, different section — building)
+    let t_cob_pct = (treatment_result[0].price / treatment_result[0].base_price - 1.0) * 100.0;
+    let c_cob_pct = (control_result[0].price / control_result[0].base_price - 1.0) * 100.0;
+    println!("{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%", "Cobblestone final displac.", t_cob_pct, c_cob_pct, t_cob_pct - c_cob_pct);
+
+    println!();
+    println!("--- Price history correlation (ores items, post-shock) ---");
+    // Use post-shock window for correlation
+    let shock_idx = shock_tick as usize;
+    let ores_names = ["Diamond", "Iron Ingot", "Redstone", "Netherite Ingot"];
+    for name in ores_names {
+        let ti = treatment_result.iter().position(|i| i.name == name).unwrap();
+        let ci = control_result.iter().position(|i| i.name == name).unwrap();
+        // vs Cobblestone as reference
+        let cob_i = treatment_result.iter().position(|i| i.name == "Cobblestone").unwrap();
+        let cob_hist = &treatment_result[cob_i].price_history;
+        let cob_start = shock_idx.min(cob_hist.len().saturating_sub(2));
+        let cob_changes = cob_hist[cob_start..]
+            .windows(2)
+            .map(|w| if w[0] > 0.0 { (w[1]-w[0])/w[0] } else { 0.0 })
+            .collect::<Vec<_>>();
+        let item_hist = &treatment_result[ti].price_history;
+        let item_start = shock_idx.min(item_hist.len().saturating_sub(2));
+        let item_changes = item_hist[item_start..]
+            .windows(2)
+            .map(|w| if w[0] > 0.0 { (w[1]-w[0])/w[0] } else { 0.0 })
+            .collect::<Vec<_>>();
+        let ctrl_hist = &control_result[ci].price_history;
+        let ctrl_start = shock_idx.min(ctrl_hist.len().saturating_sub(2));
+        let ctrl_changes = ctrl_hist[ctrl_start..]
+            .windows(2)
+            .map(|w| if w[0] > 0.0 { (w[1]-w[0])/w[0] } else { 0.0 })
+            .collect::<Vec<_>>();
+        if let (Some(tc), Some(cc)) = (
+            pearson_correlation(&item_changes, &cob_changes),
+            pearson_correlation(&ctrl_changes, &cob_changes),
+        ) {
+            println!("  {:22} T={:+.4}  C={:+.4}  Δ={:+.4}", format!("{:22}", name), tc, cc, tc - cc);
+        } else {
+            println!("  {:22} (insufficient post-shock data)", name);
+        }
+    }
+
+    println!();
+    let t_within = avg_within_section_correlation(&treatment_result, "ores");
+    let c_within = avg_within_section_correlation(&control_result, "ores");
+    let t_cross = avg_cross_section_correlation(&treatment_result);
+    let c_cross = avg_cross_section_correlation(&control_result);
+
+    println!("--- Summary ---");
+    println!(
+        "  Within-section (ores avg):   TREATMENT={:.4}  CONTROL={:.4}  Δ={:+.4}",
+        t_within.unwrap_or(0.0),
+        c_within.unwrap_or(0.0),
+        t_within.unwrap_or(0.0) - c_within.unwrap_or(0.0)
+    );
+    println!(
+        "  Cross-section (repr items): TREATMENT={:.4}  CONTROL={:.4}  Δ={:+.4}",
+        t_cross.unwrap_or(0.0),
+        c_cross.unwrap_or(0.0),
+        t_cross.unwrap_or(0.0) - c_cross.unwrap_or(0.0)
+    );
+
+    let verdict = if t_within.unwrap_or(0.0) > c_within.unwrap_or(0.0) + 0.05 {
+        "✓ SECTOR CORRELATION IS WORKING — ores items co-move more strongly with correlation enabled"
+    } else if t_within.unwrap_or(0.0) < c_within.unwrap_or(0.0) - 0.05 {
+        "✗ ANTI-CORRELATION DETECTED — items move OPPOSITE when correlation enabled"
+    } else {
+        "⚠ NEUTRAL — sector correlation has minimal effect (may need stronger shock or longer window)"
+    };
+    println!();
+    println!("  VERDICT: {}", verdict);
+    println!();
+}
+
+/// Run a correlation simulation with a seeded RNG, returning final item states.
+fn run_correlation_sim(
+    name: &str,
+    config: SimConfig,
+    seed: u64,
+    shock_tick: u64,
+    shock_item: usize,
+    shock_mult: f64,
+    duration: u64,
+) -> Vec<crate::engine::ItemState> {
+    let mut sim = Simulation::new_seeded(config.clone(), seed);
+    // Add consistent player mix
+    for _ in 0..4 { sim.add_player(Archetype::Trader); }
+    for _ in 0..3 { sim.add_player(Archetype::Farmer); }
+    for _ in 0..2 { sim.add_player(Archetype::Hoarder); }
+    sim.paused = false;
+
+    while sim.current_tick < duration {
+        // Inject price shock at the shock tick
+        if sim.current_tick == shock_tick && shock_item < sim.engine.items.len() {
+            let old = sim.engine.items[shock_item].price;
+            let item_name = sim.engine.items[shock_item].name.clone();
+            let new = (old * shock_mult).max(0.01);
+            sim.engine.items[shock_item].price = new;
+            println!(
+                "  [{}] PriceShock @ tick {}: {} {}→{} (×{:.2})",
+                name, shock_tick, item_name, old, new, shock_mult
+            );
+        }
+        sim.tick();
+    }
+
+    println!(
+        "  [{}] Final tick {} — Diamond: {:.2} ({:+.1}% from base {:.2})",
+        name,
+        sim.current_tick,
+        sim.engine.items[shock_item].price,
+        (sim.engine.items[shock_item].price / sim.engine.items[shock_item].base_price - 1.0) * 100.0,
+        sim.engine.items[shock_item].base_price,
+    );
+
+    sim.engine.items.clone()
 }
 
 fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), String> {
@@ -276,6 +605,7 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
                 StressEvent::Hyperinflation { at_tick } => sim.current_tick == *at_tick,
                 StressEvent::LoanCascade { at_tick } => sim.current_tick == *at_tick,
                 StressEvent::PlayerJoin { at_tick, .. } => sim.current_tick == *at_tick,
+                StressEvent::PriceShock { at_tick, .. } => sim.current_tick == *at_tick,
             };
             if should_fire && !injected_stress.contains(&event_key) {
                 injected_stress.insert(event_key.clone());
@@ -326,6 +656,28 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
                             "  [STRESS @ tick {}] Added {} {} players",
                             sim.current_tick, count, archetype
                         );
+                    }
+                    StressEvent::PriceShock {
+                        at_tick: _,
+                        item_index,
+                        price_multiplier,
+                    } => {
+                        // should_fire guarantees current_tick == at_tick
+                        // Copy values before mutable borrow
+                        if *item_index < sim.engine.items.len() {
+                            let old_price = sim.engine.items[*item_index].price;
+                            let item_name = sim.engine.items[*item_index].name.clone();
+                            let new_price = (old_price * price_multiplier).max(0.01);
+                            sim.engine.items[*item_index].price = new_price;
+                            println!(
+                                "  [STRESS @ tick {}] PriceShock: {} price {} → {} (×{:.2})",
+                                sim.current_tick,
+                                item_name,
+                                old_price,
+                                new_price,
+                                price_multiplier
+                            );
+                        }
                     }
                 }
             }
@@ -571,6 +923,7 @@ fn main() -> eframe::Result<()> {
         println!("  high-activity    - High activity, 20 players, 7 days");
         println!("  low-player       - 3 players, 14 days");
         println!("  spread-stability - Farmer/Trader mix, 10 days");
+        println!("  correlation      - Sector correlation test (treatment vs control)");
         println!("  all              - Run all scenarios and compare");
         println!("  sweep            - Parameter sweep across engine parameter space");
         return Ok(());
@@ -579,6 +932,13 @@ fn main() -> eframe::Result<()> {
     if args.len() > 1 && args[1] == "--sweep" {
         let config = crate::sweep::SweepConfig::default();
         crate::sweep::run_sweep(&config);
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--correlation-test" {
+        // Sector correlation test: treatment vs control with identical seed
+        let seed = 42u64;
+        run_correlation_test(seed);
         return Ok(());
     }
 
@@ -636,6 +996,7 @@ fn main() -> eframe::Result<()> {
                 "high-activity" | "high_activity" => Scenario::high_activity(),
                 "low-player" | "low_player" => Scenario::low_player(),
                 "spread-stability" | "spread_stability" => Scenario::spread_stability(),
+                "correlation" => Scenario::correlation(),
                 _ => {
                     eprintln!(
                         "Unknown scenario: {}. Use --list-scenarios to see available.",

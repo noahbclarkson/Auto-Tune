@@ -410,10 +410,19 @@ fn run_correlation_test(seed: u64) {
     let shock_idx = shock_tick as usize;
     let ores_names = ["Diamond", "Iron Ingot", "Redstone", "Netherite Ingot"];
     for name in ores_names {
-        let ti = treatment_result.iter().position(|i| i.name == name).unwrap();
-        let ci = control_result.iter().position(|i| i.name == name).unwrap();
+        let ti = match treatment_result.iter().position(|i| i.name == name) {
+            Some(i) => i,
+            None => { eprintln!("  warning: item '{}' not found in treatment results — skipping", name); continue; }
+        };
+        let ci = match control_result.iter().position(|i| i.name == name) {
+            Some(i) => i,
+            None => { eprintln!("  warning: item '{}' not found in control results — skipping", name); continue; }
+        };
         // vs Cobblestone as reference
-        let cob_i = treatment_result.iter().position(|i| i.name == "Cobblestone").unwrap();
+        let cob_i = match treatment_result.iter().position(|i| i.name == "Cobblestone") {
+            Some(i) => i,
+            None => { eprintln!("  warning: 'Cobblestone' not found in results — skipping correlation"); continue; }
+        };
         let cob_hist = &treatment_result[cob_i].price_history;
         let cob_start = shock_idx.min(cob_hist.len().saturating_sub(2));
         let cob_changes = cob_hist[cob_start..]
@@ -1019,7 +1028,13 @@ fn main() -> eframe::Result<()> {
     }
 
     if args.len() > 1 && args[1] == "--analyze" {
-        let db_path = args.get(2).expect("Usage: --analyze <path-to-simulation.db>");
+        let db_path = match args.get(2) {
+            Some(p) => p.as_str(),
+            None => {
+                eprintln!("Usage: market-simulation --analyze <path-to-simulation.db>");
+                std::process::exit(1);
+            }
+        };
         if let Err(e) = crate::analyzer::analyze_db(std::path::Path::new(db_path)) {
             eprintln!("Analysis error: {e}");
             std::process::exit(1);
@@ -1028,7 +1043,13 @@ fn main() -> eframe::Result<()> {
     }
 
     if args.len() > 1 && args[1] == "--analyze-dir" {
-        let dir_path = args.get(2).expect("Usage: --analyze-dir <path-to-sim-output-dir>");
+        let dir_path = match args.get(2) {
+            Some(p) => p.as_str(),
+            None => {
+                eprintln!("Usage: market-simulation --analyze-dir <path-to-sim-output-dir>");
+                std::process::exit(1);
+            }
+        };
         if let Err(e) = crate::analyzer::analyze_dir(std::path::Path::new(dir_path)) {
             eprintln!("Analysis error: {e}");
             std::process::exit(1);

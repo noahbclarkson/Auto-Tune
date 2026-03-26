@@ -16,6 +16,7 @@ use crate::{
         SubmitPricesResponse, TruePriceEntry, TruePricesResponse,
     },
     price_computer::recompute_true_prices,
+    rate_limit::{client_ip, RateLimiter, RateLimitResult},
 };
 
 /// POST /api/servers/:id/prices
@@ -24,7 +25,19 @@ pub async fn submit_prices(
     path: web::Path<Uuid>,
     req: HttpRequest,
     body: web::Json<SubmitPricesRequest>,
+    limiter: web::Data<RateLimiter>,
 ) -> impl Responder {
+    // Rate limit by IP before any expensive work
+    let ip = client_ip(&req).unwrap_or_else(|| "unknown".to_owned());
+    if let RateLimitResult::Limited { retry_after_secs } = limiter.check(&ip).await {
+        return HttpResponse::TooManyRequests()
+            .insert_header(("retry-after", retry_after_secs.to_string()))
+            .json(ErrorResponse::new(format!(
+                "rate limit exceeded, retry after {} seconds",
+                retry_after_secs
+            )));
+    }
+
     let auth = match req.extensions().get::<AuthenticatedServer>().cloned() {
         Some(a) => a,
         None => {

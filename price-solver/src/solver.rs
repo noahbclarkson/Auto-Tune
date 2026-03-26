@@ -35,6 +35,36 @@ pub enum SolverError {
     AnchorOutOfBounds { index: usize, n: usize },
 }
 
+/// Result of a price solve operation, including quality metrics.
+#[derive(Debug, Clone)]
+pub struct SolveResult {
+    /// Computed true prices (exponentiated log-prices)
+    pub prices: Vec<f64>,
+    /// Quality score 0–1. Based on normalized residual error (lower = better fit).
+    /// Composed with server count and item coverage factors.
+    pub quality: f64,
+    /// Normalized RMS residual of the LS fit. Measures how well prices explain ratios.
+    pub residual_rms: f64,
+    /// Number of servers that contributed to this solution
+    pub num_servers: usize,
+    /// Number of items in the solution
+    pub num_items: usize,
+}
+
+impl SolveResult {
+    /// Confidence 0–1, suitable for API responses.
+    /// Primarily based on LS residual quality. Server count and item coverage
+    /// provide modest bonuses when quality is already high.
+    pub fn confidence(&self) -> f64 {
+        let q = self.quality.clamp(0.0, 1.0);
+        // Server bonus: each additional server adds ~10% of the remaining gap to 1.0
+        let server_bonus = 0.1 * (1.0 - q) * ((self.num_servers.saturating_sub(1)) as f64).min(3.0) / 3.0;
+        // Item coverage bonus (plateaus at 50 items)
+        let item_bonus = 0.05 * (1.0 - q) * ((self.num_items as f64 / 50.0).min(1.0));
+        (q + server_bonus + item_bonus).clamp(0.0, 1.0)
+    }
+}
+
 /// Configuration for the price solver
 #[derive(Debug, Clone)]
 pub struct PriceSolverConfig {
@@ -239,6 +269,136 @@ pub fn compute_prices_with_config(
     Ok(prices)
 }
 
+/// Compute prices with full quality/residual analysis.
+///
+/// Returns a `SolveResult` containing prices and quality metrics.
+///
+/// # Quality metric
+///
+/// The quality score is based on the normalized RMS residual of the LS fit.
+/// For each edge constraint (i,j) we have `log(P_i) - log(P_j) ≈ log(r_ij)`.
+/// The residual for that edge is `x_i - x_j - log(r_ij)`.
+///
+/// A quality of 1.0 means perfect fit (zero residuals), 0.0 means terrible fit.
+pub fn compute_prices_with_quality(
+    ratios_per_server: &[Vec<Vec<f64>>],
+    server_weights: Option<&[f64]>,
+    anchor_item: usize,
+    anchor_price: f64,
+    config: PriceSolverConfig,
+) -> Result<SolveResult, SolverError> {
+    // Build the same LS system as compute_prices_with_config
+    let m = ratios_per_server.len();
+    if m == 0 || m < config.min_servers {
+        return Err(SolverError::NoServers);
+    }
+    let n = ratios_per_server[0].len();
+    if n == 0 {
+        return Err(SolverError::NoItems);
+    }
+    if anchor_item >= n {
+        return Err(SolverError::AnchorOutOfBounds {
+            index: anchor_item,
+            n,
+        });
+    }
+
+    let weights: Vec<f64> = match server_weights {
+        Some(w) => {
+            if w.len() != m {
+                return Err(SolverError::InvalidWeights {
+                    expected: m,
+                    got: w.len(),
+                });
+            }
+            w.to_vec()
+        }
+        None => vec![1.0; m],
+    };
+
+    let agg_log_r = aggregate_ratios(ratios_per_server, &weights, config.aggregation);
+
+    // Collect edges
+    let mut edges: Vec<(usize, usize, f64)> = Vec::new();
+    #[allow(clippy::needless_range_loop)]
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let log_r = agg_log_r[i][j];
+            if log_r.is_finite() {
+                edges.push((i, j, log_r));
+            }
+        }
+    }
+
+    let num_edges = edges.len();
+    let num_rows = num_edges + 1;
+    let mut a_data = vec![0.0_f64; num_rows * n];
+    let mut b_data = vec![0.0_f64; num_rows];
+
+    for (k, &(i, j, log_r)) in edges.iter().enumerate() {
+        a_data[k * n + i] = 1.0;
+        a_data[k * n + j] = -1.0;
+        b_data[k] = log_r;
+    }
+
+    let anchor_row = num_edges;
+    let anchor_w = config.anchor_weight;
+    a_data[anchor_row * n + anchor_item] = anchor_w;
+    b_data[anchor_row] = anchor_price.ln() * anchor_w;
+
+    let a = DMatrix::from_row_slice(num_rows, n, &a_data);
+    let b = DVector::from_vec(b_data.clone());
+
+    // Solve
+    let ata = a.transpose() * &a;
+    let atb = a.transpose() * &b;
+    let x = ata.lu().solve(&atb).ok_or(SolverError::SingularMatrix)?;
+
+    // Compute residual RMS on the non-anchor rows
+    let mut sq_errors: Vec<f64> = Vec::new();
+    for (k, &(i, j, _)) in edges.iter().enumerate() {
+        let predicted = x[i] - x[j];
+        let residual = predicted - b_data[k];
+        sq_errors.push(residual * residual);
+    }
+
+    let residual_rms = if sq_errors.is_empty() {
+        0.0
+    } else {
+        let mean_sq = sq_errors.iter().sum::<f64>() / sq_errors.len() as f64;
+        mean_sq.sqrt()
+    };
+
+    // Normalize: a residual_rms of 0.1 means average log-ratio error of ~0.1
+    // (e.g., true ratio is 2.0 but predicted log gives ~1.9)
+    // Quality = exp(-5 * residual_rms) gives:
+    //   rms=0.00 → quality=1.00 (perfect)
+    //   rms=0.05 → quality=0.78
+    //   rms=0.10 → quality=0.61
+    //   rms=0.20 → quality=0.37
+    //   rms=0.50 → quality=0.08
+    let quality = (-5.0 * residual_rms).exp().clamp(0.0, 1.0);
+
+    let prices: Vec<f64> = x.iter().map(|v| v.exp()).collect();
+
+    debug!(
+        "quality={:.4} residual_rms={:.6} edges={} servers={} items={}",
+        quality,
+        residual_rms,
+        num_edges,
+        m,
+        n
+    );
+
+    Ok(SolveResult {
+        prices,
+        quality,
+        residual_rms,
+        num_servers: m,
+        num_items: n,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -336,5 +496,66 @@ mod tests {
         // Item 0 should be 10.0, item 1 should be 20.0
         assert_relative_eq!(result[0], 10.0, epsilon = 0.5);
         assert_relative_eq!(result[1], 20.0, epsilon = 0.5);
+    }
+
+    #[test]
+    fn test_quality_perfect_fit() {
+        // Perfect ratios — residual should be essentially zero → quality=1.0
+        let prices = vec![10.0, 20.0, 40.0];
+        let ratios = make_ratio_matrix(&prices);
+        let result = compute_prices_with_quality(&[ratios], None, 0, 10.0, Default::default())
+            .unwrap();
+        assert_relative_eq!(result.quality, 1.0, epsilon = 0.001);
+        assert!(result.residual_rms < 0.001);
+        assert!(result.confidence() > 0.95);
+    }
+
+    #[test]
+    fn test_quality_with_noise() {
+        // Server A has perfect ratios, server B has slightly noisy ratios
+        let server_a = make_ratio_matrix(&[10.0, 20.0, 40.0]);
+        let mut server_b = make_ratio_matrix(&[10.0, 20.0, 40.0]);
+        // Add 10% noise to off-diagonal
+        for i in 0..3 {
+            for j in 0..3 {
+                if i != j {
+                    server_b[i][j] *= 1.10;
+                }
+            }
+        }
+        let result =
+            compute_prices_with_quality(&[server_a, server_b], None, 0, 10.0, Default::default())
+                .unwrap();
+        // Quality should be good but not perfect
+        assert!(result.quality > 0.5);
+        assert!(result.quality < 1.0);
+        assert!(result.residual_rms > 0.01);
+    }
+
+    #[test]
+    fn test_confidence_range() {
+        for servers in [1, 3, 10] {
+            for items in [5, 20, 100] {
+                let ratios = vec![vec![1.0_f64; items]; items];
+                // Perfect diagonal matrices = zero residual → quality=1.0
+                let result = compute_prices_with_quality(
+                    &[ratios],
+                    None,
+                    0,
+                    10.0,
+                    PriceSolverConfig {
+                        min_servers: 1,
+                        ..Default::default()
+                    },
+                );
+                if let Ok(r) = result {
+                    assert!(
+                        (0.0..=1.0).contains(&r.confidence()),
+                        "confidence out of range: {}",
+                        r.confidence()
+                    );
+                }
+            }
+        }
     }
 }

@@ -3,7 +3,7 @@
 //! POST /api/servers/register  — register a new server, receive API key
 //! GET  /api/servers           — list all registered servers
 
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -11,13 +11,25 @@ use uuid::Uuid;
 use crate::{
     auth::{generate_api_key, hash_api_key},
     models::{ErrorResponse, RegisterServerRequest, RegisterServerResponse, Server},
+    rate_limit::{client_ip, RateLimiter, RateLimitResult},
 };
 
 /// POST /api/servers/register
 pub async fn register_server(
     pool: web::Data<PgPool>,
     body: web::Json<RegisterServerRequest>,
+    req: HttpRequest,
+    limiter: web::Data<RateLimiter>,
 ) -> impl Responder {
+    let ip = client_ip(&req).unwrap_or_else(|| "unknown".to_owned());
+    if let RateLimitResult::Limited { retry_after_secs } = limiter.check(&ip).await {
+        return HttpResponse::TooManyRequests()
+            .insert_header(("retry-after", retry_after_secs.to_string()))
+            .json(ErrorResponse::new(format!(
+                "rate limit exceeded, retry after {} seconds",
+                retry_after_secs
+            )));
+    }
     let name = body.name.trim().to_owned();
 
     if name.is_empty() || name.len() > 128 {

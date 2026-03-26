@@ -9,10 +9,12 @@ mod db;
 mod matching;
 mod models;
 mod price_computer;
+mod rate_limit;
 mod routes;
 
 use auth::ApiKeyAuth;
 use matching::MatchingEngine;
+use rate_limit::{RateLimiter, RateLimitConfig};
 use routes::{
     auction::configure as configure_auction,
     exchange::get_exchange_rates,
@@ -59,10 +61,20 @@ async fn main() -> Result<()> {
     let matching_engine = Arc::new(RwLock::new(MatchingEngine::new()));
     let engine_data = web::Data::new(matching_engine);
 
+    // Rate limiters
+    let general_limiter = web::Data::new(RateLimiter::new(RateLimitConfig::fast()));
+    let submit_limiter = web::Data::new(RateLimiter::new(RateLimitConfig::submit()));
+
+    // Max request body size: 1 MiB (price submissions can be large ratio matrices)
+    let payload_config = web::PayloadConfig::new(1_048_576usize);
+
     HttpServer::new(move || {
         App::new()
             .app_data(pool_data.clone())
             .app_data(engine_data.clone())
+            .app_data(general_limiter.clone())
+            .app_data(submit_limiter.clone())
+            .app_data(payload_config.clone())
             .wrap(Logger::default())
             .route("/health", web::get().to(health))
             // Public endpoints

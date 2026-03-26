@@ -8,7 +8,7 @@
 //! 5. Appends a snapshot to `price_history`
 
 use anyhow::{Context, Result};
-use price_solver::{compute_prices_with_config, AggregationMethod, PriceSolverConfig};
+use price_solver::{compute_prices_with_quality, AggregationMethod, PriceSolverConfig};
 use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 /// Anchor item name (configurable via env var `ANCHOR_ITEM`).
@@ -163,7 +163,7 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
         ..Default::default()
     };
 
-    let prices = compute_prices_with_config(
+    let result = compute_prices_with_quality(
         &server_matrices,
         Some(&server_weights),
         anchor_idx,
@@ -174,10 +174,11 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
 
     // Write results
     let num_servers = submissions.len() as i32;
-    let confidence = compute_confidence(num_servers, n);
+    // Use the LS-residual-based confidence from SolveResult
+    let confidence = result.confidence();
 
     for (i, item_name) in all_items.iter().enumerate() {
-        let price = prices[i];
+        let price = result.prices[i];
 
         sqlx::query(
             r#"
@@ -218,36 +219,3 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
     Ok(())
 }
 
-/// Confidence score 0–1 based on data coverage.
-fn compute_confidence(num_servers: i32, num_items: usize) -> f64 {
-    let server_factor = 1.0 - (-0.5 * num_servers as f64).exp();
-    let item_factor = (num_items as f64 / 100.0).min(1.0);
-    (server_factor * 0.7 + item_factor * 0.3).min(1.0)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_confidence_single_server() {
-        let c = compute_confidence(1, 10);
-        assert!(c > 0.0 && c < 1.0);
-    }
-
-    #[test]
-    fn test_confidence_many_servers() {
-        let c = compute_confidence(10, 100);
-        assert!(c > 0.8);
-    }
-
-    #[test]
-    fn test_confidence_always_in_range() {
-        for servers in [0i32, 1, 3, 10, 100] {
-            for items in [0usize, 1, 10, 100, 1000] {
-                let c = compute_confidence(servers, items);
-                assert!((0.0..=1.0).contains(&c), "confidence out of range: {c}");
-            }
-        }
-    }
-}

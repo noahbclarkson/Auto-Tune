@@ -7,4 +7,5 @@ pub mod db;
 pub mod matching;
 pub mod models;
 pub mod price_computer;
+pub mod rate_limit;
 pub mod routes;

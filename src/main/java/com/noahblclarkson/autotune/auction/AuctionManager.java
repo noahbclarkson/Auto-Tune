@@ -163,54 +163,63 @@ public class AuctionManager {
             UUID playerId = player.getUniqueId();
             Object lock = playerLocks.computeIfAbsent(playerId, k -> new Object());
             synchronized (lock) {
-                // Deduct from player's balance immediately
+                // Deduct from player's balance immediately (escrow)
                 EconomyResponse withdrawResponse = economy.withdrawPlayer(player, totalCost.doubleValue());
                 if (!withdrawResponse.transactionSuccess()) {
                     return AuctionResult.error("Insufficient funds. Need " + configManager.formatCurrency(totalCost));
                 }
 
-                AuctionOrder order = AuctionOrder.builder()
-                        .playerUuid(playerId)
-                        .material(material.name())
-                        .price(pricePerUnit)
-                        .originalQuantity(quantity)
-                        .remainingQuantity(quantity)
-                        .side(OrderSide.BUY)
-                        .status(OrderStatus.OPEN)
-                        .createdAt(Instant.now())
-                        .build();
+                try {
+                    AuctionOrder order = AuctionOrder.builder()
+                            .playerUuid(playerId)
+                            .material(material.name())
+                            .price(pricePerUnit)
+                            .originalQuantity(quantity)
+                            .remainingQuantity(quantity)
+                            .side(OrderSide.BUY)
+                            .status(OrderStatus.OPEN)
+                            .createdAt(Instant.now())
+                            .build();
 
-                List<AuctionOrder> existingOrders = auctionRepo.findActiveByMaterial(material.name());
-                AuctionMatchingEngine.MatchResult result = matchingEngine.matchOrder(order, existingOrders);
-                List<AuctionFill> fills = result.fills();
+                    List<AuctionOrder> existingOrders = auctionRepo.findActiveByMaterial(material.name());
+                    AuctionMatchingEngine.MatchResult result = matchingEngine.matchOrder(order, existingOrders);
+                    List<AuctionFill> fills = result.fills();
 
-                int totalFilled = order.originalQuantity() - result.matchedOrder().remainingQuantity();
-                int remainingUnfilled = result.matchedOrder().remainingQuantity();
+                    int totalFilled = order.originalQuantity() - result.matchedOrder().remainingQuantity();
+                    int remainingUnfilled = result.matchedOrder().remainingQuantity();
 
-                if (!fills.isEmpty()) {
-                    for (AuctionFill fill : fills) {
-                        processFill(fill);
+                    if (!fills.isEmpty()) {
+                        for (AuctionFill fill : fills) {
+                            processFill(fill);
+                        }
                     }
+
+                    if (remainingUnfilled > 0) {
+                        AuctionOrder openOrder = order.withRemainingQuantity(remainingUnfilled);
+                        auctionRepo.insert(openOrder);
+                        // The full cost was withdrawn upfront; the remaining escrowed funds
+                        // stay in escrow until this buy order is filled or cancelled.
+                        // Cancellation (cancelOrderAsync) handles the refund.
+                    }
+
+                    if (totalFilled > 0) {
+                        BigDecimal totalBought = pricePerUnit.multiply(BigDecimal.valueOf(totalFilled));
+                        playerRepo.addTransaction(playerId, totalBought, true);
+                    }
+
+                    String filledMsg = totalFilled > 0
+                            ? totalFilled + " bought instantly, " + (remainingUnfilled > 0 ? remainingUnfilled + " listed" : "no remainder")
+                            : "Listed buy order for " + quantity + " at " + configManager.formatCurrency(pricePerUnit) + " each";
+
+                    return AuctionResult.success(filledMsg, result.matchedOrder(), fills);
+                } catch (Exception e) {
+                    // Matching or DB operation failed — refund the escrowed money
+                    economy.depositPlayer(player, totalCost.doubleValue());
+                    plugin.getLogger().log(Level.SEVERE,
+                            "Buy order failed after escrow withdrawal for " + playerId
+                                    + ", refunded " + totalCost + ": " + e.getMessage(), e);
+                    return AuctionResult.error("Order failed (funds refunded): " + e.getMessage());
                 }
-
-                if (remainingUnfilled > 0) {
-                    AuctionOrder openOrder = order.withRemainingQuantity(remainingUnfilled);
-                    auctionRepo.insert(openOrder);
-                    // The full cost was withdrawn upfront; the remaining escrowed funds
-                    // stay in escrow until this buy order is filled or cancelled.
-                    // Cancellation (cancelOrderAsync) handles the refund.
-                }
-
-                if (totalFilled > 0) {
-                    BigDecimal totalBought = pricePerUnit.multiply(BigDecimal.valueOf(totalFilled));
-                    playerRepo.addTransaction(playerId, totalBought, true);
-                }
-
-                String filledMsg = totalFilled > 0
-                        ? totalFilled + " bought instantly, " + (remainingUnfilled > 0 ? remainingUnfilled + " listed" : "no remainder")
-                        : "Listed buy order for " + quantity + " at " + configManager.formatCurrency(pricePerUnit) + " each";
-
-                return AuctionResult.success(filledMsg, result.matchedOrder(), fills);
             }
         });
     }

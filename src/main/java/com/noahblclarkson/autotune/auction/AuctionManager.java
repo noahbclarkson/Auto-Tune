@@ -10,19 +10,13 @@ import com.noahblclarkson.autotune.model.AuctionFill;
 import com.noahblclarkson.autotune.model.AuctionOrder;
 import com.noahblclarkson.autotune.model.AuctionOrder.OrderSide;
 import com.noahblclarkson.autotune.model.AuctionOrder.OrderStatus;
-import com.noahblclarkson.autotune.model.PlayerData;
-import com.noahblclarkson.autotune.util.EnchantmentPricing;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
-import org.bukkit.Material;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -334,6 +328,8 @@ public class AuctionManager {
     /**
      * Record an auction fill from the GUI path (direct fill without matching engine).
      * Handles DB insert, quantity updates, seller Vault credit, and buyer item delivery.
+     * Returns a CompletableFuture so callers can await DB completion before applying
+     * their own economy/inventory effects (enables atomicity in the GUI layer).
      *
      * @param buyOrderId  The buy order ID (may be a player UUID in GUI direct-fill path)
      * @param sellOrderId The sell order ID (may be a player UUID in GUI direct-fill path)
@@ -341,7 +337,7 @@ public class AuctionManager {
      * @param execPrice   Execution price per unit
      * @param material    Material name for the item being traded (used when order lookup fails)
      */
-    public void recordFillAsync(@NotNull UUID buyOrderId, @NotNull UUID sellOrderId,
+    public CompletableFuture<Void> recordFillAsync(@NotNull UUID buyOrderId, @NotNull UUID sellOrderId,
                                 int quantity, @NotNull BigDecimal execPrice,
                                 @NotNull String material) {
         UUID fillId = UUID.randomUUID();
@@ -356,65 +352,62 @@ public class AuctionManager {
                 .filledAt(now)
                 .build();
 
-        // Insert fill + update quantities (DB — safe to be async)
-        auctionRepo.insertFill(fill);
+        return CompletableFuture.supplyAsync(() -> {
+            // All DB operations in one atomic unit — if any throws, the future
+            // propagates the exception so callers can handle failure.
+            auctionRepo.insertFill(fill);
 
-        auctionRepo.findById(buyOrderId).ifPresent(buy -> {
-            int newRemaining = Math.max(0, buy.remainingQuantity() - quantity);
-            auctionRepo.update(buy.withRemainingQuantity(newRemaining));
-        });
+            // Look up both orders once and cache results for subsequent ops.
+            Optional<AuctionOrder> buyOpt = auctionRepo.findById(buyOrderId);
+            Optional<AuctionOrder> sellOpt = auctionRepo.findById(sellOrderId);
 
-        auctionRepo.findById(sellOrderId).ifPresent(sell -> {
-            int newRemaining = Math.max(0, sell.remainingQuantity() - quantity);
-            auctionRepo.update(sell.withRemainingQuantity(newRemaining));
-
-            // Credit seller's Vault balance
-            BigDecimal proceeds = execPrice.multiply(BigDecimal.valueOf(quantity));
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                try {
-                    Player seller = Bukkit.getPlayer(sell.playerUuid());
-                    economy.depositPlayer(seller, proceeds.doubleValue());
-                } catch (Exception e) {
-                    plugin.getLogger().log(Level.SEVERE,
-                            "Failed to credit seller " + sell.playerUuid() + " for fill " + fillId, e);
-                }
+            buyOpt.ifPresent(buy -> {
+                int newRemaining = Math.max(0, buy.remainingQuantity() - quantity);
+                auctionRepo.update(buy.withRemainingQuantity(newRemaining));
             });
-        });
 
-        // Give buyer their items.
-        // In GUI direct-fill, buyOrderId may be a player UUID (no DB order).
-        // Always look up by buyer's player UUID and use the known material.
-        auctionRepo.findById(buyOrderId).ifPresent(buy -> {
+            sellOpt.ifPresent(sell -> {
+                int newRemaining = Math.max(0, sell.remainingQuantity() - quantity);
+                auctionRepo.update(sell.withRemainingQuantity(newRemaining));
+            });
+
+            // Economy + inventory ops: run on Bukkit main thread via scheduler.
+            // If player is offline they receive nothing (same as chest shops).
+            // These are best-effort — log failures but don't fail the DB write.
+
+            // Credit seller.
+            sellOpt.ifPresent(sell -> {
+                BigDecimal proceeds = execPrice.multiply(BigDecimal.valueOf(quantity));
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    try {
+                        Player seller = Bukkit.getPlayer(sell.playerUuid());
+                        economy.depositPlayer(seller, proceeds.doubleValue());
+                    } catch (Exception e) {
+                        plugin.getLogger().log(Level.SEVERE,
+                                "Failed to credit seller " + sell.playerUuid() + " for fill " + fillId, e);
+                    }
+                });
+            });
+
+            // Give buyer their items. In GUI direct-fill, buyOrderId may be a player UUID
+            // (not an order DB ID). Use the buyer's UUID from the order record if
+            // available, otherwise fall back to buyOrderId directly.
+            UUID buyerUuid = buyOpt.map(AuctionOrder::playerUuid).orElse(buyOrderId);
             Bukkit.getScheduler().runTask(plugin, () -> {
                 try {
-                    Player buyer = Bukkit.getPlayer(buy.playerUuid());
+                    Player buyer = Bukkit.getPlayer(buyerUuid);
                     if (buyer != null) {
                         Material mat = Material.valueOf(material);
                         buyer.getInventory().addItem(new ItemStack(mat, quantity));
                     }
                 } catch (Exception e) {
                     plugin.getLogger().log(Level.SEVERE,
-                            "Failed to give buyer items for fill " + fillId, e);
+                            "Failed to give buyer " + buyerUuid + " items for fill " + fillId, e);
                 }
             });
-        });
 
-        // If buyOrderId wasn't an order (GUI direct-fill), buyer items also need to be
-        // given using the player's UUID directly.
-        if (auctionRepo.findById(buyOrderId).isEmpty()) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                try {
-                    Player buyer = Bukkit.getPlayer(buyOrderId);
-                    if (buyer != null) {
-                        Material mat = Material.valueOf(material);
-                        buyer.getInventory().addItem(new ItemStack(mat, quantity));
-                    }
-                } catch (Exception e) {
-                    plugin.getLogger().log(Level.SEVERE,
-                            "Failed to give buyer items (direct UUID) for fill " + fillId, e);
-                }
-            });
-        }
+            return null;
+        });
     }
 
     /**

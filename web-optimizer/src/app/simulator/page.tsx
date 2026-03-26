@@ -5,6 +5,7 @@ import { MarketConfig, DEFAULT_CONFIG, calculatePrices } from '@/lib/market-engi
 import { ParameterPanel } from '@/components/simulator/parameter-panel';
 import { PricePreview } from '@/components/simulator/price-preview';
 import { SpreadChart } from '@/components/simulator/spread-chart';
+import { StabilityForecast } from '@/components/simulator/stability-forecast';
 
 export default function SimulatorPage() {
   const [config, setConfig] = useState<MarketConfig>(DEFAULT_CONFIG);
@@ -52,6 +53,15 @@ export default function SimulatorPage() {
 
         {/* Results */}
         <div className="lg:col-span-2 space-y-4">
+          <StabilityForecast
+            buyRatio={buyRatio}
+            onlinePlayers={onlinePlayers}
+            zScore={zScore}
+            weightedVolume={weightedVolume}
+            distinctTraders={distinctTraders}
+            config={config}
+          />
+
           <PricePreview
             buyPrice={prices.buyPrice}
             sellPrice={prices.sellPrice}

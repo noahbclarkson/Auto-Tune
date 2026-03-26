@@ -83,7 +83,7 @@ public class AuctionCommand {
 
     @Command("auction open")
     public void auctionOpen(Player player) {
-        new AuctionGui(player.getName(), auctionManager, configManager).open(player);
+        new AuctionGui(player.getName(), auctionManager, configManager, economy).open(player);
     }
 
     @Command("auction browse")
@@ -94,7 +94,7 @@ public class AuctionCommand {
             player.sendMessage(Component.text("Unknown material: " + material, NamedTextColor.RED));
             return;
         }
-        new AuctionGui(mat.name(), player.getName(), auctionManager, configManager).open(player);
+        new AuctionGui(mat.name(), player.getName(), auctionManager, configManager, economy).open(player);
     }
 
     @Command("auction sell")

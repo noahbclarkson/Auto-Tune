@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @Singleton
-public final class ShopManager {
+public class ShopManager {
 
     private final DatabaseManager databaseManager;
     private final ItemRepository itemRepository;

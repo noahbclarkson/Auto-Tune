@@ -12,6 +12,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -46,6 +47,7 @@ public class AuctionGui {
     private final String playerName;
     private final AuctionManager auctionManager;
     private final ConfigManager configManager;
+    private final Economy economy;
 
     private final String material;
     private ChestGui gui;
@@ -56,15 +58,18 @@ public class AuctionGui {
 
     // ── Constructors ───────────────────────────────────────────────────────────
 
-    public AuctionGui(String playerName, AuctionManager auctionManager, ConfigManager configManager) {
-        this(null, playerName, auctionManager, configManager);
+    public AuctionGui(String playerName, AuctionManager auctionManager,
+                      ConfigManager configManager, Economy economy) {
+        this(null, playerName, auctionManager, configManager, economy);
     }
 
-    public AuctionGui(String material, String playerName, AuctionManager auctionManager, ConfigManager configManager) {
+    public AuctionGui(String material, String playerName, AuctionManager auctionManager,
+                      ConfigManager configManager, Economy economy) {
         this.material = material;
         this.playerName = playerName;
         this.auctionManager = auctionManager;
         this.configManager = configManager;
+        this.economy = economy;
     }
 
     public void open(Player player) {
@@ -283,7 +288,9 @@ public class AuctionGui {
     }
 
     private void fillBuyOrder(Player player, AuctionOrder order) {
-        // Player sells items to the buy order holder
+        // Player sells items to the buy order holder.
+        // Items + money movement are deferred until after DB write succeeds
+        // so we can restore on failure — prevents item loss if the async write fails.
         Material needed = parseMaterial(order.material());
         if (needed == null) {
             player.sendMessage(Component.text("Unknown material in order", NamedTextColor.RED));
@@ -300,22 +307,44 @@ public class AuctionGui {
         int fillQty = Math.min(have, order.remainingQuantity());
         BigDecimal totalCost = order.price().multiply(BigDecimal.valueOf(fillQty));
 
-        removeItems(player, needed, fillQty);
-        AutoTune.getInstance().getVaultEconomy().depositPlayer(player, totalCost.doubleValue());
+        // Snapshot inventory so we can restore on failure
+        ItemStack[] preRemoval = player.getInventory().getStorageContents().clone();
+
+        player.sendMessage(Component.text("Processing sale of " + fillQty + "x "
+                + formatMaterial(order.material()) + "...", NamedTextColor.YELLOW));
 
         // fillBuyOrder: player is selling to an existing BUY order in the book.
         // buyOrderId = the existing buy order (order.id())
         // sellOrderId = the player's UUID (they have no separate sell order in the DB)
-        processFillAsync(order.id(), player.getUniqueId(), fillQty, order.price(), order.material());
-
-        player.sendMessage(Component.text("Sold " + fillQty + "x " + formatMaterial(order.material())
-                + " for " + configManager.formatCurrency(totalCost) + "!", NamedTextColor.GREEN));
-
-        open(player);
+        auctionManager.recordFillAsync(order.id(), player.getUniqueId(), fillQty, order.price(), order.material())
+                .orTimeout(10, TimeUnit.SECONDS)
+                .thenAccept(v -> {
+                    // DB write succeeded: now apply the real effects
+                    Bukkit.getScheduler().runTask(AutoTune.getInstance(), () -> {
+                        removeItems(player, needed, fillQty);
+                        economy.depositPlayer(player, totalCost.doubleValue());
+                        player.sendMessage(Component.text("Sold " + fillQty + "x "
+                                + formatMaterial(order.material()) + " for "
+                                + configManager.formatCurrency(totalCost) + "!", NamedTextColor.GREEN));
+                        open(player);
+                    });
+                })
+                .exceptionally(ex -> {
+                    // DB write failed — restore inventory to pre-transaction state
+                    Bukkit.getScheduler().runTask(AutoTune.getInstance(), () -> {
+                        player.getInventory().setStorageContents(preRemoval);
+                        player.sendMessage(Component.text("Sale failed: could not record transaction. "
+                                + "Your items have been returned.", NamedTextColor.RED));
+                        open(player);
+                    });
+                    return null;
+                });
     }
 
     private void fillSellOrder(Player player, AuctionOrder order) {
-        // Player buys from the sell order
+        // Player buys from the sell order.
+        // Money is withdrawn BEFORE the async DB call; if DB write fails the refund
+        // is issued. Items are given only after DB write succeeds.
         Material mat = parseMaterial(order.material());
         if (mat == null) {
             player.sendMessage(Component.text("Unknown material in order", NamedTextColor.RED));
@@ -325,33 +354,49 @@ public class AuctionGui {
         int fillQty = order.remainingQuantity();
         BigDecimal totalCost = order.price().multiply(BigDecimal.valueOf(fillQty));
 
-        var economy = AutoTune.getInstance().getVaultEconomy();
         if (!economy.has(player, totalCost.doubleValue())) {
             player.sendMessage(Component.text("Insufficient funds. Need "
                     + configManager.formatCurrency(totalCost), NamedTextColor.RED));
             return;
         }
 
-        economy.withdrawPlayer(player, totalCost.doubleValue());
-        giveItems(player, mat, fillQty);
+        // Snapshot balance for refund if needed
+        double balanceBefore = economy.getBalance(player);
+
+        // Withdraw first — if this fails we abort without touching DB
+        if (!economy.withdrawPlayer(player, totalCost.doubleValue()).transactionSuccess()) {
+            player.sendMessage(Component.text("Failed to withdraw funds.", NamedTextColor.RED));
+            return;
+        }
+
+        player.sendMessage(Component.text("Processing purchase of " + fillQty + "x "
+                + formatMaterial(order.material()) + "...", NamedTextColor.YELLOW));
 
         // fillSellOrder: player is buying from an existing SELL order in the book.
         // buyOrderId = the player's UUID (they have no formal buy order in the DB)
         // sellOrderId = the existing sell order (order.id())
-        processFillAsync(player.getUniqueId(), order.id(), fillQty, order.price(), mat.name());
-
-        player.sendMessage(Component.text("Bought " + fillQty + "x " + formatMaterial(order.material())
-                + " for " + configManager.formatCurrency(totalCost) + "!", NamedTextColor.GREEN));
-
-        open(player);
-    }
-
-    private void processFillAsync(UUID buyOrderId, UUID sellOrderId, int quantity,
-                                  BigDecimal execPrice, String material) {
-        // The caller has already handled money (withdraw for buy, deposit for sell)
-        // and item transfer. Now record the fill: insert fill, update quantities,
-        // credit seller, give buyer items — all handled by AuctionManager.
-        auctionManager.recordFillAsync(buyOrderId, sellOrderId, quantity, execPrice, material);
+        auctionManager.recordFillAsync(player.getUniqueId(), order.id(), fillQty, order.price(), mat.name())
+                .orTimeout(10, TimeUnit.SECONDS)
+                .thenAccept(v -> {
+                    // DB write succeeded: give buyer the items.
+                    Bukkit.getScheduler().runTask(AutoTune.getInstance(), () -> {
+                        giveItems(player, mat, fillQty);
+                        player.sendMessage(Component.text("Bought " + fillQty + "x "
+                                + formatMaterial(order.material()) + " for "
+                                + configManager.formatCurrency(totalCost) + "!", NamedTextColor.GREEN));
+                        open(player);
+                    });
+                })
+                .exceptionally(ex -> {
+                    // DB write failed — refund the player's money.
+                    Bukkit.getScheduler().runTask(AutoTune.getInstance(), () -> {
+                        economy.depositPlayer(player, totalCost.doubleValue());
+                        player.sendMessage(Component.text("Purchase failed: could not record transaction. "
+                                + "Your funds have been refunded.", NamedTextColor.RED));
+                        open(player);
+                    });
+                    return null;
+                });
     }
 
     // ── My Orders GUI ─────────────────────────────────────────────────────────

@@ -1,27 +1,19 @@
 use actix_web::{middleware::Logger, web, App, HttpResponse, HttpServer, Responder};
 use anyhow::Result;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 mod auth;
 mod db;
-mod matching;
 mod models;
 mod price_computer;
 mod rate_limit;
 mod routes;
 
 use auth::ApiKeyAuth;
-use matching::MatchingEngine;
 use rate_limit::{RateLimitConfig, RateLimiter};
 use routes::{
     auction::configure as configure_auction,
     exchange::get_exchange_rates,
-    orders::{
-        cancel_order, get_orderbook, get_orderbook_depth, get_trade_history, list_orders,
-        place_order,
-    },
     prices::{get_price_history, get_true_prices, submit_prices},
     servers::{list_servers, register_server},
 };
@@ -57,10 +49,6 @@ async fn main() -> Result<()> {
 
     let pool_data = web::Data::new(pool);
 
-    // Initialize matching engine for auction house
-    let matching_engine = Arc::new(RwLock::new(MatchingEngine::new()));
-    let engine_data = web::Data::new(matching_engine);
-
     // Rate limiters
     let general_limiter = web::Data::new(RateLimiter::new(RateLimitConfig::fast()));
     let submit_limiter = web::Data::new(RateLimiter::new(RateLimitConfig::submit()));
@@ -71,7 +59,6 @@ async fn main() -> Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(pool_data.clone())
-            .app_data(engine_data.clone())
             .app_data(general_limiter.clone())
             .app_data(submit_limiter.clone())
             .app_data(payload_config.clone())
@@ -89,17 +76,9 @@ async fn main() -> Result<()> {
                 "/api/servers/exchange-rates",
                 web::get().to(get_exchange_rates),
             )
-            // Auction house endpoints
+            // Auction house — removed 2026-03-26. Was: full in-game GUI in Java plugin.
+            // These routes now return 410 Gone.
             .configure(configure_auction)
-            .route("/api/orders", web::post().to(place_order))
-            .route("/api/orders", web::get().to(list_orders))
-            .route("/api/orders/{id}", web::delete().to(cancel_order))
-            .route("/api/orderbook/{item_id}", web::get().to(get_orderbook))
-            .route(
-                "/api/orderbook/{item_id}/depth",
-                web::get().to(get_orderbook_depth),
-            )
-            .route("/api/trades", web::get().to(get_trade_history))
             // Authenticated endpoints
             .service(
                 web::scope("/api/servers/{server_id}")

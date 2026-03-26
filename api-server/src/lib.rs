@@ -1,10 +1,9 @@
-//! Auto-Tune auction house API server library
+//! Auto-Tune price discovery API server library
 //!
-//! Provides REST endpoints for the auction house order book system.
+//! Provides REST endpoints for cross-server price discovery via ratio matrices.
 
 pub mod auth;
 pub mod db;
-pub mod matching;
 pub mod models;
 pub mod price_computer;
 pub mod rate_limit;

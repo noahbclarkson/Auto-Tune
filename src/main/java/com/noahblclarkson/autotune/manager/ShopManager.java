@@ -355,4 +355,29 @@ public class ShopManager {
         return marketEngine.getSpread(item.id());
     }
 
+    /**
+     * Set (or clear) a per-item base spread override.
+     * Pass null to remove the override and fall back to the global config value.
+     */
+    public void setBaseSpreadOverride(int itemId, @Nullable Double override) {
+        itemRepository.updateBaseSpreadOverride(itemId, override);
+        getItemById(itemId).ifPresent(item -> {
+            ShopItem updated = item.toBuilder().baseSpreadOverride(override).build();
+            hashToItemCache.put(updated.itemHash(), updated);
+            idToItemCache.put(updated.id(), updated);
+        });
+    }
+
+    /**
+     * Set (or clear) a per-item max price change override.
+     * Pass null to remove the override and fall back to the global config value.
+     */
+    public void setMaxPriceChangeOverride(int itemId, @Nullable Double override) {
+        itemRepository.updateMaxPriceChangeOverride(itemId, override);
+        getItemById(itemId).ifPresent(item -> {
+            ShopItem updated = item.toBuilder().maxPriceChangeOverride(override).build();
+            hashToItemCache.put(updated.itemHash(), updated);
+            idToItemCache.put(updated.id(), updated);
+        });
+    }
 }

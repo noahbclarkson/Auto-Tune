@@ -36,6 +36,7 @@ public class TaskScheduler {
     private ScheduledTask loanWarningTask;
     private ScheduledTask economySnapshotTask;
     private ScheduledTask priceReporterTask;
+    private ScheduledTask priceRetryTask;
     private ScheduledTask alertCheckTask;
     private ScheduledTask cleanupTask;
 
@@ -90,6 +91,9 @@ public class TaskScheduler {
         }
         if (priceReporterTask != null) {
             priceReporterTask.cancel();
+        }
+        if (priceRetryTask != null) {
+            priceRetryTask.cancel();
         }
         if (alertCheckTask != null) {
             alertCheckTask.cancel();
@@ -207,6 +211,21 @@ public class TaskScheduler {
                 },
                 intervalMinutes,
                 intervalMinutes,
+                TimeUnit.MINUTES
+        );
+
+        // Retry queue drain — runs every minute, independent of the submission interval
+        priceRetryTask = plugin.getServer().getAsyncScheduler().runAtFixedRate(
+                plugin,
+                task -> {
+                    try {
+                        priceReporter.drainRetryQueue();
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Error draining price retry queue: " + e.getMessage());
+                    }
+                },
+                1,
+                1,
                 TimeUnit.MINUTES
         );
     }

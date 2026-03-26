@@ -68,7 +68,7 @@ public class AdminCommand {
     @Permission("autotune.admin")
     public void adminHelp(CommandSender sender) {
         sender.sendMessage(Component.empty());
-        sender.sendMessage(Component.text("Auto-Tune Admin", NamedTextColor.GOLD, TextDecoration.BOLD));
+        sender.sendMessage(Component.text("Auto-Tune Admin", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
         sender.sendMessage(Component.text("/at admin info", NamedTextColor.YELLOW)
                 .append(Component.text(" — Economy overview and health", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin stats", NamedTextColor.YELLOW)
@@ -81,6 +81,14 @@ public class AdminCommand {
                 .append(Component.text(" — Remove price override", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin price list", NamedTextColor.YELLOW)
                 .append(Component.text(" — List all active overrides", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin item spread <item> <value>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Per-item base spread override", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin item maxchange <item> <value>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Per-item max price change override", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin item info <item>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Show item config & overrides", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin item reset <item>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Clear all per-item overrides", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin reload", NamedTextColor.YELLOW)
                 .append(Component.text(" — Reload config and caches", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
@@ -321,6 +329,161 @@ public class AdminCommand {
         }
 
         sender.sendMessage(Component.empty());
+    }
+
+    // ─── Per-item config override subcommands ──────────────────────────────────
+
+    @Command("autotune admin item spread")
+    @Permission("autotune.admin")
+    public void itemSpread(
+            CommandSender sender,
+            @Argument(value = "material", suggestions = "price-override-material") String materialName,
+            @Argument("value") double value
+    ) {
+        org.bukkit.Material mat = matchMaterial(materialName);
+        if (mat == null) {
+            sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        Optional<ShopItem> shopItem = shopManager.getItemByMaterial(mat);
+        if (shopItem.isEmpty()) {
+            sender.sendMessage(Component.text("Material not in shop: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        if (value <= 0 || value > 1.0) {
+            sender.sendMessage(Component.text("Base spread must be between 0.01 and 1.0 (e.g. 0.20 = 20%).",
+                    NamedTextColor.RED));
+            return;
+        }
+
+        ShopItem item = shopItem.get();
+        shopManager.setBaseSpreadOverride(item.id(), value);
+        sender.sendMessage(Component.text("Base spread override for " + item.getDisplayNameOrMaterial()
+                + " set to " + String.format("%.2f%%", value * 100), NamedTextColor.GREEN));
+    }
+
+    @Command("autotune admin item maxchange")
+    @Permission("autotune.admin")
+    public void itemMaxChange(
+            CommandSender sender,
+            @Argument(value = "material", suggestions = "price-override-material") String materialName,
+            @Argument("value") double value
+    ) {
+        org.bukkit.Material mat = matchMaterial(materialName);
+        if (mat == null) {
+            sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        Optional<ShopItem> shopItem = shopManager.getItemByMaterial(mat);
+        if (shopItem.isEmpty()) {
+            sender.sendMessage(Component.text("Material not in shop: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        if (value <= 0 || value > 50.0) {
+            sender.sendMessage(Component.text("Max price change must be between 0.01 and 50.0 (percent).",
+                    NamedTextColor.RED));
+            return;
+        }
+
+        ShopItem item = shopItem.get();
+        shopManager.setMaxPriceChangeOverride(item.id(), value);
+        sender.sendMessage(Component.text("Max price change override for " + item.getDisplayNameOrMaterial()
+                + " set to " + String.format("%.2f%%", value), NamedTextColor.GREEN));
+    }
+
+    @Command("autotune admin item info")
+    @Permission("autotune.admin")
+    public void itemInfo(
+            CommandSender sender,
+            @Argument(value = "material", suggestions = "price-override-material") String materialName
+    ) {
+        org.bukkit.Material mat = matchMaterial(materialName);
+        if (mat == null) {
+            sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        Optional<ShopItem> shopItem = shopManager.getItemByMaterial(mat);
+        if (shopItem.isEmpty()) {
+            sender.sendMessage(Component.text("Material not in shop: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        ShopItem item = shopItem.get();
+        BigDecimal currentPrice = marketEngine.getCurrentPrice(item.id());
+        MarketEngine.SpreadResult spread = marketEngine.getSpread(item.id());
+        double globalMaxChange = configManager.getConfig().economy().maxPriceChangePercent();
+        double globalBaseSpread = configManager.getConfig().economy().spread().baseSpread();
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text(item.getDisplayNameOrMaterial(), NamedTextColor.GOLD)
+                .decorate(TextDecoration.BOLD)
+                .append(Component.text(" (" + item.section() + ")", NamedTextColor.GRAY)));
+
+        sender.sendMessage(Component.text("  Price: ", NamedTextColor.GRAY)
+                .append(Component.text(configManager.formatCurrency(currentPrice), NamedTextColor.GREEN)));
+        sender.sendMessage(Component.text("  Spread: ", NamedTextColor.GRAY)
+                .append(Component.text("BPD " + String.format("%.2f%%", spread.bpd().doubleValue() * 100)
+                        + " / SPD " + String.format("%.2f%%", spread.spd().doubleValue() * 100), NamedTextColor.AQUA)));
+
+        // Base spread override
+        String spreadStr = item.baseSpreadOverride() != null
+                ? String.format("%.2f%%", item.baseSpreadOverride() * 100) + " (override)"
+                : String.format("%.2f%%", globalBaseSpread * 100) + " (global)";
+        sender.sendMessage(Component.text("  Base Spread: ", NamedTextColor.GRAY)
+                .append(Component.text(spreadStr,
+                        item.baseSpreadOverride() != null ? NamedTextColor.YELLOW : NamedTextColor.WHITE)));
+
+        // Max price change override
+        String maxChangeStr = item.maxPriceChangeOverride() != null
+                ? String.format("%.2f%%", item.maxPriceChangeOverride()) + " (override)"
+                : String.format("%.2f%%", globalMaxChange) + " (global)";
+        sender.sendMessage(Component.text("  Max Change: ", NamedTextColor.GRAY)
+                .append(Component.text(maxChangeStr,
+                        item.maxPriceChangeOverride() != null ? NamedTextColor.YELLOW : NamedTextColor.WHITE)));
+
+        // Price override
+        Optional<PriceOverride> priceOverride = marketEngine.getOverride(item.id());
+        if (priceOverride.isPresent()) {
+            PriceOverride over = priceOverride.get();
+            sender.sendMessage(Component.text("  Price Override: ", NamedTextColor.GRAY)
+                    .append(Component.text(configManager.formatCurrency(over.price())
+                            + " (expires: " + over.formatExpiry() + ")", NamedTextColor.YELLOW)));
+        }
+
+        sender.sendMessage(Component.text("  Buyable: ", NamedTextColor.GRAY)
+                .append(Component.text(shopManager.isBuyable(item) ? "Yes" : "No",
+                        shopManager.isBuyable(item) ? NamedTextColor.GREEN : NamedTextColor.RED)));
+        sender.sendMessage(Component.empty());
+    }
+
+    @Command("autotune admin item reset")
+    @Permission("autotune.admin")
+    public void itemReset(
+            CommandSender sender,
+            @Argument(value = "material", suggestions = "price-override-material") String materialName
+    ) {
+        org.bukkit.Material mat = matchMaterial(materialName);
+        if (mat == null) {
+            sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        Optional<ShopItem> shopItem = shopManager.getItemByMaterial(mat);
+        if (shopItem.isEmpty()) {
+            sender.sendMessage(Component.text("Material not in shop: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        ShopItem item = shopItem.get();
+        shopManager.setBaseSpreadOverride(item.id(), null);
+        shopManager.setMaxPriceChangeOverride(item.id(), null);
+        sender.sendMessage(Component.text("All per-item overrides cleared for "
+                + item.getDisplayNameOrMaterial() + ". Using global config values.", NamedTextColor.GREEN));
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────

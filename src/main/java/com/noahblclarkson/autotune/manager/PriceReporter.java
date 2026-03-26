@@ -97,7 +97,7 @@ public class PriceReporter {
             return;
         }
 
-        sendWithRetry(payload, snapshot, cfg);
+        sendPayload(payload, snapshot, cfg);
     }
 
     /** Drains the retry queue, attempting each queued submission once.
@@ -112,37 +112,27 @@ public class PriceReporter {
             return;
         }
 
-        // Examine entries without consuming them until we find one due for retry
-        List<QueuedSubmission> retryNow = new ArrayList<>();
-        List<QueuedSubmission> keep = new ArrayList<>();
-
-        for (QueuedSubmission entry : retryQueue) {
-            if (entry.retryCount >= MAX_RETRIES) {
-                plugin.getLogger().warning("Price reporter giving up on submission after "
-                        + MAX_RETRIES + " attempts. Items: " + entry.itemNames);
-                continue; // drop
-            }
-            retryNow.add(entry);
+        // Drain all entries — we'll re-queue on failure with incremented retry count
+        List<QueuedSubmission> batch = new ArrayList<>();
+        QueuedSubmission entry;
+        while ((entry = retryQueue.poll()) != null) {
+            batch.add(entry);
         }
 
-        if (retryNow.isEmpty()) {
+        if (batch.isEmpty()) {
             return;
         }
 
-        plugin.getLogger().fine("Retrying " + retryNow.size() + " queued price submissions.");
+        plugin.getLogger().fine("Retrying " + batch.size() + " queued price submission(s).");
 
-        for (QueuedSubmission queued : retryNow) {
-            retryQueue.remove(queued);
-            // Build a fresh payload snapshot keyed only by the queued item names
-            Map<Integer, PriceAccumulator> freshSnapshot = new LinkedHashMap<>();
-            for (Map.Entry<Integer, PriceAccumulator> e : accumulators.entrySet()) {
-                if (queued.itemNames.contains(e.getValue().itemName)) {
-                    freshSnapshot.put(e.getKey(), e.getValue());
-                }
+        for (QueuedSubmission queued : batch) {
+            if (queued.retryCount() >= MAX_RETRIES) {
+                plugin.getLogger().warning("Price reporter giving up on submission after "
+                        + MAX_RETRIES + " attempts (" + queued.payload().item_names().size() + " items).");
+                continue; // drop permanently
             }
-            if (!freshSnapshot.isEmpty()) {
-                sendWithRetry(queued.payload, freshSnapshot, cfg);
-            }
+
+            retrySend(queued, cfg);
         }
     }
 
@@ -215,9 +205,9 @@ public class PriceReporter {
         return new SubmitPayload(itemNames, ratioMatrix, onlinePlayers);
     }
 
-    private void sendWithRetry(SubmitPayload payload,
-                               Map<Integer, PriceAccumulator> snapshot,
-                               AutoTuneConfig.PriceReporterConfig cfg) {
+    private void sendPayload(SubmitPayload payload,
+                             Map<Integer, PriceAccumulator> snapshot,
+                             AutoTuneConfig.PriceReporterConfig cfg) {
 
         String baseUrl = cfg.apiUrl().replaceAll("/$", "");
         String endpoint = baseUrl + "/api/servers/" + cfg.serverId() + "/prices";
@@ -238,28 +228,66 @@ public class PriceReporter {
                     } else {
                         plugin.getLogger().warning("Price reporter submit failed: HTTP "
                                 + response.statusCode() + " - " + response.body());
-                        enqueueForRetry(payload, snapshot);
+                        enqueueForRetry(payload, 0);
                     }
                 })
                 .exceptionally(error -> {
                     plugin.getLogger().warning("Price reporter submit failed: " + error.getMessage());
-                    enqueueForRetry(payload, snapshot);
+                    enqueueForRetry(payload, 0);
                     return null;
                 });
     }
 
-    private void enqueueForRetry(SubmitPayload payload,
-                                 Map<Integer, PriceAccumulator> snapshot) {
+    /** Retry a previously-queued submission. Re-queues with incremented count on failure. */
+    private void retrySend(QueuedSubmission queued, AutoTuneConfig.PriceReporterConfig cfg) {
+        String baseUrl = cfg.apiUrl().replaceAll("/$", "");
+        String endpoint = baseUrl + "/api/servers/" + cfg.serverId() + "/prices";
+        SubmitPayload payload = queued.payload();
+        int attempt = queued.retryCount() + 1;
+
+        HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
+                .timeout(Duration.ofSeconds(15))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + cfg.apiKey())
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(payload)))
+                .build();
+
+        httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenAccept(response -> {
+                    if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                        plugin.getLogger().fine("Retry succeeded for " + payload.item_names().size()
+                                + " items (attempt " + attempt + ").");
+                    } else {
+                        plugin.getLogger().warning("Price reporter retry failed: HTTP "
+                                + response.statusCode() + " (attempt " + attempt + "/" + MAX_RETRIES + ")");
+                        enqueueForRetry(payload, attempt);
+                    }
+                })
+                .exceptionally(error -> {
+                    plugin.getLogger().warning("Price reporter retry failed: " + error.getMessage()
+                            + " (attempt " + attempt + "/" + MAX_RETRIES + ")");
+                    enqueueForRetry(payload, attempt);
+                    return null;
+                });
+    }
+
+    private void enqueueForRetry(SubmitPayload payload, int retryCount) {
+        if (retryCount >= MAX_RETRIES) {
+            plugin.getLogger().warning("Price reporter: max retries reached, dropping "
+                    + payload.item_names().size() + " items.");
+            return;
+        }
         // Evict oldest if full
         while (retryQueue.size() >= MAX_QUEUED) {
             QueuedSubmission evicted = retryQueue.poll();
             if (evicted != null) {
-                plugin.getLogger().fine("Retry queue full — dropping oldest: " + evicted.itemNames);
+                plugin.getLogger().fine("Retry queue full — dropping oldest ("
+                        + evicted.payload().item_names().size() + " items).");
             }
         }
-        retryQueue.add(new QueuedSubmission(payload, 0));
+        retryQueue.add(new QueuedSubmission(payload, retryCount));
         plugin.getLogger().fine("Queued " + payload.item_names().size()
-                + " item prices for retry (attempt 1/" + MAX_RETRIES + ").");
+                + " items for retry (attempt " + (retryCount + 1) + "/" + MAX_RETRIES + ").");
     }
 
     // -------------------------------------------------------------------------

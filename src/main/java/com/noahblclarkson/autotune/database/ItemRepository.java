@@ -116,6 +116,30 @@ public class ItemRepository {
                         .execute());
     }
 
+    public void updateBaseSpreadOverride(int itemId, @Nullable Double baseSpreadOverride) {
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                                UPDATE at_items SET base_spread_override = :override, updated_at = :updatedAt
+                                WHERE id = :id
+                                """)
+                        .bind("id", itemId)
+                        .bind("override", baseSpreadOverride)
+                        .bind("updatedAt", Timestamp.from(Instant.now()))
+                        .execute());
+    }
+
+    public void updateMaxPriceChangeOverride(int itemId, @Nullable Double maxPriceChangeOverride) {
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                                UPDATE at_items SET max_price_change_override = :override, updated_at = :updatedAt
+                                WHERE id = :id
+                                """)
+                        .bind("id", itemId)
+                        .bind("override", maxPriceChangeOverride)
+                        .bind("updatedAt", Timestamp.from(Instant.now()))
+                        .execute());
+    }
+
     public void updateBuyable(int itemId, @Nullable Boolean buyable) {
         jdbi.useHandle(handle ->
                 handle.createUpdate("UPDATE at_items SET buyable = :buyable, updated_at = :updatedAt WHERE id = :id")

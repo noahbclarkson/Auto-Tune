@@ -332,6 +332,92 @@ public class AuctionManager {
     }
 
     /**
+     * Record an auction fill from the GUI path (direct fill without matching engine).
+     * Handles DB insert, quantity updates, seller Vault credit, and buyer item delivery.
+     *
+     * @param buyOrderId  The buy order ID (may be a player UUID in GUI direct-fill path)
+     * @param sellOrderId The sell order ID (may be a player UUID in GUI direct-fill path)
+     * @param quantity    Number of items in the fill
+     * @param execPrice   Execution price per unit
+     * @param material    Material name for the item being traded (used when order lookup fails)
+     */
+    public void recordFillAsync(@NotNull UUID buyOrderId, @NotNull UUID sellOrderId,
+                                int quantity, @NotNull BigDecimal execPrice,
+                                @NotNull String material) {
+        UUID fillId = UUID.randomUUID();
+        Instant now = Instant.now();
+
+        AuctionFill fill = AuctionFill.builder()
+                .id(fillId)
+                .buyOrderId(buyOrderId)
+                .sellOrderId(sellOrderId)
+                .quantity(quantity)
+                .price(execPrice)
+                .filledAt(now)
+                .build();
+
+        // Insert fill + update quantities (DB — safe to be async)
+        auctionRepo.insertFill(fill);
+
+        auctionRepo.findById(buyOrderId).ifPresent(buy -> {
+            int newRemaining = Math.max(0, buy.remainingQuantity() - quantity);
+            auctionRepo.update(buy.withRemainingQuantity(newRemaining));
+        });
+
+        auctionRepo.findById(sellOrderId).ifPresent(sell -> {
+            int newRemaining = Math.max(0, sell.remainingQuantity() - quantity);
+            auctionRepo.update(sell.withRemainingQuantity(newRemaining));
+
+            // Credit seller's Vault balance
+            BigDecimal proceeds = execPrice.multiply(BigDecimal.valueOf(quantity));
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                try {
+                    Player seller = Bukkit.getPlayer(sell.playerUuid());
+                    economy.depositPlayer(seller, proceeds.doubleValue());
+                } catch (Exception e) {
+                    plugin.getLogger().log(Level.SEVERE,
+                            "Failed to credit seller " + sell.playerUuid() + " for fill " + fillId, e);
+                }
+            });
+        });
+
+        // Give buyer their items.
+        // In GUI direct-fill, buyOrderId may be a player UUID (no DB order).
+        // Always look up by buyer's player UUID and use the known material.
+        auctionRepo.findById(buyOrderId).ifPresent(buy -> {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                try {
+                    Player buyer = Bukkit.getPlayer(buy.playerUuid());
+                    if (buyer != null) {
+                        Material mat = Material.valueOf(material);
+                        buyer.getInventory().addItem(new ItemStack(mat, quantity));
+                    }
+                } catch (Exception e) {
+                    plugin.getLogger().log(Level.SEVERE,
+                            "Failed to give buyer items for fill " + fillId, e);
+                }
+            });
+        });
+
+        // If buyOrderId wasn't an order (GUI direct-fill), buyer items also need to be
+        // given using the player's UUID directly.
+        if (auctionRepo.findById(buyOrderId).isEmpty()) {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                try {
+                    Player buyer = Bukkit.getPlayer(buyOrderId);
+                    if (buyer != null) {
+                        Material mat = Material.valueOf(material);
+                        buyer.getInventory().addItem(new ItemStack(mat, quantity));
+                    }
+                } catch (Exception e) {
+                    plugin.getLogger().log(Level.SEVERE,
+                            "Failed to give buyer items (direct UUID) for fill " + fillId, e);
+                }
+            });
+        }
+    }
+
+    /**
      * Update order's remaining quantity. Called from GUI path where matching
      * engine is not involved (GUI directly fills an existing order).
      */

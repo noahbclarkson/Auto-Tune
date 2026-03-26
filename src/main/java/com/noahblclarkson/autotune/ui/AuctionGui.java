@@ -303,7 +303,10 @@ public class AuctionGui {
         removeItems(player, needed, fillQty);
         AutoTune.getInstance().getVaultEconomy().depositPlayer(player, totalCost.doubleValue());
 
-        processFillAsync(order, fillQty);
+        // fillBuyOrder: player is selling to an existing BUY order in the book.
+        // buyOrderId = the existing buy order (order.id())
+        // sellOrderId = the player's UUID (they have no separate sell order in the DB)
+        processFillAsync(order.id(), player.getUniqueId(), fillQty, order.price(), order.material());
 
         player.sendMessage(Component.text("Sold " + fillQty + "x " + formatMaterial(order.material())
                 + " for " + configManager.formatCurrency(totalCost) + "!", NamedTextColor.GREEN));
@@ -332,7 +335,10 @@ public class AuctionGui {
         economy.withdrawPlayer(player, totalCost.doubleValue());
         giveItems(player, mat, fillQty);
 
-        processFillAsync(order, fillQty);
+        // fillSellOrder: player is buying from an existing SELL order in the book.
+        // buyOrderId = the player's UUID (they have no formal buy order in the DB)
+        // sellOrderId = the existing sell order (order.id())
+        processFillAsync(player.getUniqueId(), order.id(), fillQty, order.price(), mat.name());
 
         player.sendMessage(Component.text("Bought " + fillQty + "x " + formatMaterial(order.material())
                 + " for " + configManager.formatCurrency(totalCost) + "!", NamedTextColor.GREEN));
@@ -340,19 +346,12 @@ public class AuctionGui {
         open(player);
     }
 
-    private void processFillAsync(AuctionOrder order, int quantity) {
-        Bukkit.getScheduler().runTaskAsynchronously(AutoTune.getInstance(), () -> {
-            // Update order's remaining quantity in DB and record the fill.
-            // Item/money transfers already happened on the main thread in the caller.
-            // The seller's side of the fill is handled by AuctionManager when the
-            // matching engine runs — but here we came from the GUI fill path, so we
-            // need to record the fill and update the order directly.
-            auctionManager.getOrder(order.id()).ifPresent(current -> {
-                int newRemaining = Math.max(0, current.remainingQuantity() - quantity);
-                AuctionOrder updated = current.withRemainingQuantity(newRemaining);
-                auctionManager.updateOrderRemaining(updated);
-            });
-        });
+    private void processFillAsync(UUID buyOrderId, UUID sellOrderId, int quantity,
+                                  BigDecimal execPrice, String material) {
+        // The caller has already handled money (withdraw for buy, deposit for sell)
+        // and item transfer. Now record the fill: insert fill, update quantities,
+        // credit seller, give buyer items — all handled by AuctionManager.
+        auctionManager.recordFillAsync(buyOrderId, sellOrderId, quantity, execPrice, material);
     }
 
     // ── My Orders GUI ─────────────────────────────────────────────────────────

@@ -92,7 +92,10 @@ export default function Home() {
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Top Movers (24h)</CardTitle>
+                  <div>
+                    <CardTitle className="text-base">Top Movers</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Items with the largest 24h price change</p>
+                  </div>
                   <span className="text-xs text-muted-foreground">{topMovers.length} items</span>
                 </div>
               </CardHeader>
@@ -100,79 +103,82 @@ export default function Home() {
                 {topMovers.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center">No data yet</p>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {topMovers.map((item) => {
                       const trend = trends.find((t) => t.itemId === item.id);
                       const spreadPct = ((item.bpd + item.spd) * 100).toFixed(1);
-                      const spreadWidth = Math.min(100, ((item.bpd + item.spd) / 0.5) * 100);
                       const changeDir = item.change24h > 0 ? 'up' : item.change24h < 0 ? 'down' : 'flat';
-                      const changeColor = item.change24h > 0
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : item.change24h < 0
-                        ? 'text-red-500 dark:text-red-400'
-                        : 'text-muted-foreground';
+                      const changeMag = Math.abs(item.change24h);
+                      // Visual bar: log scale for the change magnitude
+                      const magWidth = Math.min(100, Math.log1p(changeMag * 100) * 40);
+                      const barColor = changeDir === 'up'
+                        ? 'bg-emerald-500'
+                        : changeDir === 'down'
+                        ? 'bg-red-400'
+                        : 'bg-muted';
+
                       return (
                         <a
                           key={item.id}
                           href={`/items/detail/?id=${item.id}`}
                           className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/60 transition-colors group"
                         >
-                          {/* Change direction indicator */}
-                          <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
-                            changeDir === 'up' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                            changeDir === 'down' ? 'bg-red-500/10 text-red-500 dark:text-red-400' :
-                            'bg-muted text-muted-foreground'
-                          }`}>
-                            {changeDir === 'up' ? '▲' : changeDir === 'down' ? '▼' : '—'}
+                          {/* Change magnitude bar */}
+                          <div className="shrink-0 w-1.5 h-10 rounded-full bg-muted overflow-hidden self-center">
+                            <div
+                              className={`w-full rounded-full transition-all ${barColor}`}
+                              style={{ height: `${magWidth}%`, marginTop: `${Math.max(0, 50 - magWidth / 2)}%` }}
+                            />
                           </div>
 
-                          {/* Item name + section */}
+                          {/* Change % */}
+                          <div className={`shrink-0 w-14 text-right ${changeDir === 'up' ? 'text-emerald-600 dark:text-emerald-400' : changeDir === 'down' ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground'}`}>
+                            <p className="text-sm font-bold leading-none">
+                              {item.change24h > 0 ? '+' : ''}{formatPercent(item.change24h)}
+                            </p>
+                            <p className="text-[10px] mt-0.5 opacity-60">24h</p>
+                          </div>
+
+                          {/* Item name + section + prices */}
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                              <span className="font-medium text-foreground group-hover:text-primary transition-colors truncate max-w-[10rem]">
                                 {item.displayName}
                               </span>
                               <Badge variant="secondary" className="capitalize text-[10px] shrink-0">
                                 {item.section}
                               </Badge>
+                              {trend && (
+                                <Badge
+                                  variant={
+                                    trend.direction === 'UP' ? 'success' :
+                                    trend.direction === 'DOWN' ? 'destructive' : 'secondary'
+                                  }
+                                  className="text-[10px] shrink-0"
+                                >
+                                  {trend.direction}
+                                </Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                               <span className="text-emerald-600 dark:text-emerald-400">BUY {formatCurrency(item.buyPrice)}</span>
-                              <span>·</span>
+                              <span>→</span>
                               <span className="text-amber-600 dark:text-amber-400">SELL {formatCurrency(item.sellPrice)}</span>
                             </div>
                           </div>
 
-                          {/* Spread bar */}
-                          <div className="shrink-0 w-20 hidden sm:block">
-                            <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
-                              <span>Spread</span>
-                              <span>{spreadPct}%</span>
+                          {/* Spread chip */}
+                          <div className="shrink-0">
+                            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium ${
+                              parseFloat(spreadPct) > 12
+                                ? 'bg-red-500/10 text-red-500 dark:text-red-400'
+                                : parseFloat(spreadPct) > 6
+                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            }`}>
+                              <span>±{spreadPct}%</span>
+                              <span className="opacity-50">spread</span>
                             </div>
-                            <div className="h-1 rounded-full bg-muted overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-primary/60"
-                                style={{ width: `${spreadWidth}%` }}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Change + trend */}
-                          <div className="shrink-0 text-right w-16">
-                            <p className={`text-sm font-bold ${changeColor}`}>
-                              {formatPercent(item.change24h)}
-                            </p>
-                            {trend && (
-                              <Badge
-                                variant={
-                                  trend.direction === 'UP' ? 'success' :
-                                  trend.direction === 'DOWN' ? 'destructive' : 'secondary'
-                                }
-                                className="text-[10px] mt-0.5"
-                              >
-                                {trend.direction}
-                              </Badge>
-                            )}
                           </div>
                         </a>
                       );

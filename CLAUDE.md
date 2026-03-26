@@ -82,7 +82,7 @@ Components:
 - `AuctionCommand.java` — Cloud command `/auction` (browse, sell, buy, my, cancel, history)
 - `AuctionGui.java` — 6-row chest GUI with sell/buy columns, click-to-fill, cancel
 
-> ⚠️ **Known gap (2026-03-26):** `fillSellOrder` in `AuctionManager` withdraws the buyer's money into the server's Vault account but does **not** credit it to the seller's balance — the funds sit in escrow indefinitely. A follow-up commit is needed to add `economy.depositPlayer(seller, ...)` after the seller's items are transferred.
+> ✅ **Fixed (2026-03-26):** `processFill()` now credits the seller's Vault balance (`economy.depositPlayer(seller, ...)`) and gives the buyer their items (`player.getInventory().addItem(...)`) on the Bukkit main thread. Buyer's funds were already withdrawn in `placeBuyOrderAsync`; this closes the escrow gap.
 
 ### Web Frontend (`web/`)
 

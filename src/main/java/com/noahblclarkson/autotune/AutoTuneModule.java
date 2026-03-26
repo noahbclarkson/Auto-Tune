@@ -11,10 +11,14 @@ import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
+import com.noahblclarkson.autotune.database.PriceAlertRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.manager.DefaultPluginAdapter;
+import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.PluginAdapter;
+import com.noahblclarkson.autotune.manager.PriceAlertManager;
+import com.noahblclarkson.autotune.manager.ShopManager;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -97,5 +101,28 @@ public class AutoTuneModule extends AbstractModule {
     @Singleton
     public AuctionRepository provideAuctionRepository(DatabaseManager databaseManager) {
         return new AuctionRepository(databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public PriceAlertRepository providePriceAlertRepository(DatabaseManager databaseManager) {
+        return new PriceAlertRepository(databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public PriceAlertManager providePriceAlertManager(
+            PriceAlertRepository priceAlertRepository,
+            MarketEngine marketEngine,
+            ShopManager shopManager,
+            ConfigManager configManager
+    ) {
+        return new PriceAlertManager(
+                plugin,
+                priceAlertRepository,
+                marketEngine,
+                shopManager,
+                configManager
+        );
     }
 }

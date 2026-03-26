@@ -203,3 +203,24 @@ CREATE TABLE IF NOT EXISTS at_auction_fills (
 
 CREATE INDEX IF NOT EXISTS idx_auction_fills_buy ON at_auction_fills(buy_order_id);
 CREATE INDEX IF NOT EXISTS idx_auction_fills_sell ON at_auction_fills(sell_order_id);
+
+-- Price alerts: Players set price thresholds and get notified when the market price crosses them.
+-- alert_type: ABOVE = notify when price rises above target, BELOW = notify when price falls below target
+-- triggered_at: NULL means alert is active; set when triggered so it only fires once per crossing.
+-- Players can re-arm triggered alerts or remove them.
+CREATE TABLE IF NOT EXISTS at_price_alerts (
+    id VARCHAR(36) PRIMARY KEY,
+    player_uuid VARCHAR(36) NOT NULL,
+    item_id INTEGER NOT NULL,
+    alert_type VARCHAR(8) NOT NULL,
+    target_price DECIMAL(20, 2) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    triggered_at DATETIME DEFAULT NULL,
+    enabled BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY(player_uuid) REFERENCES at_players(uuid) ON DELETE CASCADE,
+    FOREIGN KEY(item_id) REFERENCES at_items(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_alerts_player ON at_price_alerts(player_uuid);
+CREATE INDEX IF NOT EXISTS idx_alerts_item ON at_price_alerts(item_id);
+CREATE INDEX IF NOT EXISTS idx_alerts_active ON at_price_alerts(enabled) WHERE enabled = TRUE;

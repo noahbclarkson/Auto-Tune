@@ -13,6 +13,7 @@ import com.noahblclarkson.autotune.listener.SellGuiListener;
 import com.noahblclarkson.autotune.manager.AutosellManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
+import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.task.TaskScheduler;
 import com.noahblclarkson.autotune.web.WebServer;
@@ -37,6 +38,7 @@ public class AutoTune extends JavaPlugin {
     private LoanManager loanManager;
     private AutosellManager autosellManager;
     private EconomyMetricsManager economyMetricsManager;
+    private PriceAlertManager priceAlertManager;
     private CommandManager commandManager;
     private TaskScheduler taskScheduler;
     private WebServer webServer;
@@ -86,6 +88,8 @@ public class AutoTune extends JavaPlugin {
         loanManager = injector.getInstance(LoanManager.class);
         autosellManager = injector.getInstance(AutosellManager.class);
         economyMetricsManager = injector.getInstance(EconomyMetricsManager.class);
+        priceAlertManager = injector.getInstance(PriceAlertManager.class);
+        priceAlertManager.initialize();
         taskScheduler = injector.getInstance(TaskScheduler.class);
 
         // Register commands
@@ -140,6 +144,7 @@ public class AutoTune extends JavaPlugin {
     public void reload() throws Exception {
         configManager.load();
         marketEngine.reload();
+        priceAlertManager.rebuildCache();
         if (webServer != null && configManager.getConfig().web().enabled()) {
             webServer.stop();
             webServer.start();

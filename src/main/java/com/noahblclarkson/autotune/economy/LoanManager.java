@@ -407,8 +407,11 @@ public class LoanManager {
     public BigDecimal getAmortizationPayment(Loan loan) {
         LoanConfig config = configManager.getConfig().loans();
         Duration remaining = Duration.between(Instant.now(), loan.dueDate());
-        long hoursRemaining = Math.max(1, remaining.toHours());
-        long periodsRemaining = Math.max(1, hoursRemaining / config.compoundIntervalHours());
+        // Use minutes then convert to periods to avoid truncation error from toHours().
+        // toHours() truncates nanosecond precision loss (e.g. 30 days - 1ns → 719h not 720h).
+        // Using minutes gives us the precision needed for accurate period counting.
+        long minutesRemaining = Math.max(1, remaining.toMinutes());
+        long periodsRemaining = Math.max(1, (minutesRemaining + config.compoundIntervalHours() * 59L) / (config.compoundIntervalHours() * 60L));
 
         double rate = loan.interestRate().doubleValue();
         double balance = loan.currentBalance().doubleValue();

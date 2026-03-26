@@ -165,7 +165,12 @@ class LoanManagerTest {
         void termClampedToMax() {
             LoanConfig cfg = loanCfg(true, 0.05, false, null, null, 30, 365, 0.01, null, null);
             LoanManager lm = newLoanManager(cfg, null);
-            assertEquals(lm.getInterestRate(playerUuid, 200), lm.getInterestRate(playerUuid, 500));
+            // maxTermDays = 365, minTermDays = 30, termPremiumPerDay = 0.01
+            // 500-day term: clamped to 365 → rate = 0.05 + (365-30)*0.01 = 3.40
+            // 200-day term: no clamp → rate = 0.05 + (200-30)*0.01 = 1.75
+            // Use compareTo for BigDecimal equality (ignores scale differences).
+            assertEquals(0, new BigDecimal("3.40").compareTo(lm.getInterestRate(playerUuid, 500)));
+            assertEquals(0, new BigDecimal("1.75").compareTo(lm.getInterestRate(playerUuid, 200)));
         }
     }
 

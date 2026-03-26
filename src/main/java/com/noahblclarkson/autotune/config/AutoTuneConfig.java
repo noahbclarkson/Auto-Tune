@@ -173,6 +173,7 @@ public record AutoTuneConfig(
             @NotNull String sell,
             @NotNull String autosell,
             @NotNull String trends,
+            @NotNull String marketHistory,
             @NotNull String transactionHistory,
             @NotNull String adminTransactionHistory
     ) {
@@ -182,6 +183,7 @@ public record AutoTuneConfig(
                     "Sell Items",
                     "Autosell",
                     "Market Trends",
+                    "Price History",
                     "Your Transactions",
                     "All Transactions"
             );

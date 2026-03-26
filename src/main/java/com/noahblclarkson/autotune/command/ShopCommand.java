@@ -8,6 +8,7 @@ import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.model.ShopItem;
+import com.noahblclarkson.autotune.ui.MarketHistoryGui;
 import com.noahblclarkson.autotune.ui.ShopGui;
 import com.noahblclarkson.autotune.ui.TrendsGui;
 import com.noahblclarkson.autotune.ui.TransactionHistoryGui;
@@ -134,6 +135,16 @@ public class ShopCommand {
         new TrendsGui(plugin, player).open();
     }
 
+    @Command("shop history")
+    @Permission("autotune.shop")
+    public void showHistoryBrowser(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(configManager.getMessage("general.player-only"));
+            return;
+        }
+        new MarketHistoryGui(plugin, player).openBrowser();
+    }
+
     @Command("shop history <material>")
     @Permission("autotune.shop")
     public void showHistory(CommandSender sender, @Argument(value = "material", suggestions = "shop-materials") Material material) {
@@ -148,18 +159,8 @@ public class ShopCommand {
             return;
         }
 
-        ShopItem shopItem = item.get();
-        MarketEngine.SpreadResult spread = marketEngine.getSpread(shopItem.id());
-        player.sendMessage(Component.text("=== Price History: " + shopItem.getDisplayNameOrMaterial() + " ===", NamedTextColor.GOLD));
-        player.sendMessage(Component.text("Current Price: " + configManager.formatCurrency(shopItem.price()), NamedTextColor.GRAY));
-        player.sendMessage(Component.text("Buy Price: " + configManager.formatCurrency(marketEngine.getBuyPrice(shopItem)), NamedTextColor.GREEN));
-        player.sendMessage(Component.text("Sell Price: " + configManager.formatCurrency(marketEngine.getSellPrice(shopItem)), NamedTextColor.YELLOW));
-        player.sendMessage(Component.text("BPD: " + spread.bpd().multiply(BigDecimal.valueOf(100)) + "%", NamedTextColor.GRAY));
-        player.sendMessage(Component.text("SPD: " + spread.spd().multiply(BigDecimal.valueOf(100)) + "%", NamedTextColor.GRAY));
-
-        MarketEngine.PriceTrend trend = marketEngine.getPriceTrend(shopItem.id());
-        player.sendMessage(Component.text("Trend: " + trend.label(), trend.direction() == MarketEngine.PriceTrend.Direction.UP ? NamedTextColor.GREEN :
-                trend.direction() == MarketEngine.PriceTrend.Direction.DOWN ? NamedTextColor.RED : NamedTextColor.GRAY));
+        // Open the GUI detail view directly for this item
+        new MarketHistoryGui(plugin, player).openDetailView(item.get());
     }
 
     @Command("shop reload")

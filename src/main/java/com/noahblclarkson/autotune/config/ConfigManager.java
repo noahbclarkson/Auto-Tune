@@ -207,6 +207,7 @@ public class ConfigManager {
                 titlesSection.getString("sell", "Sell Items"),
                 titlesSection.getString("autosell", "Autosell"),
                 titlesSection.getString("trends", "Market Trends"),
+                titlesSection.getString("market-history", "Price History"),
                 titlesSection.getString("transaction-history", "Your Transactions"),
                 titlesSection.getString("admin-transaction-history", "All Transactions")
         )

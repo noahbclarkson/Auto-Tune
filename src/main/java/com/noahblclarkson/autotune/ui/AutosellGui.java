@@ -5,6 +5,8 @@ import com.github.stefvanschie.inventoryframework.gui.type.ChestGui;
 import com.github.stefvanschie.inventoryframework.pane.PaginatedPane;
 import com.github.stefvanschie.inventoryframework.pane.StaticPane;
 import com.noahblclarkson.autotune.AutoTune;
+import com.noahblclarkson.autotune.ui.AnvilMinPriceGui;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import com.noahblclarkson.autotune.config.AutoTuneConfig.ColorsConfig;
 import com.noahblclarkson.autotune.config.AutoTuneConfig.MaterialsConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
@@ -26,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class AutosellGui {
 
@@ -189,7 +192,9 @@ public class AutosellGui {
         }
 
         lore.add(Component.empty());
-        lore.add(Component.text("Click to toggle", mutedColor)
+        lore.add(Component.text("Left-click: set min price (anvil)", mutedColor)
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("Shift+click: toggle enabled/disabled", mutedColor)
                 .decoration(TextDecoration.ITALIC, false));
 
         meta.lore(lore);
@@ -201,8 +206,23 @@ public class AutosellGui {
         display.setItemMeta(meta);
 
         return new GuiItem(display, event -> {
-            autosellManager.toggleItem(player, shopItem.id());
-            renderItemsView();
+            // Shift+left-click = toggle enabled/disabled
+            if (event.isShiftClick() && event.isLeftClick()) {
+                autosellManager.toggleItem(player, shopItem.id());
+                renderItemsView();
+                return;
+            }
+            // Normal left-click = open anvil to set per-item min price
+            if (event.isLeftClick()) {
+                player.closeInventory();
+                new AnvilMinPriceGui(plugin, player, shopItem).open();
+                return;
+            }
+            // Right-click also opens anvil (more discoverable for some players)
+            if (event.isRightClick()) {
+                player.closeInventory();
+                new AnvilMinPriceGui(plugin, player, shopItem).open();
+            }
         });
     }
 

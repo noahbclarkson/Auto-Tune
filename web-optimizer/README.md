@@ -26,6 +26,7 @@ This web app lets you experiment with all those parameters in real-time via an i
 | `/` | Landing page — overview & feature highlights |
 | `/how-it-works` | Deep-dive explanation of the pricing algorithm |
 | `/simulator` | Interactive simulator with sliders, charts & stability forecast |
+| `/sweep-results` | 840-config parameter sweep results — filter, sort & find optimal settings |
 | `/true-prices` | Cross-server true-price discovery from ratio matrices |
 | `/exchange-rates` | Per-server economy multipliers vs. global baseline |
 | `/servers` | Registered servers & their submission status |

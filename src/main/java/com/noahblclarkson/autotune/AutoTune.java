@@ -218,6 +218,11 @@ public class AutoTune extends JavaPlugin {
     }
 
     @NotNull
+    public TreasuryService getTreasuryService() {
+        return treasuryService;
+    }
+
+    @NotNull
     public EconomyMetricsManager getEconomyMetricsManager() {
         return economyMetricsManager;
     }

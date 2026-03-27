@@ -31,8 +31,24 @@ import java.util.concurrent.TimeUnit;
 
 public class AuctionGui {
 
-    private static final int[] SELL_SLOTS = {9, 10, 11, 12, 13, 18, 19, 20, 21, 22};
-    private static final int[] BUY_SLOTS  = {14, 15, 16, 17, 23, 24, 25, 26, 32, 33, 34, 35};
+    // Slot positions within the buy pane (4-wide, rows 1-4 inside pane = rows 1-4 of gui)
+    // 4 items per row × 4 rows = 16 max, but we show 12 to leave room for nav
+    private static final int[] BUY_SLOTS = {
+            // Row 1 (gui row 1, pane row 0): cols 0-2
+            9,  10, 11,
+            // Row 2 (gui row 2, pane row 1): cols 0-2
+            18, 19, 20,
+            // Row 3 (gui row 3, pane row 2): cols 0-2
+            27, 28, 29,
+            // Row 4 (gui row 4, pane row 3): cols 0-2
+            36, 37, 38
+    };
+    private static final int[] SELL_SLOTS = {
+            // Row 1 (gui row 1, pane row 0): cols 0-4
+            9,  10, 11, 12, 13,
+            // Row 2 (gui row 2, pane row 1): cols 0-4
+            18, 19, 20, 21, 22
+    };
     private static final int   INFO_SLOT  = 4;
     private static final int   SELL_LABEL_SLOT = 0;
     private static final int   BUY_LABEL_SLOT  = 7;
@@ -116,7 +132,7 @@ public class AuctionGui {
         gui.addPane(header);
 
         // ── Sell orders column (left) ─────────────────────────────────────────
-        StaticPane sellPane = new StaticPane(0, 1, 5, 5);
+        StaticPane sellPane = new StaticPane(0, 1, 9, 4);
         sellPane.addItem(new GuiItem(makeItem(Material.BARRIER,
                 Component.text("SELL ORDERS", RED, TextDecoration.BOLD),
                 List.of(Component.text("Players selling " + (material != null ? formatMaterial(material) : "items"), GRAY))),
@@ -145,7 +161,7 @@ public class AuctionGui {
         gui.addPane(sellPane);
 
         // ── Buy orders column (right) ──────────────────────────────────────────
-        StaticPane buyPane = new StaticPane(5, 1, 4, 5);
+        StaticPane buyPane = new StaticPane(5, 1, 3, 4);
         buyPane.addItem(new GuiItem(makeItem(Material.EMERALD,
                 Component.text("BUY ORDERS", GREEN, TextDecoration.BOLD),
                 List.of(Component.text("Players buying " + (material != null ? formatMaterial(material) : "items"), GRAY))),
@@ -155,7 +171,7 @@ public class AuctionGui {
         for (AuctionOrder order : buyOrders) {
             if (buySlot >= BUY_SLOTS.length) break;
             int row = BUY_SLOTS[buySlot] / 9;
-            int col = BUY_SLOTS[buySlot] % 9 - 5; // offset into the right half
+            int col = BUY_SLOTS[buySlot] % 9;
             buyPane.addItem(new GuiItem(makeOrderItem(order, player),
                     e -> handleFillClick((Player) e.getWhoClicked(), order)), col, row);
             buySlot++;

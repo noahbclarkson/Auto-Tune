@@ -299,7 +299,7 @@ public class ShopGui {
         return new GuiItem(display, event -> openBuySellGui(shopItem));
     }
 
-    private void openBuySellGui(ShopItem shopItem) {
+    public void openBuySellGui(ShopItem shopItem) {
         GuiConfig guiConfig = configManager.getConfig().gui();
         ColorsConfig colors = guiConfig.colors();
         MaterialsConfig materials = guiConfig.materials();
@@ -383,7 +383,8 @@ public class ShopGui {
                 ));
                 buyItem.setItemMeta(buyMeta);
                 final int amount = qty;
-                pane.addItem(new GuiItem(buyItem, event -> executeBuy(shopItem, amount)), col, 1);
+                pane.addItem(new GuiItem(buyItem,
+                        event -> new CartConfirmGui(plugin, player).showBuyConfirm(shopItem, amount)), col, 1);
                 col++;
             }
         } else {
@@ -415,7 +416,8 @@ public class ShopGui {
             ));
             sellItem.setItemMeta(sellMeta);
             final int amount = qty;
-            pane.addItem(new GuiItem(sellItem, event -> executeSell(shopItem, amount)), col, 2);
+            pane.addItem(new GuiItem(sellItem,
+                    event -> new CartConfirmGui(plugin, player).showSellConfirm(shopItem, amount, null)), col, 2);
             col++;
         }
 
@@ -427,46 +429,6 @@ public class ShopGui {
 
         buySellGui.addPane(pane);
         buySellGui.show(player);
-    }
-
-    private void executeBuy(ShopItem shopItem, int amount) {
-        economyManager.processBuyAsync(player, shopItem, amount).thenAccept(result ->
-                databaseManager.runOnMain(() -> {
-                    if (result.success()) {
-                        player.sendMessage(configManager.getMessage("shop.purchase-success", Map.of(
-                                "amount", String.valueOf(result.amount()),
-                                "item", shopItem.getDisplayNameOrMaterial(),
-                                "price", configManager.formatCurrency(result.totalPrice())
-                        )));
-                        openBuySellGui(shopItem);
-                    } else {
-                        player.sendMessage(Component.text(result.errorMessage(),
-                                configManager.resolveColor(configManager.getConfig().gui().colors().negative())));
-                    }
-                })).exceptionally(ex -> {
-            plugin.getLogger().log(Level.WARNING, "Failed to process buy transaction", ex);
-            return null;
-        });
-    }
-
-    private void executeSell(ShopItem shopItem, int amount) {
-        economyManager.processSellAsync(player, shopItem, amount).thenAccept(result ->
-                databaseManager.runOnMain(() -> {
-                    if (result.success()) {
-                        player.sendMessage(configManager.getMessage("shop.sale-success", Map.of(
-                                "amount", String.valueOf(result.amount()),
-                                "item", shopItem.getDisplayNameOrMaterial(),
-                                "price", configManager.formatCurrency(result.totalPrice())
-                        )));
-                        openBuySellGui(shopItem);
-                    } else {
-                        player.sendMessage(Component.text(result.errorMessage(),
-                                configManager.resolveColor(configManager.getConfig().gui().colors().negative())));
-                    }
-                })).exceptionally(ex -> {
-            plugin.getLogger().log(Level.WARNING, "Failed to process sell transaction", ex);
-            return null;
-        });
     }
 
     private StaticPane createItemsNavigationPane(boolean showBack) {

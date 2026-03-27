@@ -892,11 +892,17 @@ impl PlayerAgent {
                 let base = self.guild_base_inventory.get(&i).copied().unwrap_or(50);
 
                 // Price dip detected: market price is guild_price_dip_threshold+% below perceived
-                if buy_price < perceived * dip_multiplier && current < base && self.balance > buy_price {
+                if buy_price < perceived * dip_multiplier
+                    && current < base
+                    && self.balance > buy_price
+                {
                     let room = (base - current) as f64;
                     let max_affordable = (self.balance / buy_price).floor() as i32;
                     let amount = rng.random_inclusive(
-                        1..=(room as i32).min(max_affordable).min(self.max_trade_amount).max(1),
+                        1..=(room as i32)
+                            .min(max_affordable)
+                            .min(self.max_trade_amount)
+                            .max(1),
                     );
                     let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                     let cost = buy_price * slippage * amount as f64;

@@ -225,19 +225,21 @@ impl Simulation {
                 .filter(|l| l.status == LoanStatus::Active)
                 .map(|l| l.current_balance)
                 .sum();
-            let gdp_window = 288u64;
-            let window_start = self.current_tick.saturating_sub(gdp_window);
             let gdp: f64 = self
                 .transactions
                 .iter()
-                .filter(|tx| tx.tick >= window_start && tx.tx_type == TransactionType::Buy)
+                .filter(|tx| tx.tx_type == TransactionType::Buy)
                 .map(|tx| tx.total_price)
                 .sum();
 
+            // Guard: skip circuit breaker if no transactions yet (initialization phase).
+            // At tick 0, gdp=0 → ratio=f64::MAX → TIER3 would fire spuriously.
+            // Once transactions exist, ratio is meaningful and circuit breaker applies.
             let ratio = if gdp > 0.0 {
                 total_debt / gdp
             } else {
-                f64::MAX
+                // No GDP yet — circuit breaker inactive until economy is running.
+                -1.0
             };
 
             if ratio > lc.debt_gdp_tier3_ratio {

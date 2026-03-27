@@ -196,6 +196,43 @@ impl Scenario {
         }
     }
 
+    /// sp08-moderate: Tests tiered circuit breaker at tier1 and tier2 levels.
+    /// sell_pressure_multiplier=0.80 (underselling bias), standard player mix,
+    /// single LoanCascade at day 6 (earlier cascade = less compound growth than day-7).
+    /// Expected: tier1 fires ~day 4-5 (3x debt/GDP), tier2 ~day 7-8 (5x), tier3 avoided.
+    /// Compare to stressed-economy (23,196x, tier3 fires) and sp08-full (475x, tier3 fires).
+    pub fn sp08_moderate() -> Self {
+        let mut config = SimConfig::default();
+        config.economy.sell_pressure_multiplier = 0.80;
+        Self {
+            name: "sp08 Moderate Debt Test".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 5,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Hoarder".into(),
+                    count: 1,
+                },
+            ],
+            // Single cascade at day 6: earlier than stressed (day 5) and sp08-stressed.
+            // Economy has 6 days of growth before cascade = moderate compound, not catastrophic.
+            stress_events: vec![StressEvent::LoanCascade { at_tick: 288 * 6 }],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Guild Stability Test: Standard economy with GuildBuyer archetypes.
     /// GuildBuyers maintain target inventory — they buy when stock is low,
     /// hold otherwise. Tests whether guild players provide price stability
@@ -225,6 +262,43 @@ impl Scenario {
             ],
             stress_events: vec![],
             duration_ticks: 288 * 14, // 14 days
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Buyer-heavy economy: tests whether more Hoarders and GuildBuyers can counteract
+    /// Farmer oversupply. Player mix: 2 GuildBuyer + 3 Casual + 3 Hoarder + 2 Farmer + 2 Trader.
+    /// Fewer Farmers and more Hoarders vs guild_stability. Also tests whether the
+    /// tiered circuit breaker helps when buyer mix is better.
+    pub fn buyer_heavy() -> Self {
+        let config = SimConfig::default();
+        Self {
+            name: "Buyer Heavy Economy".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Hoarder".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
             speed_ticks_per_sec: 200,
         }
     }
@@ -1099,6 +1173,8 @@ fn main() -> eframe::Result<()> {
         println!("  high-activity    - High activity, 20 players, 7 days");
         println!("  low-player       - 3 players, 14 days");
         println!("  spread-stability - Farmer/Trader mix, 10 days");
+        println!("  sp08-moderate    - Tiered breaker test: sp=0.80, cascade at day 6, 14d");
+        println!("  buyer-heavy     - Buyer-heavy mix: 2 GuildBuyer + 3 Hoarder + 3 Casual");
         println!("  correlation      - Sector correlation test (treatment vs control)");
         println!("  all              - Run all scenarios and compare");
         println!("  sweep            - Parameter sweep across engine parameter space");
@@ -1146,6 +1222,8 @@ fn main() -> eframe::Result<()> {
                 Scenario::high_activity(),
                 Scenario::low_player(),
                 Scenario::spread_stability(),
+                Scenario::sp08_moderate(),
+                Scenario::buyer_heavy(),
                 Scenario::guild_stability(),
             ];
             let base_dir = output_dir.unwrap_or_else(|| PathBuf::from("./output"));
@@ -1174,6 +1252,8 @@ fn main() -> eframe::Result<()> {
                 "high-activity" | "high_activity" => Scenario::high_activity(),
                 "low-player" | "low_player" => Scenario::low_player(),
                 "spread-stability" | "spread_stability" => Scenario::spread_stability(),
+                "sp08-moderate" | "sp08_moderate" => Scenario::sp08_moderate(),
+                "buyer-heavy" | "buyer_heavy" => Scenario::buyer_heavy(),
                 "guild-stability" | "guild_stability" => Scenario::guild_stability(),
                 "correlation" => Scenario::correlation(),
                 _ => {

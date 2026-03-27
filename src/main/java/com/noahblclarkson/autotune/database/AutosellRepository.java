@@ -3,7 +3,9 @@ package com.noahblclarkson.autotune.database;
 import org.jdbi.v3.core.Jdbi;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -148,6 +150,28 @@ public class AutosellRepository {
                         .bind("itemId", itemId)
                         .mapTo(BigDecimal.class)
                         .findOne());
+    }
+
+    /**
+     * Get all per-item minimum price thresholds for a player.
+     * Only includes items that have a non-null custom threshold set.
+     * Used to populate the in-memory cache on player login.
+     */
+    public Map<Integer, BigDecimal> getAllMinPrices(UUID playerUuid) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                                SELECT item_id, min_price FROM at_autosell_items
+                                WHERE player_uuid = :playerUuid AND min_price IS NOT NULL
+                                """)
+                        .bind("playerUuid", playerUuid.toString())
+                        .map((rs, ctx) -> {
+                            int itemId = rs.getInt("item_id");
+                            BigDecimal minPrice = rs.getBigDecimal("min_price");
+                            return java.util.Map.entry(itemId, minPrice);
+                        })
+                        .collect(java.util.stream.Collectors.toMap(
+                                java.util.Map.Entry::getKey,
+                                java.util.Map.Entry::getValue)));
     }
 
     /**

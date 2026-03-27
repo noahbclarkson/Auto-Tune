@@ -270,6 +270,8 @@ public class EconomyManager {
         // If this fails, money was already deposited and items removed — log for
         // admin review but still report success to the player (items are gone,
         // money is with them, which is the better outcome than items+gifts+broken ledger).
+        // Catches: DB errors, executor shutdown (RejectedExecutionException),
+        // interrupted threads, and any other unexpected failure from supplyAsync.
         final BigDecimal finalPricePerUnit = pricePerUnit;
         final BigDecimal finalNetProceeds = netProceeds;
         try {
@@ -291,9 +293,6 @@ public class EconomyManager {
                 return null;
             }).join();
         } catch (Exception e) {
-            // DB write failed but player has money and items are removed.
-            // This is the safer outcome: player got paid with a clean inventory.
-            // Log for admin review — no user-facing error so they don't panic.
             plugin.getLogger().log(Level.WARNING,
                     "[Auto-Tune] DB write failed after sell for " + player.getName()
                             + " (amount=" + amount + ", net=" + netProceeds + "). "
@@ -434,13 +433,19 @@ public class EconomyManager {
                     }
                 }
             } else {
-                // Refund the buy cost portion since sell items couldn't be removed.
-                // netCost > 0 means player paid; netCost < 0 means player received money.
+                // Sell items couldn't be fully removed — refund whatever money was
+                // moved in Phase 2 to leave the player in a consistent state.
+                // This doesn't recover items already removed, but it stops the
+                // player from gaining money from a partially-failed cart.
                 if (finalNetCost.compareTo(BigDecimal.ZERO) > 0) {
+                    // netCost > 0: player was charged for buys — refund it
                     withdraw(player, finalNetCost.doubleValue());
+                } else if (finalNetCost.compareTo(BigDecimal.ZERO) < 0) {
+                    // netCost < 0: player received sell earnings — reclaim them
+                    // (some sell items were already removed and can't be restored)
+                    deposit(player, finalNetCost.abs().doubleValue());
                 }
-                // If netCost < 0 (player received money), they already have it.
-                // Either way, don't give buy items — player already has their sell items back.
+                // netCost == 0: nothing to refund
             }
 
             return TransactionResult.success(

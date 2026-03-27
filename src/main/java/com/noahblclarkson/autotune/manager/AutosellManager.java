@@ -26,6 +26,10 @@ public class AutosellManager {
 
     private static final Logger LOGGER = Logger.getLogger(AutosellManager.class.getName());
 
+    // Cache: player UUID → (itemId → min price, null means no per-item override / use global)
+    // Loaded eagerly on player login; kept in sync with DB writes.
+    private final Map<UUID, Map<Integer, BigDecimal>> playerMinPrices = new ConcurrentHashMap<>();
+
     private final Map<UUID, Set<Integer>> playerEnabledItems = new ConcurrentHashMap<>();
     private final DatabaseManager databaseManager;
     private final AutosellRepository autosellRepository;
@@ -50,17 +54,25 @@ public class AutosellManager {
 
     public void loadPlayer(@NotNull Player player) {
         UUID playerId = player.getUniqueId();
-        databaseManager.supplyAsync(() -> autosellRepository.getEnabledItems(playerId))
-                .thenAccept(enabledItems -> {
-                    if (enabledItems != null) {
-                        databaseManager.runOnMain(() -> playerEnabledItems.put(playerId, new HashSet<>(enabledItems)));
-                    }
-                })
-                .exceptionally(ex -> {
-                    LOGGER.log(Level.WARNING, "Failed to load autosell items for player", ex);
-                    return null;
+        // Load both enabled items and min prices in a single DB round-trip
+        databaseManager.supplyAsync(() -> {
+            Set<Integer> enabled = new HashSet<>(autosellRepository.getEnabledItems(playerId));
+            Map<Integer, BigDecimal> minPrices = autosellRepository.getAllMinPrices(playerId);
+            return new AutosellLoadResult(enabled, minPrices);
+        }).thenAccept(result -> {
+            if (result != null) {
+                databaseManager.runOnMain(() -> {
+                    playerEnabledItems.put(playerId, result.enabled());
+                    playerMinPrices.put(playerId, result.minPrices());
                 });
+            }
+        }).exceptionally(ex -> {
+            LOGGER.log(Level.WARNING, "Failed to load autosell data for player", ex);
+            return null;
+        });
     }
+
+    private record AutosellLoadResult(Set<Integer> enabled, Map<Integer, BigDecimal> minPrices) {}
 
     public void unloadPlayer(@NotNull UUID uuid) {
         playerEnabledItems.remove(uuid);
@@ -68,13 +80,16 @@ public class AutosellManager {
 
     /**
      * Returns the effective minimum price for an item.
-     * Returns the player's per-item override if set, otherwise the global config minimum.
+     * Uses the in-memory cache (loaded on login), falls back to global config.
+     * No blocking DB calls — safe for hot paths like inventory scans.
      */
     public double getEffectiveMinPrice(@NotNull UUID uuid, int itemId) {
-        Optional<BigDecimal> perItem = databaseManager.supplyAsync(
-                () -> autosellRepository.getMinPrice(uuid, itemId)).join();
-        if (perItem.isPresent() && perItem.get().doubleValue() > 0.0) {
-            return perItem.get().doubleValue();
+        Map<Integer, BigDecimal> prices = playerMinPrices.get(uuid);
+        if (prices != null) {
+            BigDecimal perItem = prices.get(itemId);
+            if (perItem != null && perItem.doubleValue() > 0.0) {
+                return perItem.doubleValue();
+            }
         }
         return configManager.getConfig().autosell().minimumPrice();
     }
@@ -261,6 +276,14 @@ public class AutosellManager {
         BigDecimal price = minPrice == 0 ? null : BigDecimal.valueOf(minPrice);
         autosellRepository.setMinPrice(uuid, itemId, price);
 
+        // Keep cache in sync
+        Map<Integer, BigDecimal> prices = playerMinPrices.computeIfAbsent(uuid, k -> new ConcurrentHashMap<>());
+        if (price == null) {
+            prices.remove(itemId);
+        } else {
+            prices.put(itemId, price);
+        }
+
         Optional<ShopItem> item = shopManager.getItemById(itemId);
         String itemName = item.map(ShopItem::getDisplayNameOrMaterial).orElse("Unknown Item");
 
@@ -280,6 +303,12 @@ public class AutosellManager {
     public void removeMinPrice(@NotNull Player player, int itemId) {
         UUID uuid = player.getUniqueId();
         autosellRepository.removeMinPrice(uuid, itemId);
+
+        // Keep cache in sync
+        Map<Integer, BigDecimal> prices = playerMinPrices.get(uuid);
+        if (prices != null) {
+            prices.remove(itemId);
+        }
 
         Optional<ShopItem> item = shopManager.getItemById(itemId);
         String itemName = item.map(ShopItem::getDisplayNameOrMaterial).orElse("Unknown Item");

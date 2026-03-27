@@ -23,6 +23,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import java.util.List;
  *
  * Level 2 — Item Detail:  mini bar chart using colored stained glass panes to show
  *            price direction over time, plus stats (current/high/low/volume/spread).
+ *            Timeframe selector (1H / 24H / 7D / 30D) controls how much history is shown.
  *            Back button returns to the browser.
  *
  * The chart renders as up to 9 columns (time periods) × 2 rows.
@@ -53,6 +55,35 @@ public class MarketHistoryGui {
     // How many history entries to show in the chart
     private static final int CHART_COLUMNS = 9;
 
+    /**
+     * Timeframe for history queries. Each variant knows how far back to query
+     * and what label to display in the GUI button.
+     */
+    public enum Timeframe {
+        HOUR(  "1H",  60),
+        DAY(   "24H", 60 * 24),
+        WEEK(  "7D",  60 * 24 * 7),
+        MONTH( "30D", 60 * 24 * 30);
+
+        private final String label;
+        private final int minutes;
+
+        Timeframe(String label, int minutes) {
+            this.label = label;
+            this.minutes = minutes;
+        }
+
+        public String label() { return label; }
+
+        /** Number of history rows to fetch (capped at CHART_COLUMNS) */
+        public int fetchLimit() { return Math.min(minutes / 5, CHART_COLUMNS); }
+
+        /** Instant marking the start of this timeframe window */
+        public Instant windowStart() {
+            return Instant.now().minusSeconds(minutes * 60L);
+        }
+    }
+
     private final AutoTune plugin;
     private final Player player;
     private final ShopManager shopManager;
@@ -60,6 +91,7 @@ public class MarketHistoryGui {
     private final ConfigManager configManager;
     private final ItemRepository itemRepository;
     private ChestGui gui;  // current open GUI; used for gui.update() in nav lambdas
+    private Timeframe selectedTimeframe = Timeframe.DAY;  // default timeframe
 
     public MarketHistoryGui(AutoTune plugin, Player player) {
         this.plugin = plugin;
@@ -142,7 +174,7 @@ public class MarketHistoryGui {
 
         return new GuiItem(display, event -> {
             event.setCancelled(true);
-            openDetailView(item);
+            openDetailView(item, selectedTimeframe);
         });
     }
 
@@ -202,7 +234,9 @@ public class MarketHistoryGui {
     // Level 2 — Item Detail + Chart
     // ─────────────────────────────────────────────────────────────────────────
 
-    public void openDetailView(ShopItem item) {
+    public void openDetailView(ShopItem item, Timeframe timeframe) {
+        selectedTimeframe = timeframe;
+
         gui = new ChestGui(6, item.getDisplayNameOrMaterial() + " History");
         gui.setOnGlobalClick(event -> event.setCancelled(true));
 
@@ -252,12 +286,17 @@ public class MarketHistoryGui {
         infoItem.setItemMeta(infoMeta);
         header.addItem(new GuiItem(infoItem, e -> {}), 1, 0);
 
+        // Timeframe selector in header at cols 5-7 (3 buttons: 1H, 24H, 7D, 30D — 4 buttons need 4 cols)
+        // Actually put them at cols 5-8 in row 0
+        createTimeframeButtons(header, item, timeframe, colors);
+
         gui.addPane(header);
 
         // ── Chart area (rows 2-3, cols 0-8) ─────────────────────────────────
         StaticPane chartArea = new StaticPane(0, 2, 9, 2);
 
-        List<PriceHistory> history = itemRepository.getPriceHistory(item.id(), CHART_COLUMNS);
+        List<PriceHistory> history = itemRepository.getPriceHistorySince(
+                item.id(), timeframe.windowStart(), timeframe.fetchLimit());
 
         if (history.isEmpty()) {
             ItemStack noData = new ItemStack(Material.BARRIER);
@@ -283,9 +322,56 @@ public class MarketHistoryGui {
         gui.addPane(buildStatsRow(item, history, colors, muted));
 
         // ── Navigation row (row 5) ──────────────────────────────────────────
-        gui.addPane(buildDetailNav(item));
+        gui.addPane(buildDetailNav(item, timeframe));
 
         gui.show(player);
+    }
+
+    /**
+     * Creates timeframe selector buttons and adds them to the given pane.
+     * Buttons are placed in row 0 starting at column 5 (cols 5, 6, 7, 8 = 4 buttons).
+     */
+    private void createTimeframeButtons(StaticPane pane, ShopItem item,
+                                        Timeframe selected, ColorsConfig colors) {
+        // Border glass for the 4 button slots (cols 5-8)
+        MaterialsConfig materials = configManager.getConfig().gui().materials();
+        Material borderMat = configManager.resolveMaterial(materials.border(), Material.BLACK_STAINED_GLASS_PANE);
+
+        int slot = 5;
+        for (Timeframe tf : Timeframe.values()) {
+            boolean isSelected = (tf == selected);
+            Material mat = isSelected ? Material.LIME_STAINED_GLASS_PANE : Material.GRAY_STAINED_GLASS_PANE;
+            TextColor labelColor = isSelected
+                    ? configManager.resolveColor(colors.positive())
+                    : configManager.resolveColor(colors.muted());
+
+            ItemStack btn = new ItemStack(mat);
+            ItemMeta bm = btn.getItemMeta();
+            bm.displayName(Component.text(tf.label(), labelColor)
+                    .decoration(TextDecoration.ITALIC, false));
+
+            if (isSelected) {
+                bm.lore(List.of(
+                        Component.text("Currently selected", configManager.resolveColor(colors.positive()))
+                                .decoration(TextDecoration.ITALIC, false)
+                ));
+            } else {
+                bm.lore(List.of(
+                        Component.text("Click to view " + tf.label() + " history", configManager.resolveColor(colors.muted()))
+                                .decoration(TextDecoration.ITALIC, false)
+                ));
+            }
+            btn.setItemMeta(bm);
+
+            final Timeframe chosen = tf;
+            pane.addItem(new GuiItem(btn, e -> {
+                e.setCancelled(true);
+                if (chosen != selected) {
+                    openDetailView(item, chosen);
+                }
+            }), slot, 0);
+            slot++;
+        }
     }
 
     /**
@@ -476,7 +562,7 @@ public class MarketHistoryGui {
         return pane;
     }
 
-    private StaticPane buildDetailNav(ShopItem item) {
+    private StaticPane buildDetailNav(ShopItem item, Timeframe timeframe) {
         ColorsConfig colors = configManager.getConfig().gui().colors();
         MaterialsConfig materials = configManager.getConfig().gui().materials();
 
@@ -500,13 +586,13 @@ public class MarketHistoryGui {
         back.setItemMeta(bm);
         pane.addItem(new GuiItem(back, e -> openBrowser()), 0, 0);
 
-        // Refresh
+        // Refresh — reopens with current timeframe
         ItemStack refresh = new ItemStack(Material.LIGHTNING_ROD);
         ItemMeta rm = refresh.getItemMeta();
         rm.displayName(Component.text("Refresh",
                 configManager.resolveColor(colors.accent())).decoration(TextDecoration.ITALIC, false));
         refresh.setItemMeta(rm);
-        pane.addItem(new GuiItem(refresh, e -> openDetailView(item)), 4, 0);
+        pane.addItem(new GuiItem(refresh, e -> openDetailView(item, timeframe)), 4, 0);
 
         // Close
         ItemStack close = new ItemStack(Material.BARRIER);

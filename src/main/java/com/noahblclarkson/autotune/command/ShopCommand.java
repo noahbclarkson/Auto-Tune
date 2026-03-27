@@ -160,7 +160,8 @@ public class ShopCommand {
         }
 
         // Open the GUI detail view directly for this item
-        new MarketHistoryGui(plugin, player).openDetailView(item.get());
+        new MarketHistoryGui(plugin, player).openDetailView(item.get(),
+                com.noahblclarkson.autotune.ui.MarketHistoryGui.Timeframe.DAY);
     }
 
     @Command("shop reload")

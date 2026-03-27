@@ -206,6 +206,35 @@ public class ItemRepository {
                         .list());
     }
 
+    /**
+     * Returns price history for an item within the given time window.
+     * Results are ordered newest-first and limited to the most recent N entries.
+     */
+    public List<PriceHistory> getPriceHistorySince(int itemId, Instant since, int limit) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                                SELECT id, item_id, price, buy_volume, sell_volume, bpd, spd, timestamp
+                                FROM at_market_history
+                                WHERE item_id = :itemId AND timestamp >= :since
+                                ORDER BY timestamp DESC
+                                LIMIT :limit
+                                """)
+                        .bind("itemId", itemId)
+                        .bind("since", Timestamp.from(since))
+                        .bind("limit", limit)
+                        .map((rs, ctx) -> PriceHistory.builder()
+                                .id(rs.getLong("id"))
+                                .itemId(rs.getInt("item_id"))
+                                .price(rs.getBigDecimal("price"))
+                                .buyVolume(rs.getInt("buy_volume"))
+                                .sellVolume(rs.getInt("sell_volume"))
+                                .bpd(rs.getBigDecimal("bpd"))
+                                .spd(rs.getBigDecimal("spd"))
+                                .timestamp(rs.getTimestamp("timestamp").toInstant())
+                                .build())
+                        .list());
+    }
+
     public Optional<PriceHistory> getClosestPriceBefore(int itemId, Instant since) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""

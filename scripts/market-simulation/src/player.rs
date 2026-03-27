@@ -877,8 +877,12 @@ impl PlayerAgent {
 
         // Phase 1: Price-dip buying — proactive market stabilization.
         // When price drops significantly below perceived value, GuildBuyer buys
-        // even if inventory is at target. This creates demand when prices fall,
+        // regardless of current inventory level. This creates demand when prices fall,
         // acting as an automatic price floor and reducing systemic underselling.
+        // BUG FIX (2026-03-27): Removed `&& current < base` from the condition.
+        // The original check prevented price-dip buying when inventory >= base,
+        // which contradicted the entire purpose of proactive buying. Phase 2
+        // handles target replenishment separately — Phase 1 is purely price-driven.
         if self.guild_price_dip_threshold > 0.0 {
             let dip_multiplier = 1.0 - self.guild_price_dip_threshold;
             for (i, _item) in items.iter().enumerate() {
@@ -889,14 +893,13 @@ impl PlayerAgent {
                     .unwrap_or(items[i].price);
                 let buy_price = items[i].buy_price();
                 let current = self.inventory.get(&i).copied().unwrap_or(0);
-                let base = self.guild_base_inventory.get(&i).copied().unwrap_or(50);
+                let target = self.guild_target_inventory.get(&i).copied().unwrap_or(50);
 
                 // Price dip detected: market price is guild_price_dip_threshold+% below perceived
-                if buy_price < perceived * dip_multiplier
-                    && current < base
-                    && self.balance > buy_price
-                {
-                    let room = (base - current) as f64;
+                // Buy regardless of inventory level (proactive stabilization)
+                if buy_price < perceived * dip_multiplier && self.balance > buy_price {
+                    // Can buy up to target inventory when seeing a dip (stock up opportunistically)
+                    let room = (target - current).max(0) as f64;
                     let max_affordable = (self.balance / buy_price).floor() as i32;
                     let amount = rng.random_inclusive(
                         1..=(room as i32)
@@ -904,6 +907,9 @@ impl PlayerAgent {
                             .min(self.max_trade_amount)
                             .max(1),
                     );
+                    if amount <= 0 {
+                        continue;
+                    }
                     let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                     let cost = buy_price * slippage * amount as f64;
                     if cost <= self.balance {

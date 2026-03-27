@@ -255,6 +255,9 @@ public class EconomyManager {
         // Clone the inventory contents so we can restore on failure.
         ItemStack[] preRemoval = player.getInventory().getStorageContents().clone();
         if (!removeItems(player, item, amount)) {
+            // removeItems modifies in-place and returns false if there weren't enough
+            // items. Restore the snapshot so the player isn't left short-handed.
+            player.getInventory().setStorageContents(preRemoval);
             return TransactionResult.insufficientItems(countItems(player, item), amount);
         }
 
@@ -520,22 +523,27 @@ public class EconomyManager {
 
     private boolean removeItems(@NotNull Player player, @NotNull ShopItem shopItem, int amount) {
         int remaining = amount;
-        var contents = player.getInventory().getStorageContents();
+        // Iterate the ACTUAL inventory contents (not a snapshot) and modify in-place.
+        // getStorageContents() returns a direct reference to the slot array in Paper,
+        // so modifications here affect the player's actual inventory immediately.
+        ItemStack[] contents = player.getInventory().getStorageContents();
 
         for (int i = 0; i < contents.length && remaining > 0; i++) {
-            var item = contents[i];
+            ItemStack item = contents[i];
             if (item != null && ItemSerializer.matchesItem(item, shopItem.itemHash())) {
                 int toRemove = Math.min(remaining, item.getAmount());
                 if (toRemove >= item.getAmount()) {
-                    contents[i] = null;
+                    contents[i] = null;  // slot fully consumed — modify in-place
                 } else {
-                    item.setAmount(item.getAmount() - toRemove);
+                    item.setAmount(item.getAmount() - toRemove);  // partial — modify in-place
                 }
                 remaining -= toRemove;
             }
         }
-
-        player.getInventory().setStorageContents(contents);
+        // No setStorageContents call: modifications above were made directly to the
+        // live inventory slot array. Calling setStorageContents would overwrite any
+        // items the player received between our first read and this write — the same
+        // stale-snapshot bug fixed in sellInventory().
         return remaining == 0;
     }
 

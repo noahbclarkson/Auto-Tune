@@ -28,6 +28,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 
 @Singleton
@@ -414,6 +416,11 @@ public class AuctionManager {
      * Returns a CompletableFuture so callers can await DB completion before applying
      * their own economy/inventory effects (enables atomicity in the GUI layer).
      *
+     * CRITICAL: Economy ops (seller credit + buyer item delivery) run FIRST on the
+     * Bukkit main thread via CountDownLatch/await. Only after they succeed do we
+     * write to the DB. If economy ops fail we throw a RuntimeException and the caller
+     * (AuctionGui) refunds the buyer's escrowed money — no DB record is created.
+     *
      * @param buyOrderId  The buy order ID (may be a player UUID in GUI direct-fill path)
      * @param sellOrderId The sell order ID (may be a player UUID in GUI direct-fill path)
      * @param quantity    Number of items in the fill
@@ -426,6 +433,59 @@ public class AuctionManager {
         UUID fillId = UUID.randomUUID();
         Instant now = Instant.now();
 
+        // Look up orders synchronously on the ForkJoinPool thread — no main-thread
+        // dependency here, just DB reads which are safe to parallelize.
+        Optional<AuctionOrder> buyOpt = auctionRepo.findById(buyOrderId);
+        Optional<AuctionOrder> sellOpt = auctionRepo.findById(sellOrderId);
+
+        BigDecimal grossProceeds = execPrice.multiply(BigDecimal.valueOf(quantity));
+        BigDecimal taxAmount = treasuryService.collectAuctionTax(grossProceeds);
+        BigDecimal netProceeds = grossProceeds.subtract(taxAmount);
+        UUID sellerUuid = sellOpt.map(AuctionOrder::playerUuid).orElse(sellOrderId);
+        UUID buyerUuid = buyOpt.map(AuctionOrder::playerUuid).orElse(buyOrderId);
+
+        // ── Economy ops FIRST — then DB write ──────────────────────────────────
+        // Run seller credit and buyer item delivery on the main thread, waiting
+        // for both to complete before touching the DB. If either fails, throw so
+        // the caller refunds escrow and no DB record is created.
+        CountDownLatch economyLatch = new CountDownLatch(1);
+        AtomicReference<Exception> economyError = new AtomicReference<>();
+
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            try {
+                // Credit seller (after auction tax deduction).
+                Player seller = Bukkit.getPlayer(sellerUuid);
+                if (seller != null) {
+                    economy.depositPlayer(seller, netProceeds.doubleValue());
+                }
+                // Give buyer their items.
+                Player buyer = Bukkit.getPlayer(buyerUuid);
+                if (buyer != null) {
+                    Material mat = Material.valueOf(material);
+                    buyer.getInventory().addItem(new ItemStack(mat, quantity));
+                }
+            } catch (Exception e) {
+                economyError.set(e);
+            } finally {
+                economyLatch.countDown();
+            }
+        });
+
+        try {
+            if (!economyLatch.await(10, TimeUnit.SECONDS)) {
+                throw new RuntimeException("Timed out waiting for auction economy ops for fill " + fillId);
+            }
+            if (economyError.get() != null) {
+                throw new RuntimeException("Auction economy op failed for fill " + fillId, economyError.get());
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while processing auction fill " + fillId, e);
+        }
+
+        // Economy ops succeeded. Now atomically write to DB — if this fails,
+        // money and items are already with the right players (better outcome than
+        // DB showing a fill that never delivered).
         AuctionFill fill = AuctionFill.builder()
                 .id(fillId)
                 .buyOrderId(buyOrderId)
@@ -436,62 +496,27 @@ public class AuctionManager {
                 .build();
 
         return CompletableFuture.supplyAsync(() -> {
-            // All DB operations in one atomic unit — if any throws, the future
-            // propagates the exception so callers can handle failure.
-            auctionRepo.insertFill(fill);
+            try {
+                auctionRepo.insertFill(fill);
 
-            // Look up both orders once and cache results for subsequent ops.
-            Optional<AuctionOrder> buyOpt = auctionRepo.findById(buyOrderId);
-            Optional<AuctionOrder> sellOpt = auctionRepo.findById(sellOrderId);
-
-            buyOpt.ifPresent(buy -> {
-                int newRemaining = Math.max(0, buy.remainingQuantity() - quantity);
-                auctionRepo.update(buy.withRemainingQuantity(newRemaining));
-            });
-
-            sellOpt.ifPresent(sell -> {
-                int newRemaining = Math.max(0, sell.remainingQuantity() - quantity);
-                auctionRepo.update(sell.withRemainingQuantity(newRemaining));
-            });
-
-            // Economy + inventory ops: run on Bukkit main thread via scheduler.
-            // If player is offline they receive nothing (same as chest shops).
-            // These are best-effort — log failures but don't fail the DB write.
-
-            // Credit seller (after auction tax deduction).
-            sellOpt.ifPresent(sell -> {
-                BigDecimal grossProceeds = execPrice.multiply(BigDecimal.valueOf(quantity));
-                BigDecimal taxAmount = treasuryService.collectAuctionTax(grossProceeds);
-                BigDecimal netProceeds = grossProceeds.subtract(taxAmount);
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    try {
-                        Player seller = Bukkit.getPlayer(sell.playerUuid());
-                        economy.depositPlayer(seller, netProceeds.doubleValue());
-                    } catch (Exception e) {
-                        plugin.getLogger().log(Level.SEVERE,
-                                "Failed to credit seller " + sell.playerUuid() + " for fill " + fillId, e);
-                    }
+                buyOpt.ifPresent(buy -> {
+                    int newRemaining = Math.max(0, buy.remainingQuantity() - quantity);
+                    auctionRepo.update(buy.withRemainingQuantity(newRemaining));
                 });
-            });
 
-            // Give buyer their items. In GUI direct-fill, buyOrderId may be a player UUID
-            // (not an order DB ID). Use the buyer's UUID from the order record if
-            // available, otherwise fall back to buyOrderId directly.
-            UUID buyerUuid = buyOpt.map(AuctionOrder::playerUuid).orElse(buyOrderId);
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                try {
-                    Player buyer = Bukkit.getPlayer(buyerUuid);
-                    if (buyer != null) {
-                        Material mat = Material.valueOf(material);
-                        buyer.getInventory().addItem(new ItemStack(mat, quantity));
-                    }
-                } catch (Exception e) {
-                    plugin.getLogger().log(Level.SEVERE,
-                            "Failed to give buyer " + buyerUuid + " items for fill " + fillId, e);
-                }
-            });
+                sellOpt.ifPresent(sell -> {
+                    int newRemaining = Math.max(0, sell.remainingQuantity() - quantity);
+                    auctionRepo.update(sell.withRemainingQuantity(newRemaining));
+                });
 
-            return null;
+                return null;
+            } catch (Exception e) {
+                // Money + items already delivered; DB write failed — log for admin review.
+                plugin.getLogger().log(Level.SEVERE,
+                        "[Auto-Tune] DB write failed after auction fill " + fillId
+                                + " — money/items delivered but not recorded. Manual review needed.", e);
+                return null;  // Don't propagate: player already has their stuff
+            }
         });
     }
 

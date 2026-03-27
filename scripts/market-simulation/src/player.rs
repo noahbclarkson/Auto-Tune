@@ -202,6 +202,12 @@ pub struct PlayerAgent {
     /// Target inventory levels for GuildBuyer archetype (item → qty).
     /// Empty for all other archetypes.
     pub guild_target_inventory: HashMap<usize, i32>,
+    /// Base inventory for GuildBuyer — fixed reference for price-dip buying.
+    /// Equal to guild_target_inventory at construction. Does not change.
+    pub guild_base_inventory: HashMap<usize, i32>,
+    /// Price-dip threshold: buy when buy_price < perceived * (1.0 - this).
+    /// 0.0 = disabled. 0.2 = buy when price is 20%+ below perceived.
+    pub guild_price_dip_threshold: f64,
     pub credit_score: i32,
     pub total_traded: f64,
     pub online: bool,
@@ -235,6 +241,8 @@ impl PlayerAgent {
             online: false,
             total_trades: 0,
             guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            guild_price_dip_threshold: 0.0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -267,6 +275,8 @@ impl PlayerAgent {
             online: false,
             total_trades: 0,
             guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            guild_price_dip_threshold: 0.0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -303,6 +313,8 @@ impl PlayerAgent {
             online: false,
             total_trades: 0,
             guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            guild_price_dip_threshold: 0.0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -335,6 +347,8 @@ impl PlayerAgent {
             online: false,
             total_trades: 0,
             guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            guild_price_dip_threshold: 0.0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -367,6 +381,8 @@ impl PlayerAgent {
             online: false,
             total_trades: 0,
             guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            guild_price_dip_threshold: 0.0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent
@@ -406,6 +422,8 @@ impl PlayerAgent {
             online: false,
             total_trades: 0,
             guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            guild_price_dip_threshold: 0.0,
         };
         agent.init_perceived_values(item_count, base_prices);
         // Newbies prefer cheap basic items
@@ -446,6 +464,8 @@ impl PlayerAgent {
             online: false,
             total_trades: 0,
             guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            guild_price_dip_threshold: 0.0,
         };
         agent.init_perceived_values(item_count, base_prices);
         // AFK farmers prefer cheap gathered items (building blocks, ores, drops)
@@ -485,14 +505,18 @@ impl PlayerAgent {
             online: false,
             total_trades: 0,
             guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            // Buy when price drops 15-30% below perceived (proactive price stabilizer)
+            guild_price_dip_threshold: rng.random(0.15..0.30),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
-        // Pre-fill some inventory to represent guild stock
+        // Pre-fill inventory to represent guild stock
         for i in 0..item_count {
             let qty = rng.random(10..50);
             agent.inventory.insert(i, qty);
             agent.guild_target_inventory.insert(i, qty);
+            agent.guild_base_inventory.insert(i, qty);
         }
         agent
     }
@@ -851,6 +875,66 @@ impl PlayerAgent {
             }
         }
 
+        // Phase 1: Price-dip buying — proactive market stabilization.
+        // When price drops significantly below perceived value, GuildBuyer buys
+        // even if inventory is at target. This creates demand when prices fall,
+        // acting as an automatic price floor and reducing systemic underselling.
+        if self.guild_price_dip_threshold > 0.0 {
+            let dip_multiplier = 1.0 - self.guild_price_dip_threshold;
+            for (i, _item) in items.iter().enumerate() {
+                let perceived = self
+                    .perceived_values
+                    .get(&i)
+                    .copied()
+                    .unwrap_or(items[i].price);
+                let buy_price = items[i].buy_price();
+                let current = self.inventory.get(&i).copied().unwrap_or(0);
+                let base = self.guild_base_inventory.get(&i).copied().unwrap_or(50);
+
+                // Price dip detected: market price is guild_price_dip_threshold+% below perceived
+                if buy_price < perceived * dip_multiplier && current < base && self.balance > buy_price {
+                    let room = (base - current) as f64;
+                    let max_affordable = (self.balance / buy_price).floor() as i32;
+                    let amount = rng.random_inclusive(
+                        1..=(room as i32).min(max_affordable).min(self.max_trade_amount).max(1),
+                    );
+                    let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                    let cost = buy_price * slippage * amount as f64;
+                    if cost <= self.balance {
+                        let balance_before = self.balance;
+                        let inventory_before = current;
+                        self.balance -= cost;
+                        *self.inventory.entry(i).or_insert(0) += amount;
+                        self.total_traded += cost;
+                        self.total_trades += 1;
+                        decisions.push(PlayerDecision {
+                            item_index: i,
+                            is_buy: true,
+                            amount,
+                        });
+                        if record {
+                            logs.push(DecisionLog {
+                                player_id: self.id,
+                                item_index: i,
+                                is_buy: true,
+                                amount,
+                                price_per_unit: buy_price * slippage,
+                                total_cost: cost,
+                                perceived_value: perceived,
+                                effective_perceived: perceived * dip_multiplier,
+                                buy_threshold: 0.0,
+                                sell_threshold: self.sell_threshold,
+                                balance_before,
+                                inventory_before,
+                                reasoning: "guild_price_dip".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Phase 2: Replenish target inventory when below target
         for (i, _item) in items.iter().enumerate() {
             let target = self.guild_target_inventory.get(&i).copied().unwrap_or(50);
             let current = self.inventory.get(&i).copied().unwrap_or(0);

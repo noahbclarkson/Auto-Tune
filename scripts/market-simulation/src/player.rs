@@ -199,6 +199,9 @@ pub struct PlayerAgent {
     pub perceived_values: HashMap<usize, f64>,
     pub preferences: HashMap<usize, f64>,
     pub inventory: HashMap<usize, i32>,
+    /// Target inventory levels for GuildBuyer archetype (item → qty).
+    /// Empty for all other archetypes.
+    pub guild_target_inventory: HashMap<usize, i32>,
     pub credit_score: i32,
     pub total_traded: f64,
     pub online: bool,
@@ -231,6 +234,7 @@ impl PlayerAgent {
             total_traded: 0.0,
             online: false,
             total_trades: 0,
+            guild_target_inventory: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -262,6 +266,7 @@ impl PlayerAgent {
             total_traded: 0.0,
             online: false,
             total_trades: 0,
+            guild_target_inventory: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -297,6 +302,7 @@ impl PlayerAgent {
             total_traded: 0.0,
             online: false,
             total_trades: 0,
+            guild_target_inventory: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -328,6 +334,7 @@ impl PlayerAgent {
             total_traded: 0.0,
             online: false,
             total_trades: 0,
+            guild_target_inventory: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -359,6 +366,7 @@ impl PlayerAgent {
             total_traded: 0.0,
             online: false,
             total_trades: 0,
+            guild_target_inventory: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent
@@ -397,6 +405,7 @@ impl PlayerAgent {
             total_traded: 0.0,
             online: false,
             total_trades: 0,
+            guild_target_inventory: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         // Newbies prefer cheap basic items
@@ -436,6 +445,7 @@ impl PlayerAgent {
             total_traded: 0.0,
             online: false,
             total_trades: 0,
+            guild_target_inventory: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         // AFK farmers prefer cheap gathered items (building blocks, ores, drops)
@@ -474,12 +484,15 @@ impl PlayerAgent {
             total_traded: 0.0,
             online: false,
             total_trades: 0,
+            guild_target_inventory: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
         // Pre-fill some inventory to represent guild stock
         for i in 0..item_count {
-            agent.inventory.insert(i, rng.random(10..50));
+            let qty = rng.random(10..50);
+            agent.inventory.insert(i, qty);
+            agent.guild_target_inventory.insert(i, qty);
         }
         agent
     }
@@ -592,6 +605,9 @@ impl PlayerAgent {
         match self.archetype {
             Archetype::Exploiter => {
                 self.decide_exploiter(items, &mut decisions, record, &mut logs, slippage_coeff);
+            }
+            Archetype::GuildBuyer => {
+                self.decide_guildbuyer(items, &mut decisions, record, &mut logs, slippage_coeff);
             }
             _ => {
                 self.decide_value_based(items, &mut decisions, record, &mut logs, slippage_coeff);
@@ -809,6 +825,136 @@ impl PlayerAgent {
                     }
                 }
             }
+        }
+    }
+
+    /// Guild Buyer: maintains target inventory for guild members.
+    /// Buys heavily when below target, holds otherwise, sells only at high surplus (> 2x target).
+    fn decide_guildbuyer(
+        &mut self,
+        items: &[ItemState],
+        decisions: &mut Vec<PlayerDecision>,
+        record: bool,
+        logs: &mut Vec<DecisionLog>,
+        slippage_coeff: f64,
+    ) {
+        let mut rng = SeededRng;
+
+        // Low-rate gathering — guilds get resources from members, not farming
+        if rng.random(0.0..1.0) < 0.2 {
+            for (i, _item) in items.iter().enumerate() {
+                let target = self.guild_target_inventory.get(&i).copied().unwrap_or(50);
+                let current = self.inventory.get(&i).copied().unwrap_or(0);
+                if current < target && rng.random(0.0..1.0) < self.gather_rate {
+                    *self.inventory.entry(i).or_insert(0) += 1;
+                }
+            }
+        }
+
+        for (i, _item) in items.iter().enumerate() {
+            let target = self.guild_target_inventory.get(&i).copied().unwrap_or(50);
+            let current = self.inventory.get(&i).copied().unwrap_or(0);
+            let buy_price = items[i].buy_price();
+            let sell_price = items[i].sell_price();
+
+            if current < target {
+                // Below target — BUY to replenish. Willing to pay up to 1.5x perceived.
+                let perceived = self
+                    .perceived_values
+                    .get(&i)
+                    .copied()
+                    .unwrap_or(items[i].price);
+                let max_willing = perceived * 1.5;
+
+                if buy_price <= max_willing && self.balance > buy_price {
+                    let deficit = (target - current) as f64;
+                    let max_affordable = (self.balance / buy_price).floor() as i32;
+                    let amount = rng.random_inclusive(
+                        1..=(deficit as i32)
+                            .min(max_affordable)
+                            .min(self.max_trade_amount)
+                            .max(1),
+                    );
+                    let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                    let cost = buy_price * slippage * amount as f64;
+                    if cost <= self.balance {
+                        let balance_before = self.balance;
+                        let inventory_before = current;
+                        self.balance -= cost;
+                        *self.inventory.entry(i).or_insert(0) += amount;
+                        self.total_traded += cost;
+                        self.total_trades += 1;
+                        decisions.push(PlayerDecision {
+                            item_index: i,
+                            is_buy: true,
+                            amount,
+                        });
+                        if record {
+                            logs.push(DecisionLog {
+                                player_id: self.id,
+                                item_index: i,
+                                is_buy: true,
+                                amount,
+                                price_per_unit: buy_price * slippage,
+                                total_cost: cost,
+                                perceived_value: perceived,
+                                effective_perceived: max_willing,
+                                buy_threshold: 0.0,
+                                sell_threshold: self.sell_threshold,
+                                balance_before,
+                                inventory_before,
+                                reasoning: "guild_replenish".to_string(),
+                            });
+                        }
+                    }
+                }
+            } else if current > target * 2 {
+                // Way above target — sell surplus
+                let surplus = current - target;
+                if surplus > 0 {
+                    let amount =
+                        rng.random_inclusive(1..=surplus.min(self.max_trade_amount).max(1));
+                    let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                    let revenue = sell_price / slippage * amount as f64;
+                    let balance_before = self.balance;
+                    let inventory_before = current;
+                    self.balance += revenue;
+                    *self.inventory.entry(i).or_insert(0) -= amount;
+                    self.total_traded += revenue;
+                    self.total_trades += 1;
+                    decisions.push(PlayerDecision {
+                        item_index: i,
+                        is_buy: false,
+                        amount,
+                    });
+                    if record {
+                        logs.push(DecisionLog {
+                            player_id: self.id,
+                            item_index: i,
+                            is_buy: false,
+                            amount,
+                            price_per_unit: sell_price / slippage,
+                            total_cost: revenue,
+                            perceived_value: self
+                                .perceived_values
+                                .get(&i)
+                                .copied()
+                                .unwrap_or(items[i].price),
+                            effective_perceived: self
+                                .perceived_values
+                                .get(&i)
+                                .copied()
+                                .unwrap_or(items[i].price),
+                            buy_threshold: self.buy_threshold,
+                            sell_threshold: self.sell_threshold,
+                            balance_before,
+                            inventory_before,
+                            reasoning: "guild_surplus".to_string(),
+                        });
+                    }
+                }
+            }
+            // Between target and 2x: hold — guild maintains stock
         }
     }
 }

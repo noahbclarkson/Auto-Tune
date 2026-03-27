@@ -196,6 +196,39 @@ impl Scenario {
         }
     }
 
+    /// Guild Stability Test: Standard economy with GuildBuyer archetypes.
+    /// GuildBuyers maintain target inventory — they buy when stock is low,
+    /// hold otherwise. Tests whether guild players provide price stability
+    /// or create artificial demand floors.
+    pub fn guild_stability() -> Self {
+        let config = SimConfig::default();
+        Self {
+            name: "Guild Stability Test".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            stress_events: vec![],
+            duration_ticks: 288 * 14, // 14 days
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Sector correlation stress test: injects a price shock to Diamond (ores section)
     /// at day 3, then measures how strongly other ores items follow.
     /// Runs with sector_correlation=0.05 (treatment) vs sector_correlation=0.0 (control)
@@ -684,7 +717,7 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
         }
     }
     println!(
-        "Players: {} (Casual:{}, Farmer:{}, Trader:{}, Hoarder:{}, Exploiter:{})",
+        "Players: {} (Casual:{}, Farmer:{}, Trader:{}, Hoarder:{}, Exploiter:{}, Newbie:{}, AFKFarmer:{}, GuildBuyer:{})",
         sim.players.len(),
         sim.players
             .iter()
@@ -705,6 +738,18 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
         sim.players
             .iter()
             .filter(|p| matches!(p.archetype, Archetype::Exploiter))
+            .count(),
+        sim.players
+            .iter()
+            .filter(|p| matches!(p.archetype, Archetype::Newbie))
+            .count(),
+        sim.players
+            .iter()
+            .filter(|p| matches!(p.archetype, Archetype::AFKFarmer))
+            .count(),
+        sim.players
+            .iter()
+            .filter(|p| matches!(p.archetype, Archetype::GuildBuyer))
             .count(),
     );
 
@@ -1080,6 +1125,7 @@ fn main() -> eframe::Result<()> {
             Scenario::standard(),
             Scenario::spread_stability(),
             Scenario::low_player(),
+            Scenario::guild_stability(),
         ];
         crate::regression::run_regression_test(&scenarios, &baseline_dir, update);
         return Ok(());
@@ -1100,6 +1146,7 @@ fn main() -> eframe::Result<()> {
                 Scenario::high_activity(),
                 Scenario::low_player(),
                 Scenario::spread_stability(),
+                Scenario::guild_stability(),
             ];
             let base_dir = output_dir.unwrap_or_else(|| PathBuf::from("./output"));
             let mut results: Vec<(String, bool, String)> = Vec::new();
@@ -1127,6 +1174,7 @@ fn main() -> eframe::Result<()> {
                 "high-activity" | "high_activity" => Scenario::high_activity(),
                 "low-player" | "low_player" => Scenario::low_player(),
                 "spread-stability" | "spread_stability" => Scenario::spread_stability(),
+                "guild-stability" | "guild_stability" => Scenario::guild_stability(),
                 "correlation" => Scenario::correlation(),
                 _ => {
                     eprintln!(

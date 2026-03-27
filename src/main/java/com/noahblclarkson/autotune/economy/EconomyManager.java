@@ -155,7 +155,7 @@ public class EconomyManager {
         // Pre-validate: check items exist without modifying inventory
         int playerHas = countItems(player, item);
         if (playerHas < amount) {
-            return CompletableFuture.completedFuture(TransactionResult.insufficientItems(playerHas));
+            return CompletableFuture.completedFuture(TransactionResult.insufficientItems(playerHas, amount));
         }
 
         BigDecimal pricePerUnit = marketEngine.getSellPrice(item, amount);
@@ -255,7 +255,7 @@ public class EconomyManager {
         // Clone the inventory contents so we can restore on failure.
         ItemStack[] preRemoval = player.getInventory().getStorageContents().clone();
         if (!removeItems(player, item, amount)) {
-            return TransactionResult.insufficientItems(countItems(player, item));
+            return TransactionResult.insufficientItems(countItems(player, item), amount);
         }
 
         // Step 2: Deposit net proceeds — only after items are safely removed.
@@ -346,7 +346,7 @@ public class EconomyManager {
             if (!cartItem.isBuying()) {
                 int playerHas = countItems(player, cartItem.shopItem());
                 if (playerHas < cartItem.quantity()) {
-                    return CompletableFuture.completedFuture(TransactionResult.insufficientItems(playerHas));
+                    return CompletableFuture.completedFuture(TransactionResult.insufficientItems(playerHas, cartItem.quantity()));
                 }
             }
         }
@@ -410,23 +410,37 @@ public class EconomyManager {
                 }
             }
 
-            // Phase 3: Remove sell items — only after money settled
+            // Phase 3: Remove sell items — only after money settled.
+            // If removal fails for any item, skip Phase 4 (don't give buy items) and refund
+            // the buy cost. The player ends up with their original sell items back plus
+            // the net money difference — acceptable outcome vs. giving them free items.
+            boolean anySellRemovalFailed = false;
             for (CartItem cartItem : cart) {
                 if (!cartItem.isBuying()) {
                     if (!removeItems(player, cartItem.shopItem(), cartItem.quantity())) {
-                        // Should be impossible since we pre-validated, but log it
+                        anySellRemovalFailed = true;
                         plugin.getLogger().warning("[Auto-Tune] Failed to remove sell cart item "
                                 + cartItem.shopItem().getDisplayNameOrMaterial() + " from "
-                                + player.getName() + " after payment. Manual admin review needed.");
+                                + player.getName() + " after payment. Admin review needed.");
                     }
                 }
             }
 
-            // Phase 4: Give buy items — last step
-            for (CartItem cartItem : cart) {
-                if (cartItem.isBuying()) {
-                    giveItems(player, cartItem.shopItem(), cartItem.quantity());
+            // Phase 4: Give buy items — only if ALL sell items were successfully removed.
+            if (!anySellRemovalFailed) {
+                for (CartItem cartItem : cart) {
+                    if (cartItem.isBuying()) {
+                        giveItems(player, cartItem.shopItem(), cartItem.quantity());
+                    }
                 }
+            } else {
+                // Refund the buy cost portion since sell items couldn't be removed.
+                // netCost > 0 means player paid; netCost < 0 means player received money.
+                if (finalNetCost.compareTo(BigDecimal.ZERO) > 0) {
+                    withdraw(player, finalNetCost.doubleValue());
+                }
+                // If netCost < 0 (player received money), they already have it.
+                // Either way, don't give buy items — player already has their sell items back.
             }
 
             return TransactionResult.success(
@@ -535,8 +549,8 @@ public class EconomyManager {
             return new TransactionResult(false, "Insufficient funds. Required: " + required, null, 0, required);
         }
 
-        public static TransactionResult insufficientItems(int had) {
-            return new TransactionResult(false, "Insufficient items. You have: " + had, null, had, BigDecimal.ZERO);
+        public static TransactionResult insufficientItems(int had, int required) {
+            return new TransactionResult(false, "Insufficient items. You have " + had + ", need " + required, null, had, BigDecimal.ZERO);
         }
 
         public static TransactionResult insufficientSpace() {

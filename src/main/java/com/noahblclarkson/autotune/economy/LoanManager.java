@@ -208,8 +208,14 @@ public class LoanManager {
                                 })
                                 .thenRun(() -> future.complete(LoanResult.repaymentSuccess(updated, paymentAmount)))
                                 .exceptionally(ex -> {
-                                    plugin.getLogger().log(Level.WARNING, "Failed to process loan repayment", ex);
-                                    future.complete(LoanResult.error("Database error"));
+                                    plugin.getLogger().log(Level.WARNING,
+                                            "Failed to process loan repayment DB update for " + playerId
+                                                    + " (amount=" + paymentAmount + "). Restoring funds.", ex);
+                                    // DB write failed but money was already withdrawn — refund the player
+                                    // to avoid losing their funds. Must run on main thread for Vault ops.
+                                    databaseManager.runOnMain(() ->
+                                            economy.depositPlayer(player, paymentAmount.doubleValue()));
+                                    future.complete(LoanResult.error("Database error — funds restored"));
                                     return null;
                                 });
                     });

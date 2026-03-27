@@ -12,7 +12,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew runServer
 
 # Build only the web frontend (Next.js static export)
-cd web && npm run export
+cd web && npm run build
+
+# Build the standalone web-optimizer (public Auto-Tune Page)
+cd web-optimizer && npm run build
 
 # Run the Rust market simulation GUI
 cd scripts/market-simulation && cargo run --release
@@ -91,6 +94,8 @@ Next.js 14 + TypeScript + Tailwind + Recharts. Built as static export. Dashboard
 
 Brand colors: `--primary` is emerald (HUSL 160°), not blue. The light/dark theme toggle persists via localStorage.
 
+**Live price updates:** The `useWebSocket` hook connects to `/ws/market` on the Javalin server and receives `price_update` messages with item prices. It is wired into the app context (`livePrices` Map + `isWsConnected`). The home page Top Movers section consumes `livePrices` — when a WebSocket price arrives, it updates the displayed buy/sell prices in real-time (between 30s polls) and flashes the updated row green. The header's `LiveIndicator` shows the WebSocket connection status.
+
 ### Web-Optimizer Frontend (`web-optimizer/`)
 
 Standalone Next.js 14 app (not bundled in the plugin). Used by server admins worldwide to explore true prices, compare servers, and simulate spread scenarios. Routes:
@@ -105,7 +110,7 @@ Uses dark emerald theme (emerald-400 primary accent). Public — no auth require
 
 ### Rust Market Simulation (`scripts/market-simulation/`)
 
-Standalone egui GUI app that mirrors the Java MarketEngine exactly (same constants, same formulas). Used for testing parameter changes visually. Features 5 player archetypes (Casual, Farmer, Trader, Hoarder, Exploiter) with distinct trading behaviors. Includes SQLite recording for data export. Build with `cargo build --release`, run with `cargo run --release`.
+Standalone Rust/egui GUI app that mirrors the Java MarketEngine exactly (same constants, same formulas). Used for testing parameter changes visually. Features 8 player archetypes: Casual, Farmer, Trader, Hoarder, Exploiter, Newbie, AFKFarmer, GuildBuyer — each with distinct trading behaviors. GuildBuyer is inventory-targeting (buys to fill guild stock, sells surplus above 2x target). Headless mode: `cargo run --release -- --headless <scenario>`. CLI tools: `--sweep` (840-config grid), `--regression` (determinism check), `--analyze <db>` (result analysis), `--correlation-test` (sector correlation). SQLite session recording. Build with `cargo build --release`, run with `cargo run --release`.
 
 ## Dependency Relocation
 

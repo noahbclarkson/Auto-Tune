@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { StatsCards } from '@/components/dashboard/stats-cards';
@@ -13,7 +13,7 @@ import { api, type ItemDto, type Stats, type TrendDto, type EconomySnapshotDto }
 import { formatCurrency, formatPercent } from '@/lib/format';
 
 export default function Home() {
-  const { apiBase } = useAppContext();
+  const { apiBase, livePrices, isWsConnected } = useAppContext();
   const [items, setItems] = useState<ItemDto[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [gdp, setGdp] = useState<number | null>(null);
@@ -21,6 +21,44 @@ export default function Home() {
   const [trends, setTrends] = useState<TrendDto[]>([]);
   const [history, setHistory] = useState<EconomySnapshotDto[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Tracks which item IDs recently received a live WebSocket price update
+  const [liveFlash, setLiveFlash] = useState<Set<number>>(new Set());
+  const liveFlashTimer = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  // Apply live WebSocket price updates on top of polled data
+  useEffect(() => {
+    if (livePrices.size === 0) return;
+    setItems((prev) => {
+      if (!prev.length) return prev;
+      let changed = false;
+      const next = prev.map((item) => {
+        const livePrice = livePrices.get(item.id);
+        if (livePrice !== undefined && livePrice !== item.price) {
+          changed = true;
+          // Compute updated buyPrice/sellPrice using current spread
+          const mid = livePrice;
+          const halfSpread = (item.bpd + item.spd) / 2;
+          const newBuyPrice = halfSpread > 0 ? mid / (1 - item.spd) : mid;
+          const newSellPrice = halfSpread > 0 ? mid * (1 - item.spd) : mid;
+          return { ...item, price: livePrice, buyPrice: newBuyPrice, sellPrice: newSellPrice };
+        }
+        return item;
+      });
+      return changed ? next : prev;
+    });
+    // Flash recently-updated items
+    livePrices.forEach((_, id) => {
+      setLiveFlash((prev) => new Set(prev).add(id));
+      if (liveFlashTimer.current[id]) clearTimeout(liveFlashTimer.current[id]);
+      liveFlashTimer.current[id] = setTimeout(() => {
+        setLiveFlash((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, 1500);
+    });
+  }, [livePrices]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -96,7 +134,15 @@ export default function Home() {
                     <CardTitle className="text-base">Top Movers</CardTitle>
                     <p className="text-xs text-muted-foreground mt-0.5">Items with the largest 24h price change</p>
                   </div>
-                  <span className="text-xs text-muted-foreground">{topMovers.length} items</span>
+                  <div className="flex items-center gap-2">
+                    {isWsConnected && (
+                      <Badge variant="outline" className="gap-1 text-[10px] border-emerald-600/40 text-emerald-500">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Live
+                      </Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground">{topMovers.length} items</span>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -121,7 +167,7 @@ export default function Home() {
                         <a
                           key={item.id}
                           href={`/items/detail/?id=${item.id}`}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/60 transition-colors group"
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${liveFlash.has(item.id) ? 'bg-emerald-950/30 ring-1 ring-emerald-800/40' : 'hover:bg-muted/60'}`}
                         >
                           {/* Change magnitude bar */}
                           <div className="shrink-0 w-1.5 h-10 rounded-full bg-muted overflow-hidden self-center">

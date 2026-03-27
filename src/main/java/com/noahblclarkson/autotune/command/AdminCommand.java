@@ -91,6 +91,8 @@ public class AdminCommand {
                 .append(Component.text(" — Clear all per-item overrides", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin reload", NamedTextColor.YELLOW)
                 .append(Component.text(" — Reload config and caches", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin transactions [player]", NamedTextColor.YELLOW)
+                .append(Component.text(" — View recent transaction history", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
     }
 
@@ -186,6 +188,38 @@ public class AdminCommand {
             plugin.getLogger().warning("Reload failed: " + e.getMessage());
             sender.sendMessage(Component.text("Reload failed: " + e.getMessage(), NamedTextColor.RED));
         }
+    }
+
+    @Command("autotune admin transactions")
+    @Permission("autotune.admin")
+    public void adminTransactions(CommandSender sender, @Argument(value = "player", suggestions = "minecraft-player") Optional<String> playerNameArg) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Component.text("This command must be used as a player.", NamedTextColor.RED));
+            return;
+        }
+
+        UUID filterUuid = null;
+
+        if (!playerNameArg.isEmpty() && !playerNameArg.get().isBlank()) {
+            String playerName = playerNameArg.get();
+            // Look up the player's UUID from their name
+            org.bukkit.OfflinePlayer offlineTarget = org.bukkit.Bukkit.getOfflinePlayerIfCached(playerName);
+            if (offlineTarget == null) {
+                sender.sendMessage(Component.text("Player not found: " + playerName, NamedTextColor.RED));
+                return;
+            }
+            filterUuid = offlineTarget.getUniqueId();
+            sender.sendMessage(Component.text("Opening transaction history for " + offlineTarget.getName() + "...", NamedTextColor.GRAY));
+        } else {
+            sender.sendMessage(Component.text("Opening full transaction history...", NamedTextColor.GRAY));
+        }
+
+        // Open ADMIN-mode transaction history GUI, optionally filtered to one player
+        new com.noahblclarkson.autotune.ui.TransactionHistoryGui(
+                plugin, player,
+                com.noahblclarkson.autotune.ui.TransactionHistoryGui.Mode.ADMIN,
+                filterUuid
+        ).open();
     }
 
     // ─── Market freeze subcommand ──────────────────────────────────────────────

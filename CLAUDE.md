@@ -43,11 +43,11 @@ onDisable: WebServer stop -> TaskScheduler stop -> DatabaseManager shutdown
 
 | Package | Purpose |
 |---------|---------|
-| `manager/` | Core domain logic: `MarketEngine` (pricing/spreads/trends), `ShopManager` (item cache, buyable logic), `AutosellManager`, `EconomyMetricsManager` |
-| `database/` | `DatabaseManager` (HikariCP, migrations, async executor) + 6 JDBI repositories |
-| `economy/` | `EconomyManager` (buy/sell processing via Vault), `LoanManager` (interest, defaults) |
-| `command/` | Cloud (Incendo) annotation-based commands: `/shop`, `/sell`, `/autosell`, `/loan`, `/transactions` |
-| `config/` | `ConfigManager` loads YAML; `AutoTuneConfig` is a nested record hierarchy (StorageConfig, WebConfig, EconomyConfig, LoanConfig, GuiConfig, DebugConfig) |
+| `manager/` | Core domain logic: `MarketEngine` (pricing/spreads/trends), `ShopManager` (item cache, buyable logic), `AutosellManager`, `EconomyMetricsManager`, `TreasuryService` (tax collection) |
+| `database/` | `DatabaseManager` (HikariCP, migrations, async executor) + JDBI repositories |
+| `economy/` | `EconomyManager` (buy/sell processing via Vault), `LoanManager` (interest, defaults, circuit breaker) |
+| `command/` | Cloud (Incendo) annotation-based commands: `/shop`, `/sell`, `/autosell`, `/loan`, `/transactions`, `/auction`, `/treasury`, `/autotune admin` |
+| `config/` | `ConfigManager` loads YAML; `AutoTuneConfig` is a nested record hierarchy (StorageConfig, WebConfig, EconomyConfig, LoanConfig, AutosellConfig, TreasuryConfig, GuiConfig, DebugConfig) |
 | `model/` | Immutable Java records with builder pattern: ShopItem, Transaction, Loan, PlayerData, EconomySnapshot, PriceHistory, etc. |
 | `ui/` | InventoryFramework GUIs: ShopGui, SellGui, AutosellGui, TrendsGui, TransactionHistoryGui |
 | `listener/` | SellGuiListener (sell on inventory close), AutosellListener (inventory change triggers), PlayerListener (join/leave) |
@@ -56,7 +56,7 @@ onDisable: WebServer stop -> TaskScheduler stop -> DatabaseManager shutdown
 
 ### Database
 
-SQLite (default) or MariaDB. Schema versioned manually via `at_schema_version` table (not Flyway). Migrations in `src/main/resources/db/` (V1 = initial schema, V2 = per-item market engine overrides). All async DB ops go through `DatabaseManager.supplyAsync()`/`runAsync()` with main-thread callbacks via `runOnMain()`. SQLite uses a single-thread executor; MySQL uses pool-sized executor.
+SQLite (default) or MariaDB. Schema versioned manually via `at_schema_version` table (not Flyway). Migrations in `src/main/resources/db/` — a single `V1__Initial_Schema.sql` (rewrite-2 consolidated all incremental migrations into one clean schema before first release). Schema includes: `at_items`, `at_market_history`, `at_players`, `at_autosell_items` (per-item autosell + min price), `at_loans`, `at_item_ratios`, `at_transactions`, `at_sections`, `at_economy_snapshots`, `at_price_alerts`. All async DB ops go through `DatabaseManager.supplyAsync()`/`runAsync()` with main-thread callbacks via `runOnMain()`. SQLite uses a single-thread executor; MySQL uses pool-sized executor.
 
 ### Market Engine (`MarketEngine.java`)
 
@@ -81,6 +81,7 @@ Components:
 - `AuctionRepository.java` — JDBI CRUD for `at_auction_orders` + `at_auction_fills` tables
 - `AuctionCommand.java` — Cloud command `/auction` (browse, sell, buy, my, cancel, history)
 - `AuctionGui.java` — 6-row chest GUI with sell/buy columns, click-to-fill, cancel
+- `MarketHistoryGui.java` — in-game price history chart (JFreeChart rendered to BufferedImage)
 
 > ✅ **Fixed (2026-03-26):** `processFill()` now credits the seller's Vault balance (`economy.depositPlayer(seller, ...)`) and gives the buyer their items (`player.getInventory().addItem(...)`) on the Bukkit main thread. Buyer's funds were already withdrawn in `placeBuyOrderAsync`; this closes the escrow gap.
 
@@ -140,11 +141,12 @@ Player trades → Java Plugin (EconomyManager)
 
 ## Key Integration Points
 
-- **Plugin → API Server**: `PriceReporter` HTTP POST pushes item prices to the Rust API server every 5 min
+- **Plugin → API Server**: `PriceReporter` HTTP POST pushes item prices to the Rust API server every 5 min. Submissions go through a bounded retry queue (5-entry cap, 3 attempts, 1-min drain task) so transient API downtime doesn't silently drop submissions.
 - **API Server → True Prices**: Rust `market_server` computes log-space least-squares true prices
 - **API Server → web-optimizer**: `web-optimizer/` fetches via `lib/api-client.ts` (fetch with error/resilience)
 - **Plugin → web/**: Bundled static Next.js dashboard served by Javalin on port 8989
 - **Auction house**: Implemented in Java plugin (rewrite-2). No auction functionality remains in Rust API server.
+- **Tax system**: `TreasuryService` collects buy/sell/auction/loan-interest taxes into the server treasury. `/treasury` command for balance, deposit, withdraw. Dynamic tax rates configurable per transaction type.
 
 ## Active Engineering Roles
 

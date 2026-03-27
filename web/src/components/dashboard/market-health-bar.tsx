@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, Minus, BarChart2, Users, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, BarChart2, Users } from 'lucide-react';
 
 interface MarketHealthBarProps {
   items: Array<{

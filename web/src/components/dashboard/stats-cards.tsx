@@ -17,9 +17,8 @@ interface StatsCardsProps {
   inflationHistory?: InflationHistoryPoint[];
 }
 
-function MiniSparkline({ data, color, positive }: { data: number[]; color: string; positive: boolean }) {
+function MiniSparkline({ data, positive }: { data: number[]; positive: boolean }) {
   const points = data.map((v, i) => ({ v, i }));
-  const gradientId = `spark-${color.replace(/\//g, '-')}-${Math.random().toString(36).slice(2, 6)}`;
   const fillColor = positive ? '#10b981' : '#ef4444';
 
   return (
@@ -72,7 +71,7 @@ export function StatsCards({
       color: 'text-amber-600 dark:text-amber-400',
       bg: 'bg-amber-50 dark:bg-amber-900/30',
       spark: gdpSpark.length > 1 ? (
-        <MiniSparkline data={gdpSpark} color="gdp" positive={gdpSpark[gdpSpark.length - 1] >= gdpSpark[0]} />
+        <MiniSparkline data={gdpSpark} positive={gdpSpark[gdpSpark.length - 1] >= gdpSpark[0]} />
       ) : undefined,
     },
     {
@@ -86,7 +85,7 @@ export function StatsCards({
         : undefined,
       trend: inflation !== null ? (inflTrend > 0 ? '+' : '') + inflTrend.toFixed(2) + 'pp' : null,
       spark: inflSpark.length > 1 ? (
-        <MiniSparkline data={inflSpark} color="inflation" positive={inflTrend >= 0} />
+        <MiniSparkline data={inflSpark} positive={inflTrend >= 0} />
       ) : undefined,
     },
   ];

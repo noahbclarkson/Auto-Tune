@@ -13,7 +13,6 @@ import {
   ReferenceLine,
   BarChart,
   Bar,
-  Cell,
 } from 'recharts';
 import { Search, ChevronDown, TrendingUp, TrendingDown, Minus, ArrowLeftRight } from 'lucide-react';
 import type { ItemDto, PriceHistoryDto } from '@/lib/api';

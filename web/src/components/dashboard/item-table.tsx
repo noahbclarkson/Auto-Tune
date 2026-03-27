@@ -143,8 +143,8 @@ export function ItemTable({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="rounded-md border border-border">
-          <table className="w-full text-sm">
+        <div className="rounded-md border border-border overflow-x-auto -mx-4 sm:mx-0">
+          <table className="w-full text-sm min-w-[640px]">
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th

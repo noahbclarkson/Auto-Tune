@@ -174,27 +174,29 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
 
     // Write results
     let num_servers = submissions.len() as i32;
-    // Use the LS-residual-based confidence from SolveResult
-    let confidence = result.confidence();
 
     for (i, item_name) in all_items.iter().enumerate() {
         let price = result.prices[i];
+        let item_confidence = result.per_item_confidence[i];
+        let is_anchored = result.connectivity.is_anchor_connected(i);
 
         sqlx::query(
             r#"
-            INSERT INTO true_prices (item_name, price, confidence, server_count)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO true_prices (item_name, price, confidence, server_count, anchored)
+            VALUES ($1, $2, $3, $4, $5)
             ON CONFLICT (item_name) DO UPDATE
                 SET price = EXCLUDED.price,
                     confidence = EXCLUDED.confidence,
                     server_count = EXCLUDED.server_count,
+                    anchored = EXCLUDED.anchored,
                     last_updated = NOW()
             "#,
         )
         .bind(item_name)
         .bind(price)
-        .bind(confidence)
+        .bind(item_confidence)
         .bind(num_servers)
+        .bind(is_anchored)
         .execute(pool)
         .await
         .with_context(|| format!("upserting true price for {item_name}"))?;

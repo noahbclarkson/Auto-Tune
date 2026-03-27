@@ -54,8 +54,12 @@ pub struct SubmitPricesResponse {
 pub struct TruePriceEntry {
     pub item: String,
     pub price: f64,
+    /// Per-item confidence (0-1), accounting for connectivity and observation count
     pub confidence: f64,
+    /// Number of servers that reported this item
     pub servers: i32,
+    /// True if this item's price is anchored to the reference item (ratio graph connected)
+    pub anchored: bool,
 }
 
 #[derive(Debug, Serialize)]

@@ -126,7 +126,7 @@ pub async fn submit_prices(
 /// GET /api/prices/true
 pub async fn get_true_prices(pool: web::Data<PgPool>) -> impl Responder {
     let result = sqlx::query(
-        "SELECT item_name, price, confidence, server_count, last_updated FROM true_prices ORDER BY price DESC",
+        "SELECT item_name, price, confidence, server_count, anchored, last_updated FROM true_prices ORDER BY price DESC",
     )
     .fetch_all(pool.get_ref())
     .await;
@@ -144,6 +144,7 @@ pub async fn get_true_prices(pool: web::Data<PgPool>) -> impl Responder {
                     price: r.try_get::<f64, _>("price").unwrap_or(0.0),
                     confidence: r.try_get::<f64, _>("confidence").unwrap_or(0.0),
                     servers: r.try_get::<i32, _>("server_count").unwrap_or(0),
+                    anchored: r.try_get::<bool, _>("anchored").unwrap_or(true),
                 })
                 .collect();
 

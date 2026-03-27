@@ -53,6 +53,7 @@ pub mod validation;
 pub use aggregation::{aggregate_ratios, AggregationMethod};
 pub use solver::{
     compute_prices_from_servers, compute_prices_with_config, compute_prices_with_quality,
-    PriceSolverConfig, SolveResult, SolverError,
+    connectivity_analysis, ConnectedComponent, ConnectivityResult, PriceSolverConfig, SolveResult,
+    SolverError,
 };
 pub use validation::{validate_ratio_matrix, ValidationError};

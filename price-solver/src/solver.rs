@@ -1,6 +1,7 @@
 //! Core solver implementation — least-squares price discovery
 
 use nalgebra::{DMatrix, DVector};
+use std::collections::HashMap;
 use thiserror::Error;
 use tracing::{debug, info};
 
@@ -49,6 +50,11 @@ pub struct SolveResult {
     pub num_servers: usize,
     /// Number of items in the solution
     pub num_items: usize,
+    /// Per-item confidence 0–1. Based on observation count and connectivity.
+    /// Items in the anchor component with many observations score highest.
+    pub per_item_confidence: Vec<f64>,
+    /// Connectivity analysis — which items are reliably linked to the anchor.
+    pub connectivity: ConnectivityResult,
 }
 
 impl SolveResult {
@@ -63,6 +69,178 @@ impl SolveResult {
         // Item coverage bonus (plateaus at 50 items)
         let item_bonus = 0.05 * (1.0 - q) * ((self.num_items as f64 / 50.0).min(1.0));
         (q + server_bonus + item_bonus).clamp(0.0, 1.0)
+    }
+}
+
+/// A connected component in the ratio graph.
+#[derive(Debug, Clone)]
+pub struct ConnectedComponent {
+    /// Indices of items in this component
+    pub item_indices: Vec<usize>,
+    /// How many valid ratio pairs exist within this component
+    pub internal_edges: usize,
+    /// True if this component contains the anchor item
+    pub is_anchor_component: bool,
+}
+
+/// Connectivity analysis of the ratio graph.
+/// A disconnected graph means some items cannot be priced relative to the anchor.
+#[derive(Debug, Clone)]
+pub struct ConnectivityResult {
+    /// All connected components found
+    pub components: Vec<ConnectedComponent>,
+    /// For each item, which component index it belongs to
+    pub item_to_component: Vec<usize>,
+    /// True if the graph is fully connected (all items in anchor component)
+    pub is_fully_connected: bool,
+    /// How well-connected the anchor component is (0-1: fraction of item-pairs observed)
+    pub anchor_coverage: f64,
+}
+
+impl ConnectivityResult {
+    /// Returns the component id for an item index.
+    pub fn component_of(&self, item: usize) -> usize {
+        self.item_to_component[item]
+    }
+
+    /// Returns true if the item is in the anchor component (reliably priced).
+    pub fn is_anchor_connected(&self, item: usize) -> bool {
+        self.components
+            .get(self.item_to_component[item])
+            .map(|c| c.is_anchor_component)
+            .unwrap_or(false)
+    }
+}
+
+/// Analyze graph connectivity using Union-Find.
+/// Builds the ratio observation graph (edge exists if any server reported r[i][j] > 0).
+/// Analyze graph connectivity using Union-Find.
+/// Builds the ratio observation graph (edge exists if any server reported r[i][j] > 0).
+pub fn connectivity_analysis(
+    ratios_per_server: &[Vec<Vec<f64>>],
+    anchor_item: usize,
+) -> ConnectivityResult {
+    let n = ratios_per_server[0].len();
+    if n == 0 {
+        return ConnectivityResult {
+            components: vec![],
+            item_to_component: vec![],
+            is_fully_connected: false,
+            anchor_coverage: 0.0,
+        };
+    }
+
+    // Union-Find: initially each item is its own parent
+    let mut parent: Vec<usize> = (0..n).collect();
+    let mut rank: Vec<usize> = vec![0; n];
+
+    fn find(parent: &mut [usize], x: usize) -> usize {
+        if parent[x] != x {
+            parent[x] = find(parent, parent[x]);
+        }
+        parent[x]
+    }
+
+    fn union(parent: &mut [usize], rank: &mut [usize], x: usize, y: usize) {
+        let px = find(parent, x);
+        let py = find(parent, y);
+        if px == py {
+            return;
+        }
+        if rank[px] < rank[py] {
+            parent[px] = py;
+        } else if rank[px] > rank[py] {
+            parent[py] = px;
+        } else {
+            parent[py] = px;
+            rank[px] += 1;
+        }
+    }
+
+    // Build observation union graph: edge (i,j) exists if ANY server has a valid ratio
+    let mut has_observed = vec![vec![false; n]; n];
+    #[allow(clippy::needless_range_loop)]
+    for matrix in ratios_per_server {
+        for i in 0..n {
+            for j in 0..n {
+                if i != j {
+                    let r = matrix[i][j];
+                    if r > 0.0 && r.is_finite() {
+                        has_observed[i][j] = true;
+                    }
+                }
+            }
+        }
+    }
+
+    // Union i and j if we have at least one valid observation in either direction
+    #[allow(clippy::needless_range_loop)]
+    for i in 0..n {
+        for j in (i + 1)..n {
+            if has_observed[i][j] || has_observed[j][i] {
+                union(&mut parent, &mut rank, i, j);
+            }
+        }
+    }
+
+    // Group by root
+    let mut root_to_items: HashMap<usize, Vec<usize>> = HashMap::new();
+    for i in 0..n {
+        let root = find(&mut parent, i);
+        root_to_items.entry(root).or_default().push(i);
+    }
+
+    let anchor_root = find(&mut parent, anchor_item);
+
+    let mut components: Vec<ConnectedComponent> = Vec::new();
+    let mut item_to_component: Vec<usize> = vec![0; n];
+
+    for (component_id, (_, items)) in root_to_items.into_iter().enumerate() {
+        // Count internal edges
+        let mut internal_edges = 0usize;
+        for &i in &items {
+            for &j in &items {
+                if i < j && (has_observed[i][j] || has_observed[j][i]) {
+                    internal_edges += 1;
+                }
+            }
+        }
+
+        let comp_root = find(&mut parent, items[0]);
+        let is_anchor_component = comp_root == anchor_root;
+
+        for &item in &items {
+            item_to_component[item] = component_id;
+        }
+
+        components.push(ConnectedComponent {
+            item_indices: items,
+            internal_edges,
+            is_anchor_component,
+        });
+    }
+
+    // Anchor coverage: fraction of item-pairs involving anchor component that have observations
+    let anchor_comp = components.iter().find(|c| c.is_anchor_component).cloned();
+    let anchor_coverage = if let Some(ac) = anchor_comp {
+        let m = ac.item_indices.len();
+        let total_pairs = m * (m - 1) / 2;
+        if total_pairs > 0 {
+            ac.internal_edges as f64 / total_pairs as f64
+        } else {
+            0.0
+        }
+    } else {
+        0.0
+    };
+
+    let is_fully_connected = components.len() == 1;
+
+    ConnectivityResult {
+        components,
+        item_to_component,
+        is_fully_connected,
+        anchor_coverage: anchor_coverage.min(1.0),
     }
 }
 
@@ -288,7 +466,6 @@ pub fn compute_prices_with_quality(
     anchor_price: f64,
     config: PriceSolverConfig,
 ) -> Result<SolveResult, SolverError> {
-    // Build the same LS system as compute_prices_with_config
     let m = ratios_per_server.len();
     if m == 0 || m < config.min_servers {
         return Err(SolverError::NoServers);
@@ -317,13 +494,42 @@ pub fn compute_prices_with_quality(
         None => vec![1.0; m],
     };
 
+    // Compute connectivity FIRST — we need it to handle disconnected items correctly
+    let connectivity = connectivity_analysis(ratios_per_server, anchor_item);
+
+    // Collect anchored items (items in the same component as anchor)
+    let anchored_indices: Vec<usize> = (0..n)
+        .filter(|&i| connectivity.is_anchor_connected(i))
+        .collect();
+    let num_anchored = anchored_indices.len();
+
+    if num_anchored == 0 {
+        return Err(SolverError::SingularMatrix);
+    }
+
+    // Build anchored subgraph set for O(1) lookup
+    let anchored_set: std::collections::HashSet<usize> = anchored_indices.iter().copied().collect();
+
+    // Map original item index -> position in anchored sub-system
+    let anchor_pos: std::collections::HashMap<usize, usize> = anchored_indices
+        .iter()
+        .enumerate()
+        .map(|(pos, &orig)| (orig, pos))
+        .collect();
+
     let agg_log_r = aggregate_ratios(ratios_per_server, &weights, config.aggregation);
 
-    // Collect edges
+    // Collect edges only within anchored component
     let mut edges: Vec<(usize, usize, f64)> = Vec::new();
     #[allow(clippy::needless_range_loop)]
     for i in 0..n {
+        if !anchored_set.contains(&i) {
+            continue;
+        }
         for j in (i + 1)..n {
+            if !anchored_set.contains(&j) {
+                continue;
+            }
             let log_r = agg_log_r[i][j];
             if log_r.is_finite() {
                 edges.push((i, j, log_r));
@@ -332,22 +538,27 @@ pub fn compute_prices_with_quality(
     }
 
     let num_edges = edges.len();
-    let num_rows = num_edges + 1;
-    let mut a_data = vec![0.0_f64; num_rows * n];
+    let num_rows = num_edges + 1; // +1 for anchor constraint
+    let mut a_data = vec![0.0_f64; num_rows * num_anchored];
     let mut b_data = vec![0.0_f64; num_rows];
 
     for (k, &(i, j, log_r)) in edges.iter().enumerate() {
-        a_data[k * n + i] = 1.0;
-        a_data[k * n + j] = -1.0;
+        let pi = *anchor_pos.get(&i).unwrap();
+        let pj = *anchor_pos.get(&j).unwrap();
+        a_data[k * num_anchored + pi] = 1.0;
+        a_data[k * num_anchored + pj] = -1.0;
         b_data[k] = log_r;
     }
 
+    // Anchor constraint
     let anchor_row = num_edges;
     let anchor_w = config.anchor_weight;
-    a_data[anchor_row * n + anchor_item] = anchor_w;
+    let anchor_orig = anchor_item;
+    let anchor_sub = *anchor_pos.get(&anchor_orig).unwrap();
+    a_data[anchor_row * num_anchored + anchor_sub] = anchor_w;
     b_data[anchor_row] = anchor_price.ln() * anchor_w;
 
-    let a = DMatrix::from_row_slice(num_rows, n, &a_data);
+    let a = DMatrix::from_row_slice(num_rows, num_anchored, &a_data);
     let b = DVector::from_vec(b_data.clone());
 
     // Solve
@@ -355,10 +566,12 @@ pub fn compute_prices_with_quality(
     let atb = a.transpose() * &b;
     let x = ata.lu().solve(&atb).ok_or(SolverError::SingularMatrix)?;
 
-    // Compute residual RMS on the non-anchor rows
+    // Compute residual RMS on anchored edges only
     let mut sq_errors: Vec<f64> = Vec::new();
     for (k, &(i, j, _)) in edges.iter().enumerate() {
-        let predicted = x[i] - x[j];
+        let pi = *anchor_pos.get(&i).unwrap();
+        let pj = *anchor_pos.get(&j).unwrap();
+        let predicted = x[pi] - x[pj];
         let residual = predicted - b_data[k];
         sq_errors.push(residual * residual);
     }
@@ -370,22 +583,63 @@ pub fn compute_prices_with_quality(
         mean_sq.sqrt()
     };
 
-    // Normalize: a residual_rms of 0.1 means average log-ratio error of ~0.1
-    // (e.g., true ratio is 2.0 but predicted log gives ~1.9)
-    // Quality = exp(-5 * residual_rms) gives:
-    //   rms=0.00 → quality=1.00 (perfect)
-    //   rms=0.05 → quality=0.78
-    //   rms=0.10 → quality=0.61
-    //   rms=0.20 → quality=0.37
-    //   rms=0.50 → quality=0.08
     let quality = (-5.0 * residual_rms).exp().clamp(0.0, 1.0);
 
-    let prices: Vec<f64> = x.iter().map(|v| v.exp()).collect();
+    // Assign prices: disconnected items default to 1.0
+    let mut prices: Vec<f64> = vec![1.0; n];
+    for &orig_idx in &anchored_indices {
+        let pos = *anchor_pos.get(&orig_idx).unwrap();
+        prices[orig_idx] = x[pos].exp();
+    }
 
     debug!(
-        "quality={:.4} residual_rms={:.6} edges={} servers={} items={}",
-        quality, residual_rms, num_edges, m, n
+        "quality={:.4} residual_rms={:.6} edges={} servers={} items={} anchored={}",
+        quality, residual_rms, num_edges, m, n, num_anchored
     );
+
+    // Count valid observations per item across all servers
+    let mut obs_count: Vec<usize> = vec![0; n];
+    #[allow(clippy::needless_range_loop)]
+    for matrix in ratios_per_server {
+        #[allow(clippy::needless_range_loop)]
+        for i in 0..n {
+            #[allow(clippy::needless_range_loop)]
+            for j in 0..n {
+                if i != j {
+                    let r = matrix[i][j];
+                    if r > 0.0 && r.is_finite() {
+                        obs_count[i] += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    let max_observed = obs_count.iter().max().copied().unwrap_or(1).max(1);
+    let anchor_conn = connectivity.is_fully_connected;
+
+    // Per-item confidence
+    let mut per_item_confidence: Vec<f64> = Vec::with_capacity(n);
+    #[allow(clippy::needless_range_loop)]
+    for i in 0..n {
+        let item_obs_rate = obs_count[i] as f64 / max_observed as f64;
+        let in_anchor = connectivity.is_anchor_connected(i);
+
+        let base_conf = quality * (0.3 + 0.7 * item_obs_rate);
+
+        let conf = if in_anchor {
+            let conn_bonus = if anchor_conn {
+                1.0
+            } else {
+                0.5 + 0.5 * connectivity.anchor_coverage
+            };
+            (base_conf * conn_bonus).clamp(0.0, 1.0)
+        } else {
+            // Disconnected: price is 1.0 (unanchored), very low confidence
+            (base_conf * 0.05).clamp(0.0, 0.1)
+        };
+        per_item_confidence.push(conf);
+    }
 
     Ok(SolveResult {
         prices,
@@ -393,6 +647,8 @@ pub fn compute_prices_with_quality(
         residual_rms,
         num_servers: m,
         num_items: n,
+        per_item_confidence,
+        connectivity,
     })
 }
 
@@ -552,5 +808,93 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_connectivity_fully_connected() {
+        // 3 servers, all observe all pairs → fully connected
+        let s1 = make_ratio_matrix(&[10.0, 20.0, 30.0]);
+        let s2 = make_ratio_matrix(&[15.0, 30.0, 45.0]);
+        let s3 = make_ratio_matrix(&[8.0, 16.0, 24.0]);
+
+        let result =
+            compute_prices_with_quality(&[s1, s2, s3], None, 0, 10.0, Default::default()).unwrap();
+
+        assert!(result.connectivity.is_fully_connected);
+        assert!(result.connectivity.is_anchor_connected(0));
+        assert!(result.connectivity.is_anchor_connected(1));
+        assert!(result.connectivity.is_anchor_connected(2));
+        // All items in same component
+        assert_eq!(
+            result.connectivity.component_of(0),
+            result.connectivity.component_of(1)
+        );
+        assert_eq!(
+            result.connectivity.component_of(1),
+            result.connectivity.component_of(2)
+        );
+    }
+
+    #[test]
+    fn test_connectivity_disconnected() {
+        // Server observes items 0-1 but item 2 is completely isolated
+        // IMPORTANT: use 0.0 (not 1.0) for missing entries — 1.0 counts as observed!
+        let s1 = vec![
+            vec![1.0, 2.0, 0.0], // item 0: connected to 1 only
+            vec![0.5, 1.0, 0.0], // item 1: connected to 0 only
+            vec![0.0, 0.0, 1.0], // item 2: completely isolated (only diagonal)
+        ];
+
+        let result = compute_prices_with_quality(&[s1], None, 0, 10.0, Default::default()).unwrap();
+
+        assert!(
+            !result.connectivity.is_fully_connected,
+            "Graph with isolated item 2 should not be fully connected"
+        );
+        assert!(
+            result.connectivity.is_anchor_connected(0),
+            "Anchor item 0 must be connected"
+        );
+        assert!(
+            result.connectivity.is_anchor_connected(1),
+            "Item 1 is connected to anchor"
+        );
+        assert!(
+            !result.connectivity.is_anchor_connected(2),
+            "Isolated item 2 must not be connected to anchor"
+        );
+        // Connected items should have far higher confidence than disconnected
+        assert!(
+            result.per_item_confidence[0] > result.per_item_confidence[2] * 5.0,
+            "Item 0 ({}) should be >5x more confident than disconnected item 2 ({})",
+            result.per_item_confidence[0],
+            result.per_item_confidence[2]
+        );
+    }
+
+    #[test]
+    fn test_per_item_confidence_anchored_higher_than_disconnected() {
+        // Same setup: item 2 is isolated
+        let s1 = vec![
+            vec![1.0, 2.0, 0.0],
+            vec![0.5, 1.0, 0.0],
+            vec![0.0, 0.0, 1.0],
+        ];
+
+        let result = compute_prices_with_quality(&[s1], None, 0, 10.0, Default::default()).unwrap();
+
+        // Connected items (0,1) should have higher confidence than isolated item 2
+        assert!(
+            result.per_item_confidence[0] > result.per_item_confidence[2],
+            "Anchored item 0 ({}) > disconnected item 2 ({})",
+            result.per_item_confidence[0],
+            result.per_item_confidence[2]
+        );
+        assert!(
+            result.per_item_confidence[1] > result.per_item_confidence[2],
+            "Connected item 1 ({}) > disconnected item 2 ({})",
+            result.per_item_confidence[1],
+            result.per_item_confidence[2]
+        );
     }
 }

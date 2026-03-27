@@ -23,6 +23,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -289,53 +290,121 @@ public class AuctionManager {
         return auctionRepo.findById(orderId);
     }
 
+    /**
+     * Process an auction fill: credit seller (after auction tax), deliver items to buyer,
+     * then record to DB.
+     *
+     * Economy ops run FIRST on the Bukkit main thread — we wait for them to complete
+     * via CountDownLatch before writing to DB. If they fail, we throw and the caller
+     * refunds the buyer's escrowed money without any DB record.
+     *
+     * The CountDownLatch approach is safe here because:
+     *   - The async thread (ForkJoinPool) blocks on latch.await() — it does NOT hold
+     *     any lock that the main thread needs, so there is no deadlock risk.
+     *   - The main thread runs economy ops (depositPlayer, addItem) which are fast and
+     *     do NOT need the ForkJoinPool, so the blocking completes promptly.
+     *
+     * @throws RuntimeException if any economy operation fails on the main thread.
+     *                         The caller is responsible for catching and refunding.
+     */
     private void processFill(AuctionFill fill) {
-        // All DB work can stay async; economy + inventory ops must run on Bukkit main thread.
-        auctionRepo.insertFill(fill);
+        // Fetch both orders first — needed for economy ops.
+        Optional<AuctionOrder> sellOpt = auctionRepo.findById(fill.sellOrderId());
+        Optional<AuctionOrder> buyOpt = auctionRepo.findById(fill.buyOrderId());
 
-        // Update remaining quantities on both orders
-        auctionRepo.findById(fill.buyOrderId()).ifPresent(buy -> {
-            int newRemaining = buy.remainingQuantity() - fill.quantity();
-            auctionRepo.update(buy.withRemainingQuantity(Math.max(0, newRemaining)));
-        });
+        // Shared error array so lambdas can write errors for the outer method to read.
+        // Array reference is effectively final; contents are mutated by lambdas.
+        Exception[] economyError = new Exception[1];
 
-        auctionRepo.findById(fill.sellOrderId()).ifPresent(sell -> {
-            int newRemaining = sell.remainingQuantity() - fill.quantity();
-            auctionRepo.update(sell.withRemainingQuantity(Math.max(0, newRemaining)));
-
-            // Calculate seller's proceeds and deduct auction tax before crediting.
+        // ── Seller credit on main thread ──────────────────────────────────────
+        // Use separate final latch per op so lambda captures work correctly.
+        final CountDownLatch sellerLatch = new CountDownLatch(1);
+        if (sellOpt.isPresent()) {
+            AuctionOrder sell = sellOpt.get();
             BigDecimal grossProceeds = fill.price().multiply(BigDecimal.valueOf(fill.quantity()));
             BigDecimal taxAmount = treasuryService.collectAuctionTax(grossProceeds);
             BigDecimal netProceeds = grossProceeds.subtract(taxAmount);
 
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            Bukkit.getScheduler().runTask(plugin, task -> {
                 try {
                     Player seller = Bukkit.getPlayer(sell.playerUuid());
+                    if (seller == null) {
+                        economyError[0] = new RuntimeException("Seller " + sell.playerUuid() + " is offline");
+                        return;
+                    }
                     economy.depositPlayer(seller, netProceeds.doubleValue());
                 } catch (Exception e) {
-                    plugin.getLogger().log(Level.SEVERE,
-                            "Failed to credit seller " + sell.playerUuid() + " for fill " + fill.id(), e);
+                    economyError[0] = e;
+                } finally {
+                    sellerLatch.countDown();
                 }
             });
-        });
+        } else {
+            sellerLatch.countDown();
+        }
 
-        auctionRepo.findById(fill.buyOrderId()).ifPresent(buy -> {
-            // Give buyer the items — run on main thread since we're in async context.
-            // If player is offline the items are silently lost (same as chest shops).
+        // Wait for seller credit before proceeding to buyer.
+        try {
+            sellerLatch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while waiting for seller credit", e);
+        }
+        if (economyError[0] != null) {
+            throw new RuntimeException("Seller credit failed for fill " + fill.id()
+                    + ": " + economyError[0].getMessage(), economyError[0]);
+        }
+
+        // ── Buyer item delivery on main thread ────────────────────────────────
+        final CountDownLatch buyerLatch = new CountDownLatch(1);
+        economyError[0] = null;
+        if (buyOpt.isPresent()) {
+            AuctionOrder buy = buyOpt.get();
             String materialName = buy.material();
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            int qty = fill.quantity();
+
+            Bukkit.getScheduler().runTask(plugin, task -> {
                 try {
                     Player buyer = Bukkit.getPlayer(buy.playerUuid());
-                    if (buyer != null) {
-                        Material mat = Material.valueOf(materialName);
-                        ItemStack items = new ItemStack(mat, fill.quantity());
-                        buyer.getInventory().addItem(items);
+                    if (buyer == null) {
+                        economyError[0] = new RuntimeException("Buyer " + buy.playerUuid() + " is offline");
+                        return;
                     }
+                    Material mat = Material.valueOf(materialName);
+                    ItemStack items = new ItemStack(mat, qty);
+                    buyer.getInventory().addItem(items);
                 } catch (Exception e) {
-                    plugin.getLogger().log(Level.SEVERE,
-                            "Failed to give buyer " + buy.playerUuid() + " items for fill " + fill.id(), e);
+                    economyError[0] = e;
+                } finally {
+                    buyerLatch.countDown();
                 }
             });
+        } else {
+            buyerLatch.countDown();
+        }
+
+        try {
+            buyerLatch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while waiting for buyer item delivery", e);
+        }
+        if (economyError[0] != null) {
+            throw new RuntimeException("Buyer item delivery failed for fill " + fill.id()
+                    + ": " + economyError[0].getMessage(), economyError[0]);
+        }
+
+        // ── Economy ops succeeded — now record to DB ─────────────────────────
+        auctionRepo.insertFill(fill);
+
+        // Update remaining quantities on both orders
+        buyOpt.ifPresent(buy -> {
+            int newRemaining = Math.max(0, buy.remainingQuantity() - fill.quantity());
+            auctionRepo.update(buy.withRemainingQuantity(newRemaining));
+        });
+        sellOpt.ifPresent(sell -> {
+            int newRemaining = Math.max(0, sell.remainingQuantity() - fill.quantity());
+            auctionRepo.update(sell.withRemainingQuantity(newRemaining));
         });
     }
 

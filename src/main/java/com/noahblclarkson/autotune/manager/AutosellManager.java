@@ -159,10 +159,19 @@ public class AutosellManager {
         int totalSold = 0;
         BigDecimal totalEarned = BigDecimal.ZERO;
 
+        // Iterate the player's ACTUAL storage contents directly.
+        // processSellImmediate removes items from the player's inventory on success,
+        // so we naturally skip re-selling them on subsequent loop iterations.
+        // No stale snapshot needed — we read real-time from the player's inventory.
         ItemStack[] contents = player.getInventory().getStorageContents();
-
         for (int slot = 0; slot < contents.length; slot++) {
             ItemStack stack = contents[slot];
+            if (stack == null || stack.getType().isAir()) {
+                continue;
+            }
+
+            // Re-read from actual inventory after potential prior modification
+            stack = player.getInventory().getStorageContents()[slot];
             if (stack == null || stack.getType().isAir()) {
                 continue;
             }
@@ -187,28 +196,31 @@ public class AutosellManager {
             }
 
             int amount = stack.getAmount();
-            // processSellImmediate handles item removal + money deposit + DB write
-            // atomically. It removes items first, deposits money, then writes to DB.
-            // If DB write fails, it restores items and returns economyError.
-            // In that case we stop the loop — partial completion would confuse players.
+            // processSellImmediate handles item removal + money deposit + DB write.
+            // Items are removed FIRST; if DB write fails, items are restored in-place.
+            // If it fails, we stop the loop so the player has a consistent inventory.
             EconomyManager.TransactionResult result = economyManager.processSellImmediate(
                     player, shopItem, amount, stack);
 
             if (result != null && result.success()) {
-                contents[slot] = null;  // item was removed by processSellImmediate
                 totalSold += result.amount();
                 totalEarned = totalEarned.add(result.totalPrice());
+                // processSellImmediate already removed items from player's actual inventory.
+                // Re-read the slot on next iteration — it will be null/empty if sold successfully.
             } else if (result != null && !result.success()) {
-                // DB failed AND items were restored by processSellImmediate.
-                // Stop the loop — don't leave player with partial sold inventory.
+                // DB failed and processSellImmediate restored the items in-place.
+                // Stop the loop — don't leave player with partially-completed autosell.
                 LOGGER.log(Level.WARNING, "Autosell stopped for " + player.getName()
                         + " after DB failure (sold " + totalSold + " items so far).", new Exception("DB failure"));
                 break;
             }
         }
 
-        // Apply slot clears to actual inventory
-        player.getInventory().setStorageContents(contents);
+        // NOTE: We do NOT call setStorageContents(contents) here.
+        // processSellImmediate modifies the player's actual inventory directly.
+        // Calling setStorageContents with our stale snapshot would overwrite any items
+        // the player received (e.g., from loot, other players) between the snapshot
+        // and the setStorageContents call — silently losing items.
 
         if (totalSold > 0) {
             player.sendMessage(configManager.getMessage("autosell.inventory-sold", Map.of(

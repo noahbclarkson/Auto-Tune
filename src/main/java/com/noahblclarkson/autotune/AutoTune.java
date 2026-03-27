@@ -14,6 +14,7 @@ import com.noahblclarkson.autotune.manager.AutosellManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
+import com.noahblclarkson.autotune.manager.ScoreboardManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.manager.TreasuryService;
 import com.noahblclarkson.autotune.task.TaskScheduler;
@@ -40,6 +41,7 @@ public class AutoTune extends JavaPlugin {
     private AutosellManager autosellManager;
     private EconomyMetricsManager economyMetricsManager;
     private PriceAlertManager priceAlertManager;
+    private ScoreboardManager scoreboardManager;
     private TreasuryService treasuryService;
     private CommandManager commandManager;
     private TaskScheduler taskScheduler;
@@ -92,6 +94,8 @@ public class AutoTune extends JavaPlugin {
         economyMetricsManager = injector.getInstance(EconomyMetricsManager.class);
         priceAlertManager = injector.getInstance(PriceAlertManager.class);
         priceAlertManager.initialize();
+        scoreboardManager = injector.getInstance(ScoreboardManager.class);
+        scoreboardManager.start();
         treasuryService = injector.getInstance(TreasuryService.class);
         treasuryService.start();
         taskScheduler = injector.getInstance(TaskScheduler.class);
@@ -137,6 +141,10 @@ public class AutoTune extends JavaPlugin {
 
         if (treasuryService != null) {
             treasuryService.shutdown();
+        }
+
+        if (scoreboardManager != null) {
+            scoreboardManager.stop();
         }
 
         if (databaseManager != null) {
@@ -225,6 +233,11 @@ public class AutoTune extends JavaPlugin {
     @NotNull
     public EconomyMetricsManager getEconomyMetricsManager() {
         return economyMetricsManager;
+    }
+
+    @NotNull
+    public ScoreboardManager getScoreboardManager() {
+        return scoreboardManager;
     }
 
     @Nullable

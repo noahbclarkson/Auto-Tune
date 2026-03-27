@@ -71,6 +71,7 @@ public class ConfigManager {
                 parseEnchantmentConfig(cfg.getConfigurationSection("enchantment")),
                 parseCleanupConfig(cfg.getConfigurationSection("cleanup")),
                 parseTaxConfig(cfg.getConfigurationSection("tax")),
+                parseScoreboardConfig(cfg.getConfigurationSection("scoreboard")),
                 this.marketFrozen
         );
     }
@@ -487,6 +488,17 @@ public class ConfigManager {
                 section.getDouble("sell-tax-percent", 0.0),
                 section.getDouble("auction-tax-percent", 0.0),
                 section.getDouble("loan-interest-tax-percent", 0.0)
+        );
+    }
+
+    private ScoreboardConfig parseScoreboardConfig(ConfigurationSection section) {
+        if (section == null) {
+            return ScoreboardConfig.defaults();
+        }
+        return new ScoreboardConfig(
+                section.getBoolean("enabled", false),
+                section.getString("title", "Auto-Tune Economy"),
+                Math.max(10, section.getInt("update-interval-seconds", 30))
         );
     }
 }

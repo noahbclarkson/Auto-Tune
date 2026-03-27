@@ -18,6 +18,7 @@ public record AutoTuneConfig(
         @NotNull EnchantmentConfig enchantment,
         @NotNull CleanupConfig cleanup,
         @NotNull TaxConfig tax,
+        @NotNull ScoreboardConfig scoreboard,
         boolean marketFrozen
 ) {
 
@@ -350,6 +351,31 @@ public record AutoTuneConfig(
     ) {
         public static TaxConfig defaults() {
             return new TaxConfig(false, 0.0, 0.0, 0.0, 0.0);
+        }
+    }
+
+    /**
+     * Economy scoreboard config — controls the per-player sidebar scoreboard
+     * shown to all players, displaying live economy statistics.
+     *
+     * enabled: whether to show scoreboards at all
+     * title: scoreboard header text (max 32 chars, Minecraft limitation)
+     * updateIntervalSeconds: how often to refresh stats (min 10s recommended)
+     *
+     * Displayed entries:
+     *   GDP       — 24h trade volume (dollar amount)
+     *   Debt      — total outstanding loan principal
+     *   Loans     — active loan count
+     *   Activity  — trade volume indicator (High/Norm/Low)
+     *   Inflation — price change direction + label
+     */
+    public record ScoreboardConfig(
+            boolean enabled,
+            @NotNull String title,
+            int updateIntervalSeconds
+    ) {
+        public static ScoreboardConfig defaults() {
+            return new ScoreboardConfig(false, "Auto-Tune Economy", 30);
         }
     }
 

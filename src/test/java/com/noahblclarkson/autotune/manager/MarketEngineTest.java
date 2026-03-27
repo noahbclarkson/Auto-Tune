@@ -71,6 +71,7 @@ class MarketEngineTest {
                 AutoTuneConfig.EnchantmentConfig.defaults(),
                 AutoTuneConfig.CleanupConfig.defaults(),
                 AutoTuneConfig.TaxConfig.defaults(),
+                AutoTuneConfig.ScoreboardConfig.defaults(),
                 false
         );
 

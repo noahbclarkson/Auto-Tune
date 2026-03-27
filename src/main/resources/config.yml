@@ -357,3 +357,19 @@ cleanup:
   economy-snapshots:
     enabled: true
     retention-days: 30
+
+# ============================================
+# Economy Scoreboard
+# Per-player sidebar scoreboard showing live economy stats.
+# Enable by setting enabled: true.
+# Players see: GDP, Debt, Loans, Activity, Inflation — updated every interval.
+# ============================================
+scoreboard:
+  # Set to true to show the economy scoreboard to all players on join.
+  enabled: false
+
+  # Scoreboard sidebar title (max 32 characters — Minecraft limit).
+  title: "Auto-Tune Economy"
+
+  # How often to refresh scoreboard stats, in seconds (min 10).
+  update-interval-seconds: 30

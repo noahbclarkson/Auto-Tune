@@ -3,6 +3,7 @@ package com.noahblclarkson.autotune;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.AutosellRepository;
 import com.noahblclarkson.autotune.database.AuctionRepository;
@@ -18,6 +19,7 @@ import com.noahblclarkson.autotune.manager.DefaultPluginAdapter;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.PluginAdapter;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
+import com.noahblclarkson.autotune.manager.ScoreboardManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -124,5 +126,14 @@ public class AutoTuneModule extends AbstractModule {
                 shopManager,
                 configManager
         );
+    }
+
+    @Provides
+    @Singleton
+    public ScoreboardManager provideScoreboardManager(
+            EconomySnapshotRepository economySnapshotRepository,
+            AutoTuneConfig autoTuneConfig
+    ) {
+        return new ScoreboardManager(plugin, economySnapshotRepository, autoTuneConfig);
     }
 }

@@ -7,6 +7,7 @@ import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.AutosellManager;
+import com.noahblclarkson.autotune.manager.ScoreboardManager;
 import com.noahblclarkson.autotune.model.Loan;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -32,6 +33,7 @@ public class PlayerListener implements Listener {
     private final PlayerRepository playerRepository;
     private final LoanManager loanManager;
     private final AutosellManager autosellManager;
+    private final ScoreboardManager scoreboardManager;
 
     @Inject
     public PlayerListener(
@@ -39,13 +41,15 @@ public class PlayerListener implements Listener {
             DatabaseManager databaseManager,
             PlayerRepository playerRepository,
             LoanManager loanManager,
-            AutosellManager autosellManager
+            AutosellManager autosellManager,
+            ScoreboardManager scoreboardManager
     ) {
         this.configManager = configManager;
         this.databaseManager = databaseManager;
         this.playerRepository = playerRepository;
         this.loanManager = loanManager;
         this.autosellManager = autosellManager;
+        this.scoreboardManager = scoreboardManager;
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -53,6 +57,7 @@ public class PlayerListener implements Listener {
         Player player = event.getPlayer();
 
         autosellManager.loadPlayer(player);
+        scoreboardManager.showScoreboard(player);
         java.util.UUID playerId = player.getUniqueId();
         String playerName = player.getName();
         databaseManager.supplyAsync(() -> {
@@ -68,8 +73,10 @@ public class PlayerListener implements Listener {
 
     @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerQuit(PlayerQuitEvent event) {
-        autosellManager.unloadPlayer(event.getPlayer().getUniqueId());
-        var unused = databaseManager.runAsync(() -> playerRepository.updateLastSeen(event.getPlayer().getUniqueId()));
+        Player player = event.getPlayer();
+        autosellManager.unloadPlayer(player.getUniqueId());
+        scoreboardManager.hideScoreboard(player);
+        var unused = databaseManager.runAsync(() -> playerRepository.updateLastSeen(player.getUniqueId()));
     }
 
     private void checkLoanWarning(Player player, Optional<Loan> activeLoan) {

@@ -78,6 +78,7 @@ class EconomyManagerTest {
                 AutoTuneConfig.EnchantmentConfig.defaults(),
                 AutoTuneConfig.CleanupConfig.defaults(),
                 AutoTuneConfig.TaxConfig.defaults(),
+                AutoTuneConfig.ScoreboardConfig.defaults(),
                 false);
         when(cm.getConfig()).thenReturn(cfg);
         return cm;

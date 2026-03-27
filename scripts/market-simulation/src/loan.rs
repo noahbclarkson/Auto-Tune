@@ -41,6 +41,7 @@ impl Loan {
         self.status == LoanStatus::Active && current_tick > self.due_tick
     }
 
+    #[allow(dead_code)]
     pub fn apply_interest(&mut self) {
         let interest = self.current_balance * self.interest_rate;
         self.current_balance += interest;

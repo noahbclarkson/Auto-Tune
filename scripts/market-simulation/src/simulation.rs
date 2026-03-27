@@ -213,9 +213,12 @@ impl Simulation {
         let recording = self.recorder.is_some();
         let mut events = Vec::new();
 
-        // Circuit breaker: check debt/GDP ratio before applying any interest
-        let threshold = self.config.loans.debt_gdp_circuit_breaker_ratio;
-        if threshold > 0.0 {
+        // Tiered circuit breaker: compute interest_multiplier based on debt/GDP ratio.
+        // Tier 1 (>tier1_ratio): cap at tier1_cap (50%) — warning zone
+        // Tier 2 (>tier2_ratio): cap at tier2_cap (25%) — danger zone
+        // Tier 3 (>tier3_ratio): full pause (0%) — emergency zone
+        let lc = &self.config.loans;
+        let (interest_multiplier, tier_name) = if lc.debt_gdp_tier3_ratio > 0.0 {
             let total_debt: f64 = self
                 .loans
                 .iter()
@@ -236,74 +239,60 @@ impl Simulation {
             } else {
                 f64::MAX
             };
-            if ratio > threshold {
-                if !self.interest_circuit_open {
-                    // Log state transition on first tick circuit opens
-                    if recording {
-                        eprintln!(
-                            "[SIMULATION] Loan circuit breaker OPEN at tick {} — debt/GDP ratio {:.1}x > {:.1}x. Interest paused.",
-                            self.current_tick, ratio, threshold
-                        );
-                    }
-                }
-                self.interest_circuit_open = true;
-                // Circuit is open: skip interest accrual but still process defaults
-                for loan in &mut self.loans {
-                    if loan.status != LoanStatus::Active {
-                        continue;
-                    }
-                    if loan.is_overdue(self.current_tick) {
-                        loan.mark_defaulted();
-                        if recording {
-                            events.push(LoanEventData {
-                                tick: self.current_tick,
-                                player_id: loan.player_index,
-                                event_type: "Defaulted",
-                                principal: loan.principal,
-                                balance: loan.current_balance,
-                                rate: loan.interest_rate,
-                                amount: 0.0,
-                            });
-                        }
-                        if let Some(player) = self.players.get_mut(loan.player_index) {
-                            player.credit_score =
-                                (player.credit_score - self.config.loans.default_penalty).max(0);
-                        }
-                    }
-                }
-                return events;
-            } else {
-                if self.interest_circuit_open && recording {
-                    eprintln!(
-                        "[SIMULATION] Loan circuit breaker CLOSED at tick {} — debt/GDP ratio {:.1}x < {:.1}x.",
-                        self.current_tick, ratio, threshold
-                    );
-                }
-                self.interest_circuit_open = false;
-            }
-        }
 
+            if ratio > lc.debt_gdp_tier3_ratio {
+                (0.0, "TIER3")
+            } else if ratio > lc.debt_gdp_tier2_ratio {
+                (lc.tier2_interest_cap, "TIER2")
+            } else if ratio > lc.debt_gdp_tier1_ratio {
+                (lc.tier1_interest_cap, "TIER1")
+            } else {
+                (1.0, "NORMAL")
+            }
+        } else {
+            (1.0, "NORMAL")
+        };
+
+        // Log tier transitions
+        let prev_tier = self.interest_circuit_open; // repurposed: true = TIER3, false = normal
+        let currently_in_tier3 = tier_name == "TIER3";
+        if currently_in_tier3 && !prev_tier && recording {
+            let total_debt: f64 = self
+                .loans
+                .iter()
+                .filter(|l| l.status == LoanStatus::Active)
+                .map(|l| l.current_balance)
+                .sum();
+            let gdp_window = 288u64;
+            let window_start = self.current_tick.saturating_sub(gdp_window);
+            let gdp: f64 = self
+                .transactions
+                .iter()
+                .filter(|tx| tx.tick >= window_start && tx.tx_type == TransactionType::Buy)
+                .map(|tx| tx.total_price)
+                .sum();
+            let ratio = if gdp > 0.0 {
+                total_debt / gdp
+            } else {
+                f64::MAX
+            };
+            eprintln!(
+                "[SIMULATION] Loan circuit breaker TIER3 OPEN at tick {} — debt/GDP {:.1}x > {:.1}x. Interest paused.",
+                self.current_tick, ratio, lc.debt_gdp_tier3_ratio
+            );
+        } else if !currently_in_tier3 && prev_tier && recording {
+            eprintln!(
+                "[SIMULATION] Loan circuit breaker CLOSED at tick {}.",
+                self.current_tick
+            );
+        }
+        self.interest_circuit_open = currently_in_tier3;
+
+        // Always process defaults even when interest is paused/tiered
         for loan in &mut self.loans {
             if loan.status != LoanStatus::Active {
                 continue;
             }
-
-            if self.current_tick - loan.last_interest_tick >= compound_interval {
-                loan.apply_interest();
-                loan.last_interest_tick = self.current_tick;
-                if recording {
-                    events.push(LoanEventData {
-                        tick: self.current_tick,
-                        player_id: loan.player_index,
-                        event_type: "InterestApplied",
-                        principal: loan.principal,
-                        balance: loan.current_balance,
-                        rate: loan.interest_rate,
-                        amount: loan.current_balance * loan.interest_rate,
-                    });
-                }
-            }
-
             if loan.is_overdue(self.current_tick) {
                 loan.mark_defaulted();
                 if recording {
@@ -320,6 +309,33 @@ impl Simulation {
                 if let Some(player) = self.players.get_mut(loan.player_index) {
                     player.credit_score =
                         (player.credit_score - self.config.loans.default_penalty).max(0);
+                }
+            }
+        }
+
+        // Apply interest with tiered multiplier (0.0 = full pause, 0.25 = 25%, etc.)
+        if interest_multiplier > 0.0 {
+            for loan in &mut self.loans {
+                if loan.status != LoanStatus::Active {
+                    continue;
+                }
+
+                if self.current_tick - loan.last_interest_tick >= compound_interval {
+                    let full_interest = loan.current_balance * loan.interest_rate;
+                    let actual_interest = full_interest * interest_multiplier;
+                    loan.current_balance += actual_interest;
+                    loan.last_interest_tick = self.current_tick;
+                    if recording {
+                        events.push(LoanEventData {
+                            tick: self.current_tick,
+                            player_id: loan.player_index,
+                            event_type: "InterestApplied",
+                            principal: loan.principal,
+                            balance: loan.current_balance,
+                            rate: loan.interest_rate,
+                            amount: actual_interest,
+                        });
+                    }
                 }
             }
         }

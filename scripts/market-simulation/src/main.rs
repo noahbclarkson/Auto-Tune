@@ -245,13 +245,21 @@ fn pearson_correlation(a: &[f64], b: &[f64]) -> Option<f64> {
     if var_a < 1e-10 || var_b < 1e-10 {
         return None;
     }
-    let cov: f64 = a.iter().zip(b.iter()).map(|(x, y)| (x - mean_a) * (y - mean_b)).sum::<f64>() / n as f64;
+    let cov: f64 = a
+        .iter()
+        .zip(b.iter())
+        .map(|(x, y)| (x - mean_a) * (y - mean_b))
+        .sum::<f64>()
+        / n as f64;
     Some(cov / (var_a * var_b).sqrt())
 }
 
 /// Average pairwise price-change correlation for items within a given section.
 /// Compares treatment (sector_correlation > 0) vs control (sector_correlation = 0).
-fn avg_within_section_correlation(items: &[crate::engine::ItemState], section: &str) -> Option<f64> {
+fn avg_within_section_correlation(
+    items: &[crate::engine::ItemState],
+    section: &str,
+) -> Option<f64> {
     // Find all items with same section via config — use item names as section proxy
     // since ItemState doesn't store section. Items in the same "ores" group:
     // Diamond(index 5), Iron Ingot(index 3), Redstone(index 2), Netherite(index 7)
@@ -276,7 +284,15 @@ fn avg_within_section_correlation(items: &[crate::engine::ItemState], section: &
         .iter()
         .map(|&i| {
             let h = &items[i].price_history;
-            h.windows(2).map(|w| if w[0] > 0.0 { (w[1] - w[0]) / w[0] } else { 0.0 }).collect()
+            h.windows(2)
+                .map(|w| {
+                    if w[0] > 0.0 {
+                        (w[1] - w[0]) / w[0]
+                    } else {
+                        0.0
+                    }
+                })
+                .collect()
         })
         .collect();
     let mut total = 0.0;
@@ -289,13 +305,23 @@ fn avg_within_section_correlation(items: &[crate::engine::ItemState], section: &
             }
         }
     }
-    if count == 0 { None } else { Some(total / count as f64) }
+    if count == 0 {
+        None
+    } else {
+        Some(total / count as f64)
+    }
 }
 
 /// Average pairwise price-change correlation for items ACROSS different sections.
 fn avg_cross_section_correlation(items: &[crate::engine::ItemState]) -> Option<f64> {
     // Pick one representative item from each section
-    let reps = ["Cobblestone", "Rotten Flesh", "Redstone", "Golden Apple", "Diamond"];
+    let reps = [
+        "Cobblestone",
+        "Rotten Flesh",
+        "Redstone",
+        "Golden Apple",
+        "Diamond",
+    ];
     let indices: Vec<usize> = items
         .iter()
         .enumerate()
@@ -309,7 +335,15 @@ fn avg_cross_section_correlation(items: &[crate::engine::ItemState]) -> Option<f
         .iter()
         .map(|&i| {
             let h = &items[i].price_history;
-            h.windows(2).map(|w| if w[0] > 0.0 { (w[1] - w[0]) / w[0] } else { 0.0 }).collect()
+            h.windows(2)
+                .map(|w| {
+                    if w[0] > 0.0 {
+                        (w[1] - w[0]) / w[0]
+                    } else {
+                        0.0
+                    }
+                })
+                .collect()
         })
         .collect();
     let mut total = 0.0;
@@ -322,7 +356,11 @@ fn avg_cross_section_correlation(items: &[crate::engine::ItemState]) -> Option<f
             }
         }
     }
-    if count == 0 { None } else { Some(total / count as f64) }
+    if count == 0 {
+        None
+    } else {
+        Some(total / count as f64)
+    }
 }
 
 /// Run the sector correlation test: treatment (sector_correlation=0.05) vs
@@ -376,33 +414,69 @@ fn run_correlation_test(seed: u64) {
     println!("║  CORRELATION TEST RESULTS                                   ║");
     println!("╚══════════════════════════════════════════════════════════════╝\n");
 
-    println!("{:25} {:>12} {:>12} {:>12}", "", "TREATMENT", "CONTROL", "DIFF");
-    println!("{:25} {:>12} {:>12} {:>12}", "", "(corr=0.05)", "(corr=0.0)", "(T−C)");
+    println!(
+        "{:25} {:>12} {:>12} {:>12}",
+        "", "TREATMENT", "CONTROL", "DIFF"
+    );
+    println!(
+        "{:25} {:>12} {:>12} {:>12}",
+        "", "(corr=0.05)", "(corr=0.0)", "(T−C)"
+    );
 
     // Final price displacement for Diamond (index 5)
     let t_diamond_pct = (treatment_result[5].price / treatment_result[5].base_price - 1.0) * 100.0;
     let c_diamond_pct = (control_result[5].price / control_result[5].base_price - 1.0) * 100.0;
-    println!("{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%", "Diamond final displacement", t_diamond_pct, c_diamond_pct, t_diamond_pct - c_diamond_pct);
+    println!(
+        "{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%",
+        "Diamond final displacement",
+        t_diamond_pct,
+        c_diamond_pct,
+        t_diamond_pct - c_diamond_pct
+    );
 
     // Final price displacement for Iron Ingot (index 3, same section)
     let t_iron_pct = (treatment_result[3].price / treatment_result[3].base_price - 1.0) * 100.0;
     let c_iron_pct = (control_result[3].price / control_result[3].base_price - 1.0) * 100.0;
-    println!("{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%", "Iron Ingot final displac.", t_iron_pct, c_iron_pct, t_iron_pct - c_iron_pct);
+    println!(
+        "{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%",
+        "Iron Ingot final displac.",
+        t_iron_pct,
+        c_iron_pct,
+        t_iron_pct - c_iron_pct
+    );
 
     // Final price displacement for Redstone (index 2, same section)
     let t_red_pct = (treatment_result[2].price / treatment_result[2].base_price - 1.0) * 100.0;
     let c_red_pct = (control_result[2].price / control_result[2].base_price - 1.0) * 100.0;
-    println!("{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%", "Redstone final displacement", t_red_pct, c_red_pct, t_red_pct - c_red_pct);
+    println!(
+        "{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%",
+        "Redstone final displacement",
+        t_red_pct,
+        c_red_pct,
+        t_red_pct - c_red_pct
+    );
 
     // Netherite (index 7, same section)
     let t_neth_pct = (treatment_result[7].price / treatment_result[7].base_price - 1.0) * 100.0;
     let c_neth_pct = (control_result[7].price / control_result[7].base_price - 1.0) * 100.0;
-    println!("{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%", "Netherite final displacement", t_neth_pct, c_neth_pct, t_neth_pct - c_neth_pct);
+    println!(
+        "{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%",
+        "Netherite final displacement",
+        t_neth_pct,
+        c_neth_pct,
+        t_neth_pct - c_neth_pct
+    );
 
     // Cobblestone (index 0, different section — building)
     let t_cob_pct = (treatment_result[0].price / treatment_result[0].base_price - 1.0) * 100.0;
     let c_cob_pct = (control_result[0].price / control_result[0].base_price - 1.0) * 100.0;
-    println!("{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%", "Cobblestone final displac.", t_cob_pct, c_cob_pct, t_cob_pct - c_cob_pct);
+    println!(
+        "{:25} {:>+11.1}% {:>+11.1}% {:>+11.1}%",
+        "Cobblestone final displac.",
+        t_cob_pct,
+        c_cob_pct,
+        t_cob_pct - c_cob_pct
+    );
 
     println!();
     println!("--- Price history correlation (ores items, post-shock) ---");
@@ -412,40 +486,82 @@ fn run_correlation_test(seed: u64) {
     for name in ores_names {
         let ti = match treatment_result.iter().position(|i| i.name == name) {
             Some(i) => i,
-            None => { eprintln!("  warning: item '{}' not found in treatment results — skipping", name); continue; }
+            None => {
+                eprintln!(
+                    "  warning: item '{}' not found in treatment results — skipping",
+                    name
+                );
+                continue;
+            }
         };
         let ci = match control_result.iter().position(|i| i.name == name) {
             Some(i) => i,
-            None => { eprintln!("  warning: item '{}' not found in control results — skipping", name); continue; }
+            None => {
+                eprintln!(
+                    "  warning: item '{}' not found in control results — skipping",
+                    name
+                );
+                continue;
+            }
         };
         // vs Cobblestone as reference
-        let cob_i = match treatment_result.iter().position(|i| i.name == "Cobblestone") {
+        let cob_i = match treatment_result
+            .iter()
+            .position(|i| i.name == "Cobblestone")
+        {
             Some(i) => i,
-            None => { eprintln!("  warning: 'Cobblestone' not found in results — skipping correlation"); continue; }
+            None => {
+                eprintln!("  warning: 'Cobblestone' not found in results — skipping correlation");
+                continue;
+            }
         };
         let cob_hist = &treatment_result[cob_i].price_history;
         let cob_start = shock_idx.min(cob_hist.len().saturating_sub(2));
         let cob_changes = cob_hist[cob_start..]
             .windows(2)
-            .map(|w| if w[0] > 0.0 { (w[1]-w[0])/w[0] } else { 0.0 })
+            .map(|w| {
+                if w[0] > 0.0 {
+                    (w[1] - w[0]) / w[0]
+                } else {
+                    0.0
+                }
+            })
             .collect::<Vec<_>>();
         let item_hist = &treatment_result[ti].price_history;
         let item_start = shock_idx.min(item_hist.len().saturating_sub(2));
         let item_changes = item_hist[item_start..]
             .windows(2)
-            .map(|w| if w[0] > 0.0 { (w[1]-w[0])/w[0] } else { 0.0 })
+            .map(|w| {
+                if w[0] > 0.0 {
+                    (w[1] - w[0]) / w[0]
+                } else {
+                    0.0
+                }
+            })
             .collect::<Vec<_>>();
         let ctrl_hist = &control_result[ci].price_history;
         let ctrl_start = shock_idx.min(ctrl_hist.len().saturating_sub(2));
         let ctrl_changes = ctrl_hist[ctrl_start..]
             .windows(2)
-            .map(|w| if w[0] > 0.0 { (w[1]-w[0])/w[0] } else { 0.0 })
+            .map(|w| {
+                if w[0] > 0.0 {
+                    (w[1] - w[0]) / w[0]
+                } else {
+                    0.0
+                }
+            })
             .collect::<Vec<_>>();
         if let (Some(tc), Some(cc)) = (
             pearson_correlation(&item_changes, &cob_changes),
             pearson_correlation(&ctrl_changes, &cob_changes),
         ) {
-            println!("  {:22} T={:+.4}  C={:+.4}  Δ={:+.4}", format!("{:22}", name), tc, cc, tc - cc);
+            println!(
+                "  {:22} T={:+.4}  C={:+.4}  Δ={:+.4}",
+                format!("{:22}", name),
+                tc,
+                cc,
+                tc - cc
+            );
         } else {
             println!("  {:22} (insufficient post-shock data)", name);
         }
@@ -495,9 +611,15 @@ fn run_correlation_sim(
 ) -> Vec<crate::engine::ItemState> {
     let mut sim = Simulation::new_seeded(config.clone(), seed);
     // Add consistent player mix
-    for _ in 0..4 { sim.add_player(Archetype::Trader); }
-    for _ in 0..3 { sim.add_player(Archetype::Farmer); }
-    for _ in 0..2 { sim.add_player(Archetype::Hoarder); }
+    for _ in 0..4 {
+        sim.add_player(Archetype::Trader);
+    }
+    for _ in 0..3 {
+        sim.add_player(Archetype::Farmer);
+    }
+    for _ in 0..2 {
+        sim.add_player(Archetype::Hoarder);
+    }
     sim.paused = false;
 
     while sim.current_tick < duration {
@@ -520,7 +642,8 @@ fn run_correlation_sim(
         name,
         sim.current_tick,
         sim.engine.items[shock_item].price,
-        (sim.engine.items[shock_item].price / sim.engine.items[shock_item].base_price - 1.0) * 100.0,
+        (sim.engine.items[shock_item].price / sim.engine.items[shock_item].base_price - 1.0)
+            * 100.0,
         sim.engine.items[shock_item].base_price,
     );
 
@@ -681,11 +804,7 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
                             sim.engine.items[*item_index].price = new_price;
                             println!(
                                 "  [STRESS @ tick {}] PriceShock: {} price {} → {} (×{:.2})",
-                                sim.current_tick,
-                                item_name,
-                                old_price,
-                                new_price,
-                                price_multiplier
+                                sim.current_tick, item_name, old_price, new_price, price_multiplier
                             );
                         }
                     }

@@ -50,9 +50,16 @@ pub struct LoanConfig {
     pub default_duration_days: i32,
     pub compound_interval_hours: i32,
     pub default_penalty: i32,
-    /// Pause interest accrual when system debt exceeds this many times the GDP.
-    /// Set to 0.0 to disable. Java equivalent: MarketEngineConfig.debtGdpCircuitBreakerRatio.
-    pub debt_gdp_circuit_breaker_ratio: f64,
+    /// Tiered debt/GDP circuit breaker.
+    /// Above tier1 → interest capped at tier1_cap (50%).
+    /// Above tier2 → interest capped at tier2_cap (25%).
+    /// Above tier3 → interest fully paused.
+    /// Set tier3 to 0.0 to disable all circuit breaking.
+    pub debt_gdp_tier1_ratio: f64,
+    pub debt_gdp_tier2_ratio: f64,
+    pub debt_gdp_tier3_ratio: f64,
+    pub tier1_interest_cap: f64,
+    pub tier2_interest_cap: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -135,7 +142,11 @@ impl Default for LoanConfig {
             default_duration_days: 7,
             compound_interval_hours: 24,
             default_penalty: 50,
-            debt_gdp_circuit_breaker_ratio: 10.0,
+            debt_gdp_tier1_ratio: 3.0,
+            debt_gdp_tier2_ratio: 5.0,
+            debt_gdp_tier3_ratio: 10.0,
+            tier1_interest_cap: 0.5,
+            tier2_interest_cap: 0.25,
         }
     }
 }

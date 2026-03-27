@@ -180,9 +180,17 @@ fn run_single(
     ];
 
     for player_cfg in &players {
-        let archetype = archetype_map.get(&player_cfg.archetype).unwrap();
+        let archetype = *archetype_map
+            .get(&player_cfg.archetype)
+            .unwrap_or_else(|| {
+                panic!(
+                    "sweep基准配置引用了未知原型: '{}'. 已知原型: {:?}",
+                    player_cfg.archetype,
+                    archetype_map.keys().collect::<Vec<_>>()
+                )
+            });
         for _ in 0..player_cfg.count {
-            sim.add_player(*archetype);
+            sim.add_player(archetype);
         }
     }
 
@@ -325,10 +333,18 @@ pub fn run_sweep(sweep_config: &SweepConfig) {
 
     let mut results = Vec::new();
     for (i, params) in combos.iter().enumerate() {
-        let sp = params.get("sell_pressure_multiplier").unwrap();
-        let bs = params.get("base_spread").unwrap();
-        let mc = params.get("max_price_change_percent").unwrap();
-        let td = params.get("trend_dampening").unwrap();
+        let sp = *params
+            .get("sell_pressure_multiplier")
+            .expect("sweep grid: missing 'sell_pressure_multiplier' — grid generator and read site are out of sync");
+        let bs = *params
+            .get("base_spread")
+            .expect("sweep grid: missing 'base_spread' — grid generator and read site are out of sync");
+        let mc = *params
+            .get("max_price_change_percent")
+            .expect("sweep grid: missing 'max_price_change_percent' — grid generator and read site are out of sync");
+        let td = *params
+            .get("trend_dampening")
+            .expect("sweep grid: missing 'trend_dampening' — grid generator and read site are out of sync");
 
         eprint!(
             "\r  [{:3}/{:3}] sp={:.2} bs={:.2} mc={:.2} td={:.3}",
@@ -341,7 +357,7 @@ pub fn run_sweep(sweep_config: &SweepConfig) {
         );
         std::io::stderr().flush().ok();
 
-        let result = run_single(*sp, *bs, *mc, *td, sweep_config.duration_ticks);
+        let result = run_single(sp, bs, mc, td, sweep_config.duration_ticks);
         println!();
         println!("{}", result.to_csv());
         results.push(result);

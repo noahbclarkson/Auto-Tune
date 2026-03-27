@@ -528,9 +528,17 @@ pub fn run_regression_scenario(scenario: &crate::Scenario, git_rev: &str) -> Sce
     let mut sim = Simulation::new_seeded(scenario.config.clone(), REGRESSION_SEED);
 
     for player_cfg in &scenario.players {
-        let archetype = archetype_map.get(&player_cfg.archetype).unwrap();
+        let archetype = *archetype_map
+            .get(&player_cfg.archetype)
+            .unwrap_or_else(|| {
+                panic!(
+                    "regression scenario references unknown archetype: '{}'. Known archetypes: {:?}",
+                    player_cfg.archetype,
+                    archetype_map.keys().collect::<Vec<_>>()
+                )
+            });
         for _ in 0..player_cfg.count {
-            sim.add_player(*archetype);
+            sim.add_player(archetype);
         }
     }
 

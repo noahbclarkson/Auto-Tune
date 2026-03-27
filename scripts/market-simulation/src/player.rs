@@ -528,9 +528,10 @@ impl PlayerAgent {
     fn init_perceived_values(&mut self, item_count: usize, base_prices: &[f64]) {
         let mut rng = SeededRng;
         for (i, &base) in base_prices.iter().enumerate().take(item_count) {
-            let stddev = base * 0.15;
-            let normal =
-                Normal::new(base, stddev).unwrap_or_else(|_| Normal::new(base, 1.0).unwrap());
+            // Normal::new fails if mean <= 0 or stddev is NaN/inf. Base prices are always > 0
+            // and stddev = base * 0.15 is always valid. Use expect() to document the invariant.
+            let normal = Normal::new(base, base * 0.15)
+                .expect("Normal(base, base*0.15) should always be valid for positive base prices");
             let perceived: f64 = normal.sample(&mut rng).max(base * 0.5);
             self.perceived_values.insert(i, perceived);
         }

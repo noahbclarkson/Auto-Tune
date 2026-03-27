@@ -139,10 +139,22 @@ public record AutoTuneConfig(
             double earlyRepaymentBonusMultiplier,
             double inflationRateImpact,
             int defaultPenalty,
-            double debtGdpCircuitBreakerRatio
+            /// Tiered debt/GDP circuit breaker.
+            /// Above tier1Ratio → interest capped at tier1Cap (50%).
+            /// Above tier2Ratio → interest capped at tier2Cap (25%).
+            /// Above tier3Ratio → interest fully paused.
+            double debtGdpTier1Ratio,
+            double debtGdpTier2Ratio,
+            double debtGdpTier3Ratio,
+            double tier1InterestCap,
+            double tier2InterestCap
     ) {
         public static LoanConfig defaults() {
-            return new LoanConfig(true, 0.05, true, 2.0, 200, 7, 3, 30, 0.002, 24, 1, 24, 1.5, 0.5, 50, 10.0);
+            return new LoanConfig(
+                    true, 0.05, true, 2.0, 200,
+                    7, 3, 30, 0.002, 24, 1, 24, 1.5, 0.5, 50,
+                    3.0, 5.0, 10.0, 0.5, 0.25
+            );
         }
     }
 

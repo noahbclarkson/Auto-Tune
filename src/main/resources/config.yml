@@ -180,6 +180,19 @@ loans:
   # Credit score penalty for defaulting
   default-penalty: 50
 
+  # Tiered debt/GDP circuit breaker — graduated interest caps prevent debt
+  # snowball before it reaches catastrophic levels (>10x where full pause fires).
+  # Tier 1 (>3x): interest capped at 50% of normal
+  # Tier 2 (>5x): interest capped at 25% of normal
+  # Tier 3 (>10x): interest fully paused (original single-threshold behavior)
+  # Evidence (2026-03-27): stressed-economy hit 23,196x debt/GDP because the
+  # old single-ratio breaker couldn't slow compounding before it exploded.
+  debt-gdp-tier1-ratio: 3.0
+  debt-gdp-tier2-ratio: 5.0
+  debt-gdp-tier3-ratio: 10.0
+  tier1-interest-cap: 0.5
+  tier2-interest-cap: 0.25
+
 gui:
   # Items per page in shop (max 45 = 5 rows x 9 columns)
   items-per-page: 45

@@ -64,7 +64,12 @@ class LoanManagerTest {
                 d.overdueCheckIntervalHours(), d.warningBeforeDueHours(),
                 d.earlyRepaymentBonusMultiplier(),
                 inflationRateImpact != null ? inflationRateImpact : d.inflationRateImpact(),
-                d.defaultPenalty(), d.debtGdpCircuitBreakerRatio()
+                d.defaultPenalty(),
+                d.debtGdpTier1Ratio(),
+                d.debtGdpTier2Ratio(),
+                d.debtGdpTier3Ratio(),
+                d.tier1InterestCap(),
+                d.tier2InterestCap()
         );
     }
 

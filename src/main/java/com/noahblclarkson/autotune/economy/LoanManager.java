@@ -260,30 +260,53 @@ public class LoanManager {
         LoanConfig config = configManager.getConfig().loans();
         Duration compoundInterval = Duration.ofHours(config.compoundIntervalHours());
 
-        // Circuit breaker: skip interest if system debt exceeds GDP × threshold.
-        // Simulation showed debt can grow 1000x when player count drops — this
-        // prevents unbounded compound growth from destabilizing the economy.
+        // Tiered circuit breaker: graduated interest caps based on debt/GDP ratio.
+        // TIER1 (>3x): 50% interest — warning zone
+        // TIER2 (>5x): 25% interest — danger zone
+        // TIER3 (>10x): 0% interest — emergency zone (original behavior)
+        // Simulation evidence (2026-03-27): old single-ratio breaker fired at 10x
+        // but couldn't prevent runaway compounding before that threshold.
+        double interestMultiplier = 1.0;
+        String currentTier = "NORMAL";
         Optional<EconomySnapshot> latestSnapshot = snapshotRepository.findLatest();
-        if (latestSnapshot.isPresent()) {
+        if (latestSnapshot.isPresent() && config.debtGdpTier3Ratio() > 0.0) {
             BigDecimal gdp = latestSnapshot.get().gdp();
             BigDecimal totalDebt = BigDecimal.ZERO;
             for (Loan l : loanRepository.findAllActive()) {
                 totalDebt = totalDebt.add(l.currentBalance());
             }
             if (gdp.compareTo(BigDecimal.ZERO) > 0) {
-                double debtGdpRatio = totalDebt.divide(gdp, MathContext.DECIMAL128).doubleValue();
-                if (debtGdpRatio > config.debtGdpCircuitBreakerRatio()) {
-                    if (!interestCircuitOpen) {
-                        plugin.getLogger().warning("[Auto-Tune] Loan circuit breaker OPEN — debt/gdp ratio "
-                                + String.format("%.1f", debtGdpRatio) + " exceeds threshold "
-                                + config.debtGdpCircuitBreakerRatio() + ". Interest accrual paused.");
-                        interestCircuitOpen = true;
+                double ratio = totalDebt.divide(gdp, MathContext.DECIMAL128).doubleValue();
+                if (ratio > config.debtGdpTier3Ratio()) {
+                    interestMultiplier = 0.0;
+                    currentTier = "TIER3";
+                } else if (ratio > config.debtGdpTier2Ratio()) {
+                    interestMultiplier = config.tier2InterestCap();
+                    currentTier = "TIER2";
+                } else if (ratio > config.debtGdpTier1Ratio()) {
+                    interestMultiplier = config.tier1InterestCap();
+                    currentTier = "TIER1";
+                }
+
+                if (!currentTier.equals("NORMAL")) {
+                    String msg = String.format("[Auto-Tune] Loan circuit breaker %s — debt/gdp %.1fx. Interest at %.0f%%.",
+                            currentTier, ratio, interestMultiplier * 100);
+                    if (currentTier.equals("TIER3") && !interestCircuitOpen) {
+                        plugin.getLogger().warning(msg + " Interest paused.");
+                    } else if (!currentTier.equals("TIER3")) {
+                        plugin.getLogger().info(msg);
                     }
-                    return;
                 }
             }
         }
-        interestCircuitOpen = false;
+
+        if (interestMultiplier <= 0.0) {
+            interestCircuitOpen = true;
+            return;
+        }
+        if (currentTier.equals("NORMAL")) {
+            interestCircuitOpen = false;
+        }
 
         List<Loan> activeLoans = loanRepository.findAllActive();
         Instant now = Instant.now();
@@ -293,9 +316,14 @@ public class LoanManager {
                 Duration timeSinceInterest = Duration.between(loan.lastInterestAt(), now);
                 if (timeSinceInterest.compareTo(compoundInterval) >= 0) {
                     // Calculate interest BEFORE applying so we can collect tax on it
-                    BigDecimal interestAmount = loan.currentBalance().multiply(loan.interestRate());
+                    BigDecimal fullInterest = loan.currentBalance().multiply(loan.interestRate());
+                    BigDecimal interestAmount = fullInterest.multiply(BigDecimal.valueOf(interestMultiplier));
                     treasuryService.collectLoanInterestTax(interestAmount);
-                    Loan updated = loan.applyInterest(loan.interestRate());
+                    // Apply tiered interest: newBalance = current + (fullInterest * multiplier)
+                    Loan updated = loan.toBuilder()
+                            .currentBalance(loan.currentBalance().add(interestAmount))
+                            .lastInterestAt(Instant.now())
+                            .build();
                     loanRepository.update(updated);
 
                     Player player = plugin.getServer().getPlayer(loan.playerUuid());

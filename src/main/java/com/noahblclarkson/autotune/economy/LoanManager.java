@@ -9,6 +9,7 @@ import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
+import com.noahblclarkson.autotune.manager.TreasuryService;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
 import com.noahblclarkson.autotune.model.Loan;
 import com.noahblclarkson.autotune.model.Loan.LoanStatus;
@@ -40,6 +41,7 @@ public class LoanManager {
     private final LoanRepository loanRepository;
     private final PlayerRepository playerRepository;
     private final EconomySnapshotRepository snapshotRepository;
+    private final TreasuryService treasuryService;
     private volatile boolean interestCircuitOpen = false;
 
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
@@ -52,7 +54,8 @@ public class LoanManager {
             DatabaseManager databaseManager,
             LoanRepository loanRepository,
             PlayerRepository playerRepository,
-            EconomySnapshotRepository snapshotRepository
+            EconomySnapshotRepository snapshotRepository,
+            TreasuryService treasuryService
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -61,6 +64,7 @@ public class LoanManager {
         this.loanRepository = loanRepository;
         this.playerRepository = playerRepository;
         this.snapshotRepository = snapshotRepository;
+        this.treasuryService = treasuryService;
     }
 
     public LoanResult requestLoan(@NotNull Player player, @NotNull BigDecimal amount, int termDays) {
@@ -282,6 +286,9 @@ public class LoanManager {
             try {
                 Duration timeSinceInterest = Duration.between(loan.lastInterestAt(), now);
                 if (timeSinceInterest.compareTo(compoundInterval) >= 0) {
+                    // Calculate interest BEFORE applying so we can collect tax on it
+                    BigDecimal interestAmount = loan.currentBalance().multiply(loan.interestRate());
+                    treasuryService.collectLoanInterestTax(interestAmount);
                     Loan updated = loan.applyInterest(loan.interestRate());
                     loanRepository.update(updated);
 

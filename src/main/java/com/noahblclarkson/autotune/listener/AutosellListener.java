@@ -125,11 +125,11 @@ public class AutosellListener implements Listener {
             EconomyManager.TransactionResult result = autosellManager.sellPickup(player, shopItem, stack, amount);
 
             if (result != null && result.success()) {
-                // Don't manually clear the slot here — sellPickup calls processSellImmediate
-                // which removes items from the player's *real* inventory directly.
-                // Clearing the slot in our copy would incorrectly null out restored items
-                // if a DB failure caused processSellImmediate to restore them.
-                // The sellPickup call already updated the real inventory; leave our copy alone.
+                // Null the slot in our snapshot — sellPickup removed items from the *actual*
+                // inventory. Without this, the next loop iteration sees the same slot
+                // still populated in our cloned snapshot and attempts to re-sell it
+                // (getting "insufficient items" which is silently ignored).
+                storageContents[slot] = null;
                 totalSold += result.amount();
                 totalEarned = totalEarned.add(result.totalPrice());
             }

@@ -29,6 +29,7 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.logging.Level;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -387,7 +388,7 @@ public class WebServer {
         });
 
         app.exception(Exception.class, (e, ctx) -> {
-            plugin.getLogger().warning("Web API error: " + e.getMessage());
+            plugin.getLogger().log(Level.WARNING, "Web API error: " + e.getMessage());
             ctx.status(500).json(Map.of("error", "Internal server error"));
         });
     }
@@ -403,7 +404,7 @@ public class WebServer {
 
             ws.onError(ctx -> {
                 wsClients.remove(ctx);
-                plugin.getLogger().warning("WebSocket error: " + ctx.error());
+                plugin.getLogger().log(Level.WARNING, "WebSocket error: " + ctx.error());
             });
         });
     }
@@ -424,8 +425,7 @@ public class WebServer {
         );
 
         final String json = gson.toJson(message);
-        @SuppressWarnings("PMD.AvoidCatchingGenericException")
-        boolean removed = wsClients.removeIf(ctx -> {
+        wsClients.removeIf(ctx -> {
             try {
                 ctx.send(json);
                 return false;

@@ -165,13 +165,13 @@ Not only does this assist administrators in managing a server's economy, but it 
 
 ### Auto-Tune Default Shop Setup
 
-<img src="https://github.com/Unprotesting/Auto-Tune/blob/master/.github/Auto-Tune-Shop.gif?raw=true" width="500"/>
+<img src="https://github.com/noahbclarkson/Auto-Tune/blob/rewrite-2/.github/Auto-Tune-Shop.gif?raw=true" width="500"/>
 
 ## :computer: Usage
 
 ### :clipboard: Server setup
 
-1. Download the latest version of Auto-Tune from the [releases](https://github.com/Unprotesting/Auto-Tune/releases) tab on Github. Development versions can be found under the [actions](https://github.com/Unprotesting/Auto-Tune/actions) tab on Github (where each commit produces a build artifact which is the latest version of the plugin).
+1. Download the latest version of Auto-Tune from the [releases](https://github.com/noahbclarkson/Auto-Tune/releases) tab on Github. Development versions can be found under the [actions](https://github.com/noahbclarkson/Auto-Tune/actions) tab on Github (where each commit produces a build artifact which is the latest version of the plugin).
 2. Please use [Paper](https://papermc.io/) or a fork of Paper as your server software.
 3. Make sure the required dependencies are installed ([Vault](https://www.spigotmc.org/resources/vault.34315/) and an economy plugin such as [Essentials](https://essentialsx.net))
 4. Put the ```.jar``` files in the ```/plugins``` folder of your server.
@@ -219,6 +219,4 @@ Feel free to create a fork of the repository and open a pull request to contribu
 
 > [![Discord](https://img.shields.io/discord/748222485975269508.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/bNVVPe5)
 >
-> :email: *<unprotesting.email@gmail.com>*
->
-> :calling: **Unprotesting#3616**
+> Report bugs via [GitHub Issues](https://github.com/noahbclarkson/Auto-Tune/issues).

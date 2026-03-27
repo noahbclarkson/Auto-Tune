@@ -25,7 +25,10 @@ This web app lets you experiment with all those parameters in real-time via an i
 |-------|-------------|
 | `/` | Landing page — overview & feature highlights |
 | `/how-it-works` | Deep-dive explanation of the pricing algorithm |
-| `/simulator` | Live interactive simulator with sliders & charts |
+| `/simulator` | Interactive simulator with sliders, charts & stability forecast |
+| `/true-prices` | Cross-server true-price discovery from ratio matrices |
+| `/exchange-rates` | Per-server economy multipliers vs. global baseline |
+| `/servers` | Registered servers & their submission status |
 
 ---
 
@@ -111,14 +114,23 @@ web-optimizer/
 │   │   ├── page.tsx              # Landing page
 │   │   ├── how-it-works/
 │   │   │   └── page.tsx          # Algorithm explanation
-│   │   └── simulator/
-│   │       └── page.tsx          # Interactive simulator
+│   │   ├── simulator/
+│   │   │   └── page.tsx          # Interactive simulator
+│   │   ├── true-prices/
+│   │   │   └── page.tsx          # True-price table + local calculator
+│   │   ├── exchange-rates/
+│   │   │   └── page.tsx          # Server rate table + bar chart
+│   │   └── servers/
+│   │       └── page.tsx          # Server registry + registration
 │   ├── components/
 │   │   ├── landing/              # Hero, feature cards, algorithm preview
 │   │   ├── layout/               # Header, Footer
-│   │   └── simulator/            # ParameterPanel, PricePreview, SpreadChart
+│   │   ├── simulator/            # ParameterPanel, PricePreview, SpreadChart, StabilityForecast
+│   │   ├── prices/              # TruePricesLive, PriceCalculator, ExchangeRateChart
+│   │   └── servers/             # ServerCard, RegisterServerModal
 │   └── lib/
-│       ├── market-engine.ts      # JS port of the pricing algorithm
+│       ├── market-engine.ts      # TS port of the pricing algorithm
+│       ├── api-client.ts         # API fetch helpers
 │       └── utils.ts              # Helpers
 ├── public/
 ├── tailwind.config.ts
@@ -130,4 +142,4 @@ web-optimizer/
 
 ## Contributing
 
-This UI lives in the `web-optimizer/` subdirectory of the [Auto-Tune monorepo](https://github.com/noahbclarkson/Auto-Tune). Open a PR against `main` (or the active feature branch) with changes scoped to this folder.
+This UI lives in the `web-optimizer/` subdirectory of the [Auto-Tune monorepo](https://github.com/noahbclarkson/Auto-Tune). Open a PR against `rewrite-2` (the active development branch) with changes scoped to this folder.

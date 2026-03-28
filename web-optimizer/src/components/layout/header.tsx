@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp, Grid } from 'lucide-react';
+import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp, Grid, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV = [
@@ -10,6 +10,7 @@ const NAV = [
   { href: '/how-it-works', label: 'How It Works', icon: BookOpen },
   { href: '/simulator', label: 'Simulator', icon: BarChart2 },
   { href: '/sweep-results', label: 'Sweep', icon: Grid },
+  { href: '/simulation-results', label: 'Sim Results', icon: FlaskConical },
   { href: '/true-prices', label: 'True Prices', icon: DollarSign },
   { href: '/servers', label: 'Servers', icon: Server },
   { href: '/exchange-rates', label: 'Exchange Rates', icon: TrendingUp },

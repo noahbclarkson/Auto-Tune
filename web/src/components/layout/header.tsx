@@ -50,6 +50,7 @@ const NAV_LINKS = [
   { href: '/loans/', label: 'Loans' },
   { href: '/leaderboard/', label: 'Leaderboard' },
   { href: '/compare/', label: 'Compare' },
+  { href: '/admin/', label: 'Admin' },
 ];
 
 export function Header({ totalItems, onlinePlayers }: HeaderProps) {

@@ -129,6 +129,36 @@ export interface VolumeMultiplierDto {
   timestamp: number;
 }
 
+export interface AdminHealthDto {
+  frozen: boolean;
+  gdp: number;
+  totalDebt: number;
+  activeLoans: number;
+  debtGdpRatio: number;
+  debtGdpLabel: string;
+  circuitBreakerTier: string;
+  interestMultiplier: number;
+  buyPct: number;
+  sellPct: number;
+  avgBpd: number;
+  avgSpd: number;
+  globalVolumeMultiplier: number;
+  inflationLabel: string;
+  topVolatile: Array<{
+    id: number;
+    material: string;
+    displayName: string;
+    pctChange: number;
+  }>;
+  topUndersold: Array<{
+    id: number;
+    material: string;
+    displayName: string;
+    pctChange: number;
+  }>;
+  timestamp: number;
+}
+
 export const api = {
   items: {
     list: (base: string) => fetchJson<ItemDto[]>(`${base}/api/items`),
@@ -164,4 +194,7 @@ export const api = {
   },
   leaderboard: (base: string, limit = 20) =>
     fetchJson<LeaderboardEntryDto[]>(`${base}/api/leaderboard?limit=${limit}`),
+  admin: {
+    health: (base: string) => fetchJson<AdminHealthDto>(`${base}/api/admin/health`),
+  },
 };

@@ -12,8 +12,10 @@ import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
+import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
+import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
 import com.noahblclarkson.autotune.model.Loan;
 import com.noahblclarkson.autotune.model.PlayerData;
@@ -29,6 +31,8 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.logging.Level;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,6 +60,8 @@ public class WebServer {
     private final TransactionRepository transactionRepository;
     private final LoanRepository loanRepository;
     private final PlayerRepository playerRepository;
+    private final LoanManager loanManager;
+    private final ShopManager shopManager;
     private final Gson gson;
 
     private Javalin app;
@@ -71,7 +77,9 @@ public class WebServer {
             EconomyMetricsManager economyMetricsManager,
             TransactionRepository transactionRepository,
             LoanRepository loanRepository,
-            PlayerRepository playerRepository
+            PlayerRepository playerRepository,
+            LoanManager loanManager,
+            ShopManager shopManager
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -82,6 +90,8 @@ public class WebServer {
         this.transactionRepository = transactionRepository;
         this.loanRepository = loanRepository;
         this.playerRepository = playerRepository;
+        this.loanManager = loanManager;
+        this.shopManager = shopManager;
         this.gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .create();
@@ -389,6 +399,119 @@ public class WebServer {
                     "multiplier", marketEngine.getGlobalVolumeMultiplier(),
                     KEY_TIMESTAMP, System.currentTimeMillis()
             ));
+        });
+
+        // ── Admin health endpoint ────────────────────────────────────────────
+        app.get("/api/admin/health", ctx -> {
+            Instant oneDayAgo = Instant.now().minus(Duration.ofDays(1));
+
+            // Market status
+            boolean frozen = marketEngine.isFrozen();
+
+            // Circuit breaker
+            LoanManager.CircuitBreakerStatus cb = loanManager.getCircuitBreakerStatus();
+
+            // GDP / debt
+            BigDecimal gdp = BigDecimal.ZERO;
+            BigDecimal totalDebt = BigDecimal.ZERO;
+            int activeLoans = 0;
+            if (economyMetricsManager.getLatestSnapshot().isPresent()) {
+                EconomySnapshot snap = economyMetricsManager.getLatestSnapshot().get();
+                gdp = snap.gdp();
+                totalDebt = snap.totalDebt();
+                activeLoans = snap.activeLoans();
+            }
+
+            // Debt/GDP
+            double debtGdpRatio = cb.debtGdpRatio();
+            String debtGdpLabel;
+            if (debtGdpRatio < 0) {
+                debtGdpLabel = "N/A";
+            } else if (debtGdpRatio < 3.0) {
+                debtGdpLabel = String.format("%.2fx", debtGdpRatio);
+            } else if (debtGdpRatio < 10.0) {
+                debtGdpLabel = String.format("%.2fx ⚠", debtGdpRatio);
+            } else {
+                debtGdpLabel = String.format("%.2fx ❌", debtGdpRatio);
+            }
+
+            // Buy ratio
+            BigDecimal buyVol = transactionRepository.getGlobalBuyVolume(oneDayAgo);
+            BigDecimal totalVol = transactionRepository.getGlobalVolume(oneDayAgo);
+            double buyPct = 0.0;
+            if (totalVol.compareTo(BigDecimal.ZERO) > 0) {
+                buyPct = buyVol.divide(totalVol, 4, RoundingMode.HALF_UP).doubleValue() * 100.0;
+            }
+
+            // Avg spread
+            List<ShopItem> allItems = shopManager.getAllItems();
+            double totalBpd = 0, totalSpd = 0;
+            for (ShopItem item : allItems) {
+                MarketEngine.SpreadResult sp = marketEngine.getSpread(item.id());
+                totalBpd += sp.bpd().doubleValue();
+                totalSpd += sp.spd().doubleValue();
+            }
+            double avgBpd = allItems.isEmpty() ? 0 : (totalBpd / allItems.size()) * 100;
+            double avgSpd = allItems.isEmpty() ? 0 : (totalSpd / allItems.size()) * 100;
+
+            // Volume multiplier
+            double globalMult = marketEngine.getGlobalVolumeMultiplier();
+
+            // Inflation
+            String inflationLabel = economyMetricsManager.getInflationLabel();
+
+            // Top volatile items
+            List<Map<String, Object>> volatilities = new ArrayList<>();
+            List<Map<String, Object>> undersells = new ArrayList<>();
+            for (ShopItem item : allItems) {
+                List<PriceHistory> history = itemRepository
+                        .getPriceHistorySince(item.id(), oneDayAgo, 10);
+                if (history.size() < 2) continue;
+                BigDecimal newest = history.get(0).price();
+                BigDecimal oldest = history.get(history.size() - 1).price();
+                if (oldest.compareTo(BigDecimal.ZERO) <= 0) continue;
+                double pctChange = newest.subtract(oldest)
+                        .divide(oldest, 4, RoundingMode.HALF_UP)
+                        .doubleValue() * 100.0;
+                Map<String, Object> entry = Map.of(
+                        "id", item.id(),
+                        "material", item.material().name(),
+                        "displayName", item.getDisplayNameOrMaterial(),
+                        "pctChange", pctChange
+                );
+                volatilities.add(entry);
+                undersells.add(entry);
+            }
+            volatilities.sort((a, b) -> {
+                double av = (Double) a.get("pctChange");
+                double bv = (Double) b.get("pctChange");
+                return Double.compare(Math.abs(bv), Math.abs(av)); // most volatile first
+            });
+            undersells.sort((a, b) -> {
+                double av = (Double) a.get("pctChange");
+                double bv = (Double) b.get("pctChange");
+                return Double.compare(av, bv); // most negative first (undersold)
+            });
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("frozen", frozen);
+            response.put("gdp", gdp.doubleValue());
+            response.put("totalDebt", totalDebt.doubleValue());
+            response.put("activeLoans", activeLoans);
+            response.put("debtGdpRatio", debtGdpRatio);
+            response.put("debtGdpLabel", debtGdpLabel);
+            response.put("circuitBreakerTier", cb.tier());
+            response.put("interestMultiplier", cb.interestMultiplier());
+            response.put("buyPct", buyPct);
+            response.put("sellPct", 100.0 - buyPct);
+            response.put("avgBpd", avgBpd);
+            response.put("avgSpd", avgSpd);
+            response.put("globalVolumeMultiplier", globalMult);
+            response.put("inflationLabel", inflationLabel);
+            response.put("topVolatile", volatilities.stream().limit(5).collect(Collectors.toList()));
+            response.put("topUndersold", undersells.stream().limit(5).collect(Collectors.toList()));
+            response.put("timestamp", System.currentTimeMillis());
+            ctx.json(response);
         });
 
         app.exception(Exception.class, (e, ctx) -> {

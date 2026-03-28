@@ -11,6 +11,7 @@ import java.util.UUID;
 public record PlayerData(
         @NotNull UUID uuid,
         @Nullable String username,
+        @Nullable String guildTag,
         int creditScore,
         @NotNull BigDecimal totalTraded,
         @NotNull BigDecimal totalBought,
@@ -29,6 +30,7 @@ public record PlayerData(
         return new PlayerData(
                 uuid,
                 username,
+                null,
                 DEFAULT_CREDIT_SCORE,
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
@@ -47,6 +49,7 @@ public record PlayerData(
         return new Builder()
                 .uuid(uuid)
                 .username(username)
+                .guildTag(guildTag)
                 .creditScore(creditScore)
                 .totalTraded(totalTraded)
                 .totalBought(totalBought)
@@ -79,6 +82,7 @@ public record PlayerData(
     public static class Builder {
         private UUID uuid;
         private String username;
+        private String guildTag;
         private int creditScore = DEFAULT_CREDIT_SCORE;
         private BigDecimal totalTraded = BigDecimal.ZERO;
         private BigDecimal totalBought = BigDecimal.ZERO;
@@ -94,6 +98,11 @@ public record PlayerData(
 
         public Builder username(String username) {
             this.username = username;
+            return this;
+        }
+
+        public Builder guildTag(String guildTag) {
+            this.guildTag = guildTag;
             return this;
         }
 
@@ -134,7 +143,7 @@ public record PlayerData(
 
         public PlayerData build() {
             return new PlayerData(
-                    uuid, username, creditScore, totalTraded, totalBought,
+                    uuid, username, guildTag, creditScore, totalTraded, totalBought,
                     totalSold, transactionCount, firstSeen, lastSeen
             );
         }

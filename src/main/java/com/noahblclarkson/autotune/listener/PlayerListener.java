@@ -9,6 +9,7 @@ import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.AutosellManager;
 import com.noahblclarkson.autotune.manager.ScoreboardManager;
 import com.noahblclarkson.autotune.model.Loan;
+import net.milkbowl.vault.permission.Permission;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -27,6 +28,7 @@ import java.util.logging.Logger;
 public class PlayerListener implements Listener {
 
     private static final Logger LOGGER = Logger.getLogger(PlayerListener.class.getName());
+    private static final String DEFAULT_GROUP = "default";
 
     private final ConfigManager configManager;
     private final DatabaseManager databaseManager;
@@ -34,6 +36,7 @@ public class PlayerListener implements Listener {
     private final LoanManager loanManager;
     private final AutosellManager autosellManager;
     private final ScoreboardManager scoreboardManager;
+    private final Permission vaultPerms;
 
     @Inject
     public PlayerListener(
@@ -42,7 +45,8 @@ public class PlayerListener implements Listener {
             PlayerRepository playerRepository,
             LoanManager loanManager,
             AutosellManager autosellManager,
-            ScoreboardManager scoreboardManager
+            ScoreboardManager scoreboardManager,
+            Permission vaultPerms
     ) {
         this.configManager = configManager;
         this.databaseManager = databaseManager;
@@ -50,6 +54,7 @@ public class PlayerListener implements Listener {
         this.loanManager = loanManager;
         this.autosellManager = autosellManager;
         this.scoreboardManager = scoreboardManager;
+        this.vaultPerms = vaultPerms;
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -60,8 +65,10 @@ public class PlayerListener implements Listener {
         scoreboardManager.showScoreboard(player);
         java.util.UUID playerId = player.getUniqueId();
         String playerName = player.getName();
+
         databaseManager.supplyAsync(() -> {
             playerRepository.getOrCreate(playerId, playerName);
+            updateGuildTag(player);
             return loanManager.getActiveLoan(playerId);
         }).thenAccept(activeLoan -> databaseManager.runOnMain(() ->
                 checkLoanWarning(player, activeLoan)))
@@ -77,6 +84,24 @@ public class PlayerListener implements Listener {
         autosellManager.unloadPlayer(player.getUniqueId());
         scoreboardManager.hideScoreboard(player);
         var unused = databaseManager.runAsync(() -> playerRepository.updateLastSeen(player.getUniqueId()));
+    }
+
+    private void updateGuildTag(Player player) {
+        try {
+            String[] groups = vaultPerms.getPlayerGroups(player);
+            if (groups != null && groups.length > 0) {
+                for (String group : groups) {
+                    if (group != null && !group.equalsIgnoreCase(DEFAULT_GROUP)) {
+                        playerRepository.updateGuildTag(player.getUniqueId(), group);
+                        return;
+                    }
+                }
+            }
+            // No non-default group found — clear any existing guild tag
+            playerRepository.updateGuildTag(player.getUniqueId(), null);
+        } catch (Exception ex) {
+            LOGGER.log(Level.FINE, "Could not update guild tag for " + player.getName(), ex);
+        }
     }
 
     private void checkLoanWarning(Player player, Optional<Loan> activeLoan) {

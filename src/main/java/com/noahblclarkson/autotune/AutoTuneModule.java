@@ -5,6 +5,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.guild.GuildService;
 import com.noahblclarkson.autotune.database.AutosellRepository;
 import com.noahblclarkson.autotune.database.AuctionRepository;
 import com.noahblclarkson.autotune.database.DatabaseManager;
@@ -23,6 +24,8 @@ import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ScoreboardManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.permission.Permission;
+import org.bukkit.Server;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class AutoTuneModule extends AbstractModule {
@@ -56,6 +59,22 @@ public class AutoTuneModule extends AbstractModule {
     @Singleton
     public Economy provideEconomy() {
         return plugin.getVaultEconomy();
+    }
+
+    @Provides
+    @Singleton
+    public Permission providePermission() {
+        return plugin.getVaultPerms();
+    }
+
+    @Provides
+    @Singleton
+    public GuildService provideGuildService(
+            PlayerRepository playerRepository,
+            LoanRepository loanRepository,
+            Server server
+    ) {
+        return new GuildService(playerRepository, loanRepository, server);
     }
 
     @Provides

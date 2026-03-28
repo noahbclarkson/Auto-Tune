@@ -22,7 +22,8 @@ public class PlayerRepository {
     public Optional<PlayerData> findByUuid(UUID uuid) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""
-                                SELECT uuid, username, credit_score, total_traded, total_bought,
+                                SELECT uuid, username, COALESCE(guild_tag, '') as guild_tag,
+                                       credit_score, total_traded, total_bought,
                                        total_sold, transaction_count, first_seen, last_seen
                                 FROM at_players WHERE uuid = :uuid
                                 """)
@@ -30,6 +31,7 @@ public class PlayerRepository {
                         .map((rs, ctx) -> PlayerData.builder()
                                 .uuid(UUID.fromString(rs.getString("uuid")))
                                 .username(rs.getString("username"))
+                                .guildTag(rs.getString("guild_tag"))
                                 .creditScore(rs.getInt("credit_score"))
                                 .totalTraded(rs.getBigDecimal("total_traded"))
                                 .totalBought(rs.getBigDecimal("total_bought"))
@@ -52,15 +54,16 @@ public class PlayerRepository {
     public void insert(@NotNull PlayerData player) {
         jdbi.useHandle(handle ->
                 handle.createUpdate("""
-                                INSERT INTO at_players (uuid, username, credit_score, total_traded,
+                                INSERT INTO at_players (uuid, username, guild_tag, credit_score, total_traded,
                                                         total_bought, total_sold, transaction_count,
                                                         first_seen, last_seen)
-                                VALUES (:uuid, :username, :creditScore, :totalTraded,
+                                VALUES (:uuid, :username, :guildTag, :creditScore, :totalTraded,
                                         :totalBought, :totalSold, :transactionCount,
                                         :firstSeen, :lastSeen)
                                 """)
                         .bind("uuid", player.uuid().toString())
                         .bind("username", player.username())
+                        .bind("guildTag", player.guildTag())
                         .bind("creditScore", player.creditScore())
                         .bind("totalTraded", player.totalTraded())
                         .bind("totalBought", player.totalBought())
@@ -76,6 +79,7 @@ public class PlayerRepository {
                 handle.createUpdate("""
                                 UPDATE at_players SET
                                     username = :username,
+                                    guild_tag = :guildTag,
                                     credit_score = :creditScore,
                                     total_traded = :totalTraded,
                                     total_bought = :totalBought,
@@ -86,6 +90,7 @@ public class PlayerRepository {
                                 """)
                         .bind("uuid", player.uuid().toString())
                         .bind("username", player.username())
+                        .bind("guildTag", player.guildTag())
                         .bind("creditScore", player.creditScore())
                         .bind("totalTraded", player.totalTraded())
                         .bind("totalBought", player.totalBought())
@@ -93,6 +98,42 @@ public class PlayerRepository {
                         .bind("transactionCount", player.transactionCount())
                         .bind("lastSeen", Timestamp.from(player.lastSeen()))
                         .execute());
+    }
+
+    public void updateGuildTag(UUID uuid, String guildTag) {
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                                UPDATE at_players SET guild_tag = :guildTag, last_seen = :lastSeen
+                                WHERE uuid = :uuid
+                                """)
+                        .bind("uuid", uuid.toString())
+                        .bind("guildTag", guildTag)
+                        .bind("lastSeen", Timestamp.from(Instant.now()))
+                        .execute());
+    }
+
+    public List<PlayerData> findByGuildTag(String guildTag) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                                SELECT uuid, username, COALESCE(guild_tag, '') as guild_tag,
+                                       credit_score, total_traded, total_bought,
+                                       total_sold, transaction_count, first_seen, last_seen
+                                FROM at_players WHERE guild_tag = :guildTag
+                                """)
+                        .bind("guildTag", guildTag)
+                        .map((rs, ctx) -> PlayerData.builder()
+                                .uuid(UUID.fromString(rs.getString("uuid")))
+                                .username(rs.getString("username"))
+                                .guildTag(rs.getString("guild_tag"))
+                                .creditScore(rs.getInt("credit_score"))
+                                .totalTraded(rs.getBigDecimal("total_traded"))
+                                .totalBought(rs.getBigDecimal("total_bought"))
+                                .totalSold(rs.getBigDecimal("total_sold"))
+                                .transactionCount(rs.getInt("transaction_count"))
+                                .firstSeen(rs.getTimestamp("first_seen").toInstant())
+                                .lastSeen(rs.getTimestamp("last_seen").toInstant())
+                                .build())
+                        .list());
     }
 
     public void updateCreditScore(UUID uuid, int newScore) {

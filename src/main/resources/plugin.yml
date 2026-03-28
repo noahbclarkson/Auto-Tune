@@ -25,6 +25,9 @@ commands:
   transactions:
     description: View your transaction history
     permission: autotune.transactions
+  guild:
+    description: Guild economy commands
+    permission: autotune.guild
 
 permissions:
   autotune.shop:
@@ -41,6 +44,9 @@ permissions:
     default: true
   autotune.transactions:
     description: View own transaction history
+    default: true
+  autotune.guild:
+    description: View guild economy stats
     default: true
   autotune.admin:
     description: Administrative commands

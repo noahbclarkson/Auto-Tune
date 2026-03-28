@@ -46,6 +46,7 @@ CREATE INDEX IF NOT EXISTS idx_history_timestamp ON at_market_history(timestamp)
 CREATE TABLE IF NOT EXISTS at_players (
     uuid VARCHAR(36) PRIMARY KEY,
     username VARCHAR(16),
+    guild_tag VARCHAR(64) DEFAULT NULL,
     credit_score INTEGER DEFAULT 500,
     total_traded DECIMAL(20, 2) DEFAULT 0,
     total_bought DECIMAL(20, 2) DEFAULT 0,

@@ -20,6 +20,7 @@ import com.noahblclarkson.autotune.manager.TreasuryService;
 import com.noahblclarkson.autotune.task.TaskScheduler;
 import com.noahblclarkson.autotune.web.WebServer;
 import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.permission.Permission;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -48,6 +49,7 @@ public class AutoTune extends JavaPlugin {
     private WebServer webServer;
 
     private Economy vaultEconomy;
+    private Permission vaultPerms;
 
     @Override
     public void onEnable() {
@@ -77,6 +79,9 @@ public class AutoTune extends JavaPlugin {
         if (!setupEconomy()) {
             throw new IllegalStateException("Vault economy not found! Please install Vault and an economy plugin.");
         }
+
+        // Setup Vault permissions (for guild detection) — non-fatal if absent
+        setupPermission();
 
         // Initialize database
         databaseManager = new DatabaseManager(this, configManager);
@@ -198,6 +203,27 @@ public class AutoTune extends JavaPlugin {
     @NotNull
     public Economy getVaultEconomy() {
         return vaultEconomy;
+    }
+
+    public Permission getVaultPerms() {
+        return vaultPerms;
+    }
+
+    private void setupPermission() {
+        if (getServer().getPluginManager().getPlugin("Vault") == null) {
+            getLogger().warning("Vault not found — guild features disabled.");
+            vaultPerms = null;
+            return;
+        }
+        RegisteredServiceProvider<Permission> rsp = getServer().getServicesManager()
+                .getRegistration(Permission.class);
+        if (rsp == null) {
+            getLogger().warning("No Vault permission provider found — guild features disabled.");
+            vaultPerms = null;
+            return;
+        }
+        vaultPerms = rsp.getProvider();
+        getLogger().info("Vault permission provider registered (" + vaultPerms.getName() + ").");
     }
 
     @NotNull

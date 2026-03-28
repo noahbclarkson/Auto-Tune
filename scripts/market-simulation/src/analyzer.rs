@@ -408,7 +408,7 @@ pub fn analyze_dir(dir_path: &Path) -> Result<(), String> {
     // Print comparison table
     println!(
         "  {:22} {:>10} {:>10} {:>10} {:>10} {:>8} {:>8}",
-        "Scenario", "GDP", "Debt", "Debt/GDP", "BPD avg", "Vol", "Buy%"
+        "Scenario", "GDP", "Debt", "Debt/GDP", "SPD avg", "Vol", "Buy%"
     );
     println!(
         "  {:22} {:>10} {:>10} {:>10} {:>10} {:>8} {:>8}",
@@ -428,7 +428,7 @@ pub fn analyze_dir(dir_path: &Path) -> Result<(), String> {
             s.gdp,
             s.debt,
             s.debt / s.gdp.max(0.01),
-            s.avg_bpd * 100.0,
+            s.avg_spd * 100.0,
             s.avg_volatility,
             s.buy_ratio * 100.0,
         );
@@ -574,14 +574,17 @@ fn compute_avg_volatility(conn: &Connection) -> f64 {
 
     for item_name in items {
         let prices: Vec<f64> = conn
-            .query_row(
+            .prepare(
                 "SELECT price FROM item_states WHERE item_name = ?1
                  AND tick % 288 = 0 ORDER BY tick",
-                params![&item_name],
-                |row| row.get(0),
             )
             .ok()
-            .map(|p| vec![p])
+            .map(|mut stmt| {
+                stmt.query_map(params![&item_name], |row| row.get(0))
+                    .ok()
+                    .map(|rows| rows.filter_map(|r| r.ok()).collect::<Vec<f64>>())
+                    .unwrap_or_default()
+            })
             .unwrap_or_default();
 
         // Use last 14 samples (bi-hourly snapshots × 14 days)

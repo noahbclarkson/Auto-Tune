@@ -26,7 +26,7 @@ export function Footer() {
           <div className="flex flex-col gap-2 text-sm">
             <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Links</p>
             <a
-              href="https://github.com/Aetheraudios/Auto-Tune"
+              href="https://github.com/noahbclarkson/Auto-Tune"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-colors"

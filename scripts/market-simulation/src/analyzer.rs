@@ -484,6 +484,8 @@ pub struct SimSummary {
     pub gdp: f64,
     pub debt: f64,
     pub avg_bpd: f64,
+    #[allow(dead_code)]
+    pub avg_spd: f64,
     pub avg_volatility: f64,
     pub buy_ratio: f64,
 }
@@ -509,6 +511,10 @@ pub fn load_summary(db_path: &Path) -> Result<SimSummary, String> {
         .query_row("SELECT AVG(bpd) FROM item_states", [], |row| row.get(0))
         .unwrap_or(0.0);
 
+    let avg_spd: f64 = conn
+        .query_row("SELECT AVG(spd) FROM item_states", [], |row| row.get(0))
+        .unwrap_or(0.0);
+
     let (buy_count, total_decisions): (i64, i64) = conn
         .query_row(
             "SELECT SUM(CASE WHEN action='Buy' THEN 1 ELSE 0 END), COUNT(*) FROM decisions",
@@ -525,6 +531,7 @@ pub fn load_summary(db_path: &Path) -> Result<SimSummary, String> {
         gdp,
         debt,
         avg_bpd,
+        avg_spd,
         avg_volatility: avg_vol,
         buy_ratio,
     })

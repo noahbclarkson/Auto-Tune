@@ -336,6 +336,81 @@ impl Scenario {
         }
     }
 
+    /// Standard+MM with GuildBuyers at fixed 5% threshold.
+    /// Tests whether the uniquely-safe 5% GuildBuyer threshold combined with MM
+    /// produces a healthier economy than random-threshold guild_stability.
+    /// Standard+MM has no GuildBuyers by default, so we add 2 at 5%.
+    pub fn standard_with_mm_fixed_guild() -> Self {
+        Self {
+            name: "Standard+MM+5%GB Economy".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+            ],
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Exploiter Stress Test: Standard+MM + 2 Exploiters from tick 0.
+    /// Exploiters chase trends (buy rising, sell falling), amplifying volatility.
+    /// Tests whether MarketMakers provide sufficient two-sided liquidity to
+    /// absorb Exploiter-driven price manipulation without destabilizing the economy.
+    ///
+    /// Control: standard_with_mm (no Exploiters)
+    /// Treatment: standard_with_mm + 2 Exploiters
+    pub fn exploiter_stress() -> Self {
+        Self {
+            name: "Exploiter Stress Test".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 5,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "Exploiter".into(),
+                    count: 2,
+                },
+            ],
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// MarketMaker Test: replaces one GuildBuyer with one MarketMaker in the
     /// guild_stability player mix, to test whether two-sided liquidity from
     /// MarketMakers can counteract GuildBuyer buy-dominance and reduce systemic underselling.
@@ -1431,6 +1506,311 @@ fn run_guild_threshold_sweep() {
     println!("\n  CSV saved to: {}", csv_path.display());
 }
 
+// ─── Exploiter Stress Test ─────────────────────────────────────────────────
+
+/// Head-to-head comparison of standard+MM vs standard+MM+2 Exploiters.
+/// Exploiters chase trends (buy rising, sell falling), amplifying price swings.
+/// Tests whether MarketMakers can absorb Exploiter-driven manipulation without
+/// the economy destabilizing.
+fn run_exploiter_stress_test() {
+    use crate::analyzer::load_summary;
+
+    let control = Scenario::standard_with_mm();
+    let treatment = Scenario::exploiter_stress();
+    let seed = 98765432u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       EXPLOITER STRESS TEST                                 ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!();
+    println!(
+        "  {:^48}  {:^48}",
+        "CONTROL (standard+MM)", "TREATMENT (standard+MM + 2 Exploiters)"
+    );
+    println!("  Seed: {}", seed);
+    println!();
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8}  |  {:>12} {:>12} {:>10} {:>8} {:>8}",
+        "GDP", "Debt", "D/G", "BPD%", "Buy%",
+        "GDP", "Debt", "D/G", "BPD%", "Buy%"
+    );
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8}  |  {:>12} {:>12} {:>10} {:>8} {:>8}",
+        "─".repeat(12), "─".repeat(12), "─".repeat(10), "─".repeat(8), "─".repeat(8),
+        "─".repeat(12), "─".repeat(12), "─".repeat(10), "─".repeat(8), "─".repeat(8)
+    );
+
+    // Run control
+    let ctrl_dir = PathBuf::from("/tmp/autotune-exploit-ctrl");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    if let Err(e) = run_headless(&control, Some(ctrl_dir.clone())) {
+        eprintln!("  Control run error: {}", e);
+        return;
+    }
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Control summary error: {}", e);
+            return;
+        }
+    };
+
+    // Run treatment (different seed for different RNG)
+    let treat_dir = PathBuf::from("/tmp/autotune-exploit-treat");
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&treat_dir).ok();
+    if let Err(e) = run_headless(&treatment, Some(treat_dir.clone())) {
+        eprintln!("  Treatment run error: {}", e);
+        return;
+    }
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treatment summary error: {}", e);
+            return;
+        }
+    };
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+
+    println!(
+        "  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}%  |  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}%",
+        ctrl_summary.gdp,
+        ctrl_summary.debt,
+        ctrl_dg,
+        ctrl_summary.avg_bpd * 100.0,
+        ctrl_summary.buy_ratio * 100.0,
+        treat_summary.gdp,
+        treat_summary.debt,
+        treat_dg,
+        treat_summary.avg_bpd * 100.0,
+        treat_summary.buy_ratio * 100.0
+    );
+
+    println!();
+    println!("  === ANALYSIS ===");
+    let gdp_pct = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let vol_pct = (treat_summary.avg_volatility / ctrl_summary.avg_volatility.max(0.0001) - 1.0) * 100.0;
+    println!(
+        "  GDP change:          {:+.1}% (Exploiters {:>})",
+        gdp_pct,
+        if gdp_pct < -5.0 { "harm GDP" } else if gdp_pct > 5.0 { "boost GDP" } else { "neutral on GDP" }
+    );
+    println!(
+        "  Volatility change:  {:+.1}% (Exploiters {:>})",
+        vol_pct,
+        if vol_pct > 50.0 { "raise volatility" } else if vol_pct < -50.0 { "reduce volatility" } else { "stable volatility" }
+    );
+    println!(
+        "  D/G control:         {:.2}x  |  treatment: {:.2}x",
+        ctrl_dg, treat_dg
+    );
+
+    // Verdict
+    println!();
+    if treat_dg < ctrl_dg * 2.0 && vol_pct < 200.0 {
+        println!("  ✅ MARKETMAKERS ABSORB EXPLOITER PRESSURE — MM provides sufficient");
+        println!("     two-sided liquidity to prevent Exploiter destabilization.");
+    } else if vol_pct > 500.0 {
+        println!("  ⚠️  EXploiters caused runaway volatility — consider adjusting MM");
+        println!("     spread parameters or reducing Exploiter participation rate.");
+    } else {
+        println!("  ⚠️  Mixed results — Exploiters {:>} GDP and {:>} volatility.",
+            if gdp_pct < 0.0 { "reduced" } else { "increased" },
+            if vol_pct > 0.0 { "increased" } else { "reduced" }
+        );
+    }
+
+    // Cleanup
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
+// ─── Fine-Grained Threshold Sweep ─────────────────────────────────────────
+
+/// Fine-grained sweep around the 5% sweet-spot found in the coarse sweep.
+/// Tests thresholds: 1%, 3%, 5%, 7%, 10% to find the true optimum.
+fn run_fine_threshold_sweep() {
+    use crate::analyzer::load_summary;
+    use crate::player::set_fixed_guild_threshold;
+
+    let base_scenario = Scenario::guild_stability();
+    // Coarse sweep showed: 5% uniquely safe (0.03x), 10% moderate (0.56x), 15-30% catastrophic
+    // Fine sweep tests the gap between 5% and 15%
+    let thresholds: Vec<f64> = vec![0.01, 0.03, 0.05, 0.07, 0.10];
+    let total = thresholds.len();
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       FINE-GRAINED GUILDBUYER THRESHOLD SWEEP                ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!();
+    println!("  Scenario: Guild Stability (2 GuildBuyer + 4 Casual + 3 Farmer + 2 Trader)");
+    println!("  Duration: 14 days ({} ticks)", base_scenario.duration_ticks);
+    println!("  Thresholds: {:?}  (coarse sweep found 5% uniquely safe)", thresholds);
+    println!();
+    println!(
+        "{:>10} {:>12} {:>12} {:>10} {:>8} {:>8} {:>10} {:>8}",
+        "threshold", "GDP", "Debt", "Debt/GDP", "BPD%", "SPD%", "Volatility", "Buy%"
+    );
+    println!(
+        "{:>10} {:>12} {:>12} {:>10} {:>8} {:>8} {:>10} {:>8}",
+        "─".repeat(10), "─".repeat(12), "─".repeat(12), "─".repeat(10),
+        "─".repeat(8), "─".repeat(8), "─".repeat(10), "─".repeat(8)
+    );
+
+    let mut results: Vec<GuildSweepResult> = Vec::new();
+
+    for (i, threshold) in thresholds.iter().enumerate() {
+        eprint!("\r  [{}/{}] threshold={:.2}", i + 1, total, threshold);
+        std::io::stderr().flush().ok();
+
+        set_fixed_guild_threshold(Some(*threshold));
+
+        let out_dir = PathBuf::from(format!(
+            "/tmp/autotune-fine-{:04}",
+            (threshold * 100.0) as i32
+        ));
+        let _ = std::fs::remove_dir_all(&out_dir);
+        std::fs::create_dir_all(&out_dir).ok();
+
+        let result = run_headless(&base_scenario, Some(out_dir.clone()));
+        set_fixed_guild_threshold(None);
+
+        if let Err(e) = &result {
+            eprintln!("\n  ✗ Error: {:?}", e);
+            continue;
+        }
+
+        let db_path = out_dir.join("simulation.db");
+        let summary = match load_summary(&db_path) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("\n  ✗ Could not load summary: {}", e);
+                continue;
+            }
+        };
+
+        let _ = std::fs::remove_dir_all(&out_dir);
+
+        let debt_gdp = summary.debt / summary.gdp.max(0.01);
+        let threshold_pct = threshold * 100.0;
+        println!(
+            "\n  {:>8.0}% {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.2}% {:>9.4} {:>7.1}%",
+            threshold_pct,
+            summary.gdp,
+            summary.debt,
+            debt_gdp,
+            summary.avg_bpd * 100.0,
+            summary.avg_bpd * 100.0,
+            summary.avg_volatility,
+            summary.buy_ratio * 100.0
+        );
+
+        results.push(GuildSweepResult {
+            threshold: *threshold,
+            gdp: summary.gdp,
+            debt: summary.debt,
+            debt_gdp_ratio: debt_gdp,
+            avg_bpd: summary.avg_bpd,
+            avg_spd: summary.avg_bpd,
+            avg_volatility: summary.avg_volatility,
+            buy_ratio: summary.buy_ratio,
+        });
+    }
+
+    println!("\n");
+    if results.is_empty() {
+        println!("  No results collected.");
+        return;
+    }
+
+    // Analysis
+    println!("╔══════════════════════════════════════════════════════════════╗");
+    println!("║  FINE-GRAINED SWEEP ANALYSIS                                 ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    // Safest (lowest D/G)
+    let safest = results
+        .iter()
+        .min_by(|a, b| a.debt_gdp_ratio.partial_cmp(&b.debt_gdp_ratio).unwrap())
+        .unwrap();
+    println!(
+        "  Safest (lowest D/G):  threshold={:.0}%  D/G={:.3}x  GDP={:.0}",
+        safest.threshold * 100.0,
+        safest.debt_gdp_ratio,
+        safest.gdp
+    );
+
+    // Best GDP among safe (< 3x D/G) configs
+    let safe_configs: Vec<_> = results.iter().filter(|r| r.debt_gdp_ratio < 3.0).collect();
+    if let Some(best_safe_gdp) = safe_configs.iter().max_by(|a, b| a.gdp.partial_cmp(&b.gdp).unwrap()) {
+        println!(
+            "  Best GDP (D/G < 3x): threshold={:.0}%  GDP={:.0}  D/G={:.3}x",
+            best_safe_gdp.threshold * 100.0,
+            best_safe_gdp.gdp,
+            best_safe_gdp.debt_gdp_ratio
+        );
+    }
+
+    // Most balanced buy ratio
+    let most_balanced = results
+        .iter()
+        .min_by(|a, b| {
+            (a.buy_ratio - 0.5).abs().partial_cmp(&(b.buy_ratio - 0.5).abs()).unwrap()
+        })
+        .unwrap();
+    println!(
+        "  Most balanced buy%:  threshold={:.0}%  buy%={:.1}%  D/G={:.3}x",
+        most_balanced.threshold * 100.0,
+        most_balanced.buy_ratio * 100.0,
+        most_balanced.debt_gdp_ratio
+    );
+
+    println!("\n  Threshold recommendation:");
+    if safest.threshold == 0.05 {
+        println!("  → 5% CONFIRMED as the sweet-spot (D/G {:.3}x, GDP {:.0})", safest.debt_gdp_ratio, safest.gdp);
+    } else {
+        println!(
+            "  → {:.0}% may be better than 5% (D/G {:.3}x vs {:.3}x at 5%)",
+            safest.threshold * 100.0,
+            safest.debt_gdp_ratio,
+            results.iter().find(|r| r.threshold == 0.05).map(|r| r.debt_gdp_ratio).unwrap_or(0.0)
+        );
+    }
+
+    // CSV export
+    let csv_path = PathBuf::from(
+        "/home/ubuntu/.openclaw/workspace-autotune/sim-output/fine-threshold-sweep.csv",
+    );
+    if let Some(parent) = csv_path.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+    let mut csv = std::fs::File::create(&csv_path).unwrap();
+    writeln!(
+        csv,
+        "threshold,gdp,debt,debt_gdp_ratio,avg_bpd,avg_spd,avg_volatility,buy_ratio"
+    )
+    .ok();
+    for r in &results {
+        writeln!(
+            csv,
+            "{:.2},{:.2},{:.2},{:.6},{:.6},{:.6},{:.6},{:.4}",
+            r.threshold,
+            r.gdp,
+            r.debt,
+            r.debt_gdp_ratio,
+            r.avg_bpd,
+            r.avg_spd,
+            r.avg_volatility,
+            r.buy_ratio
+        )
+        .ok();
+    }
+    println!("\n  CSV saved to: {}", csv_path.display());
+}
+
 #[derive(Debug)]
 struct GuildSweepResult {
     threshold: f64,
@@ -1475,16 +1855,27 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--list-scenarios" {
         println!("Available scenarios:");
-        println!("  standard         - Normal economy with 11 players (default)");
+        println!("  standard         - Normal economy: 5 Casual + 3 Farmer + 2 Trader + 1 Hoarder");
         println!("  stressed         - Exploit, low players, loan cascade injected");
         println!("  high-activity    - High activity, 20 players, 7 days");
         println!("  low-player       - 3 players, 14 days");
         println!("  spread-stability - Farmer/Trader mix, 10 days");
-        println!("  sp08-moderate    - Tiered breaker test: sp=0.80, cascade at day 6, 14d");
-        println!("  buyer-heavy     - Buyer-heavy mix: 2 GuildBuyer + 3 Hoarder + 3 Casual");
+        println!("  sp08-moderate    - Tiered breaker: sp=0.80, cascade day 6, 14d");
+        println!("  buyer-heavy      - 2 GuildBuyer + 3 Hoarder + 3 Casual + 2 Farmer + 2 Trader");
+        println!("  guild-stability  - 2 GuildBuyer + 4 Casual + 3 Farmer + 2 Trader (15-30% threshold)");
+        println!("  marketmaker-test - 1 GuildBuyer + 1 MarketMaker + 4 Casual + 3 Farmer + 2 Trader");
+        println!("  standard-with-mm - 5 Casual + 3 Farmer + 2 Trader + 1 MarketMaker (RECOMMENDED)");
+        println!("  standard-with-mm-fixed-guild - standard+MM + 2 GuildBuyer at 5% threshold");
+        println!("  exploiter-stress - standard+MM + 2 Exploiters (stress-tests MM resilience)");
         println!("  correlation      - Sector correlation test (treatment vs control)");
-        println!("  all              - Run all scenarios and compare");
-        println!("  sweep            - Parameter sweep across engine parameter space");
+        println!();
+        println!("Special modes:");
+        println!("  --sweep                 Parameter sweep (840 configs)");
+        println!("  --guild-threshold-sweep  Coarse sweep: thresholds 5-50%");
+        println!("  --fine-threshold-sweep    Fine sweep: thresholds 1%, 3%, 5%, 7%, 10%");
+        println!("  --exploiter-stress-test   Head-to-head: standard+MM vs +Exploiters");
+        println!("  --regression            Regression test against stored baselines");
+        println!("  --all                   Run all scenarios headlessly");
         return Ok(());
     }
 
@@ -1508,8 +1899,8 @@ fn main() -> eframe::Result<()> {
             Scenario::standard(),
             Scenario::spread_stability(),
             Scenario::low_player(),
-            Scenario::guild_stability(),
             Scenario::marketmaker_test(),
+            Scenario::standard_with_mm(),
         ];
         crate::regression::run_regression_test(&scenarios, &baseline_dir, update);
         return Ok(());
@@ -1517,6 +1908,16 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--guild-threshold-sweep" {
         run_guild_threshold_sweep();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--exploiter-stress-test" {
+        run_exploiter_stress_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--fine-threshold-sweep" {
+        run_fine_threshold_sweep();
         return Ok(());
     }
 
@@ -1540,6 +1941,8 @@ fn main() -> eframe::Result<()> {
                 Scenario::guild_stability(),
                 Scenario::marketmaker_test(),
                 Scenario::standard_with_mm(),
+                Scenario::standard_with_mm_fixed_guild(),
+                Scenario::exploiter_stress(),
             ];
             let base_dir = output_dir.unwrap_or_else(|| PathBuf::from("./output"));
             let mut results: Vec<(String, bool, String)> = Vec::new();
@@ -1572,6 +1975,8 @@ fn main() -> eframe::Result<()> {
                 "guild-stability" | "guild_stability" => Scenario::guild_stability(),
                 "marketmaker-test" | "marketmaker_test" => Scenario::marketmaker_test(),
                 "standard-with-mm" | "standard_with_mm" => Scenario::standard_with_mm(),
+                "standard-with-mm-fixed-guild" | "standard_with_mm_fixed_guild" => Scenario::standard_with_mm_fixed_guild(),
+                "exploiter-stress" | "exploiter_stress" => Scenario::exploiter_stress(),
                 "correlation" => Scenario::correlation(),
                 _ => {
                     eprintln!(

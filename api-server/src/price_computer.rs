@@ -463,7 +463,7 @@ mod tests {
     #[test]
     fn test_filter_outliers_no_change_when_all_agree() {
         let mut matrices = make_agreeing_matrices();
-        let before: Vec<_> = matrices.iter().map(|m| m.clone()).collect();
+        let before: Vec<_> = matrices.to_vec();
         let result = filter_outliers(&mut matrices, 3.0);
         assert_eq!(
             result.values().sum::<usize>(),

@@ -511,6 +511,7 @@ pub fn run_regression_scenario(scenario: &crate::Scenario, git_rev: &str) -> Sce
         ("Newbie".into(), Archetype::Newbie),
         ("AFKFarmer".into(), Archetype::AFKFarmer),
         ("GuildBuyer".into(), Archetype::GuildBuyer),
+        ("MarketMaker".into(), Archetype::MarketMaker),
     ]
     .into_iter()
     .collect();

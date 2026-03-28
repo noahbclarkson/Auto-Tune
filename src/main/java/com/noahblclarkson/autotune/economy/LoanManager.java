@@ -505,4 +505,45 @@ public class LoanManager {
             return new LoanResult(false, message, null, BigDecimal.ZERO);
         }
     }
+
+    /**
+     * Returns the current loan circuit breaker status — tier, ratio, and whether
+     * interest is currently paused. Safe to call from admin commands at any time.
+     */
+    public CircuitBreakerStatus getCircuitBreakerStatus() {
+        LoanConfig config = configManager.getConfig().loans();
+        Optional<EconomySnapshot> latestSnapshot = snapshotRepository.findLatest();
+
+        if (latestSnapshot.isEmpty() || config.debtGdpTier3Ratio() <= 0.0) {
+            return new CircuitBreakerStatus("NORMAL", -1.0, 1.0, false);
+        }
+
+        BigDecimal gdp = latestSnapshot.get().gdp();
+        BigDecimal totalDebt = BigDecimal.ZERO;
+        for (Loan l : loanRepository.findAllActive()) {
+            totalDebt = totalDebt.add(l.currentBalance());
+        }
+
+        if (gdp.compareTo(BigDecimal.ZERO) <= 0) {
+            return new CircuitBreakerStatus("NORMAL", -1.0, 1.0, false);
+        }
+
+        double ratio = totalDebt.divide(gdp, MathContext.DECIMAL128).doubleValue();
+        if (ratio > config.debtGdpTier3Ratio()) {
+            return new CircuitBreakerStatus("TIER3", ratio, 0.0, interestCircuitOpen);
+        } else if (ratio > config.debtGdpTier2Ratio()) {
+            return new CircuitBreakerStatus("TIER2", ratio, config.tier2InterestCap(), false);
+        } else if (ratio > config.debtGdpTier1Ratio()) {
+            return new CircuitBreakerStatus("TIER1", ratio, config.tier1InterestCap(), false);
+        }
+        return new CircuitBreakerStatus("NORMAL", ratio, 1.0, false);
+    }
+
+    /** Current state of the loan circuit breaker. */
+    public record CircuitBreakerStatus(
+            String tier,       // NORMAL, TIER1, TIER2, TIER3
+            double debtGdpRatio,
+            double interestMultiplier,
+            boolean circuitOpen
+    ) {}
 }

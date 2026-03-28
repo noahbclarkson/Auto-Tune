@@ -4,10 +4,15 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
+import com.noahblclarkson.autotune.database.TransactionRepository;
+import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.ShopManager;
+import com.noahblclarkson.autotune.model.EconomySnapshot;
+import com.noahblclarkson.autotune.model.PriceHistory;
 import com.noahblclarkson.autotune.model.PriceOverride;
 import com.noahblclarkson.autotune.model.ShopItem;
 import net.kyori.adventure.text.Component;
@@ -23,9 +28,13 @@ import org.incendo.cloud.annotations.suggestion.Suggestions;
 import org.incendo.cloud.context.CommandContext;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -46,6 +55,9 @@ public class AdminCommand {
     private final MarketEngine marketEngine;
     private final EconomyMetricsManager metricsManager;
     private final PriceOverrideRepository overrideRepo;
+    private final LoanManager loanManager;
+    private final TransactionRepository transactionRepository;
+    private final ItemRepository itemRepository;
 
     @Inject
     public AdminCommand(
@@ -54,7 +66,10 @@ public class AdminCommand {
             ShopManager shopManager,
             MarketEngine marketEngine,
             EconomyMetricsManager metricsManager,
-            PriceOverrideRepository overrideRepo
+            PriceOverrideRepository overrideRepo,
+            LoanManager loanManager,
+            TransactionRepository transactionRepository,
+            ItemRepository itemRepository
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -62,6 +77,9 @@ public class AdminCommand {
         this.marketEngine = marketEngine;
         this.metricsManager = metricsManager;
         this.overrideRepo = overrideRepo;
+        this.loanManager = loanManager;
+        this.transactionRepository = transactionRepository;
+        this.itemRepository = itemRepository;
     }
 
     @Command("autotune admin")
@@ -71,6 +89,8 @@ public class AdminCommand {
         sender.sendMessage(Component.text("Auto-Tune Admin", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
         sender.sendMessage(Component.text("/at admin info", NamedTextColor.YELLOW)
                 .append(Component.text(" — Economy overview and health", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin health", NamedTextColor.YELLOW)
+                .append(Component.text(" — Full economy diagnostic report", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin stats", NamedTextColor.YELLOW)
                 .append(Component.text(" — Detailed market statistics", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin market freeze", NamedTextColor.YELLOW)
@@ -137,6 +157,206 @@ public class AdminCommand {
         }
 
         sender.sendMessage(Component.empty());
+    }
+
+    @Command("autotune admin health")
+    @Permission("autotune.admin")
+    public void adminHealth(CommandSender sender) {
+        Instant oneDayAgo = Instant.now().minus(Duration.ofDays(1));
+        List<ShopItem> allItems = shopManager.getAllItems();
+
+        // ── Market status ────────────────────────────────────────────────────
+        boolean frozen = marketEngine.isFrozen();
+        Component marketStatus = frozen
+                ? Component.text("FROZEN", NamedTextColor.RED)
+                : Component.text("Active", NamedTextColor.GREEN);
+
+        // ── GDP + Debt + Circuit breaker ────────────────────────────────────
+        LoanManager.CircuitBreakerStatus cb = loanManager.getCircuitBreakerStatus();
+        BigDecimal gdp = BigDecimal.ZERO;
+        BigDecimal totalDebt = BigDecimal.ZERO;
+        int activeLoans = 0;
+
+        if (metricsManager.getLatestSnapshot().isPresent()) {
+            EconomySnapshot snap = metricsManager.getLatestSnapshot().get();
+            gdp = snap.gdp();
+            totalDebt = snap.totalDebt();
+            activeLoans = snap.activeLoans();
+        }
+
+        // Debt/GDP ratio + tier color
+        Component debtGdpLabel;
+        NamedTextColor debtGdpColor;
+        if (cb.debtGdpRatio() < 0) {
+            debtGdpLabel = Component.text("N/A (no GDP)", NamedTextColor.GRAY);
+            debtGdpColor = NamedTextColor.GRAY;
+        } else if (cb.debtGdpRatio() < 3.0) {
+            debtGdpLabel = Component.text(String.format("%.2fx", cb.debtGdpRatio()), NamedTextColor.GREEN);
+            debtGdpColor = NamedTextColor.GREEN;
+        } else if (cb.debtGdpRatio() < 10.0) {
+            debtGdpLabel = Component.text(String.format("%.2fx ⚠", cb.debtGdpRatio()), NamedTextColor.YELLOW);
+            debtGdpColor = NamedTextColor.YELLOW;
+        } else {
+            debtGdpLabel = Component.text(String.format("%.2fx ❌", cb.debtGdpRatio()), NamedTextColor.RED);
+            debtGdpColor = NamedTextColor.RED;
+        }
+
+        // Circuit breaker tier badge
+        Component tierBadge;
+        NamedTextColor tierColor;
+        switch (cb.tier()) {
+            case "TIER3" -> { tierBadge = Component.text("TIER3 — EMERGENCY", NamedTextColor.RED); tierColor = NamedTextColor.RED; }
+            case "TIER2" -> { tierBadge = Component.text("TIER2 — DANGER", NamedTextColor.RED); tierColor = NamedTextColor.RED; }
+            case "TIER1" -> { tierBadge = Component.text("TIER1 — WARNING", NamedTextColor.YELLOW); tierColor = NamedTextColor.YELLOW; }
+            default -> { tierBadge = Component.text("Normal", NamedTextColor.GREEN); tierColor = NamedTextColor.GREEN; }
+        }
+
+        // ── Buy ratio ───────────────────────────────────────────────────────
+        BigDecimal buyVol = transactionRepository.getGlobalBuyVolume(oneDayAgo);
+        BigDecimal totalVol = transactionRepository.getGlobalVolume(oneDayAgo);
+        double buyPct = 0.0;
+        if (totalVol.compareTo(BigDecimal.ZERO) > 0) {
+            buyPct = buyVol.divide(totalVol, 4, RoundingMode.HALF_UP).doubleValue() * 100.0;
+        }
+        NamedTextColor buyColor = (buyPct >= 45 && buyPct <= 55)
+                ? NamedTextColor.GREEN
+                : (buyPct >= 40 && buyPct <= 60)
+                        ? NamedTextColor.YELLOW
+                        : NamedTextColor.RED;
+        Component buyLabel = Component.text(String.format("%.1f%% buy / %.1f%% sell",
+                buyPct, 100.0 - buyPct), buyColor);
+
+        // ── Spread ──────────────────────────────────────────────────────────
+        double totalBpd = 0, totalSpd = 0;
+        int spreadCount = 0;
+        for (ShopItem item : allItems) {
+            MarketEngine.SpreadResult sp = marketEngine.getSpread(item.id());
+            totalBpd += sp.bpd().doubleValue();
+            totalSpd += sp.spd().doubleValue();
+            spreadCount++;
+        }
+        double avgBpd = spreadCount > 0 ? (totalBpd / spreadCount) * 100 : 0;
+        double avgSpd = spreadCount > 0 ? (totalSpd / spreadCount) * 100 : 0;
+        NamedTextColor spreadColor = (avgBpd < 5) ? NamedTextColor.GREEN : (avgBpd < 10) ? NamedTextColor.YELLOW : NamedTextColor.RED;
+        Component spreadLabel = Component.text(
+                String.format("BPD %.2f%% / SPD %.2f%%", avgBpd, avgSpd), spreadColor);
+
+        // ── Volume activity ─────────────────────────────────────────────────
+        double globalMult = marketEngine.getGlobalVolumeMultiplier();
+        Component volLabel;
+        NamedTextColor volColor;
+        if (globalMult > 1.5) {
+            volLabel = Component.text(String.format("High (%.2fx)", globalMult), NamedTextColor.YELLOW);
+            volColor = NamedTextColor.YELLOW;
+        } else if (globalMult < 0.5) {
+            volLabel = Component.text(String.format("Low (%.2fx)", globalMult), NamedTextColor.RED);
+            volColor = NamedTextColor.RED;
+        } else {
+            volLabel = Component.text(String.format("Normal (%.2fx)", globalMult), NamedTextColor.GREEN);
+            volColor = NamedTextColor.GREEN;
+        }
+
+        // ── Inflation ───────────────────────────────────────────────────────
+        Component inflationLabel = Component.text(metricsManager.getInflationLabel(),
+                metricsManager.getInflationLabel().equals("Stable") ? NamedTextColor.GREEN
+                        : NamedTextColor.YELLOW);
+
+        // ── Top volatile + undersold items ─────────────────────────────────
+        List<ItemVolatility> volatilities = new ArrayList<>();
+        List<ItemVolatility> undersells = new ArrayList<>();
+        for (ShopItem item : allItems) {
+            List<PriceHistory> history = itemRepository
+                    .getPriceHistorySince(item.id(), oneDayAgo, 10);
+            if (history.size() < 2) {
+                continue;
+            }
+            BigDecimal newest = history.get(0).price();
+            BigDecimal oldest = history.get(history.size() - 1).price();
+            if (oldest.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            double pctChange = newest.subtract(oldest)
+                    .divide(oldest, 4, RoundingMode.HALF_UP)
+                    .doubleValue() * 100.0;
+            volatilities.add(new ItemVolatility(item, pctChange));
+
+            // Displacement from current price vs oldest historical price (proxy for base)
+            double displacement = newest.subtract(oldest)
+                    .divide(oldest, 4, RoundingMode.HALF_UP)
+                    .doubleValue() * 100.0;
+            undersells.add(new ItemVolatility(item, displacement));
+        }
+
+        // Sort: most volatile = highest absolute % change
+        volatilities.sort(Comparator.comparingDouble((ItemVolatility v) -> Math.abs(v.pctChange())).reversed());
+        undersells.sort(Comparator.comparingDouble(v -> v.pctChange())); // most negative = most undersold
+
+        // ── Render ─────────────────────────────────────────────────────────
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Auto-Tune Economy Health Report", NamedTextColor.GOLD, TextDecoration.BOLD));
+        sender.sendMessage(Component.text("  Market: ").color(NamedTextColor.GRAY).append(marketStatus));
+
+        sender.sendMessage(Component.text("  GDP: ").color(NamedTextColor.GRAY)
+                .append(Component.text(configManager.formatCurrency(gdp), NamedTextColor.AQUA)));
+        sender.sendMessage(Component.text("  Debt: ").color(NamedTextColor.GRAY)
+                .append(Component.text(configManager.formatCurrency(totalDebt),
+                        totalDebt.compareTo(BigDecimal.ZERO) > 0 ? NamedTextColor.RED : NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("  Debt/GDP: ").color(NamedTextColor.GRAY).append(debtGdpLabel));
+        sender.sendMessage(Component.text("  Circuit Breaker: ").color(NamedTextColor.GRAY).append(tierBadge));
+        if (!"NORMAL".equals(cb.tier()) && cb.debtGdpRatio() >= 0) {
+            sender.sendMessage(Component.text("  Interest Rate: ").color(NamedTextColor.GRAY)
+                    .append(Component.text(String.format("%.0f%% of normal", cb.interestMultiplier() * 100),
+                            NamedTextColor.YELLOW)));
+        }
+        sender.sendMessage(Component.text("  Active Loans: ").color(NamedTextColor.GRAY)
+                .append(Component.text(String.valueOf(activeLoans), NamedTextColor.AQUA)));
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("  24h Trade Mix: ").color(NamedTextColor.GRAY).append(buyLabel));
+        sender.sendMessage(Component.text("  Avg Spread: ").color(NamedTextColor.GRAY).append(spreadLabel));
+        sender.sendMessage(Component.text("  Volume Activity: ").color(NamedTextColor.GRAY).append(volLabel));
+        sender.sendMessage(Component.text("  Inflation: ").color(NamedTextColor.GRAY).append(inflationLabel));
+
+        // ── Volatile items ───────────────────────────────────────────────────
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Most Volatile Items (24h)", NamedTextColor.GOLD, TextDecoration.BOLD));
+        renderVolatilityList(sender, volatilities, 5, false);
+
+        // ── Most undersold items ────────────────────────────────────────────
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Most Undersold Items (below fair value)", NamedTextColor.GOLD, TextDecoration.BOLD));
+        renderVolatilityList(sender, undersells, 5, true);
+
+        sender.sendMessage(Component.empty());
+    }
+
+    private record ItemVolatility(ShopItem item, double pctChange) {}
+
+    private void renderVolatilityList(CommandSender sender, List<ItemVolatility> items,
+                                      int limit, boolean undersold) {
+        if (items.isEmpty()) {
+            sender.sendMessage(Component.text("  No data available yet.", NamedTextColor.GRAY));
+            return;
+        }
+        for (int i = 0; i < Math.min(limit, items.size()); i++) {
+            ItemVolatility v = items.get(i);
+            NamedTextColor color;
+            String arrow;
+            if (undersold) {
+                // Most undersold = most negative change
+                if (v.pctChange() <= -20) { color = NamedTextColor.RED; arrow = "▼"; }
+                else if (v.pctChange() <= -5) { color = NamedTextColor.YELLOW; arrow = "▼"; }
+                else { color = NamedTextColor.GRAY; arrow = "—"; }
+            } else {
+                // Most volatile = largest absolute move either direction
+                if (Math.abs(v.pctChange()) >= 20) { color = NamedTextColor.RED; arrow = (v.pctChange() > 0) ? "▲▲" : "▼▼"; }
+                else if (Math.abs(v.pctChange()) >= 5) { color = NamedTextColor.YELLOW; arrow = (v.pctChange() > 0) ? "▲" : "▼"; }
+                else { color = NamedTextColor.GRAY; arrow = "—"; }
+            }
+            String label = v.item().getDisplayNameOrMaterial();
+            sender.sendMessage(Component.text("  " + arrow + " " + label + ": "
+                    + String.format("%+.1f%%", v.pctChange()), color));
+        }
     }
 
     @Command("autotune admin stats")

@@ -1,6 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Bell } from 'lucide-react';
+import { PriceAlertDialog } from './price-alert-dialog';
 import { formatCurrency, formatPercent } from '@/lib/format';
 import type { ItemDto, ItemTrendDto } from '@/lib/api';
 
@@ -10,10 +13,11 @@ interface ItemDetailHeaderProps {
 }
 
 export function ItemDetailHeader({ item, trend }: ItemDetailHeaderProps) {
+  const [alertOpen, setAlertOpen] = useState(false);
   const spreadPct = ((item.bpd + item.spd) * 100).toFixed(2);
 
   return (
-    <div className="flex flex-col gap-2">
+    <>
       {/* Title row */}
       <div className="flex items-center gap-3 flex-wrap">
         <h2 className="text-2xl font-bold text-foreground">{item.displayName}</h2>
@@ -38,6 +42,16 @@ export function ItemDetailHeader({ item, trend }: ItemDetailHeaderProps) {
             {trend.streak > 1 && ` ×${trend.streak}`}
           </Badge>
         )}
+
+        {/* Price alert button */}
+        <button
+          onClick={() => setAlertOpen(true)}
+          className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-primary/30 bg-primary/5 text-primary text-xs font-medium hover:bg-primary/10 hover:border-primary/50 transition-all"
+          title="Set a price alert for this item"
+        >
+          <Bell className="h-3.5 w-3.5" />
+          Set Alert
+        </button>
       </div>
 
       {/* Material + ID */}
@@ -89,6 +103,8 @@ export function ItemDetailHeader({ item, trend }: ItemDetailHeaderProps) {
           <span className="font-semibold text-foreground font-mono">{spreadPct}%</span>
         </div>
       </div>
-    </div>
+
+      <PriceAlertDialog item={item} open={alertOpen} onClose={() => setAlertOpen(false)} />
+    </>
   );
 }

@@ -145,7 +145,11 @@ fn filter_outliers(
             .filter(|&servers| servers.contains(&si))
             .count();
         if count > 0 {
-            tracing::debug!(server_idx = si, outlier_pairs = count, "server has outlier ratios");
+            tracing::debug!(
+                server_idx = si,
+                outlier_pairs = count,
+                "server has outlier ratios"
+            );
         }
     }
 
@@ -392,13 +396,28 @@ mod tests {
         let mean_log = 0.0_f64;
         assert!(is_within_k_sigma(mean_log, mean_log, 0.1, 3.0), "at mean");
         // ±0.2 in log-space is within ±0.3 (3σ)
-        assert!(is_within_k_sigma(0.2, mean_log, 0.1, 3.0), "within 3σ boundary");
+        assert!(
+            is_within_k_sigma(0.2, mean_log, 0.1, 3.0),
+            "within 3σ boundary"
+        );
         // ±0.3 in log-space is exactly at 3σ boundary
-        assert!(is_within_k_sigma(-0.3, mean_log, 0.1, 3.0), "at 3σ lower boundary");
-        assert!(is_within_k_sigma(0.3, mean_log, 0.1, 3.0), "at 3σ upper boundary");
+        assert!(
+            is_within_k_sigma(-0.3, mean_log, 0.1, 3.0),
+            "at 3σ lower boundary"
+        );
+        assert!(
+            is_within_k_sigma(0.3, mean_log, 0.1, 3.0),
+            "at 3σ upper boundary"
+        );
         // ±0.5 in log-space is outside ±0.3 (3σ)
-        assert!(!is_within_k_sigma(-0.5, mean_log, 0.1, 3.0), "outside 3σ lower");
-        assert!(!is_within_k_sigma(0.5, mean_log, 0.1, 3.0), "outside 3σ upper");
+        assert!(
+            !is_within_k_sigma(-0.5, mean_log, 0.1, 3.0),
+            "outside 3σ lower"
+        );
+        assert!(
+            !is_within_k_sigma(0.5, mean_log, 0.1, 3.0),
+            "outside 3σ upper"
+        );
     }
 
     #[test]
@@ -423,9 +442,21 @@ mod tests {
         // Server 1: dirt=1, stone=2, iron=4  (same ratios)
         // Server 2: dirt=1, stone=2, iron=4  (same ratios)
         vec![
-            vec![vec![1.0, 0.5, 0.25], vec![2.0, 1.0, 0.5], vec![4.0, 2.0, 1.0]],
-            vec![vec![1.0, 0.5, 0.25], vec![2.0, 1.0, 0.5], vec![4.0, 2.0, 1.0]],
-            vec![vec![1.0, 0.5, 0.25], vec![2.0, 1.0, 0.5], vec![4.0, 2.0, 1.0]],
+            vec![
+                vec![1.0, 0.5, 0.25],
+                vec![2.0, 1.0, 0.5],
+                vec![4.0, 2.0, 1.0],
+            ],
+            vec![
+                vec![1.0, 0.5, 0.25],
+                vec![2.0, 1.0, 0.5],
+                vec![4.0, 2.0, 1.0],
+            ],
+            vec![
+                vec![1.0, 0.5, 0.25],
+                vec![2.0, 1.0, 0.5],
+                vec![4.0, 2.0, 1.0],
+            ],
         ]
     }
 
@@ -434,7 +465,11 @@ mod tests {
         let mut matrices = make_agreeing_matrices();
         let before: Vec<_> = matrices.iter().map(|m| m.clone()).collect();
         let result = filter_outliers(&mut matrices, 3.0);
-        assert_eq!(result.values().sum::<usize>(), 0, "no outliers when all agree");
+        assert_eq!(
+            result.values().sum::<usize>(),
+            0,
+            "no outliers when all agree"
+        );
         // matrices should be unchanged
         assert_eq!(matrices, before);
     }
@@ -449,7 +484,7 @@ mod tests {
         // variance_log = (10×(1.386-1.888)² + (6.908-1.888)²)/11 = (10×0.252 + 25.20)/11 = 2.705
         // std_log = 1.644
         // z(malicious) = |6.908 - 1.888| / 1.644 = 5.02 / 1.644 = 3.05 → > 3 ✓
-        // z(malicious) = 5.02 / 2.73 = 1.84 → < 2.0... 
+        // z(malicious) = 5.02 / 2.73 = 1.84 → < 2.0...
         // Wait, let me recalculate variance properly:
         // honest deviation from mean: 1.386 - 1.888 = -0.502, squared = 0.252
         // malicious deviation: 6.908 - 1.888 = 5.020, squared = 25.20
@@ -459,7 +494,11 @@ mod tests {
         // z = 5.02 / 2.52 = 1.99 → just barely < 2.0 (at σ=2.0)
         //
         // I'll use σ=3.0 (default) with 10 honest + 1 malicious at 1000x
-        let honest = vec![vec![1.0, 0.5, 0.25], vec![2.0, 1.0, 0.5], vec![4.0, 2.0, 1.0]];
+        let honest = vec![
+            vec![1.0, 0.5, 0.25],
+            vec![2.0, 1.0, 0.5],
+            vec![4.0, 2.0, 1.0],
+        ];
         let malicious = vec![
             vec![1.0, 0.5, 0.001],
             vec![2.0, 1.0, 0.5],
@@ -470,16 +509,30 @@ mod tests {
 
         let result = filter_outliers(&mut matrices, 3.0);
         let total: usize = result.values().sum();
-        assert!(total > 0, "10-honest + 1-malicious at 1000x should be filtered at σ=3.0, got {total}");
-        assert_eq!(matrices[10][2][0], 1.0, "outlier iron/dirt replaced with 1.0");
+        assert!(
+            total > 0,
+            "10-honest + 1-malicious at 1000x should be filtered at σ=3.0, got {total}"
+        );
+        assert_eq!(
+            matrices[10][2][0], 1.0,
+            "outlier iron/dirt replaced with 1.0"
+        );
     }
 
     #[test]
     fn test_filter_outliers_single_observation_kept() {
         // Only one server has a particular pair → no outlier detection possible
         let mut matrices = vec![
-            vec![vec![1.0, 0.5, 0.25], vec![2.0, 1.0, 0.5], vec![4.0, 2.0, 1.0]],
-            vec![vec![1.0, 0.5, 0.25], vec![2.0, 1.0, 0.5], vec![1.0, 1.0, 1.0]], // iron/dirt = 1.0
+            vec![
+                vec![1.0, 0.5, 0.25],
+                vec![2.0, 1.0, 0.5],
+                vec![4.0, 2.0, 1.0],
+            ],
+            vec![
+                vec![1.0, 0.5, 0.25],
+                vec![2.0, 1.0, 0.5],
+                vec![1.0, 1.0, 1.0],
+            ], // iron/dirt = 1.0
         ];
         let result = filter_outliers(&mut matrices, 3.0);
         // No pair has 2+ servers with valid observations AND disagreement
@@ -491,9 +544,21 @@ mod tests {
     fn test_filter_outliers_allows_slight_variance() {
         // 3 servers with slight variance (within 3σ) should not be filtered
         let mut matrices = vec![
-            vec![vec![1.0, 0.5, 0.25], vec![2.0, 1.0, 0.5], vec![4.0, 2.0, 1.0]],
-            vec![vec![1.0, 0.5, 0.24], vec![2.1, 1.0, 0.49], vec![4.2, 2.04, 1.0]],
-            vec![vec![1.0, 0.5, 0.26], vec![2.05, 1.0, 0.51], vec![4.1, 2.02, 1.0]],
+            vec![
+                vec![1.0, 0.5, 0.25],
+                vec![2.0, 1.0, 0.5],
+                vec![4.0, 2.0, 1.0],
+            ],
+            vec![
+                vec![1.0, 0.5, 0.24],
+                vec![2.1, 1.0, 0.49],
+                vec![4.2, 2.04, 1.0],
+            ],
+            vec![
+                vec![1.0, 0.5, 0.26],
+                vec![2.05, 1.0, 0.51],
+                vec![4.1, 2.02, 1.0],
+            ],
         ];
         let result = filter_outliers(&mut matrices, 3.0);
         // Minor 4-8% variance is well within 3σ for 3 observations → no outliers
@@ -509,11 +574,18 @@ mod tests {
         // With only 2 servers, variance can't be meaningfully measured
         // (stddev=0 with 2 observations of the same value, σ<0.01 → keep)
         let mut matrices = vec![
-            vec![vec![1.0, 0.5, 0.25], vec![2.0, 1.0, 0.5], vec![4.0, 2.0, 1.0]],
-            vec![vec![1.0, 0.5, 0.25], vec![2.0, 1.0, 0.5], vec![4.0, 2.0, 1.0]],
+            vec![
+                vec![1.0, 0.5, 0.25],
+                vec![2.0, 1.0, 0.5],
+                vec![4.0, 2.0, 1.0],
+            ],
+            vec![
+                vec![1.0, 0.5, 0.25],
+                vec![2.0, 1.0, 0.5],
+                vec![4.0, 2.0, 1.0],
+            ],
         ];
         let result = filter_outliers(&mut matrices, 3.0);
         assert_eq!(result.values().sum::<usize>(), 0);
     }
 }
-

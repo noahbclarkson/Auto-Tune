@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use rand::Rng;
 use rand::RngExt;
@@ -152,6 +152,11 @@ pub enum Archetype {
     /// earns from the spread. Provides liquidity to both sides, reducing
     /// systemic underselling from Farmer-dominated economies.
     MarketMaker,
+    /// Insider Trader — mean-reversion player. Tracks rolling price history,
+    /// buys when price is significantly below recent average, sells when
+    /// significantly above. Counteracts momentum-driven overshoot in both
+    /// directions. Distinct from Exploiter (momentum-following).
+    InsiderTrader,
 }
 
 impl Archetype {
@@ -166,6 +171,7 @@ impl Archetype {
             Self::AFKFarmer => "AFKFarmer",
             Self::GuildBuyer => "GuildBuyer",
             Self::MarketMaker => "MarketMaker",
+            Self::InsiderTrader => "InsiderTrader",
         }
     }
 }
@@ -230,6 +236,12 @@ pub struct PlayerAgent {
     pub mm_max_inventory: i32,
     /// Target inventory level per item for MarketMaker archetype.
     pub mm_target_inventory: i32,
+    /// Rolling price history window size (in ticks) for InsiderTrader.
+    /// How many past prices to track for mean-reversion calculation.
+    pub insider_history_window: usize,
+    /// Per-item rolling price history. Updated after each engine tick.
+    /// Used by InsiderTrader to compute moving average for mean-reversion.
+    pub insider_price_history: HashMap<usize, VecDeque<f64>>,
     pub credit_score: i32,
     pub total_traded: f64,
     pub online: bool,
@@ -265,6 +277,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            insider_history_window: 0,
+            insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
         };
@@ -301,6 +315,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            insider_history_window: 0,
+            insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
         };
@@ -341,6 +357,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            insider_history_window: 0,
+            insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
         };
@@ -377,6 +395,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            insider_history_window: 0,
+            insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
         };
@@ -413,6 +433,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            insider_history_window: 0,
+            insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
         };
@@ -456,6 +478,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            insider_history_window: 0,
+            insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
         };
@@ -500,6 +524,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            insider_history_window: 0,
+            insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
         };
@@ -551,6 +577,8 @@ impl PlayerAgent {
             guild_price_dip_threshold: guild_dip_threshold,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
+            insider_history_window: 0,
+            insider_price_history: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -599,6 +627,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            insider_history_window: 0,
+            insider_price_history: HashMap::new(),
             // MarketMaker-specific
             mm_max_inventory: max_inv,
             mm_target_inventory: target_inv,
@@ -609,6 +639,51 @@ impl PlayerAgent {
         for i in 0..item_count {
             agent.inventory.insert(i, target_inv);
         }
+        agent
+    }
+
+    pub fn new_insider_trader(index: usize, item_count: usize, _base_prices: &[f64]) -> Self {
+        let mut rng = SeededRng;
+        // InsiderTraders have substantial capital — they take positions
+        let budget = rng.random(20000.0..100000.0);
+        // Mean-reversion threshold: buy when price < mean*(1-threshold), sell when > mean*(1+threshold)
+        let threshold = rng.random(0.08..0.20);
+        // History window: number of ticks to average. ~20 ticks = ~4 hours of price history.
+        let history_window = rng.random(15..35);
+
+        let mut agent = Self {
+            id: index,
+            name: format!("InsiderTrader-{index}"),
+            archetype: Archetype::InsiderTrader,
+            balance: budget,
+            online_probability: rng.random(0.6..0.9),
+            activity_rate: rng.random(0.6..0.9),
+            // Insider uses threshold symmetrically for buy/sell
+            buy_threshold: threshold,
+            sell_threshold: threshold,
+            max_trade_amount: rng.random(10..50),
+            risk_tolerance: rng.random(0.5..0.8),
+            inventory_saturation: rng.random(0.05..0.15),
+            gather_rate: rng.random(0.02..0.10),
+            usage_rate: rng.random(0.02..0.08),
+            perceived_values: HashMap::new(),
+            preferences: HashMap::new(),
+            inventory: HashMap::new(),
+            credit_score: 700,
+            total_traded: 0.0,
+            online: false,
+            total_trades: 0,
+            guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            guild_price_dip_threshold: 0.0,
+            mm_max_inventory: 0,
+            mm_target_inventory: 0,
+            // InsiderTrader-specific
+            insider_history_window: history_window,
+            insider_price_history: HashMap::new(),
+        };
+        agent.init_perceived_values(item_count, &[]);
+        agent.init_preferences(item_count);
         agent
     }
 
@@ -648,8 +723,10 @@ impl PlayerAgent {
             Self::new_newbie(index, item_count, base_prices)
         } else if roll < 0.97 {
             Self::new_afk_farmer(index, item_count, base_prices)
-        } else {
+        } else if roll < 0.985 {
             Self::new_guild_buyer(index, item_count, base_prices)
+        } else {
+            Self::new_insider_trader(index, item_count, base_prices)
         }
     }
 
@@ -726,6 +803,9 @@ impl PlayerAgent {
             }
             Archetype::MarketMaker => {
                 self.decide_marketmaker(items, &mut decisions, record, &mut logs, slippage_coeff);
+            }
+            Archetype::InsiderTrader => {
+                self.decide_insider_trader(items, &mut decisions, record, &mut logs, slippage_coeff);
             }
             _ => {
                 self.decide_value_based(items, &mut decisions, record, &mut logs, slippage_coeff);
@@ -1324,6 +1404,157 @@ impl PlayerAgent {
                     }
                 }
             }
+        }
+    }
+
+    /// Insider Trader — mean-reversion strategy.
+    ///
+    /// Tracks a rolling price history for each item. When current price is
+    /// significantly BELOW the rolling mean → BUY (price is cheap, expect rebound).
+    /// When significantly ABOVE → SELL (price is expensive, expect pullback).
+    /// Near the mean → hold/neutral.
+    ///
+    /// Key distinction from Exploiter (momentum-following):
+    ///   Exploiter buys when price is RISING (rides momentum up)
+    ///   InsiderTrader buys when price is FALLING (fades momentum, expects bounce)
+    ///
+    /// Key distinction from MarketMaker (liquidity provision):
+    ///   MM posts around perceived fair value regardless of price history
+    ///   InsiderTrader specifically exploits deviations from recent price average
+    ///
+    /// This provides a stabilizing counter-force to price overshoot in both
+    /// directions — buying into dips reduces crash depth, selling into spikes
+    /// trims rally height. Acts as a "smart money" anchor in the player mix.
+    fn decide_insider_trader(
+        &mut self,
+        items: &[ItemState],
+        decisions: &mut Vec<PlayerDecision>,
+        record: bool,
+        logs: &mut Vec<DecisionLog>,
+        slippage_coeff: f64,
+    ) {
+        let mut rng = SeededRng;
+        let threshold = self.buy_threshold; // symmetric buy/sell threshold
+
+        for (i, item) in items.iter().enumerate() {
+            // Update price history: record current price BEFORE making decisions.
+            // This ensures decisions are based on history UP TO the start of this tick.
+            let current_price = item.sell_price();
+            let history = self
+                .insider_price_history
+                .entry(i)
+                .or_default();
+
+            // Add current price to history (will be used in NEXT tick's decisions)
+            // Skip if history window is 0
+            if self.insider_history_window > 0 {
+                history.push_back(current_price);
+                while history.len() > self.insider_history_window {
+                    history.pop_front();
+                }
+            }
+
+            // Need at least 3 data points before we can meaningfully mean-revert
+            if history.len() < 3 {
+                continue;
+            }
+
+            // Compute rolling mean
+            let mean: f64 = history.iter().sum::<f64>() / history.len() as f64;
+            if mean <= 0.0 {
+                continue;
+            }
+
+            let deviation = (current_price - mean) / mean;
+            let perceived = mean; // Use rolling mean as the insider's fair value estimate
+            let buy_price = item.buy_price();
+            let sell_price = item.sell_price();
+
+            // BUY when price is significantly below mean (undervalued)
+            // deviation is negative → e.g., deviation=-0.15 means price is 15% below mean
+            if deviation < -threshold && buy_price <= self.balance {
+                // Size scales with how extreme the deviation is
+                // At -threshold: min position. At -2x threshold: max position.
+                let extremity = (-deviation / threshold).min(2.0);
+                let base_amount = (self.max_trade_amount as f64 * extremity * self.risk_tolerance).ceil();
+                let amount = rng.random_inclusive(1..=base_amount.max(1.0) as i32);
+                let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                let cost = buy_price * slippage * amount as f64;
+                if cost <= self.balance {
+                    let balance_before = self.balance;
+                    let inventory_before = self.inventory.get(&i).copied().unwrap_or(0);
+                    self.balance -= cost;
+                    *self.inventory.entry(i).or_insert(0) += amount;
+                    self.total_traded += cost;
+                    self.total_trades += 1;
+                    decisions.push(PlayerDecision {
+                        item_index: i,
+                        is_buy: true,
+                        amount,
+                    });
+                    if record {
+                        logs.push(DecisionLog {
+                            player_id: self.id,
+                            item_index: i,
+                            is_buy: true,
+                            amount,
+                            price_per_unit: buy_price * slippage,
+                            total_cost: cost,
+                            perceived_value: perceived,
+                            effective_perceived: mean,
+                            buy_threshold: self.buy_threshold,
+                            sell_threshold: self.sell_threshold,
+                            balance_before,
+                            inventory_before,
+                            reasoning: format!("insider_buy_dev={:.2}", deviation),
+                        });
+                    }
+                }
+            }
+            // SELL when price is significantly above mean (overvalued)
+            else if deviation > threshold {
+                let have = self.inventory.get(&i).copied().unwrap_or(0);
+                if have > 0 {
+                    let extremity = (deviation / threshold).min(2.0);
+                    let base_amount = (have as f64 * extremity * self.risk_tolerance).ceil();
+                    let amount = rng
+                        .random_inclusive(1..=base_amount.max(1.0) as i32)
+                        .min(have);
+                    if amount > 0 {
+                        let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                        let revenue = sell_price / slippage * amount as f64;
+                        let balance_before = self.balance;
+                        let inventory_before = have;
+                        self.balance += revenue;
+                        *self.inventory.entry(i).or_insert(0) -= amount;
+                        self.total_traded += revenue;
+                        self.total_trades += 1;
+                        decisions.push(PlayerDecision {
+                            item_index: i,
+                            is_buy: false,
+                            amount,
+                        });
+                        if record {
+                            logs.push(DecisionLog {
+                                player_id: self.id,
+                                item_index: i,
+                                is_buy: false,
+                                amount,
+                                price_per_unit: sell_price / slippage,
+                                total_cost: revenue,
+                                perceived_value: perceived,
+                                effective_perceived: mean,
+                                buy_threshold: self.buy_threshold,
+                                sell_threshold: self.sell_threshold,
+                                balance_before,
+                                inventory_before,
+                                reasoning: format!("insider_sell_dev={:.2}", deviation),
+                            });
+                        }
+                    }
+                }
+            }
+            // NEUTRAL when price is within threshold band — do nothing
         }
     }
 }

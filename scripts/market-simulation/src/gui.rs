@@ -1242,6 +1242,7 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                         Archetype::AFKFarmer => egui::Color32::from_rgb(99, 179, 237),
                         Archetype::GuildBuyer => egui::Color32::from_rgb(255, 118, 117),
                         Archetype::MarketMaker => egui::Color32::from_rgb(0, 206, 201),
+                        Archetype::InsiderTrader => egui::Color32::from_rgb(255, 183, 197),
                     };
                     ui.colored_label(archetype_color, player.archetype.label());
                 });
@@ -1708,6 +1709,15 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                             player.mm_target_inventory, player.mm_max_inventory
                         ));
                         ui.label("Trades both directions, reduces systemic underselling.");
+                    }
+                    Archetype::InsiderTrader => {
+                        ui.label("Mean-reversion: buys when price is below rolling average, sells when above.");
+                        ui.label(format!(
+                            "Threshold={:.0}% deviation, history window={} ticks",
+                            player.buy_threshold * 100.0,
+                            player.insider_history_window
+                        ));
+                        ui.label("Contrarian — fades momentum by buying dips and selling spikes.");
                     }
                 }
 

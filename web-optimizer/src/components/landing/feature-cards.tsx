@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Users, Gavel, Bell, Globe, ShieldCheck, Wifi } from 'lucide-react';
 
 const accentMap = {
   emerald: {
@@ -20,11 +20,29 @@ const accentMap = {
     bar: 'bg-amber-600/20 border-amber-600/30',
     stat: 'text-amber-400',
   },
+  violet: {
+    tag: 'text-violet-400 bg-violet-950/60 border-violet-800/50',
+    code: 'text-violet-300',
+    bar: 'bg-violet-600/20 border-violet-600/30',
+    stat: 'text-violet-400',
+  },
+  rose: {
+    tag: 'text-rose-400 bg-rose-950/60 border-rose-800/50',
+    code: 'text-rose-300',
+    bar: 'bg-rose-600/20 border-rose-600/30',
+    stat: 'text-rose-400',
+  },
+  sky2: {
+    tag: 'text-cyan-400 bg-cyan-950/60 border-cyan-800/50',
+    code: 'text-cyan-300',
+    bar: 'bg-cyan-600/20 border-cyan-600/30',
+    stat: 'text-cyan-400',
+  },
 } as const;
 
 type AccentKey = keyof typeof accentMap;
 
-const features: { tag: string; title: string; description: string; stat: { label: string; value: string }; code: string; accent: AccentKey }[] = [
+const features: { tag: string; title: string; description: string; stat: { label: string; value: string }; code: string; accent: AccentKey; icon: React.ElementType }[] = [
   {
     tag: 'PRICING',
     title: 'Supply & Demand Pricing',
@@ -33,6 +51,7 @@ const features: { tag: string; title: string; description: string; stat: { label
     stat: { label: 'Max change / tick', value: '1.5%' },
     code: 'change = tradeRatio × playerScaling × maxChange%',
     accent: 'emerald',
+    icon: ArrowRight,
   },
   {
     tag: 'SPREADS',
@@ -42,15 +61,47 @@ const features: { tag: string; title: string; description: string; stat: { label
     stat: { label: 'Spread factors', value: '5 layers' },
     code: 'bpd = halfSpread × imbalance × liq × players × vol',
     accent: 'sky',
+    icon: ArrowRight,
   },
   {
-    tag: 'STABILITY',
-    title: 'Trend Dampening & Floors',
+    tag: 'GUILDS',
+    title: 'Guild Economy Dashboard',
     description:
-      'Consecutive-tick streaks trigger dampening: 1 / (1 + streak × 0.05), with a 25% floor. Sell pressure multiplier and a $0.01 price floor prevent economic death spirals.',
-    stat: { label: 'Min dampening floor', value: '25%' },
-    code: 'dampening = max(1/(1+streak×d), floor)',
+      'Auto-Tune reads your Vault permission groups and tracks per-guild trading volume, net position, and debt. Works with any Vault-compatible guild plugin — no config needed.',
+    stat: { label: 'Top 10 guilds', value: 'by volume' },
+    code: '/guild · /guild stats · /guild top',
+    accent: 'violet',
+    icon: Users,
+  },
+  {
+    tag: 'AUCTION',
+    title: 'Auction House',
+    description:
+      'Players post sell orders at their price, with a configurable duration. Buyers browse, purchase, and receive items instantly. Expired orders are reclaimed automatically.',
+    stat: { label: 'Order expiry', value: 'configurable' },
+    code: '/auction · /auction post · /auction reclaim',
     accent: 'amber',
+    icon: Gavel,
+  },
+  {
+    tag: 'ALERTS',
+    title: 'Price Alerts',
+    description:
+      'Players subscribe to items and receive notifications when prices cross their thresholds. Admins can configure alert channels — Discord webhook, in-game, or both.',
+    stat: { label: 'Discord + in-game', value: 'webhook ready' },
+    code: '/autotune alert add <item> <threshold>',
+    accent: 'rose',
+    icon: Bell,
+  },
+  {
+    tag: 'CROSS-SERVER',
+    title: 'Cross-Server True Prices',
+    description:
+      'Servers submit anonymised price ratios to an optional API. A least-squares solver computes globally consistent true prices used as starting baselines for new servers.',
+    stat: { label: '3σ outlier filter', value: 'prevents spoofing' },
+    code: 'POST /api/submit · GET /api/true-prices',
+    accent: 'sky2',
+    icon: Globe,
   },
 ];
 
@@ -60,42 +111,51 @@ export function FeatureCards() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-end justify-between mb-10">
           <div>
-            <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">Engine Overview</p>
+            <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">Everything Included</p>
             <h2 className="text-2xl sm:text-3xl font-bold text-white">
-              Three systems, one economy
+              More than just pricing
             </h2>
+            <p className="text-gray-400 text-sm mt-1.5 max-w-lg">
+              A complete economy platform: dynamic spreads, guild tracking, auction house, loan circuit breakers, cross-server price discovery, and real-time dashboards.
+            </p>
           </div>
           <Link
             href="/how-it-works"
             className="hidden sm:flex items-center gap-1.5 text-sm text-gray-400 hover:text-emerald-400 transition-colors"
           >
-            Full breakdown <ArrowRight className="w-3.5 h-3.5" />
+            Algorithm docs <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-5">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {features.map((f) => {
             const a = accentMap[f.accent];
+            const Icon = f.icon;
             return (
               <div
                 key={f.title}
                 className="group bg-gray-900/70 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-all hover:-translate-y-0.5"
               >
-                {/* Tag */}
-                <div className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-mono font-medium mb-4 ${a.tag}`}>
-                  {f.tag}
+                {/* Tag + icon */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-mono font-medium ${a.tag}`}>
+                    {f.tag}
+                  </div>
+                  <div className={`w-7 h-7 rounded-md border flex items-center justify-center ${a.bar}`}>
+                    <Icon className={`w-3.5 h-3.5 ${a.stat}`} />
+                  </div>
                 </div>
 
                 <h3 className="text-base font-semibold text-white mb-2">{f.title}</h3>
                 <p className="text-sm text-gray-400 leading-relaxed mb-4">{f.description}</p>
 
                 {/* Stat */}
-                <div className={`flex items-center gap-3 px-3 py-2 rounded-lg border ${a.bar} mb-4`}>
-                  <span className={`text-xl font-bold font-mono ${a.stat}`}>{f.stat.value}</span>
+                <div className={`flex items-center gap-3 px-3 py-2 rounded-lg border ${a.bar} mb-3`}>
+                  <span className={`text-lg font-bold font-mono ${a.stat}`}>{f.stat.value}</span>
                   <span className="text-xs text-gray-500">{f.stat.label}</span>
                 </div>
 
-                {/* Formula */}
+                {/* Command / code */}
                 <div className="bg-gray-950/80 rounded-md px-3 py-2 border border-gray-800">
                   <code className={`text-xs font-mono break-all leading-relaxed ${a.code}`}>{f.code}</code>
                 </div>

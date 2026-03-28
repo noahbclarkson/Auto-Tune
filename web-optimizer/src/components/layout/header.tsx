@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp, Grid, FlaskConical } from 'lucide-react';
+import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp, Grid, FlaskConical, Code2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV = [
@@ -12,8 +12,9 @@ const NAV = [
   { href: '/sweep-results', label: 'Sweep', icon: Grid },
   { href: '/simulation-results', label: 'Sim Results', icon: FlaskConical },
   { href: '/true-prices', label: 'True Prices', icon: DollarSign },
+  { href: '/exchange-rates', label: 'Rates', icon: TrendingUp },
   { href: '/servers', label: 'Servers', icon: Server },
-  { href: '/exchange-rates', label: 'Exchange Rates', icon: TrendingUp },
+  { href: '/api-docs', label: 'API', icon: Code2 },
 ];
 
 export function Header() {

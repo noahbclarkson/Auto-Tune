@@ -26,6 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -257,7 +258,7 @@ public class AuctionGui {
         if (isOwn) {
             lore.add(Component.text("[Click to CANCEL this order]", RED, TextDecoration.BOLD));
         } else {
-            lore.add(Component.text("[Click to " + sideLabel.toLowerCase() + "]", GREEN, TextDecoration.BOLD));
+            lore.add(Component.text("[Click to " + sideLabel.toLowerCase(Locale.ROOT) + "]", GREEN, TextDecoration.BOLD));
         }
 
         Component displayName;
@@ -434,7 +435,7 @@ public class AuctionGui {
         } else {
             int slot = 0;
             for (AuctionOrder order : orders) {
-                if (slot >= 7) break; // slots 1-7 for orders
+                if (slot >= BUY_SLOTS.length) break; // slots 1-7 for orders
                 pane.addItem(new GuiItem(makeOrderItem(order, player),
                         e -> handleFillClick(player, order)), slot + 1, 1);
                 slot++;
@@ -473,7 +474,7 @@ public class AuctionGui {
 
     private Material parseMaterial(String name) {
         try {
-            return Material.valueOf(name.toUpperCase());
+            return Material.valueOf(name.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             return null;
         }
@@ -481,8 +482,8 @@ public class AuctionGui {
 
     private String formatMaterial(String material) {
         if (material == null) return "";
-        String s = material.replace("_", " ").toLowerCase();
-        return s.substring(0, 1).toUpperCase() + s.substring(1);
+        String s = material.replace("_", " ").toLowerCase(Locale.ROOT);
+        return s.substring(0, 1).toUpperCase(Locale.ROOT) + s.substring(1);
     }
 
     private int countItems(Player player, Material mat) {

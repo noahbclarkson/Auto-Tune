@@ -15,6 +15,8 @@ import java.util.function.Consumer;
 
 public final class ChatSearchHandler implements Listener {
 
+    private static final String CANCEL_CMD = "cancel";
+
     private final Plugin plugin;
     private final Player player;
     private final Consumer<String> onInput;
@@ -45,7 +47,7 @@ public final class ChatSearchHandler implements Listener {
         String message = PlainTextComponentSerializer.plainText().serialize(event.message()).trim();
         unregister();
 
-        if ("cancel".equalsIgnoreCase(message)) {
+        if (CANCEL_CMD.equalsIgnoreCase(message)) {
             plugin.getServer().getScheduler().runTask(plugin, onCancel);
         } else {
             plugin.getServer().getScheduler().runTask(plugin, () -> onInput.accept(message));

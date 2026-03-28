@@ -53,6 +53,8 @@ public class AnvilMinPriceGui implements Listener {
      */
     private static final Map<UUID, String> PLAYER_RENAME_TEXT = new ConcurrentHashMap<>();
     private static final Map<UUID, AnvilMinPriceGui> OPEN_GUIS = new ConcurrentHashMap<>();
+    // Anvil slot index 2 = output slot (where the renamed item appears)
+    private static final int ANVIL_OUTPUT_SLOT = 2;
 
     public AnvilMinPriceGui(
             AutoTune plugin,
@@ -122,7 +124,7 @@ public class AnvilMinPriceGui implements Listener {
         }
 
         // Raw slot 2 = output slot in anvil view
-        if (event.getRawSlot() != 2) {
+        if (event.getRawSlot() != ANVIL_OUTPUT_SLOT) {
             return;
         }
 

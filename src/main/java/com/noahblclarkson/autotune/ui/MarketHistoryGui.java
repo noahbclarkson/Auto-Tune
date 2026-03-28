@@ -54,6 +54,10 @@ public class MarketHistoryGui {
 
     // How many history entries to show in the chart
     private static final int CHART_COLUMNS = 9;
+    private static final BigDecimal ZERO = BigDecimal.ZERO;
+    private static final BigDecimal ONE = BigDecimal.ONE;
+    private static final int CHART_MAX_TOP_BLOCK_ROWS = 2;
+    private static final int CHART_MIN_ROWS = 1;
 
     /**
      * Timeframe for history queries. Each variant knows how far back to query
@@ -65,15 +69,15 @@ public class MarketHistoryGui {
         WEEK(  "7D",  60 * 24 * 7),
         MONTH( "30D", 60 * 24 * 30);
 
-        private final String label;
+        private final String tag;
         private final int minutes;
 
-        Timeframe(String label, int minutes) {
-            this.label = label;
+        Timeframe(String tag, int minutes) {
+            this.tag = tag;
             this.minutes = minutes;
         }
 
-        public String label() { return label; }
+        public String label() { return tag; }
 
         /** Number of history rows to fetch (capped at CHART_COLUMNS) */
         public int fetchLimit() { return Math.min(minutes / 5, CHART_COLUMNS); }
@@ -382,6 +386,7 @@ public class MarketHistoryGui {
      *
      * Colors: GREEN = up, RED = down, YELLOW = stable.
      */
+    @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
     private void buildPriceChart(StaticPane pane, List<PriceHistory> history,
                                  ColorsConfig colors, TextColor muted) {
         // Reverse so oldest is on the left (x=0)
@@ -398,7 +403,7 @@ public class MarketHistoryGui {
             avgChange = avgChange.divide(BigDecimal.valueOf(reversed.size() - 1),
                     2, RoundingMode.HALF_UP);
         }
-        if (avgChange.compareTo(BigDecimal.ZERO) == 0) avgChange = BigDecimal.ONE;
+        if (avgChange.compareTo(ZERO) == 0) avgChange = ONE;
 
         DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm")
                 .withZone(ZoneId.systemDefault());
@@ -428,14 +433,14 @@ public class MarketHistoryGui {
                     ? price.subtract(reversed.get(col - 1).price()).abs()
                     : BigDecimal.ZERO;
             int rows = deviation.divide(avgChange, RoundingMode.FLOOR).intValue() + 1;
-            rows = Math.min(2, Math.max(1, rows));
+            rows = Math.min(CHART_MAX_TOP_BLOCK_ROWS, Math.max(CHART_MIN_ROWS, rows));
 
             // Bottom block (always present)
             ItemStack bottomBlock = makeChartBlock(mat, ph, colors, muted, timeFmt, dateFmt);
             pane.addItem(new GuiItem(bottomBlock, e -> {}), col, 0);
 
             // Top block (only if magnitude warrants)
-            if (rows > 1) {
+            if (rows > CHART_MIN_ROWS) {
                 ItemStack topBlock = makeChartBlock(mat, ph, colors, muted, timeFmt, dateFmt);
                 pane.addItem(new GuiItem(topBlock, e -> {}), col, 1);
             }

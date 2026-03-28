@@ -32,6 +32,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -305,15 +306,15 @@ public class AuctionCommand {
 
     private Material parseMaterial(String name) {
         try {
-            return Material.valueOf(name.toUpperCase());
+            return Material.valueOf(name.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             return null;
         }
     }
 
     private String formatMaterial(String material) {
-        return material.replace("_", " ").toLowerCase()
-                .substring(0, 1).toUpperCase()
-                + material.replace("_", " ").toLowerCase().substring(1);
+        return material.replace("_", " ").toLowerCase(Locale.ROOT)
+                .substring(0, 1).toUpperCase(Locale.ROOT)
+                + material.replace("_", " ").toLowerCase(Locale.ROOT).substring(1);
     }
 }

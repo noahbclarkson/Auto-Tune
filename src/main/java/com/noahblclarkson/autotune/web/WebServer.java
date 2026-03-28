@@ -43,6 +43,10 @@ import java.util.stream.Collectors;
 @Singleton
 public class WebServer {
 
+    // API response field names
+    private static final String KEY_LIMIT = "limit";
+    private static final String KEY_TIMESTAMP = "timestamp";
+
     private final AutoTune plugin;
     private final ConfigManager configManager;
     private final ItemRepository itemRepository;
@@ -156,7 +160,7 @@ public class WebServer {
 
         app.get("/api/items/{id}/history", ctx -> {
             int id = Integer.parseInt(ctx.pathParam("id"));
-            int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(100);
+            int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(100);
 
             List<PriceHistory> history = itemRepository.getPriceHistory(id, limit);
             List<PriceHistoryDto> dtos = history.stream()
@@ -181,7 +185,7 @@ public class WebServer {
                     "totalItems", items.size(),
                     "onlinePlayers", onlinePlayers,
                     "serverName", plugin.getServer().getName(),
-                    "timestamp", System.currentTimeMillis()
+                    KEY_TIMESTAMP, System.currentTimeMillis()
             );
 
             ctx.json(stats);
@@ -215,10 +219,10 @@ public class WebServer {
             if (latest.isPresent()) {
                 ctx.json(Map.of(
                         "gdp", latest.get().gdp().doubleValue(),
-                        "timestamp", latest.get().timestamp().toEpochMilli()
+                        KEY_TIMESTAMP, latest.get().timestamp().toEpochMilli()
                 ));
             } else {
-                ctx.json(Map.of("gdp", 0.0, "timestamp", System.currentTimeMillis()));
+                ctx.json(Map.of("gdp", 0.0, KEY_TIMESTAMP, System.currentTimeMillis()));
             }
         });
 
@@ -228,11 +232,11 @@ public class WebServer {
             if (latest.isPresent()) {
                 result.put("averagePriceChange", latest.get().averagePriceChange().doubleValue());
                 result.put("label", economyMetricsManager.getInflationLabel());
-                result.put("timestamp", latest.get().timestamp().toEpochMilli());
+                result.put(KEY_TIMESTAMP, latest.get().timestamp().toEpochMilli());
             } else {
                 result.put("averagePriceChange", 0.0);
                 result.put("label", "N/A");
-                result.put("timestamp", System.currentTimeMillis());
+                result.put(KEY_TIMESTAMP, System.currentTimeMillis());
             }
             ctx.json(result);
         });
@@ -244,18 +248,18 @@ public class WebServer {
                 result.put("totalDebt", latest.get().totalDebt().doubleValue());
                 result.put("activeLoans", latest.get().activeLoans());
                 result.put("debtPerCapita", economyMetricsManager.getDebtPerCapita().doubleValue());
-                result.put("timestamp", latest.get().timestamp().toEpochMilli());
+                result.put(KEY_TIMESTAMP, latest.get().timestamp().toEpochMilli());
             } else {
                 result.put("totalDebt", 0.0);
                 result.put("activeLoans", 0);
                 result.put("debtPerCapita", 0.0);
-                result.put("timestamp", System.currentTimeMillis());
+                result.put(KEY_TIMESTAMP, System.currentTimeMillis());
             }
             ctx.json(result);
         });
 
         app.get("/api/economy/history", ctx -> {
-            int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(100);
+            int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(100);
             List<EconomySnapshot> snapshots = snapshotRepository.findRecent(limit);
             List<EconomySnapshotDto> dtos = snapshots.stream()
                     .map(s -> new EconomySnapshotDto(
@@ -289,7 +293,7 @@ public class WebServer {
         });
 
         app.get("/api/transactions", ctx -> {
-            int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(50);
+            int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(50);
             List<Transaction> transactions = transactionRepository.findRecent(Math.min(limit, 200));
             List<TransactionFeedDto> dtos = transactions.stream()
                     .map(this::toTransactionDto)
@@ -299,7 +303,7 @@ public class WebServer {
 
         app.get("/api/items/{id}/transactions", ctx -> {
             int id = Integer.parseInt(ctx.pathParam("id"));
-            int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(50);
+            int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(50);
             List<Transaction> transactions = transactionRepository.findByItem(id, Math.min(limit, 200));
             List<TransactionFeedDto> dtos = transactions.stream()
                     .map(this::toTransactionDto)
@@ -364,7 +368,7 @@ public class WebServer {
         });
 
         app.get("/api/leaderboard", ctx -> {
-            int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(20);
+            int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(20);
             List<PlayerData> topTraders = playerRepository.findTopTraders(Math.min(limit, 100));
             AtomicInteger rank = new AtomicInteger(1);
             List<LeaderboardEntryDto> dtos = topTraders.stream()
@@ -383,7 +387,7 @@ public class WebServer {
         app.get("/api/economy/volume-multiplier", ctx -> {
             ctx.json(Map.of(
                     "multiplier", marketEngine.getGlobalVolumeMultiplier(),
-                    "timestamp", System.currentTimeMillis()
+                    KEY_TIMESTAMP, System.currentTimeMillis()
             ));
         });
 
@@ -416,7 +420,7 @@ public class WebServer {
 
         Map<String, Object> message = Map.of(
                 "type", "price_update",
-                "timestamp", System.currentTimeMillis(),
+                KEY_TIMESTAMP, System.currentTimeMillis(),
                 "prices", prices.entrySet().stream()
                         .collect(Collectors.toMap(
                                 e -> String.valueOf(e.getKey()),

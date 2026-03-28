@@ -39,6 +39,12 @@ import java.util.logging.Level;
 
 public class ShopGui {
 
+    // Section browser: 7 columns, up to 3 rows in the GUI grid
+    private static final int SECTION_COLS_MAX = 7;
+    private static final int SECTION_ROWS_MAX = 3;
+    // Quantity selector: 8 columns (qty buttons: 1, 2, 4, 8, 16, 32, 64, custom)
+    private static final int QTY_COLS_MAX = 8;
+
     private final AutoTune plugin;
     private final Player player;
     private final ShopManager shopManager;
@@ -91,10 +97,10 @@ public class ShopGui {
         int x = 1;
         int y = 1;
         for (Section section : sections) {
-            if (x > 7) {
+            if (x > SECTION_COLS_MAX) {
                 x = 1;
                 y++;
-                if (y > 3) break;
+                if (y > SECTION_ROWS_MAX) break;
             }
 
             ItemStack icon = new ItemStack(section.icon());
@@ -370,7 +376,7 @@ public class ShopGui {
         if (buyable) {
             int col = 1;
             for (int qty : validQuantities) {
-                if (col > 8) break;
+                if (col > QTY_COLS_MAX) break;
                 BigDecimal qtyBuyPrice = shopManager.getBuyPrice(shopItem, qty);
                 BigDecimal totalCost = qtyBuyPrice.multiply(BigDecimal.valueOf(qty));
                 ItemStack buyItem = new ItemStack(buyButtonMaterial, Math.min(qty, 64));
@@ -403,7 +409,7 @@ public class ShopGui {
 
         int col = 1;
         for (int qty : validQuantities) {
-            if (col > 8) break;
+            if (col > QTY_COLS_MAX) break;
             BigDecimal qtySellPrice = shopManager.getSellPrice(shopItem, qty);
             BigDecimal totalValue = qtySellPrice.multiply(BigDecimal.valueOf(qty));
             ItemStack sellItem = new ItemStack(sellButtonMaterial, Math.min(qty, 64));

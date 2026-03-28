@@ -40,6 +40,7 @@ public class CartConfirmGui {
     private static final TextColor GRAY    = TextColor.fromHexString("#888888");
     private static final TextColor GOLD    = TextColor.fromHexString("#ffaa00");
     private static final TextColor ACCENT  = TextColor.fromHexString("#55aaff");
+    private static final double ENCHANT_PRICE_THRESHOLD = 1.0;
 
     private final AutoTune plugin;
     private final Player player;
@@ -143,7 +144,7 @@ public class CartConfirmGui {
         if (itemStack != null) {
             double enchantMult = EnchantmentPricing.getMultiplier(itemStack,
                     configManager.getConfig().enchantment());
-            if (enchantMult > 1.0) {
+            if (enchantMult > ENCHANT_PRICE_THRESHOLD) {
                 pricePerUnit = EnchantmentPricing.applyMultiplier(basePricePerUnit, enchantMult);
             }
         }

@@ -25,6 +25,9 @@ import java.util.Map;
  */
 public final class EnchantmentPricing {
 
+    private static final int MIN_ROMAN = 0;
+    private static final int MAX_ROMAN = 10;
+
     private EnchantmentPricing() {
     }
 
@@ -160,8 +163,8 @@ public final class EnchantmentPricing {
      */
     @NotNull
     private static String toRoman(int n) {
-        if (n <= 0) return String.valueOf(n);
-        if (n > 10) return String.valueOf(n);
+        if (n <= MIN_ROMAN) return String.valueOf(n);
+        if (n > MAX_ROMAN) return String.valueOf(n);
         String[] tens = {"", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"};
         return tens[n];
     }

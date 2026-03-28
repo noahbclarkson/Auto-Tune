@@ -32,6 +32,9 @@ import java.util.function.Consumer;
 
 public class AutosellGui {
 
+    // Section browser grid: 9 columns (0-8), wraps to next row
+    private static final int SECTION_COLS = 9;
+
     private enum ViewMode {
         SECTIONS,
         ITEMS
@@ -94,7 +97,7 @@ public class AutosellGui {
             sectionsPane.addItem(new GuiItem(icon, event -> openSection(section.id())), x, y);
 
             x++;
-            if (x > 8) {
+            if (x > SECTION_COLS) {
                 x = 0;
                 y++;
             }

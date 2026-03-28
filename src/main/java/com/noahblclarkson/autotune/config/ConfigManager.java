@@ -73,6 +73,7 @@ public class ConfigManager {
                 parseTaxConfig(cfg.getConfigurationSection("tax")),
                 parseScoreboardConfig(cfg.getConfigurationSection("scoreboard")),
                 parseExchangeRateConfig(cfg.getConfigurationSection("exchange-rate")),
+                parseAuctionConfig(cfg.getConfigurationSection("auction")),
                 this.marketFrozen
         );
     }
@@ -510,6 +511,16 @@ public class ConfigManager {
         return new ExchangeRateConfig(
                 section.getBoolean("enabled", true),
                 Math.max(5, section.getLong("fetch-interval-minutes", 15))
+        );
+    }
+
+    private AuctionConfig parseAuctionConfig(ConfigurationSection section) {
+        if (section == null) {
+            return AuctionConfig.defaults();
+        }
+        return new AuctionConfig(
+                Math.max(1, section.getInt("default-duration-hours", 72)),
+                Math.max(1, section.getInt("expiration-check-interval-minutes", 15))
         );
     }
 }

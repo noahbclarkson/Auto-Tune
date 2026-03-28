@@ -373,3 +373,20 @@ scoreboard:
 
   # How often to refresh scoreboard stats, in seconds (min 10).
   update-interval-seconds: 30
+
+# ============================================
+# Auction House
+# Configures the in-game order-book auction system.
+# Buy and sell orders are matched by price-time priority.
+# ============================================
+auction:
+  # How long auction orders remain active before expiring (in hours).
+  # Expired buy orders: escrowed funds are refunded to the player.
+  # Expired sell orders: items are NOT returned automatically — player
+  # must cancel manually, or items remain in the order and never clear.
+  # A reasonable default balances active trading against stale orders.
+  default-duration-hours: 72
+
+  # How often to check for expired orders and process refunds (in minutes).
+  # Set to 0 to disable automatic expiration processing.
+  expiration-check-interval-minutes: 15

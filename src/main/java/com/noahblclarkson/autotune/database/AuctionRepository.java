@@ -27,7 +27,7 @@ public class AuctionRepository {
                 handle.createQuery("""
                         SELECT id, player_uuid, material, item_data, price,
                                original_quantity, remaining_quantity, side, status,
-                               created_at, filled_at
+                               created_at, filled_at, expires_at
                         FROM at_auction_orders WHERE id = :id
                         """)
                         .bind("id", id.toString())
@@ -40,11 +40,12 @@ public class AuctionRepository {
                 handle.createQuery("""
                         SELECT id, player_uuid, material, item_data, price,
                                original_quantity, remaining_quantity, side, status,
-                               created_at, filled_at
+                               created_at, filled_at, expires_at
                         FROM at_auction_orders
                         WHERE material = :material
                           AND status IN ('OPEN', 'PARTIALLY_FILLED')
                           AND remaining_quantity > 0
+                          AND expires_at > CURRENT_TIMESTAMP
                         ORDER BY side ASC, price DESC, created_at ASC
                         """)
                         .bind("material", material)
@@ -57,11 +58,12 @@ public class AuctionRepository {
                 handle.createQuery("""
                         SELECT id, player_uuid, material, item_data, price,
                                original_quantity, remaining_quantity, side, status,
-                               created_at, filled_at
+                               created_at, filled_at, expires_at
                         FROM at_auction_orders
                         WHERE player_uuid = :playerUuid
                           AND status IN ('OPEN', 'PARTIALLY_FILLED')
                           AND remaining_quantity > 0
+                          AND expires_at > CURRENT_TIMESTAMP
                         ORDER BY created_at DESC
                         """)
                         .bind("playerUuid", playerUuid.toString())
@@ -74,7 +76,7 @@ public class AuctionRepository {
                 handle.createQuery("""
                         SELECT id, player_uuid, material, item_data, price,
                                original_quantity, remaining_quantity, side, status,
-                               created_at, filled_at
+                               created_at, filled_at, expires_at
                         FROM at_auction_orders
                         WHERE player_uuid = :playerUuid
                         ORDER BY created_at DESC
@@ -82,6 +84,26 @@ public class AuctionRepository {
                         """)
                         .bind("playerUuid", playerUuid.toString())
                         .bind("limit", limit)
+                        .map((rs, ctx) -> mapOrder(rs))
+                        .list());
+    }
+
+    /**
+     * Find all active orders that have passed their expiration time.
+     * These orders should be cancelled and their owners refunded/notified.
+     */
+    public List<AuctionOrder> findExpiredOrders() {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                        SELECT id, player_uuid, material, item_data, price,
+                               original_quantity, remaining_quantity, side, status,
+                               created_at, filled_at, expires_at
+                        FROM at_auction_orders
+                        WHERE status IN ('OPEN', 'PARTIALLY_FILLED')
+                          AND remaining_quantity > 0
+                          AND expires_at <= CURRENT_TIMESTAMP
+                        ORDER BY expires_at ASC
+                        """)
                         .map((rs, ctx) -> mapOrder(rs))
                         .list());
     }
@@ -131,10 +153,12 @@ public class AuctionRepository {
                 handle.createUpdate("""
                         INSERT INTO at_auction_orders
                           (id, player_uuid, material, item_data, price,
-                           original_quantity, remaining_quantity, side, status, created_at, filled_at)
+                           original_quantity, remaining_quantity, side, status,
+                           created_at, filled_at, expires_at)
                         VALUES
                           (:id, :playerUuid, :material, :itemData, :price,
-                           :originalQty, :remainingQty, :side, :status, :createdAt, :filledAt)
+                           :originalQty, :remainingQty, :side, :status,
+                           :createdAt, :filledAt, :expiresAt)
                         """)
                         .bind("id", order.id().toString())
                         .bind("playerUuid", order.playerUuid().toString())
@@ -147,6 +171,7 @@ public class AuctionRepository {
                         .bind("status", order.status().name())
                         .bind("createdAt", Timestamp.from(order.createdAt()))
                         .bind("filledAt", order.filledAt() != null ? Timestamp.from(order.filledAt()) : null)
+                        .bind("expiresAt", Timestamp.from(order.expiresAt()))
                         .execute());
     }
 
@@ -199,6 +224,7 @@ public class AuctionRepository {
                     .createdAt(rs.getTimestamp("created_at").toInstant())
                     .filledAt(rs.getTimestamp("filled_at") != null
                             ? rs.getTimestamp("filled_at").toInstant() : null)
+                    .expiresAt(rs.getTimestamp("expires_at").toInstant())
                     .build();
         } catch (Exception e) {
             throw new RuntimeException("Failed to map auction order", e);

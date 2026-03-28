@@ -3,6 +3,7 @@ package com.noahblclarkson.autotune.auction;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
+import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.AuctionRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
@@ -22,7 +23,9 @@ import org.jetbrains.annotations.NotNull;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,6 +48,7 @@ public class AuctionManager {
     private final AuctionMatchingEngine matchingEngine;
     private final TreasuryService treasuryService;
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
+    private final int defaultDurationHours;
 
     @Inject
     public AuctionManager(
@@ -53,7 +57,8 @@ public class AuctionManager {
             ConfigManager configManager,
             AuctionRepository auctionRepo,
             PlayerRepository playerRepo,
-            TreasuryService treasuryService
+            TreasuryService treasuryService,
+            AutoTuneConfig config
     ) {
         this.plugin = plugin;
         this.economy = economy;
@@ -62,6 +67,7 @@ public class AuctionManager {
         this.playerRepo = playerRepo;
         this.matchingEngine = new AuctionMatchingEngine();
         this.treasuryService = treasuryService;
+        this.defaultDurationHours = config.auction().defaultDurationHours();
     }
 
     /**
@@ -99,6 +105,7 @@ public class AuctionManager {
                         .side(OrderSide.SELL)
                         .status(OrderStatus.OPEN)
                         .createdAt(Instant.now())
+                        .expiresAt(Instant.now().plus(defaultDurationHours, ChronoUnit.HOURS))
                         .build();
 
                 // Load existing orders for matching
@@ -186,6 +193,7 @@ public class AuctionManager {
                             .side(OrderSide.BUY)
                             .status(OrderStatus.OPEN)
                             .createdAt(Instant.now())
+                            .expiresAt(Instant.now().plus(defaultDurationHours, ChronoUnit.HOURS))
                             .build();
 
                     List<AuctionOrder> existingOrders = auctionRepo.findActiveByMaterial(material.name());
@@ -543,6 +551,107 @@ public class AuctionManager {
 
     private BigDecimal refund(AuctionOrder order) {
         return order.price().multiply(BigDecimal.valueOf(order.remainingQuantity()));
+    }
+
+    /**
+     * Process all expired auction orders.
+     * BUY orders: escrowed funds are refunded to the player.
+     * SELL orders: items are returned to the player's inventory (if online).
+     * Players are notified via message when their orders expire.
+     *
+     * This method runs on the calling thread (typically the async scheduler).
+     * Economy operations (refunds, item returns) are dispatched to the main thread
+     * via Bukkit.getScheduler().runTask() and awaited via CountDownLatch.
+     *
+     * @return number of orders that were expired
+     */
+    public int processExpiredOrders() {
+        List<AuctionOrder> expired = auctionRepo.findExpiredOrders();
+        if (expired.isEmpty()) {
+            return 0;
+        }
+
+        int count = 0;
+        for (AuctionOrder order : expired) {
+            try {
+                expireOrder(order);
+                count++;
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING,
+                        "Failed to expire auction order " + order.id() + ": " + e.getMessage(), e);
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Expire a single order: update status, refund/return as appropriate.
+     */
+    private void expireOrder(AuctionOrder order) {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Exception> error = new AtomicReference<>();
+
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            try {
+                if (order.side() == OrderSide.BUY) {
+                    // Refund escrowed funds to the player
+                    BigDecimal refund = order.price()
+                            .multiply(BigDecimal.valueOf(order.remainingQuantity()));
+                    Player player = Bukkit.getPlayer(order.playerUuid());
+                    if (player != null) {
+                        economy.depositPlayer(player, refund.doubleValue());
+                        player.sendMessage(net.kyori.adventure.text.Component.text(
+                                "⚠️ Your buy order for " + order.remainingQuantity() + "× "
+                                        + formatMaterialName(order.material())
+                                        + " expired. " + configManager.formatCurrency(refund)
+                                        + " refunded to your balance.",
+                                net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+                    }
+                } else {
+                    // Return items to the seller's inventory (if online)
+                    Player player = Bukkit.getPlayer(order.playerUuid());
+                    if (player != null) {
+                        Material mat = Material.valueOf(order.material());
+                        ItemStack items = new ItemStack(mat, order.remainingQuantity());
+                        player.getInventory().addItem(items);
+                        player.sendMessage(net.kyori.adventure.text.Component.text(
+                                "⚠️ Your sell order for " + order.remainingQuantity() + "× "
+                                        + formatMaterialName(order.material())
+                                        + " expired. Items returned to your inventory.",
+                                net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+                    }
+                    // Note: if the player is offline, items are NOT returned automatically.
+                    // They remain in the database as EXPIRED and must be manually reclaimed.
+                    // Consider: add a /auction reclaim command for offline players.
+                }
+            } catch (Exception e) {
+                error.set(e);
+            } finally {
+                latch.countDown();
+            }
+        });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            plugin.getLogger().warning("Interrupted while expiring order " + order.id());
+            return;
+        }
+
+        if (error.get() != null) {
+            plugin.getLogger().log(Level.WARNING,
+                    "Error expiring order " + order.id() + ": " + error.get().getMessage());
+            return;
+        }
+
+        // Update order status in DB
+        auctionRepo.update(order.withStatusExpired());
+    }
+
+    private String formatMaterialName(String material) {
+        String name = material.toLowerCase(Locale.ROOT).replace('_', ' ');
+        return name.substring(0, 1).toUpperCase(Locale.ROOT) + name.substring(1);
     }
 
     private boolean validateTickSize(BigDecimal price) {

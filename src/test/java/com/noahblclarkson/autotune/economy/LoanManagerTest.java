@@ -92,6 +92,7 @@ class LoanManagerTest {
                 AutoTuneConfig.TaxConfig.defaults(),
                 AutoTuneConfig.ScoreboardConfig.defaults(),
                 AutoTuneConfig.ExchangeRateConfig.defaults(),
+                AutoTuneConfig.AuctionConfig.defaults(),
                 false
         );
     }

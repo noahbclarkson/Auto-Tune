@@ -14,6 +14,7 @@ import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.PriceReporter;
 import com.noahblclarkson.autotune.web.WebServer;
+import com.noahblclarkson.autotune.auction.AuctionManager;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 
 import java.util.concurrent.TimeUnit;
@@ -31,6 +32,7 @@ public class TaskScheduler {
     private final PriceAlertManager priceAlertManager;
     private final DatabaseCleanupManager cleanupManager;
     private final ExchangeRateService exchangeRateService;
+    private final AuctionManager auctionManager;
 
     private ScheduledTask marketTask;
     private ScheduledTask loanInterestTask;
@@ -42,6 +44,7 @@ public class TaskScheduler {
     private ScheduledTask alertCheckTask;
     private ScheduledTask cleanupTask;
     private ScheduledTask exchangeRateTask;
+    private ScheduledTask auctionExpirationTask;
 
     @Inject
     public TaskScheduler(
@@ -54,7 +57,8 @@ public class TaskScheduler {
             PriceReporter priceReporter,
             PriceAlertManager priceAlertManager,
             DatabaseCleanupManager cleanupManager,
-            ExchangeRateService exchangeRateService
+            ExchangeRateService exchangeRateService,
+            AuctionManager auctionManager
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -66,6 +70,7 @@ public class TaskScheduler {
         this.priceAlertManager = priceAlertManager;
         this.cleanupManager = cleanupManager;
         this.exchangeRateService = exchangeRateService;
+        this.auctionManager = auctionManager;
     }
 
     public void start() {
@@ -76,6 +81,7 @@ public class TaskScheduler {
         startAlertCheckTask();
         startCleanupTask();
         startExchangeRateTask();
+        startAuctionExpirationTask();
         plugin.getLogger().info("Scheduled tasks started.");
     }
 
@@ -109,6 +115,9 @@ public class TaskScheduler {
         }
         if (exchangeRateTask != null) {
             exchangeRateTask.cancel();
+        }
+        if (auctionExpirationTask != null) {
+            auctionExpirationTask.cancel();
         }
         plugin.getLogger().info("Scheduled tasks stopped.");
     }
@@ -308,5 +317,37 @@ public class TaskScheduler {
         );
 
         plugin.getLogger().info("Exchange rate fetching enabled (every " + intervalMinutes + " min).");
+    }
+
+    private void startAuctionExpirationTask() {
+        int intervalMinutes = configManager.getConfig().auction()
+                .expirationCheckIntervalMinutes();
+
+        if (intervalMinutes <= 0) {
+            plugin.getLogger().info("Auction order expiration check is disabled (interval <= 0).");
+            return;
+        }
+
+        auctionExpirationTask = plugin.getServer().getAsyncScheduler().runAtFixedRate(
+                plugin,
+                task -> {
+                    try {
+                        int expired = auctionManager.processExpiredOrders();
+                        if (expired > 0) {
+                            plugin.getLogger().info(
+                                    "Auto-Tune: Processed " + expired + " expired auction order(s).");
+                        }
+                    } catch (Exception e) {
+                        plugin.getLogger().warning(
+                                "Error processing expired auction orders: " + e.getMessage());
+                    }
+                },
+                intervalMinutes,
+                intervalMinutes,
+                TimeUnit.MINUTES
+        );
+
+        plugin.getLogger().info(
+                "Auction order expiration check enabled (every " + intervalMinutes + " min).");
     }
 }

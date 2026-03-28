@@ -20,6 +20,7 @@ public record AutoTuneConfig(
         @NotNull TaxConfig tax,
         @NotNull ScoreboardConfig scoreboard,
         @NotNull ExchangeRateConfig exchangeRate,
+        @NotNull AuctionConfig auction,
         boolean marketFrozen
 ) {
 
@@ -443,6 +444,20 @@ public record AutoTuneConfig(
     ) {
         public static ExchangeRateConfig defaults() {
             return new ExchangeRateConfig(true, 15);
+        }
+    }
+
+    /**
+     * Auction house configuration.
+     * @param defaultDurationHours   How long orders remain active before expiring (hours).
+     * @param expirationCheckIntervalMinutes How often to process expired orders (minutes).
+     */
+    public record AuctionConfig(
+            int defaultDurationHours,
+            int expirationCheckIntervalMinutes
+    ) {
+        public static AuctionConfig defaults() {
+            return new AuctionConfig(72, 15);
         }
     }
 }

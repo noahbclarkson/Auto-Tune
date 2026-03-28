@@ -209,6 +209,7 @@ CREATE TABLE IF NOT EXISTS at_auction_orders (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     filled_at DATETIME DEFAULT NULL,
+    expires_at DATETIME NOT NULL,
     FOREIGN KEY(player_uuid) REFERENCES at_players(uuid) ON DELETE CASCADE
 );
 

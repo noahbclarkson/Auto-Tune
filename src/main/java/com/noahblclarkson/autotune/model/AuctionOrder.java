@@ -18,7 +18,8 @@ public record AuctionOrder(
         @NotNull OrderSide side,
         @NotNull OrderStatus status,
         @NotNull Instant createdAt,
-        Instant filledAt
+        Instant filledAt,
+        @NotNull Instant expiresAt
 ) {
 
     public enum OrderSide {
@@ -29,7 +30,8 @@ public record AuctionOrder(
         OPEN,
         PARTIALLY_FILLED,
         FILLED,
-        CANCELLED
+        CANCELLED,
+        EXPIRED
     }
 
     public boolean isActive() {
@@ -41,6 +43,10 @@ public record AuctionOrder(
         return originalQuantity - remainingQuantity;
     }
 
+    public boolean isExpired() {
+        return Instant.now().isAfter(expiresAt) && isActive();
+    }
+
     public AuctionOrder withRemainingQuantity(int remaining) {
         OrderStatus newStatus = remaining == 0 ? OrderStatus.FILLED
                 : remaining < originalQuantity ? OrderStatus.PARTIALLY_FILLED
@@ -48,7 +54,8 @@ public record AuctionOrder(
         return new AuctionOrder(
                 id, playerUuid, material, itemData, price,
                 originalQuantity, remaining, side, newStatus,
-                createdAt, remaining == 0 ? Instant.now() : filledAt
+                createdAt, remaining == 0 ? Instant.now() : filledAt,
+                expiresAt
         );
     }
 
@@ -56,7 +63,8 @@ public record AuctionOrder(
         return new AuctionOrder(
                 id, playerUuid, material, itemData, price,
                 originalQuantity, remainingQuantity, side,
-                OrderStatus.CANCELLED, createdAt, filledAt
+                OrderStatus.CANCELLED, createdAt, filledAt,
+                expiresAt
         );
     }
 
@@ -64,7 +72,17 @@ public record AuctionOrder(
         return new AuctionOrder(
                 id, playerUuid, material, itemData, price,
                 originalQuantity, remainingQuantity, side,
-                OrderStatus.FILLED, createdAt, Instant.now()
+                OrderStatus.FILLED, createdAt, Instant.now(),
+                expiresAt
+        );
+    }
+
+    public AuctionOrder withStatusExpired() {
+        return new AuctionOrder(
+                id, playerUuid, material, itemData, price,
+                originalQuantity, remainingQuantity, side,
+                OrderStatus.EXPIRED, createdAt, filledAt,
+                expiresAt
         );
     }
 
@@ -84,6 +102,7 @@ public record AuctionOrder(
         private OrderStatus status = OrderStatus.OPEN;
         private Instant createdAt = Instant.now();
         private Instant filledAt = null;
+        private Instant expiresAt = Instant.now().plusSeconds(72 * 3600); // default 72h
 
         public Builder id(UUID id) { this.id = id; return this; }
         public Builder playerUuid(UUID playerUuid) { this.playerUuid = playerUuid; return this; }
@@ -96,10 +115,11 @@ public record AuctionOrder(
         public Builder status(OrderStatus status) { this.status = status; return this; }
         public Builder createdAt(Instant ts) { this.createdAt = ts; return this; }
         public Builder filledAt(Instant ts) { this.filledAt = ts; return this; }
+        public Builder expiresAt(Instant ts) { this.expiresAt = ts; return this; }
 
         public AuctionOrder build() {
             return new AuctionOrder(id, playerUuid, material, itemData, price,
-                    originalQuantity, remainingQuantity, side, status, createdAt, filledAt);
+                    originalQuantity, remainingQuantity, side, status, createdAt, filledAt, expiresAt);
         }
     }
 }

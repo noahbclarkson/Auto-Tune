@@ -83,6 +83,7 @@ class EconomyManagerTest {
                 AutoTuneConfig.TaxConfig.defaults(),
                 AutoTuneConfig.ScoreboardConfig.defaults(),
                 AutoTuneConfig.ExchangeRateConfig.defaults(),
+                AutoTuneConfig.AuctionConfig.defaults(),
                 false);
         when(cm.getConfig()).thenReturn(cfg);
         return cm;

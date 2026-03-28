@@ -1,5 +1,6 @@
 import { ArrowRight, Calculator } from 'lucide-react';
 import Link from 'next/link';
+import { SpreadCalculator } from '@/components/landing/spread-calculator';
 
 const steps = [
   {
@@ -179,6 +180,8 @@ export default function HowItWorks() {
           </code>
         </div>
       </div>
+
+      <SpreadCalculator />
 
       {/* CTA */}
       <div className="mt-8 flex justify-center">

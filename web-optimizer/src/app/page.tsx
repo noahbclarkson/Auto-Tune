@@ -3,6 +3,7 @@ import { FeatureCards } from '@/components/landing/feature-cards';
 import { DynamicEconomy } from '@/components/landing/dynamic-economy';
 import { AlgorithmPreview } from '@/components/landing/algorithm-preview';
 import { QuickStart } from '@/components/landing/quick-start';
+import { KeyFindings } from '@/components/landing/key-findings';
 
 export default function Home() {
   return (
@@ -11,6 +12,7 @@ export default function Home() {
       <FeatureCards />
       <DynamicEconomy />
       <AlgorithmPreview />
+      <KeyFindings />
       <QuickStart />
     </div>
   );

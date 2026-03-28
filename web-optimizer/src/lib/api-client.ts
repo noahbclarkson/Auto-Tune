@@ -14,6 +14,7 @@ export interface TruePrice {
   price: number;
   confidence: number;
   servers: number;
+  anchored: boolean;
 }
 
 export interface TruePricesResponse {

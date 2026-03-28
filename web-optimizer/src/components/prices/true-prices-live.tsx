@@ -7,9 +7,40 @@ import {
   type TruePrice,
 } from '@/lib/api-client';
 import { PriceHistoryChart } from '@/components/prices/price-history-chart';
+import { Anchor, Users, TrendingUp } from 'lucide-react';
 
 interface TruePricesLiveProps {
   prices: TruePrice[];
+}
+
+function confidenceColor(conf: number): string {
+  if (conf >= 0.70) return 'text-emerald-400';
+  if (conf >= 0.40) return 'text-amber-400';
+  return 'text-rose-400';
+}
+
+function confidenceBg(conf: number): string {
+  if (conf >= 0.70) return 'bg-emerald-950/40 border-emerald-800/40';
+  if (conf >= 0.40) return 'bg-amber-950/40 border-amber-800/40';
+  return 'bg-rose-950/40 border-rose-800/40';
+}
+
+function ConfidenceBar({ conf }: { conf: number }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${
+            conf >= 0.70 ? 'bg-emerald-500' : conf >= 0.40 ? 'bg-amber-500' : 'bg-rose-500'
+          }`}
+          style={{ width: `${Math.round(conf * 100)}%` }}
+        />
+      </div>
+      <span className={`text-xs font-mono font-semibold shrink-0 ${confidenceColor(conf)}`}>
+        {(conf * 100).toFixed(0)}%
+      </span>
+    </div>
+  );
 }
 
 export function TruePricesLive({ prices }: TruePricesLiveProps) {
@@ -17,6 +48,7 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
   const [history, setHistory] = useState<PriceHistoryPoint[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [showAnchored, setShowAnchored] = useState(false);
 
   useEffect(() => {
     if (!selectedItem) {
@@ -59,7 +91,18 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
       <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-6 mb-6">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-4">
           <h2 className="text-sm font-semibold text-emerald-400 uppercase tracking-wide">Live True Prices</h2>
-          <p className="text-xs text-gray-500">Tap an item to view its history</p>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showAnchored}
+                onChange={(e) => setShowAnchored(e.target.checked)}
+                className="accent-emerald-500 w-3.5 h-3.5"
+              />
+              Anchored only
+            </label>
+            <p className="text-xs text-gray-500">Click item for history</p>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -67,14 +110,18 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
             <thead>
               <tr className="border-b border-gray-800/80">
                 <th className="text-left py-2 pr-4 text-gray-400 font-medium">Item</th>
-                <th className="text-left py-2 pr-4 text-gray-400 font-medium">Price</th>
+                <th className="text-left py-2 pr-4 text-gray-400 font-medium">True Price</th>
                 <th className="text-left py-2 pr-4 text-gray-400 font-medium hidden sm:table-cell">Confidence</th>
-                <th className="text-left py-2 text-gray-400 font-medium hidden sm:table-cell">Servers</th>
+                <th className="text-left py-2 text-gray-400 font-medium hidden md:table-cell">Servers</th>
               </tr>
             </thead>
             <tbody>
-              {prices.map((entry) => {
+              {prices
+                .filter((entry) => !showAnchored || entry.anchored)
+                .map((entry) => {
                 const selected = selectedItem === entry.item;
+                const confColor = confidenceColor(entry.confidence);
+                const confBg = confidenceBg(entry.confidence);
                 return (
                   <tr
                     key={entry.item}
@@ -83,15 +130,60 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
                     }`}
                     onClick={() => setSelectedItem(entry.item)}
                   >
-                    <td className="py-2 pr-4 text-gray-200">{entry.item}</td>
-                    <td className="py-2 pr-4 text-white font-mono">${entry.price.toFixed(2)}</td>
-                    <td className="py-2 pr-4 text-gray-300 hidden sm:table-cell">{(entry.confidence * 100).toFixed(1)}%</td>
-                    <td className="py-2 text-gray-300 hidden sm:table-cell">{entry.servers}</td>
+                    <td className="py-2.5 pr-4">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${entry.anchored ? 'bg-emerald-500' : 'bg-gray-600'}`} />
+                        <span className={`font-medium ${selected ? 'text-white' : 'text-gray-200'}`}>{entry.item}</span>
+                        {entry.anchored && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-1 py-0.5 rounded uppercase tracking-wide">
+                            <Anchor className="w-2.5 h-2.5" /> anchor
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-white">${entry.price.toFixed(2)}</span>
+                      </div>
+                    </td>
+                    <td className="py-2.5 pr-4 hidden sm:table-cell">
+                      <ConfidenceBar conf={entry.confidence} />
+                    </td>
+                    <td className="py-2.5 hidden md:table-cell">
+                      <div className="flex items-center gap-1 text-gray-400">
+                        <Users className="w-3 h-3" />
+                        <span className="text-xs font-mono">{entry.servers}</span>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          {prices.length === 0 && (
+            <p className="text-center py-6 text-gray-500 text-sm">No prices match the current filter.</p>
+          )}
+        </div>
+
+        {/* Confidence legend */}
+        <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-gray-800/60">
+          <span className="text-xs text-gray-600">Confidence:</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-xs text-emerald-400">≥70% high</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-1.5 rounded-full bg-amber-500" />
+            <span className="text-xs text-amber-400">40–70% moderate</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-1.5 rounded-full bg-rose-500" />
+            <span className="text-xs text-rose-400">&lt;40% low</span>
+          </div>
+          <div className="flex items-center gap-1.5 ml-auto">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-xs text-gray-500">anchor item</span>
+          </div>
         </div>
       </div>
 

@@ -14,7 +14,7 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { Search, ChevronDown, TrendingUp, TrendingDown, Minus, ArrowLeftRight } from 'lucide-react';
+import { Search, ChevronDown, TrendingUp, TrendingDown, Minus, ArrowLeftRight, RotateCcw } from 'lucide-react';
 import type { ItemDto, PriceHistoryDto } from '@/lib/api';
 
 type Period = '1h' | '6h' | '1d';
@@ -323,6 +323,11 @@ export function CompareChart({ items, apiBase }: CompareChartProps) {
   const [period, setPeriod] = useState<Period>('1h');
   const [view, setView] = useState<'ratio' | 'spread'>('ratio');
 
+  const reset = () => {
+    setItemA(null);
+    setItemB(null);
+  };
+
   const { history: historyA, loading: loadingA } = useItemHistory(apiBase, itemA?.id ?? null);
   const { history: historyB, loading: loadingB } = useItemHistory(apiBase, itemB?.id ?? null);
 
@@ -349,6 +354,15 @@ export function CompareChart({ items, apiBase }: CompareChartProps) {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="text-base">Compare Items</CardTitle>
           <div className="flex items-center gap-2">
+            {(itemA || itemB) && (
+              <button
+                onClick={reset}
+                className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Reset selection"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
+            )}
             <div className="flex gap-1 bg-muted rounded p-0.5">
               <button
                 onClick={() => setView('ratio')}
@@ -406,8 +420,14 @@ export function CompareChart({ items, apiBase }: CompareChartProps) {
 
         {/* Chart area */}
         {!bothSelected ? (
-          <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
-            Select two items to compare their price ratio or spread
+          <div className="flex h-72 flex-col items-center justify-center gap-3 text-center">
+            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+              <ArrowLeftRight className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground mb-1">Select two items to compare</p>
+              <p className="text-xs text-muted-foreground">Choose items above to see their price ratio over time or spread comparison</p>
+            </div>
           </div>
         ) : loading ? (
           <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">

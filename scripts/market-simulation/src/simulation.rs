@@ -83,6 +83,7 @@ impl Simulation {
             Archetype::Newbie => PlayerAgent::new_newbie(id, item_count, &base_prices),
             Archetype::AFKFarmer => PlayerAgent::new_afk_farmer(id, item_count, &base_prices),
             Archetype::GuildBuyer => PlayerAgent::new_guild_buyer(id, item_count, &base_prices),
+            Archetype::MarketMaker => PlayerAgent::new_market_maker(id, item_count, &base_prices),
         };
         self.players.push(player);
     }

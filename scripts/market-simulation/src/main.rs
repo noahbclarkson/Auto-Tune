@@ -303,6 +303,48 @@ impl Scenario {
         }
     }
 
+    /// MarketMaker Test: replaces one GuildBuyer with one MarketMaker in the
+    /// guild_stability player mix, to test whether two-sided liquidity from
+    /// MarketMakers can counteract GuildBuyer buy-dominance and reduce systemic underselling.
+    ///
+    /// Hypothesis: MarketMaker provides sell orders when overstocked, reducing the
+    /// GuildBuyer's dominance as the sole buyer. Should improve buy_ratio balance
+    /// and price stability vs guild_stability.
+    pub fn marketmaker_test() -> Self {
+        let config = SimConfig::default();
+        Self {
+            name: "MarketMaker Test".to_string(),
+            config,
+            players: vec![
+                // Replace 1 of 2 GuildBuyers with MarketMaker
+                // to measure isolated effect of two-sided liquidity
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            stress_events: vec![],
+            duration_ticks: 288 * 14, // 14 days
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Sector correlation stress test: injects a price shock to Diamond (ores section)
     /// at day 3, then measures how strongly other ores items follow.
     /// Runs with sector_correlation=0.05 (treatment) vs sector_correlation=0.0 (control)
@@ -781,6 +823,7 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
     archetype_map.insert("Newbie".into(), Archetype::Newbie);
     archetype_map.insert("AFKFarmer".into(), Archetype::AFKFarmer);
     archetype_map.insert("GuildBuyer".into(), Archetype::GuildBuyer);
+    archetype_map.insert("MarketMaker".into(), Archetype::MarketMaker);
 
     for player_cfg in &scenario.players {
         let archetype = archetype_map
@@ -791,7 +834,7 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
         }
     }
     println!(
-        "Players: {} (Casual:{}, Farmer:{}, Trader:{}, Hoarder:{}, Exploiter:{}, Newbie:{}, AFKFarmer:{}, GuildBuyer:{})",
+        "Players: {} (Casual:{}, Farmer:{}, Trader:{}, Hoarder:{}, Exploiter:{}, Newbie:{}, AFKFarmer:{}, GuildBuyer:{}, MarketMaker:{})",
         sim.players.len(),
         sim.players
             .iter()
@@ -824,6 +867,10 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
         sim.players
             .iter()
             .filter(|p| matches!(p.archetype, Archetype::GuildBuyer))
+            .count(),
+        sim.players
+            .iter()
+            .filter(|p| matches!(p.archetype, Archetype::MarketMaker))
             .count(),
     );
 
@@ -1202,6 +1249,7 @@ fn main() -> eframe::Result<()> {
             Scenario::spread_stability(),
             Scenario::low_player(),
             Scenario::guild_stability(),
+            Scenario::marketmaker_test(),
         ];
         crate::regression::run_regression_test(&scenarios, &baseline_dir, update);
         return Ok(());
@@ -1225,6 +1273,7 @@ fn main() -> eframe::Result<()> {
                 Scenario::sp08_moderate(),
                 Scenario::buyer_heavy(),
                 Scenario::guild_stability(),
+                Scenario::marketmaker_test(),
             ];
             let base_dir = output_dir.unwrap_or_else(|| PathBuf::from("./output"));
             let mut results: Vec<(String, bool, String)> = Vec::new();
@@ -1255,6 +1304,7 @@ fn main() -> eframe::Result<()> {
                 "sp08-moderate" | "sp08_moderate" => Scenario::sp08_moderate(),
                 "buyer-heavy" | "buyer_heavy" => Scenario::buyer_heavy(),
                 "guild-stability" | "guild_stability" => Scenario::guild_stability(),
+                "marketmaker-test" | "marketmaker_test" => Scenario::marketmaker_test(),
                 "correlation" => Scenario::correlation(),
                 _ => {
                     eprintln!(

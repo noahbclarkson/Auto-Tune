@@ -1241,6 +1241,7 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                         Archetype::Newbie => egui::Color32::from_rgb(255, 183, 77),
                         Archetype::AFKFarmer => egui::Color32::from_rgb(99, 179, 237),
                         Archetype::GuildBuyer => egui::Color32::from_rgb(255, 118, 117),
+                        Archetype::MarketMaker => egui::Color32::from_rgb(0, 206, 201),
                     };
                     ui.colored_label(archetype_color, player.archetype.label());
                 });
@@ -1695,6 +1696,18 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                             player.sell_threshold * 100.0
                         ));
                         ui.label("Buys heavily to keep guild inventory stocked.");
+                    }
+                    Archetype::MarketMaker => {
+                        ui.label("Posts two-sided orders around fair value, earns from spread.");
+                        ui.label(format!(
+                            "Buy/sell threshold={:.1}% (MM spread = 2x this)",
+                            player.sell_threshold * 100.0
+                        ));
+                        ui.label(format!(
+                            "Inventory target={}, max={} per item",
+                            player.mm_target_inventory, player.mm_max_inventory
+                        ));
+                        ui.label("Trades both directions, reduces systemic underselling.");
                     }
                 }
 

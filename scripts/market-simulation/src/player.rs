@@ -135,6 +135,10 @@ pub enum Archetype {
     /// Guild bulk buyer — wants to maintain target inventory for members,
     /// buys heavily when stock is low, rarely sells.
     GuildBuyer,
+    /// Market Maker — posts two-sided limit orders around fair value,
+    /// earns from the spread. Provides liquidity to both sides, reducing
+    /// systemic underselling from Farmer-dominated economies.
+    MarketMaker,
 }
 
 impl Archetype {
@@ -148,6 +152,7 @@ impl Archetype {
             Self::Newbie => "Newbie",
             Self::AFKFarmer => "AFKFarmer",
             Self::GuildBuyer => "GuildBuyer",
+            Self::MarketMaker => "MarketMaker",
         }
     }
 }
@@ -208,6 +213,10 @@ pub struct PlayerAgent {
     /// Price-dip threshold: buy when buy_price < perceived * (1.0 - this).
     /// 0.0 = disabled. 0.2 = buy when price is 20%+ below perceived.
     pub guild_price_dip_threshold: f64,
+    /// Max inventory per item for MarketMaker archetype. Limits position size.
+    pub mm_max_inventory: i32,
+    /// Target inventory level per item for MarketMaker archetype.
+    pub mm_target_inventory: i32,
     pub credit_score: i32,
     pub total_traded: f64,
     pub online: bool,
@@ -243,6 +252,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            mm_max_inventory: 0,
+            mm_target_inventory: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -277,6 +288,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            mm_max_inventory: 0,
+            mm_target_inventory: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -315,6 +328,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            mm_max_inventory: 0,
+            mm_target_inventory: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -349,6 +364,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            mm_max_inventory: 0,
+            mm_target_inventory: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -383,6 +400,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            mm_max_inventory: 0,
+            mm_target_inventory: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent
@@ -424,6 +443,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            mm_max_inventory: 0,
+            mm_target_inventory: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         // Newbies prefer cheap basic items
@@ -466,6 +487,8 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            mm_max_inventory: 0,
+            mm_target_inventory: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         // AFK farmers prefer cheap gathered items (building blocks, ores, drops)
@@ -508,6 +531,8 @@ impl PlayerAgent {
             guild_base_inventory: HashMap::new(),
             // Buy when price drops 15-30% below perceived (proactive price stabilizer)
             guild_price_dip_threshold: rng.random(0.15..0.30),
+            mm_max_inventory: 0,
+            mm_target_inventory: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -517,6 +542,54 @@ impl PlayerAgent {
             agent.inventory.insert(i, qty);
             agent.guild_target_inventory.insert(i, qty);
             agent.guild_base_inventory.insert(i, qty);
+        }
+        agent
+    }
+
+    /// Market Maker: posts two-sided limit orders around perceived fair value.
+    /// Earns from the bid-ask spread. Trades in both directions, providing
+    /// liquidity that counteracts Farmer-dominated sell pressure.
+    pub fn new_market_maker(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
+        let mut rng = SeededRng;
+        // MarketMakers need substantial capital to maintain two-sided positions
+        let budget = rng.random(50000.0..200000.0);
+        let max_inv = rng.random(30..80);
+        let target_inv = rng.random(15..40);
+
+        let mut agent = Self {
+            id: index,
+            name: format!("MarketMaker-{index}"),
+            archetype: Archetype::MarketMaker,
+            balance: budget,
+            online_probability: rng.random(0.7..0.95),
+            activity_rate: rng.random(0.7..0.95),
+            // Very tight thresholds — MarketMakers transact on narrow margins
+            buy_threshold: rng.random(0.02..0.05),
+            sell_threshold: rng.random(0.02..0.05),
+            max_trade_amount: rng.random(50..200),
+            risk_tolerance: rng.random(0.5..0.8),
+            inventory_saturation: rng.random(0.1..0.3),
+            gather_rate: rng.random(0.0..0.05),
+            usage_rate: rng.random(0.0..0.02),
+            perceived_values: HashMap::new(),
+            preferences: HashMap::new(),
+            inventory: HashMap::new(),
+            credit_score: 750,
+            total_traded: 0.0,
+            online: false,
+            total_trades: 0,
+            guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            guild_price_dip_threshold: 0.0,
+            // MarketMaker-specific
+            mm_max_inventory: max_inv,
+            mm_target_inventory: target_inv,
+        };
+        agent.init_perceived_values(item_count, base_prices);
+        agent.init_preferences(item_count);
+        // Start with target inventory
+        for i in 0..item_count {
+            agent.inventory.insert(i, target_inv);
         }
         agent
     }
@@ -632,6 +705,9 @@ impl PlayerAgent {
             }
             Archetype::GuildBuyer => {
                 self.decide_guildbuyer(items, &mut decisions, record, &mut logs, slippage_coeff);
+            }
+            Archetype::MarketMaker => {
+                self.decide_marketmaker(items, &mut decisions, record, &mut logs, slippage_coeff);
             }
             _ => {
                 self.decide_value_based(items, &mut decisions, record, &mut logs, slippage_coeff);
@@ -1051,6 +1127,185 @@ impl PlayerAgent {
                 }
             }
             // Between target and 2x: hold — guild maintains stock
+        }
+    }
+
+    /// Market Maker: posts two-sided orders around perceived fair value.
+    ///
+    /// Strategy:
+    /// - Each item has a target inventory level (mm_target_inventory).
+    /// - If current < target: buy from market (up to deficit × risk_tolerance).
+    /// - If current > target: sell to market (up to surplus × risk_tolerance).
+    /// - If near target: post both a buy AND a sell (two-sided liquidity).
+    /// - Fair value = midpoint of (perceived, base_price, current_market_price).
+    /// - Buy price = fair × (1 - sell_threshold), Sell price = fair × (1 + sell_threshold).
+    ///   The spread (2 × sell_threshold) is the MarketMaker's profit margin.
+    ///
+    /// Effect on economy:
+    /// - Provides liquidity on BOTH sides simultaneously.
+    /// - Counteracts Farmer sell pressure (absorbs sells when overstocked).
+    /// - Counteracts Hoarder undersupply (provides buys when understocked).
+    /// - Tight spread = more transactions, more GDP, more stable prices.
+    fn decide_marketmaker(
+        &mut self,
+        items: &[ItemState],
+        decisions: &mut Vec<PlayerDecision>,
+        record: bool,
+        logs: &mut Vec<DecisionLog>,
+        slippage_coeff: f64,
+    ) {
+        let mut rng = SeededRng;
+        let max_inv = self.mm_max_inventory.max(1) as f64;
+        let target_inv = self.mm_target_inventory.max(1) as f64;
+
+        for (i, _item) in items.iter().enumerate() {
+            let perceived = self
+                .perceived_values
+                .get(&i)
+                .copied()
+                .unwrap_or(items[i].price);
+            let base = items[i].price;
+            // Fair value: blend of perceived value and market price
+            let fair = (perceived + base) / 2.0;
+
+            let buy_price = items[i].buy_price();
+            let sell_price = items[i].sell_price();
+            let current = self.inventory.get(&i).copied().unwrap_or(0) as f64;
+            let deficit = (target_inv - current).max(0.0);
+            let surplus = (current - target_inv).max(0.0);
+            let at_target = current >= target_inv * 0.8 && current <= target_inv * 1.2;
+
+            // Post buy order when below target or at target
+            // Buy price threshold is self.sell_threshold (narrow margin for MM)
+            if buy_price < perceived * (1.0 + self.sell_threshold) && self.balance > buy_price {
+                // Scale buy amount by how understocked we are
+                let position_fraction = (deficit / max_inv).min(1.0);
+                let base_amount =
+                    (self.max_trade_amount as f64 * position_fraction * self.risk_tolerance).ceil();
+                let amount = rng.random_inclusive(1..=base_amount.max(1.0) as i32);
+                if amount > 0 {
+                    let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                    let cost = buy_price * slippage * amount as f64;
+                    if cost <= self.balance {
+                        let balance_before = self.balance;
+                        let inventory_before = current as i32;
+                        self.balance -= cost;
+                        *self.inventory.entry(i).or_insert(0) += amount;
+                        self.total_traded += cost;
+                        self.total_trades += 1;
+                        decisions.push(PlayerDecision {
+                            item_index: i,
+                            is_buy: true,
+                            amount,
+                        });
+                        if record {
+                            logs.push(DecisionLog {
+                                player_id: self.id,
+                                item_index: i,
+                                is_buy: true,
+                                amount,
+                                price_per_unit: buy_price * slippage,
+                                total_cost: cost,
+                                perceived_value: perceived,
+                                effective_perceived: fair,
+                                buy_threshold: self.buy_threshold,
+                                sell_threshold: self.sell_threshold,
+                                balance_before,
+                                inventory_before,
+                                reasoning: "mm_buy".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Post sell order when above target or at target
+            // Sell price threshold is self.sell_threshold (narrow margin for MM)
+            if sell_price > perceived * (1.0 - self.sell_threshold) {
+                let have = self.inventory.get(&i).copied().unwrap_or(0);
+                if have > 0 {
+                    let position_fraction = (surplus / max_inv).min(1.0);
+                    let base_amount =
+                        (self.max_trade_amount as f64 * position_fraction * self.risk_tolerance)
+                            .ceil();
+                    let amount = rng
+                        .random_inclusive(1..=base_amount.max(1.0) as i32)
+                        .min(have);
+                    if amount > 0 {
+                        let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                        let revenue = sell_price / slippage * amount as f64;
+                        let balance_before = self.balance;
+                        let inventory_before = have;
+                        self.balance += revenue;
+                        *self.inventory.entry(i).or_insert(0) -= amount;
+                        self.total_traded += revenue;
+                        self.total_trades += 1;
+                        decisions.push(PlayerDecision {
+                            item_index: i,
+                            is_buy: false,
+                            amount,
+                        });
+                        if record {
+                            logs.push(DecisionLog {
+                                player_id: self.id,
+                                item_index: i,
+                                is_buy: false,
+                                amount,
+                                price_per_unit: sell_price / slippage,
+                                total_cost: revenue,
+                                perceived_value: perceived,
+                                effective_perceived: fair,
+                                buy_threshold: self.buy_threshold,
+                                sell_threshold: self.sell_threshold,
+                                balance_before,
+                                inventory_before,
+                                reasoning: "mm_sell".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Two-sided mode when at target: also post passive orders on the other side
+            if at_target {
+                // Already posted a buy above if needed; now also post a sell if have inventory
+                let have = self.inventory.get(&i).copied().unwrap_or(0);
+                if have > 0 && sell_price > perceived * (1.0 - self.sell_threshold) {
+                    let amount = rng.random_inclusive(1..=have.min(self.max_trade_amount).max(1));
+                    if amount > 0 {
+                        let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                        let revenue = sell_price / slippage * amount as f64;
+                        let balance_before = self.balance;
+                        let inventory_before = have;
+                        self.balance += revenue;
+                        *self.inventory.entry(i).or_insert(0) -= amount;
+                        self.total_traded += revenue;
+                        self.total_trades += 1;
+                        decisions.push(PlayerDecision {
+                            item_index: i,
+                            is_buy: false,
+                            amount,
+                        });
+                        if record {
+                            logs.push(DecisionLog {
+                                player_id: self.id,
+                                item_index: i,
+                                is_buy: false,
+                                amount,
+                                price_per_unit: sell_price / slippage,
+                                total_cost: revenue,
+                                perceived_value: perceived,
+                                effective_perceived: fair,
+                                buy_threshold: self.buy_threshold,
+                                sell_threshold: self.sell_threshold,
+                                balance_before,
+                                inventory_before,
+                                reasoning: "mm_two_sided".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
         }
     }
 }

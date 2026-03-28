@@ -37,6 +37,7 @@ public class ShopManager {
     private final ConcurrentMap<Integer, Boolean> buyableCache = new ConcurrentHashMap<>();
 
     @Inject
+    @SuppressWarnings("PMD.ConstructorCallsOverridableMethod")
     public ShopManager(DatabaseManager databaseManager, ItemRepository itemRepository,
                        MarketEngine marketEngine, ConfigManager configManager) {
         this.databaseManager = databaseManager;

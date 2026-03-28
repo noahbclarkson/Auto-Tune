@@ -72,7 +72,7 @@ public class MarketEngine {
      * Load active price overrides from the database into memory.
      * Called on startup and whenever overrides are modified.
      */
-    public void loadOverrideCache() {
+    public final void loadOverrideCache() {
         overrideCache.clear();
         overrideCache.putAll(priceOverrideRepository.getActiveOverrides());
         adapter.getLogger().info("Loaded " + overrideCache.size() + " active price overrides.");

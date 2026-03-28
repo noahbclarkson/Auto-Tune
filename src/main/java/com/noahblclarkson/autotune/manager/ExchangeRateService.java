@@ -49,7 +49,7 @@ public class ExchangeRateService {
     private final ConcurrentMap<String, ExchangeRate> cache = new ConcurrentHashMap<>();
 
     /** Timestamp of the last successful fetch. */
-    private volatile Instant lastFetchedAt;
+    private volatile Instant lastFetchedAtInstant;
 
     /** Whether the last fetch encountered an error. */
     private volatile boolean lastFetchFailed;
@@ -107,7 +107,7 @@ public class ExchangeRateService {
     /** Returns when the cache was last successfully refreshed. */
     @Nullable
     public Instant lastFetchedAt() {
-        return lastFetchedAt;
+        return lastFetchedAtInstant;
     }
 
     /** Whether the last fetch attempt encountered an error. */
@@ -180,11 +180,11 @@ public class ExchangeRateService {
 
             cache.clear();
             cache.putAll(newCache);
-            lastFetchedAt = Instant.now();
+            lastFetchedAtInstant = Instant.now();
             lastFetchFailed = false;
 
             plugin.getLogger().fine("Exchange rates refreshed: " + newCache.size()
-                    + " server(s), fetched at " + lastFetchedAt);
+                    + " server(s), fetched at " + lastFetchedAtInstant);
         } catch (Exception e) {
             plugin.getLogger().warning("Failed to parse exchange rate response: " + e.getMessage());
             lastFetchFailed = true;

@@ -32,6 +32,7 @@ public class SellGuiListener implements Listener {
     private final Map<UUID, Inventory> activeSellInventories = new ConcurrentHashMap<>();
 
     @Inject
+    @SuppressWarnings("PMD.AssignmentToNonFinalStatic")
     public SellGuiListener(ShopManager shopManager, EconomyManager economyManager, ConfigManager configManager) {
         this.shopManager = shopManager;
         this.economyManager = economyManager;

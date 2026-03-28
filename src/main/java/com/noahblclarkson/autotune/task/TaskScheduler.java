@@ -9,6 +9,7 @@ import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.DatabaseCleanupManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
+import com.noahblclarkson.autotune.manager.ExchangeRateService;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.PriceReporter;
@@ -29,6 +30,7 @@ public class TaskScheduler {
     private final PriceReporter priceReporter;
     private final PriceAlertManager priceAlertManager;
     private final DatabaseCleanupManager cleanupManager;
+    private final ExchangeRateService exchangeRateService;
 
     private ScheduledTask marketTask;
     private ScheduledTask loanInterestTask;
@@ -39,6 +41,7 @@ public class TaskScheduler {
     private ScheduledTask priceRetryTask;
     private ScheduledTask alertCheckTask;
     private ScheduledTask cleanupTask;
+    private ScheduledTask exchangeRateTask;
 
     @Inject
     public TaskScheduler(
@@ -50,7 +53,8 @@ public class TaskScheduler {
             Provider<WebServer> webServerProvider,
             PriceReporter priceReporter,
             PriceAlertManager priceAlertManager,
-            DatabaseCleanupManager cleanupManager
+            DatabaseCleanupManager cleanupManager,
+            ExchangeRateService exchangeRateService
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -61,6 +65,7 @@ public class TaskScheduler {
         this.priceReporter = priceReporter;
         this.priceAlertManager = priceAlertManager;
         this.cleanupManager = cleanupManager;
+        this.exchangeRateService = exchangeRateService;
     }
 
     public void start() {
@@ -70,6 +75,7 @@ public class TaskScheduler {
         startPriceReporterTask();
         startAlertCheckTask();
         startCleanupTask();
+        startExchangeRateTask();
         plugin.getLogger().info("Scheduled tasks started.");
     }
 
@@ -100,6 +106,9 @@ public class TaskScheduler {
         }
         if (cleanupTask != null) {
             cleanupTask.cancel();
+        }
+        if (exchangeRateTask != null) {
+            exchangeRateTask.cancel();
         }
         plugin.getLogger().info("Scheduled tasks stopped.");
     }
@@ -267,5 +276,37 @@ public class TaskScheduler {
                 intervalHours,
                 TimeUnit.HOURS
         );
+    }
+
+    private void startExchangeRateTask() {
+        if (!exchangeRateService.isEnabled()) {
+            return;
+        }
+
+        long intervalMinutes = configManager.getConfig().exchangeRate().fetchIntervalMinutes();
+
+        // Fetch once on startup (delayed by 30s to let other things initialize first)
+        plugin.getServer().getAsyncScheduler().runDelayed(
+                plugin,
+                task -> exchangeRateService.fetchExchangeRates(),
+                30,
+                TimeUnit.SECONDS
+        );
+
+        exchangeRateTask = plugin.getServer().getAsyncScheduler().runAtFixedRate(
+                plugin,
+                task -> {
+                    try {
+                        exchangeRateService.fetchExchangeRates();
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Error fetching exchange rates: " + e.getMessage());
+                    }
+                },
+                intervalMinutes,
+                intervalMinutes,
+                TimeUnit.MINUTES
+        );
+
+        plugin.getLogger().info("Exchange rate fetching enabled (every " + intervalMinutes + " min).");
     }
 }

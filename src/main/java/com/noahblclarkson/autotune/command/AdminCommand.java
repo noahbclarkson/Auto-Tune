@@ -9,9 +9,11 @@ import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
+import com.noahblclarkson.autotune.manager.ExchangeRateService;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
+import com.noahblclarkson.autotune.model.ExchangeRate;
 import com.noahblclarkson.autotune.model.PriceHistory;
 import com.noahblclarkson.autotune.model.PriceOverride;
 import com.noahblclarkson.autotune.model.ShopItem;
@@ -58,6 +60,7 @@ public class AdminCommand {
     private final LoanManager loanManager;
     private final TransactionRepository transactionRepository;
     private final ItemRepository itemRepository;
+    private final ExchangeRateService exchangeRateService;
 
     @Inject
     public AdminCommand(
@@ -69,7 +72,8 @@ public class AdminCommand {
             PriceOverrideRepository overrideRepo,
             LoanManager loanManager,
             TransactionRepository transactionRepository,
-            ItemRepository itemRepository
+            ItemRepository itemRepository,
+            ExchangeRateService exchangeRateService
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -80,6 +84,7 @@ public class AdminCommand {
         this.loanManager = loanManager;
         this.transactionRepository = transactionRepository;
         this.itemRepository = itemRepository;
+        this.exchangeRateService = exchangeRateService;
     }
 
     @Command("autotune admin")
@@ -113,6 +118,8 @@ public class AdminCommand {
                 .append(Component.text(" — Reload config and caches", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin transactions [player]", NamedTextColor.YELLOW)
                 .append(Component.text(" — View recent transaction history", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin exchange", NamedTextColor.YELLOW)
+                .append(Component.text(" — Show cross-server exchange rates", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
     }
 
@@ -738,6 +745,69 @@ public class AdminCommand {
         shopManager.setMaxPriceChangeOverride(item.id(), null);
         sender.sendMessage(Component.text("All per-item overrides cleared for "
                 + item.getDisplayNameOrMaterial() + ". Using global config values.", NamedTextColor.GREEN));
+    }
+
+    @Command("autotune admin exchange")
+    @Permission("autotune.admin")
+    public void adminExchange(CommandSender sender) {
+        if (!exchangeRateService.isEnabled()) {
+            sender.sendMessage(Component.text("Exchange rates are disabled. "
+                    + "Enable exchange-rate in config.yml and ensure price-reporter is configured.", NamedTextColor.RED));
+            return;
+        }
+
+        var rates = exchangeRateService.getExchangeRates();
+        var localRate = exchangeRateService.getLocalExchangeRate();
+        var lastFetched = exchangeRateService.lastFetchedAt();
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Cross-Server Exchange Rates", NamedTextColor.GOLD, TextDecoration.BOLD));
+
+        if (lastFetched == null) {
+            sender.sendMessage(Component.text("  No data fetched yet.", NamedTextColor.GRAY));
+        } else {
+            sender.sendMessage(Component.text("  Last updated: ").color(NamedTextColor.GRAY)
+                    .append(Component.text(DATE_FORMAT.format(lastFetched), NamedTextColor.WHITE)));
+        }
+
+        // Local server's own rate
+        if (localRate != null) {
+            double pct = (localRate.rate() - 1.0) * 100;
+            NamedTextColor localColor = Math.abs(pct) <= 5 ? NamedTextColor.GREEN
+                    : pct > 0 ? NamedTextColor.YELLOW : NamedTextColor.AQUA;
+            sender.sendMessage(Component.text("  Your server: ").color(NamedTextColor.GRAY)
+                    .append(Component.text(String.format(Locale.ROOT, "%.2fx", localRate.rate()), localColor))
+                    .append(Component.text("  (" + localRate.label() + ")", NamedTextColor.WHITE)));
+        } else {
+            sender.sendMessage(Component.text("  Your server: ").color(NamedTextColor.GRAY)
+                    .append(Component.text("No submission data — ensure price-reporter is configured and has submitted.", NamedTextColor.GRAY)));
+        }
+
+        if (rates.isEmpty()) {
+            sender.sendMessage(Component.text("  No other servers have submitted data yet.", NamedTextColor.GRAY));
+            sender.sendMessage(Component.empty());
+            return;
+        }
+
+        sender.sendMessage(Component.text("  Other servers:", NamedTextColor.YELLOW));
+        int shown = 0;
+        for (ExchangeRate rate : rates) {
+            if (shown >= 10) {
+                sender.sendMessage(Component.text("  ... and " + (rates.size() - 10) + " more servers.", NamedTextColor.GRAY));
+                break;
+            }
+            double pct = (rate.rate() - 1.0) * 100;
+            NamedTextColor color = Math.abs(pct) <= 5 ? NamedTextColor.GREEN
+                    : pct > 0 ? NamedTextColor.YELLOW : NamedTextColor.AQUA;
+            sender.sendMessage(
+                    Component.text("  " + rate.name(), NamedTextColor.WHITE)
+                            .append(Component.text("  " + String.format(Locale.ROOT, "%.2fx", rate.rate()), color))
+                            .append(Component.text("  (" + rate.playerCount() + " players)", NamedTextColor.GRAY))
+            );
+            shown++;
+        }
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Rate > 1.0 = more expensive than global average; < 1.0 = cheaper.", NamedTextColor.DARK_GRAY));
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────

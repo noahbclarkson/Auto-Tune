@@ -2,8 +2,8 @@ package com.noahblclarkson.autotune.economy;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.manager.PluginAdapter;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
@@ -35,7 +35,7 @@ import java.util.logging.Level;
 @Singleton
 public class EconomyManager {
 
-    private final AutoTune plugin;
+    private final PluginAdapter plugin;
     private final Economy economy;
     private final DatabaseManager databaseManager;
     private final ShopManager shopManager;
@@ -48,7 +48,7 @@ public class EconomyManager {
 
     @Inject
     public EconomyManager(
-            AutoTune plugin,
+            PluginAdapter plugin,
             Economy economy,
             DatabaseManager databaseManager,
             ShopManager shopManager,

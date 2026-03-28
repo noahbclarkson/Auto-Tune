@@ -16,6 +16,7 @@ import com.noahblclarkson.autotune.database.PriceAlertRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.manager.DefaultPluginAdapter;
+import com.noahblclarkson.autotune.manager.ExchangeRateService;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.PluginAdapter;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
@@ -135,5 +136,13 @@ public class AutoTuneModule extends AbstractModule {
             AutoTuneConfig autoTuneConfig
     ) {
         return new ScoreboardManager(plugin, economySnapshotRepository, autoTuneConfig);
+    }
+
+    @Provides
+    @Singleton
+    public ExchangeRateService provideExchangeRateService(
+            ConfigManager configManager
+    ) {
+        return new ExchangeRateService(plugin, configManager);
     }
 }

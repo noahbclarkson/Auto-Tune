@@ -1,6 +1,5 @@
 package com.noahblclarkson.autotune.economy;
 
-import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.DatabaseManager;
@@ -8,6 +7,7 @@ import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.economy.EconomyManager.TransactionResult;
 import com.noahblclarkson.autotune.manager.MarketEngine;
+import com.noahblclarkson.autotune.manager.PluginAdapter;
 import com.noahblclarkson.autotune.manager.PriceReporter;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.manager.TreasuryService;
@@ -30,14 +30,17 @@ import static org.mockito.Mockito.*;
 /**
  * Unit tests for EconomyManager transaction logic.
  * Tests verify the atomicity ordering: DB-first for async ops, items-first for sync ops.
- * Uses inline mock setup following LoanManagerTest patterns.
+ * EconomyManager uses PluginAdapter (not AutoTune directly) so it can be unit-tested
+ * without a full server environment. Tests use PluginAdapter mock via Mockito 5.
  *
- * TODO: Re-enable once mock infrastructure is upgraded or EconomyManager refactored.
- * Blocked by: AutoTune extends JavaPlugin (final class) — Mockito can't mock it on JDK 17 CI.
- * Paper's JavaPlugin is final by design. Options: (a) upgrade CI to JDK 21 with inline-mock-maker,
- * (b) extract plugin dependency into a LoggerProvider interface, (c) use integration tests.
+ * NOTE: Disabled because processSellImmediate/processBuyAsync internally call
+ * new ItemStack(Material.X) which triggers Paper's Material registry initialization.
+ * Paper's Material enum requires a live server environment to load registry data
+ * (NoClassDefFoundError: No RegistryAccess implementation found). These tests need
+ * to run in a Paper test environment (e.g., PaperSimulator, MockBukkit, or integration tests).
+ * See: https://github.com/PaperMC/Paper/issues/XXXX
  */
-@Disabled("AutoTune extends JavaPlugin (final) — Mockito can't mock on JDK 17. See TODO above.")
+@Disabled("Requires Paper server environment — Material registry initialization fails outside server")
 class EconomyManagerTest {
 
     // ── Mock helpers ────────────────────────────────────────────────────────────
@@ -79,22 +82,22 @@ class EconomyManagerTest {
                 AutoTuneConfig.CleanupConfig.defaults(),
                 AutoTuneConfig.TaxConfig.defaults(),
                 AutoTuneConfig.ScoreboardConfig.defaults(),
+                AutoTuneConfig.ExchangeRateConfig.defaults(),
                 false);
         when(cm.getConfig()).thenReturn(cfg);
         return cm;
     }
 
     private static ShopItem mockShopItem() {
-        ShopItem item = mock(ShopItem.class);
-        when(item.id()).thenReturn(1);
-        when(item.material()).thenReturn(Material.DIAMOND);
-        when(item.itemHash()).thenReturn("DIAMOND");
-        when(item.price()).thenReturn(BigDecimal.valueOf(100));
-        when(item.section()).thenReturn("ores");
-        when(item.enabled()).thenReturn(true);
-        when(item.itemData()).thenReturn(null);
-        when(item.getDisplayNameOrMaterial()).thenReturn("Diamond");
-        return item;
+        return ShopItem.builder()
+                .id(1)
+                .material(Material.DIAMOND)
+                .itemHash("DIAMOND")
+                .displayName("Diamond")
+                .price(BigDecimal.valueOf(100))
+                .section("ores")
+                .enabled(true)
+                .build();
     }
 
     private static Player mockPlayer() {
@@ -102,7 +105,29 @@ class EconomyManagerTest {
         java.util.UUID uuid = java.util.UUID.randomUUID();
         when(p.getUniqueId()).thenReturn(uuid);
         when(p.getName()).thenReturn("TestPlayer");
+
+        // Stub inventory so processSellImmediate doesn't NPE on getInventory().getStorageContents()
+        org.bukkit.inventory.PlayerInventory inv = mock(org.bukkit.inventory.PlayerInventory.class);
+        when(inv.getStorageContents()).thenReturn(new org.bukkit.inventory.ItemStack[36]);
+        // Stub addItem to avoid triggering Bukkit Material registry in test JVM
+        when(inv.addItem(any())).thenReturn(new java.util.HashMap<>());
+        when(p.getInventory()).thenReturn(inv);
         return p;
+    }
+
+    /**
+     * Sets up the mock player's inventory with a matching item for the test diamond.
+     * Overrides the default empty inventory from mockPlayer().
+     */
+    private static void givePlayerItems(Player p, Material mat, String hash, int amount) {
+        org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(mat, amount);
+        org.bukkit.inventory.ItemStack[] contents = new org.bukkit.inventory.ItemStack[36];
+        contents[0] = stack;
+        org.bukkit.inventory.PlayerInventory inv = mock(org.bukkit.inventory.PlayerInventory.class);
+        when(inv.getStorageContents()).thenReturn(contents);
+        when(inv.addItem(any())).thenReturn(new java.util.HashMap<>());
+        doNothing().when(inv).setStorageContents(any());
+        when(p.getInventory()).thenReturn(inv);
     }
 
     private static EconomyManager makeManager(DatabaseManager db, ShopManager shop,
@@ -110,12 +135,22 @@ class EconomyManagerTest {
                                              TransactionRepository txRepo, PriceReporter reporter,
                                              TreasuryService treasuryService) {
         return new EconomyManager(
-                mock(AutoTune.class),
+                mock(PluginAdapter.class),
                 new FakeEconomy(),
                 db, shop, engine,
                 playerRepo, txRepo, reporter,
                 makeConfigManager(),
                 treasuryService);
+    }
+
+    /** TreasuryService stub that returns zero tax — avoids NPE from mock(null) defaults. */
+    private static TreasuryService fakeTreasuryService() {
+        TreasuryService ts = mock(TreasuryService.class);
+        when(ts.collectSellTax(any())).thenReturn(BigDecimal.ZERO);
+        when(ts.collectBuyTax(any())).thenReturn(BigDecimal.ZERO);
+        when(ts.collectAuctionTax(any())).thenReturn(BigDecimal.ZERO);
+        when(ts.collectLoanInterestTax(any())).thenReturn(BigDecimal.ZERO);
+        return ts;
     }
 
     // ── processSellImmediate tests ─────────────────────────────────────────────
@@ -141,9 +176,10 @@ class EconomyManagerTest {
 
             EconomyManager mgr = makeManager(db, mock(ShopManager.class), engine,
                     mock(PlayerRepository.class), mock(TransactionRepository.class),
-                    mock(PriceReporter.class), mock(TreasuryService.class));
+                    mock(PriceReporter.class), fakeTreasuryService());
 
             Player player = mockPlayer();
+            givePlayerItems(player, Material.DIAMOND, "DIAMOND", 3);
             ShopItem item = mockShopItem();
 
             TransactionResult result = mgr.processSellImmediate(player, item, 3, null);
@@ -178,20 +214,19 @@ class EconomyManagerTest {
             };
 
             EconomyManager mgr = new EconomyManager(
-                    mock(AutoTune.class), failingEconomy,
+                    mock(PluginAdapter.class), failingEconomy,
                     syncDbManager(), mock(ShopManager.class), engine,
                     mock(PlayerRepository.class), mock(TransactionRepository.class),
-                    mock(PriceReporter.class), makeConfigManager(), mock(TreasuryService.class));
+                    mock(PriceReporter.class), makeConfigManager(), fakeTreasuryService());
 
             Player player = mockPlayer();
+            givePlayerItems(player, Material.DIAMOND, "DIAMOND", 3);
             ShopItem item = mockShopItem();
 
             TransactionResult result = mgr.processSellImmediate(player, item, 3, null);
 
             assertFalse(result.success());
             assertEquals("Economy transaction failed", result.errorMessage());
-            // DB write was not called because deposit failed before it
-            verify(mock(TransactionRepository.class), never()).insert(any());
         }
     }
 
@@ -217,7 +252,7 @@ class EconomyManagerTest {
 
             EconomyManager mgr = makeManager(db, shop, engine,
                     mock(PlayerRepository.class), mock(TransactionRepository.class),
-                    mock(PriceReporter.class), mock(TreasuryService.class));
+                    mock(PriceReporter.class), fakeTreasuryService());
 
             Player player = mockPlayer();
             ShopItem item = mockShopItem();
@@ -238,7 +273,7 @@ class EconomyManagerTest {
 
             EconomyManager mgr = makeManager(db, shop, mock(MarketEngine.class),
                     mock(PlayerRepository.class), mock(TransactionRepository.class),
-                    mock(PriceReporter.class), mock(TreasuryService.class));
+                    mock(PriceReporter.class), fakeTreasuryService());
 
             Player player = mockPlayer();
             ShopItem item = mockShopItem();
@@ -273,7 +308,7 @@ class EconomyManagerTest {
 
             EconomyManager mgr = makeManager(db, mock(ShopManager.class), engine,
                     mock(PlayerRepository.class), mock(TransactionRepository.class),
-                    mock(PriceReporter.class), mock(TreasuryService.class));
+                    mock(PriceReporter.class), fakeTreasuryService());
 
             Player player = mockPlayer();
             ShopItem item = mockShopItem();
@@ -297,7 +332,7 @@ class EconomyManagerTest {
         void getBalance() {
             EconomyManager mgr = makeManager(syncDbManager(), mock(ShopManager.class),
                     mock(MarketEngine.class), mock(PlayerRepository.class),
-                    mock(TransactionRepository.class), mock(PriceReporter.class), mock(TreasuryService.class));
+                    mock(TransactionRepository.class), mock(PriceReporter.class), fakeTreasuryService());
             // FakeEconomy: getBalance returns 0
             assertEquals(0.0, mgr.getBalance(mockPlayer()), 0.001);
         }
@@ -307,7 +342,7 @@ class EconomyManagerTest {
         void hasBalance() {
             EconomyManager mgr = makeManager(syncDbManager(), mock(ShopManager.class),
                     mock(MarketEngine.class), mock(PlayerRepository.class),
-                    mock(TransactionRepository.class), mock(PriceReporter.class), mock(TreasuryService.class));
+                    mock(TransactionRepository.class), mock(PriceReporter.class), fakeTreasuryService());
             // FakeEconomy.has() always returns true
             assertTrue(mgr.hasBalance(mockPlayer(), 1000));
         }
@@ -317,7 +352,7 @@ class EconomyManagerTest {
         void withdraw() {
             EconomyManager mgr = makeManager(syncDbManager(), mock(ShopManager.class),
                     mock(MarketEngine.class), mock(PlayerRepository.class),
-                    mock(TransactionRepository.class), mock(PriceReporter.class), mock(TreasuryService.class));
+                    mock(TransactionRepository.class), mock(PriceReporter.class), fakeTreasuryService());
             assertTrue(mgr.withdraw(mockPlayer(), 50));
         }
 
@@ -326,7 +361,7 @@ class EconomyManagerTest {
         void deposit() {
             EconomyManager mgr = makeManager(syncDbManager(), mock(ShopManager.class),
                     mock(MarketEngine.class), mock(PlayerRepository.class),
-                    mock(TransactionRepository.class), mock(PriceReporter.class), mock(TreasuryService.class));
+                    mock(TransactionRepository.class), mock(PriceReporter.class), fakeTreasuryService());
             assertTrue(mgr.deposit(mockPlayer(), 50));
         }
     }

@@ -72,6 +72,7 @@ public class ConfigManager {
                 parseCleanupConfig(cfg.getConfigurationSection("cleanup")),
                 parseTaxConfig(cfg.getConfigurationSection("tax")),
                 parseScoreboardConfig(cfg.getConfigurationSection("scoreboard")),
+                parseExchangeRateConfig(cfg.getConfigurationSection("exchange-rate")),
                 this.marketFrozen
         );
     }
@@ -499,6 +500,16 @@ public class ConfigManager {
                 section.getBoolean("enabled", false),
                 section.getString("title", "Auto-Tune Economy"),
                 Math.max(10, section.getInt("update-interval-seconds", 30))
+        );
+    }
+
+    private ExchangeRateConfig parseExchangeRateConfig(ConfigurationSection section) {
+        if (section == null) {
+            return ExchangeRateConfig.defaults();
+        }
+        return new ExchangeRateConfig(
+                section.getBoolean("enabled", true),
+                Math.max(5, section.getLong("fetch-interval-minutes", 15))
         );
     }
 }

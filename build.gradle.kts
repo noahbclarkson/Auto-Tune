@@ -75,13 +75,10 @@ pmd {
     toolVersion = "7.14.0"
     isConsoleOutput = true
     isIgnoreFailures = true
-    ruleSets = listOf(
-        "category/java/bestpractices.xml",
-        "category/java/codestyle.xml",
-        "category/java/design.xml",
-        "category/java/errorprone.xml",
-        "category/java/performance.xml"
-    )
+    // Focus on Error Prone rules only — these catch actual bugs.
+    // Code Style (2900+ violations), Design, Best Practices, and Performance
+    // are non-blocking style issues that add noise and bury real problems.
+    ruleSets = listOf("category/java/errorprone.xml")
 }
 
 tasks {

@@ -165,7 +165,9 @@ public class ScoreboardManager {
                 if (manager != null) {
                     player.setScoreboard(manager.getMainScoreboard());
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                LOGGER.log(Level.FINE, "Could not reset scoreboard for " + player.getName(), e);
+            }
         }
     }
 

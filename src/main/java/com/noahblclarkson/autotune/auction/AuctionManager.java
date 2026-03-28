@@ -335,6 +335,15 @@ public class AuctionManager {
                         return;
                     }
                     economy.depositPlayer(seller, netProceeds.doubleValue());
+                    // Notify seller that their listing was filled.
+                    String itemName = sell.material().toLowerCase(java.util.Locale.ROOT)
+                            .replace('_', ' ');
+                    itemName = itemName.substring(0, 1).toUpperCase(java.util.Locale.ROOT)
+                            + itemName.substring(1);
+                    seller.sendMessage(net.kyori.adventure.text.Component.text(
+                            "⚡ Your auction listing sold: " + fill.quantity() + "× " + itemName
+                                    + " for " + configManager.formatCurrency(grossProceeds) + " total",
+                            net.kyori.adventure.text.format.NamedTextColor.GREEN));
                 } catch (Exception e) {
                     economyError[0] = e;
                 } finally {

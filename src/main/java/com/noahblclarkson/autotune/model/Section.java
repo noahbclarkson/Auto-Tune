@@ -3,6 +3,7 @@ package com.noahblclarkson.autotune.model;
 import org.bukkit.Material;
 import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
 public record Section(
         @NotNull String id,
         @NotNull String displayName,

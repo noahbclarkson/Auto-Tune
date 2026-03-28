@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
 public record ShopItem(
         int id,
         @NotNull Material material,

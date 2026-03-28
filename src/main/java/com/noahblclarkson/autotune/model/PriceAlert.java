@@ -17,6 +17,7 @@ import java.util.UUID;
  * @param triggeredAt  when the alert was triggered (null = still active)
  * @param enabled      whether the alert is active
  */
+@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
 public record PriceAlert(
         String id,
         UUID playerUuid,

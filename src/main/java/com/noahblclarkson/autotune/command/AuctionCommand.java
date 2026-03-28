@@ -204,9 +204,6 @@ public class AuctionCommand {
                                         + configManager.formatCurrency(fill.price())
                                         + " each (" + configManager.formatCurrency(total) + " total)",
                                         NamedTextColor.YELLOW));
-                                // Give items to player
-                                var item = new org.bukkit.inventory.ItemStack(mat, fill.quantity());
-                                player.getWorld().dropItemNaturally(player.getLocation(), item);
                             }
                         }
                     } else {

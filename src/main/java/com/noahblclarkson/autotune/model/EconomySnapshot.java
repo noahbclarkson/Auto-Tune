@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
 public record EconomySnapshot(
         long id,
         @NotNull BigDecimal gdp,

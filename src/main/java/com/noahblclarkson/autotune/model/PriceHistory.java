@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
 public record PriceHistory(
         long id,
         int itemId,

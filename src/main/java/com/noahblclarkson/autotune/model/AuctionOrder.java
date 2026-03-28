@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
 public record AuctionOrder(
         @NotNull UUID id,
         @NotNull UUID playerUuid,

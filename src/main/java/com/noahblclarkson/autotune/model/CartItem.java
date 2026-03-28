@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
 
+@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
 public record CartItem(
         @NotNull ShopItem shopItem,
         int quantity,

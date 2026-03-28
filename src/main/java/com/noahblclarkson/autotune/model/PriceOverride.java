@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
 public record PriceOverride(
         int itemId,
         BigDecimal price,

@@ -10,6 +10,7 @@ import java.time.Instant;
  * ratio = price of itemA / price of itemB
  * Items are normalized so itemA < itemB to avoid duplicate entries.
  */
+@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
 public record ItemRatio(
         int itemA,
         int itemB,

@@ -31,6 +31,19 @@ impl rand::TryRng for SeededRng {
 // This covers BOTH rng_next() calls AND rand::rng() calls made by player factories.
 thread_local! {
     static GLOBAL_SEEDED_RNG: RefCell<Option<StdRng>> = const { RefCell::new(None) };
+    /// If set, ALL GuildBuyers will use this exact threshold instead of randomizing.
+    /// Set via --fixed-guild-threshold CLI flag for threshold sweep runs.
+    pub static FIXED_GUILD_THRESHOLD: RefCell<Option<f64>> = const { RefCell::new(None) };
+}
+
+/// Set the fixed GuildBuyer price-dip threshold. None = use random per-player.
+pub fn set_fixed_guild_threshold(t: Option<f64>) {
+    FIXED_GUILD_THRESHOLD.with(|cell| *cell.borrow_mut() = t);
+}
+
+/// Get the fixed GuildBuyer threshold, if one is set.
+pub fn get_fixed_guild_threshold() -> Option<f64> {
+    FIXED_GUILD_THRESHOLD.with(|cell| *cell.borrow())
 }
 
 /// Set the thread-local seeded RNG for deterministic runs.
@@ -502,6 +515,11 @@ impl PlayerAgent {
         let mut rng = SeededRng;
         let budget = rng.random(50000.0..200000.0);
 
+        // Fixed threshold set via CLI sweep; otherwise randomize per-player (0.15–0.30).
+        // A lower threshold = buys only on large dips; higher = aggressive, buys on small dips.
+        let guild_dip_threshold =
+            get_fixed_guild_threshold().unwrap_or_else(|| rng.random(0.15..0.30));
+
         let mut agent = Self {
             id: index,
             name: format!("GuildBuyer-{index}"),
@@ -529,8 +547,8 @@ impl PlayerAgent {
             total_trades: 0,
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
-            // Buy when price drops 15-30% below perceived (proactive price stabilizer)
-            guild_price_dip_threshold: rng.random(0.15..0.30),
+            // Buy when price drops guild_dip_threshold+% below perceived (proactive price stabilizer)
+            guild_price_dip_threshold: guild_dip_threshold,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
         };

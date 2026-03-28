@@ -479,16 +479,16 @@ pub fn analyze_dir(dir_path: &Path) -> Result<(), String> {
     Ok(())
 }
 
-struct SimSummary {
-    name: String,
-    gdp: f64,
-    debt: f64,
-    avg_bpd: f64,
-    avg_volatility: f64,
-    buy_ratio: f64,
+pub struct SimSummary {
+    pub name: String,
+    pub gdp: f64,
+    pub debt: f64,
+    pub avg_bpd: f64,
+    pub avg_volatility: f64,
+    pub buy_ratio: f64,
 }
 
-fn load_summary(db_path: &Path) -> Result<SimSummary, String> {
+pub fn load_summary(db_path: &Path) -> Result<SimSummary, String> {
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
 
     let name = db_path

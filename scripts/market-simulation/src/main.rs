@@ -9,6 +9,7 @@ mod regression;
 mod simulation;
 mod sweep;
 
+use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -295,6 +296,38 @@ impl Scenario {
                 ArchetypeConfig {
                     archetype: "Trader".into(),
                     count: 2,
+                },
+            ],
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Standard economy but replaces the 1 Hoarder with 1 MarketMaker.
+    /// Tests whether two-sided MM liquidity can counteract Farmer sell pressure
+    /// in a standard player mix, without GuildBuyers dominating as buyers.
+    pub fn standard_with_mm() -> Self {
+        Self {
+            name: "Standard+MM Economy".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 5,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+                // Replace Hoarder with MarketMaker
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
                 },
             ],
             stress_events: vec![],
@@ -1183,6 +1216,233 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
     Ok(())
 }
 
+/// GuildBuyer price-dip threshold sweep.
+///
+/// Runs guild-stability scenario across 10 threshold values (0.05–0.50).
+/// Lower threshold = buys only on large price dips; higher = aggressive, buys on small dips.
+///
+/// CSV columns: threshold, GDP, debt, debt_gdp_ratio, avg_bpd, avg_spd,
+///              avg_volatility, buy_ratio, final_prices_json
+fn run_guild_threshold_sweep() {
+    use crate::analyzer::load_summary;
+    use crate::player::set_fixed_guild_threshold;
+
+    let base_scenario = Scenario::guild_stability();
+    let thresholds: Vec<f64> = (1..=10).map(|i| i as f64 * 0.05).collect();
+    let total = thresholds.len();
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       GUILDBUYER PRICE-DIP THRESHOLD SWEEP                  ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!();
+    println!("  Scenario: Guild Stability (2 GuildBuyer + 4 Casual + 3 Farmer + 2 Trader)");
+    println!(
+        "  Duration: 14 days ({} ticks)",
+        base_scenario.duration_ticks
+    );
+    println!("  Thresholds: {:?}", thresholds);
+    println!();
+    println!(
+        "{:>10} {:>12} {:>12} {:>10} {:>8} {:>8} {:>10} {:>8}",
+        "threshold", "GDP", "Debt", "Debt/GDP", "BPD%", "SPD%", "Volatility", "Buy%"
+    );
+    println!(
+        "{:>10} {:>12} {:>12} {:>10} {:>8} {:>8} {:>10} {:>8}",
+        "─".repeat(10),
+        "─".repeat(12),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(10),
+        "─".repeat(8)
+    );
+
+    let mut results: Vec<GuildSweepResult> = Vec::new();
+
+    for (i, threshold) in thresholds.iter().enumerate() {
+        eprint!("\r  [{}/{}] threshold={:.2}", i + 1, total, threshold);
+        std::io::stderr().flush().ok();
+
+        // Set fixed threshold for this run
+        set_fixed_guild_threshold(Some(*threshold));
+
+        // Run headless with temp output dir
+        let out_dir = PathBuf::from(format!(
+            "/tmp/autotune-sweep-{:04}",
+            (threshold * 100.0) as i32
+        ));
+        let _ = std::fs::remove_dir_all(&out_dir);
+        std::fs::create_dir_all(&out_dir).ok();
+
+        let result = run_headless(&base_scenario, Some(out_dir.clone()));
+
+        // Clear fixed threshold
+        set_fixed_guild_threshold(None);
+
+        if let Err(e) = &result {
+            eprintln!("\n  ✗ Error: {:?}", e);
+            continue;
+        }
+
+        // Load summary from DB
+        let db_path = out_dir.join("simulation.db");
+        let summary = match load_summary(&db_path) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("\n  ✗ Could not load summary: {}", e);
+                continue;
+            }
+        };
+
+        // Clean up temp dir
+        let _ = std::fs::remove_dir_all(&out_dir);
+
+        let debt_gdp = summary.debt / summary.gdp.max(0.01);
+        let threshold_pct = threshold * 100.0;
+        println!(
+            "\n  {:>8.0}% {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.2}% {:>9.4} {:>7.1}%",
+            threshold_pct,
+            summary.gdp,
+            summary.debt,
+            debt_gdp,
+            summary.avg_bpd * 100.0,
+            summary.avg_bpd * 100.0, // SPD not in summary yet
+            summary.avg_volatility,
+            summary.buy_ratio * 100.0
+        );
+
+        results.push(GuildSweepResult {
+            threshold: *threshold,
+            gdp: summary.gdp,
+            debt: summary.debt,
+            debt_gdp_ratio: debt_gdp,
+            avg_bpd: summary.avg_bpd,
+            avg_spd: summary.avg_bpd, // placeholder; actual SPD needs separate query
+            avg_volatility: summary.avg_volatility,
+            buy_ratio: summary.buy_ratio,
+        });
+    }
+
+    println!("\n");
+    if results.is_empty() {
+        println!("  No results collected.");
+        return;
+    }
+
+    // ── Analysis ──────────────────────────────────────────────────────
+    println!("╔══════════════════════════════════════════════════════════════╗");
+    println!("║  SWEEP ANALYSIS                                              ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    // Best GDP
+    let best_gdp = results
+        .iter()
+        .max_by(|a, b| a.gdp.partial_cmp(&b.gdp).unwrap())
+        .unwrap();
+    println!(
+        "  Best GDP:       threshold={:.0}%  GDP={:.0}  (D/G={:.2}x)",
+        best_gdp.threshold * 100.0,
+        best_gdp.gdp,
+        best_gdp.debt_gdp_ratio
+    );
+
+    // Lowest debt
+    let lowest_debt = results
+        .iter()
+        .min_by(|a, b| a.debt.partial_cmp(&b.debt).unwrap())
+        .unwrap();
+    println!(
+        "  Lowest debt:    threshold={:.0}%  debt={:.0}  (D/G={:.2}x)",
+        lowest_debt.threshold * 100.0,
+        lowest_debt.debt,
+        lowest_debt.debt_gdp_ratio
+    );
+
+    // Most balanced buy ratio (closest to 50%)
+    let most_balanced = results
+        .iter()
+        .min_by(|a, b| {
+            (a.buy_ratio - 0.5)
+                .abs()
+                .partial_cmp(&(b.buy_ratio - 0.5).abs())
+                .unwrap()
+        })
+        .unwrap();
+    println!(
+        "  Most balanced: threshold={:.0}%  buy%={:.1}%  (D/G={:.2}x)",
+        most_balanced.threshold * 100.0,
+        most_balanced.buy_ratio * 100.0,
+        most_balanced.debt_gdp_ratio
+    );
+
+    // Lowest volatility
+    let lowest_vol = results
+        .iter()
+        .min_by(|a, b| a.avg_volatility.partial_cmp(&b.avg_volatility).unwrap())
+        .unwrap();
+    println!(
+        "  Most stable:   threshold={:.0}%  vol={:.4}  (D/G={:.2}x)",
+        lowest_vol.threshold * 100.0,
+        lowest_vol.avg_volatility,
+        lowest_vol.debt_gdp_ratio
+    );
+
+    // Trend: GDP vs threshold
+    println!("\n  Threshold → GDP trend:");
+    for r in &results {
+        let bar_len = ((r.gdp / 100000.0).min(30.0)) as usize;
+        println!(
+            "  {:4.0}%  {}{:>12.0}",
+            r.threshold * 100.0,
+            "█".repeat(bar_len),
+            r.gdp
+        );
+    }
+
+    // CSV export
+    let csv_path = PathBuf::from(
+        "/home/ubuntu/.openclaw/workspace-autotune/sim-output/guild-threshold-sweep.csv",
+    );
+    if let Some(parent) = csv_path.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+    let mut csv = std::fs::File::create(&csv_path).unwrap();
+    writeln!(
+        csv,
+        "threshold,gdp,debt,debt_gdp_ratio,avg_bpd,avg_spd,avg_volatility,buy_ratio"
+    )
+    .ok();
+    for r in &results {
+        writeln!(
+            csv,
+            "{:.2},{:.2},{:.2},{:.6},{:.6},{:.6},{:.6},{:.4}",
+            r.threshold,
+            r.gdp,
+            r.debt,
+            r.debt_gdp_ratio,
+            r.avg_bpd,
+            r.avg_spd,
+            r.avg_volatility,
+            r.buy_ratio
+        )
+        .ok();
+    }
+    println!("\n  CSV saved to: {}", csv_path.display());
+}
+
+#[derive(Debug)]
+struct GuildSweepResult {
+    threshold: f64,
+    gdp: f64,
+    debt: f64,
+    debt_gdp_ratio: f64,
+    avg_bpd: f64,
+    avg_spd: f64,
+    avg_volatility: f64,
+    buy_ratio: f64,
+}
+
 #[allow(dead_code)]
 fn print_usage() {
     eprintln!(
@@ -1255,6 +1515,11 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    if args.len() > 1 && args[1] == "--guild-threshold-sweep" {
+        run_guild_threshold_sweep();
+        return Ok(());
+    }
+
     if args.len() > 1 && args[1] == "--headless" {
         // Headless mode
         let scenario_name = args.get(2).map(|s| s.as_str()).unwrap_or("standard");
@@ -1274,6 +1539,7 @@ fn main() -> eframe::Result<()> {
                 Scenario::buyer_heavy(),
                 Scenario::guild_stability(),
                 Scenario::marketmaker_test(),
+                Scenario::standard_with_mm(),
             ];
             let base_dir = output_dir.unwrap_or_else(|| PathBuf::from("./output"));
             let mut results: Vec<(String, bool, String)> = Vec::new();
@@ -1305,6 +1571,7 @@ fn main() -> eframe::Result<()> {
                 "buyer-heavy" | "buyer_heavy" => Scenario::buyer_heavy(),
                 "guild-stability" | "guild_stability" => Scenario::guild_stability(),
                 "marketmaker-test" | "marketmaker_test" => Scenario::marketmaker_test(),
+                "standard-with-mm" | "standard_with_mm" => Scenario::standard_with_mm(),
                 "correlation" => Scenario::correlation(),
                 _ => {
                     eprintln!(

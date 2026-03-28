@@ -48,6 +48,7 @@ const NAV_LINKS = [
   { href: '/items/', label: 'Items' },
   { href: '/economy/', label: 'Economy' },
   { href: '/loans/', label: 'Loans' },
+  { href: '/portfolio/', label: 'Portfolio' },
   { href: '/leaderboard/', label: 'Leaderboard' },
   { href: '/compare/', label: 'Compare' },
   { href: '/admin/', label: 'Admin' },

@@ -19,6 +19,30 @@ public class PlayerRepository {
         this.jdbi = databaseManager.getJdbi();
     }
 
+    public Optional<PlayerData> findByName(String name) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                                SELECT uuid, username, COALESCE(guild_tag, '') as guild_tag,
+                                       credit_score, total_traded, total_bought,
+                                       total_sold, transaction_count, first_seen, last_seen
+                                FROM at_players WHERE LOWER(username) = LOWER(:name)
+                                """)
+                        .bind("name", name)
+                        .map((rs, ctx) -> PlayerData.builder()
+                                .uuid(UUID.fromString(rs.getString("uuid")))
+                                .username(rs.getString("username"))
+                                .guildTag(rs.getString("guild_tag"))
+                                .creditScore(rs.getInt("credit_score"))
+                                .totalTraded(rs.getBigDecimal("total_traded"))
+                                .totalBought(rs.getBigDecimal("total_bought"))
+                                .totalSold(rs.getBigDecimal("total_sold"))
+                                .transactionCount(rs.getInt("transaction_count"))
+                                .firstSeen(rs.getTimestamp("first_seen").toInstant())
+                                .lastSeen(rs.getTimestamp("last_seen").toInstant())
+                                .build())
+                        .findFirst());
+    }
+
     public Optional<PlayerData> findByUuid(UUID uuid) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""

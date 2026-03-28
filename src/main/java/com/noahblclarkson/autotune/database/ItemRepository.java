@@ -24,6 +24,10 @@ public class ItemRepository {
         this.jdbi = databaseManager.getJdbi();
     }
 
+    public Jdbi getJdbi() {
+        return jdbi;
+    }
+
     private static ShopItem mapItem(ResultSet rs) throws SQLException {
         String buyableStr = rs.getString("buyable");
         Boolean buyable = rs.wasNull() ? null : "1".equals(buyableStr) || "true".equalsIgnoreCase(buyableStr);

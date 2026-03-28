@@ -12,6 +12,7 @@ import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
+import com.noahblclarkson.autotune.economy.EconomyManager;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
@@ -21,11 +22,14 @@ import com.noahblclarkson.autotune.model.Loan;
 import com.noahblclarkson.autotune.model.PlayerData;
 import com.noahblclarkson.autotune.model.PriceHistory;
 import com.noahblclarkson.autotune.model.ShopItem;
+import com.noahblclarkson.autotune.model.PortfolioDto;
 import com.noahblclarkson.autotune.model.Transaction;
+import com.noahblclarkson.autotune.service.PortfolioService;
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.json.JsonMapper;
 import io.javalin.websocket.WsContext;
+import org.bukkit.Server;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Type;
@@ -62,6 +66,9 @@ public class WebServer {
     private final PlayerRepository playerRepository;
     private final LoanManager loanManager;
     private final ShopManager shopManager;
+    private final EconomyManager economyManager;
+    private final Server server;
+    private final PortfolioService portfolioService;
     private final Gson gson;
 
     private Javalin app;
@@ -79,7 +86,9 @@ public class WebServer {
             LoanRepository loanRepository,
             PlayerRepository playerRepository,
             LoanManager loanManager,
-            ShopManager shopManager
+            ShopManager shopManager,
+            EconomyManager economyManager,
+            Server server
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -92,6 +101,10 @@ public class WebServer {
         this.playerRepository = playerRepository;
         this.loanManager = loanManager;
         this.shopManager = shopManager;
+        this.economyManager = economyManager;
+        this.server = server;
+        this.portfolioService = new PortfolioService(
+                playerRepository, itemRepository, loanRepository, economyManager, server);
         this.gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .create();
@@ -375,6 +388,20 @@ public class WebServer {
                     avgRate,
                     overdueCount
             ));
+        });
+
+        // ── Player portfolio ─────────────────────────────────────────────────
+        app.get("/api/portfolio/{playerName}", ctx -> {
+            String playerName = ctx.pathParam("playerName");
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).result("playerName is required");
+                return;
+            }
+            portfolioService.buildPortfolio(playerName.trim())
+                    .ifPresentOrElse(
+                            dto -> ctx.json(dto),
+                            () -> ctx.status(404).result("Player not found: " + playerName)
+                    );
         });
 
         app.get("/api/leaderboard", ctx -> {

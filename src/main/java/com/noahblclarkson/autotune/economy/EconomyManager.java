@@ -75,6 +75,10 @@ public class EconomyManager {
         return economy.getBalance(player);
     }
 
+    public double getBalance(@NotNull org.bukkit.OfflinePlayer player) {
+        return economy.getBalance(player);
+    }
+
     public boolean hasBalance(@NotNull Player player, double amount) {
         return economy.has(player, amount);
     }

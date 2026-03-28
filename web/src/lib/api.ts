@@ -129,6 +129,42 @@ export interface VolumeMultiplierDto {
   timestamp: number;
 }
 
+export interface HoldingDto {
+  itemId: number;
+  material: string;
+  displayName: string;
+  section: string;
+  netQuantity: number;
+  avgBuyPrice: number;
+  currentPrice: number;
+  currentValue: number;
+  unrealizedPnl: number;
+  pnlPct: number;
+}
+
+export interface ActiveLoanDto {
+  loanId: string;
+  principal: number;
+  currentBalance: number;
+  interestRate: number;
+  createdAt: number;
+  dueDate: number;
+  status: string;
+}
+
+export interface PortfolioDto {
+  playerName: string;
+  uuid: string | null;
+  vaultBalance: number;
+  holdingsValue: number;
+  totalDebt: number;
+  netWorth: number;
+  creditScore: number;
+  transactionCount: number;
+  holdings: HoldingDto[];
+  activeLoans: ActiveLoanDto[];
+}
+
 export interface AdminHealthDto {
   frozen: boolean;
   gdp: number;
@@ -194,6 +230,10 @@ export const api = {
   },
   leaderboard: (base: string, limit = 20) =>
     fetchJson<LeaderboardEntryDto[]>(`${base}/api/leaderboard?limit=${limit}`),
+  portfolio: {
+    get: (base: string, playerName: string) =>
+      fetchJson<PortfolioDto>(`${base}/api/portfolio/${encodeURIComponent(playerName)}`),
+  },
   admin: {
     health: (base: string) => fetchJson<AdminHealthDto>(`${base}/api/admin/health`),
   },

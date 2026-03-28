@@ -378,82 +378,80 @@ export default function SimulationResultsPage() {
                 </thead>
                 <tbody>
                   {pageRows.map((r) => (
-                    <>
-                      <tr
-                        key={r.name}
-                        className={`border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors cursor-pointer ${expanded === r.name ? 'bg-emerald-950/10' : ''}`}
-                        onClick={() => setExpanded(expanded === r.name ? null : r.name)}
-                      >
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-gray-500 text-xs transition-transform ${expanded === r.name ? 'rotate-90' : ''}`}>▶</span>
-                            <span className="font-mono text-xs text-sky-300">{r.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <span className={`font-mono text-xs font-semibold ${debtGdpColor(r.debtGdp)}`}>
-                            {r.debtGdp < 1000 ? fmt(r.debtGdp) : '—'}
-                          </span>
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <span className="font-mono text-xs text-gray-300">
-                            {r.gdp > 1000000 ? (r.gdp / 1000000).toFixed(1) + 'M' :
-                             r.gdp > 1000 ? (r.gdp / 1000).toFixed(0) + 'k' :
-                             fmt(r.gdp, 0)}
-                          </span>
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <span className="font-mono text-xs text-gray-300">
-                            {r.debt > 1000000 ? (r.debt / 1000000).toFixed(1) + 'M' :
-                             r.debt > 1000 ? (r.debt / 1000).toFixed(0) + 'k' :
-                             fmt(r.debt, 0)}
-                          </span>
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <span className={`font-mono text-xs font-semibold ${
-                            r.buyRatio >= 0.48 && r.buyRatio <= 0.52 ? 'text-emerald-400' :
-                            r.buyRatio < 0.40 ? 'text-rose-400' : 'text-amber-400'
-                          }`}>
-                            {fmt(r.buyRatio * 100, 1)}%
-                          </span>
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <span className={`font-mono text-xs ${
-                            r.avgBpd < 0.03 ? 'text-emerald-400' :
-                            r.avgBpd < 0.06 ? 'text-amber-400' : 'text-rose-400'
-                          }`}>
-                            {(r.avgBpd * 100).toFixed(2)}%
-                          </span>
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <span className={`font-mono text-xs ${
-                            r.avgSpd < 0.03 ? 'text-emerald-400' :
-                            r.avgSpd < 0.06 ? 'text-amber-400' : 'text-rose-400'
-                          }`}>
-                            {(r.avgSpd * 100).toFixed(2)}%
-                          </span>
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <span className={`font-mono text-xs ${
-                            r.defaultRate < 1 ? 'text-emerald-400' :
-                            r.defaultRate < 5 ? 'text-amber-400' : 'text-rose-400'
-                          }`}>
-                            {fmt(r.defaultRate, 1)}%
-                          </span>
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <HealthBadge debtGdp={r.debtGdp} buyRatio={r.buyRatio} />
-                        </td>
-                      </tr>
-                      {expanded === r.name && (
-                        <tr key={`${r.name}-detail`}>
-                          <td colSpan={9} className="p-0">
-                            <DetailPanel r={r} />
-                          </td>
-                        </tr>
-                      )}
-                    </>
+                    <tr
+                      key={r.name}
+                      className={`border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors cursor-pointer ${expanded === r.name ? 'bg-emerald-950/10' : ''}`}
+                      onClick={() => setExpanded(expanded === r.name ? null : r.name)}
+                    >
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-gray-500 text-xs transition-transform ${expanded === r.name ? 'rotate-90' : ''}`}>▶</span>
+                          <span className="font-mono text-xs text-sky-300">{r.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <span className={`font-mono text-xs font-semibold ${debtGdpColor(r.debtGdp)}`}>
+                          {r.debtGdp < 1000 ? fmt(r.debtGdp) : '—'}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <span className="font-mono text-xs text-gray-300">
+                          {r.gdp > 1000000 ? (r.gdp / 1000000).toFixed(1) + 'M' :
+                           r.gdp > 1000 ? (r.gdp / 1000).toFixed(0) + 'k' :
+                           fmt(r.gdp, 0)}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <span className="font-mono text-xs text-gray-300">
+                          {r.debt > 1000000 ? (r.debt / 1000000).toFixed(1) + 'M' :
+                           r.debt > 1000 ? (r.debt / 1000).toFixed(0) + 'k' :
+                           fmt(r.debt, 0)}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <span className={`font-mono text-xs font-semibold ${
+                          r.buyRatio >= 0.48 && r.buyRatio <= 0.52 ? 'text-emerald-400' :
+                          r.buyRatio < 0.40 ? 'text-rose-400' : 'text-amber-400'
+                        }`}>
+                          {fmt(r.buyRatio * 100, 1)}%
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <span className={`font-mono text-xs ${
+                          r.avgBpd < 0.03 ? 'text-emerald-400' :
+                          r.avgBpd < 0.06 ? 'text-amber-400' : 'text-rose-400'
+                        }`}>
+                          {(r.avgBpd * 100).toFixed(2)}%
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <span className={`font-mono text-xs ${
+                          r.avgSpd < 0.03 ? 'text-emerald-400' :
+                          r.avgSpd < 0.06 ? 'text-amber-400' : 'text-rose-400'
+                        }`}>
+                          {(r.avgSpd * 100).toFixed(2)}%
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <span className={`font-mono text-xs ${
+                          r.defaultRate < 1 ? 'text-emerald-400' :
+                          r.defaultRate < 5 ? 'text-amber-400' : 'text-rose-400'
+                        }`}>
+                          {fmt(r.defaultRate, 1)}%
+                        </span>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <HealthBadge debtGdp={r.debtGdp} buyRatio={r.buyRatio} />
+                      </td>
+                    </tr>
                   ))}
+                  {pageRows.map((r) => expanded === r.name ? (
+                    <tr key={`${r.name}-detail`}>
+                      <td colSpan={9} className="p-0">
+                        <DetailPanel r={r} />
+                      </td>
+                    </tr>
+                  ) : null)}
                 </tbody>
               </table>
             </div>

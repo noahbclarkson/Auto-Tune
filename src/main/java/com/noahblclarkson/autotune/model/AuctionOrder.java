@@ -31,7 +31,8 @@ public record AuctionOrder(
         PARTIALLY_FILLED,
         FILLED,
         CANCELLED,
-        EXPIRED
+        EXPIRED,
+        RECLAIMED
     }
 
     public boolean isActive() {
@@ -82,6 +83,15 @@ public record AuctionOrder(
                 id, playerUuid, material, itemData, price,
                 originalQuantity, remainingQuantity, side,
                 OrderStatus.EXPIRED, createdAt, filledAt,
+                expiresAt
+        );
+    }
+
+    public AuctionOrder withStatusReclaimed() {
+        return new AuctionOrder(
+                id, playerUuid, material, itemData, price,
+                originalQuantity, remainingQuantity, side,
+                OrderStatus.RECLAIMED, createdAt, filledAt,
                 expiresAt
         );
     }

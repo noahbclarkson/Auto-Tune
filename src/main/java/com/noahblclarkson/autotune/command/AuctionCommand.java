@@ -79,6 +79,8 @@ public class AuctionCommand {
                 .append(Component.text(" - Cancel an active order", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/auction history", NamedTextColor.YELLOW)
                 .append(Component.text(" - Recent auction trades", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/auction reclaim", NamedTextColor.YELLOW)
+                .append(Component.text(" - Reclaim items from expired sell orders", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
     }
 
@@ -263,6 +265,27 @@ public class AuctionCommand {
                         player.sendMessage(Component.text("✗ " + result.message(), NamedTextColor.RED));
                     }
                 });
+    }
+
+    @Command("auction reclaim")
+    public void auctionReclaim(Player player) {
+        List<AuctionOrder> expired = auctionManager.getExpiredSellOrdersForPlayer(player.getUniqueId());
+        if (expired == null || expired.isEmpty()) {
+            player.sendMessage(Component.text("You have no expired sell orders to reclaim.", NamedTextColor.GRAY));
+            return;
+        }
+
+        player.sendMessage(Component.text(
+                "Reclaiming items from " + expired.size() + " expired sell order(s)...", NamedTextColor.YELLOW));
+
+        int items = auctionManager.reclaimExpiredOrders(player);
+        if (items > 0) {
+            player.sendMessage(Component.text(
+                    "✓ " + items + " item(s) returned to your inventory.", NamedTextColor.GREEN));
+        } else {
+            player.sendMessage(Component.text(
+                    "No items were returned — your inventory may be full.", NamedTextColor.RED));
+        }
     }
 
     @Command("auction history")

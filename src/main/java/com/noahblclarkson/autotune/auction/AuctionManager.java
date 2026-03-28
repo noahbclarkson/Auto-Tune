@@ -288,6 +288,10 @@ public class AuctionManager {
         return auctionRepo.findActiveByPlayer(playerUuid);
     }
 
+    public List<AuctionOrder> getExpiredSellOrdersForPlayer(UUID playerUuid) {
+        return auctionRepo.findExpiredSellOrdersByPlayer(playerUuid);
+    }
+
     public List<AuctionFill> getRecentFills(int limit) {
         return auctionRepo.findRecentFills(limit);
     }
@@ -582,6 +586,82 @@ public class AuctionManager {
             }
         }
         return count;
+    }
+
+    /**
+     * Reclaim expired sell orders for a player: finds EXPIRED sell orders with
+     * remaining items and gives them back to the player.
+     *
+     * Called when a player runs /auction reclaim.
+     *
+     * @return the number of items returned (not orders — may be multiple items per order)
+     */
+    public int reclaimExpiredOrders(Player player) {
+        List<AuctionOrder> expired = auctionRepo.findExpiredSellOrdersByPlayer(player.getUniqueId());
+        if (expired.isEmpty()) {
+            return 0;
+        }
+
+        int itemsReturned = 0;
+        for (AuctionOrder order : expired) {
+            try {
+                int reclaimed = reclaimSingleOrder(player, order);
+                itemsReturned += reclaimed;
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING,
+                        "Failed to reclaim auction order " + order.id() + ": " + e.getMessage(), e);
+            }
+        }
+        return itemsReturned;
+    }
+
+    /**
+     * Reclaim a single expired sell order: give items to the player and mark RECLAIMED.
+     * Runs item-return on the main thread, then updates the DB.
+     */
+    private int reclaimSingleOrder(Player player, AuctionOrder order) {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Exception> error = new AtomicReference<>();
+        AtomicReference<Integer> itemsRef = new AtomicReference<>(0);
+
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            try {
+                Material mat = Material.valueOf(order.material());
+                ItemStack stack = new ItemStack(mat, order.remainingQuantity());
+                var overflow = player.getInventory().addItem(stack);
+                int returned = order.remainingQuantity() - (overflow.isEmpty() ? 0 :
+                        overflow.values().stream().mapToInt(ItemStack::getAmount).sum());
+                itemsRef.set(returned);
+
+                player.sendMessage(net.kyori.adventure.text.Component.text(
+                        "✓ Reclaimed " + returned + "× " + formatMaterialName(order.material())
+                                + " from expired sell order.",
+                        net.kyori.adventure.text.format.NamedTextColor.GREEN));
+
+                // Update DB on main thread too — we already have the latch pattern here
+                auctionRepo.update(order.withStatusReclaimed());
+            } catch (Exception e) {
+                error.set(e);
+            } finally {
+                latch.countDown();
+            }
+        });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            plugin.getLogger().warning("Interrupted while reclaiming order " + order.id());
+            return 0;
+        }
+
+        if (error.get() != null) {
+            plugin.getLogger().log(Level.WARNING,
+                    "Error reclaiming order " + order.id() + ": " + error.get().getMessage());
+            return 0;
+        }
+
+        return itemsRef.get();
     }
 
     /**

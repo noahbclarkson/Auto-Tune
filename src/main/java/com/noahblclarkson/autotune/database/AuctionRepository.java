@@ -108,6 +108,28 @@ public class AuctionRepository {
                         .list());
     }
 
+    /**
+     * Find expired sell orders for a specific player.
+     * Used by /auction reclaim to return items to players who were offline when orders expired.
+     */
+    public List<AuctionOrder> findExpiredSellOrdersByPlayer(UUID playerUuid) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                        SELECT id, player_uuid, material, item_data, price,
+                               original_quantity, remaining_quantity, side, status,
+                               created_at, filled_at, expires_at
+                        FROM at_auction_orders
+                        WHERE player_uuid = :playerUuid
+                          AND side = 'SELL'
+                          AND status = 'EXPIRED'
+                          AND remaining_quantity > 0
+                        ORDER BY expires_at ASC
+                        """)
+                        .bind("playerUuid", playerUuid.toString())
+                        .map((rs, ctx) -> mapOrder(rs))
+                        .list());
+    }
+
     public List<AuctionFill> findFillsByOrder(UUID orderId) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""

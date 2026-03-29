@@ -109,20 +109,12 @@ tasks {
 
     shadowJar {
         archiveClassifier.set("")
-
-        relocate("org.incendo.cloud", "com.noahblclarkson.autotune.lib.cloud")
-        relocate("com.zaxxer.hikari", "com.noahblclarkson.autotune.lib.hikari")
-        relocate("org.jdbi", "com.noahblclarkson.autotune.lib.jdbi")
-        relocate("io.javalin", "com.noahblclarkson.autotune.lib.javalin")
-        relocate("org.eclipse.jetty", "com.noahblclarkson.autotune.lib.jetty")
-        relocate("com.github.stefvanschie.inventoryframework", "com.noahblclarkson.autotune.lib.inventoryframework")
-
-        // NOTE: minimize{} is intentionally omitted.
-        // Shadow JAR minimization causes 'zip file closed' errors in Paper's
-        // plugin classloader because it strips META-INF and versioned classes
-        // that Paper's classloader depends on at init time. Relocation already
-        // provides namespace isolation from other plugins; size reduction is
-        // not worth the instability.
+        // NOTE: Relocation is intentionally omitted.
+        // Shadow's classpath merging combined with Paper's PaperPluginClassLoader
+        // causes 'zip file closed' errors — the classloader closes the JAR's ZIP
+        // while other threads are still reading META-INF/versions/ entries.
+        // Paper's classloader already isolates plugins from each other.
+        // A flat JAR (no relocation) is stable and correct.
     }
 
     processResources {

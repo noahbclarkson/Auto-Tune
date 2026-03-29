@@ -117,15 +117,12 @@ tasks {
         relocate("org.eclipse.jetty", "com.noahblclarkson.autotune.lib.jetty")
         relocate("com.github.stefvanschie.inventoryframework", "com.noahblclarkson.autotune.lib.inventoryframework")
 
-        minimize {
-            exclude(dependency("org.xerial:.*"))
-            exclude(dependency("org.mariadb.jdbc:.*"))
-            exclude(dependency("io.javalin:.*"))
-            exclude(dependency("org.eclipse.jetty:.*"))
-            // Guice has complex multi-release JAR structure and SPI/service-loading
-            // that breaks when minimized or relocated in Paper's classloader hierarchy.
-            exclude(dependency("com.google.inject:.*"))
-        }
+        // NOTE: minimize{} is intentionally omitted.
+        // Shadow JAR minimization causes 'zip file closed' errors in Paper's
+        // plugin classloader because it strips META-INF and versioned classes
+        // that Paper's classloader depends on at init time. Relocation already
+        // provides namespace isolation from other plugins; size reduction is
+        // not worth the instability.
     }
 
     processResources {

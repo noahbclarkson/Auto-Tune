@@ -8,6 +8,7 @@ import org.bukkit.command.CommandSender;
 import org.incendo.cloud.annotations.AnnotationParser;
 import org.incendo.cloud.execution.ExecutionCoordinator;
 import org.incendo.cloud.paper.LegacyPaperCommandManager;
+import org.incendo.cloud.SenderMapper;
 
 @Singleton
 public class CommandManager {
@@ -20,15 +21,22 @@ public class CommandManager {
     }
 
     public void registerCommands() {
-        LegacyPaperCommandManager<CommandSender> commandManager = LegacyPaperCommandManager.createNative(
-                plugin,
-                ExecutionCoordinator.simpleCoordinator()
-        );
-
-        // Brigadier is intentionally not registered here.
-        // Paper 1.21.11 + Cloud 2.0.0-beta.14 have a compatibility issue
-        // causing "Argument is not declared in syntax" errors.
-        // Commands register and function normally via Cloud's annotation parser.
+        LegacyPaperCommandManager<CommandSender> commandManager;
+        try {
+            // Use the standard constructor (not createNative) — this avoids
+            // Brigadier registration entirely and routes commands through
+            // Paper's standard command dispatch. Commands still work via
+            // Cloud's annotation parser, but without native Brigadier
+            // command tree support.
+            commandManager = new LegacyPaperCommandManager<>(
+                    plugin,
+                    ExecutionCoordinator.simpleCoordinator(),
+                    SenderMapper.identity()
+            );
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to initialize command manager: " + e.getMessage());
+            return;
+        }
 
         AnnotationParser<CommandSender> parser = new AnnotationParser<>(commandManager, CommandSender.class);
 

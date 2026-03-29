@@ -43,6 +43,7 @@ public class AutoTuneModule extends AbstractModule {
     protected void configure() {
         bind(AutoTune.class).toInstance(plugin);
         bind(JavaPlugin.class).toInstance(plugin);
+        bind(Server.class).toInstance(plugin.getServer());
         bind(PluginAdapter.class).toInstance(new DefaultPluginAdapter(plugin));
     }
 
@@ -50,6 +51,12 @@ public class AutoTuneModule extends AbstractModule {
     @Singleton
     public ConfigManager provideConfigManager() {
         return plugin.getConfigManager();
+    }
+
+    @Provides
+    @Singleton
+    public AutoTuneConfig provideAutoTuneConfig() {
+        return plugin.getConfigManager().getConfig();
     }
 
     @Provides

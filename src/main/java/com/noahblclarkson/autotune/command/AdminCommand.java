@@ -805,7 +805,7 @@ public class AdminCommand {
         }
     }
 
-    @Command("autotune admin transactions")
+    @Command("autotune admin transactions [player]")
     @Permission("autotune.admin")
     public void adminTransactions(CommandSender sender, @Argument(value = "player", suggestions = "minecraft-player") Optional<String> playerNameArg) {
         if (!(sender instanceof Player player)) {
@@ -881,7 +881,7 @@ public class AdminCommand {
                 .toList();
     }
 
-    @Command("autotune admin price set")
+    @Command("autotune admin price set <material> <price> [hours]")
     @Permission("autotune.admin")
     public void priceSet(
             CommandSender sender,
@@ -923,7 +923,7 @@ public class AdminCommand {
                 + ": " + configManager.formatCurrency(price) + expiryStr, NamedTextColor.GREEN));
     }
 
-    @Command("autotune admin price remove")
+    @Command("autotune admin price remove <material>")
     @Permission("autotune.admin")
     public void priceRemove(CommandSender sender, @Argument("material") String materialName) {
         org.bukkit.Material mat = matchMaterial(materialName);
@@ -982,7 +982,7 @@ public class AdminCommand {
 
     // ─── Per-item config override subcommands ──────────────────────────────────
 
-    @Command("autotune admin item spread")
+    @Command("autotune admin item spread <material> <value>")
     @Permission("autotune.admin")
     public void itemSpread(
             CommandSender sender,
@@ -1013,7 +1013,7 @@ public class AdminCommand {
                 + " set to " + String.format("%.2f%%", value * 100), NamedTextColor.GREEN));
     }
 
-    @Command("autotune admin item maxchange")
+    @Command("autotune admin item maxchange <material> <value>")
     @Permission("autotune.admin")
     public void itemMaxChange(
             CommandSender sender,
@@ -1044,7 +1044,7 @@ public class AdminCommand {
                 + " set to " + String.format("%.2f%%", value), NamedTextColor.GREEN));
     }
 
-    @Command("autotune admin item info")
+    @Command("autotune admin item info <material>")
     @Permission("autotune.admin")
     public void itemInfo(
             CommandSender sender,
@@ -1110,7 +1110,7 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin item reset")
+    @Command("autotune admin item reset <material>")
     @Permission("autotune.admin")
     public void itemReset(
             CommandSender sender,

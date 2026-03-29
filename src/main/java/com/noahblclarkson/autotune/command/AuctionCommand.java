@@ -89,7 +89,7 @@ public class AuctionCommand {
         new AuctionGui(player.getName(), auctionManager, configManager, economy).open(player);
     }
 
-    @Command("auction browse")
+    @Command("auction browse <material>")
     public void auctionBrowse(Player player,
                               @Argument("material") String material) {
         Material mat = parseMaterial(material);
@@ -100,7 +100,7 @@ public class AuctionCommand {
         new AuctionGui(mat.name(), player.getName(), auctionManager, configManager, economy).open(player);
     }
 
-    @Command("auction sell")
+    @Command("auction sell <price> <quantity>")
     public void auctionSell(Player player,
                             @Argument("price") BigDecimal price,
                             @Argument("quantity") int quantity) {
@@ -160,7 +160,7 @@ public class AuctionCommand {
                 });
     }
 
-    @Command("auction buy")
+    @Command("auction buy <material> <price> <quantity>")
     public void auctionBuy(Player player,
                            @Argument("material") String material,
                            @Argument("price") BigDecimal price,
@@ -246,7 +246,7 @@ public class AuctionCommand {
         player.sendMessage(Component.empty());
     }
 
-    @Command("auction cancel")
+    @Command("auction cancel <orderId>")
     public void auctionCancel(Player player, @Argument("orderId") String orderIdStr) {
         UUID orderId;
         try {
@@ -288,7 +288,7 @@ public class AuctionCommand {
         }
     }
 
-    @Command("auction history")
+    @Command("auction history <limit>")
     public void auctionHistory(CommandSender sender,
                                 @Argument("limit") int limit) {
         int clamped = Math.min(50, Math.max(1, limit));

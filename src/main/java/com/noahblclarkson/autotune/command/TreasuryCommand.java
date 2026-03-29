@@ -52,7 +52,7 @@ public class TreasuryCommand {
                 .append(Component.text(configManager.formatCurrency(balance), NamedTextColor.WHITE)));
     }
 
-    @Command("treasury deposit")
+    @Command("treasury deposit <amount>")
     @Permission("autotune.admin")
     public void treasuryDeposit(CommandSender sender,
                                 @Argument("amount") double amount) {
@@ -69,7 +69,7 @@ public class TreasuryCommand {
                 + " to treasury. New balance: " + configManager.formatCurrency(newBalance), NamedTextColor.GREEN));
     }
 
-    @Command("treasury withdraw")
+    @Command("treasury withdraw <amount>")
     @Permission("autotune.admin")
     public void treasuryWithdraw(CommandSender sender,
                                  @Argument("amount") double amount) {

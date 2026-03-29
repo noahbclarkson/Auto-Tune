@@ -79,7 +79,7 @@ public class AutosellCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autosell minprice")
+    @Command("autosell minprice <material> [price]")
     @Permission("autotune.autosell")
     public void minpriceCommand(CommandSender sender,
                                @Argument("material") String materialName,
@@ -126,7 +126,7 @@ public class AutosellCommand {
         }
     }
 
-    @Command("autosell minprice remove")
+    @Command("autosell minprice remove <material>")
     @Permission("autotune.autosell")
     public void minpriceRemove(CommandSender sender,
                                @Argument("material") String materialName) {

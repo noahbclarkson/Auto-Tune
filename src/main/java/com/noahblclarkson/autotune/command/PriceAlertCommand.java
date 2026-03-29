@@ -92,7 +92,7 @@ public class PriceAlertCommand {
         return List.of("above", "below");
     }
 
-    @Command("alert add")
+    @Command("alert add <material> <price> <type>")
     public void alertAdd(
             Player sender,
             @Argument("material") String materialName,
@@ -188,7 +188,7 @@ public class PriceAlertCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("alert remove")
+    @Command("alert remove <identifier>")
     public void alertRemove(Player sender, @Argument("identifier") String identifier) {
         UUID playerUuid = sender.getUniqueId();
         List<PriceAlert> alerts = alertManager.getPlayerAlerts(playerUuid);
@@ -211,7 +211,7 @@ public class PriceAlertCommand {
         sender.sendMessage(Component.text("Alert removed for " + itemName + ".", NamedTextColor.GREEN));
     }
 
-    @Command("alert rearm")
+    @Command("alert rearm <identifier>")
     public void alertRearm(Player sender, @Argument("identifier") String identifier) {
         UUID playerUuid = sender.getUniqueId();
         List<PriceAlert> alerts = alertManager.getPlayerAlerts(playerUuid);
@@ -234,7 +234,7 @@ public class PriceAlertCommand {
         sender.sendMessage(Component.text("Alert rearmed for " + itemName + ".", NamedTextColor.GREEN));
     }
 
-    @Command("alert toggle")
+    @Command("alert toggle <identifier>")
     public void alertToggle(Player sender, @Argument("identifier") String identifier) {
         UUID playerUuid = sender.getUniqueId();
         List<PriceAlert> alerts = alertManager.getPlayerAlerts(playerUuid);

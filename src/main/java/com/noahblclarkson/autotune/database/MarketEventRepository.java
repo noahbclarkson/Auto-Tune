@@ -82,6 +82,22 @@ public class MarketEventRepository {
         );
     }
 
+    /**
+     * Delete all ENDED or CANCELLED market events whose end time is older than the cutoff.
+     * ACTIVE and SCHEDULED events are never deleted by cleanup.
+     *
+     * @param cutoff Events ending before this instant are deleted.
+     * @return Number of rows deleted.
+     */
+    public int deleteEndedOrCancelledOlderThan(Instant cutoff) {
+        return jdbi.withHandle(handle ->
+            handle.createUpdate(
+                    "DELETE FROM at_market_events WHERE status IN ('ENDED', 'CANCELLED') AND ends_at < :cutoff")
+                    .bind("cutoff", Timestamp.from(cutoff))
+                    .execute()
+        );
+    }
+
     public Optional<MarketEvent> findById(UUID id) {
         return jdbi.withHandle(handle ->
             handle.createQuery("SELECT * FROM at_market_events WHERE id = :id")
@@ -132,6 +148,14 @@ public class MarketEventRepository {
                     .map((rs, ctx) -> mapEvent(rs))
                     .list()
         );
+    }
+
+    /** @return Total count of all market events. */
+    public long count() {
+        return jdbi.withHandle(handle ->
+            handle.createQuery("SELECT COUNT(*) FROM at_market_events")
+                    .map((rs, ctx) -> rs.getLong(1))
+                    .findOnly());
     }
 
     private static MarketEvent mapEvent(ResultSet rs) throws SQLException {

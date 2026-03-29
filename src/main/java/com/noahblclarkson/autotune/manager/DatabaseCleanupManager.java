@@ -5,10 +5,12 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.database.AuctionRepository;
+import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.ItemRepository;
+import com.noahblclarkson.autotune.database.MarketEventRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
-import org.jdbi.v3.core.Jdbi;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -17,10 +19,13 @@ import java.util.logging.Level;
 /**
  * Periodically prunes old data from the database to prevent unbounded growth.
  *
- * Cleans three tables:
- * - {@code at_transactions}     — trade audit log (used for price calculations)
- * - {@code at_market_history}    — price/volume snapshots (used for web charts)
- * - {@code at_economy_snapshots} — economy-wide statistics (used for dashboards)
+ * Cleans nine table groups:
+ * - {@code at_transactions}      — trade audit log (used for price calculations)
+ * - {@code at_market_history}   — price/volume snapshots (used for web charts)
+ * - {@code at_economy_snapshots}— economy-wide statistics (used for dashboards)
+ * - {@code at_auction_orders}   — expired/cancelled/filled auction orders
+ * - {@code at_auction_fills}    — auction fill history
+ * - {@code at_market_events}    — ended/cancelled market events
  *
  * Retention periods are configurable via {@code cleanup:} in config.yml.
  * On SQLite, runs {@code VACUUM} after deletions to reclaim disk space.
@@ -33,7 +38,9 @@ public class DatabaseCleanupManager {
     private final TransactionRepository transactionRepository;
     private final ItemRepository itemRepository;
     private final EconomySnapshotRepository snapshotRepository;
-    private final Jdbi jdbi;
+    private final AuctionRepository auctionRepository;
+    private final MarketEventRepository marketEventRepository;
+    private final DatabaseManager databaseManager;
 
     @Inject
     public DatabaseCleanupManager(
@@ -42,14 +49,18 @@ public class DatabaseCleanupManager {
             TransactionRepository transactionRepository,
             ItemRepository itemRepository,
             EconomySnapshotRepository snapshotRepository,
-            Jdbi jdbi
+            AuctionRepository auctionRepository,
+            MarketEventRepository marketEventRepository,
+            DatabaseManager databaseManager
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.transactionRepository = transactionRepository;
         this.itemRepository = itemRepository;
         this.snapshotRepository = snapshotRepository;
-        this.jdbi = jdbi;
+        this.auctionRepository = auctionRepository;
+        this.marketEventRepository = marketEventRepository;
+        this.databaseManager = databaseManager;
     }
 
     /**
@@ -100,11 +111,44 @@ public class DatabaseCleanupManager {
             }
         }
 
+        // --- Auction orders: delete terminal orders older than retention threshold ---
+        if (cleanup.auctionOrders().enabled()) {
+            Instant cutoff = Instant.now().minus(Duration.ofDays(cleanup.auctionOrders().retentionDays()));
+            int deleted = auctionRepository.deleteOrdersOlderThan(cutoff);
+            totalDeleted += deleted;
+            if (isDebug) {
+                plugin.getLogger().info("[cleanup] Deleted " + deleted + " auction orders older than "
+                        + cleanup.auctionOrders().retentionDays() + " days");
+            }
+        }
+
+        // --- Auction fills: delete old fill records ---
+        if (cleanup.auctionFills().enabled()) {
+            Instant cutoff = Instant.now().minus(Duration.ofDays(cleanup.auctionFills().retentionDays()));
+            int deleted = auctionRepository.deleteFillsOlderThan(cutoff);
+            totalDeleted += deleted;
+            if (isDebug) {
+                plugin.getLogger().info("[cleanup] Deleted " + deleted + " auction fills older than "
+                        + cleanup.auctionFills().retentionDays() + " days");
+            }
+        }
+
+        // --- Market events: delete ended/cancelled events older than retention threshold ---
+        if (cleanup.marketEvents().enabled()) {
+            Instant cutoff = Instant.now().minus(Duration.ofDays(cleanup.marketEvents().retentionDays()));
+            int deleted = marketEventRepository.deleteEndedOrCancelledOlderThan(cutoff);
+            totalDeleted += deleted;
+            if (isDebug) {
+                plugin.getLogger().info("[cleanup] Deleted " + deleted + " market events older than "
+                        + cleanup.marketEvents().retentionDays() + " days");
+            }
+        }
+
         // --- SQLite VACUUM ---
         // VACUUM cannot run inside a transaction, so we use a raw handle with autocommit
         if (isStorageSqlite()) {
             try {
-                jdbi.withHandle(handle ->
+                databaseManager.getJdbi().withHandle(handle ->
                         handle.createUpdate("VACUUM").execute());
                 if (isDebug) {
                     plugin.getLogger().info("[cleanup] SQLite VACUUM completed");
@@ -128,7 +172,10 @@ public class DatabaseCleanupManager {
         return new CleanupStats(
                 transactionRepository.count(),
                 itemRepository.countMarketHistory(),
-                snapshotRepository.count()
+                snapshotRepository.count(),
+                auctionRepository.countOrders(),
+                auctionRepository.countFills(),
+                marketEventRepository.count()
         );
     }
 
@@ -137,5 +184,12 @@ public class DatabaseCleanupManager {
                 == AutoTuneConfig.StorageConfig.StorageType.SQLITE;
     }
 
-    public record CleanupStats(long transactionCount, long marketHistoryCount, long snapshotCount) {}
+    public record CleanupStats(
+            long transactionCount,
+            long marketHistoryCount,
+            long snapshotCount,
+            long auctionOrderCount,
+            long auctionFillCount,
+            long marketEventCount
+    ) {}
 }

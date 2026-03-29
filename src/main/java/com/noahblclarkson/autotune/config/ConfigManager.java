@@ -478,8 +478,29 @@ public class ConfigManager {
                 snapSection.getInt("retention-days", 30))
                 : AutoTuneConfig.CleanupConfig.RetentionConfig.defaults(true, 30);
 
-        return new CleanupConfig(txConfig, histConfig, snapConfig,
-                section.getInt("cleanup-interval-hours", 24));
+        ConfigurationSection auctionOrdersSection = section.getConfigurationSection("auction-orders");
+        AutoTuneConfig.CleanupConfig.RetentionConfig auctionOrdersConfig = auctionOrdersSection != null
+                ? new AutoTuneConfig.CleanupConfig.RetentionConfig(
+                auctionOrdersSection.getBoolean("enabled", true),
+                auctionOrdersSection.getInt("retention-days", 30))
+                : AutoTuneConfig.CleanupConfig.RetentionConfig.defaults(true, 30);
+
+        ConfigurationSection auctionFillsSection = section.getConfigurationSection("auction-fills");
+        AutoTuneConfig.CleanupConfig.RetentionConfig auctionFillsConfig = auctionFillsSection != null
+                ? new AutoTuneConfig.CleanupConfig.RetentionConfig(
+                auctionFillsSection.getBoolean("enabled", true),
+                auctionFillsSection.getInt("retention-days", 60))
+                : AutoTuneConfig.CleanupConfig.RetentionConfig.defaults(true, 60);
+
+        ConfigurationSection marketEventsSection = section.getConfigurationSection("market-events");
+        AutoTuneConfig.CleanupConfig.RetentionConfig marketEventsConfig = marketEventsSection != null
+                ? new AutoTuneConfig.CleanupConfig.RetentionConfig(
+                marketEventsSection.getBoolean("enabled", true),
+                marketEventsSection.getInt("retention-days", 7))
+                : AutoTuneConfig.CleanupConfig.RetentionConfig.defaults(true, 7);
+
+        return new CleanupConfig(txConfig, histConfig, snapConfig, auctionOrdersConfig, auctionFillsConfig,
+                marketEventsConfig, section.getInt("cleanup-interval-hours", 24));
     }
 
     private TaxConfig parseTaxConfig(ConfigurationSection section) {

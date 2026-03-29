@@ -358,6 +358,24 @@ cleanup:
     enabled: true
     retention-days: 30
 
+  # Auction orders: only terminal orders are pruned (FILLED, EXPIRED, CANCELLED, RECLAIMED).
+  # Active OPEN / PARTIALLY_FILLED orders are never deleted.
+  auction-orders:
+    enabled: true
+    retention-days: 30
+
+  # Auction fill history: kept longer because fills are smaller records
+  # and useful for historical price analysis.
+  auction-fills:
+    enabled: true
+    retention-days: 60
+
+  # Market events: only ENDED or CANCELLED events are pruned.
+  # ACTIVE and SCHEDULED events are never deleted.
+  market-events:
+    enabled: true
+    retention-days: 7
+
 # ============================================
 # Economy Scoreboard
 # Per-player sidebar scoreboard showing live economy stats.

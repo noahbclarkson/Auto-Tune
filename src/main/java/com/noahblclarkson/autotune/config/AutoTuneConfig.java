@@ -317,6 +317,9 @@ public record AutoTuneConfig(
             @NotNull RetentionConfig transactions,
             @NotNull RetentionConfig marketHistory,
             @NotNull RetentionConfig economySnapshots,
+            @NotNull RetentionConfig auctionOrders,
+            @NotNull RetentionConfig auctionFills,
+            @NotNull RetentionConfig marketEvents,
             int cleanupIntervalHours
     ) {
         public record RetentionConfig(boolean enabled, int retentionDays) {
@@ -330,6 +333,9 @@ public record AutoTuneConfig(
                     RetentionConfig.defaults(true, 14),
                     RetentionConfig.defaults(true, 7),
                     RetentionConfig.defaults(true, 30),
+                    RetentionConfig.defaults(true, 30),   // auctionOrders
+                    RetentionConfig.defaults(true, 60),   // auctionFills
+                    RetentionConfig.defaults(true, 7),    // marketEvents (keep ended/cancelled for 7 days)
                     24
             );
         }

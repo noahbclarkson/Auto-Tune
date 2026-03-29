@@ -231,6 +231,57 @@ public class AuctionRepository {
                         .execute());
     }
 
+    /**
+     * Delete auction orders whose status is terminal (FILLED, EXPIRED, CANCELLED, RECLAIMED)
+     * and whose last status update is older than the given cutoff.
+     * Active OPEN/PARTIALLY_FILLED orders are never deleted.
+     *
+     * @param cutoff Orders updated before this instant are deleted.
+     * @return Number of rows deleted.
+     */
+    public int deleteOrdersOlderThan(Instant cutoff) {
+        return jdbi.withHandle(handle ->
+                handle.createUpdate("""
+                        DELETE FROM at_auction_orders
+                        WHERE status IN ('FILLED', 'EXPIRED', 'CANCELLED', 'RECLAIMED')
+                          AND updated_at < :cutoff
+                        """)
+                        .bind("cutoff", Timestamp.from(cutoff))
+                        .execute());
+    }
+
+    /**
+     * Delete auction fills whose fill timestamp is older than the given cutoff.
+     *
+     * @param cutoff Fills filled before this instant are deleted.
+     * @return Number of rows deleted.
+     */
+    public int deleteFillsOlderThan(Instant cutoff) {
+        return jdbi.withHandle(handle ->
+                handle.createUpdate("""
+                        DELETE FROM at_auction_fills
+                        WHERE filled_at < :cutoff
+                        """)
+                        .bind("cutoff", Timestamp.from(cutoff))
+                        .execute());
+    }
+
+    /** @return Total count of auction orders (all statuses). */
+    public long countOrders() {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("SELECT COUNT(*) FROM at_auction_orders")
+                        .map((rs, ctx) -> rs.getLong(1))
+                        .findOnly());
+    }
+
+    /** @return Total count of auction fills. */
+    public long countFills() {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("SELECT COUNT(*) FROM at_auction_fills")
+                        .map((rs, ctx) -> rs.getLong(1))
+                        .findOnly());
+    }
+
     private AuctionOrder mapOrder(java.sql.ResultSet rs) {
         try {
             return AuctionOrder.builder()

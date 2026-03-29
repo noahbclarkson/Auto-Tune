@@ -17,6 +17,7 @@ import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.PriceAlertRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
+import com.noahblclarkson.autotune.manager.DatabaseCleanupManager;
 import com.noahblclarkson.autotune.manager.DefaultPluginAdapter;
 import com.noahblclarkson.autotune.manager.ExchangeRateService;
 import com.noahblclarkson.autotune.manager.MarketEngine;
@@ -181,5 +182,21 @@ public class AutoTuneModule extends AbstractModule {
             ConfigManager configManager
     ) {
         return new MarketEventService(plugin, marketEventRepository, pluginAdapter, configManager);
+    }
+
+    @Provides
+    @Singleton
+    public DatabaseCleanupManager provideDatabaseCleanupManager(
+            ConfigManager configManager,
+            TransactionRepository transactionRepository,
+            ItemRepository itemRepository,
+            EconomySnapshotRepository snapshotRepository,
+            AuctionRepository auctionRepository,
+            MarketEventRepository marketEventRepository,
+            DatabaseManager databaseManager
+    ) {
+        return new DatabaseCleanupManager(
+                plugin, configManager, transactionRepository, itemRepository,
+                snapshotRepository, auctionRepository, marketEventRepository, databaseManager);
     }
 }

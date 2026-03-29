@@ -8,6 +8,33 @@ website: https://github.com/noahblclarkson/Auto-Tune
 
 load: STARTUP
 
+# Paper downloads and manages these from Maven Central.
+# No need to shade/bundle them — avoids multi-release JAR conflicts
+# that cause 'zip file closed' errors in Paper's classloader.
+libraries:
+  # Dependency Injection
+  - com.google.inject:guice:7.0.0
+
+  # Database
+  - com.zaxxer:HikariCP:7.0.2
+  - org.jdbi:jdbi3-core:3.51.0
+  - org.jdbi:jdbi3-sqlobject:3.51.0
+  - org.xerial:sqlite-jdbc:3.51.1.0
+  - org.mariadb.jdbc:mariadb-java-client:3.5.7
+
+  # Web Server
+  - io.javalin:javalin:6.7.0
+  - com.google.code.gson:gson:2.13.2
+
+  # Inventory GUI Framework
+  - com.github.stefvanschie.inventoryframework:IF:0.11.6
+
+  # Command Framework
+  - org.incendo.cloud:cloud-core:2.0.0
+  - org.incendo.cloud:cloud-paper:2.0.0-beta.14
+  - org.incendo.cloud:cloud-annotations:2.0.0
+  - org.incendo.cloud:cloud-minecraft-extras:2.0.0-beta.14
+
 dependencies:
   server:
     Vault:

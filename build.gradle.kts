@@ -1,7 +1,6 @@
 plugins {
     java
     pmd
-    id("com.gradleup.shadow") version "9.3.2"
     id("xyz.jpenilla.run-paper") version "2.3.1"
     // Note: net.ltgt.errorprone plugin is disabled because it requires a JDK with
     // compiler API (javac). The VPS only has a JRE. CI has a full JDK 21 so it
@@ -44,28 +43,32 @@ dependencies {
     // PlaceholderAPI (optional — exposes prices, trends, economy stats as placeholders)
     compileOnly("me.clip:placeholderapi:2.11.6")
 
-    // Command Framework - Cloud
-    implementation("org.incendo:cloud-core:${property("cloudCoreVersion")}")
-    implementation("org.incendo:cloud-paper:${property("cloudPaperVersion")}")
-    implementation("org.incendo:cloud-annotations:${property("cloudCoreVersion")}")
-    implementation("org.incendo:cloud-minecraft-extras:${property("cloudPaperVersion")}")
+    // All runtime deps are compileOnly — Paper provides them at runtime via
+    // the libraries: section in paper-plugin.yml. This avoids the multi-release
+    // JAR classloader conflicts that cause 'zip file closed' errors.
 
     // Dependency Injection
-    implementation("com.google.inject:guice:${property("guiceVersion")}")
+    compileOnly("com.google.inject:guice:${property("guiceVersion")}")
 
     // Database
-    implementation("com.zaxxer:HikariCP:${property("hikariVersion")}")
-    implementation("org.jdbi:jdbi3-core:${property("jdbiVersion")}")
-    implementation("org.jdbi:jdbi3-sqlobject:${property("jdbiVersion")}")
-    implementation("org.xerial:sqlite-jdbc:${property("sqliteVersion")}")
-    implementation("org.mariadb.jdbc:mariadb-java-client:${property("mariadbVersion")}")
+    compileOnly("com.zaxxer:HikariCP:${property("hikariVersion")}")
+    compileOnly("org.jdbi:jdbi3-core:${property("jdbiVersion")}")
+    compileOnly("org.jdbi:jdbi3-sqlobject:${property("jdbiVersion")}")
+    compileOnly("org.xerial:sqlite-jdbc:${property("sqliteVersion")}")
+    compileOnly("org.mariadb.jdbc:mariadb-java-client:${property("mariadbVersion")}")
 
     // Web Server
-    implementation("io.javalin:javalin:${property("javalinVersion")}")
-    implementation("com.google.code.gson:gson:${property("gsonVersion")}")
+    compileOnly("io.javalin:javalin:${property("javalinVersion")}")
+    compileOnly("com.google.code.gson:gson:${property("gsonVersion")}")
 
     // Inventory GUI Framework
-    implementation("com.github.stefvanschie.inventoryframework:IF:${property("inventoryFrameworkVersion")}")
+    compileOnly("com.github.stefvanschie.inventoryframework:IF:${property("inventoryFrameworkVersion")}")
+
+    // Command Framework
+    compileOnly("org.incendo:cloud-core:${property("cloudCoreVersion")}")
+    compileOnly("org.incendo:cloud-paper:${property("cloudPaperVersion")}")
+    compileOnly("org.incendo:cloud-annotations:${property("cloudCoreVersion")}")
+    compileOnly("org.incendo:cloud-minecraft-extras:${property("cloudPaperVersion")}")
 
     // Annotations
     compileOnly("org.jetbrains:annotations:26.0.1")
@@ -75,17 +78,10 @@ pmd {
     toolVersion = "7.14.0"
     isConsoleOutput = true
     isIgnoreFailures = true
-    // Focus on Error Prone rules only — these catch actual bugs.
-    // Code Style (2900+ violations), Design, Best Practices, and Performance
-    // are non-blocking style issues that add noise and bury real problems.
     ruleSets = listOf("category/java/errorprone.xml")
 }
 
 tasks {
-    build {
-        dependsOn(shadowJar)
-    }
-
     val installWebDeps by registering(Exec::class) {
         workingDir = file("web")
         val isWindows = System.getProperty("os.name").lowercase().contains("windows")
@@ -105,16 +101,6 @@ tasks {
         workingDir = file("web")
         val isWindows = System.getProperty("os.name").lowercase().contains("windows")
         commandLine(if (isWindows) "npm.cmd" else "npm", "run", "export")
-    }
-
-    shadowJar {
-        archiveClassifier.set("")
-        // NOTE: Relocation is intentionally omitted.
-        // Shadow's classpath merging combined with Paper's PaperPluginClassLoader
-        // causes 'zip file closed' errors — the classloader closes the JAR's ZIP
-        // while other threads are still reading META-INF/versions/ entries.
-        // Paper's classloader already isolates plugins from each other.
-        // A flat JAR (no relocation) is stable and correct.
     }
 
     processResources {

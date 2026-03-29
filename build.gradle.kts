@@ -41,7 +41,7 @@ dependencies {
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
     testImplementation("com.github.MilkBowl:VaultAPI:1.7.1")
 
-    // PlaceholderAPI (optional — exposes prices, trends, economy stats as placeholders)
+    // PlaceholderAPI (optional)
     compileOnly("me.clip:placeholderapi:2.11.6")
 
     // Command Framework - Cloud
@@ -69,6 +69,19 @@ dependencies {
 
     // Annotations
     compileOnly("org.jetbrains:annotations:26.0.1")
+
+    // Runtime deps needed for tests (test classpath mirrors plugin JAR classpath)
+    testImplementation("com.google.inject:guice:${property("guiceVersion")}")
+    testImplementation("com.zaxxer:HikariCP:${property("hikariVersion")}")
+    testImplementation("org.jdbi:jdbi3-core:${property("jdbiVersion")}")
+    testImplementation("org.jdbi:jdbi3-sqlobject:${property("jdbiVersion")}")
+    testImplementation("org.xerial:sqlite-jdbc:${property("sqliteVersion")}")
+    testImplementation("org.mariadb.jdbc:mariadb-java-client:${property("mariadbVersion")}")
+    testImplementation("io.javalin:javalin:${property("javalinVersion")}")
+    testImplementation("com.google.code.gson:gson:${property("gsonVersion")}")
+    testImplementation("com.github.stefvanschie.inventoryframework:IF:${property("inventoryFrameworkVersion")}")
+    testImplementation("org.incendo:cloud-core:${property("cloudCoreVersion")}")
+    testImplementation("org.incendo:cloud-paper:${property("cloudPaperVersion")}")
 }
 
 pmd {
@@ -115,7 +128,10 @@ tasks {
         relocate("com.github.stefvanschie.inventoryframework", "com.noahblclarkson.autotune.lib.inventoryframework")
         relocate("com.google.inject", "com.noahblclarkson.autotune.lib.guice")
 
+        // Exclude Guice from minimization — its Multi-Release JAR structure
+        // conflicts with Paper's classloader on 1.21.4 (zip file closed errors).
         minimize {
+            exclude(dependency("com.google.inject:.*"))
             exclude(dependency("org.xerial:.*"))
             exclude(dependency("org.mariadb.jdbc:.*"))
             exclude(dependency("io.javalin:.*"))

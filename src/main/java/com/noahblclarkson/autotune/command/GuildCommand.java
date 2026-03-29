@@ -28,22 +28,20 @@ public class GuildCommand {
         this.configManager = configManager;
     }
 
-    @Command("guild")
-    @Permission("autotune.guild")
-    public void guildHelp(CommandSender sender) {
-        sender.sendMessage(Component.empty());
-        sender.sendMessage(Component.text("Guild Economy", NamedTextColor.GOLD, TextDecoration.BOLD)
-                .append(Component.text(" — Server economy by guild", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/guild", NamedTextColor.YELLOW)
-                .append(Component.text(" — View your guild's economy stats", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/guild stats <guild>", NamedTextColor.YELLOW)
-                .append(Component.text(" — View a specific guild's stats", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/guild top", NamedTextColor.YELLOW)
-                .append(Component.text(" — Top guilds by trading volume", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.empty());
-    }
+    // guildHelp removed: /guild base command now handled by guildStatsForPlayer (player) and
+    // guildStatsNoArgs (console) which both show contextual help when no guild is found.
 
     @Command("guild")
+    @Permission("autotune.guild")
+    public void guildBase(CommandSender sender) {
+        sender.sendMessage(Component.text("Use ", NamedTextColor.GRAY)
+                .append(Component.text("/guild stats", NamedTextColor.YELLOW))
+                .append(Component.text(" to view your guild's economy stats, or ", NamedTextColor.GRAY))
+                .append(Component.text("/guild stats <guild>", NamedTextColor.YELLOW))
+                .append(Component.text(" to view a specific guild.", NamedTextColor.GRAY)));
+    }
+
+    @Command("guild stats")
     @Permission("autotune.guild")
     public void guildStatsForPlayer(Player player) {
         Optional<GuildService.GuildStats> statsOpt = guildService.getGuildStatsForPlayer(player);
@@ -56,16 +54,6 @@ public class GuildCommand {
         }
 
         sendGuildStats(player, statsOpt.get());
-    }
-
-    @Command("guild stats")
-    @Permission("autotune.guild")
-    public void guildStatsNoArgs(CommandSender sender) {
-        if (sender instanceof Player player) {
-            guildStatsForPlayer(player);
-        } else {
-            sender.sendMessage(Component.text("Usage: /guild stats <guild_name>", NamedTextColor.YELLOW));
-        }
     }
 
     @Command("guild stats <guildName>")

@@ -6,7 +6,6 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
 import org.bukkit.command.CommandSender;
 import org.incendo.cloud.annotations.AnnotationParser;
-import org.incendo.cloud.bukkit.CloudBukkitCapabilities;
 import org.incendo.cloud.execution.ExecutionCoordinator;
 import org.incendo.cloud.paper.LegacyPaperCommandManager;
 
@@ -26,11 +25,10 @@ public class CommandManager {
                 ExecutionCoordinator.simpleCoordinator()
         );
 
-        if (commandManager.hasCapability(CloudBukkitCapabilities.NATIVE_BRIGADIER)) {
-            commandManager.registerBrigadier();
-        } else if (commandManager.hasCapability(CloudBukkitCapabilities.ASYNCHRONOUS_COMPLETION)) {
-            commandManager.registerAsynchronousCompletions();
-        }
+        // Brigadier is intentionally not registered here.
+        // Paper 1.21.11 + Cloud 2.0.0-beta.14 have a compatibility issue
+        // causing "Argument is not declared in syntax" errors.
+        // Commands register and function normally via Cloud's annotation parser.
 
         AnnotationParser<CommandSender> parser = new AnnotationParser<>(commandManager, CommandSender.class);
 

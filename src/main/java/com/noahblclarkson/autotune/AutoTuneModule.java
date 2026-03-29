@@ -12,6 +12,7 @@ import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
+import com.noahblclarkson.autotune.database.MarketEventRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.PriceAlertRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
@@ -19,6 +20,7 @@ import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.manager.DefaultPluginAdapter;
 import com.noahblclarkson.autotune.manager.ExchangeRateService;
 import com.noahblclarkson.autotune.manager.MarketEngine;
+import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.manager.PluginAdapter;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ScoreboardManager;
@@ -163,5 +165,21 @@ public class AutoTuneModule extends AbstractModule {
             ConfigManager configManager
     ) {
         return new ExchangeRateService(plugin, configManager);
+    }
+
+    @Provides
+    @Singleton
+    public MarketEventRepository provideMarketEventRepository(DatabaseManager databaseManager) {
+        return new MarketEventRepository(databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public MarketEventService provideMarketEventService(
+            MarketEventRepository marketEventRepository,
+            PluginAdapter pluginAdapter,
+            ConfigManager configManager
+    ) {
+        return new MarketEventService(plugin, marketEventRepository, pluginAdapter, configManager);
     }
 }

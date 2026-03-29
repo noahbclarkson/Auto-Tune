@@ -16,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +75,7 @@ public class ConfigManager {
                 parseScoreboardConfig(cfg.getConfigurationSection("scoreboard")),
                 parseExchangeRateConfig(cfg.getConfigurationSection("exchange-rate")),
                 parseAuctionConfig(cfg.getConfigurationSection("auction")),
+                parseMarketEventConfig(cfg.getConfigurationSection("market-events")),
                 this.marketFrozen
         );
     }
@@ -521,6 +523,36 @@ public class ConfigManager {
         return new AuctionConfig(
                 Math.max(1, section.getInt("default-duration-hours", 72)),
                 Math.max(1, section.getInt("expiration-check-interval-minutes", 15))
+        );
+    }
+
+    private MarketEventConfig parseMarketEventConfig(ConfigurationSection section) {
+        if (section == null || !section.getBoolean("enabled", true)) {
+            return MarketEventConfig.defaults();
+        }
+
+        List<AutoTuneConfig.MarketEventConfigEntry> entries = new ArrayList<>();
+        List<?> eventList = section.getList("events");
+        if (eventList != null) {
+            for (Object item : eventList) {
+                if (item instanceof org.bukkit.configuration.ConfigurationSection eventSection) {
+                    entries.add(new AutoTuneConfig.MarketEventConfigEntry(
+                            eventSection.getString("name", "Unnamed Event"),
+                            eventSection.getString("type", "CUSTOM"),
+                            eventSection.getStringList("materials"),
+                            eventSection.getDouble("multiplier", 2.0),
+                            eventSection.getInt("duration-minutes", 60),
+                            eventSection.getString("start-message", ""),
+                            eventSection.getString("end-message", "")
+                    ));
+                }
+            }
+        }
+
+        return new MarketEventConfig(
+                section.getBoolean("enabled", true),
+                entries,
+                Math.max(1, section.getInt("check-interval-minutes", 5))
         );
     }
 }

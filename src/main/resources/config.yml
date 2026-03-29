@@ -390,3 +390,57 @@ auction:
   # How often to check for expired orders and process refunds (in minutes).
   # Set to 0 to disable automatic expiration processing.
   expiration-check-interval-minutes: 15
+
+# ─── Market Events ────────────────────────────────────────────────────────────
+# Dynamic server-wide events that modify price behavior for matching items.
+# Events affect price VELOCITY (how fast prices change), not absolute prices.
+# Natural market forces still apply — exploits are not possible.
+#
+# Supported event types:
+#   DEMAND_SURGE  — amplify upward price movements (buy prices boosted)
+#   SUPPLY_GLUT   — amplify downward price movements (sell prices boosted)
+#   INFLATION_BOOST — always add upward drift regardless of direction
+#   DEFLATION_DROP  — always add downward drift regardless of direction
+#   GOLD_RUSH     — symmetric multiplier on price changes
+#   CUSTOM        — custom multiplier (specify value)
+#
+# Material patterns support wildcards:
+#   "DIAMOND"          — exact match
+#   "GOLD_*"           — matches GOLD_INGOT, GOLD_BLOCK, GOLD_NUGGET, etc.
+#   "*_INGOT"          — matches any INGOT material
+#   "*RA*"             — matches any material containing "RA" (e.g., GRASS_BLOCK)
+#
+# Default events are loaded at startup. Admins can trigger/cancel events
+# at runtime via /at event commands — these are not persisted in config.
+
+market-events:
+  enabled: true
+
+  # How often to check for event lifecycle (activate scheduled / end expired).
+  # In minutes. The market tick interval (economy.update-interval) governs
+  # how often prices are recalculated with event multipliers applied.
+  check-interval-minutes: 5
+
+  # Pre-defined event templates. These can be triggered by admins at runtime.
+  # Uncomment and modify as desired.
+  events:
+    # - name: "Diamond Rush"
+    #   type: DEMAND_SURGE
+    #   materials:
+    #     - DIAMOND
+    #     - EMERALD
+    #   multiplier: 2.0
+    #   duration-minutes: 60
+    #   start-message: "<gold> Diamond Rush! </gold> Diamond and Emerald buy prices are surging!"
+    #   end-message: "<gray> Diamond Rush has ended. Prices returning to normal.</gray>"
+    #
+    # - name: "Iron Oversupply"
+    #   type: SUPPLY_GLUT
+    #   materials:
+    #     - IRON_INGOT
+    #     - IRON_BLOCK
+    #     - IRON_NUGGET
+    #   multiplier: 1.5
+    #   duration-minutes: 120
+    #   start-message: "<gold> Iron Oversupply! </gold> Sell your iron at boosted prices for 2 hours!"
+    #   end-message: "<gray> Iron Oversupply event ended.</gray>"

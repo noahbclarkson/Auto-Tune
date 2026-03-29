@@ -43,6 +43,7 @@ class MarketEngineTest {
     private ItemRepository itemRepository;
     private TransactionRepository transactionRepository;
     private PriceOverrideRepository priceOverrideRepository;
+    private MarketEventService marketEventService;
     private AutoTuneConfig config;
     private MarketEngine engine;
 
@@ -53,6 +54,7 @@ class MarketEngineTest {
         itemRepository = mock(ItemRepository.class);
         transactionRepository = mock(TransactionRepository.class);
         priceOverrideRepository = mock(PriceOverrideRepository.class);
+        marketEventService = mock(MarketEventService.class);
 
         // Use real config with defaults
         config = new AutoTuneConfig(
@@ -74,6 +76,7 @@ class MarketEngineTest {
                 AutoTuneConfig.ScoreboardConfig.defaults(),
                 AutoTuneConfig.ExchangeRateConfig.defaults(),
                 AutoTuneConfig.AuctionConfig.defaults(),
+                AutoTuneConfig.MarketEventConfig.defaults(),
                 false
         );
 
@@ -82,10 +85,12 @@ class MarketEngineTest {
         when(configManager.getConfig()).thenReturn(config);
         when(configManager.isMarketFrozen()).thenReturn(false);
         when(priceOverrideRepository.getActiveOverrides()).thenReturn(Collections.emptyMap());
+        when(marketEventService.applyEventMultiplier(anyString(), anyDouble()))
+                .thenAnswer(inv -> inv.getArgument(1));
 
         engine = new MarketEngine(
                 adapter, configManager, itemRepository,
-                transactionRepository, priceOverrideRepository
+                transactionRepository, priceOverrideRepository, marketEventService
         );
     }
 

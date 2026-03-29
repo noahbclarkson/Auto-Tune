@@ -28,6 +28,9 @@ commands:
   guild:
     description: Guild economy commands
     permission: autotune.guild
+  event:
+    description: Market event management
+    permission: autotune.admin.event
 
 permissions:
   autotune.shop:

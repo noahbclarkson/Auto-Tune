@@ -45,6 +45,7 @@ public class CommandManager {
         registerSafely(parser, injector, PriceAlertCommand.class, "alert");
         registerSafely(parser, injector, TreasuryCommand.class, "treasury");
         registerSafely(parser, injector, GuildCommand.class, "guild");
+        registerSafely(parser, injector, EventCommand.class, "event");
     }
 
     private <T> void registerSafely(AnnotationParser<CommandSender> parser, Injector injector, Class<T> cls, String name) {

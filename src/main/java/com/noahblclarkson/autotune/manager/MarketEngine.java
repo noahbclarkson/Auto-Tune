@@ -42,6 +42,7 @@ public class MarketEngine {
     private final ItemRepository itemRepository;
     private final TransactionRepository transactionRepository;
     private final PriceOverrideRepository priceOverrideRepository;
+    private final MarketEventService marketEventService;
 
     private final Map<Integer, BigDecimal> priceCache = new ConcurrentHashMap<>();
     private final Map<Integer, SpreadResult> spreadCache = new ConcurrentHashMap<>();
@@ -58,13 +59,15 @@ public class MarketEngine {
             ConfigManager configManager,
             ItemRepository itemRepository,
             TransactionRepository transactionRepository,
-            PriceOverrideRepository priceOverrideRepository
+            PriceOverrideRepository priceOverrideRepository,
+            MarketEventService marketEventService
     ) {
         this.adapter = adapter;
         this.configManager = configManager;
         this.itemRepository = itemRepository;
         this.transactionRepository = transactionRepository;
         this.priceOverrideRepository = priceOverrideRepository;
+        this.marketEventService = marketEventService;
         loadOverrideCache();
     }
 
@@ -92,6 +95,9 @@ public class MarketEngine {
         AutoTuneConfig.EconomyConfig economyConfig = configManager.getConfig().economy();
         int onlineCount = adapter.getOnlineCount();
         boolean frozen = configManager.isMarketFrozen();
+
+        // Process market event lifecycle (activate/deactivate scheduled events)
+        marketEventService.onMarketTick();
 
         try {
             List<ShopItem> items = itemRepository.findAll();
@@ -370,6 +376,9 @@ public class MarketEngine {
                 priceChangePercent *= dampening;
             }
         }
+
+        // Apply market event multiplier (amplifies or dampens price changes for matching items)
+        priceChangePercent = marketEventService.applyEventMultiplier(item.material().name(), priceChangePercent);
 
         BigDecimal priceChange = currentPrice.multiply(BigDecimal.valueOf(priceChangePercent), MATH_CONTEXT);
         return currentPrice.add(priceChange);

@@ -157,6 +157,28 @@ CREATE TABLE IF NOT EXISTS at_economy_snapshots (
 
 CREATE INDEX IF NOT EXISTS idx_economy_snapshots_timestamp ON at_economy_snapshots(timestamp);
 
+-- Market events: scheduled or active server-wide market events that modify price behavior
+CREATE TABLE IF NOT EXISTS at_market_events (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(128) NOT NULL,
+    event_type VARCHAR(32) NOT NULL,
+    materials TEXT DEFAULT NULL,
+    price_multiplier DECIMAL(10, 5) NOT NULL,
+    starts_at DATETIME NOT NULL,
+    ends_at DATETIME NOT NULL,
+    start_message TEXT DEFAULT NULL,
+    end_message TEXT DEFAULT NULL,
+    created_by VARCHAR(64) NOT NULL,
+    status VARCHAR(16) NOT NULL,
+    cron_expression VARCHAR(64) DEFAULT NULL,
+    tick_count INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_status ON at_market_events(status);
+CREATE INDEX IF NOT EXISTS idx_events_starts_at ON at_market_events(starts_at);
+CREATE INDEX IF NOT EXISTS idx_events_ends_at ON at_market_events(ends_at);
+
 -- Treasury: server-wide tax accumulator
 -- Tax config in config.yml controls which transactions are taxed and at what rate.
 -- The at_treasury table holds the accumulated balance.

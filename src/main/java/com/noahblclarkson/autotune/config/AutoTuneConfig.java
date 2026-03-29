@@ -21,6 +21,7 @@ public record AutoTuneConfig(
         @NotNull ScoreboardConfig scoreboard,
         @NotNull ExchangeRateConfig exchangeRate,
         @NotNull AuctionConfig auction,
+        @NotNull MarketEventConfig marketEvents,
         boolean marketFrozen
 ) {
 
@@ -458,6 +459,41 @@ public record AutoTuneConfig(
     ) {
         public static AuctionConfig defaults() {
             return new AuctionConfig(72, 15);
+        }
+    }
+
+    /**
+     * Market events configuration — controls scheduled or triggered market events
+     * that modify price behavior for matching items.
+     *
+     * @param enabled            Whether market events are active at all
+     * @param defaultEvents      Pre-defined event templates loaded from config
+     * @param checkIntervalMinutes How often to check for event lifecycle (minutes)
+     */
+    public record MarketEventConfig(
+            boolean enabled,
+            @NotNull List<MarketEventConfigEntry> defaultEvents,
+            int checkIntervalMinutes
+    ) {
+        public static MarketEventConfig defaults() {
+            return new MarketEventConfig(true, List.of(), 5);
+        }
+    }
+
+    /**
+     * A single market event template from config.
+     */
+    public record MarketEventConfigEntry(
+            @NotNull String name,
+            @NotNull String type,
+            @NotNull List<String> materials,
+            double multiplier,
+            int durationMinutes,
+            String startMessage,
+            String endMessage
+    ) {
+        public static MarketEventConfigEntry defaults() {
+            return new MarketEventConfigEntry("", "CUSTOM", List.of(), 2.0, 60, "", "");
         }
     }
 }

@@ -13,6 +13,7 @@ import com.noahblclarkson.autotune.listener.SellGuiListener;
 import com.noahblclarkson.autotune.manager.AutosellManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
+import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ScoreboardManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
@@ -44,6 +45,7 @@ public class AutoTune extends JavaPlugin {
     private PriceAlertManager priceAlertManager;
     private ScoreboardManager scoreboardManager;
     private TreasuryService treasuryService;
+    private MarketEventService marketEventService;
     private CommandManager commandManager;
     private TaskScheduler taskScheduler;
     private WebServer webServer;
@@ -103,6 +105,8 @@ public class AutoTune extends JavaPlugin {
         scoreboardManager.start();
         treasuryService = injector.getInstance(TreasuryService.class);
         treasuryService.start();
+        marketEventService = injector.getInstance(MarketEventService.class);
+        marketEventService.onEnable();
         taskScheduler = injector.getInstance(TaskScheduler.class);
 
         // Register commands

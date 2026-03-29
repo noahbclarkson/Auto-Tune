@@ -1,6 +1,7 @@
 plugins {
     java
     pmd
+    id("com.gradleup.shadow") version "9.3.2"
     id("xyz.jpenilla.run-paper") version "2.3.1"
     // Note: net.ltgt.errorprone plugin is disabled because it requires a JDK with
     // compiler API (javac). The VPS only has a JRE. CI has a full JDK 21 so it
@@ -43,32 +44,28 @@ dependencies {
     // PlaceholderAPI (optional — exposes prices, trends, economy stats as placeholders)
     compileOnly("me.clip:placeholderapi:2.11.6")
 
-    // All runtime deps are compileOnly — Paper provides them at runtime via
-    // the libraries: section in paper-plugin.yml. This avoids the multi-release
-    // JAR classloader conflicts that cause 'zip file closed' errors.
+    // Command Framework - Cloud
+    implementation("org.incendo:cloud-core:${property("cloudCoreVersion")}")
+    implementation("org.incendo:cloud-paper:${property("cloudPaperVersion")}")
+    implementation("org.incendo:cloud-annotations:${property("cloudCoreVersion")}")
+    implementation("org.incendo:cloud-minecraft-extras:${property("cloudPaperVersion")}")
 
     // Dependency Injection
-    compileOnly("com.google.inject:guice:${property("guiceVersion")}")
+    implementation("com.google.inject:guice:${property("guiceVersion")}")
 
     // Database
-    compileOnly("com.zaxxer:HikariCP:${property("hikariVersion")}")
-    compileOnly("org.jdbi:jdbi3-core:${property("jdbiVersion")}")
-    compileOnly("org.jdbi:jdbi3-sqlobject:${property("jdbiVersion")}")
-    compileOnly("org.xerial:sqlite-jdbc:${property("sqliteVersion")}")
-    compileOnly("org.mariadb.jdbc:mariadb-java-client:${property("mariadbVersion")}")
+    implementation("com.zaxxer:HikariCP:${property("hikariVersion")}")
+    implementation("org.jdbi:jdbi3-core:${property("jdbiVersion")}")
+    implementation("org.jdbi:jdbi3-sqlobject:${property("jdbiVersion")}")
+    implementation("org.xerial:sqlite-jdbc:${property("sqliteVersion")}")
+    implementation("org.mariadb.jdbc:mariadb-java-client:${property("mariadbVersion")}")
 
     // Web Server
-    compileOnly("io.javalin:javalin:${property("javalinVersion")}")
-    compileOnly("com.google.code.gson:gson:${property("gsonVersion")}")
+    implementation("io.javalin:javalin:${property("javalinVersion")}")
+    implementation("com.google.code.gson:gson:${property("gsonVersion")}")
 
     // Inventory GUI Framework
-    compileOnly("com.github.stefvanschie.inventoryframework:IF:${property("inventoryFrameworkVersion")}")
-
-    // Command Framework
-    compileOnly("org.incendo:cloud-core:${property("cloudCoreVersion")}")
-    compileOnly("org.incendo:cloud-paper:${property("cloudPaperVersion")}")
-    compileOnly("org.incendo:cloud-annotations:${property("cloudCoreVersion")}")
-    compileOnly("org.incendo:cloud-minecraft-extras:${property("cloudPaperVersion")}")
+    implementation("com.github.stefvanschie.inventoryframework:IF:${property("inventoryFrameworkVersion")}")
 
     // Annotations
     compileOnly("org.jetbrains:annotations:26.0.1")
@@ -82,6 +79,10 @@ pmd {
 }
 
 tasks {
+    build {
+        dependsOn(shadowJar)
+    }
+
     val installWebDeps by registering(Exec::class) {
         workingDir = file("web")
         val isWindows = System.getProperty("os.name").lowercase().contains("windows")
@@ -101,6 +102,25 @@ tasks {
         workingDir = file("web")
         val isWindows = System.getProperty("os.name").lowercase().contains("windows")
         commandLine(if (isWindows) "npm.cmd" else "npm", "run", "export")
+    }
+
+    shadowJar {
+        archiveClassifier.set("")
+
+        relocate("org.incendo.cloud", "com.noahblclarkson.autotune.lib.cloud")
+        relocate("com.zaxxer.hikari", "com.noahblclarkson.autotune.lib.hikari")
+        relocate("org.jdbi", "com.noahblclarkson.autotune.lib.jdbi")
+        relocate("io.javalin", "com.noahblclarkson.autotune.lib.javalin")
+        relocate("org.eclipse.jetty", "com.noahblclarkson.autotune.lib.jetty")
+        relocate("com.github.stefvanschie.inventoryframework", "com.noahblclarkson.autotune.lib.inventoryframework")
+        relocate("com.google.inject", "com.noahblclarkson.autotune.lib.guice")
+
+        minimize {
+            exclude(dependency("org.xerial:.*"))
+            exclude(dependency("org.mariadb.jdbc:.*"))
+            exclude(dependency("io.javalin:.*"))
+            exclude(dependency("org.eclipse.jetty:.*"))
+        }
     }
 
     processResources {

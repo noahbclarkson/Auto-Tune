@@ -304,3 +304,202 @@ export function getSpreadFactors(
     playerScalingPct: ps * 100,
   };
 }
+
+// ─── Market Events ───────────────────────────────────────────────────────────
+
+/** Mirrors Java MarketEvent.EventType and Rust events.rs */
+export type MarketEventType =
+  | 'DEMAND_SURGE'
+  | 'SUPPLY_GLUT'
+  | 'INFLATION_BOOST'
+  | 'DEFLATION_DROP'
+  | 'GOLD_RUSH'
+  | 'CUSTOM';
+
+/** Mirrors Java MarketEvent record */
+export interface MarketEvent {
+  id: string;
+  name: string;
+  type: MarketEventType;
+  /** Material patterns — exact names or wildcard patterns (PREFIX_*, *_SUFFIX, *MIDDLE*) */
+  materials: string[];
+  /** Price change multiplier (e.g. 2.0 = 2× price change velocity) */
+  priceChangeMultiplier: number;
+  /** Human-readable description for UI */
+  description?: string;
+}
+
+/**
+ * Returns true if a material name matches a wildcard pattern.
+ * Mirrors Java MarketEvent.matchesPattern():
+ *   "GOLD_*"   → starts with "GOLD_"
+ *   "*_INGOT"  → ends with "_INGOT"
+ *   "*GOLD*"   → contains "GOLD"
+ */
+export function matchesMaterialPattern(material: string, pattern: string): boolean {
+  const m = material.toUpperCase();
+  const p = pattern.toUpperCase();
+
+  if (m === p) return true;
+  if (p.endsWith('_*')) return m.startsWith(p.slice(0, -2) + '_');
+  if (p.startsWith('*_')) return m.endsWith('_' + p.slice(2));
+  if (p.startsWith('*') && p.endsWith('*')) return m.includes(p.slice(1, -1));
+  return false;
+}
+
+/**
+ * Returns true if this event matches the given material.
+ */
+export function eventMatchesMaterial(event: MarketEvent, material: string): boolean {
+  if (!event.materials || event.materials.length === 0) return false;
+  return event.materials.some((pat) => matchesMaterialPattern(material, pat));
+}
+
+/**
+ * Computes the additional price-change effect from an event.
+ * Mirrors Java MarketEventService.computeEventEffect() exactly.
+ *
+ * Effects are additive — they add to (or subtract from) the natural price change.
+ * Multiple matching events stack additively.
+ *
+ * @param type      - Event type
+ * @param multiplier - Event multiplier (e.g. 2.0)
+ * @param priceChangePercent - Natural price change % BEFORE the event
+ * @returns Additional price change % caused by the event
+ */
+export function computeEventEffect(
+  type: MarketEventType,
+  multiplier: number,
+  priceChangePercent: number,
+): number {
+  const extra = priceChangePercent * (multiplier - 1.0);
+
+  switch (type) {
+    case 'DEMAND_SURGE': {
+      // Amplifies upward movements, suppresses downward
+      if (priceChangePercent >= 0) {
+        return extra; // amplify rising prices
+      } else {
+        // Push toward zero (less downward)
+        return -priceChangePercent * (1.0 - 1.0 / multiplier);
+      }
+    }
+    case 'SUPPLY_GLUT': {
+      // Amplifies downward movements, suppresses upward
+      if (priceChangePercent <= 0) {
+        return extra; // amplify falling prices
+      } else {
+        // Push toward zero (less upward)
+        return -priceChangePercent * (1.0 - 1.0 / multiplier);
+      }
+    }
+    case 'INFLATION_BOOST': {
+      // Always add upward drift regardless of direction
+      return Math.abs(priceChangePercent) * (multiplier - 1.0);
+    }
+    case 'DEFLATION_DROP': {
+      // Always add downward drift
+      return -Math.abs(priceChangePercent) * (multiplier - 1.0);
+    }
+    case 'GOLD_RUSH':
+    case 'CUSTOM': {
+      // Symmetric: amplify whatever direction the natural change is going
+      return extra;
+    }
+    default:
+      return 0.0;
+  }
+}
+
+/**
+ * Returns the combined event effect for a material across all active events.
+ * Mirrors Java MarketEventService.applyEventMultiplier().
+ */
+export function applyEventMultipliers(
+  events: MarketEvent[],
+  material: string,
+  priceChangePercent: number,
+): number {
+  if (!events || events.length === 0) return priceChangePercent;
+
+  let result = priceChangePercent;
+  for (const event of events) {
+    if (!eventMatchesMaterial(event, material)) continue;
+    const effect = computeEventEffect(event.type, event.priceChangeMultiplier, priceChangePercent);
+    result += effect;
+  }
+  return result;
+}
+
+/**
+ * Returns the net multiplicative multiplier for a material (for display).
+ * Use for UI display — not for actual price calculations.
+ */
+export function getNetEventMultiplier(events: MarketEvent[], material: string): number {
+  let net = 1.0;
+  for (const event of events) {
+    if (eventMatchesMaterial(event, material)) {
+      net *= event.priceChangeMultiplier;
+    }
+  }
+  return net;
+}
+
+/**
+ * Human-readable description of what an event type does.
+ */
+export const EVENT_TYPE_DESCRIPTIONS: Record<MarketEventType, string> = {
+  DEMAND_SURGE: 'Buy prices boosted — good time to sell',
+  SUPPLY_GLUT: 'Sell prices boosted — players get more for items',
+  INFLATION_BOOST: 'All prices drift upward (inflation)',
+  DEFLATION_DROP: 'All prices drift downward (deflation)',
+  GOLD_RUSH: 'Specific items more valuable to buy',
+  CUSTOM: 'Custom multiplier',
+};
+
+/**
+ * Color mapping for event types (for UI badges).
+ */
+export const EVENT_TYPE_COLORS: Record<MarketEventType, string> = {
+  DEMAND_SURGE: 'text-amber-400',
+  SUPPLY_GLUT: 'text-rose-400',
+  INFLATION_BOOST: 'text-emerald-400',
+  DEFLATION_DROP: 'text-sky-400',
+  GOLD_RUSH: 'text-yellow-400',
+  CUSTOM: 'text-purple-400',
+};
+
+/**
+ * Simulate price evolution with optional active market events.
+ * When events are provided, their effects are applied each tick.
+ */
+export function simulatePriceWithEvents(
+  nTicks: number,
+  initialPrice: number,
+  buyProbability: number,
+  onlinePlayers: number,
+  config: MarketConfig = DEFAULT_CONFIG,
+  activeEvents: MarketEvent[] = [],
+  material = 'DIAMOND',
+): number[] {
+  const prices: number[] = [initialPrice];
+  const ps = playerScaling(onlinePlayers, config.fullEffectPlayers);
+
+  for (let i = 0; i < nTicks; i++) {
+    // Trade ratio: -1 (all sells) to +1 (all buys)
+    const tradeRatio = (buyProbability - 0.5) * 2.0;
+
+    // Natural price change as percentage
+    let changePct = tradeRatio * ps * (config.maxPriceChangePercent / 100.0);
+
+    // Apply market events (amplify/dampen the natural change)
+    if (activeEvents.length > 0) {
+      changePct = applyEventMultipliers(activeEvents, material, changePct);
+    }
+
+    const newPrice = prices[prices.length - 1] * (1 + changePct);
+    prices.push(Math.max(0.01, newPrice)); // Floor at $0.01
+  }
+
+  return prices;
+}

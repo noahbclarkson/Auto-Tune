@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { MarketConfig, DEFAULT_CONFIG, calculatePrices } from '@/lib/market-engine';
+import { MarketConfig, DEFAULT_CONFIG, calculatePrices, MarketEvent } from '@/lib/market-engine';
 import { ParameterPanel } from '@/components/simulator/parameter-panel';
 import { PricePreview } from '@/components/simulator/price-preview';
 import { SpreadChart } from '@/components/simulator/spread-chart';
 import { StabilityForecast } from '@/components/simulator/stability-forecast';
+import { MarketEventsPanel } from '@/components/simulator/market-events-panel';
+import { ProjectionChart } from '@/components/simulator/projection-chart';
 
 export default function SimulatorPage() {
   const [config, setConfig] = useState<MarketConfig>(DEFAULT_CONFIG);
@@ -15,6 +17,8 @@ export default function SimulatorPage() {
   const [zScore, setZScore] = useState(0);
   const [weightedVolume, setWeightedVolume] = useState(0);
   const [distinctTraders, setDistinctTraders] = useState(5);
+  const [activeEvents, setActiveEvents] = useState<MarketEvent[]>([]);
+  const [projectionMaterial, setProjectionMaterial] = useState('DIAMOND');
 
   const prices = useMemo(() => {
     return calculatePrices(basePrice, buyRatio, onlinePlayers, zScore, weightedVolume, distinctTraders, config);
@@ -31,8 +35,8 @@ export default function SimulatorPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Parameters */}
-        <div className="lg:col-span-1">
+        {/* Left column */}
+        <div className="lg:col-span-1 space-y-4">
           <ParameterPanel
             config={config}
             setConfig={setConfig}
@@ -49,9 +53,12 @@ export default function SimulatorPage() {
             distinctTraders={distinctTraders}
             setDistinctTraders={setDistinctTraders}
           />
+
+          {/* Market Events */}
+          <MarketEventsPanel events={activeEvents} onEventsChange={setActiveEvents} />
         </div>
 
-        {/* Results */}
+        {/* Right column */}
         <div className="lg:col-span-2 space-y-4">
           <StabilityForecast
             buyRatio={buyRatio}
@@ -60,6 +67,17 @@ export default function SimulatorPage() {
             weightedVolume={weightedVolume}
             distinctTraders={distinctTraders}
             config={config}
+          />
+
+          {/* Price Projection with events */}
+          <ProjectionChart
+            config={config}
+            basePrice={basePrice}
+            buyRatio={buyRatio}
+            onlinePlayers={onlinePlayers}
+            activeEvents={activeEvents}
+            projectionMaterial={projectionMaterial}
+            onMaterialChange={setProjectionMaterial}
           />
 
           <PricePreview

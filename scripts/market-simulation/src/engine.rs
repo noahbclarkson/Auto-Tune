@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
 use crate::config::{SimConfig, TICKS_PER_DAY};
+use crate::events::{MarketEvent, apply_event_multiplier};
 
 const ATANH_099: f64 = 2.6466524123622457;
 const VOLUME_BUCKETS: usize = 10;
@@ -139,6 +140,7 @@ impl MarketEngine {
         config: &SimConfig,
         current_tick: u64,
         transactions: &VecDeque<Transaction>,
+        active_events: &[MarketEvent],
     ) {
         let base_window_ticks = config.trade_window_ticks();
         let trade_window_ticks = if config.economy.adaptive_window {
@@ -175,7 +177,14 @@ impl MarketEngine {
                 config.economy.player_rate_limit_multiplier,
             );
 
-            let price = self.calculate_new_price(item_idx, &metrics, online_count, config);
+            let price = self.calculate_new_price(
+                item_idx,
+                &self.items[item_idx].name,
+                &metrics,
+                online_count,
+                config,
+                active_events,
+            );
             let spread =
                 self.calculate_spread(item_idx, &metrics, online_count, global_vol_mult, config);
 
@@ -321,9 +330,11 @@ impl MarketEngine {
     fn calculate_new_price(
         &self,
         item_idx: usize,
+        material_name: &str,
         metrics: &TradeMetrics,
         online_count: i32,
         config: &SimConfig,
+        active_events: &[MarketEvent],
     ) -> f64 {
         let current_price = self.items[item_idx].price;
 
@@ -361,6 +372,12 @@ impl MarketEngine {
                 let dampening = raw_dampening.max(config.economy.trend_dampening_floor);
                 price_change_percent *= dampening;
             }
+        }
+
+        // Apply market event multiplier (amplifies or dampens price velocity)
+        if !active_events.is_empty() {
+            price_change_percent =
+                apply_event_multiplier(active_events, material_name, price_change_percent);
         }
 
         let price_change = current_price * price_change_percent;

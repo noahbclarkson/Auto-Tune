@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 
 use crate::config::SimConfig;
 use crate::engine::{MarketEngine, Transaction, TransactionType};
+use crate::events::MarketEvent;
 use crate::loan::{Loan, LoanStatus, calculate_interest_rate};
 use crate::player::{Archetype, DecisionLog, PlayerAgent, rng_next, set_global_seeded_rng};
 use crate::recorder::{DataRecorder, LoanEventData, TickSnapshot};
@@ -31,6 +32,8 @@ pub struct Simulation {
     pub tick_accumulator: f64,
     pub config_dirty: bool,
     pub recorder: Option<DataRecorder>,
+    /// Active market events that apply price velocity modifiers.
+    pub events: Vec<MarketEvent>,
     /// Tracks whether the loan interest circuit breaker is currently open.
     /// When true, interest accrual is paused until debt/GDP drops below threshold.
     interest_circuit_open: bool,
@@ -53,6 +56,7 @@ impl Simulation {
             tick_accumulator: 0.0,
             config_dirty: false,
             recorder: None,
+            events: Vec::new(),
             interest_circuit_open: false,
             next_player_id: 0,
         }
@@ -84,7 +88,9 @@ impl Simulation {
             Archetype::AFKFarmer => PlayerAgent::new_afk_farmer(id, item_count, &base_prices),
             Archetype::GuildBuyer => PlayerAgent::new_guild_buyer(id, item_count, &base_prices),
             Archetype::MarketMaker => PlayerAgent::new_market_maker(id, item_count, &base_prices),
-            Archetype::InsiderTrader => PlayerAgent::new_insider_trader(id, item_count, &base_prices),
+            Archetype::InsiderTrader => {
+                PlayerAgent::new_insider_trader(id, item_count, &base_prices)
+            }
         };
         self.players.push(player);
     }
@@ -169,11 +175,20 @@ impl Simulation {
             self.transactions.pop_front();
         }
 
+        // Filter to only events that are active at this tick
+        let active_events: Vec<_> = self
+            .events
+            .iter()
+            .filter(|e| e.is_active(self.current_tick))
+            .cloned()
+            .collect();
+
         self.engine.tick(
             online_count,
             &self.config,
             self.current_tick,
             &self.transactions,
+            &active_events,
         );
 
         let loan_events = self.process_loans();

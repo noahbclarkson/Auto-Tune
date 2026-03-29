@@ -1,6 +1,7 @@
 mod analyzer;
 mod config;
 mod engine;
+mod events;
 mod gui;
 mod loan;
 mod player;
@@ -14,6 +15,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use crate::config::{ArchetypeConfig, SimConfig};
+use crate::events::MarketEvent;
 use crate::player::Archetype;
 use crate::simulation::Simulation;
 
@@ -25,6 +27,8 @@ pub struct Scenario {
     pub stress_events: Vec<StressEvent>,
     pub duration_ticks: u64,
     pub speed_ticks_per_sec: u64,
+    /// Market events that apply price velocity modifiers during the simulation.
+    pub events: Vec<MarketEvent>,
 }
 
 #[derive(Clone, Debug)]
@@ -82,6 +86,7 @@ impl Scenario {
                     count: 1,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14, // 14 days
             speed_ticks_per_sec: 100,
@@ -119,6 +124,7 @@ impl Scenario {
                 StressEvent::LowPlayers { at_tick: 288 * 7 },
                 StressEvent::LoanCascade { at_tick: 288 * 5 },
             ],
+            events: Vec::new(),
             duration_ticks: 288 * 14,
             speed_ticks_per_sec: 200,
         }
@@ -146,6 +152,7 @@ impl Scenario {
                     count: 3,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 7,
             speed_ticks_per_sec: 300,
@@ -166,6 +173,7 @@ impl Scenario {
                     count: 1,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
             speed_ticks_per_sec: 100,
@@ -191,6 +199,7 @@ impl Scenario {
                     count: 3,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 10,
             speed_ticks_per_sec: 200,
@@ -229,6 +238,7 @@ impl Scenario {
             // Single cascade at day 6: earlier than stressed (day 5) and sp08-stressed.
             // Economy has 6 days of growth before cascade = moderate compound, not catastrophic.
             stress_events: vec![StressEvent::LoanCascade { at_tick: 288 * 6 }],
+            events: Vec::new(),
             duration_ticks: 288 * 14,
             speed_ticks_per_sec: 200,
         }
@@ -261,6 +271,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14, // 14 days
             speed_ticks_per_sec: 200,
@@ -298,6 +309,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
             speed_ticks_per_sec: 200,
@@ -330,6 +342,7 @@ impl Scenario {
                     count: 1,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
             speed_ticks_per_sec: 200,
@@ -366,6 +379,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
             speed_ticks_per_sec: 200,
@@ -402,6 +416,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
             speed_ticks_per_sec: 200,
@@ -441,6 +456,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
             speed_ticks_per_sec: 200,
@@ -478,6 +494,7 @@ impl Scenario {
                     count: 1,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
             speed_ticks_per_sec: 200,
@@ -523,6 +540,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
             speed_ticks_per_sec: 200,
@@ -565,6 +583,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14, // 14 days
             speed_ticks_per_sec: 200,
@@ -597,8 +616,97 @@ impl Scenario {
             ],
             // Diamond is index 5 in default items — we inject a forced buy spike at day 3
             // The stress event system fires a custom PriceShock that manipulates Diamond's price
+            events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 7,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Market Event System test: validates that the Rust simulation correctly models
+    /// the Java MarketEventService behavior.
+    ///
+    /// Test design — standard+MM+GuildBuyers economy (proven healthy):
+    /// - Control: no market events
+    /// - Treatment 1: DEMAND_SURGE × 2.0 on DIAMOND starting day 3 (864 ticks)
+    ///   → Diamond prices should rise FASTER during the event
+    ///   → After event ends (day 5), prices should normalize
+    /// - Treatment 2: SUPPLY_GLUT × 2.0 on IRON_INGOT starting day 7 (2016 ticks)
+    ///   → Iron prices should fall FASTER during the event
+    /// - Treatment 3: INFLATION_BOOST × 1.5 across all items starting day 5
+    ///   → All items should drift upward faster during event
+    ///
+    /// Validates:
+    /// 1. Event multiplier applies correctly per item/material
+    /// 2. Multiple concurrent events stack additively
+    /// 3. Event expiry is handled correctly
+    /// 4. Wildcard material patterns work (*_INGOT matches GOLD_INGOT, IRON_INGOT)
+    pub fn market_event_test() -> Self {
+        Self {
+            name: "Market Event Test".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 5,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+            ],
+            // DEMAND_SURGE on Diamond (exact match): day 3 → day 5
+            // SUPPLY_GLUT on Iron Ingot (exact match): day 7 → day 9
+            // INFLATION_BOOST on all items (*): day 5 → day 8
+            // Also test wildcard: GOLD_* ingots at day 10
+            events: vec![
+                MarketEvent {
+                    name: "Diamond Demand Surge".into(),
+                    event_type: crate::events::EventType::DemandSurge,
+                    materials: vec!["DIAMOND".into()],
+                    multiplier: 2.0,
+                    starts_at_tick: 288 * 3, // day 3
+                    ends_at_tick: 288 * 5,   // day 5
+                },
+                MarketEvent {
+                    name: "Iron Supply Glut".into(),
+                    event_type: crate::events::EventType::SupplyGlut,
+                    materials: vec!["IRON_INGOT".into()],
+                    multiplier: 2.0,
+                    starts_at_tick: 288 * 7, // day 7
+                    ends_at_tick: 288 * 9,   // day 9
+                },
+                MarketEvent {
+                    name: "Economy-Wide Inflation Boost".into(),
+                    event_type: crate::events::EventType::InflationBoost,
+                    materials: vec!["*".into()],
+                    multiplier: 1.5,
+                    starts_at_tick: 288 * 5, // day 5
+                    ends_at_tick: 288 * 8,   // day 8
+                },
+                MarketEvent {
+                    name: "Gold Ingot Rush".into(),
+                    event_type: crate::events::EventType::GoldRush,
+                    materials: vec!["GOLD_*".into()], // wildcard prefix
+                    multiplier: 1.8,
+                    starts_at_tick: 288 * 10, // day 10
+                    ends_at_tick: 288 * 12,   // day 12
+                },
+            ],
+            stress_events: vec![],
+            duration_ticks: 288 * 14, // 14 days
             speed_ticks_per_sec: 200,
         }
     }
@@ -1037,6 +1145,7 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
     println!("Speed: {} ticks/sec", scenario.speed_ticks_per_sec);
 
     let mut sim = Simulation::new(scenario.config.clone());
+    sim.events = scenario.events.clone();
 
     // Add players
     let mut archetype_map: std::collections::HashMap<String, Archetype> =
@@ -1805,6 +1914,7 @@ fn run_seeded_headless(scenario: &Scenario, seed: u64, output_dir: &PathBuf) -> 
     .collect();
 
     let mut sim = Simulation::new_seeded(scenario.config.clone(), seed);
+    sim.events = scenario.events.clone();
 
     for player_cfg in &scenario.players {
         let archetype = archetype_map
@@ -2443,6 +2553,7 @@ fn main() -> eframe::Result<()> {
         println!("  exploiter-stress - standard+MM + 2 Exploiters (stress-tests MM resilience)");
         println!("  exploiter-cap-test - standard+MM + 1 Exploiter (5% cap = 1 of 12 players)");
         println!("  correlation      - Sector correlation test (treatment vs control)");
+        println!("  market-event-test - DEMAND_SURGE / SUPPLY_GLUT / INFLATION / DEFLATION events");
         println!();
         println!("Special modes:");
         println!("  --sweep                 Parameter sweep (840 configs)");
@@ -2566,6 +2677,7 @@ fn main() -> eframe::Result<()> {
                 "exploiter-stress" | "exploiter_stress" => Scenario::exploiter_stress(),
                 "exploiter-cap-test" | "exploiter_cap_test" => Scenario::exploiter_cap_test(),
                 "insider-trader-test" | "insider_trader_test" => Scenario::insider_trader_test(),
+                "market-event-test" | "market_event_test" => Scenario::market_event_test(),
                 "correlation" => Scenario::correlation(),
                 _ => {
                     eprintln!(

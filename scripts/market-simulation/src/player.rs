@@ -805,7 +805,13 @@ impl PlayerAgent {
                 self.decide_marketmaker(items, &mut decisions, record, &mut logs, slippage_coeff);
             }
             Archetype::InsiderTrader => {
-                self.decide_insider_trader(items, &mut decisions, record, &mut logs, slippage_coeff);
+                self.decide_insider_trader(
+                    items,
+                    &mut decisions,
+                    record,
+                    &mut logs,
+                    slippage_coeff,
+                );
             }
             _ => {
                 self.decide_value_based(items, &mut decisions, record, &mut logs, slippage_coeff);
@@ -1440,10 +1446,7 @@ impl PlayerAgent {
             // Update price history: record current price BEFORE making decisions.
             // This ensures decisions are based on history UP TO the start of this tick.
             let current_price = item.sell_price();
-            let history = self
-                .insider_price_history
-                .entry(i)
-                .or_default();
+            let history = self.insider_price_history.entry(i).or_default();
 
             // Add current price to history (will be used in NEXT tick's decisions)
             // Skip if history window is 0
@@ -1476,7 +1479,8 @@ impl PlayerAgent {
                 // Size scales with how extreme the deviation is
                 // At -threshold: min position. At -2x threshold: max position.
                 let extremity = (-deviation / threshold).min(2.0);
-                let base_amount = (self.max_trade_amount as f64 * extremity * self.risk_tolerance).ceil();
+                let base_amount =
+                    (self.max_trade_amount as f64 * extremity * self.risk_tolerance).ceil();
                 let amount = rng.random_inclusive(1..=base_amount.max(1.0) as i32);
                 let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                 let cost = buy_price * slippage * amount as f64;

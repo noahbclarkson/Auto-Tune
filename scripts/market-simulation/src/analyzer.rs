@@ -537,6 +537,35 @@ pub fn load_summary(db_path: &Path) -> Result<SimSummary, String> {
     })
 }
 
+/// Load the final (latest tick) price for each item in a simulation DB.
+/// Returns: Vec<(item_name, final_price, base_price)>
+pub fn load_all_prices(db_path: &Path) -> Result<Vec<(String, f64, f64)>, String> {
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+
+    // Get the latest tick
+    let max_tick: i64 = conn
+        .query_row("SELECT MAX(tick) FROM item_states", [], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT item_name, price, base_price FROM item_states WHERE tick = ?1",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([max_tick], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, f64>(1)?, row.get::<_, f64>(2)?))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut prices = Vec::new();
+    for row in rows {
+        prices.push(row.map_err(|e| e.to_string())?);
+    }
+    Ok(prices)
+}
+
 fn gdp_trajectory(conn: &Connection) -> Option<(f64, f64)> {
     let early: Option<f64> = conn
         .query_row(

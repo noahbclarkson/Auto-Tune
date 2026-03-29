@@ -4,9 +4,11 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { ItemTable } from '@/components/dashboard/item-table';
+import { ItemGrid } from '@/components/dashboard/item-grid';
 import { Card, CardContent } from '@/components/ui/card';
 import { api, type ItemDto, type Stats, type TrendDto } from '@/lib/api';
 import { formatPercent } from '@/lib/format';
+import { LayoutGrid, List } from 'lucide-react';
 
 function ItemsStatsBar({ items }: { items: ItemDto[] }) {
   const stats = useMemo(() => {
@@ -66,6 +68,7 @@ export default function ItemsPage() {
   const [items, setItems] = useState<ItemDto[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [trends, setTrends] = useState<TrendDto[]>([]);
+  const [view, setView] = useState<'table' | 'grid'>('table');
 
   const fetchData = useCallback(async () => {
     try {
@@ -93,12 +96,44 @@ export default function ItemsPage() {
       <Header totalItems={stats?.totalItems ?? 0} onlinePlayers={stats?.onlinePlayers ?? 0} />
       <main className="mx-auto max-w-7xl px-6 py-6">
         <ItemsStatsBar items={items} />
-        <ItemTable
-          items={items}
-          trends={trends}
-          linkToDetail={true}
-          pageSize={25}
-        />
+
+        {/* View toggle */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-muted-foreground">
+            {items.length} items across {new Set(items.map(i => i.section)).size} sections
+          </p>
+          <div className="flex items-center gap-1 border border-border rounded-lg p-0.5">
+            <button
+              onClick={() => setView('table')}
+              className={`rounded-md p-1.5 transition-colors ${
+                view === 'table' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+              title="Table view"
+            >
+              <List className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setView('grid')}
+              className={`rounded-md p-1.5 transition-colors ${
+                view === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+              title="Grid view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {view === 'table' ? (
+          <ItemTable
+            items={items}
+            trends={trends}
+            linkToDetail={true}
+            pageSize={25}
+          />
+        ) : (
+          <ItemGrid items={items} trends={trends} linkToDetail={true} />
+        )}
       </main>
     </div>
   );

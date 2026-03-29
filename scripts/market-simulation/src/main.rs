@@ -29,6 +29,8 @@ pub struct Scenario {
     pub speed_ticks_per_sec: u64,
     /// Market events that apply price velocity modifiers during the simulation.
     pub events: Vec<MarketEvent>,
+    /// RNG seed for deterministic runs. None = use wall-clock randomness.
+    pub seed: Option<u64>,
 }
 
 #[derive(Clone, Debug)]
@@ -86,6 +88,7 @@ impl Scenario {
                     count: 1,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14, // 14 days
@@ -124,6 +127,7 @@ impl Scenario {
                 StressEvent::LowPlayers { at_tick: 288 * 7 },
                 StressEvent::LoanCascade { at_tick: 288 * 5 },
             ],
+            seed: None,
             events: Vec::new(),
             duration_ticks: 288 * 14,
             speed_ticks_per_sec: 200,
@@ -152,6 +156,7 @@ impl Scenario {
                     count: 3,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 7,
@@ -173,6 +178,7 @@ impl Scenario {
                     count: 1,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
@@ -199,6 +205,7 @@ impl Scenario {
                     count: 3,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 10,
@@ -238,6 +245,7 @@ impl Scenario {
             // Single cascade at day 6: earlier than stressed (day 5) and sp08-stressed.
             // Economy has 6 days of growth before cascade = moderate compound, not catastrophic.
             stress_events: vec![StressEvent::LoanCascade { at_tick: 288 * 6 }],
+            seed: None,
             events: Vec::new(),
             duration_ticks: 288 * 14,
             speed_ticks_per_sec: 200,
@@ -271,6 +279,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14, // 14 days
@@ -309,6 +318,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
@@ -342,6 +352,7 @@ impl Scenario {
                     count: 1,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
@@ -379,6 +390,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
@@ -416,6 +428,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
@@ -456,6 +469,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
@@ -494,6 +508,7 @@ impl Scenario {
                     count: 1,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
@@ -540,6 +555,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
@@ -583,6 +599,7 @@ impl Scenario {
                     count: 2,
                 },
             ],
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14, // 14 days
@@ -616,6 +633,7 @@ impl Scenario {
             ],
             // Diamond is index 5 in default items — we inject a forced buy spike at day 3
             // The stress event system fires a custom PriceShock that manipulates Diamond's price
+            seed: None,
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 7,
@@ -667,6 +685,7 @@ impl Scenario {
                     count: 1,
                 },
             ],
+            seed: None,
             // DEMAND_SURGE on Diamond (exact match): day 3 → day 5
             // SUPPLY_GLUT on Iron Ingot (exact match): day 7 → day 9
             // INFLATION_BOOST on all items (*): day 5 → day 8
@@ -708,6 +727,101 @@ impl Scenario {
             stress_events: vec![],
             duration_ticks: 288 * 14, // 14 days
             speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Control for Market Event test: IDENTICAL player mix as market_event_test
+    /// (5 Casual + 3 Farmer + 2 Trader + 2 GuildBuyer + 1 MarketMaker, 14 days)
+    /// but with NO market events.
+    ///
+    /// This is the exact same config as market_event_test — same players, same duration,
+    /// same tick rate — just without the 4 market events (DEMAND_SURGE, SUPPLY_GLUT,
+    /// INFLATION_BOOST, GOLD_RUSH).
+    ///
+    /// When run with the SAME seed, the control and treatment diverge ONLY because of
+    /// the events, making it a clean measurement of event impact.
+    pub fn market_event_control() -> Self {
+        Self {
+            name: "Market Event Control".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 5,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+            ],
+            events: Vec::new(), // NO events — this is the control
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+            seed: None,
+        }
+    }
+
+    /// Standard+MM+GB+IT: Tests whether InsiderTraders add value to the recommended
+    /// economy config (standard+MM+GB@7%).
+    ///
+    /// Control: guild_stability_mm_fixed_guild (same players, no InsiderTraders)
+    /// Treatment: standard_plus_mm_gb_it (2 additional InsiderTraders added)
+    ///
+    /// Key question: Do InsiderTraders provide additional stabilization on top of
+    /// MM + GB, or are they redundant/destabilizing?
+    ///
+    /// InsiderTraders buy on price dips (mean-reversion), while MM provides two-sided
+    /// liquidity and GB buys to maintain inventory targets. ITs might complement
+    /// the system by accelerating mean-reversion after price shocks.
+    pub fn standard_plus_mm_gb_it() -> Self {
+        Self {
+            name: "Standard+MM+GB+IT".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 5,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                // NEW: 2 InsiderTraders added to the recommended config
+                ArchetypeConfig {
+                    archetype: "InsiderTrader".into(),
+                    count: 2,
+                },
+            ],
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+            seed: None,
         }
     }
 }
@@ -1133,7 +1247,424 @@ fn run_correlation_sim(
     sim.engine.items.clone()
 }
 
+// ─── Event Control Test ─────────────────────────────────────────────────────
+
+/// Head-to-head comparison of market_event_test vs market_event_control.
+/// Both run with IDENTICAL seed (42) so the only difference is the market events.
+/// Produces a detailed per-item price comparison showing exactly what each event did.
+fn run_event_control_test() {
+    use crate::analyzer::load_summary;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       MARKET EVENT CONTROL TEST                            ║");
+    println!("║  Control vs Treatment — identical seed, same player mix   ║");
+    println!("║  Players: 5Cas + 3Far + 2Tra + 2GB + 1MM (13 total, 14d) ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: no events | Treatment: DEMAND_SURGE(DIAMOND), SUPPLY_GLUT(IRON),");
+    println!("            INFLATION_BOOST(all), GOLD_RUSH(GOLD_*), each ×2 over 14 days");
+    println!("  Seed: {} | Both runs use identical RNG trajectory\n", seed);
+
+    // Run control (no events)
+    let ctrl_scenario = Scenario::market_event_control();
+    let ctrl_dir = PathBuf::from("/tmp/autotune-event-ctrl");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    let mut ctrl = ctrl_scenario.clone();
+    ctrl.seed = Some(seed);
+    if let Err(e) = run_headless(&ctrl, Some(ctrl_dir.clone())) {
+        eprintln!("  Control run error: {}", e);
+        return;
+    }
+
+    // Run treatment (with events)
+    let treat_scenario = Scenario::market_event_test();
+    let treat_dir = PathBuf::from("/tmp/autotune-event-treat");
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&treat_dir).ok();
+    let mut treat = treat_scenario.clone();
+    treat.seed = Some(seed);
+    if let Err(e) = run_headless(&treat, Some(treat_dir.clone())) {
+        eprintln!("  Treatment run error: {}", e);
+        return;
+    }
+
+    // Load summaries
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Control summary error: {}", e);
+            return;
+        }
+    };
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treatment summary error: {}", e);
+            return;
+        }
+    };
+
+    // Load per-item final prices from the printout (we re-run the sims to get prices)
+    // Since we already ran both and they're in memory/output dirs, let's re-run once more
+    // to capture the exact final prices. Or use the analyze tool.
+    // Actually let's just run analyze on both DBs and parse the output.
+    // Instead, use run_seeded_headless directly and capture final prices.
+    // We already ran them. Let's use run_seeded_headless which we can inspect.
+    // Best approach: re-run both in-process to get final prices directly.
+
+    // Re-run to capture per-item final prices (same seed, same players)
+    let ctrl_dir2 = PathBuf::from("/tmp/autotune-event-ctrl2");
+    let treat_dir2 = PathBuf::from("/tmp/autotune-event-treat2");
+    let _ = std::fs::remove_dir_all(&ctrl_dir2);
+    let _ = std::fs::remove_dir_all(&treat_dir2);
+    std::fs::create_dir_all(&ctrl_dir2).ok();
+    std::fs::create_dir_all(&treat_dir2).ok();
+
+    let mut ctrl_s = ctrl_scenario.clone();
+    ctrl_s.seed = Some(seed);
+    let mut treat_s = treat_scenario.clone();
+    treat_s.seed = Some(seed);
+
+    if let Err(e) = run_seeded_headless(&ctrl_s, seed, &ctrl_dir2) {
+        eprintln!("  Control re-run error: {}", e);
+        return;
+    }
+    if let Err(e) = run_seeded_headless(&treat_s, seed, &treat_dir2) {
+        eprintln!("  Treatment re-run error: {}", e);
+        return;
+    }
+
+    // Load prices from the re-run sims via analyze
+    let ctrl_db = ctrl_dir2.join("simulation.db");
+    let treat_db = treat_dir2.join("simulation.db");
+
+    // Print macro-style comparison table
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  SUMMARY METRICS                                           ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Metric", "CONTROL (no events)", "TREATMENT (events)", "EVENT EFFECT"
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "─".repeat(20), "─".repeat(15), "─".repeat(15), "─".repeat(15)
+    );
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+    let gdp_eff = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let dg_eff = (treat_dg - ctrl_dg) / ctrl_dg.max(0.01) * 100.0;
+
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
+        "GDP", ctrl_summary.gdp, treat_summary.gdp, gdp_eff
+    );
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
+        "Total Debt", ctrl_summary.debt, treat_summary.debt,
+        (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.2}x {:>15.2}x {:>+14.1}%",
+        "Debt / GDP", ctrl_dg, treat_dg, dg_eff
+    );
+    println!(
+        "  {:20} {:>15.1}% {:>15.1}% {:>+14.1}%",
+        "Buy Ratio",
+        ctrl_summary.buy_ratio * 100.0,
+        treat_summary.buy_ratio * 100.0,
+        (treat_summary.buy_ratio - ctrl_summary.buy_ratio) / ctrl_summary.buy_ratio.max(0.01) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.4} {:>15.4} {:>+14.4}",
+        "Avg Volatility",
+        ctrl_summary.avg_volatility,
+        treat_summary.avg_volatility,
+        treat_summary.avg_volatility - ctrl_summary.avg_volatility
+    );
+    println!(
+        "  {:20} {:>15.3}% {:>15.3}% {:>+14.3}%",
+        "Avg BPD",
+        ctrl_summary.avg_bpd * 100.0,
+        treat_summary.avg_bpd * 100.0,
+        (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0
+    );
+
+    // Per-item price analysis
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  PER-ITEM PRICE ANALYSIS (same seed, same player RNG)     ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20} {:>12} {:>12} {:>10} {:>12} {:>10}",
+        "Item", "Ctrl Price", "Treat Price", "Ctrl %", "Treat %", "Event Δ"
+    );
+    println!(
+        "  {:20} {:>12} {:>12} {:>10} {:>12} {:>10}",
+        "─".repeat(20), "─".repeat(12), "─".repeat(12), "─".repeat(10),
+        "─".repeat(12), "─".repeat(10)
+    );
+
+    // Query DBs for final prices
+    use crate::analyzer::load_all_prices;
+    let ctrl_prices = load_all_prices(&ctrl_db).unwrap_or_default();
+    let treat_prices = load_all_prices(&treat_db).unwrap_or_default();
+
+    let item_names = ["Cobblestone", "Rotten Flesh", "Redstone", "Iron Ingot",
+                      "Blaze Rod", "Diamond", "Golden Apple", "Netherite Ingot"];
+
+    for name in item_names {
+        let c = ctrl_prices.iter().find(|p| p.0 == name);
+        let t = treat_prices.iter().find(|p| p.0 == name);
+        if let (Some((_, c_price, c_base)), Some((_, t_price, t_base))) = (c, t) {
+            let c_pct = (*c_price / *c_base - 1.0) * 100.0;
+            let t_pct = (*t_price / *t_base - 1.0) * 100.0;
+            let event_delta = t_pct - c_pct;
+            let event_flag = if event_delta.abs() > 1.0 {
+                if name == "Diamond" { " ← DEMAND_SURGE" }
+                else if name.starts_with("GOLD") { " ← GOLD_RUSH" }
+                else if name == "Iron Ingot" { " ← SUPPLY_GLUT" }
+                else { " ← INFLATION" }
+            } else { "" };
+            println!(
+                "  {:20} {:>12.2} {:>12.2} {:>+9.1}% {:>+11.1}% {:>+9.1}%{}",
+                name, c_price, t_price, c_pct, t_pct, event_delta, event_flag
+            );
+        }
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  ANALYSIS                                                  ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    if gdp_eff < -10.0 {
+        println!("  ⚠️  Events REDUCED GDP by {:.1}% — events suppress economic activity", gdp_eff.abs());
+    } else if gdp_eff > 10.0 {
+        println!("  ✅ Events BOOSTED GDP by {:.1}% — events stimulate trade", gdp_eff);
+    } else {
+        println!("  ✅ Events had NEUTRAL GDP effect ({:+.1}%)", gdp_eff);
+    }
+
+    if dg_eff < -10.0 {
+        println!("  ✅ Events REDUCED Debt/GDP by {:.1}% — healthier debt levels", dg_eff.abs());
+    } else if dg_eff > 10.0 {
+        println!("  ⚠️  Events WORSENED Debt/GDP by {:.1}% — more debt relative to GDP", dg_eff);
+    } else {
+        println!("  ⚠️  Events had NEAR-NEUTRAL Debt/GDP effect ({:+.1}%)", dg_eff);
+    }
+
+    let vol_diff = treat_summary.avg_volatility - ctrl_summary.avg_volatility;
+    if vol_diff > 0.01 {
+        println!("  ⚠️  Events INCREASED volatility (+{:.4})", vol_diff);
+    } else if vol_diff < -0.01 {
+        println!("  ✅ Events REDUCED volatility ({:.4})", vol_diff);
+    } else {
+        println!("  ✅ Events had NEUTRAL effect on volatility ({:.4})", vol_diff);
+    }
+
+    println!("\n  Key findings:");
+    println!("  1. Events are designed to amplify price moves during active windows.");
+    println!("  2. After events end (day 5-12), prices should naturalize toward control levels.");
+    println!("  3. If final prices differ substantially, events create lasting price distortions.");
+    println!("  4. Net economic health effect (GDP, D/G) is the primary success metric.");
+
+    // Cleanup
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    let _ = std::fs::remove_dir_all(&ctrl_dir2);
+    let _ = std::fs::remove_dir_all(&treat_dir2);
+}
+
+// ─── InsiderTrader Added Test ───────────────────────────────────────────────
+
+/// Tests whether adding 2 InsiderTraders to the recommended economy
+/// (standard+MM+GB@7%) improves stability and economic health.
+///
+/// Control: guild_stability_mm_fixed_guild (1MM + 2GB@7% + 4Cas + 3Far + 2Tra, no IT)
+/// Treatment: standard_plus_mm_gb_it (same + 2 InsiderTraders)
+///
+/// Same seed (42) for both runs — identical RNG, only the IT archetype differs.
+fn run_it_added_test() {
+    use crate::analyzer::load_summary;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       INSIDERTRADER ADDED TEST                             ║");
+    println!("║  Control vs Treatment — 2 ITs added to recommended config ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guild_stability_mm_fixed_guild (1MM+2GB@7%+4Cas+3Far+2Tra)");
+    println!("  Treatment: same + 2 InsiderTraders (mean-reversion archetype)");
+    println!("  Seed: {}\n", seed);
+
+    let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let treat_scenario = Scenario::standard_plus_mm_gb_it();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-it-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-it-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl = ctrl_scenario.clone();
+    ctrl.seed = Some(seed);
+    let mut treat = treat_scenario.clone();
+    treat.seed = Some(seed);
+
+    println!("─── Control (no IT) ───");
+    if let Err(e) = run_headless(&ctrl, Some(ctrl_dir.clone())) {
+        eprintln!("  Control error: {}", e);
+        return;
+    }
+
+    println!("\n─── Treatment (+2 IT) ───");
+    if let Err(e) = run_headless(&treat, Some(treat_dir.clone())) {
+        eprintln!("  Treatment error: {}", e);
+        return;
+    }
+
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Summary error: {}", e);
+            return;
+        }
+    };
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Summary error: {}", e);
+            return;
+        }
+    };
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  RESULTS — IT ADDED vs CONTROL                             ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Metric", "CONTROL (no IT)", "TREATMENT (+2 IT)", "Effect"
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "─".repeat(20), "─".repeat(15), "─".repeat(15), "─".repeat(15)
+    );
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
+        "GDP",
+        ctrl_summary.gdp,
+        treat_summary.gdp,
+        (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
+        "Total Debt",
+        ctrl_summary.debt,
+        treat_summary.debt,
+        (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.2}x {:>15.2}x {:>+14.1}%",
+        "Debt / GDP",
+        ctrl_dg,
+        treat_dg,
+        (treat_dg / ctrl_dg.max(0.01) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.1}% {:>15.1}% {:>+14.1}%",
+        "Buy Ratio",
+        ctrl_summary.buy_ratio * 100.0,
+        treat_summary.buy_ratio * 100.0,
+        (treat_summary.buy_ratio - ctrl_summary.buy_ratio) / ctrl_summary.buy_ratio.max(0.01) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.4} {:>15.4} {:>+14.4}",
+        "Avg Volatility",
+        ctrl_summary.avg_volatility,
+        treat_summary.avg_volatility,
+        treat_summary.avg_volatility - ctrl_summary.avg_volatility
+    );
+    println!(
+        "  {:20} {:>15.3}% {:>15.3}% {:>+14.3}%",
+        "Avg BPD",
+        ctrl_summary.avg_bpd * 100.0,
+        treat_summary.avg_bpd * 100.0,
+        (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0
+    );
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  VERDICT                                                   ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    let gdp_change = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let dg_change = (treat_dg / ctrl_dg.max(0.01) - 1.0) * 100.0;
+    let vol_change = treat_summary.avg_volatility - ctrl_summary.avg_volatility;
+    let bpd_change = (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0;
+
+    let mut improvements = 0;
+    let mut regressions = 0;
+
+    if gdp_change > 5.0 {
+        println!("  ✅ GDP: +{:.1}% (ITs boost economic activity)", gdp_change);
+        improvements += 1;
+    } else if gdp_change < -5.0 {
+        println!("  ⚠️  GDP: {:.1}% (ITs reduce economic activity)", gdp_change);
+        regressions += 1;
+    } else {
+        println!("  ⚠️  GDP: {:+.1}% (ITs have neutral GDP effect)", gdp_change);
+    }
+
+    if dg_change < -10.0 {
+        println!("  ✅ Debt/GDP: {:.1}% (ITs improve debt health)", dg_change);
+        improvements += 1;
+    } else if dg_change > 10.0 {
+        println!("  ⚠️  Debt/GDP: +{:.1}% (ITs worsen debt health)", dg_change);
+        regressions += 1;
+    } else {
+        println!("  ⚠️  Debt/GDP: {:+.1}% (ITs have neutral debt effect)", dg_change);
+    }
+
+    if vol_change < -0.005 {
+        println!("  ✅ Volatility: {:.4} (ITs reduce volatility)", vol_change);
+        improvements += 1;
+    } else if vol_change > 0.005 {
+        println!("  ⚠️  Volatility: +{:.4} (ITs increase volatility)", vol_change);
+        regressions += 1;
+    } else {
+        println!("  ⚠️  Volatility: {:+.4} (ITs have neutral volatility effect)", vol_change);
+    }
+
+    if bpd_change < -0.2 {
+        println!("  ✅ BPD: {:.2}% (ITs tighten spreads)", bpd_change);
+        improvements += 1;
+    } else if bpd_change > 0.2 {
+        println!("  ⚠️  BPD: +{:.2}% (ITs widen spreads)", bpd_change);
+        regressions += 1;
+    } else {
+        println!("  ⚠️  BPD: {:+.2}% (ITs have neutral spread effect)", bpd_change);
+    }
+
+    println!();
+    if improvements >= 3 && regressions == 0 {
+        println!("  ✅ RECOMMENDATION: ADD InsiderTraders to recommended config.");
+        println!("     ITs complement MM+GB by accelerating mean-reversion after price shocks.");
+    } else if regressions >= 2 {
+        println!("  ⚠️  RECOMMENDATION: DO NOT add ITs — they degrade economic health.");
+        println!("     InsiderTraders may be redundant with or destabilizing vs MM+GB.");
+    } else {
+        println!("  ⚠️  MIXED: {} improvements, {} regressions.", improvements, regressions);
+        println!("     InsiderTraders have a modest mixed effect — optional for realism.");
+    }
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
 fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), String> {
+    use crate::player::set_global_seeded_rng;
     use crate::recorder::DataRecorder;
 
     println!("=== Running Scenario: {} ===", scenario.name);
@@ -1144,7 +1675,17 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
     );
     println!("Speed: {} ticks/sec", scenario.speed_ticks_per_sec);
 
-    let mut sim = Simulation::new(scenario.config.clone());
+    // Use seeded RNG if scenario specifies a seed, otherwise use wall-clock randomness
+    if let Some(seed) = scenario.seed {
+        println!("Seed: {} (deterministic)", seed);
+        set_global_seeded_rng(seed);
+    }
+
+    let mut sim = if let Some(seed) = scenario.seed {
+        Simulation::new_seeded(scenario.config.clone(), seed)
+    } else {
+        Simulation::new(scenario.config.clone())
+    };
     sim.events = scenario.events.clone();
 
     // Add players
@@ -2619,6 +3160,11 @@ fn main() -> eframe::Result<()> {
             let output_idx = args.iter().position(|s| s == "--output");
             output_idx.and_then(|i| args.get(i + 1)).map(PathBuf::from)
         };
+        // --seed <N> overrides the scenario's seed (useful for deterministic replay)
+        let seed_override = {
+            let seed_idx = args.iter().position(|s| s == "--seed");
+            seed_idx.and_then(|i| args.get(i + 1)?.parse::<u64>().ok())
+        };
 
         if scenario_name == "all" {
             let scenarios: Vec<Scenario> = vec![
@@ -2636,6 +3182,9 @@ fn main() -> eframe::Result<()> {
                 Scenario::standard_with_mm_fixed_guild(),
                 Scenario::exploiter_stress(),
                 Scenario::exploiter_cap_test(),
+                Scenario::insider_trader_test(),
+                Scenario::market_event_test(),
+                Scenario::standard_plus_mm_gb_it(),
             ];
             let base_dir = output_dir.unwrap_or_else(|| PathBuf::from("./output"));
             let mut results: Vec<(String, bool, String)> = Vec::new();
@@ -2678,6 +3227,10 @@ fn main() -> eframe::Result<()> {
                 "exploiter-cap-test" | "exploiter_cap_test" => Scenario::exploiter_cap_test(),
                 "insider-trader-test" | "insider_trader_test" => Scenario::insider_trader_test(),
                 "market-event-test" | "market_event_test" => Scenario::market_event_test(),
+                "market-event-control" | "market_event_control" => Scenario::market_event_control(),
+                "standard-plus-mm-gb-it" | "standard_plus_mm_gb_it" => {
+                    Scenario::standard_plus_mm_gb_it()
+                }
                 "correlation" => Scenario::correlation(),
                 _ => {
                     eprintln!(
@@ -2689,11 +3242,29 @@ fn main() -> eframe::Result<()> {
             };
             let out_dir =
                 output_dir.or_else(|| Some(PathBuf::from(format!("./output/{}", scenario_name))));
+            let scenario = if let Some(seed) = seed_override {
+                let mut s = scenario;
+                s.seed = Some(seed);
+                s
+            } else {
+                scenario
+            };
             if let Err(e) = run_headless(&scenario, out_dir) {
                 eprintln!("Error: {}", e);
                 std::process::exit(1);
             }
         }
+        return Ok(());
+    }
+
+    // ─── Event Control Test ───────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--event-control-test" {
+        run_event_control_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--it-added-test" {
+        run_it_added_test();
         return Ok(());
     }
 

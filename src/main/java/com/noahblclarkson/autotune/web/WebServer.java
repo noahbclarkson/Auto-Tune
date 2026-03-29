@@ -16,7 +16,9 @@ import com.noahblclarkson.autotune.economy.EconomyManager;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
+import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.manager.ShopManager;
+import com.noahblclarkson.autotune.model.MarketEvent;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
 import com.noahblclarkson.autotune.model.Loan;
 import com.noahblclarkson.autotune.model.PlayerData;
@@ -67,6 +69,7 @@ public class WebServer {
     private final LoanManager loanManager;
     private final ShopManager shopManager;
     private final EconomyManager economyManager;
+    private final MarketEventService marketEventService;
     private final Server server;
     private final PortfolioService portfolioService;
     private final Gson gson;
@@ -88,6 +91,7 @@ public class WebServer {
             LoanManager loanManager,
             ShopManager shopManager,
             EconomyManager economyManager,
+            MarketEventService marketEventService,
             Server server
     ) {
         this.plugin = plugin;
@@ -102,6 +106,7 @@ public class WebServer {
         this.loanManager = loanManager;
         this.shopManager = shopManager;
         this.economyManager = economyManager;
+        this.marketEventService = marketEventService;
         this.server = server;
         this.portfolioService = new PortfolioService(
                 playerRepository, itemRepository, loanRepository, economyManager, server);
@@ -424,6 +429,47 @@ public class WebServer {
         app.get("/api/economy/volume-multiplier", ctx -> {
             ctx.json(Map.of(
                     "multiplier", marketEngine.getGlobalVolumeMultiplier(),
+                    KEY_TIMESTAMP, System.currentTimeMillis()
+            ));
+        });
+
+        // ── Market events endpoint ──────────────────────────────────────────
+        app.get("/api/events", ctx -> {
+            List<MarketEvent> active = marketEventService.getActiveEvents();
+            List<MarketEvent> recent = marketEventService.listEvents().stream()
+                    .filter(e -> e.status() != com.noahblclarkson.autotune.model.MarketEvent.Status.SCHEDULED)
+                    .limit(20)
+                    .toList();
+            Instant now = Instant.now();
+            List<Map<String, Object>> activeDtos = active.stream()
+                    .map(e -> Map.<String, Object>of(
+                            "id", e.id().toString(),
+                            "name", e.name(),
+                            "type", e.type().name(),
+                            "materials", e.materials(),
+                            "multiplier", e.priceMultiplier(),
+                            "startsAt", e.startsAt().toEpochMilli(),
+                            "endsAt", e.endsAt().toEpochMilli(),
+                            "status", e.status().name(),
+                            "remainingMinutes", Math.max(0, Duration.between(now, e.endsAt()).toMinutes())
+                    ))
+                    .toList();
+            List<Map<String, Object>> recentDtos = recent.stream()
+                    .map(e -> Map.<String, Object>of(
+                            "id", e.id().toString(),
+                            "name", e.name(),
+                            "type", e.type().name(),
+                            "materials", e.materials(),
+                            "multiplier", e.priceMultiplier(),
+                            "startsAt", e.startsAt().toEpochMilli(),
+                            "endsAt", e.endsAt().toEpochMilli(),
+                            "status", e.status().name()
+                    ))
+                    .toList();
+            ctx.json(Map.of(
+                    "active", activeDtos,
+                    "recent", recentDtos,
+                    "activeCount", active.size(),
                     KEY_TIMESTAMP, System.currentTimeMillis()
             ));
         });

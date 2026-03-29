@@ -116,13 +116,15 @@ tasks {
         relocate("io.javalin", "com.noahblclarkson.autotune.lib.javalin")
         relocate("org.eclipse.jetty", "com.noahblclarkson.autotune.lib.jetty")
         relocate("com.github.stefvanschie.inventoryframework", "com.noahblclarkson.autotune.lib.inventoryframework")
-        relocate("com.google.inject", "com.noahblclarkson.autotune.lib.guice")
 
         minimize {
             exclude(dependency("org.xerial:.*"))
             exclude(dependency("org.mariadb.jdbc:.*"))
             exclude(dependency("io.javalin:.*"))
             exclude(dependency("org.eclipse.jetty:.*"))
+            // Guice has complex multi-release JAR structure and SPI/service-loading
+            // that breaks when minimized or relocated in Paper's classloader hierarchy.
+            exclude(dependency("com.google.inject:.*"))
         }
     }
 

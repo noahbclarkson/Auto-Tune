@@ -8,17 +8,21 @@ import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.economy.LoanManager;
+import com.noahblclarkson.autotune.manager.DatabaseCleanupManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.ExchangeRateService;
 import com.noahblclarkson.autotune.manager.MarketEngine;
+import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
 import com.noahblclarkson.autotune.model.ExchangeRate;
+import com.noahblclarkson.autotune.model.MarketEvent;
 import com.noahblclarkson.autotune.model.PriceHistory;
 import com.noahblclarkson.autotune.model.PriceOverride;
 import com.noahblclarkson.autotune.model.ShopItem;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.command.CommandSender;
@@ -61,6 +65,8 @@ public class AdminCommand {
     private final TransactionRepository transactionRepository;
     private final ItemRepository itemRepository;
     private final ExchangeRateService exchangeRateService;
+    private final DatabaseCleanupManager cleanupManager;
+    private final MarketEventService marketEventService;
 
     @Inject
     public AdminCommand(
@@ -73,7 +79,9 @@ public class AdminCommand {
             LoanManager loanManager,
             TransactionRepository transactionRepository,
             ItemRepository itemRepository,
-            ExchangeRateService exchangeRateService
+            ExchangeRateService exchangeRateService,
+            DatabaseCleanupManager cleanupManager,
+            MarketEventService marketEventService
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -85,6 +93,8 @@ public class AdminCommand {
         this.transactionRepository = transactionRepository;
         this.itemRepository = itemRepository;
         this.exchangeRateService = exchangeRateService;
+        this.cleanupManager = cleanupManager;
+        this.marketEventService = marketEventService;
     }
 
     @Command("autotune admin")
@@ -96,6 +106,8 @@ public class AdminCommand {
                 .append(Component.text(" — Economy overview and health", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin health", NamedTextColor.YELLOW)
                 .append(Component.text(" — Full economy diagnostic report", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin audit", NamedTextColor.YELLOW)
+                .append(Component.text(" — System health and consistency check", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin stats", NamedTextColor.YELLOW)
                 .append(Component.text(" — Detailed market statistics", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin market freeze", NamedTextColor.YELLOW)
@@ -164,6 +176,382 @@ public class AdminCommand {
         }
 
         sender.sendMessage(Component.empty());
+    }
+
+    @Command("autotune admin audit")
+    @Permission("autotune.admin")
+    public void adminAudit(CommandSender sender) {
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Auto-Tune System Audit", NamedTextColor.GOLD, TextDecoration.BOLD)
+                .append(Component.text(" — " + DATE_FORMAT.format(Instant.now()), NamedTextColor.DARK_GRAY)));
+        sender.sendMessage(Component.empty());
+
+        int issues = 0;
+
+        // ── 1. Vault check ────────────────────────────────────────────────
+        sender.sendMessage(Component.text("Vault & Dependencies", NamedTextColor.YELLOW, TextDecoration.BOLD));
+        boolean vaultOk = checkVault(sender);
+        if (!vaultOk) issues++;
+        sender.sendMessage(Component.empty());
+
+        // ── 2. Config sanity ───────────────────────────────────────────────
+        sender.sendMessage(Component.text("Configuration", NamedTextColor.YELLOW, TextDecoration.BOLD));
+        issues += checkConfig(sender);
+        sender.sendMessage(Component.empty());
+
+        // ── 3. Economy state ───────────────────────────────────────────────
+        sender.sendMessage(Component.text("Economy State", NamedTextColor.YELLOW, TextDecoration.BOLD));
+        issues += checkEconomyState(sender);
+        sender.sendMessage(Component.empty());
+
+        // ── 4. Database health ─────────────────────────────────────────────
+        sender.sendMessage(Component.text("Database", NamedTextColor.YELLOW, TextDecoration.BOLD));
+        issues += checkDatabase(sender);
+        sender.sendMessage(Component.empty());
+
+        // ── 5. Circuit breaker ─────────────────────────────────────────────
+        sender.sendMessage(Component.text("Loan Circuit Breaker", NamedTextColor.YELLOW, TextDecoration.BOLD));
+        issues += checkCircuitBreaker(sender);
+        sender.sendMessage(Component.empty());
+
+        // ── Summary ────────────────────────────────────────────────────────
+        sender.sendMessage(Component.empty());
+        if (issues == 0) {
+            sender.sendMessage(Component.text("✅ No issues found — economy looks healthy.",
+                    NamedTextColor.GREEN).decorate(TextDecoration.BOLD));
+        } else {
+            sender.sendMessage(Component.text("⚠️  " + issues + " issue(s) found — review above for details.",
+                    NamedTextColor.YELLOW).decorate(TextDecoration.BOLD));
+            sender.sendMessage(Component.text("  Run /at admin health for a full market diagnostic.",
+                    NamedTextColor.GRAY));
+        }
+        sender.sendMessage(Component.empty());
+    }
+
+    private boolean checkVault(CommandSender sender) {
+        try {
+            var reg = plugin.getServer().getServicesManager()
+                    .getRegistration(net.milkbowl.vault.economy.Economy.class);
+            if (reg == null) {
+                sender.sendMessage(Component.text("  ❌ Vault Economy provider not found.", NamedTextColor.RED)
+                        .append(Component.text(" Players cannot buy or sell.", NamedTextColor.GRAY)));
+                return false;
+            }
+            net.milkbowl.vault.economy.Economy eco = reg.getProvider();
+            // Test with the console's UUID (Minecraft console UUID: UUID for "Console" or use first online player)
+            if (eco != null) {
+                sender.sendMessage(Component.text("  ✅ Vault Economy connected.", NamedTextColor.GREEN));
+                return true;
+            } else {
+                sender.sendMessage(Component.text("  ❌ Vault Economy provider is null.", NamedTextColor.RED));
+                return false;
+            }
+        } catch (Exception e) {
+            sender.sendMessage(Component.text("  ❌ Vault Economy error: " + e.getMessage(), NamedTextColor.RED));
+            return false;
+        }
+    }
+
+    private int checkConfig(CommandSender sender) {
+        int issues = 0;
+        var config = configManager.getConfig();
+
+        // Market frozen
+        if (marketEngine.isFrozen()) {
+            sender.sendMessage(Component.text("  ⚠️  Market is frozen — prices are not updating.", NamedTextColor.YELLOW));
+            issues++;
+        }
+
+        // Spread sanity
+        double baseSpread = config.economy().spread().baseSpread();
+        if (baseSpread <= 0) {
+            sender.sendMessage(Component.text("  ❌ baseSpread is " + baseSpread + " — must be > 0. Prices cannot update.",
+                    NamedTextColor.RED));
+            issues++;
+        } else if (baseSpread > 1.0) {
+            sender.sendMessage(Component.text("  ❌ baseSpread is " + baseSpread + " — must be ≤ 1.0 (100%).",
+                    NamedTextColor.RED));
+            issues++;
+        } else if (baseSpread > 0.5) {
+            sender.sendMessage(Component.text("  ⚠️  baseSpread is " + (baseSpread * 100) + "% — spreads will be very wide.",
+                    NamedTextColor.YELLOW));
+            issues++;
+        } else {
+            sender.sendMessage(Component.text("  ✅ baseSpread: " + (baseSpread * 100) + "%", NamedTextColor.GREEN));
+        }
+
+        // Max price change
+        double maxChange = config.economy().maxPriceChangePercent();
+        if (maxChange <= 0 || maxChange > 50) {
+            sender.sendMessage(Component.text("  ❌ maxPriceChangePercent is " + maxChange
+                    + "% — should be between 0.1 and 50. Prices may behave unpredictably.", NamedTextColor.RED));
+            issues++;
+        } else {
+            sender.sendMessage(Component.text("  ✅ maxPriceChangePercent: " + maxChange + "%", NamedTextColor.GREEN));
+        }
+
+        // Market tick interval
+        long tickInterval = config.economy().updateInterval();
+        long tickMs = tickInterval * 50;
+        if (tickInterval <= 0) {
+            sender.sendMessage(Component.text("  ❌ Market tick interval is " + tickInterval + " — must be > 0.",
+                    NamedTextColor.RED));
+            issues++;
+        } else if (tickMs < 60000) {
+            sender.sendMessage(Component.text("  ⚠️  Market tick is every " + (tickMs / 1000) + "s — very fast! "
+                    + "Consider ≥ 6000 (5 min) for typical servers.", NamedTextColor.YELLOW));
+            issues++;
+        } else {
+            sender.sendMessage(Component.text("  ✅ Market tick: every " + (tickMs / 1000) + "s", NamedTextColor.GREEN));
+        }
+
+        // Loan enabled but no interest rate
+        if (config.loans().enabled()) {
+            double rate = config.loans().baseInterestRate();
+            if (rate <= 0) {
+                sender.sendMessage(Component.text("  ❌ Loans enabled but interest rate is " + rate
+                        + " — loans will never generate revenue.", NamedTextColor.RED));
+                issues++;
+            } else if (rate > 0.5) {
+                sender.sendMessage(Component.text("  ⚠️  Interest rate is " + (rate * 100)
+                        + "% — may be too high for players.", NamedTextColor.YELLOW));
+                issues++;
+            } else {
+                sender.sendMessage(Component.text("  ✅ Loan interest rate: " + (rate * 100) + "%", NamedTextColor.GREEN));
+            }
+        } else {
+            sender.sendMessage(Component.text("  ℹ️  Loans disabled.", NamedTextColor.GRAY));
+        }
+
+        // Exchange rate fetch issues
+        if (exchangeRateService.isEnabled()) {
+            if (exchangeRateService.lastFetchFailed()) {
+                sender.sendMessage(Component.text("  ⚠️  Exchange rate fetch failed on last attempt — "
+                        + "check API server is reachable and API key is valid.", NamedTextColor.YELLOW));
+                issues++;
+            } else if (exchangeRateService.lastFetchedAt() == null) {
+                sender.sendMessage(Component.text("  ⚠️  Exchange rates enabled but never fetched successfully.",
+                        NamedTextColor.YELLOW));
+                issues++;
+            } else {
+                Duration ago = Duration.between(exchangeRateService.lastFetchedAt(), Instant.now());
+                sender.sendMessage(Component.text("  ✅ Exchange rates — last fetched "
+                        + formatDuration(ago) + " ago", NamedTextColor.GREEN));
+            }
+        } else {
+            sender.sendMessage(Component.text("  ℹ️  Exchange rates disabled.", NamedTextColor.GRAY));
+        }
+
+        // Database cleanup
+        int cleanupHours = config.cleanup().cleanupIntervalHours();
+        if (cleanupHours <= 0) {
+            sender.sendMessage(Component.text("  ⚠️  Database cleanup disabled — data.db may grow unbounded.",
+                    NamedTextColor.YELLOW));
+            issues++;
+        } else {
+            sender.sendMessage(Component.text("  ✅ Database cleanup every " + cleanupHours + "h", NamedTextColor.GREEN));
+        }
+
+        return issues;
+    }
+
+    private int checkEconomyState(CommandSender sender) {
+        int issues = 0;
+
+        Optional<EconomySnapshot> snapOpt = metricsManager.getLatestSnapshot();
+        if (snapOpt.isEmpty()) {
+            sender.sendMessage(Component.text("  ⚠️  No economy snapshot yet — "
+                    + "economy hasn't been running long enough.", NamedTextColor.YELLOW));
+            issues++;
+            return issues;
+        }
+
+        EconomySnapshot snap = snapOpt.get();
+
+        // GDP sanity
+        if (snap.gdp().compareTo(BigDecimal.ZERO) <= 0) {
+            sender.sendMessage(Component.text("  ❌ GDP is " + configManager.formatCurrency(snap.gdp())
+                    + " — no economic activity detected.", NamedTextColor.RED));
+            issues++;
+        } else if (snap.gdp().compareTo(new BigDecimal("100")) < 0) {
+            sender.sendMessage(Component.text("  ⚠️  GDP is very low: " + configManager.formatCurrency(snap.gdp())
+                    + " — may indicate a new or inactive economy.", NamedTextColor.YELLOW));
+            issues++;
+        } else {
+            sender.sendMessage(Component.text("  ✅ GDP: " + configManager.formatCurrency(snap.gdp()),
+                    NamedTextColor.GREEN));
+        }
+
+        // Debt/GDP ratio
+        if (snap.gdp().compareTo(BigDecimal.ZERO) > 0) {
+            double ratio = snap.totalDebt().divide(snap.gdp(), 4, RoundingMode.HALF_UP).doubleValue();
+            if (ratio > 10) {
+                sender.sendMessage(Component.text("  ❌ Debt/GDP is " + String.format("%.1fx", ratio)
+                        + " — critical. Circuit breaker should be pausing interest.",
+                        NamedTextColor.RED));
+                issues++;
+            } else if (ratio > 3) {
+                sender.sendMessage(Component.text("  ⚠️  Debt/GDP is " + String.format("%.1fx", ratio)
+                        + " — elevated. Monitor with /at admin health.", NamedTextColor.YELLOW));
+                issues++;
+            } else {
+                sender.sendMessage(Component.text("  ✅ Debt/GDP: " + String.format("%.1fx", ratio),
+                        NamedTextColor.GREEN));
+            }
+        }
+
+        // Volume activity
+        if (snap.transactionVolume().compareTo(BigDecimal.ZERO) <= 0) {
+            sender.sendMessage(Component.text("  ⚠️  No transaction volume in the snapshot period — "
+                    + "players may not be trading.", NamedTextColor.YELLOW));
+            issues++;
+        }
+
+        // Stale snapshot
+        Duration age = Duration.between(snap.timestamp(), Instant.now());
+        if (age.toMinutes() > 15) {
+            sender.sendMessage(Component.text("  ❌ Latest snapshot is " + formatDuration(age)
+                    + " old — snapshot system may be broken.", NamedTextColor.RED));
+            issues++;
+        } else {
+            sender.sendMessage(Component.text("  ✅ Snapshot age: " + formatDuration(age) + " ago",
+                    NamedTextColor.GREEN));
+        }
+
+        // Active expired price overrides
+        Map<Integer, PriceOverride> overrides = overrideRepo.getAllOverrides();
+        long expiredCount = overrides.values().stream().filter(PriceOverride::isExpired).count();
+        if (expiredCount > 0) {
+            sender.sendMessage(Component.text("  ⚠️  " + expiredCount + " expired price override(s) not cleaned up — "
+                    + "run /at admin reload to clear or remove manually with /at admin price remove.",
+                    NamedTextColor.YELLOW));
+            issues++;
+        }
+
+        // Items with stale prices
+        List<ShopItem> allItems = shopManager.getAllItems();
+        Instant oneWeekAgo = Instant.now().minus(Duration.ofDays(7));
+        int staleItems = 0;
+        for (ShopItem item : allItems) {
+            List<PriceHistory> history = itemRepository.getPriceHistorySince(item.id(), oneWeekAgo, 1);
+            if (history.isEmpty()) {
+                staleItems++;
+            }
+        }
+        if (staleItems > 0 && allItems.size() > 0) {
+            double pct = (staleItems * 100.0) / allItems.size();
+            sender.sendMessage(Component.text("  ⚠️  " + staleItems + "/" + allItems.size()
+                    + " items (" + String.format("%.0f%%", pct) + ") have no price history in 7 days — "
+                    + "these items may not be trading.", NamedTextColor.YELLOW));
+            issues++;
+        }
+
+        return issues;
+    }
+
+    private int checkDatabase(CommandSender sender) {
+        int issues = 0;
+
+        try {
+            DatabaseCleanupManager.CleanupStats stats = cleanupManager.getStats();
+
+            sender.sendMessage(Component.text("  Table sizes:", NamedTextColor.GRAY));
+            sender.sendMessage(Component.text("    Transactions: " + formatNumber(stats.transactionCount()), NamedTextColor.AQUA));
+            sender.sendMessage(Component.text("    Market history: " + formatNumber(stats.marketHistoryCount()), NamedTextColor.AQUA));
+            sender.sendMessage(Component.text("    Economy snapshots: " + formatNumber(stats.snapshotCount()), NamedTextColor.AQUA));
+            sender.sendMessage(Component.text("    Auction orders: " + formatNumber(stats.auctionOrderCount()), NamedTextColor.AQUA));
+            sender.sendMessage(Component.text("    Auction fills: " + formatNumber(stats.auctionFillCount()), NamedTextColor.AQUA));
+            sender.sendMessage(Component.text("    Market events: " + formatNumber(stats.marketEventCount()), NamedTextColor.AQUA));
+
+            // Warn about large tables
+            if (stats.transactionCount() > 1_000_000) {
+                sender.sendMessage(Component.text("  ⚠️  Transactions table has "
+                        + formatNumber(stats.transactionCount()) + " rows — "
+                        + "consider reducing cleanup.retention-days if > 14 days.",
+                        NamedTextColor.YELLOW));
+                issues++;
+            }
+            if (stats.marketHistoryCount() > 5_000_000) {
+                sender.sendMessage(Component.text("  ⚠️  Market history has "
+                        + formatNumber(stats.marketHistoryCount()) + " rows — "
+                        + "consider reducing cleanup.market-history.retention-days if > 7 days.",
+                        NamedTextColor.YELLOW));
+                issues++;
+            }
+
+            // Market events stuck in unusual state
+            List<MarketEvent> allEvents = marketEventService.listEvents();
+            long activeCount = allEvents.stream()
+                    .filter(e -> e.status() == com.noahblclarkson.autotune.model.MarketEvent.Status.ACTIVE)
+                    .count();
+            if (activeCount > 5) {
+                sender.sendMessage(Component.text("  ⚠️  " + activeCount + " active market events — "
+                        + "too many simultaneous events may distort prices.",
+                        NamedTextColor.YELLOW));
+                issues++;
+            } else {
+                sender.sendMessage(Component.text("  ✅ Active market events: " + activeCount, NamedTextColor.GREEN));
+            }
+
+        } catch (Exception e) {
+            sender.sendMessage(Component.text("  ❌ Failed to read database stats: " + e.getMessage(),
+                    NamedTextColor.RED));
+            issues++;
+        }
+
+        return issues;
+    }
+
+    private int checkCircuitBreaker(CommandSender sender) {
+        int issues = 0;
+        LoanManager.CircuitBreakerStatus cb = loanManager.getCircuitBreakerStatus();
+
+        sender.sendMessage(Component.text("  Tier: ", NamedTextColor.GRAY)
+                .append(switch (cb.tier()) {
+                    case "TIER3" -> Component.text("EMERGENCY", NamedTextColor.RED);
+                    case "TIER2" -> Component.text("DANGER", NamedTextColor.RED);
+                    case "TIER1" -> Component.text("WARNING", NamedTextColor.YELLOW);
+                    default -> Component.text("Normal", NamedTextColor.GREEN);
+                }));
+
+        if (cb.debtGdpRatio() >= 0) {
+            sender.sendMessage(Component.text("  Debt/GDP: ", NamedTextColor.GRAY)
+                    .append(Component.text(String.format("%.2fx", cb.debtGdpRatio()),
+                            cb.debtGdpRatio() > 10 ? NamedTextColor.RED
+                                    : cb.debtGdpRatio() > 3 ? NamedTextColor.YELLOW
+                                    : NamedTextColor.GREEN)));
+        } else {
+            sender.sendMessage(Component.text("  Debt/GDP: N/A (GDP = 0)", NamedTextColor.GRAY));
+        }
+
+        sender.sendMessage(Component.text("  Interest rate: ", NamedTextColor.GRAY)
+                .append(Component.text(String.format("%.0f%% of normal",
+                        cb.interestMultiplier() * 100),
+                        cb.interestMultiplier() < 1.0 ? NamedTextColor.YELLOW : NamedTextColor.GREEN)));
+
+        if (!"NORMAL".equals(cb.tier())) {
+            sender.sendMessage(Component.text("  ⚠️  Circuit breaker is active — "
+                    + "interest is being capped or paused.", NamedTextColor.YELLOW)
+                    .append(Component.text(" Run /at admin health to see full circuit breaker state.",
+                            NamedTextColor.GRAY)));
+            issues++;
+        } else {
+            sender.sendMessage(Component.text("  ✅ Circuit breaker is idle — economy is in a healthy state.",
+                    NamedTextColor.GREEN));
+        }
+
+        // Check for overdue loans
+        var overdueLoans = loanManager.getOverdueLoans();
+        if (!overdueLoans.isEmpty()) {
+            sender.sendMessage(Component.text("  ⚠️  " + overdueLoans.size()
+                    + " overdue loan(s) — consider using /loan forgive or adjusting terms.",
+                    NamedTextColor.YELLOW));
+            issues++;
+        } else {
+            sender.sendMessage(Component.text("  ✅ No overdue loans.", NamedTextColor.GREEN));
+        }
+
+        return issues;
     }
 
     @Command("autotune admin health")
@@ -811,6 +1199,19 @@ public class AdminCommand {
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────
+
+    private String formatDuration(Duration d) {
+        if (d.toMinutes() < 1) return "<1 min";
+        if (d.toMinutes() < 60) return d.toMinutes() + " min";
+        if (d.toHours() < 24) return d.toHours() + " h";
+        return d.toDays() + " d";
+    }
+
+    private String formatNumber(long n) {
+        if (n >= 1_000_000) return String.format("%.1fM", n / 1_000_000.0);
+        if (n >= 1_000) return String.format("%.1fK", n / 1_000.0);
+        return String.valueOf(n);
+    }
 
     private org.bukkit.Material matchMaterial(String name) {
         org.bukkit.Material mat = org.bukkit.Material.matchMaterial(name.toUpperCase(Locale.ROOT));

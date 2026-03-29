@@ -252,6 +252,11 @@ public class LoanManager {
         return loanRepository.findActiveByPlayer(playerUuid);
     }
 
+    /** Returns all currently overdue loans. Does not modify state. */
+    public List<Loan> getOverdueLoans() {
+        return loanRepository.findOverdueLoans();
+    }
+
     public List<Loan> getLoanHistory(@NotNull UUID playerUuid) {
         return loanRepository.findByPlayer(playerUuid);
     }

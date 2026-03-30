@@ -23,13 +23,16 @@ This web app lets you experiment with all those parameters in real-time via an i
 
 | Route | Description |
 |-------|-------------|
-| `/` | Landing page — overview & feature highlights |
+| `/` | Landing page — overview, social proof, feature highlights |
 | `/how-it-works` | Deep-dive explanation of the pricing algorithm |
-| `/simulator` | Interactive simulator with sliders, charts & stability forecast |
+| `/simulator` | Interactive simulator with sliders, charts, market events & stability forecast |
 | `/sweep-results` | 840-config parameter sweep results — filter, sort & find optimal settings |
+| `/simulation-results` | Cross-run simulation analysis from the Rust market simulator |
 | `/true-prices` | Cross-server true-price discovery from ratio matrices |
 | `/exchange-rates` | Per-server economy multipliers vs. global baseline |
 | `/servers` | Registered servers & their submission status |
+| `/roadmap` | What's coming next — organized by category |
+| `/api-docs` | API reference for the Rust API server |
 
 ---
 
@@ -121,12 +124,20 @@ web-optimizer/
 │   │   │   └── page.tsx          # True-price table + local calculator
 │   │   ├── exchange-rates/
 │   │   │   └── page.tsx          # Server rate table + bar chart
-│   │   └── servers/
-│   │       └── page.tsx          # Server registry + registration
+│   │   ├── servers/
+│   │   │   └── page.tsx          # Server registry + registration
+│   │   ├── simulation-results/
+│   │   │   └── page.tsx          # Simulation result analyzer
+│   │   ├── sweep-results/
+│   │   │   └── page.tsx          # Parameter sweep result viewer
+│   │   ├── roadmap/
+│   │   │   └── page.tsx          # Roadmap by category
+│   │   └── api-docs/
+│   │       └── page.tsx          # API reference
 │   ├── components/
-│   │   ├── landing/              # Hero, feature cards, algorithm preview
+│   │   ├── landing/              # Hero, feature cards, changelog, social proof, theme toggle
 │   │   ├── layout/               # Header, Footer
-│   │   ├── simulator/            # ParameterPanel, PricePreview, SpreadChart, StabilityForecast
+│   │   ├── simulator/            # ParameterPanel, PricePreview, SpreadChart, StabilityForecast, MarketEventsPanel, ProjectionChart
 │   │   ├── prices/              # TruePricesLive, PriceCalculator, ExchangeRateChart
 │   │   └── servers/             # ServerCard, RegisterServerModal
 │   └── lib/

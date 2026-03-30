@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp, Grid, FlaskConical, Code2 } from 'lucide-react';
+import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp, Grid, FlaskConical, Code2, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/landing/theme-toggle';
 
 const NAV = [
   { href: '/', label: 'Home', icon: Home },
@@ -14,6 +15,7 @@ const NAV = [
   { href: '/true-prices', label: 'True Prices', icon: DollarSign },
   { href: '/exchange-rates', label: 'Rates', icon: TrendingUp },
   { href: '/servers', label: 'Servers', icon: Server },
+  { href: '/roadmap', label: 'Roadmap', icon: Map },
   { href: '/api-docs', label: 'API', icon: Code2 },
 ];
 
@@ -54,11 +56,12 @@ export function Header() {
                 </Link>
               );
             })}
+            <ThemeToggle />
             <a
               href="https://github.com/noahbclarkson/Auto-Tune"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800/60 transition-colors ml-1"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800/60 transition-colors"
             >
               <Github className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">GitHub</span>

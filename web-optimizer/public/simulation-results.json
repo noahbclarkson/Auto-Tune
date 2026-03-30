@@ -2925,6 +2925,159 @@
     ]
   },
   {
+    "name": "standard-mm-fixed-guild",
+    "gdp": 897657.8424469397,
+    "debt": 1581784.3157196902,
+    "debtGdp": 1.7621238749587251,
+    "avgBpd": 0.009345380014857099,
+    "avgSpd": 0.009687598585795563,
+    "avgVolatility": 0.0,
+    "buyRatio": 0.8853283651606894,
+    "defaultRate": 7.6923076923076925,
+    "totalInterestPaid": 1269904.672293006,
+    "interestEvents": 72,
+    "defaultedEvents": 7,
+    "durationDays": 14.0,
+    "maxTick": 4032,
+    "startedAt": "2026-03-28 15:13:46",
+    "configJson": "{\"economy\":{\"max_price_change_percent\":1.5,\"trade_window_days\":7,\"slippage_coeff\":0.01,\"sell_pressure_multiplier\":1.0,\"sector_correlation\":0.05,\"player_rate_limit_multiplier\":3.0,\"trend_dampening\":0.05,\"trend_streak_threshold_percent\":0.1,\"trend_dampening_floor\":0.25,\"adaptive_window\":true,\"min_window_days\":2,\"max_window_days\":7,\"max_sector_correlation_group_size\":20},\"spread\":{\"base_spread\":0.2,\"volume_impact\":0.8,\"player_impact\":0.6,\"liquidity_coeff\":0.01,\"liquidity_full_effect_traders\":10},\"player_scaling\":{\"full_effect_players\":10},\"loans\":{\"enabled\":true,\"base_interest_rate\":0.05,\"credit_score_modifier\":true,\"max_loan_multiplier\":2.0,\"min_credit_score\":200,\"default_duration_days\":7,\"compound_interval_hours\":24,\"default_penalty\":50,\"debt_gdp_tier1_ratio\":3.0,\"debt_gdp_tier2_ratio\":5.0,\"debt_gdp_tier3_ratio\":10.0,\"tier1_interest_cap\":0.5,\"tier2_interest_cap\":0.25},\"items\":[{\"name\":\"Cobblestone\",\"base_price\":1.0,\"section\":\"building\",\"max_price_change_override\":null,\"base_spread_override\":null},{\"name\":\"Rotten Flesh\",\"base_price\":2.0,\"section\":\"drops\",\"max_price_change_override\":null,\"base_spread_override\":null},{\"name\":\"Redstone\",\"base_price\":20.0,\"section\":\"ores\",\"max_price_change_override\":null,\"base_spread_override\":null},{\"name\":\"Iron Ingot\",\"base_price\":50.0,\"section\":\"ores\",\"max_price_change_override\":null,\"base_spread_override\":null},{\"name\":\"Blaze Rod\",\"base_price\":75.0,\"section\":\"drops\",\"max_price_change_override\":null,\"base_spread_override\":null},{\"name\":\"Diamond\",\"base_price\":500.0,\"section\":\"ores\",\"max_price_change_override\":null,\"base_spread_override\":null},{\"name\":\"Golden Apple\",\"base_price\":500.0,\"section\":\"food\",\"max_price_change_override\":null,\"base_spread_override\":null},{\"name\":\"Netherite Ingot\",\"base_price\":2500.0,\"section\":\"ores\",\"max_price_change_override\":null,\"base_spread_override\":null}]}",
+    "priceStability": [
+      {
+        "item": "Blaze Rod",
+        "basePrice": 75.0,
+        "minPrice": 28.7,
+        "maxPrice": 68.08,
+        "avgPrice": 45.62428571428571,
+        "firstPrice": 74.96,
+        "lastTrend": "DOWN"
+      },
+      {
+        "item": "Iron Ingot",
+        "basePrice": 50.0,
+        "minPrice": 21.9,
+        "maxPrice": 50.98,
+        "avgPrice": 34.082142857142856,
+        "firstPrice": 49.4,
+        "lastTrend": "STABLE"
+      },
+      {
+        "item": "Diamond",
+        "basePrice": 500.0,
+        "minPrice": 200.45,
+        "maxPrice": 458.18,
+        "avgPrice": 313.4542857142857,
+        "firstPrice": 499.79,
+        "lastTrend": "STABLE"
+      },
+      {
+        "item": "Netherite Ingot",
+        "basePrice": 2500.0,
+        "minPrice": 1007.27,
+        "maxPrice": 2077.09,
+        "avgPrice": 1529.565,
+        "firstPrice": 2498.93,
+        "lastTrend": "STABLE"
+      },
+      {
+        "item": "Golden Apple",
+        "basePrice": 500.0,
+        "minPrice": 191.75,
+        "maxPrice": 376.52,
+        "avgPrice": 283.2657142857143,
+        "firstPrice": 493.1,
+        "lastTrend": "STABLE"
+      },
+      {
+        "item": "Rotten Flesh",
+        "basePrice": 2.0,
+        "minPrice": 1.34,
+        "maxPrice": 2.16,
+        "avgPrice": 1.4721428571428572,
+        "firstPrice": 1.98,
+        "lastTrend": "STABLE"
+      },
+      {
+        "item": "Redstone",
+        "basePrice": 20.0,
+        "minPrice": 9.65,
+        "maxPrice": 14.93,
+        "avgPrice": 11.809285714285712,
+        "firstPrice": 19.72,
+        "lastTrend": "STABLE"
+      },
+      {
+        "item": "Cobblestone",
+        "basePrice": 1.0,
+        "minPrice": 0.66,
+        "maxPrice": 0.88,
+        "avgPrice": 0.7007142857142857,
+        "firstPrice": 0.99,
+        "lastTrend": "STABLE"
+      }
+    ],
+    "mostActiveItems": [
+      {
+        "item": "Golden Apple",
+        "trades": 6785
+      },
+      {
+        "item": "Redstone",
+        "trades": 6693
+      },
+      {
+        "item": "Netherite Ingot",
+        "trades": 6233
+      },
+      {
+        "item": "Diamond",
+        "trades": 5542
+      },
+      {
+        "item": "Iron Ingot",
+        "trades": 5182
+      },
+      {
+        "item": "Blaze Rod",
+        "trades": 5073
+      },
+      {
+        "item": "Cobblestone",
+        "trades": 4042
+      },
+      {
+        "item": "Rotten Flesh",
+        "trades": 3390
+      }
+    ],
+    "archetypes": [
+      {
+        "archetype": "Casual",
+        "players": 4,
+        "trades": 226
+      },
+      {
+        "archetype": "Farmer",
+        "players": 3,
+        "trades": 1061
+      },
+      {
+        "archetype": "GuildBuyer",
+        "players": 2,
+        "trades": 30413
+      },
+      {
+        "archetype": "MarketMaker",
+        "players": 1,
+        "trades": 8028
+      },
+      {
+        "archetype": "Trader",
+        "players": 2,
+        "trades": 3212
+      }
+    ]
+  },
+  {
     "name": "standard-with-mm",
     "gdp": 931423.0208118798,
     "debt": 2047537.840043844,

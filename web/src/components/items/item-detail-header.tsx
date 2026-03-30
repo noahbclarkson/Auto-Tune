@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Bell } from 'lucide-react';
 import { PriceAlertDialog } from './price-alert-dialog';
+import { EnchantmentSelector } from './enchantment-selector';
 import { formatCurrency, formatPercent } from '@/lib/format';
 import type { ItemDto, ItemTrendDto } from '@/lib/api';
 
@@ -103,6 +104,9 @@ export function ItemDetailHeader({ item, trend }: ItemDetailHeaderProps) {
           <span className="font-semibold text-foreground font-mono">{spreadPct}%</span>
         </div>
       </div>
+
+      {/* Enchantment selector */}
+      <EnchantmentSelector material={item.material} baseSellPrice={item.sellPrice} />
 
       <PriceAlertDialog item={item} open={alertOpen} onClose={() => setAlertOpen(false)} />
     </>

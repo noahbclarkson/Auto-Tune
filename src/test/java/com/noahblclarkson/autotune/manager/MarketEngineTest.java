@@ -224,6 +224,7 @@ class MarketEngineTest {
                     1.5,  // amplified sell pressure
                     0.05, 3.0, 0.05, 0.1, 0.25,
                     true, 2, 7, 20,
+                    1, 1, 0.0, 0.0,  // min buy qty, min sell qty, min buy val, min sell val
                     AutoTuneConfig.SpreadConfig.defaults(),
                     AutoTuneConfig.PlayerScalingConfig.defaults()
             );

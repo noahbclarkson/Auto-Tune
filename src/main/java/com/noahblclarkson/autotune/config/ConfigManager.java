@@ -172,6 +172,10 @@ public class ConfigManager {
                 section.getInt("min-window-days", 2),
                 section.getInt("max-window-days", 7),
                 section.getInt("max-sector-correlation-group-size", 20),
+                section.getInt("min-buy-quantity", 1),
+                section.getInt("min-sell-quantity", 1),
+                section.getDouble("min-buy-value", 0.0),
+                section.getDouble("min-sell-value", 0.0),
                 spreadConfig,
                 playerScalingConfig
         );

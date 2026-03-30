@@ -3,6 +3,7 @@ package com.noahblclarkson.autotune.command;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
+import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
@@ -137,6 +138,8 @@ public class AdminCommand {
                 .append(Component.text(" — View recent transaction history", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin exchange", NamedTextColor.YELLOW)
                 .append(Component.text(" — Show cross-server exchange rates", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin transaction-min", NamedTextColor.YELLOW)
+                .append(Component.text(" — Show minimum transaction size settings", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
     }
 
@@ -808,6 +811,27 @@ public class AdminCommand {
             plugin.getLogger().warning("Reload failed: " + e.getMessage());
             sender.sendMessage(Component.text("Reload failed: " + e.getMessage(), NamedTextColor.RED));
         }
+    }
+
+    @Command("autotune admin transaction-min")
+    @Permission("autotune.admin")
+    public void transactionMin(CommandSender sender) {
+        AutoTuneConfig.EconomyConfig ec = configManager.getConfig().economy();
+        sender.sendMessage(Component.text("═══ Minimum Transaction Settings ═══", NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("  Min buy quantity:  ", NamedTextColor.GRAY)
+                .append(Component.text(String.valueOf(ec.minBuyQuantity()), NamedTextColor.AQUA)));
+        sender.sendMessage(Component.text("  Min sell quantity: ", NamedTextColor.GRAY)
+                .append(Component.text(String.valueOf(ec.minSellQuantity()), NamedTextColor.AQUA)));
+        sender.sendMessage(Component.text("  Min buy value:     ", NamedTextColor.GRAY)
+                .append(Component.text(formatMinValue(ec.minBuyValue()), NamedTextColor.AQUA)));
+        sender.sendMessage(Component.text("  Min sell value:   ", NamedTextColor.GRAY)
+                .append(Component.text(formatMinValue(ec.minSellValue()), NamedTextColor.AQUA)));
+        sender.sendMessage(Component.text("Edit economy.min-*-quantity and economy.min-*-value in config.yml, "
+                + "then run /at admin reload.", NamedTextColor.DARK_GRAY));
+    }
+
+    private String formatMinValue(double val) {
+        return val > 0 ? configManager.formatCurrency(val) : "disabled";
     }
 
     @Command("autotune admin transactions [player]")

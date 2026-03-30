@@ -94,6 +94,15 @@ economy:
   # Sections with more items than this are skipped to prevent server-wide cascading
   max-sector-correlation-group-size: 20
 
+  # Minimum transaction size enforcement — prevents dust spam that clutters the economy
+  # Quantity minimums: rejected if player tries to buy/sell fewer than this many items
+  min-buy-quantity: 1
+  min-sell-quantity: 1
+  # Value minimums: rejected if the total transaction value is below this (0 = disabled)
+  # Useful to prevent 1-item dust trades from polluting price history
+  min-buy-value: 0.0
+  min-sell-value: 0.0
+
   # Spread configuration (difference between buy and sell prices)
   # The spread is split into BPD (buy price difference) and SPD (sell price difference)
   # which are adjusted independently based on trade volume imbalance

@@ -81,6 +81,10 @@ public record AutoTuneConfig(
             int minWindowDays,
             int maxWindowDays,
             int maxSectorCorrelationGroupSize,
+            int minBuyQuantity,
+            int minSellQuantity,
+            double minBuyValue,
+            double minSellValue,
             @NotNull SpreadConfig spread,
             @NotNull PlayerScalingConfig playerScaling
     ) {
@@ -102,6 +106,10 @@ public record AutoTuneConfig(
                     2,
                     7,
                     20,
+                    1,
+                    1,
+                    0.0,
+                    0.0,
                     SpreadConfig.defaults(),
                     PlayerScalingConfig.defaults()
             );

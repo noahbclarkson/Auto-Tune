@@ -2,6 +2,7 @@ package com.noahblclarkson.autotune.economy;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.manager.PluginAdapter;
 import com.noahblclarkson.autotune.database.DatabaseManager;
@@ -100,8 +101,20 @@ public class EconomyManager {
             return CompletableFuture.completedFuture(TransactionResult.error("This item is not yet available for purchase."));
         }
 
+        AutoTuneConfig.EconomyConfig ec = configManager.getConfig().economy();
+        int minQty = ec.minBuyQuantity();
+        double minVal = ec.minBuyValue();
+        if (amount < minQty) {
+            return CompletableFuture.completedFuture(
+                    TransactionResult.belowMinimum(TransactionType.BUY, minQty, minVal, amount));
+        }
+
         BigDecimal pricePerUnit = marketEngine.getBuyPrice(item, amount);
         BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
+        if (minVal > 0 && totalPrice.doubleValue() < minVal) {
+            return CompletableFuture.completedFuture(
+                    TransactionResult.belowMinimum(TransactionType.BUY, minQty, minVal, amount));
+        }
 
         // Collect buy tax before checking balance — player pays item cost + tax
         BigDecimal taxAmount = treasuryService.collectBuyTax(totalPrice);
@@ -156,6 +169,14 @@ public class EconomyManager {
     public CompletableFuture<TransactionResult> processSellAsync(@NotNull Player player, @NotNull ShopItem item, int amount) {
         java.util.UUID playerId = player.getUniqueId();
 
+        AutoTuneConfig.EconomyConfig ec = configManager.getConfig().economy();
+        int minQty = ec.minSellQuantity();
+        double minVal = ec.minSellValue();
+        if (amount < minQty) {
+            return CompletableFuture.completedFuture(
+                    TransactionResult.belowMinimum(TransactionType.SELL, minQty, minVal, amount));
+        }
+
         // Pre-validate: check items exist without modifying inventory
         int playerHas = countItems(player, item);
         if (playerHas < amount) {
@@ -164,6 +185,10 @@ public class EconomyManager {
 
         BigDecimal pricePerUnit = marketEngine.getSellPrice(item, amount);
         BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
+        if (minVal > 0 && totalPrice.doubleValue() < minVal) {
+            return CompletableFuture.completedFuture(
+                    TransactionResult.belowMinimum(TransactionType.SELL, minQty, minVal, amount));
+        }
 
         // Collect sell tax from proceeds before calculating net to player
         BigDecimal taxAmount = treasuryService.collectSellTax(totalPrice);
@@ -314,6 +339,11 @@ public class EconomyManager {
         BigDecimal totalBuyCost = BigDecimal.ZERO;
         BigDecimal totalSellProfit = BigDecimal.ZERO;
         int slotsNeeded = 0;
+        AutoTuneConfig.EconomyConfig ec = configManager.getConfig().economy();
+        int minBuyQty = ec.minBuyQuantity();
+        int minSellQty = ec.minSellQuantity();
+        double minBuyVal = ec.minBuyValue();
+        double minSellVal = ec.minSellValue();
 
         for (CartItem cartItem : cart) {
             if (cartItem.isBuying()) {
@@ -321,14 +351,32 @@ public class EconomyManager {
                     return CompletableFuture.completedFuture(
                             TransactionResult.error(cartItem.shopItem().getDisplayNameOrMaterial() + " is not yet available for purchase."));
                 }
+                int qty = cartItem.quantity();
+                if (qty < minBuyQty) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.belowMinimum(TransactionType.BUY, minBuyQty, minBuyVal, qty));
+                }
                 BigDecimal buyPrice = marketEngine.getBuyPrice(cartItem.shopItem(), cartItem.quantity())
                         .multiply(BigDecimal.valueOf(cartItem.quantity()));
+                if (minBuyVal > 0 && buyPrice.doubleValue() < minBuyVal) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.belowMinimum(TransactionType.BUY, minBuyQty, minBuyVal, qty));
+                }
                 totalBuyCost = totalBuyCost.add(buyPrice);
                 slotsNeeded += (int) Math.ceil(cartItem.quantity() /
                         (double) new ItemStack(cartItem.shopItem().material()).getMaxStackSize());
             } else {
+                int qty = cartItem.quantity();
+                if (qty < minSellQty) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.belowMinimum(TransactionType.SELL, minSellQty, minSellVal, qty));
+                }
                 BigDecimal sellPrice = marketEngine.getSellPrice(cartItem.shopItem(), cartItem.quantity())
                         .multiply(BigDecimal.valueOf(cartItem.quantity()));
+                if (minSellVal > 0 && sellPrice.doubleValue() < minSellVal) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.belowMinimum(TransactionType.SELL, minSellQty, minSellVal, qty));
+                }
                 totalSellProfit = totalSellProfit.add(sellPrice);
             }
         }
@@ -580,6 +628,24 @@ public class EconomyManager {
 
         public static TransactionResult error(String message) {
             return new TransactionResult(false, message, null, 0, BigDecimal.ZERO);
+        }
+
+        /**
+         * Creates a failure result when a transaction doesn't meet the minimum size requirement.
+         * @param type BUY or SELL
+         * @param minimumQty minimum quantity required
+         * @param minimumValue minimum total value required (displayed if > 0)
+         * @param attemptedQty quantity the player tried to transact
+         */
+        public static TransactionResult belowMinimum(TransactionType type, int minimumQty, double minimumValue, int attemptedQty) {
+            String msg;
+            if (minimumValue > 0 && attemptedQty * 0.01 < minimumValue) {
+                // Value threshold is the binding constraint
+                msg = String.format("Transaction too small. Minimum value: $%.2f", minimumValue);
+            } else {
+                msg = String.format("Transaction too small. Minimum quantity: %d", minimumQty);
+            }
+            return new TransactionResult(false, msg, type, attemptedQty, BigDecimal.ZERO);
         }
     }
 }

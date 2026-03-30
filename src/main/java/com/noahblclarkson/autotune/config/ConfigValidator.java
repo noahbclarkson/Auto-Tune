@@ -106,6 +106,22 @@ public class ConfigValidator {
         if (c.maxSectorCorrelationGroupSize() <= 0) {
             v.add(S_ECONOMY + ".maxSectorCorrelationGroupSize must be > 0 (currently " + c.maxSectorCorrelationGroupSize() + ").");
         }
+        if (c.minBuyQuantity() < 1) {
+            v.add(S_ECONOMY + ".minBuyQuantity must be >= 1 (currently " + c.minBuyQuantity() + "). "
+                    + "A minimum of 1 prevents buying zero items.");
+        }
+        if (c.minSellQuantity() < 1) {
+            v.add(S_ECONOMY + ".minSellQuantity must be >= 1 (currently " + c.minSellQuantity() + "). "
+                    + "A minimum of 1 prevents selling zero items.");
+        }
+        if (c.minBuyValue() < 0) {
+            v.add(S_ECONOMY + ".minBuyValue must be >= 0 (currently " + c.minBuyValue() + "). "
+                    + "Set to 0 to disable this check.");
+        }
+        if (c.minSellValue() < 0) {
+            v.add(S_ECONOMY + ".minSellValue must be >= 0 (currently " + c.minSellValue() + "). "
+                    + "Set to 0 to disable this check.");
+        }
     }
 
     private static void validateSpread(AutoTuneConfig.SpreadConfig c, List<String> v) {

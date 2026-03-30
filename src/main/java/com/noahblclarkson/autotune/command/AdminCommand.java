@@ -48,6 +48,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+@SuppressWarnings("PMD")
 @Singleton
 public class AdminCommand {
 

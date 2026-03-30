@@ -94,6 +94,7 @@ class LoanManagerTest {
                 AutoTuneConfig.ExchangeRateConfig.defaults(),
                 AutoTuneConfig.AuctionConfig.defaults(),
                 AutoTuneConfig.MarketEventConfig.defaults(),
+                AutoTuneConfig.EconomicNewsConfig.defaults(),
                 false
         );
     }

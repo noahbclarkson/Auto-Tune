@@ -76,6 +76,7 @@ public class ConfigManager {
                 parseExchangeRateConfig(cfg.getConfigurationSection("exchange-rate")),
                 parseAuctionConfig(cfg.getConfigurationSection("auction")),
                 parseMarketEventConfig(cfg.getConfigurationSection("market-events")),
+                parseEconomicNewsConfig(cfg.getConfigurationSection("news")),
                 this.marketFrozen
         );
     }
@@ -574,6 +575,21 @@ public class ConfigManager {
                 section.getBoolean("enabled", true),
                 entries,
                 Math.max(1, section.getInt("check-interval-minutes", 5))
+        );
+    }
+
+    private EconomicNewsConfig parseEconomicNewsConfig(ConfigurationSection section) {
+        if (section == null || !section.getBoolean("enabled", true)) {
+            return EconomicNewsConfig.defaults();
+        }
+        return new EconomicNewsConfig(
+                section.getBoolean("enabled", true),
+                Math.max(1, section.getInt("interval-minutes", 5)),
+                Math.max(0.1, section.getDouble("price-change-threshold-percent", 5.0)),
+                Math.max(1.0, section.getDouble("volume-spike-multiplier", 3.0)),
+                Math.max(5, section.getInt("history-window-minutes", 60)),
+                Math.max(1, section.getInt("max-items-per-cycle", 3)),
+                Math.max(5, section.getInt("item-cooldown-minutes", 30))
         );
     }
 }

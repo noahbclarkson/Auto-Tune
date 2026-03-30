@@ -22,6 +22,7 @@ public record AutoTuneConfig(
         @NotNull ExchangeRateConfig exchangeRate,
         @NotNull AuctionConfig auction,
         @NotNull MarketEventConfig marketEvents,
+        @NotNull EconomicNewsConfig news,
         boolean marketFrozen
 ) {
 
@@ -500,6 +501,41 @@ public record AutoTuneConfig(
     ) {
         public static MarketEventConfigEntry defaults() {
             return new MarketEventConfigEntry("", "CUSTOM", List.of(), 2.0, 60, "", "");
+        }
+    }
+
+    /**
+     * Economic news feed configuration — controls the in-game market narration
+     * that broadcasts significant market events to all players.
+     *
+     * The news feed periodically scans recent price history for:
+     * - Large price surges or crashes (> threshold within window)
+     * - Unusual volume spikes (> multiplier × normal volume)
+     * - Circuit breaker activation (tier 1, 2, or 3)
+     * - Market freeze/unfreeze events
+     *
+     * Messages are delivered via action bar to avoid spamming chat.
+     * A per-item cooldown prevents the same item from dominating the feed.
+     *
+     * @param enabled            Whether the news feed is active
+     * @param intervalMinutes    How often to scan and broadcast a news item (minutes)
+     * @param priceChangeThresholdPercent  Minimum % price change to trigger a news item
+     * @param volumeSpikeMultiplier       Volume must exceed normal × this to trigger
+     * @param historyWindowMinutes        How far back to look for price changes (minutes)
+     * @param maxItemsPerCycle  Maximum news items to broadcast per cycle (randomized subset)
+     * @param itemCooldownMinutes         Don't re-announce the same item within this window
+     */
+    public record EconomicNewsConfig(
+            boolean enabled,
+            int intervalMinutes,
+            double priceChangeThresholdPercent,
+            double volumeSpikeMultiplier,
+            int historyWindowMinutes,
+            int maxItemsPerCycle,
+            int itemCooldownMinutes
+    ) {
+        public static EconomicNewsConfig defaults() {
+            return new EconomicNewsConfig(true, 5, 5.0, 3.0, 60, 3, 30);
         }
     }
 }

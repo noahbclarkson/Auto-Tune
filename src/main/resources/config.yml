@@ -462,3 +462,41 @@ market-events:
     #   duration-minutes: 120
     #   start-message: "<gold> Iron Oversupply! </gold> Sell your iron at boosted prices for 2 hours!"
     #   end-message: "<gray> Iron Oversupply event ended.</gray>"
+
+# ─── Economic News Feed ───────────────────────────────────────────────────────
+# In-game market narration — broadcasts significant market events to all players
+# via action bar. Makes the economy feel alive without spamming chat.
+#
+# What triggers news:
+#   - Price surges/crashes above the threshold within the history window
+#   - Volume spikes above the multiplier × normal volume
+#   - Circuit breaker tier activation (tiers 1/2/3 or recovery)
+#
+# Design: never spams. Per-item cooldown + max N items per cycle ensures
+# variety. Small enough to not annoy, interesting enough to matter.
+news:
+  # Set to false to disable the news feed entirely.
+  enabled: true
+
+  # How often to scan for news and broadcast (in minutes).
+  interval-minutes: 5
+
+  # Minimum % price change within history-window to trigger a news item.
+  # Set lower for more sensitive (more news), higher for only big moves.
+  price-change-threshold-percent: 5.0
+
+  # Volume must exceed this × the average entry volume to trigger a spike alert.
+  volume-spike-multiplier: 3.0
+
+  # How far back to look for price changes and volume spikes (in minutes).
+  # Set to 60 for hourly context, 30 for a faster-changing feed.
+  history-window-minutes: 60
+
+  # Maximum number of distinct items to announce per cycle.
+  # If more items qualify, a random subset is chosen each cycle so all
+  # items eventually get coverage.
+  max-items-per-cycle: 3
+
+  # Don't re-announce the same item within this window (in minutes).
+  # Prevents a single volatile item from dominating the feed.
+  item-cooldown-minutes: 30

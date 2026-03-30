@@ -13,6 +13,8 @@ import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.MarketEventRepository;
+import com.noahblclarkson.autotune.economy.LoanManager;
+import com.noahblclarkson.autotune.service.EconomicNewsService;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.PriceAlertRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
@@ -189,6 +191,19 @@ public class AutoTuneModule extends AbstractModule {
             ConfigManager configManager
     ) {
         return new MarketEventService(plugin, marketEventRepository, pluginAdapter, configManager);
+    }
+
+    @Provides
+    @Singleton
+    public EconomicNewsService provideEconomicNewsService(
+            ItemRepository itemRepository,
+            ShopManager shopManager,
+            LoanManager loanManager,
+            ConfigManager configManager,
+            PluginAdapter pluginAdapter
+    ) {
+        return new EconomicNewsService(
+                plugin, itemRepository, shopManager, loanManager, configManager, pluginAdapter);
     }
 
     @Provides

@@ -56,6 +56,7 @@ public class ConfigValidator {
         validateWeb(config.web(), violations);
         validateAuction(config.auction(), violations);
         validateMarketEvents(config.marketEvents(), violations);
+        validateEconomicNews(config.news(), violations);
         validateExchangeRate(config.exchangeRate(), violations);
 
         return violations;
@@ -344,6 +345,34 @@ public class ConfigValidator {
                             + "Zero-duration events end immediately.");
                 }
             }
+        }
+    }
+
+    private static void validateEconomicNews(AutoTuneConfig.EconomicNewsConfig c, List<String> v) {
+        if (c.intervalMinutes() <= 0) {
+            v.add("news.interval-minutes must be > 0 (currently " + c.intervalMinutes() + "). "
+                    + "Zero or negative would disable the news feed.");
+        }
+        if (c.intervalMinutes() > 60) {
+            v.add("news.interval-minutes is very high at " + c.intervalMinutes() + " minutes. "
+                    + "Consider ≤ 15 for an engaging news feed.");
+        }
+        if (c.priceChangeThresholdPercent() <= 0) {
+            v.add("news.price-change-threshold-percent must be > 0 (currently " + c.priceChangeThresholdPercent() + "). "
+                    + "Zero or negative would spam every tiny price movement.");
+        }
+        if (c.volumeSpikeMultiplier() < 1.0) {
+            v.add("news.volume-spike-multiplier must be ≥ 1.0 (currently " + c.volumeSpikeMultiplier() + "). "
+                    + "A value < 1.0 would trigger on below-average volume.");
+        }
+        if (c.historyWindowMinutes() <= 0) {
+            v.add("news.history-window-minutes must be > 0 (currently " + c.historyWindowMinutes() + ").");
+        }
+        if (c.maxItemsPerCycle() <= 0) {
+            v.add("news.max-items-per-cycle must be > 0 (currently " + c.maxItemsPerCycle() + ").");
+        }
+        if (c.itemCooldownMinutes() <= 0) {
+            v.add("news.item-cooldown-minutes must be > 0 (currently " + c.itemCooldownMinutes() + ").");
         }
     }
 

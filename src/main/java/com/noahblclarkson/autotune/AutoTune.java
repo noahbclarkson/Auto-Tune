@@ -15,6 +15,7 @@ import com.noahblclarkson.autotune.manager.AutosellManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.MarketEventService;
+import com.noahblclarkson.autotune.service.EconomicNewsService;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ScoreboardManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
@@ -47,6 +48,7 @@ public class AutoTune extends JavaPlugin {
     private ScoreboardManager scoreboardManager;
     private TreasuryService treasuryService;
     private MarketEventService marketEventService;
+    private EconomicNewsService economicNewsService;
     private CommandManager commandManager;
     private TaskScheduler taskScheduler;
     private WebServer webServer;
@@ -114,6 +116,8 @@ public class AutoTune extends JavaPlugin {
         treasuryService.start();
         marketEventService = injector.getInstance(MarketEventService.class);
         marketEventService.onEnable();
+        economicNewsService = injector.getInstance(EconomicNewsService.class);
+        economicNewsService.onEnable();
         taskScheduler = injector.getInstance(TaskScheduler.class);
 
         // Register commands
@@ -253,7 +257,8 @@ public class AutoTune extends JavaPlugin {
         getLogger().info("  Economy: " + cfg.economy().currencySymbol()
                 + " | Loans: " + (cfg.loans().enabled() ? "on" : "off")
                 + " | Events: " + (cfg.marketEvents().enabled() ? "on" : "off")
-                + " | Price reporting: " + (cfg.priceReporter().enabled() ? "on" : "off"));
+                + " | Price reporting: " + (cfg.priceReporter().enabled() ? "on" : "off")
+                + " | News feed: " + (cfg.news().enabled() ? "on (" + cfg.news().intervalMinutes() + "m)" : "off"));
         getLogger().info("  Commands: /shop, /sell, /autosell, /loan, /auction, /event");
         getLogger().info("  Dashboard: http://" + cfg.web().host() + ":" + cfg.web().port());
         getLogger().info("========================================");

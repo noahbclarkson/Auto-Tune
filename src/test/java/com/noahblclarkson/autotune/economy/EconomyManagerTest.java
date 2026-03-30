@@ -85,6 +85,7 @@ class EconomyManagerTest {
                 AutoTuneConfig.ExchangeRateConfig.defaults(),
                 AutoTuneConfig.AuctionConfig.defaults(),
                 AutoTuneConfig.MarketEventConfig.defaults(),
+                AutoTuneConfig.EconomicNewsConfig.defaults(),
                 false);
         when(cm.getConfig()).thenReturn(cfg);
         return cm;

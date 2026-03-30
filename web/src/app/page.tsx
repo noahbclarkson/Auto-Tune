@@ -7,6 +7,7 @@ import { StatsCards } from '@/components/dashboard/stats-cards';
 import { EconomyPanel } from '@/components/dashboard/economy-panel';
 import { TransactionFeed } from '@/components/dashboard/transaction-feed';
 import { MarketHealthBar } from '@/components/dashboard/market-health-bar';
+import { MarketDigest } from '@/components/dashboard/market-digest';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { api, type ItemDto, type Stats, type TrendDto, type EconomySnapshotDto } from '@/lib/api';
@@ -122,6 +123,8 @@ export default function Home() {
           inflation={inflation}
           onlinePlayers={stats?.onlinePlayers ?? 0}
         />
+
+        <MarketDigest items={items} trends={trends} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">

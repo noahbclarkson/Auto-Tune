@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 
+import math
+
 SCRIPT_DIR = Path(__file__).parent.resolve()
 # scripts/ is at: <workspace>/autotune/scripts/
 # workspace root is 2 levels up from scripts/: scripts -> autotune -> workspace
@@ -13,6 +15,45 @@ WORKSPACE = SCRIPT_DIR.parent.parent
 SIM_OUTPUT = WORKSPACE / "sim-output"
 OUTPUT_FILE = WORKSPACE / "autotune" / "web-optimizer" / "public" / "simulation-results.json"
 OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+
+def compute_avg_volatility(conn: sqlite3.Connection) -> float:
+    """Port of Rust compute_avg_volatility: avg coefficient of variation across items."""
+    try:
+        items = [row[0] for row in conn.execute(
+            "SELECT DISTINCT item_name FROM item_states"
+        ).fetchall()]
+    except Exception:
+        return 0.0
+
+    total_vol = 0.0
+    count = 0
+
+    for item_name in items:
+        try:
+            prices = [row[0] for row in conn.execute(
+                "SELECT price FROM item_states WHERE item_name = ? AND tick % 288 = 0 ORDER BY tick",
+                (item_name,)
+            ).fetchall()]
+        except Exception:
+            continue
+
+        # Last 14 bi-hourly samples (≈14 days)
+        recent = list(reversed(prices))[:14]
+        if len(recent) < 3:
+            continue
+        mean = sum(recent) / len(recent)
+        if mean < 0.01:
+            continue
+
+        # Population std dev
+        variance = sum((p - mean) ** 2 for p in recent) / len(recent)
+        stddev = math.sqrt(variance)
+        cv = stddev / mean
+        total_vol += cv
+        count += 1
+
+    return total_vol / count if count > 0 else 0.0
 
 
 def analyze_db(db_path: Path) -> dict | None:
@@ -141,6 +182,7 @@ def analyze_db(db_path: Path) -> dict | None:
                 "trades": row["trades"],
             })
 
+        avg_volatility = compute_avg_volatility(conn)
         conn.close()
 
         name = db_path.parent.name
@@ -151,7 +193,7 @@ def analyze_db(db_path: Path) -> dict | None:
             "debtGdp": debt / gdp if gdp > 0 else 0,
             "avgBpd": avg_bpd,
             "avgSpd": avg_spd,
-            "avgVolatility": 0.0,  # Would need compute_avg_volatility() from Rust port
+            "avgVolatility": avg_volatility,
             "buyRatio": buy_ratio,
             "defaultRate": default_rate,
             "totalInterestPaid": loan_row["interest_total"] or 0,
@@ -197,16 +239,27 @@ def main():
     print(f"Written: {OUTPUT_FILE}", flush=True)
 
     # Print summary table
-    print(f"\n{'Scenario':<30} {'GDP':>12} {'Debt':>12} {'D/G':>8} {'BPD':>7} {'Buy%':>7}")
-    print("-" * 80)
+    print(f"\n{'Scenario':<30} {'GDP':>12} {'Debt':>12} {'D/G':>8} {'BPD':>7} {'Buy%':>7} {'Vol':>7}")
+    print("-" * 85)
     for r in results:
+        vol = r['avgVolatility']
+        vol_str = f"{vol:.4f}" if vol > 0 else "—"
+        vol_indicator = ""
+        if vol > 0:
+            if vol < 0.05:
+                vol_indicator = " ✓"
+            elif vol < 0.15:
+                vol_indicator = " ~"
+            else:
+                vol_indicator = " ✗"
         print(
             f"{r['name']:<30} "
             f"{r['gdp']:>12.0f} "
             f"{r['debt']:>12.0f} "
             f"{r['debtGdp']:>7.2f}x "
             f"{r['avgBpd']*100:>6.2f}% "
-            f"{r['buyRatio']*100:>6.1f}%"
+            f"{r['buyRatio']*100:>6.1f}% "
+            f"{vol_str}{vol_indicator}"
         )
 
 

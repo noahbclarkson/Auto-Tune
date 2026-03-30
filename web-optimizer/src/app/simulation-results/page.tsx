@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 
@@ -55,12 +55,41 @@ function debtGdpBg(d: number): string {
   return 'bg-rose-950/30';
 }
 
-function HealthBadge({ debtGdp, buyRatio }: { debtGdp: number; buyRatio: number }) {
-  const isHealthy = debtGdp < 3 && buyRatio >= 0.45 && buyRatio <= 0.55;
-  const isOk = debtGdp < 10;
+function volatilityColor(v: number): string {
+  if (v === 0) return 'text-gray-500';
+  if (v < 0.05) return 'text-emerald-400';
+  if (v < 0.15) return 'text-sky-400';
+  return 'text-rose-400';
+}
+
+function volatilityLabel(v: number): string {
+  if (v === 0) return '—';
+  if (v < 0.05) return 'STABLE';
+  if (v < 0.15) return 'MODERATE';
+  return 'UNSTABLE';
+}
+
+function HealthBadge({ debtGdp, buyRatio, volatility }: { debtGdp: number; buyRatio: number; volatility: number }) {
+  const isHealthy = debtGdp < 3 && buyRatio >= 0.45 && buyRatio <= 0.55 && volatility < 0.05;
+  const isOk = debtGdp < 10 && volatility < 0.15;
   if (isHealthy) return <span className="text-xs font-semibold text-emerald-400 bg-emerald-950/50 px-1.5 py-0.5 rounded">HEALTHY</span>;
   if (isOk) return <span className="text-xs font-semibold text-amber-400 bg-amber-950/50 px-1.5 py-0.5 rounded">MODERATE</span>;
   return <span className="text-xs font-semibold text-rose-400 bg-rose-950/50 px-1.5 py-0.5 rounded">UNHEALTHY</span>;
+}
+
+function VolatilityBar({ v }: { v: number }) {
+  if (v === 0) return <span className="text-xs text-gray-500">—</span>;
+  // Cap at 0.50 for display
+  const pct = Math.min(v / 0.50, 1);
+  const color = v < 0.05 ? 'bg-emerald-500' : v < 0.15 ? 'bg-sky-500' : 'bg-rose-500';
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="w-12 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct * 100}%` }} />
+      </div>
+      <span className={`text-xs font-mono font-semibold ${volatilityColor(v)}`}>{v.toFixed(3)}</span>
+    </div>
+  );
 }
 
 function DetailPanel({ r }: { r: SimResult }) {
@@ -70,20 +99,33 @@ function DetailPanel({ r }: { r: SimResult }) {
 
   const loanCfg = config.loans as Record<string, number> | undefined;
   const spreadCfg = config.spread as Record<string, number> | undefined;
+  const playerScaling = config.player_scaling as Record<string, number> | undefined;
+  const volLabel = volatilityLabel(r.avgVolatility);
+  const volColor = r.avgVolatility < 0.05 ? 'text-emerald-400' : r.avgVolatility < 0.15 ? 'text-sky-400' : 'text-rose-400';
 
   return (
     <div className="p-6 border-t border-gray-800 bg-gray-900/30">
-      {/* Key config params */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      {/* Header metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         {[
           { label: 'Duration', value: `${r.durationDays}d` },
           { label: 'Max tick', value: r.maxTick.toLocaleString() },
-          { label: 'Started', value: r.startedAt.split(' ')[0] },
+          { label: 'Started', value: r.startedAt.split(' ')[0] || '—' },
           { label: 'Interest events', value: r.interestEvents.toLocaleString() },
-        ].map(({ label, value }) => (
+          {
+            label: 'Volatility',
+            value: r.avgVolatility > 0 ? r.avgVolatility.toFixed(4) : '—',
+            color: r.avgVolatility > 0 ? (r.avgVolatility < 0.05 ? 'text-emerald-400' : r.avgVolatility < 0.15 ? 'text-sky-400' : 'text-rose-400') : 'text-gray-400',
+            badge: volLabel,
+            badgeColor: r.avgVolatility < 0.05 ? 'bg-emerald-950/50 text-emerald-400' : r.avgVolatility < 0.15 ? 'bg-sky-950/50 text-sky-400' : 'bg-rose-950/50 text-rose-400',
+          },
+        ].map(({ label, value, color, badge, badgeColor }) => (
           <div key={label} className="rounded-lg border border-gray-800 bg-gray-900/50 px-3 py-2">
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{label}</p>
-            <p className="text-sm font-bold font-mono text-white">{value}</p>
+            <div className="flex items-center gap-2">
+              <p className={`text-sm font-bold font-mono ${color || 'text-white'}`}>{value}</p>
+              {badge && <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${badgeColor}`}>{badge}</span>}
+            </div>
           </div>
         ))}
       </div>
@@ -146,22 +188,47 @@ function DetailPanel({ r }: { r: SimResult }) {
               </div>
             ))}
           </div>
+
+          {/* Spread config */}
+          {spreadCfg && (
+            <div className="mt-6">
+              <h3 className="text-xs text-gray-500 uppercase tracking-widest font-medium mb-3">Spread Config</h3>
+              <div className="rounded-lg border border-gray-800 bg-gray-900/40 p-3 space-y-1.5">
+                {[
+                  { label: 'Base spread', value: `${((spreadCfg.base_spread as number) * 100).toFixed(0)}%` },
+                  { label: 'Volume impact', value: `${((spreadCfg.volume_impact as number) * 100).toFixed(0)}%` },
+                  { label: 'Player impact', value: `${((spreadCfg.player_impact as number) * 100).toFixed(0)}%` },
+                  { label: 'Liquidity coeff', value: `${((spreadCfg.liquidity_coeff as number) * 100).toFixed(1)}%` },
+                  { label: 'Full-effect traders', value: `${spreadCfg.liquidity_full_effect_traders || spreadCfg.liquidityFullEffectTraders || '?'}` },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex justify-between text-xs">
+                    <span className="text-gray-500">{label}</span>
+                    <span className="font-mono text-gray-300">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Archetypes + loan */}
         <div>
-          <h3 className="text-xs text-gray-500 uppercase tracking-widest font-medium mb-3">Player Archetypes</h3>
-          <div className="space-y-2 mb-6">
-            {r.archetypes.map((a) => (
-              <div key={a.archetype} className="flex items-center justify-between">
-                <span className="text-xs text-gray-300">{a.archetype}</span>
-                <div className="flex items-center gap-3 text-xs text-gray-500">
-                  <span>{a.players} players</span>
-                  <span className="font-mono text-gray-400">{a.trades.toLocaleString()} tx</span>
-                </div>
+          {r.archetypes && r.archetypes.length > 0 && (
+            <>
+              <h3 className="text-xs text-gray-500 uppercase tracking-widest font-medium mb-3">Player Archetypes</h3>
+              <div className="space-y-2 mb-6">
+                {r.archetypes.map((a) => (
+                  <div key={a.archetype} className="flex items-center justify-between">
+                    <span className="text-xs text-gray-300">{a.archetype}</span>
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                      <span>{a.players} players</span>
+                      <span className="font-mono text-gray-400">{a.trades.toLocaleString()} tx</span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
 
           <h3 className="text-xs text-gray-500 uppercase tracking-widest font-medium mb-3">Loan Activity</h3>
           <div className="rounded-lg border border-gray-800 bg-gray-900/40 p-3 space-y-2">
@@ -193,8 +260,29 @@ function DetailPanel({ r }: { r: SimResult }) {
                   <span className="text-gray-600">Tier 3 circuit breaker</span>
                   <span className="font-mono text-gray-400">{loanCfg.debt_gdp_tier3_ratio}×</span>
                 </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-600">Max loan multiplier</span>
+                  <span className="font-mono text-gray-400">{loanCfg.max_loan_multiplier}× GDP</span>
+                </div>
               </>
             )}
+          </div>
+
+          {/* Volatility interpretation */}
+          <div className="mt-4 rounded-lg border border-gray-800 bg-gray-900/40 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`text-sm font-bold font-mono ${volColor}`}>{r.avgVolatility > 0 ? r.avgVolatility.toFixed(4) : '—'}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${r.avgVolatility < 0.05 ? 'bg-emerald-950/50 text-emerald-400' : r.avgVolatility < 0.15 ? 'bg-sky-950/50 text-sky-400' : 'bg-rose-950/50 text-rose-400'}`}>{volLabel}</span>
+            </div>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              {r.avgVolatility === 0
+                ? 'Volatility data not available for this run.'
+                : r.avgVolatility < 0.05
+                ? 'Prices are stable — the market engine is well-regulated.'
+                : r.avgVolatility < 0.15
+                ? 'Some price oscillation — within acceptable bounds.'
+                : 'Significant price oscillation — parameter review recommended.'}
+            </p>
           </div>
         </div>
       </div>
@@ -207,13 +295,13 @@ export default function SimulationResultsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [maxDebtGdp, setMaxDebtGdp] = useState(500);
-  const [sortKey, setSortKey] = useState<SortKey>('debtGdp');
+  const [sortKey, setSortKey] = useState<SortKey>('avgVolatility');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 15;
 
-  useState(() => {
+  useEffect(() => {
     fetch('/simulation-results.json')
       .then((r) => r.json())
       .then((json) => {
@@ -224,7 +312,7 @@ export default function SimulationResultsPage() {
         setError('Could not load simulation results.');
         setLoading(false);
       });
-  });
+  }, []);
 
   const filtered = useMemo(() => {
     return data.filter((r) => r.debtGdp <= maxDebtGdp);
@@ -267,7 +355,8 @@ export default function SimulationResultsPage() {
     );
   }
 
-  const healthyRuns = data.filter((r) => r.debtGdp < 3 && r.buyRatio >= 0.45 && r.buyRatio <= 0.55).length;
+  const healthyRuns = data.filter((r) => r.debtGdp < 3 && r.buyRatio >= 0.45 && r.buyRatio <= 0.55 && r.avgVolatility < 0.05).length;
+  const volatileRuns = data.filter((r) => r.avgVolatility > 0 && r.avgVolatility >= 0.15).length;
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -282,10 +371,11 @@ export default function SimulationResultsPage() {
             Simulation Run Results
           </h1>
           <p className="text-gray-400 max-w-3xl text-sm leading-relaxed">
-            Analysis of {data.length > 0 ? data.length + ' ' : ''} market simulation runs. Each run
+            Analysis of {data.length > 0 ? `${data.length} ` : ''}market simulation runs. Each run
             simulates a 14-day Minecraft economy with different player archetype mixes and engine
-            parameters. Compare debt/GDP health, buy ratios, spread behavior, and price stability
-            across scenarios. Click any row to expand full details.
+            parameters. Compare debt/GDP health, buy ratios, volatility, and price stability
+            across scenarios. Click any row to expand full details including config parameters,
+            spread settings, and loan activity.
           </p>
         </div>
 
@@ -294,8 +384,8 @@ export default function SimulationResultsPage() {
           {[
             { label: 'Total runs', value: data.length.toString() },
             { label: 'Healthy', value: `${healthyRuns} (${data.length > 0 ? Math.round(healthyRuns / data.length * 100) : 0 }%)` },
+            { label: 'Volatile (≥0.15)', value: `${volatileRuns}` },
             { label: 'Showing', value: filtered.length.toString() },
-            { label: 'Per page', value: PAGE_SIZE.toString() },
           ].map(({ label, value }) => (
             <div key={label} className="rounded-lg border border-gray-800 bg-gray-900/50 px-4 py-3">
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{label}</p>
@@ -343,6 +433,23 @@ export default function SimulationResultsPage() {
           </div>
         </div>
 
+        {/* Volatility legend */}
+        <div className="flex flex-wrap items-center gap-4 mb-4 text-xs text-gray-500">
+          <span className="uppercase tracking-wider font-medium">Volatility scale:</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-8 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-emerald-400">&lt; 0.05 STABLE</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-8 h-1.5 rounded-full bg-sky-500" />
+            <span className="text-sky-400">0.05–0.15 MODERATE</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-8 h-1.5 rounded-full bg-rose-500" />
+            <span className="text-rose-400">&ge; 0.15 UNSTABLE</span>
+          </div>
+        </div>
+
         {/* Table */}
         {loading ? (
           <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-12 text-center">
@@ -372,6 +479,7 @@ export default function SimulationResultsPage() {
                     <Th col="buyRatio" label="Buy%" />
                     <Th col="avgBpd" label="BPD%" />
                     <Th col="avgSpd" label="SPD%" />
+                    <Th col="avgVolatility" label="Vol" />
                     <Th col="defaultRate" label="Def%" />
                     <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Health</th>
                   </tr>
@@ -433,6 +541,9 @@ export default function SimulationResultsPage() {
                         </span>
                       </td>
                       <td className="px-2 py-2.5">
+                        <VolatilityBar v={r.avgVolatility} />
+                      </td>
+                      <td className="px-2 py-2.5">
                         <span className={`font-mono text-xs ${
                           r.defaultRate < 1 ? 'text-emerald-400' :
                           r.defaultRate < 5 ? 'text-amber-400' : 'text-rose-400'
@@ -441,13 +552,13 @@ export default function SimulationResultsPage() {
                         </span>
                       </td>
                       <td className="px-2 py-2.5">
-                        <HealthBadge debtGdp={r.debtGdp} buyRatio={r.buyRatio} />
+                        <HealthBadge debtGdp={r.debtGdp} buyRatio={r.buyRatio} volatility={r.avgVolatility} />
                       </td>
                     </tr>
                   ))}
                   {pageRows.map((r) => expanded === r.name ? (
                     <tr key={`${r.name}-detail`}>
-                      <td colSpan={9} className="p-0">
+                      <td colSpan={10} className="p-0">
                         <DetailPanel r={r} />
                       </td>
                     </tr>

@@ -1810,9 +1810,7 @@ fn run_floor_strength_sweep() {
     println!("║       DIAMOND FLOOR STRENGTH SWEEP                            ║");
     println!("║  Diamond base = $500.  Tests 30%–90% floor.  Seed=42.         ║");
     println!("╚══════════════════════════════════════════════════════════════════╝\n");
-    println!(
-        "  Scenario: GuildStability+MM+7%GB (1MM + 2GB@7% + 4Cas + 3Far + 2Tra)"
-    );
+    println!("  Scenario: GuildStability+MM+7%GB (1MM + 2GB@7% + 4Cas + 3Far + 2Tra)");
     println!("  Duration: 14 days (4032 ticks)\n");
 
     // ── Run control (no floor) ────────────────────────────────────────────
@@ -1865,14 +1863,31 @@ fn run_floor_strength_sweep() {
     // ── Header ─────────────────────────────────────────────────────────────
     println!(
         "{:>7} {:>7} {:>10} {:>10} {:>9} {:>7} {:>7} {:>9} {:>8} {:>10} {:>11}",
-        "Floor%", "Floor$", "GDP", "Debt", "D/G", "BPD%", "SPD%", "Vol", "Buy%",
-        "Diam Int$", "Display$"
+        "Floor%",
+        "Floor$",
+        "GDP",
+        "Debt",
+        "D/G",
+        "BPD%",
+        "SPD%",
+        "Vol",
+        "Buy%",
+        "Diam Int$",
+        "Display$"
     );
     println!(
         "{:>7} {:>7} {:>10} {:>10} {:>9} {:>7} {:>7} {:>9} {:>8} {:>10} {:>11}",
-        "─".repeat(7), "─".repeat(7), "─".repeat(10), "─".repeat(10),
-        "─".repeat(9), "─".repeat(7), "─".repeat(7), "─".repeat(9),
-        "─".repeat(8), "─".repeat(10), "─".repeat(11)
+        "─".repeat(7),
+        "─".repeat(7),
+        "─".repeat(10),
+        "─".repeat(10),
+        "─".repeat(9),
+        "─".repeat(7),
+        "─".repeat(7),
+        "─".repeat(9),
+        "─".repeat(8),
+        "─".repeat(10),
+        "─".repeat(11)
     );
 
     // ── Run each floor % ─────────────────────────────────────────────────
@@ -1880,12 +1895,22 @@ fn run_floor_strength_sweep() {
 
     for floor_pct in FLOOR_PCTS {
         let fp = *floor_pct;
-        eprint!("\r  [{}/{}] floor={:.0}%", (fp * 100.0) as i32, 100, fp * 100.0);
+        eprint!(
+            "\r  [{}/{}] floor={:.0}%",
+            (fp * 100.0) as i32,
+            100,
+            fp * 100.0
+        );
         std::io::stderr().flush().ok();
 
         // Build scenario with this floor % on Diamond
         let mut scenario = Scenario::guild_stability_mm_fixed_guild();
-        if let Some(diamond) = scenario.config.items.iter_mut().find(|ic| ic.name == "Diamond") {
+        if let Some(diamond) = scenario
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
             diamond.price_floor_override = Some(DIAMOND_BASE_PRICE * fp);
         }
         // Seed must match control
@@ -2013,7 +2038,10 @@ fn run_floor_strength_sweep() {
     let most_balanced = results
         .iter()
         .min_by(|a, b| {
-            (a.buy_ratio - 0.5).abs().partial_cmp(&(b.buy_ratio - 0.5).abs()).unwrap()
+            (a.buy_ratio - 0.5)
+                .abs()
+                .partial_cmp(&(b.buy_ratio - 0.5).abs())
+                .unwrap()
         })
         .unwrap();
     println!(
@@ -4033,7 +4061,10 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--regression" {
         let update = args.contains(&"--update".to_string());
-        let baseline_dir = std::path::PathBuf::from("regression-baselines");
+        // Use CARGO_MANIFEST_DIR so the path is resolved relative to the Cargo.toml location,
+        // not the cwd (which varies depending on how `cargo run` is invoked).
+        let baseline_dir =
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("regression-baselines");
         let scenarios: Vec<Scenario> = vec![
             Scenario::standard(),
             Scenario::spread_stability(),

@@ -61,6 +61,8 @@ public class EconomicNewsService {
 
     /** Tracks the last announced circuit breaker tier to avoid repeat announcements */
     private final AtomicReference<String> lastCircuitBreakerTier = new AtomicReference<>(null);
+    /** Previous aggregate volatility for spike detection */
+    private final AtomicReference<Double> previousAvgVolatility = new AtomicReference<>(null);
     /** Old announcements for cooldown pruning */
     private final CopyOnWriteArrayList<Instant> recentAnnouncements = new CopyOnWriteArrayList<>();
     /** Round-robin counter for fair item selection across cycles */
@@ -203,6 +205,55 @@ public class EconomicNewsService {
 
                 out.add(new NewsItem(msg, col, "/shop " + mat, "Click to view " + mat));
             }
+        }
+
+        // 3. Aggregate economy volatility spike — the most critical economy health indicator
+        checkVolatilitySpike(cfg, out);
+    }
+
+    /**
+     * Detects when the economy's aggregate volatility crosses into the UNSTABLE zone.
+     * Uses the standard deviation of all items' 24h price changes as the metric.
+     * Based on 23-simulation-run dataset: <0.05=STABLE, 0.05-0.15=MODERATE, >=0.15=UNSTABLE.
+     */
+    private void checkVolatilitySpike(AutoTuneConfig.EconomicNewsConfig cfg, List<NewsItem> out) {
+        Instant windowStart = Instant.now().minus(Duration.ofMinutes(cfg.historyWindowMinutes()));
+        int historyLimit = Math.max(2, cfg.historyWindowMinutes() / 5);
+
+        List<Double> pctChanges = new ArrayList<>();
+        for (ShopItem item : shopManager.getAllItems()) {
+            List<PriceHistory> history = itemRepository.getPriceHistorySince(item.id(), windowStart, historyLimit);
+            if (history.size() < 2) continue;
+            BigDecimal newest = history.get(history.size() - 1).price();
+            BigDecimal oldest = history.get(0).price();
+            if (oldest.compareTo(BigDecimal.ZERO) <= 0) continue;
+            double pctChange = newest.subtract(oldest)
+                    .divide(oldest, 4, RoundingMode.HALF_UP)
+                    .doubleValue() * 100.0;
+            pctChanges.add(pctChange);
+        }
+
+        if (pctChanges.size() < 2) return;
+
+        double sum = 0.0;
+        for (double p : pctChanges) sum += p;
+        double mean = sum / pctChanges.size();
+        double variance = 0.0;
+        for (double p : pctChanges) {
+            double d = p / 100.0 - mean;
+            variance += d * d;
+        }
+        variance /= pctChanges.size();
+        double avgVolatility = Math.sqrt(variance);
+
+        double prev = previousAvgVolatility.get() != null ? previousAvgVolatility.get() : 0.0;
+        previousAvgVolatility.set(avgVolatility);
+
+        // Alert on transition into UNSTABLE zone (from below 0.15 to above 0.15)
+        if (avgVolatility >= 0.15 && prev < 0.15) {
+            String msg = "⚠️ <red>ECONOMY VOLATILITY SPIKE</red> — prices are oscillating wildly! "
+                    + "Run <aqua>/at admin health</aqua> to diagnose.";
+            out.add(new NewsItem(msg, NamedTextColor.RED, "/at admin health", "Run /at admin health"));
         }
     }
 

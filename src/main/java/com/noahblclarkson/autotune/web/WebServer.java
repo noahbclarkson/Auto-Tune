@@ -555,6 +555,20 @@ public class WebServer {
                 volatilities.add(entry);
                 undersells.add(entry);
             }
+            // Aggregate economy volatility (std dev of all items' 24h price changes)
+            double avgVolatility = 0.0;
+            if (!volatilities.isEmpty()) {
+                double sum = volatilities.stream().mapToDouble(v -> (Double) v.get("pctChange")).sum();
+                double mean = sum / volatilities.size();
+                double variance = volatilities.stream()
+                        .mapToDouble(v -> {
+                            double d = ((Double) v.get("pctChange")) / 100.0 - mean;
+                            return d * d;
+                        })
+                        .sum() / volatilities.size();
+                avgVolatility = Math.sqrt(variance);
+            }
+
             volatilities.sort((a, b) -> {
                 double av = (Double) a.get("pctChange");
                 double bv = (Double) b.get("pctChange");
@@ -581,6 +595,7 @@ public class WebServer {
             response.put("avgSpd", avgSpd);
             response.put("globalVolumeMultiplier", globalMult);
             response.put("inflationLabel", inflationLabel);
+            response.put("avgVolatility", avgVolatility);
             response.put("topVolatile", volatilities.stream().limit(5).collect(Collectors.toList()));
             response.put("topUndersold", undersells.stream().limit(5).collect(Collectors.toList()));
             response.put("timestamp", System.currentTimeMillis());

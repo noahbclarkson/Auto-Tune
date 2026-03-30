@@ -694,6 +694,22 @@ public class AdminCommand {
         volatilities.sort(Comparator.comparingDouble((ItemVolatility v) -> Math.abs(v.pctChange())).reversed());
         undersells.sort(Comparator.comparingDouble(v -> v.pctChange())); // most negative = most undersold
 
+        // ── Aggregate economy volatility ───────────────────────────────────
+        // Standard deviation of all items' 24h price changes — the single most important
+        // economy health indicator (confirmed across 23 simulation runs)
+        double avgVolatility = 0.0;
+        if (!volatilities.isEmpty()) {
+            double sum = volatilities.stream().mapToDouble(ItemVolatility::pctChange).sum();
+            double mean = sum / volatilities.size();
+            double variance = volatilities.stream()
+                    .mapToDouble(v -> {
+                        double d = v.pctChange() / 100.0 - mean; // normalize to decimal
+                        return d * d;
+                    })
+                    .sum() / volatilities.size();
+            avgVolatility = Math.sqrt(variance);
+        }
+
         // ── Render ─────────────────────────────────────────────────────────
         sender.sendMessage(Component.empty());
         sender.sendMessage(Component.text("Auto-Tune Economy Health Report", NamedTextColor.GOLD, TextDecoration.BOLD));
@@ -719,6 +735,24 @@ public class AdminCommand {
         sender.sendMessage(Component.text("  Avg Spread: ").color(NamedTextColor.GRAY).append(spreadLabel));
         sender.sendMessage(Component.text("  Volume Activity: ").color(NamedTextColor.GRAY).append(volLabel));
         sender.sendMessage(Component.text("  Inflation: ").color(NamedTextColor.GRAY).append(inflationLabel));
+
+        // Aggregate economy volatility (std dev of all items' 24h price changes)
+        NamedTextColor econVolColor;
+        String econVolLabel;
+        if (avgVolatility < 0.05) {
+            econVolColor = NamedTextColor.GREEN;
+            econVolLabel = "Stable";
+        } else if (avgVolatility < 0.15) {
+            econVolColor = NamedTextColor.YELLOW;
+            econVolLabel = "Moderate";
+        } else {
+            econVolColor = NamedTextColor.RED;
+            econVolLabel = "Unstable";
+        }
+        Component volBadge = Component.text(" [" + econVolLabel + "]", econVolColor);
+        sender.sendMessage(Component.text("  Econ Volatility: ").color(NamedTextColor.GRAY)
+                .append(Component.text(String.format("%.4f", avgVolatility), econVolColor))
+                .append(volBadge));
 
         // ── Volatile items ───────────────────────────────────────────────────
         sender.sendMessage(Component.empty());

@@ -77,6 +77,14 @@ pub struct ItemConfig {
     pub max_price_change_override: Option<f64>,
     #[serde(default)]
     pub base_spread_override: Option<f64>,
+    /// Per-item price floor: minimum price (market support floor).
+    /// If set, price cannot fall below this value.
+    #[serde(default)]
+    pub price_floor_override: Option<f64>,
+    /// Per-item price ceiling: maximum price (player affordability cap).
+    /// If set, price cannot exceed this value.
+    #[serde(default)]
+    pub price_ceiling_override: Option<f64>,
 }
 
 impl Default for SimConfig {
@@ -159,6 +167,8 @@ pub fn default_items() -> Vec<ItemConfig> {
             section: "building".into(),
             max_price_change_override: None,
             base_spread_override: None,
+            price_floor_override: None,
+            price_ceiling_override: None,
         },
         ItemConfig {
             name: "Rotten Flesh".into(),
@@ -166,6 +176,8 @@ pub fn default_items() -> Vec<ItemConfig> {
             section: "drops".into(),
             max_price_change_override: None,
             base_spread_override: None,
+            price_floor_override: None,
+            price_ceiling_override: None,
         },
         ItemConfig {
             name: "Redstone".into(),
@@ -173,6 +185,8 @@ pub fn default_items() -> Vec<ItemConfig> {
             section: "ores".into(),
             max_price_change_override: None,
             base_spread_override: None,
+            price_floor_override: None,
+            price_ceiling_override: None,
         },
         ItemConfig {
             name: "Iron Ingot".into(),
@@ -180,6 +194,8 @@ pub fn default_items() -> Vec<ItemConfig> {
             section: "ores".into(),
             max_price_change_override: None,
             base_spread_override: None,
+            price_floor_override: None,
+            price_ceiling_override: None,
         },
         ItemConfig {
             name: "Blaze Rod".into(),
@@ -187,6 +203,8 @@ pub fn default_items() -> Vec<ItemConfig> {
             section: "drops".into(),
             max_price_change_override: None,
             base_spread_override: None,
+            price_floor_override: None,
+            price_ceiling_override: None,
         },
         ItemConfig {
             name: "Diamond".into(),
@@ -194,6 +212,8 @@ pub fn default_items() -> Vec<ItemConfig> {
             section: "ores".into(),
             max_price_change_override: None,
             base_spread_override: None,
+            price_floor_override: None,
+            price_ceiling_override: None,
         },
         ItemConfig {
             name: "Golden Apple".into(),
@@ -201,6 +221,8 @@ pub fn default_items() -> Vec<ItemConfig> {
             section: "food".into(),
             max_price_change_override: None,
             base_spread_override: None,
+            price_floor_override: None,
+            price_ceiling_override: None,
         },
         ItemConfig {
             name: "Netherite Ingot".into(),
@@ -208,6 +230,8 @@ pub fn default_items() -> Vec<ItemConfig> {
             section: "ores".into(),
             max_price_change_override: None,
             base_spread_override: None,
+            price_floor_override: None,
+            price_ceiling_override: None,
         },
     ]
 }

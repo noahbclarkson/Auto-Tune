@@ -73,15 +73,29 @@ pub struct ItemState {
     pub sell_volume_history: Vec<i32>,
     pub tick_buy_volume: i32,
     pub tick_sell_volume: i32,
+    /// Per-item floor: minimum displayed price (market support).
+    pub price_floor_override: Option<f64>,
+    /// Per-item ceiling: maximum displayed price (player affordability cap).
+    pub price_ceiling_override: Option<f64>,
 }
 
 impl ItemState {
     pub fn buy_price(&self) -> f64 {
-        round2(self.price * (1.0 + self.spread.bpd))
+        round2(self.apply_floor_ceiling(self.price * (1.0 + self.spread.bpd)))
     }
 
     pub fn sell_price(&self) -> f64 {
-        round2((self.price * (1.0 - self.spread.spd)).max(0.0))
+        round2(self.apply_floor_ceiling((self.price * (1.0 - self.spread.spd)).max(0.0)))
+    }
+
+    /// Apply floor (minimum) and ceiling (maximum) to a price.
+    /// Mirrors Java MarketEngine.applyFloorCeiling().
+    fn apply_floor_ceiling(&self, price: f64) -> f64 {
+        let p = self
+            .price_floor_override
+            .map_or(price, |floor| price.max(floor));
+        self.price_ceiling_override
+            .map_or(p, |ceiling| p.min(ceiling))
     }
 }
 
@@ -123,6 +137,8 @@ impl MarketEngine {
                 sell_volume_history: vec![0],
                 tick_buy_volume: 0,
                 tick_sell_volume: 0,
+                price_floor_override: ic.price_floor_override,
+                price_ceiling_override: ic.price_ceiling_override,
             })
             .collect();
 

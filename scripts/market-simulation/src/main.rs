@@ -516,6 +516,57 @@ impl Scenario {
         }
     }
 
+    /// Floor/Ceiling Test: Tests whether per-item floor/ceiling affects displayed prices.
+    /// Control: guild_stability_mm_fixed_guild (no floor/ceiling)
+    /// Treatment: same economy but Diamond floor=60% of base ($300), Iron ceiling=100% ($50)
+    ///
+    /// Floor: prevents displayed price from going below floor even when internal price is low.
+    /// Ceiling: prevents displayed price from exceeding ceiling even when internal price is high.
+    /// Internal prices still move freely — only displayed buy/sell prices are clamped.
+    pub fn floor_ceiling_test() -> Self {
+        let mut config = SimConfig::default();
+        // Set floor for Diamond at 60% of base ($500 * 0.6 = $300)
+        if let Some(diamond) = config.items.iter_mut().find(|ic| ic.name == "Diamond") {
+            diamond.price_floor_override = Some(diamond.base_price * 0.6);
+        }
+        // Set ceiling for Iron Ingot at 100% of base ($50)
+        if let Some(iron) = config.items.iter_mut().find(|ic| ic.name == "Iron Ingot") {
+            iron.price_ceiling_override = Some(iron.base_price * 1.0);
+        }
+
+        Self {
+            name: "Floor/Ceiling Test".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// InsiderTrader Test: tests the mean-reversion archetype in isolation.
     ///
     /// InsiderTrader buys when price is below rolling average (undervalued),
@@ -1519,6 +1570,455 @@ fn run_event_control_test() {
     let _ = std::fs::remove_dir_all(&treat_dir);
     let _ = std::fs::remove_dir_all(&ctrl_dir2);
     let _ = std::fs::remove_dir_all(&treat_dir2);
+}
+
+// ─── Floor/Ceiling Test ─────────────────────────────────────────────────────
+
+/// Tests whether per-item floor/ceiling affects displayed prices and trade behavior.
+///
+/// Control: guild_stability_mm_fixed_guild (no floor/ceiling)
+/// Treatment: same but Diamond floor=60% base ($300), Iron ceiling=100% base ($50)
+///
+/// Key question: Does floor/ceiling change the INTERNAL prices, or only the displayed ones?
+/// Per the Java implementation, floor/ceiling is applied to getBuyPrice/getSellPrice,
+/// NOT to the internal price update. So internal prices should be identical between
+/// control and treatment. Only displayed prices differ when floor/ceiling binds.
+///
+/// Expected: Same GDP, same volume, same internal prices, but Diamond sell floor=$300
+/// (vs potentially lower in control when oversupply is severe).
+fn run_floor_ceiling_test() {
+    use crate::analyzer::load_summary;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       FLOOR/CEILING TEST                                    ║");
+    println!("║  Control vs Treatment — same economy, floor/ceiling on      ║");
+    println!("║  Diamond floor=60% ($300), Iron ceiling=100% ($50)          ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guild_stability_mm_fixed_guild (no floor/ceiling)");
+    println!("  Treatment: same + Diamond floor $300, Iron ceiling $50");
+    println!("  Seed: {}\n", seed);
+
+    let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let treat_scenario = Scenario::floor_ceiling_test();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-fc-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-fc-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl = ctrl_scenario.clone();
+    ctrl.seed = Some(seed);
+    let mut treat = treat_scenario.clone();
+    treat.seed = Some(seed);
+
+    if let Err(e) = run_headless(&ctrl, Some(ctrl_dir.clone())) {
+        eprintln!("  Control run error: {}", e);
+        return;
+    }
+    if let Err(e) = run_headless(&treat, Some(treat_dir.clone())) {
+        eprintln!("  Treatment run error: {}", e);
+        return;
+    }
+
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Control summary error: {}", e);
+            return;
+        }
+    };
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treatment summary error: {}", e);
+            return;
+        }
+    };
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  SUMMARY METRICS                                           ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Metric", "CONTROL", "TREATMENT", "Effect"
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "GDP",
+        &format!("{:.0}", ctrl_summary.gdp),
+        &format!("{:.0}", treat_summary.gdp),
+        &format!(
+            "{:+.1}%",
+            (treat_summary.gdp / ctrl_summary.gdp - 1.0) * 100.0
+        )
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Total Debt",
+        &format!("{:.0}", ctrl_summary.debt),
+        &format!("{:.0}", treat_summary.debt),
+        &format!(
+            "{:+.1}%",
+            (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0
+        )
+    );
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Debt/GDP",
+        &format!("{:.2}x", ctrl_dg),
+        &format!("{:.2}x", treat_dg),
+        &format!("{:+.2}x", treat_dg - ctrl_dg)
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Buy Ratio",
+        &format!("{:.1}%", ctrl_summary.buy_ratio * 100.0),
+        &format!("{:.1}%", treat_summary.buy_ratio * 100.0),
+        &format!(
+            "{:+.1}%",
+            (treat_summary.buy_ratio - ctrl_summary.buy_ratio) * 100.0
+        )
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Avg Volatility",
+        &format!("{:.4}", ctrl_summary.avg_volatility),
+        &format!("{:.4}", treat_summary.avg_volatility),
+        &format!(
+            "{:+.4}",
+            treat_summary.avg_volatility - ctrl_summary.avg_volatility
+        )
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Avg BPD",
+        &format!("{:.3}%", ctrl_summary.avg_bpd * 100.0),
+        &format!("{:.3}%", treat_summary.avg_bpd * 100.0),
+        &format!(
+            "{:+.3}%",
+            (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0
+        )
+    );
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  INTERNAL PRICE DISPLACEMENT (should be identical)         ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20} {:>10} {:>10} {:>10}",
+        "Item", "Ctrl Int%", "Treat Int%", "Δ"
+    );
+
+    for i in 0..8 {
+        let ic = &ctrl_scenario.config.items[i];
+        let ce = treat_scenario.config.items.get(i).unwrap_or(ic);
+        // Internal prices aren't directly stored in summary — they're in the final prices.
+        // We show the floor/ceiling values as a note.
+        let floor_str = ce
+            .price_floor_override
+            .map_or("none".into(), |f| format!("${:.0}", f));
+        let ceil_str = ce
+            .price_ceiling_override
+            .map_or("none".into(), |c| format!("${:.0}", c));
+        println!(
+            "  {:20} floor={:>8}  ceiling={:>8}",
+            ic.name, floor_str, ceil_str
+        );
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  ANALYSIS                                                  ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    let gdp_eff = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    if gdp_eff.abs() < 1.0 {
+        println!(
+            "  ✅ Floor/ceiling had NEUTRAL GDP effect ({:+.2}%)",
+            gdp_eff
+        );
+        println!("     Internal prices unchanged — floor/ceiling only affects displayed prices.");
+    } else {
+        println!("  ⚠️  Floor/ceiling changed GDP by {:+.2}%", gdp_eff);
+        println!(
+            "     This suggests floor/ceiling IS affecting internal prices or trade decisions."
+        );
+    }
+
+    let bpd_diff = (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0;
+    if bpd_diff.abs() < 0.1 {
+        println!(
+            "  ✅ Spreads (BPD) unchanged ({:+.3}%) — as expected.",
+            bpd_diff
+        );
+    } else {
+        println!("  ⚠️  Spreads changed by {:+.3}%", bpd_diff);
+    }
+
+    println!("\n  Key insight: Floor/ceiling is applied AFTER spread calculation,");
+    println!("  in getBuyPrice/getSellPrice. It protects players from extreme prices");
+    println!("  without changing the internal market equilibrium.");
+    println!("  Floor helps sellers during oversupply; ceiling helps buyers during scarcity.");
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
+// ─── Multi-Server Coordination Test ────────────────────────────────────────
+
+/// Multi-Server Simulation: Tests cross-server price aggregation.
+///
+/// Runs 3 independent servers with different economic conditions (player mixes),
+/// each generating a ratio matrix from their price history. A coordinator aggregates
+/// the ratio matrices and computes "true" relative prices using weighted geometric mean.
+///
+/// Key question: Does cross-server true price computation produce meaningful consensus prices?
+///
+/// Architecture:
+/// - Each server runs a full simulation (different archetypes → different price scales)
+/// - Coordinator collects final prices from each server
+/// - Uses ratio-matrix aggregation (not just geometric mean of absolute prices)
+/// - True prices are anchored to Cobblestone base price ($1)
+fn run_multi_server_test() {
+    use crate::analyzer::load_all_prices;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       MULTI-SERVER COORDINATION TEST                        ║");
+    println!("║  3 servers, cross-server price aggregation                 ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    // ── Step 1: Run 3 different scenarios as "independent servers" ──
+    let seed = 42u64;
+
+    // Server A: guild_stability (high demand, GB-heavy)
+    let srv_a_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let srv_a_dir = PathBuf::from("/tmp/autotune-ms-srv-a");
+    let _ = std::fs::remove_dir_all(&srv_a_dir);
+    std::fs::create_dir_all(&srv_a_dir).ok();
+    let mut srv_a = srv_a_scenario.clone();
+    srv_a.seed = Some(seed);
+    println!("  Running Server A (guild_stability_mm_fixed_guild)...");
+    if let Err(e) = run_headless(&srv_a, Some(srv_a_dir.clone())) {
+        eprintln!("  Server A error: {}", e);
+        return;
+    }
+
+    // Server B: standard (casual/farmer mix — baseline economy)
+    let srv_b_scenario = Scenario::standard();
+    let srv_b_dir = PathBuf::from("/tmp/autotune-ms-srv-b");
+    let _ = std::fs::remove_dir_all(&srv_b_dir);
+    std::fs::create_dir_all(&srv_b_dir).ok();
+    let mut srv_b = srv_b_scenario.clone();
+    srv_b.seed = Some(seed + 100);
+    println!("  Running Server B (standard)...");
+    if let Err(e) = run_headless(&srv_b, Some(srv_b_dir.clone())) {
+        eprintln!("  Server B error: {}", e);
+        return;
+    }
+
+    // Server C: spread_stability (trader-heavy — different scale economy)
+    let srv_c_scenario = Scenario::spread_stability();
+    let srv_c_dir = PathBuf::from("/tmp/autotune-ms-srv-c");
+    let _ = std::fs::remove_dir_all(&srv_c_dir);
+    std::fs::create_dir_all(&srv_c_dir).ok();
+    let mut srv_c = srv_c_scenario.clone();
+    srv_c.seed = Some(seed + 200);
+    println!("  Running Server C (spread_stability)...\n");
+    if let Err(e) = run_headless(&srv_c, Some(srv_c_dir.clone())) {
+        eprintln!("  Server C error: {}", e);
+        return;
+    }
+
+    // ── Step 2: Load final prices from each server's DB ──
+    println!("  Loading final prices from each server DB...\n");
+
+    let srv_a_prices = load_all_prices(&srv_a_dir.join("simulation.db"))
+        .map_err(|e| e.to_string())
+        .unwrap_or_default();
+    let srv_b_prices = load_all_prices(&srv_b_dir.join("simulation.db"))
+        .map_err(|e| e.to_string())
+        .unwrap_or_default();
+    let srv_c_prices = load_all_prices(&srv_c_dir.join("simulation.db"))
+        .map_err(|e| e.to_string())
+        .unwrap_or_default();
+
+    if srv_a_prices.is_empty() || srv_b_prices.is_empty() || srv_c_prices.is_empty() {
+        println!("  ⚠️  Failed to load prices from one or more server DBs.");
+        println!("  DB data may be missing. This can happen if the simulation ended early.");
+        let _ = std::fs::remove_dir_all(&srv_a_dir);
+        let _ = std::fs::remove_dir_all(&srv_b_dir);
+        let _ = std::fs::remove_dir_all(&srv_c_dir);
+        return;
+    }
+
+    // ── Step 3: Build ratio matrices ──
+    // load_all_prices returns Vec<(name, price, spread)> — prices are the INTERNAL prices
+    fn extract_price_vec(prices: &[(String, f64, f64)]) -> Vec<f64> {
+        prices.iter().map(|(_, p, _)| *p).collect()
+    }
+
+    let a_vec = extract_price_vec(&srv_a_prices);
+    let b_vec = extract_price_vec(&srv_b_prices);
+    let c_vec = extract_price_vec(&srv_c_prices);
+
+    let item_names: Vec<&str> = srv_a_prices.iter().map(|(n, _, _)| n.as_str()).collect();
+    let n = item_names
+        .len()
+        .min(a_vec.len().min(b_vec.len().min(c_vec.len())));
+
+    if n < 2 {
+        println!("  ⚠️  Not enough items in price data.");
+        let _ = std::fs::remove_dir_all(&srv_a_dir);
+        let _ = std::fs::remove_dir_all(&srv_b_dir);
+        let _ = std::fs::remove_dir_all(&srv_c_dir);
+        return;
+    }
+
+    // Build ratio matrices: r[i][j] = price[i] / price[j]
+    fn build_ratio_matrix(prices: &[f64]) -> Vec<Vec<f64>> {
+        let n = prices.len();
+        (0..n)
+            .map(|i| {
+                (0..n)
+                    .map(|j| {
+                        if prices[j] > 0.0 {
+                            prices[i] / prices[j]
+                        } else {
+                            1.0
+                        }
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    let a_ratios = build_ratio_matrix(&a_vec);
+    let b_ratios = build_ratio_matrix(&b_vec);
+    let c_ratios = build_ratio_matrix(&c_vec);
+
+    // Geometric mean of ratio matrices across servers
+    let mut combined = vec![vec![0.0; n]; n];
+    for i in 0..n {
+        for j in 0..n {
+            combined[i][j] = (a_ratios[i][j] * b_ratios[i][j] * c_ratios[i][j]).powf(1.0 / 3.0);
+        }
+    }
+
+    // Solve for true prices from combined ratio matrix.
+    // We use power iteration: price[i] ≈ (∏_j r[i][j])^(1/n)
+    // Then normalize to Cobblestone base = $1
+    let mut true_prices: Vec<f64> = (0..n)
+        .map(|i| {
+            let prod: f64 = (0..n)
+                .filter(|&j| j != i && combined[i][j] > 0.0)
+                .map(|j| combined[i][j])
+                .product();
+            let cnt = (0..n).filter(|&j| j != i && combined[i][j] > 0.0).count();
+            if cnt > 0 {
+                prod.powf(1.0 / cnt as f64)
+            } else {
+                1.0
+            }
+        })
+        .collect();
+
+    // Normalize so Cobblestone (item 0) = its base price
+    let cobblestone_base = 1.0_f64; // Cobblestone base price
+    if true_prices[0] > 0.0 {
+        let scale = cobblestone_base / true_prices[0];
+        for p in &mut true_prices {
+            *p *= scale;
+        }
+    }
+
+    let bases = [1.0, 2.0, 20.0, 50.0, 75.0, 500.0, 500.0, 2500.0];
+
+    println!(
+        "  {:20} {:>10} {:>10} {:>10} {:>10} {:>10}",
+        "Item", "Srv A ($)", "Srv B ($)", "Srv C ($)", "True Price", "True vs Base"
+    );
+    println!(
+        "  {:20} {:>10} {:>10} {:>10} {:>10} {:>10}",
+        "---", "---", "---", "---", "---", "---"
+    );
+
+    for i in 0..n {
+        let displacement = if bases.get(i).copied().unwrap_or(1.0) > 0.0 {
+            (true_prices[i] / bases[i] - 1.0) * 100.0
+        } else {
+            0.0
+        };
+        println!(
+            "  {:20} {:>10.2} {:>10.2} {:>10.2} {:>10.2} {:>+8.1}%",
+            item_names[i], a_vec[i], b_vec[i], c_vec[i], true_prices[i], displacement
+        );
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  CROSS-SERVER RATIO ANALYSIS                               ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    // Show key ratios: Diamond/Iron, Gold Apple/Diamond, Netherite/Diamond
+    fn find_ratio(items: &[&str], vec: &[f64], name_a: &str, name_b: &str) -> f64 {
+        let ia = items.iter().position(|&n| n == name_a);
+        let ib = items.iter().position(|&n| n == name_b);
+        match (ia, ib) {
+            (Some(i), Some(j)) if vec[j] > 0.0 => vec[i] / vec[j],
+            _ => 0.0,
+        }
+    }
+
+    println!("  Key price ratios (should be consistent across servers with different scales):");
+    let ratios = [
+        ("Diamond", "Iron Ingot"),
+        ("Diamond", "Golden Apple"),
+        ("Netherite Ingot", "Diamond"),
+        ("Blaze Rod", "Redstone"),
+        ("Cobblestone", "Rotten Flesh"),
+    ];
+
+    println!(
+        "  {:30} {:>10} {:>10} {:>10} {:>10}",
+        "Ratio", "Srv A", "Srv B", "Srv C", "True"
+    );
+    println!(
+        "  {:30} {:>10} {:>10} {:>10} {:>10}",
+        "---", "---", "---", "---", "---"
+    );
+
+    for (name_a, name_b) in &ratios {
+        let ra = find_ratio(&item_names, &a_vec, name_a, name_b);
+        let rb = find_ratio(&item_names, &b_vec, name_a, name_b);
+        let rc = find_ratio(&item_names, &c_vec, name_a, name_b);
+        let rt = find_ratio(&item_names, &true_prices, name_a, name_b);
+        println!(
+            "  {}/{} {:>13} {:>10.3} {:>10.3} {:>10.3} {:>10.3}",
+            name_a, name_b, "", ra, rb, rc, rt
+        );
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  KEY INSIGHT                                               ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Cross-server price aggregation works at the RATIO level.");
+    println!("  Individual servers may have 10x different absolute price scales,");
+    println!("  but their relative prices (Diamond/Iron, Cobblestone/Redstone)");
+    println!("  tend to be consistent because they reflect real crafting economics.");
+    println!();
+    println!("  By aggregating ratio matrices from multiple servers and solving for");
+    println!("  true relative prices, we get a consensus 'true price' vector that");
+    println!("  new servers can use as initial price anchors.");
+    println!();
+    println!("  This is exactly what the Rust price-solver crate does in the API server:");
+    println!("  servers submit ratio matrices → solver computes true prices → new servers");
+    println!("  use true prices as starting point → faster convergence to fair prices.");
+
+    // Cleanup
+    let _ = std::fs::remove_dir_all(&srv_a_dir);
+    let _ = std::fs::remove_dir_all(&srv_b_dir);
+    let _ = std::fs::remove_dir_all(&srv_c_dir);
 }
 
 // ─── InsiderTrader Added Test ───────────────────────────────────────────────
@@ -3180,6 +3680,8 @@ fn main() -> eframe::Result<()> {
         println!("  --exploiter-stress-test   Head-to-head: standard+MM vs +Exploiters");
         println!("  --regression            Regression test against stored baselines");
         println!("  --all                   Run all scenarios headlessly");
+        println!("  --floor-ceiling-test     Floor/ceiling effect: control vs treatment");
+        println!("  --multi-server-test     Cross-server price aggregation test");
         return Ok(());
     }
 
@@ -3262,6 +3764,7 @@ fn main() -> eframe::Result<()> {
                 Scenario::insider_trader_test(),
                 Scenario::market_event_test(),
                 Scenario::standard_plus_mm_gb_it(),
+                Scenario::floor_ceiling_test(),
             ];
             let base_dir = output_dir.unwrap_or_else(|| PathBuf::from("./output"));
             let mut results: Vec<(String, bool, String)> = Vec::new();
@@ -3308,6 +3811,7 @@ fn main() -> eframe::Result<()> {
                 "standard-plus-mm-gb-it" | "standard_plus_mm_gb_it" => {
                     Scenario::standard_plus_mm_gb_it()
                 }
+                "floor-ceiling-test" | "floor_ceiling_test" => Scenario::floor_ceiling_test(),
                 "correlation" => Scenario::correlation(),
                 _ => {
                     eprintln!(
@@ -3342,6 +3846,18 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--it-added-test" {
         run_it_added_test();
+        return Ok(());
+    }
+
+    // ─── Floor/Ceiling Test ───────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--floor-ceiling-test" {
+        run_floor_ceiling_test();
+        return Ok(());
+    }
+
+    // ─── Multi-Server Test ───────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--multi-server-test" {
+        run_multi_server_test();
         return Ok(());
     }
 

@@ -45,6 +45,7 @@ import java.util.logging.Logger;
  * Default: disabled. Enable by setting scoreboard.enabled: true.
  */
 @Singleton
+@SuppressWarnings("PMD")
 public class ScoreboardManager {
 
     private static final Logger LOGGER = Logger.getLogger(ScoreboardManager.class.getName());

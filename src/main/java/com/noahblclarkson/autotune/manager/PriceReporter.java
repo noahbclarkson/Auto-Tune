@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class PriceReporter {
 
     private static final MathContext MC = new MathContext(10, RoundingMode.HALF_UP);

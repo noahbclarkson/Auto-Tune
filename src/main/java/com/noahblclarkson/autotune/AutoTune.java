@@ -4,6 +4,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.noahblclarkson.autotune.command.CommandManager;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.config.ConfigValidator;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.economy.EconomyManager;
 import com.noahblclarkson.autotune.economy.LoanManager;
@@ -59,7 +60,7 @@ public class AutoTune extends JavaPlugin {
 
         try {
             initialize();
-            getLogger().info("Auto-Tune has been enabled successfully!");
+            logStartupSummary();
         } catch (Exception e) {
             getLogger().log(Level.SEVERE, "Failed to enable Auto-Tune", e);
             getServer().getPluginManager().disablePlugin(this);
@@ -76,6 +77,12 @@ public class AutoTune extends JavaPlugin {
         // Load configuration first
         configManager = new ConfigManager(this);
         configManager.load();
+
+        // Fail fast if config has invalid values — before any managers or DB are initialized
+        var violations = ConfigValidator.validate(configManager.getConfig());
+        if (!violations.isEmpty()) {
+            throw new IllegalStateException(ConfigValidator.format(violations));
+        }
 
         // Setup Vault economy
         if (!setupEconomy()) {
@@ -228,6 +235,28 @@ public class AutoTune extends JavaPlugin {
         }
         vaultPerms = rsp.getProvider();
         getLogger().info("Vault permission provider registered (" + vaultPerms.getName() + ").");
+    }
+
+    /**
+     * Logs a concise startup summary with version, config, and enabled features.
+     * Called once after all managers are initialized, before commands/listeners.
+     */
+    private void logStartupSummary() {
+        var meta = getPluginMeta();
+        var cfg = configManager.getConfig();
+
+        getLogger().info("========================================");
+        getLogger().info("  Auto-Tune v" + meta.getVersion() + " enabled");
+        getLogger().info("  Storage: " + cfg.storage().type()
+                + " | Web: " + cfg.web().host() + ":" + cfg.web().port()
+                + " | Market: " + (cfg.marketFrozen() ? "FROZEN" : "active"));
+        getLogger().info("  Economy: " + cfg.economy().currencySymbol()
+                + " | Loans: " + (cfg.loans().enabled() ? "on" : "off")
+                + " | Events: " + (cfg.marketEvents().enabled() ? "on" : "off")
+                + " | Price reporting: " + (cfg.priceReporter().enabled() ? "on" : "off"));
+        getLogger().info("  Commands: /shop, /sell, /autosell, /loan, /auction, /event");
+        getLogger().info("  Dashboard: http://" + cfg.web().host() + ":" + cfg.web().port());
+        getLogger().info("========================================");
     }
 
     @NotNull

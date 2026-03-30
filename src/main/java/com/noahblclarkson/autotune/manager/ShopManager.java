@@ -381,4 +381,30 @@ public class ShopManager {
             idToItemCache.put(updated.id(), updated);
         });
     }
+
+    /**
+     * Set (or clear) a per-item price floor — buy/sell prices will never go below this.
+     * Pass null to remove the floor and allow free market pricing.
+     */
+    public void setPriceFloorOverride(int itemId, @Nullable BigDecimal floor) {
+        itemRepository.updatePriceFloor(itemId, floor);
+        getItemById(itemId).ifPresent(item -> {
+            ShopItem updated = item.toBuilder().priceFloorOverride(floor).build();
+            hashToItemCache.put(updated.itemHash(), updated);
+            idToItemCache.put(updated.id(), updated);
+        });
+    }
+
+    /**
+     * Set (or clear) a per-item price ceiling — buy/sell prices will never exceed this.
+     * Pass null to remove the ceiling and allow free market pricing.
+     */
+    public void setPriceCeilingOverride(int itemId, @Nullable BigDecimal ceiling) {
+        itemRepository.updatePriceCeiling(itemId, ceiling);
+        getItemById(itemId).ifPresent(item -> {
+            ShopItem updated = item.toBuilder().priceCeilingOverride(ceiling).build();
+            hashToItemCache.put(updated.itemHash(), updated);
+            idToItemCache.put(updated.id(), updated);
+        });
+    }
 }

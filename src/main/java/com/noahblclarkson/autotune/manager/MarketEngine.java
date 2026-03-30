@@ -540,8 +540,10 @@ public class MarketEngine {
         BigDecimal price = priceCache.getOrDefault(item.id(), item.price());
         SpreadResult spread = spreadCache.getOrDefault(item.id(), SpreadResult.DEFAULT);
 
-        return price.multiply(BigDecimal.ONE.add(spread.bpd()), MATH_CONTEXT)
+        BigDecimal finalPrice = price.multiply(BigDecimal.ONE.add(spread.bpd()), MATH_CONTEXT)
                 .setScale(2, RoundingMode.HALF_UP);
+
+        return applyFloorCeiling(finalPrice, item, true);
     }
 
     public BigDecimal getBuyPrice(ShopItem item, int amount) {
@@ -551,17 +553,21 @@ public class MarketEngine {
 
         BigDecimal basePrice = price.multiply(BigDecimal.ONE.add(spread.bpd()), MATH_CONTEXT);
         BigDecimal slippageFactor = BigDecimal.ONE.add(BigDecimal.valueOf(slippageCoeff * Math.sqrt(amount)));
-        return basePrice.multiply(slippageFactor, MATH_CONTEXT)
+        BigDecimal finalPrice = basePrice.multiply(slippageFactor, MATH_CONTEXT)
                 .setScale(2, RoundingMode.HALF_UP);
+
+        return applyFloorCeiling(finalPrice, item, true);
     }
 
     public BigDecimal getSellPrice(ShopItem item) {
         BigDecimal price = priceCache.getOrDefault(item.id(), item.price());
         SpreadResult spread = spreadCache.getOrDefault(item.id(), SpreadResult.DEFAULT);
 
-        return price.multiply(BigDecimal.ONE.subtract(spread.spd()), MATH_CONTEXT)
+        BigDecimal finalPrice = price.multiply(BigDecimal.ONE.subtract(spread.spd()), MATH_CONTEXT)
                 .max(BigDecimal.ZERO)
                 .setScale(2, RoundingMode.HALF_UP);
+
+        return applyFloorCeiling(finalPrice, item, false);
     }
 
     public BigDecimal getSellPrice(ShopItem item, int amount) {
@@ -571,9 +577,27 @@ public class MarketEngine {
 
         BigDecimal basePrice = price.multiply(BigDecimal.ONE.subtract(spread.spd()), MATH_CONTEXT);
         BigDecimal slippageFactor = BigDecimal.ONE.add(BigDecimal.valueOf(slippageCoeff * Math.sqrt(amount)));
-        return basePrice.divide(slippageFactor, MATH_CONTEXT)
+        BigDecimal finalPrice = basePrice.divide(slippageFactor, MATH_CONTEXT)
                 .max(BigDecimal.ZERO)
                 .setScale(2, RoundingMode.HALF_UP);
+
+        return applyFloorCeiling(finalPrice, item, false);
+    }
+
+    /**
+     * Apply per-item price floor and ceiling bounds to a computed price.
+     * Floor: minimum price (prevents prices going too low — market support).
+     * Ceiling: maximum price (prevents prices going too high — player affordability cap).
+     * Only applied if the ShopItem has a corresponding override set.
+     */
+    private BigDecimal applyFloorCeiling(BigDecimal computedPrice, ShopItem item, boolean isBuy) {
+        if (item.priceFloorOverride() != null) {
+            computedPrice = computedPrice.max(item.priceFloorOverride());
+        }
+        if (item.priceCeilingOverride() != null) {
+            computedPrice = computedPrice.min(item.priceCeilingOverride());
+        }
+        return computedPrice;
     }
 
     public void recordBuy(int itemId, int amount) {

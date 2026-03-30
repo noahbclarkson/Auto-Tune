@@ -20,6 +20,8 @@ public record ShopItem(
         @Nullable String itemData,
         @Nullable Double maxPriceChangeOverride,
         @Nullable Double baseSpreadOverride,
+        @Nullable BigDecimal priceFloorOverride,
+        @Nullable BigDecimal priceCeilingOverride,
         @NotNull Instant createdAt,
         @NotNull Instant updatedAt
 ) {
@@ -41,6 +43,8 @@ public record ShopItem(
                 .itemData(itemData)
                 .maxPriceChangeOverride(maxPriceChangeOverride)
                 .baseSpreadOverride(baseSpreadOverride)
+                .priceFloorOverride(priceFloorOverride)
+                .priceCeilingOverride(priceCeilingOverride)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt);
     }
@@ -83,6 +87,8 @@ public record ShopItem(
         private String itemData;
         private Double maxPriceChangeOverride;
         private Double baseSpreadOverride;
+        private BigDecimal priceFloorOverride;
+        private BigDecimal priceCeilingOverride;
         private Instant createdAt = Instant.now();
         private Instant updatedAt = Instant.now();
 
@@ -141,6 +147,16 @@ public record ShopItem(
             return this;
         }
 
+        public Builder priceFloorOverride(BigDecimal priceFloorOverride) {
+            this.priceFloorOverride = priceFloorOverride;
+            return this;
+        }
+
+        public Builder priceCeilingOverride(BigDecimal priceCeilingOverride) {
+            this.priceCeilingOverride = priceCeilingOverride;
+            return this;
+        }
+
         public Builder createdAt(Instant createdAt) {
             this.createdAt = createdAt;
             return this;
@@ -156,6 +172,7 @@ public record ShopItem(
                     id, material, itemHash, displayName, price,
                     section, enabled, buyable, itemData,
                     maxPriceChangeOverride, baseSpreadOverride,
+                    priceFloorOverride, priceCeilingOverride,
                     createdAt, updatedAt
             );
         }

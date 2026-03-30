@@ -123,6 +123,10 @@ public class AdminCommand {
                 .append(Component.text(" — Per-item base spread override", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin item maxchange <item> <value>", NamedTextColor.YELLOW)
                 .append(Component.text(" — Per-item max price change override", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin item floor <item> <value>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Price floor (min price), -1 to clear", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin item ceiling <item> <value>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Price ceiling (max price), -1 to clear", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin item info <item>", NamedTextColor.YELLOW)
                 .append(Component.text(" — Show item config & overrides", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin item reset <item>", NamedTextColor.YELLOW)
@@ -1045,6 +1049,88 @@ public class AdminCommand {
                 + " set to " + String.format("%.2f%%", value), NamedTextColor.GREEN));
     }
 
+    @Command("autotune admin item floor <material> <value>")
+    @Permission("autotune.admin")
+    public void itemFloor(
+            CommandSender sender,
+            @Argument(value = "material", suggestions = "price-override-material") String materialName,
+            @Argument("value") double value
+    ) {
+        org.bukkit.Material mat = matchMaterial(materialName);
+        if (mat == null) {
+            sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        Optional<ShopItem> shopItem = shopManager.getItemByMaterial(mat);
+        if (shopItem.isEmpty()) {
+            sender.sendMessage(Component.text("Material not in shop: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        ShopItem item = shopItem.get();
+        if (value < 0) {
+            // -1 sentinel = clear floor
+            shopManager.setPriceFloorOverride(item.id(), null);
+            sender.sendMessage(Component.text("Price floor cleared for " + item.getDisplayNameOrMaterial()
+                    + ". Using free market pricing.", NamedTextColor.GREEN));
+            return;
+        }
+
+        if (value < 0.01) {
+            sender.sendMessage(Component.text("Price floor must be at least $0.01. Use -1 to clear.",
+                    NamedTextColor.RED));
+            return;
+        }
+
+        BigDecimal floor = BigDecimal.valueOf(value);
+        shopManager.setPriceFloorOverride(item.id(), floor);
+        sender.sendMessage(Component.text("Price floor for " + item.getDisplayNameOrMaterial()
+                + " set to " + configManager.formatCurrency(floor)
+                + " — buy/sell prices will not go below this.", NamedTextColor.GREEN));
+    }
+
+    @Command("autotune admin item ceiling <material> <value>")
+    @Permission("autotune.admin")
+    public void itemCeiling(
+            CommandSender sender,
+            @Argument(value = "material", suggestions = "price-override-material") String materialName,
+            @Argument("value") double value
+    ) {
+        org.bukkit.Material mat = matchMaterial(materialName);
+        if (mat == null) {
+            sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        Optional<ShopItem> shopItem = shopManager.getItemByMaterial(mat);
+        if (shopItem.isEmpty()) {
+            sender.sendMessage(Component.text("Material not in shop: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        ShopItem item = shopItem.get();
+        if (value < 0) {
+            // -1 sentinel = clear ceiling
+            shopManager.setPriceCeilingOverride(item.id(), null);
+            sender.sendMessage(Component.text("Price ceiling cleared for " + item.getDisplayNameOrMaterial()
+                    + ". Using free market pricing.", NamedTextColor.GREEN));
+            return;
+        }
+
+        if (value < 0.01) {
+            sender.sendMessage(Component.text("Price ceiling must be at least $0.01. Use -1 to clear.",
+                    NamedTextColor.RED));
+            return;
+        }
+
+        BigDecimal ceiling = BigDecimal.valueOf(value);
+        shopManager.setPriceCeilingOverride(item.id(), ceiling);
+        sender.sendMessage(Component.text("Price ceiling for " + item.getDisplayNameOrMaterial()
+                + " set to " + configManager.formatCurrency(ceiling)
+                + " — buy/sell prices will not exceed this.", NamedTextColor.GREEN));
+    }
+
     @Command("autotune admin item info <material>")
     @Permission("autotune.admin")
     public void itemInfo(
@@ -1096,6 +1182,22 @@ public class AdminCommand {
                 .append(Component.text(maxChangeStr,
                         item.maxPriceChangeOverride() != null ? NamedTextColor.YELLOW : NamedTextColor.WHITE)));
 
+        // Price floor override
+        String floorStr = item.priceFloorOverride() != null
+                ? configManager.formatCurrency(item.priceFloorOverride()) + " (override)"
+                : "None";
+        sender.sendMessage(Component.text("  Price Floor: ", NamedTextColor.GRAY)
+                .append(Component.text(floorStr,
+                        item.priceFloorOverride() != null ? NamedTextColor.YELLOW : NamedTextColor.WHITE)));
+
+        // Price ceiling override
+        String ceilingStr = item.priceCeilingOverride() != null
+                ? configManager.formatCurrency(item.priceCeilingOverride()) + " (override)"
+                : "None";
+        sender.sendMessage(Component.text("  Price Ceiling: ", NamedTextColor.GRAY)
+                .append(Component.text(ceilingStr,
+                        item.priceCeilingOverride() != null ? NamedTextColor.YELLOW : NamedTextColor.WHITE)));
+
         // Price override
         Optional<PriceOverride> priceOverride = marketEngine.getOverride(item.id());
         if (priceOverride.isPresent()) {
@@ -1132,6 +1234,8 @@ public class AdminCommand {
         ShopItem item = shopItem.get();
         shopManager.setBaseSpreadOverride(item.id(), null);
         shopManager.setMaxPriceChangeOverride(item.id(), null);
+        shopManager.setPriceFloorOverride(item.id(), null);
+        shopManager.setPriceCeilingOverride(item.id(), null);
         sender.sendMessage(Component.text("All per-item overrides cleared for "
                 + item.getDisplayNameOrMaterial() + ". Using global config values.", NamedTextColor.GREEN));
     }

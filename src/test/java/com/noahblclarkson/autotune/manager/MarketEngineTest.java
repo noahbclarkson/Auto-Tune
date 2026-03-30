@@ -567,6 +567,96 @@ class MarketEngineTest {
         }
     }
 
+    @DisplayName("Price floor and ceiling")
+    class PriceFloorCeilingTests {
+
+        private ShopItem makeItemWithFloorCeiling(int id, String price,
+                                                   BigDecimal floor, BigDecimal ceiling) {
+            return new ShopItem(
+                    id,
+                    Material.DIAMOND,
+                    "diamond",
+                    "Diamond",
+                    new BigDecimal(price),
+                    "misc",
+                    true,
+                    null,
+                    null,
+                    null, null, floor, ceiling,
+                    Instant.now(),
+                    Instant.now()
+            );
+        }
+
+        @Test
+        @DisplayName("buy price respects floor when market price is below floor")
+        void buyPriceRespectsFloor() {
+            // Market price $50, floor $100, BPD 10%
+            // Raw buy = $50 * 1.10 = $55, but floor clamps to $100
+            ShopItem item = makeItemWithFloorCeiling(1, "50.00",
+                    new BigDecimal("100.00"), null);
+            BigDecimal price = engine.getBuyPrice(item);
+            assertEquals(new BigDecimal("100.00"), price);
+        }
+
+        @Test
+        @DisplayName("buy price respects ceiling when market price would exceed ceiling")
+        void buyPriceRespectsCeiling() {
+            // Market price $200, ceiling $100, BPD 10%
+            // Raw buy = $200 * 1.10 = $220, but ceiling clamps to $100
+            ShopItem item = makeItemWithFloorCeiling(2, "200.00",
+                    null, new BigDecimal("100.00"));
+            BigDecimal price = engine.getBuyPrice(item);
+            assertEquals(new BigDecimal("100.00"), price);
+        }
+
+        @Test
+        @DisplayName("sell price respects floor when market price is below floor")
+        void sellPriceRespectsFloor() {
+            // Market price $50, floor $100, SPD 10%
+            // Raw sell = $50 * 0.90 = $45, but floor clamps to $100
+            ShopItem item = makeItemWithFloorCeiling(3, "50.00",
+                    new BigDecimal("100.00"), null);
+            BigDecimal price = engine.getSellPrice(item);
+            assertEquals(new BigDecimal("100.00"), price);
+        }
+
+        @Test
+        @DisplayName("sell price respects ceiling when market price would exceed ceiling")
+        void sellPriceRespectsCeiling() {
+            // Market price $200, ceiling $100, SPD 10%
+            // Raw sell = $200 * 0.90 = $180, but ceiling clamps to $100
+            ShopItem item = makeItemWithFloorCeiling(4, "200.00",
+                    null, new BigDecimal("100.00"));
+            BigDecimal price = engine.getSellPrice(item);
+            assertEquals(new BigDecimal("100.00"), price);
+        }
+
+        @Test
+        @DisplayName("floor and ceiling both apply when both are set")
+        void bothFloorAndCeilingApply() {
+            // Floor $80, ceiling $120. Price in range should be unchanged ($100).
+            // Buy: $100 * 1.10 = $110, which is in [$80, $120] range
+            ShopItem item = makeItemWithFloorCeiling(5, "100.00",
+                    new BigDecimal("80.00"), new BigDecimal("120.00"));
+            BigDecimal buyPrice = engine.getBuyPrice(item);
+            assertEquals(new BigDecimal("110.00"), buyPrice);
+
+            // Sell: $100 * 0.90 = $90, which is in [$80, $120] range
+            BigDecimal sellPrice = engine.getSellPrice(item);
+            assertEquals(new BigDecimal("90.00"), sellPrice);
+        }
+
+        @Test
+        @DisplayName("no floor or ceiling means no bounds applied")
+        void noFloorOrCeiling() {
+            // Market price $100, no floor/ceiling, BPD 10%
+            ShopItem item = makeItemWithFloorCeiling(6, "100.00", null, null);
+            assertEquals(new BigDecimal("110.00"), engine.getBuyPrice(item));
+            assertEquals(new BigDecimal("90.00"), engine.getSellPrice(item));
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Helper methods
     // -------------------------------------------------------------------------
@@ -592,7 +682,7 @@ class MarketEngineTest {
                 true,
                 null,
                 null,
-                null, null,
+                null, null, null, null,
                 Instant.now(),
                 Instant.now()
         );
@@ -609,7 +699,7 @@ class MarketEngineTest {
                 true,
                 null,
                 null,
-                maxChange, null,
+                maxChange, null, null, null,
                 Instant.now(),
                 Instant.now()
         );

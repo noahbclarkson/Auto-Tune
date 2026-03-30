@@ -38,6 +38,12 @@ public class ItemRepository {
         double baseSpreadRaw = rs.getDouble("base_spread_override");
         Double baseSpreadOverride = rs.wasNull() ? null : baseSpreadRaw;
 
+        BigDecimal priceFloorOverride = rs.getBigDecimal("price_floor");
+        if (rs.wasNull()) priceFloorOverride = null;
+
+        BigDecimal priceCeilingOverride = rs.getBigDecimal("price_ceiling");
+        if (rs.wasNull()) priceCeilingOverride = null;
+
         return ShopItem.builder()
                 .id(rs.getInt("id"))
                 .material(Material.valueOf(rs.getString("material")))
@@ -50,13 +56,15 @@ public class ItemRepository {
                 .itemData(rs.getString("item_data"))
                 .maxPriceChangeOverride(maxPriceChangeOverride)
                 .baseSpreadOverride(baseSpreadOverride)
+                .priceFloorOverride(priceFloorOverride)
+                .priceCeilingOverride(priceCeilingOverride)
                 .createdAt(rs.getTimestamp("created_at").toInstant())
                 .updatedAt(rs.getTimestamp("updated_at").toInstant())
                 .build();
     }
 
     private static final String SELECT_COLUMNS =
-            "id, material, item_hash, display_name, price, section, enabled, buyable, item_data, max_price_change_override, base_spread_override, created_at, updated_at";
+            "id, material, item_hash, display_name, price, section, enabled, buyable, item_data, max_price_change_override, base_spread_override, price_floor, price_ceiling, created_at, updated_at";
 
     public List<ShopItem> findAll() {
         return jdbi.withHandle(handle ->
@@ -140,6 +148,30 @@ public class ItemRepository {
                                 """)
                         .bind("id", itemId)
                         .bind("override", maxPriceChangeOverride)
+                        .bind("updatedAt", Timestamp.from(Instant.now()))
+                        .execute());
+    }
+
+    public void updatePriceFloor(int itemId, @Nullable BigDecimal priceFloor) {
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                                UPDATE at_items SET price_floor = :floor, updated_at = :updatedAt
+                                WHERE id = :id
+                                """)
+                        .bind("id", itemId)
+                        .bind("floor", priceFloor)
+                        .bind("updatedAt", Timestamp.from(Instant.now()))
+                        .execute());
+    }
+
+    public void updatePriceCeiling(int itemId, @Nullable BigDecimal priceCeiling) {
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                                UPDATE at_items SET price_ceiling = :ceiling, updated_at = :updatedAt
+                                WHERE id = :id
+                                """)
+                        .bind("id", itemId)
+                        .bind("ceiling", priceCeiling)
                         .bind("updatedAt", Timestamp.from(Instant.now()))
                         .execute());
     }

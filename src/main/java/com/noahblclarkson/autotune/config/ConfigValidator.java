@@ -197,6 +197,14 @@ public class ConfigValidator {
         if (c.inflationRateImpact() < 0) {
             v.add(S_LOANS + ".inflationRateImpact must be >= 0 (currently " + c.inflationRateImpact() + ").");
         }
+        if (c.postDefaultCooldownHours() < 0) {
+            v.add(S_LOANS + ".postDefaultCooldownHours must be >= 0 (currently " + c.postDefaultCooldownHours() + "). "
+                    + "Use 0 to disable the post-default cooldown.");
+        }
+        if (c.singleLoanGdpCap() <= 0) {
+            v.add(S_LOANS + ".singleLoanGdpCap must be > 0 (currently " + c.singleLoanGdpCap() + "). "
+                    + "A value of 1.0 caps single loans at economy GDP. Values < 1 would be trivially small.");
+        }
     }
 
     private static void validateGui(AutoTuneConfig.GuiConfig c, List<String> v) {

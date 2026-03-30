@@ -53,7 +53,8 @@ CREATE TABLE IF NOT EXISTS at_players (
     total_sold DECIMAL(20, 2) DEFAULT 0,
     transaction_count INTEGER DEFAULT 0,
     first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
+    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_defaulted_at DATETIME DEFAULT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_players_credit ON at_players(credit_score);

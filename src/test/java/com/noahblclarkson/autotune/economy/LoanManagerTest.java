@@ -69,7 +69,9 @@ class LoanManagerTest {
                 d.debtGdpTier2Ratio(),
                 d.debtGdpTier3Ratio(),
                 d.tier1InterestCap(),
-                d.tier2InterestCap()
+                d.tier2InterestCap(),
+                d.postDefaultCooldownHours(),
+                d.singleLoanGdpCap()
         );
     }
 
@@ -135,7 +137,7 @@ class LoanManagerTest {
             LoanConfig cfg = loanCfg(false, 0.05, false, null, null, null, null, 0.0, null, null);
             PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
-                    Instant.now(), Instant.now());
+                    Instant.now(), Instant.now(), null);
             LoanManager lm = newLoanManager(cfg, pd);
             assertEquals(0, lm.getInterestRate(playerUuid, 30).compareTo(BigDecimal.valueOf(0.05)));
         }
@@ -146,7 +148,7 @@ class LoanManagerTest {
             LoanConfig cfg = loanCfg(true, 0.10, true, null, 500, null, null, 0.0, null, null);
             PlayerData pd = new PlayerData(playerUuid, playerName, null, 300,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
-                    Instant.now(), Instant.now());
+                    Instant.now(), Instant.now(), null);
             LoanManager lm = newLoanManager(cfg, pd);
             assertTrue(lm.getInterestRate(playerUuid, 30).doubleValue() > 0.10);
         }
@@ -157,7 +159,7 @@ class LoanManagerTest {
             LoanConfig cfg = loanCfg(true, 0.10, true, null, 500, null, null, 0.0, null, null);
             PlayerData pd = new PlayerData(playerUuid, playerName, null, 900,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
-                    Instant.now(), Instant.now());
+                    Instant.now(), Instant.now(), null);
             LoanManager lm = newLoanManager(cfg, pd);
             assertTrue(lm.getInterestRate(playerUuid, 30).doubleValue() < 0.10);
         }
@@ -168,7 +170,7 @@ class LoanManagerTest {
             LoanConfig cfg = loanCfg(true, 0.05, false, null, null, 30, 365, 0.01, null, null);
             PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
-                    Instant.now(), Instant.now());
+                    Instant.now(), Instant.now(), null);
             LoanManager lm = newLoanManager(cfg, pd);
             BigDecimal r30 = lm.getInterestRate(playerUuid, 30);
             BigDecimal r60 = lm.getInterestRate(playerUuid, 60);
@@ -209,7 +211,7 @@ class LoanManagerTest {
             LoanRepository lr = mock(LoanRepository.class);
             PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
-                    Instant.now(), Instant.now());
+                    Instant.now(), Instant.now(), null);
             when(pr.getOrCreate(playerUuid, playerName)).thenReturn(pd);
             when(pr.findByUuid(playerUuid)).thenReturn(Optional.of(pd));
             when(lr.findActiveByPlayer(playerUuid)).thenReturn(
@@ -262,7 +264,7 @@ class LoanManagerTest {
             PlayerRepository pr = mock(PlayerRepository.class);
             PlayerData lowCredit = new PlayerData(playerUuid, playerName, null, 400,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
-                    Instant.now(), Instant.now());
+                    Instant.now(), Instant.now(), null);
             when(pr.getOrCreate(playerUuid, playerName)).thenReturn(lowCredit);
             when(pr.findByUuid(playerUuid)).thenReturn(Optional.of(lowCredit));
 
@@ -318,7 +320,7 @@ class LoanManagerTest {
         void fromTradingHistory() {
             PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
                     BigDecimal.valueOf(1000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
-                    Instant.now(), Instant.now());
+                    Instant.now(), Instant.now(), null);
             LoanConfig cfg = loanCfg(true, null, null, 3.0, null, null, null, null, null, null);
             LoanManager lm = makeLoanManager(cfg, new FakeEconomy(),
                     mock(LoanRepository.class), mock(PlayerRepository.class),
@@ -332,7 +334,7 @@ class LoanManagerTest {
         void floorPreventsSmallLoan() {
             PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
                     BigDecimal.valueOf(100), BigDecimal.ZERO, BigDecimal.ZERO, 0,
-                    Instant.now(), Instant.now());
+                    Instant.now(), Instant.now(), null);
             LoanConfig cfg = loanCfg(true, null, null, 0.5, null, null, null, null, null, null);
             LoanManager lm = makeLoanManager(cfg, new FakeEconomy(),
                     mock(LoanRepository.class), mock(PlayerRepository.class),
@@ -356,7 +358,7 @@ class LoanManagerTest {
             LoanConfig cfg = loanCfg(true, null, null, null, null, null, null, null, 24, null);
             PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
-                    Instant.now(), Instant.now());
+                    Instant.now(), Instant.now(), null);
             LoanManager lm = makeLoanManager(cfg, new FakeEconomy(),
                     mock(LoanRepository.class), mock(PlayerRepository.class),
                     mock(EconomySnapshotRepository.class), pd);
@@ -377,7 +379,7 @@ class LoanManagerTest {
             LoanConfig cfg = loanCfg(true, null, null, null, null, null, null, null, 24, null);
             PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
-                    Instant.now(), Instant.now());
+                    Instant.now(), Instant.now(), null);
             LoanManager lm = makeLoanManager(cfg, new FakeEconomy(),
                     mock(LoanRepository.class), mock(PlayerRepository.class),
                     mock(EconomySnapshotRepository.class), pd);

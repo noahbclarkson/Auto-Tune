@@ -136,6 +136,16 @@ public class LoanManager {
             return LoanResult.insufficientCredit(config.minCreditScore());
         }
 
+        // Post-default cooldown: prevent immediately taking a new loan after defaulting
+        if (playerData.lastDefaultedAt() != null && config.postDefaultCooldownHours() > 0) {
+            Instant cooldownEnd = playerData.lastDefaultedAt()
+                    .plus(Duration.ofHours(config.postDefaultCooldownHours()));
+            if (Instant.now().isBefore(cooldownEnd)) {
+                long hoursLeft = Duration.between(Instant.now(), cooldownEnd).toHours();
+                return LoanResult.error("Cooldown after default: " + hoursLeft + "h remaining");
+            }
+        }
+
         Optional<Loan> existingLoan = loanRepository.findActiveByPlayer(playerId);
         if (existingLoan.isPresent()) {
             return LoanResult.alreadyHasLoan(existingLoan.get());
@@ -148,6 +158,20 @@ public class LoanManager {
 
         if (amount.compareTo(maxLoan) > 0) {
             return LoanResult.exceedsMax(maxLoan);
+        }
+
+        // Single loan GDP cap: no single loan can exceed economy GDP × singleLoanGdpCap
+        if (config.singleLoanGdpCap() > 0) {
+            Optional<EconomySnapshot> latestSnapshot = snapshotRepository.findLatest();
+            if (latestSnapshot.isPresent()) {
+                BigDecimal gdp = latestSnapshot.get().gdp();
+                if (gdp.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal gdpCap = gdp.multiply(BigDecimal.valueOf(config.singleLoanGdpCap()));
+                    if (amount.compareTo(gdpCap) > 0) {
+                        return LoanResult.exceedsGdpCap(gdpCap);
+                    }
+                }
+            }
         }
 
         BigDecimal interestRate = calculateInterestRate(playerData.creditScore(), clampedTerm, config);
@@ -271,13 +295,18 @@ public class LoanManager {
         // TIER3 (>10x): 0% interest — emergency zone (original behavior)
         // Simulation evidence (2026-03-27): old single-ratio breaker fired at 10x
         // but couldn't prevent runaway compounding before that threshold.
+        //
+        // FIX (2026-03-30): Circuit breaker now counts ALL unpaid debt (ACTIVE + DEFAULTED),
+        // not just active. When loans default, their principal was already drawn from the
+        // economy — treating them as zero in the D/G calculation falsely shows "recovered"
+        // and lets players immediately take enormous new loans.
         double interestMultiplier = 1.0;
         String currentTier = "NORMAL";
         Optional<EconomySnapshot> latestSnapshot = snapshotRepository.findLatest();
         if (latestSnapshot.isPresent() && config.debtGdpTier3Ratio() > 0.0) {
             BigDecimal gdp = latestSnapshot.get().gdp();
             BigDecimal totalDebt = BigDecimal.ZERO;
-            for (Loan l : loanRepository.findAllActive()) {
+            for (Loan l : loanRepository.findAllUnpaid()) {
                 totalDebt = totalDebt.add(l.currentBalance());
             }
             if (gdp.compareTo(BigDecimal.ZERO) > 0) {
@@ -351,6 +380,9 @@ public class LoanManager {
             try {
                 Loan defaulted = loan.markDefaulted();
                 loanRepository.update(defaulted);
+
+                // Record when this player defaulted — used for post-default cooldown
+                playerRepository.updateLastDefaultedAt(loan.playerUuid(), Instant.now());
 
                 PlayerData playerData = playerRepository.findByUuid(loan.playerUuid()).orElse(null);
                 if (playerData != null) {
@@ -498,6 +530,10 @@ public class LoanManager {
             return new LoanResult(false, "Exceeds maximum loan amount: " + max, null, max);
         }
 
+        public static LoanResult exceedsGdpCap(BigDecimal cap) {
+            return new LoanResult(false, "Exceeds economy GDP cap: " + cap + " (single loan limit)", null, cap);
+        }
+
         public static LoanResult noActiveLoan() {
             return new LoanResult(false, "No active loan to repay", null, BigDecimal.ZERO);
         }
@@ -525,7 +561,7 @@ public class LoanManager {
 
         BigDecimal gdp = latestSnapshot.get().gdp();
         BigDecimal totalDebt = BigDecimal.ZERO;
-        for (Loan l : loanRepository.findAllActive()) {
+        for (Loan l : loanRepository.findAllUnpaid()) {
             totalDebt = totalDebt.add(l.currentBalance());
         }
 

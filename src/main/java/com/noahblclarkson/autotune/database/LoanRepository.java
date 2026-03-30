@@ -213,4 +213,30 @@ public class LoanRepository {
                         .mapTo(Integer.class)
                         .one());
     }
+
+    /**
+     * Returns all loans that are not yet PAID — includes both ACTIVE and DEFAULTED.
+     * Used for the circuit breaker D/G calculation so that defaulted loans still count
+     * toward total economic debt (their principal was drawn from the economy).
+     */
+    public List<Loan> findAllUnpaid() {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                                SELECT id, player_uuid, principal, current_balance, interest_rate,
+                                       created_at, due_date, last_interest_at, status
+                                FROM at_loans WHERE status IN ('ACTIVE', 'DEFAULTED')
+                                """)
+                        .map((rs, ctx) -> Loan.builder()
+                                .id(UUID.fromString(rs.getString("id")))
+                                .playerUuid(UUID.fromString(rs.getString("player_uuid")))
+                                .principal(rs.getBigDecimal("principal"))
+                                .currentBalance(rs.getBigDecimal("current_balance"))
+                                .interestRate(rs.getBigDecimal("interest_rate"))
+                                .createdAt(rs.getTimestamp("created_at").toInstant())
+                                .dueDate(rs.getTimestamp("due_date").toInstant())
+                                .lastInterestAt(rs.getTimestamp("last_interest_at").toInstant())
+                                .status(LoanStatus.valueOf(rs.getString("status")))
+                                .build())
+                        .list());
+    }
 }

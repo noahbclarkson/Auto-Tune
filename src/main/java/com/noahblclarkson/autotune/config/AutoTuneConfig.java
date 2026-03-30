@@ -152,13 +152,20 @@ public record AutoTuneConfig(
             double debtGdpTier2Ratio,
             double debtGdpTier3Ratio,
             double tier1InterestCap,
-            double tier2InterestCap
+            double tier2InterestCap,
+            /// Hours a player must wait after a defaulted loan before they can take a new loan.
+            int postDefaultCooldownHours,
+            /// Maximum size of a single loan as a multiple of economy GDP.
+            /// A value of 1.0 means no single loan can exceed total GDP.
+            double singleLoanGdpCap
     ) {
         public static LoanConfig defaults() {
             return new LoanConfig(
                     true, 0.05, true, 2.0, 200,
                     7, 3, 30, 0.002, 24, 1, 24, 1.5, 0.5, 50,
-                    3.0, 5.0, 10.0, 0.5, 0.25
+                    3.0, 5.0, 10.0, 0.5, 0.25,
+                    168,    // postDefaultCooldownHours: 7 days
+                    1.0     // singleLoanGdpCap: single loan capped at 1× GDP
             );
         }
     }

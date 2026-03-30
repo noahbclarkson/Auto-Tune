@@ -18,7 +18,8 @@ public record PlayerData(
         @NotNull BigDecimal totalSold,
         int transactionCount,
         @NotNull Instant firstSeen,
-        @NotNull Instant lastSeen
+        @NotNull Instant lastSeen,
+        @Nullable Instant lastDefaultedAt
 ) {
 
     public static final int DEFAULT_CREDIT_SCORE = 500;
@@ -37,7 +38,8 @@ public record PlayerData(
                 BigDecimal.ZERO,
                 0,
                 now,
-                now
+                now,
+                null
         );
     }
 
@@ -56,7 +58,8 @@ public record PlayerData(
                 .totalSold(totalSold)
                 .transactionCount(transactionCount)
                 .firstSeen(firstSeen)
-                .lastSeen(lastSeen);
+                .lastSeen(lastSeen)
+                .lastDefaultedAt(lastDefaultedAt);
     }
 
     public PlayerData withCreditScore(int newScore) {
@@ -90,6 +93,7 @@ public record PlayerData(
         private int transactionCount;
         private Instant firstSeen = Instant.now();
         private Instant lastSeen = Instant.now();
+        private Instant lastDefaultedAt = null;
 
         public Builder uuid(UUID uuid) {
             this.uuid = uuid;
@@ -141,10 +145,15 @@ public record PlayerData(
             return this;
         }
 
+        public Builder lastDefaultedAt(Instant lastDefaultedAt) {
+            this.lastDefaultedAt = lastDefaultedAt;
+            return this;
+        }
+
         public PlayerData build() {
             return new PlayerData(
                     uuid, username, guildTag, creditScore, totalTraded, totalBought,
-                    totalSold, transactionCount, firstSeen, lastSeen
+                    totalSold, transactionCount, firstSeen, lastSeen, lastDefaultedAt
             );
         }
     }

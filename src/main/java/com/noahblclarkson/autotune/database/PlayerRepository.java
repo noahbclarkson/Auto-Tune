@@ -24,7 +24,8 @@ public class PlayerRepository {
                 handle.createQuery("""
                                 SELECT uuid, username, COALESCE(guild_tag, '') as guild_tag,
                                        credit_score, total_traded, total_bought,
-                                       total_sold, transaction_count, first_seen, last_seen
+                                       total_sold, transaction_count, first_seen, last_seen,
+                                       last_defaulted_at
                                 FROM at_players WHERE LOWER(username) = LOWER(:name)
                                 """)
                         .bind("name", name)
@@ -39,6 +40,7 @@ public class PlayerRepository {
                                 .transactionCount(rs.getInt("transaction_count"))
                                 .firstSeen(rs.getTimestamp("first_seen").toInstant())
                                 .lastSeen(rs.getTimestamp("last_seen").toInstant())
+                                .lastDefaultedAt(tsToInstant(rs.getTimestamp("last_defaulted_at")))
                                 .build())
                         .findFirst());
     }
@@ -48,7 +50,8 @@ public class PlayerRepository {
                 handle.createQuery("""
                                 SELECT uuid, username, COALESCE(guild_tag, '') as guild_tag,
                                        credit_score, total_traded, total_bought,
-                                       total_sold, transaction_count, first_seen, last_seen
+                                       total_sold, transaction_count, first_seen, last_seen,
+                                       last_defaulted_at
                                 FROM at_players WHERE uuid = :uuid
                                 """)
                         .bind("uuid", uuid.toString())
@@ -63,6 +66,7 @@ public class PlayerRepository {
                                 .transactionCount(rs.getInt("transaction_count"))
                                 .firstSeen(rs.getTimestamp("first_seen").toInstant())
                                 .lastSeen(rs.getTimestamp("last_seen").toInstant())
+                                .lastDefaultedAt(tsToInstant(rs.getTimestamp("last_defaulted_at")))
                                 .build())
                         .findFirst());
     }
@@ -80,10 +84,10 @@ public class PlayerRepository {
                 handle.createUpdate("""
                                 INSERT INTO at_players (uuid, username, guild_tag, credit_score, total_traded,
                                                         total_bought, total_sold, transaction_count,
-                                                        first_seen, last_seen)
+                                                        first_seen, last_seen, last_defaulted_at)
                                 VALUES (:uuid, :username, :guildTag, :creditScore, :totalTraded,
                                         :totalBought, :totalSold, :transactionCount,
-                                        :firstSeen, :lastSeen)
+                                        :firstSeen, :lastSeen, :lastDefaultedAt)
                                 """)
                         .bind("uuid", player.uuid().toString())
                         .bind("username", player.username())
@@ -95,6 +99,7 @@ public class PlayerRepository {
                         .bind("transactionCount", player.transactionCount())
                         .bind("firstSeen", Timestamp.from(player.firstSeen()))
                         .bind("lastSeen", Timestamp.from(player.lastSeen()))
+                        .bind("lastDefaultedAt", player.lastDefaultedAt() != null ? Timestamp.from(player.lastDefaultedAt()) : null)
                         .execute());
     }
 
@@ -141,7 +146,8 @@ public class PlayerRepository {
                 handle.createQuery("""
                                 SELECT uuid, username, COALESCE(guild_tag, '') as guild_tag,
                                        credit_score, total_traded, total_bought,
-                                       total_sold, transaction_count, first_seen, last_seen
+                                       total_sold, transaction_count, first_seen, last_seen,
+                                       last_defaulted_at
                                 FROM at_players WHERE guild_tag = :guildTag
                                 """)
                         .bind("guildTag", guildTag)
@@ -156,6 +162,7 @@ public class PlayerRepository {
                                 .transactionCount(rs.getInt("transaction_count"))
                                 .firstSeen(rs.getTimestamp("first_seen").toInstant())
                                 .lastSeen(rs.getTimestamp("last_seen").toInstant())
+                                .lastDefaultedAt(tsToInstant(rs.getTimestamp("last_defaulted_at")))
                                 .build())
                         .list());
     }
@@ -196,7 +203,8 @@ public class PlayerRepository {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""
                                 SELECT uuid, username, credit_score, total_traded, total_bought,
-                                       total_sold, transaction_count, first_seen, last_seen
+                                       total_sold, transaction_count, first_seen, last_seen,
+                                       last_defaulted_at
                                 FROM at_players ORDER BY total_traded DESC LIMIT :limit
                                 """)
                         .bind("limit", limit)
@@ -210,6 +218,7 @@ public class PlayerRepository {
                                 .transactionCount(rs.getInt("transaction_count"))
                                 .firstSeen(rs.getTimestamp("first_seen").toInstant())
                                 .lastSeen(rs.getTimestamp("last_seen").toInstant())
+                                .lastDefaultedAt(tsToInstant(rs.getTimestamp("last_defaulted_at")))
                                 .build())
                         .list());
     }
@@ -222,5 +231,20 @@ public class PlayerRepository {
                         .bind("uuid", uuid.toString())
                         .bind("lastSeen", Timestamp.from(Instant.now()))
                         .execute());
+    }
+
+    public void updateLastDefaultedAt(UUID uuid, Instant defaultedAt) {
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                                UPDATE at_players SET last_defaulted_at = :defaultedAt WHERE uuid = :uuid
+                                """)
+                        .bind("uuid", uuid.toString())
+                        .bind("defaultedAt", defaultedAt != null ? Timestamp.from(defaultedAt) : null)
+                        .execute());
+    }
+
+    /** Converts a SQL TIMESTAMP to an Instant, returning null if the column was NULL. */
+    private static Instant tsToInstant(Timestamp ts) {
+        return ts != null ? ts.toInstant() : null;
     }
 }

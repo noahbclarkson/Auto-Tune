@@ -1263,7 +1263,10 @@ fn run_event_control_test() {
     println!("╚══════════════════════════════════════════════════════════════╝\n");
     println!("  Control: no events | Treatment: DEMAND_SURGE(DIAMOND), SUPPLY_GLUT(IRON),");
     println!("            INFLATION_BOOST(all), GOLD_RUSH(GOLD_*), each ×2 over 14 days");
-    println!("  Seed: {} | Both runs use identical RNG trajectory\n", seed);
+    println!(
+        "  Seed: {} | Both runs use identical RNG trajectory\n",
+        seed
+    );
 
     // Run control (no events)
     let ctrl_scenario = Scenario::market_event_control();
@@ -1349,7 +1352,10 @@ fn run_event_control_test() {
     );
     println!(
         "  {:20} {:>15} {:>15} {:>15}",
-        "─".repeat(20), "─".repeat(15), "─".repeat(15), "─".repeat(15)
+        "─".repeat(20),
+        "─".repeat(15),
+        "─".repeat(15),
+        "─".repeat(15)
     );
 
     let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
@@ -1363,7 +1369,9 @@ fn run_event_control_test() {
     );
     println!(
         "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
-        "Total Debt", ctrl_summary.debt, treat_summary.debt,
+        "Total Debt",
+        ctrl_summary.debt,
+        treat_summary.debt,
         (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0
     );
     println!(
@@ -1375,7 +1383,8 @@ fn run_event_control_test() {
         "Buy Ratio",
         ctrl_summary.buy_ratio * 100.0,
         treat_summary.buy_ratio * 100.0,
-        (treat_summary.buy_ratio - ctrl_summary.buy_ratio) / ctrl_summary.buy_ratio.max(0.01) * 100.0
+        (treat_summary.buy_ratio - ctrl_summary.buy_ratio) / ctrl_summary.buy_ratio.max(0.01)
+            * 100.0
     );
     println!(
         "  {:20} {:>15.4} {:>15.4} {:>+14.4}",
@@ -1402,8 +1411,12 @@ fn run_event_control_test() {
     );
     println!(
         "  {:20} {:>12} {:>12} {:>10} {:>12} {:>10}",
-        "─".repeat(20), "─".repeat(12), "─".repeat(12), "─".repeat(10),
-        "─".repeat(12), "─".repeat(10)
+        "─".repeat(20),
+        "─".repeat(12),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(12),
+        "─".repeat(10)
     );
 
     // Query DBs for final prices
@@ -1411,8 +1424,16 @@ fn run_event_control_test() {
     let ctrl_prices = load_all_prices(&ctrl_db).unwrap_or_default();
     let treat_prices = load_all_prices(&treat_db).unwrap_or_default();
 
-    let item_names = ["Cobblestone", "Rotten Flesh", "Redstone", "Iron Ingot",
-                      "Blaze Rod", "Diamond", "Golden Apple", "Netherite Ingot"];
+    let item_names = [
+        "Cobblestone",
+        "Rotten Flesh",
+        "Redstone",
+        "Iron Ingot",
+        "Blaze Rod",
+        "Diamond",
+        "Golden Apple",
+        "Netherite Ingot",
+    ];
 
     for name in item_names {
         let c = ctrl_prices.iter().find(|p| p.0 == name);
@@ -1422,11 +1443,18 @@ fn run_event_control_test() {
             let t_pct = (*t_price / *t_base - 1.0) * 100.0;
             let event_delta = t_pct - c_pct;
             let event_flag = if event_delta.abs() > 1.0 {
-                if name == "Diamond" { " ← DEMAND_SURGE" }
-                else if name.starts_with("GOLD") { " ← GOLD_RUSH" }
-                else if name == "Iron Ingot" { " ← SUPPLY_GLUT" }
-                else { " ← INFLATION" }
-            } else { "" };
+                if name == "Diamond" {
+                    " ← DEMAND_SURGE"
+                } else if name.starts_with("GOLD") {
+                    " ← GOLD_RUSH"
+                } else if name == "Iron Ingot" {
+                    " ← SUPPLY_GLUT"
+                } else {
+                    " ← INFLATION"
+                }
+            } else {
+                ""
+            };
             println!(
                 "  {:20} {:>12.2} {:>12.2} {:>+9.1}% {:>+11.1}% {:>+9.1}%{}",
                 name, c_price, t_price, c_pct, t_pct, event_delta, event_flag
@@ -1438,19 +1466,34 @@ fn run_event_control_test() {
     println!("║  ANALYSIS                                                  ║");
     println!("╚══════════════════════════════════════════════════════════════╝\n");
     if gdp_eff < -10.0 {
-        println!("  ⚠️  Events REDUCED GDP by {:.1}% — events suppress economic activity", gdp_eff.abs());
+        println!(
+            "  ⚠️  Events REDUCED GDP by {:.1}% — events suppress economic activity",
+            gdp_eff.abs()
+        );
     } else if gdp_eff > 10.0 {
-        println!("  ✅ Events BOOSTED GDP by {:.1}% — events stimulate trade", gdp_eff);
+        println!(
+            "  ✅ Events BOOSTED GDP by {:.1}% — events stimulate trade",
+            gdp_eff
+        );
     } else {
         println!("  ✅ Events had NEUTRAL GDP effect ({:+.1}%)", gdp_eff);
     }
 
     if dg_eff < -10.0 {
-        println!("  ✅ Events REDUCED Debt/GDP by {:.1}% — healthier debt levels", dg_eff.abs());
+        println!(
+            "  ✅ Events REDUCED Debt/GDP by {:.1}% — healthier debt levels",
+            dg_eff.abs()
+        );
     } else if dg_eff > 10.0 {
-        println!("  ⚠️  Events WORSENED Debt/GDP by {:.1}% — more debt relative to GDP", dg_eff);
+        println!(
+            "  ⚠️  Events WORSENED Debt/GDP by {:.1}% — more debt relative to GDP",
+            dg_eff
+        );
     } else {
-        println!("  ⚠️  Events had NEAR-NEUTRAL Debt/GDP effect ({:+.1}%)", dg_eff);
+        println!(
+            "  ⚠️  Events had NEAR-NEUTRAL Debt/GDP effect ({:+.1}%)",
+            dg_eff
+        );
     }
 
     let vol_diff = treat_summary.avg_volatility - ctrl_summary.avg_volatility;
@@ -1459,7 +1502,10 @@ fn run_event_control_test() {
     } else if vol_diff < -0.01 {
         println!("  ✅ Events REDUCED volatility ({:.4})", vol_diff);
     } else {
-        println!("  ✅ Events had NEUTRAL effect on volatility ({:.4})", vol_diff);
+        println!(
+            "  ✅ Events had NEUTRAL effect on volatility ({:.4})",
+            vol_diff
+        );
     }
 
     println!("\n  Key findings:");
@@ -1550,7 +1596,10 @@ fn run_it_added_test() {
     );
     println!(
         "  {:20} {:>15} {:>15} {:>15}",
-        "─".repeat(20), "─".repeat(15), "─".repeat(15), "─".repeat(15)
+        "─".repeat(20),
+        "─".repeat(15),
+        "─".repeat(15),
+        "─".repeat(15)
     );
     println!(
         "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
@@ -1578,7 +1627,8 @@ fn run_it_added_test() {
         "Buy Ratio",
         ctrl_summary.buy_ratio * 100.0,
         treat_summary.buy_ratio * 100.0,
-        (treat_summary.buy_ratio - ctrl_summary.buy_ratio) / ctrl_summary.buy_ratio.max(0.01) * 100.0
+        (treat_summary.buy_ratio - ctrl_summary.buy_ratio) / ctrl_summary.buy_ratio.max(0.01)
+            * 100.0
     );
     println!(
         "  {:20} {:>15.4} {:>15.4} {:>+14.4}",
@@ -1608,33 +1658,54 @@ fn run_it_added_test() {
     let mut regressions = 0;
 
     if gdp_change > 5.0 {
-        println!("  ✅ GDP: +{:.1}% (ITs boost economic activity)", gdp_change);
+        println!(
+            "  ✅ GDP: +{:.1}% (ITs boost economic activity)",
+            gdp_change
+        );
         improvements += 1;
     } else if gdp_change < -5.0 {
-        println!("  ⚠️  GDP: {:.1}% (ITs reduce economic activity)", gdp_change);
+        println!(
+            "  ⚠️  GDP: {:.1}% (ITs reduce economic activity)",
+            gdp_change
+        );
         regressions += 1;
     } else {
-        println!("  ⚠️  GDP: {:+.1}% (ITs have neutral GDP effect)", gdp_change);
+        println!(
+            "  ⚠️  GDP: {:+.1}% (ITs have neutral GDP effect)",
+            gdp_change
+        );
     }
 
     if dg_change < -10.0 {
         println!("  ✅ Debt/GDP: {:.1}% (ITs improve debt health)", dg_change);
         improvements += 1;
     } else if dg_change > 10.0 {
-        println!("  ⚠️  Debt/GDP: +{:.1}% (ITs worsen debt health)", dg_change);
+        println!(
+            "  ⚠️  Debt/GDP: +{:.1}% (ITs worsen debt health)",
+            dg_change
+        );
         regressions += 1;
     } else {
-        println!("  ⚠️  Debt/GDP: {:+.1}% (ITs have neutral debt effect)", dg_change);
+        println!(
+            "  ⚠️  Debt/GDP: {:+.1}% (ITs have neutral debt effect)",
+            dg_change
+        );
     }
 
     if vol_change < -0.005 {
         println!("  ✅ Volatility: {:.4} (ITs reduce volatility)", vol_change);
         improvements += 1;
     } else if vol_change > 0.005 {
-        println!("  ⚠️  Volatility: +{:.4} (ITs increase volatility)", vol_change);
+        println!(
+            "  ⚠️  Volatility: +{:.4} (ITs increase volatility)",
+            vol_change
+        );
         regressions += 1;
     } else {
-        println!("  ⚠️  Volatility: {:+.4} (ITs have neutral volatility effect)", vol_change);
+        println!(
+            "  ⚠️  Volatility: {:+.4} (ITs have neutral volatility effect)",
+            vol_change
+        );
     }
 
     if bpd_change < -0.2 {
@@ -1644,7 +1715,10 @@ fn run_it_added_test() {
         println!("  ⚠️  BPD: +{:.2}% (ITs widen spreads)", bpd_change);
         regressions += 1;
     } else {
-        println!("  ⚠️  BPD: {:+.2}% (ITs have neutral spread effect)", bpd_change);
+        println!(
+            "  ⚠️  BPD: {:+.2}% (ITs have neutral spread effect)",
+            bpd_change
+        );
     }
 
     println!();
@@ -1655,7 +1729,10 @@ fn run_it_added_test() {
         println!("  ⚠️  RECOMMENDATION: DO NOT add ITs — they degrade economic health.");
         println!("     InsiderTraders may be redundant with or destabilizing vs MM+GB.");
     } else {
-        println!("  ⚠️  MIXED: {} improvements, {} regressions.", improvements, regressions);
+        println!(
+            "  ⚠️  MIXED: {} improvements, {} regressions.",
+            improvements, regressions
+        );
         println!("     InsiderTraders have a modest mixed effect — optional for realism.");
     }
 

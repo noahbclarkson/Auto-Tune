@@ -548,14 +548,16 @@ pub fn load_all_prices(db_path: &Path) -> Result<Vec<(String, f64, f64)>, String
         .map_err(|e| e.to_string())?;
 
     let mut stmt = conn
-        .prepare(
-            "SELECT item_name, price, base_price FROM item_states WHERE tick = ?1",
-        )
+        .prepare("SELECT item_name, price, base_price FROM item_states WHERE tick = ?1")
         .map_err(|e| e.to_string())?;
 
     let rows = stmt
         .query_map([max_tick], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, f64>(1)?, row.get::<_, f64>(2)?))
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, f64>(1)?,
+                row.get::<_, f64>(2)?,
+            ))
         })
         .map_err(|e| e.to_string())?;
 

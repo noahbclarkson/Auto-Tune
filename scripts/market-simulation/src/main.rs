@@ -1766,6 +1766,338 @@ fn run_floor_ceiling_test() {
     let _ = std::fs::remove_dir_all(&treat_dir);
 }
 
+// ─── Floor Strength Sweep ─────────────────────────────────────────────────
+
+/// Diamond base price = $500 in the default config.
+const DIAMOND_BASE_PRICE: f64 = 500.0;
+
+/// Diamond floor percentages to test.
+const FLOOR_PCTS: &[f64] = &[0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90];
+
+#[derive(Debug)]
+struct FloorSweepResult {
+    floor_pct: f64,
+    gdp: f64,
+    debt: f64,
+    debt_gdp_ratio: f64,
+    avg_bpd: f64,
+    avg_spd: f64,
+    avg_volatility: f64,
+    buy_ratio: f64,
+    diamond_internal: f64,
+    diamond_displayed: f64,
+    floor_binds: bool,
+}
+
+/// Sweep Diamond floor from 30% to 90% of base price to find the GDP-neutral level.
+///
+/// The floor/ceiling test (2026-03-30) showed floor at 60% ($300) causes -4.9% GDP
+/// through a BEHAVIORAL mechanism: floored displayed prices inflate price_incentive
+/// → players gather MORE → oversupply → internal prices DROP FURTHER.
+///
+/// This sweep answers: at what floor % does GDP become neutral (vs no floor)?
+/// And: does the floor paradox intensify at stronger floors?
+///
+/// Runs guild_stability_mm_fixed_guild (1MM + 2GB@7% + 4Cas + 3Far + 2Tra)
+/// with Diamond floor at each percentage, vs a no-floor control.
+fn run_floor_strength_sweep() {
+    use crate::analyzer::{load_all_prices, load_summary};
+    use std::io::Write;
+
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║       DIAMOND FLOOR STRENGTH SWEEP                            ║");
+    println!("║  Diamond base = $500.  Tests 30%–90% floor.  Seed=42.         ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  Scenario: GuildStability+MM+7%GB (1MM + 2GB@7% + 4Cas + 3Far + 2Tra)"
+    );
+    println!("  Duration: 14 days (4032 ticks)\n");
+
+    // ── Run control (no floor) ────────────────────────────────────────────
+    println!("  Running control (no floor)...\n");
+
+    let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let ctrl_dir = PathBuf::from("/tmp/autotune-fs-ctrl");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+
+    let mut ctrl = ctrl_scenario.clone();
+    ctrl.seed = Some(seed);
+
+    if let Err(e) = run_headless(&ctrl, Some(ctrl_dir.clone())) {
+        eprintln!("  Control run error: {}", e);
+        return;
+    }
+
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Control summary error: {}", e);
+            return;
+        }
+    };
+
+    let ctrl_prices = match load_all_prices(&ctrl_dir.join("simulation.db")) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("  Control prices error: {}", e);
+            return;
+        }
+    };
+
+    let ctrl_diamond_internal = ctrl_prices
+        .iter()
+        .find(|(name, _, _)| name == "Diamond")
+        .map(|(_, p, _)| *p)
+        .unwrap_or(0.0);
+
+    let ctrl_gdp = ctrl_summary.gdp;
+    println!(
+        "  Control: GDP={:.0}  D/G={:.2}x  Buy%={:.1}%  Diamond int=${:.0}\n",
+        ctrl_gdp,
+        ctrl_summary.debt / ctrl_summary.gdp.max(1.0),
+        ctrl_summary.buy_ratio * 100.0,
+        ctrl_diamond_internal
+    );
+
+    // ── Header ─────────────────────────────────────────────────────────────
+    println!(
+        "{:>7} {:>7} {:>10} {:>10} {:>9} {:>7} {:>7} {:>9} {:>8} {:>10} {:>11}",
+        "Floor%", "Floor$", "GDP", "Debt", "D/G", "BPD%", "SPD%", "Vol", "Buy%",
+        "Diam Int$", "Display$"
+    );
+    println!(
+        "{:>7} {:>7} {:>10} {:>10} {:>9} {:>7} {:>7} {:>9} {:>8} {:>10} {:>11}",
+        "─".repeat(7), "─".repeat(7), "─".repeat(10), "─".repeat(10),
+        "─".repeat(9), "─".repeat(7), "─".repeat(7), "─".repeat(9),
+        "─".repeat(8), "─".repeat(10), "─".repeat(11)
+    );
+
+    // ── Run each floor % ─────────────────────────────────────────────────
+    let mut results: Vec<FloorSweepResult> = Vec::new();
+
+    for floor_pct in FLOOR_PCTS {
+        let fp = *floor_pct;
+        eprint!("\r  [{}/{}] floor={:.0}%", (fp * 100.0) as i32, 100, fp * 100.0);
+        std::io::stderr().flush().ok();
+
+        // Build scenario with this floor % on Diamond
+        let mut scenario = Scenario::guild_stability_mm_fixed_guild();
+        if let Some(diamond) = scenario.config.items.iter_mut().find(|ic| ic.name == "Diamond") {
+            diamond.price_floor_override = Some(DIAMOND_BASE_PRICE * fp);
+        }
+        // Seed must match control
+        scenario.seed = Some(seed);
+
+        let out_dir = PathBuf::from(format!("/tmp/autotune-fs-{:02}", (fp * 100.0) as i32));
+        let _ = std::fs::remove_dir_all(&out_dir);
+        std::fs::create_dir_all(&out_dir).ok();
+
+        if let Err(e) = run_headless(&scenario, Some(out_dir.clone())) {
+            eprintln!("\n  Floor {}% run error: {}", fp * 100.0, e);
+            continue;
+        }
+
+        let summary = match load_summary(&out_dir.join("simulation.db")) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("\n  Floor {}% summary error: {}", fp * 100.0, e);
+                continue;
+            }
+        };
+
+        let prices = match load_all_prices(&out_dir.join("simulation.db")) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("\n  Floor {}% prices error: {}", fp * 100.0, e);
+                continue;
+            }
+        };
+
+        let diamond_internal = prices
+            .iter()
+            .find(|(name, _, _)| name == "Diamond")
+            .map(|(_, p, _)| *p)
+            .unwrap_or(0.0);
+
+        let floor_abs = DIAMOND_BASE_PRICE * fp;
+        let displayed = diamond_internal.max(floor_abs);
+        let floor_binds = diamond_internal < floor_abs;
+
+        let _ = std::fs::remove_dir_all(&out_dir);
+
+        let debt_gdp = summary.debt / summary.gdp.max(0.01);
+
+        println!(
+            "\n{:>7.0}% {:>7.0} {:>10.0} {:>10.0} {:>8.2}x {:>6.2}% {:>6.2}% {:>8.4} {:>7.1}% {:>10.0} {:>10.0} {:>11}",
+            fp * 100.0,
+            floor_abs,
+            summary.gdp,
+            summary.debt,
+            debt_gdp,
+            summary.avg_bpd * 100.0,
+            summary.avg_spd * 100.0,
+            summary.avg_volatility,
+            summary.buy_ratio * 100.0,
+            diamond_internal,
+            displayed,
+            if floor_binds { "← FLOOR" } else { "" }
+        );
+
+        results.push(FloorSweepResult {
+            floor_pct: fp,
+            gdp: summary.gdp,
+            debt: summary.debt,
+            debt_gdp_ratio: debt_gdp,
+            avg_bpd: summary.avg_bpd,
+            avg_spd: summary.avg_spd,
+            avg_volatility: summary.avg_volatility,
+            buy_ratio: summary.buy_ratio,
+            diamond_internal,
+            diamond_displayed: displayed,
+            floor_binds,
+        });
+    }
+
+    println!("\n");
+
+    // ── Analysis ─────────────────────────────────────────────────────────
+    println!("╔══════════════════════════════════════════════════════════════════╗");
+    println!("║  SWEEP ANALYSIS                                              ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+
+    // GDP-neutral (closest to 0% GDP effect)
+    let gdp_neutral = results
+        .iter()
+        .min_by(|a, b| {
+            ((a.gdp / ctrl_gdp.max(1.0) - 1.0).abs())
+                .partial_cmp(&(b.gdp / ctrl_gdp.max(1.0) - 1.0).abs())
+                .unwrap()
+        })
+        .unwrap();
+    let gdp_neutral_eff = (gdp_neutral.gdp / ctrl_gdp.max(1.0) - 1.0) * 100.0;
+    println!(
+        "  GDP-neutral floor: {:.0}% (${:.0}) — GDP {:+.2}% vs control",
+        gdp_neutral.floor_pct * 100.0,
+        gdp_neutral.floor_pct * DIAMOND_BASE_PRICE,
+        gdp_neutral_eff
+    );
+
+    // Best GDP
+    let best_gdp = results
+        .iter()
+        .max_by(|a, b| a.gdp.partial_cmp(&b.gdp).unwrap())
+        .unwrap();
+    println!(
+        "  Best GDP:         {:.0}% — GDP={:.0} ({:+.1}% vs control)",
+        best_gdp.floor_pct * 100.0,
+        best_gdp.gdp,
+        (best_gdp.gdp / ctrl_gdp.max(1.0) - 1.0) * 100.0
+    );
+
+    // Lowest D/G
+    let lowest_dg = results
+        .iter()
+        .min_by(|a, b| a.debt_gdp_ratio.partial_cmp(&b.debt_gdp_ratio).unwrap())
+        .unwrap();
+    println!(
+        "  Lowest D/G:       {:.0}% — D/G={:.2}x  (floor{} bound)",
+        lowest_dg.floor_pct * 100.0,
+        lowest_dg.debt_gdp_ratio,
+        if lowest_dg.floor_binds { "" } else { " NOT" }
+    );
+
+    // Most balanced buy ratio
+    let most_balanced = results
+        .iter()
+        .min_by(|a, b| {
+            (a.buy_ratio - 0.5).abs().partial_cmp(&(b.buy_ratio - 0.5).abs()).unwrap()
+        })
+        .unwrap();
+    println!(
+        "  Most balanced:   {:.0}% — buy%={:.1}%",
+        most_balanced.floor_pct * 100.0,
+        most_balanced.buy_ratio * 100.0
+    );
+
+    // Floor paradox: at what % does internal price fall BELOW control?
+    let paradox = results
+        .iter()
+        .filter(|r| r.diamond_internal < ctrl_diamond_internal)
+        .min_by(|a, b| a.diamond_internal.partial_cmp(&b.diamond_internal).unwrap());
+    if let Some(p) = paradox {
+        let suppression = (1.0 - p.diamond_internal / ctrl_diamond_internal) * 100.0;
+        println!(
+            "\n  ⚠️  Floor paradox at {:.0}%: internal=${:.0} ({:.1}% BELOW control)\n\
+                 Floor keeps displayed price HIGH (${:.0}) but internal falls to ${:.0}",
+            p.floor_pct * 100.0,
+            p.diamond_internal,
+            suppression,
+            p.diamond_displayed,
+            p.diamond_internal
+        );
+    }
+
+    // GDP vs floor % table
+    println!("\n  GDP effect by floor %:\n");
+    for r in &results {
+        let eff = (r.gdp / ctrl_gdp.max(1.0) - 1.0) * 100.0;
+        let bar = if eff > 0.0 { "+" } else { "" };
+        let binds = if r.floor_binds { "📍" } else { "  " };
+        println!(
+            "  {:>6.0}% {:>6}: {} {}{:.2}%  (Diam int=${:.0}, displayed=${:.0})",
+            r.floor_pct * 100.0,
+            "$".to_string() + &format!("{:.0}", r.floor_pct * DIAMOND_BASE_PRICE),
+            binds,
+            bar,
+            eff,
+            r.diamond_internal,
+            r.diamond_displayed
+        );
+    }
+
+    // ── CSV ───────────────────────────────────────────────────────────────
+    let csv_path = PathBuf::from(
+        "/home/ubuntu/.openclaw/workspace-autotune/sim-output/floor-strength-sweep.csv",
+    );
+    if let Some(parent) = csv_path.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+    if let Ok(mut csv) = std::fs::File::create(&csv_path) {
+        writeln!(
+            csv,
+            "floor_pct,floor_abs,gdp,debt,debt_gdp_ratio,avg_bpd,avg_spd,avg_volatility,buy_ratio,diamond_internal,diamond_displayed,floor_binds,gdp_effect_pct"
+        )
+        .ok();
+        for r in &results {
+            let gdp_eff = (r.gdp / ctrl_gdp.max(1.0) - 1.0) * 100.0;
+            writeln!(
+                csv,
+                "{:.2},{:.2},{:.2},{:.2},{:.6},{:.6},{:.6},{:.6},{:.4},{:.2},{:.2},{:.0},{:.4}",
+                r.floor_pct,
+                r.floor_pct * DIAMOND_BASE_PRICE,
+                r.gdp,
+                r.debt,
+                r.debt_gdp_ratio,
+                r.avg_bpd,
+                r.avg_spd,
+                r.avg_volatility,
+                r.buy_ratio,
+                r.diamond_internal,
+                r.diamond_displayed,
+                if r.floor_binds { 1.0 } else { 0.0 },
+                gdp_eff
+            )
+            .ok();
+        }
+        println!("\n  CSV saved to: {}", csv_path.display());
+    }
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+}
+
 // ─── Multi-Server Coordination Test ────────────────────────────────────────
 
 /// Multi-Server Simulation: Tests cross-server price aggregation.
@@ -3681,6 +4013,7 @@ fn main() -> eframe::Result<()> {
         println!("  --regression            Regression test against stored baselines");
         println!("  --all                   Run all scenarios headlessly");
         println!("  --floor-ceiling-test     Floor/ceiling effect: control vs treatment");
+        println!("  --floor-strength-sweep   Diamond floor 30-90% — find GDP-neutral level");
         println!("  --multi-server-test     Cross-server price aggregation test");
         return Ok(());
     }
@@ -3852,6 +4185,12 @@ fn main() -> eframe::Result<()> {
     // ─── Floor/Ceiling Test ───────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--floor-ceiling-test" {
         run_floor_ceiling_test();
+        return Ok(());
+    }
+
+    // ─── Floor Strength Sweep ────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--floor-strength-sweep" {
+        run_floor_strength_sweep();
         return Ok(());
     }
 

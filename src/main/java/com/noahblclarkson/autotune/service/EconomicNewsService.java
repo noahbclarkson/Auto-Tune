@@ -23,6 +23,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -67,6 +68,22 @@ public class EconomicNewsService {
     private final CopyOnWriteArrayList<Instant> recentAnnouncements = new CopyOnWriteArrayList<>();
     /** Round-robin counter for fair item selection across cycles */
     private final AtomicInteger roundRobinCounter = new AtomicInteger(0);
+
+    /** Rolling buffer of recent news items for the /news command — max 30 entries */
+    private final CopyOnWriteArrayList<RecentNewsItem> recentNewsItems = new CopyOnWriteArrayList<>();
+    private static final int MAX_RECENT_NEWS = 30;
+
+    /**
+     * Public news item record with timestamp — exposed to NewsCommand via getRecentNews().
+     * The raw NewsItem uses MiniMessage format; this record stores the parsed text for display.
+     */
+    public record RecentNewsItem(
+            Instant timestamp,
+            String text,
+            TextColor color,
+            String clickCommand,
+            String hoverText
+    ) {}
 
     public EconomicNewsService(
             AutoTune plugin,
@@ -303,6 +320,29 @@ public class EconomicNewsService {
             player.sendActionBar(component);
         }
         log.info("[Auto-Tune News] " + stripTags(item.message()));
+
+        // Record in rolling news buffer for /news command
+        RecentNewsItem recent = new RecentNewsItem(
+                Instant.now(),
+                stripTags(item.message()),
+                item.color(),
+                item.clickCommand(),
+                item.hoverText()
+        );
+        recentNewsItems.add(recent);
+        // Trim to max size
+        while (recentNewsItems.size() > MAX_RECENT_NEWS) {
+            recentNewsItems.remove(0);
+        }
+    }
+
+    /**
+     * Returns the most recent news items in reverse chronological order (newest first).
+     */
+    public List<RecentNewsItem> getRecentNews() {
+        List<RecentNewsItem> copy = new ArrayList<>(recentNewsItems);
+        Collections.reverse(copy);
+        return copy;
     }
 
     private Component parseComponent(String miniMsg) {

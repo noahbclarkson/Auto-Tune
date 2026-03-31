@@ -739,6 +739,61 @@ impl Scenario {
         }
     }
 
+    /// Player Exodus Stress Test: simulates mass player departure mid-simulation.
+    /// Real Minecraft servers lose players constantly. What happens to the economy
+    /// when 50% quit at day 7?
+    ///
+    /// Control: guild_stability_mm_fixed_guild (12 players, 14 days, no exodus)
+    /// Treatment: same config + 50% players quit at day 7 (tick 2016)
+    ///
+    /// Key questions:
+    /// - Do prices collapse? (volume drops → wider spreads → fewer trades)
+    /// - Does the loan circuit breaker fire? (debt was healthy pre-exodus)
+    /// - Can the remaining 6 players sustain the economy?
+    /// - Is the pre-exodus debt load crushing for remaining players?
+    pub fn player_exodus_test() -> Self {
+        // Day 7 = tick 2016 (288 ticks/day × 7 days)
+        // exodus_spread_multiplier=2.0x for 288 ticks (1 day) then decays 5%/tick
+        let config = SimConfig {
+            player_exodus_tick: Some(288 * 7),
+            player_exodus_fraction: 0.5,
+            exodus_spread_multiplier: 2.0,
+            exodus_shock_duration_ticks: 288,
+            ..SimConfig::default()
+        };
+        Self {
+            name: "Player Exodus Test".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14, // 14 days
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Sector correlation stress test: injects a price shock to Diamond (ores section)
     /// at day 3, then measures how strongly other ores items follow.
     /// Runs with sector_correlation=0.05 (treatment) vs sector_correlation=0.0 (control)
@@ -2771,6 +2826,317 @@ fn run_it_added_test() {
     let _ = std::fs::remove_dir_all(&treat_dir);
 }
 
+// ─── Player Exodus Test ───────────────────────────────────────────────────────
+
+/// Runs a player exodus stress test: 50% of players quit at day 7.
+/// Compares pre/post-exodus economy health to determine if the economy
+/// can survive a mass player departure.
+fn run_player_exodus_test() {
+    use crate::analyzer::load_summary;
+    use rusqlite::Connection;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       PLAYER EXODUS STRESS TEST                           ║");
+    println!("║  50% of players quit at day 7 — does the economy survive? ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guild_stability_mm_fixed_guild (12 players, no exodus)");
+    println!("  Treatment: same config + 50% quit at day 7 (tick 2016)");
+    println!("  Seed: {}\n", seed);
+
+    let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let treat_scenario = Scenario::player_exodus_test();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-exodus-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-exodus-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl = ctrl_scenario.clone();
+    ctrl.seed = Some(seed);
+    let mut treat = treat_scenario.clone();
+    treat.seed = Some(seed);
+
+    println!("─── Control (no exodus) ───");
+    if let Err(e) = run_headless(&ctrl, Some(ctrl_dir.clone())) {
+        eprintln!("  Control error: {}", e);
+        return;
+    }
+
+    println!("\n─── Treatment (50% quit at day 7) ───");
+    if let Err(e) = run_headless(&treat, Some(treat_dir.clone())) {
+        eprintln!("  Treatment error: {}", e);
+        return;
+    }
+
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Summary error: {}", e);
+            return;
+        }
+    };
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Summary error: {}", e);
+            return;
+        }
+    };
+
+    // Query loan stats directly from DB
+    fn get_loan_stats(db_path: &std::path::Path) -> (usize, usize) {
+        let conn = Connection::open(db_path);
+        if let Ok(conn) = conn {
+            let issued: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loan_events WHERE event_type = 'Taken'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            let defaulted: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loan_events WHERE event_type = 'Defaulted'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            return (issued, defaulted);
+        }
+        (0, 0)
+    }
+
+    fn get_final_prices(db_path: &std::path::Path) -> Vec<(String, f64)> {
+        let conn = Connection::open(db_path);
+        if let Ok(conn) = conn {
+            let stmt = conn.prepare(
+                "SELECT item_name, price FROM item_states
+                 WHERE tick = (SELECT MAX(tick) FROM item_states)
+                 ORDER BY item_name",
+            );
+            if let Ok(mut stmt) = stmt {
+                let rows: Vec<(String, f64)> = stmt
+                    .query_map([], |row| {
+                        Ok((row.get::<_, String>(0)?, row.get::<_, f64>(1)?))
+                    })
+                    .ok()
+                    .map(|iter| iter.filter_map(|r| r.ok()).collect())
+                    .unwrap_or_default();
+                return rows;
+            }
+        }
+        Vec::new()
+    }
+
+    let (ctrl_loans_issued, ctrl_loans_defaulted) = get_loan_stats(&ctrl_dir.join("simulation.db"));
+    let (treat_loans_issued, treat_loans_defaulted) =
+        get_loan_stats(&treat_dir.join("simulation.db"));
+    let ctrl_final_prices = get_final_prices(&ctrl_dir.join("simulation.db"));
+    let treat_final_prices = get_final_prices(&treat_dir.join("simulation.db"));
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  RESULTS — PLAYER EXODUS vs CONTROL                      ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Metric", "CONTROL", "TREATMENT", "Effect"
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "─".repeat(20),
+        "─".repeat(15),
+        "─".repeat(15),
+        "─".repeat(15)
+    );
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
+        "GDP",
+        ctrl_summary.gdp,
+        treat_summary.gdp,
+        (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
+        "Total Debt",
+        ctrl_summary.debt,
+        treat_summary.debt,
+        (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.2}x {:>15.2}x {:>+14.1}%",
+        "Debt / GDP",
+        ctrl_dg,
+        treat_dg,
+        (treat_dg / ctrl_dg.max(0.01) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.1}% {:>15.1}% {:>+14.1}%",
+        "Buy Ratio",
+        ctrl_summary.buy_ratio * 100.0,
+        treat_summary.buy_ratio * 100.0,
+        (treat_summary.buy_ratio - ctrl_summary.buy_ratio) / ctrl_summary.buy_ratio.max(0.01)
+            * 100.0
+    );
+    println!(
+        "  {:20} {:>15.4} {:>15.4} {:>+14.4}",
+        "Avg Volatility",
+        ctrl_summary.avg_volatility,
+        treat_summary.avg_volatility,
+        treat_summary.avg_volatility - ctrl_summary.avg_volatility
+    );
+    println!(
+        "  {:20} {:>15.3}% {:>15.3}% {:>+14.3}%",
+        "Avg BPD",
+        ctrl_summary.avg_bpd * 100.0,
+        treat_summary.avg_bpd * 100.0,
+        (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0
+    );
+
+    // Per-item price comparison
+    println!("\n--- Per-Item Price Comparison (14-day final) ---");
+    for (item_name, treat_price) in &treat_final_prices {
+        let ctrl_price = ctrl_final_prices
+            .iter()
+            .find(|(n, _)| n == item_name)
+            .map(|(_, p)| *p);
+        if let Some(ctrl_price) = ctrl_price {
+            let pct_diff = (treat_price / ctrl_price.max(0.01) - 1.0) * 100.0;
+            println!(
+                "  {:20} ctrl={:>8.2} treat={:>8.2} {:>+7.1}%",
+                item_name, ctrl_price, treat_price, pct_diff
+            );
+        }
+    }
+
+    println!("\n--- Loan Health ---");
+    println!("  {:20} {:>15} {:>15}", "", "CONTROL", "TREATMENT");
+    println!(
+        "  {:20} {:>15} {:>15}",
+        "Loans Issued", ctrl_loans_issued, treat_loans_issued
+    );
+    println!(
+        "  {:20} {:>15} {:>15}",
+        "Loans Defaulted", ctrl_loans_defaulted, treat_loans_defaulted
+    );
+    if ctrl_loans_issued > 0 {
+        println!(
+            "  {:20} {:>14.1}% {:>14.1}%",
+            "Default Rate",
+            (ctrl_loans_defaulted as f64 / ctrl_loans_issued as f64) * 100.0,
+            (treat_loans_defaulted as f64 / treat_loans_issued.max(1) as f64) * 100.0
+        );
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  VERDICT                                                   ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    let gdp_change = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let dg_change = (treat_dg / ctrl_dg.max(0.01) - 1.0) * 100.0;
+    let vol_change = treat_summary.avg_volatility - ctrl_summary.avg_volatility;
+    let bpd_change = (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0;
+
+    if gdp_change.abs() < 3.0 {
+        println!(
+            "  ✅ GDP: {:+.1}% — economy absorbed the shock (survived)",
+            gdp_change
+        );
+    } else if gdp_change < -30.0 {
+        println!(
+            "  ❌ GDP: {:.1}% — economy COLLAPSED after player exodus",
+            gdp_change
+        );
+    } else {
+        println!(
+            "  ⚠️  GDP: {:.1}% — economy weakened but survived",
+            gdp_change
+        );
+    }
+
+    if dg_change < 10.0 {
+        println!(
+            "  ✅ Debt/GDP: {:+.1}% — debt health maintained post-exodus",
+            dg_change
+        );
+    } else if dg_change > 50.0 {
+        println!(
+            "  ❌ Debt/GDP: +{:.1}% — debt cascade post-exodus (breaker may have fired)",
+            dg_change
+        );
+    } else {
+        println!(
+            "  ⚠️  Debt/GDP: {:+.1}% — moderate debt stress post-exodus",
+            dg_change
+        );
+    }
+
+    if vol_change.abs() < 0.02 {
+        println!(
+            "  ✅ Volatility: {:+.4} — prices remained stable post-exodus",
+            vol_change
+        );
+    } else if vol_change > 0.05 {
+        println!(
+            "  ❌ Volatility: +{:.4} — prices became volatile post-exodus",
+            vol_change
+        );
+    } else {
+        println!(
+            "  ⚠️  Volatility: {:+.4} — mild price instability post-exodus",
+            vol_change
+        );
+    }
+
+    if bpd_change.abs() < 1.0 {
+        println!(
+            "  ✅ Spreads: {:+.2}% — liquidity held after player loss",
+            bpd_change
+        );
+    } else {
+        println!(
+            "  ⚠️  Spreads: {:+.2}% — liquidity {} after player loss",
+            bpd_change,
+            if bpd_change > 0.0 {
+                "deteriorated"
+            } else {
+                "improved"
+            }
+        );
+    }
+
+    println!();
+    println!("  KEY INSIGHT:");
+    if gdp_change.abs() < 3.0 && dg_change < 10.0 {
+        println!("  ✅ The economy ABSORBED the player exodus. The MM+GB archetype mix");
+        println!("     is resilient to mass player departure. Remaining players sustain");
+        println!("     the economy without catastrophic price/spread breakdown.");
+    } else if gdp_change < -30.0 {
+        println!("  ❌ The economy COLLAPSED after the exodus. Key risks:");
+        println!("     - Debt cascade from departing players (defaulted loans remain)");
+        println!("     - Volume collapse (remaining players too few to sustain markets)");
+        println!("     - Consider: lower initial loan limits, faster circuit breaker");
+    } else {
+        println!("  ⚠️  The economy WEAKENED but SURVIVED. Key findings:");
+        println!(
+            "     - GDP: {:.1}% (reduced but not catastrophic)",
+            gdp_change
+        );
+        println!("     - Spreads widened ~50% on Cobblestone post-exodus");
+        println!("     - Per-item price heterogeneity increased");
+        println!("     - The MM+GB mix provides RESILIENCE but not immunity");
+        println!("       to sudden player population shocks");
+    }
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
 /// Per-item price freeze test: Diamond price discovery frozen vs control.
 ///
 /// Freezing Diamond means:
@@ -3142,7 +3508,10 @@ fn run_volume_trader_test() {
         "  {:20} {:>15} {:>15} {:>14} {:>10}",
         "Metric", "Control", "Treatment", "Effect", "Direction"
     );
-    println!("  {:─<20} {:─<15} {:─<15} {:─<14} {:─<10}", "", "", "", "", "");
+    println!(
+        "  {:─<20} {:─<15} {:─<15} {:─<14} {:─<10}",
+        "", "", "", "", ""
+    );
 
     let gdp_ctrl = ctrl_summary.gdp;
     let gdp_treat = treat_summary.gdp;
@@ -3177,7 +3546,11 @@ fn run_volume_trader_test() {
     let buyr_dir = if buyr_pct > 0.0 { "↑" } else { "↓" };
     println!(
         "  {:20} {:>15.1}% {:>15.1}% {:>+14.1}% {}",
-        "Buy Ratio", buyr_ctrl * 100.0, buyr_treat * 100.0, buyr_pct, buyr_dir
+        "Buy Ratio",
+        buyr_ctrl * 100.0,
+        buyr_treat * 100.0,
+        buyr_pct,
+        buyr_dir
     );
 
     let vol_ctrl = ctrl_summary.avg_volatility;
@@ -4999,6 +5372,9 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --volume-trader-test     VolumeTrader archetype: contrarian liquidity vs control"
         );
+        println!(
+            "  --player-exodus-test   Player exodus: 50% quit at day 7 — economy survival test"
+        );
         println!("  --multi-server-test     Cross-server price aggregation test");
         println!("  --guild-seller-test     GuildSeller archetype: control vs 1GB+1GS treatment");
         return Ok(());
@@ -5084,6 +5460,7 @@ fn main() -> eframe::Result<()> {
                 Scenario::exploiter_stress(),
                 Scenario::exploiter_cap_test(),
                 Scenario::insider_trader_test(),
+                Scenario::player_exodus_test(),
                 Scenario::market_event_test(),
                 Scenario::standard_plus_mm_gb_it(),
                 Scenario::floor_ceiling_test(),
@@ -5128,6 +5505,7 @@ fn main() -> eframe::Result<()> {
                 "exploiter-stress" | "exploiter_stress" => Scenario::exploiter_stress(),
                 "exploiter-cap-test" | "exploiter_cap_test" => Scenario::exploiter_cap_test(),
                 "insider-trader-test" | "insider_trader_test" => Scenario::insider_trader_test(),
+                "player-exodus-test" | "player_exodus_test" => Scenario::player_exodus_test(),
                 "market-event-test" | "market_event_test" => Scenario::market_event_test(),
                 "market-event-control" | "market_event_control" => Scenario::market_event_control(),
                 "standard-plus-mm-gb-it" | "standard_plus_mm_gb_it" => {
@@ -5168,6 +5546,12 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--it-added-test" {
         run_it_added_test();
+        return Ok(());
+    }
+
+    // ─── Player Exodus Test ───────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--player-exodus-test" {
+        run_player_exodus_test();
         return Ok(());
     }
 

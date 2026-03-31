@@ -137,6 +137,51 @@ impl Simulation {
     pub fn tick(&mut self) {
         self.current_tick += 1;
 
+        // ── Player Exodus ───────────────────────────────────────────────────────
+        // Simulates mass player departure at a specific tick (e.g. half the server quits).
+        // Players with highest outstanding debt quit first (most realistic).
+        // Also triggers a spread shock (liquidity panic) for the configured duration.
+        if self.current_tick == self.config.player_exodus_tick.unwrap_or(u64::MAX) {
+            let num_to_remove =
+                (self.players.len() as f64 * self.config.player_exodus_fraction) as usize;
+            if num_to_remove > 0 {
+                // Compute each player's total outstanding debt from active loans
+                let mut player_debts: Vec<(usize, f64)> = (0..self.players.len())
+                    .map(|i| {
+                        let debt = self
+                            .loans
+                            .iter()
+                            .filter(|l| l.player_index == i && l.status != LoanStatus::Defaulted)
+                            .map(|l| l.current_balance)
+                            .sum::<f64>();
+                        (i, debt)
+                    })
+                    .collect();
+                // Sort by debt descending (highest-debt players quit first)
+                player_debts
+                    .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                let quit_indices: Vec<usize> = player_debts
+                    .iter()
+                    .take(num_to_remove)
+                    .map(|&(i, _)| i)
+                    .collect();
+                for &idx in &quit_indices {
+                    self.players[idx].online = false;
+                }
+                // Fire the spread shock to model liquidity panic
+                self.engine.spread_shock = self.config.exodus_spread_multiplier;
+                self.engine.shock_remaining_ticks = self.config.exodus_shock_duration_ticks;
+                println!(
+                    "  [EXODUS] tick {} — {} players quit (highest-debt first): {:?} | spread shock: {:.1}x for {} ticks",
+                    self.current_tick,
+                    num_to_remove,
+                    quit_indices,
+                    self.config.exodus_spread_multiplier,
+                    self.config.exodus_shock_duration_ticks
+                );
+            }
+        }
+
         let recording = self.recorder.is_some();
         let slippage_coeff = self.config.economy.slippage_coeff;
         let items_snapshot: Vec<_> = self.engine.items.clone();

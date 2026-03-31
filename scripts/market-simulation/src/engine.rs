@@ -113,6 +113,10 @@ pub struct MarketEngine {
     pub global_volume_multiplier: f64,
     pub global_volume_history: Vec<f64>,
     pub effective_window_ticks: u64,
+    /// Spread multiplier active during exodus shock. Decays to 1.0 over time.
+    pub spread_shock: f64,
+    /// Remaining ticks for spread shock (0 = no active shock).
+    pub shock_remaining_ticks: u64,
 }
 
 #[allow(dead_code)]
@@ -152,6 +156,8 @@ impl MarketEngine {
             global_volume_multiplier: 1.0,
             global_volume_history: vec![1.0],
             effective_window_ticks: config.trade_window_ticks(),
+            spread_shock: 1.0,
+            shock_remaining_ticks: 0,
         }
     }
 
@@ -183,6 +189,15 @@ impl MarketEngine {
         self.global_volume_history.push(global_vol_mult);
         if self.global_volume_history.len() > 5000 {
             self.global_volume_history.remove(0);
+        }
+
+        // Spread shock decay: reduce shock by 5% per tick, floor at 1.0
+        if self.shock_remaining_ticks > 0 {
+            self.shock_remaining_ticks = self.shock_remaining_ticks.saturating_sub(1);
+            self.spread_shock = 1.0 + (self.spread_shock - 1.0) * 0.95; // decay 5%
+            if self.shock_remaining_ticks == 0 {
+                self.spread_shock = 1.0;
+            }
         }
 
         let old_prices: Vec<f64> = self.items.iter().map(|item| item.price).collect();
@@ -258,7 +273,10 @@ impl MarketEngine {
             let new_price = round2(new_price);
             let spread = &new_spreads[item_idx];
 
-            self.items[item_idx].spread = spread.clone();
+            self.items[item_idx].spread = SpreadResult {
+                bpd: spread.bpd * self.spread_shock,
+                spd: spread.spd * self.spread_shock,
+            };
 
             // Price and history update: skip for frozen items (price didn't change).
             // Mirrors Java: if (!frozen && !item.priceFrozen()) { ... update DB ... }

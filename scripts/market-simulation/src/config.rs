@@ -7,6 +7,18 @@ pub struct SimConfig {
     pub player_scaling: PlayerScalingConfig,
     pub loans: LoanConfig,
     pub items: Vec<ItemConfig>,
+    /// Tick at which a fraction of players quit the server (simulates mass exodus).
+    /// None = no exodus (players stay for entire simulation).
+    pub player_exodus_tick: Option<u64>,
+    /// Fraction of players that quit when exodus_tick is reached (0.0 to 1.0).
+    /// Players with highest outstanding debt quit first (most realistic).
+    pub player_exodus_fraction: f64,
+    /// Multiplier applied to base_spread for `spread_shock_duration` ticks after exodus.
+    /// Models reduced liquidity and market panic when players quit. Default 2.0x.
+    pub exodus_spread_multiplier: f64,
+    /// Number of ticks the spread shock lasts before decaying (spread decay: 5%/tick).
+    /// Default 288 (1 day). Set to 0 to disable shock.
+    pub exodus_shock_duration_ticks: u64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -102,6 +114,10 @@ impl Default for SimConfig {
             player_scaling: PlayerScalingConfig::default(),
             loans: LoanConfig::default(),
             items: default_items(),
+            player_exodus_tick: None,
+            player_exodus_fraction: 0.5,
+            exodus_spread_multiplier: 2.0,
+            exodus_shock_duration_ticks: 288,
         }
     }
 }

@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
+import { ParameterHeatmap } from '@/components/simulator/parameter-heatmap';
 
 interface SweepRow {
   sell_pressure_multiplier: number;
@@ -46,6 +47,7 @@ export default function SweepResultsPage() {
   const [sortKey, setSortKey] = useState<SortKey>('buy_ratio');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [page, setPage] = useState(0);
+  const [viewMode, setViewMode] = useState<'heatmap' | 'table'>('heatmap');
   const PAGE_SIZE = 20;
 
   const [data, setData] = useState<SweepRow[]>([]);
@@ -230,6 +232,44 @@ export default function SweepResultsPage() {
             ))}
           </div>
         </div>
+
+        {/* View mode toggle */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => setViewMode('heatmap')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                viewMode === 'heatmap'
+                  ? 'bg-emerald-700/60 text-emerald-300 border border-emerald-600/50'
+                  : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-gray-600 hover:text-gray-300'
+              }`}
+            >
+              📊 Heatmap
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-emerald-700/60 text-emerald-300 border border-emerald-600/50'
+                  : 'bg-gray-800 text-gray-400 border border-gray-700 hover:border-gray-600 hover:text-gray-300'
+              }`}
+            >
+              📋 Table
+            </button>
+          </div>
+          {data.length > 0 && (
+            <p className="text-xs text-gray-600 hidden sm:block">
+              {filtered.length} configs {viewMode === 'heatmap' ? '· hover cells for values' : '· sorted by ' + sortKey}
+            </p>
+          )}
+        </div>
+
+        {/* Heatmap view */}
+        {viewMode === 'heatmap' && !loading && !error && data.length > 0 && (
+          <div className="mb-6">
+            <ParameterHeatmap data={filtered} />
+          </div>
+        )}
 
         {/* Table */}
         {loading ? (

@@ -585,6 +585,7 @@ class MarketEngineTest {
                     null,
                     null,
                     null, null, floor, ceiling,
+                    false,
                     Instant.now(),
                     Instant.now()
             );
@@ -684,7 +685,7 @@ class MarketEngineTest {
                 true,
                 null,
                 null,
-                null, null, null, null,
+                null, null, null, null, false,
                 Instant.now(),
                 Instant.now()
         );
@@ -701,7 +702,7 @@ class MarketEngineTest {
                 true,
                 null,
                 null,
-                maxChange, null, null, null,
+                maxChange, null, null, null, false,
                 Instant.now(),
                 Instant.now()
         );

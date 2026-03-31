@@ -51,6 +51,7 @@ const NAV_LINKS = [
   { href: '/portfolio/', label: 'Portfolio' },
   { href: '/leaderboard/', label: 'Leaderboard' },
   { href: '/compare/', label: 'Compare' },
+  { href: '/badges/', label: 'Badges' },
   { href: '/admin/', label: 'Admin' },
 ];
 

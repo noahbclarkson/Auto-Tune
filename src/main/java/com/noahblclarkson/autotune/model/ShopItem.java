@@ -22,6 +22,7 @@ public record ShopItem(
         @Nullable Double baseSpreadOverride,
         @Nullable BigDecimal priceFloorOverride,
         @Nullable BigDecimal priceCeilingOverride,
+        boolean priceFrozen,
         @NotNull Instant createdAt,
         @NotNull Instant updatedAt
 ) {
@@ -89,6 +90,7 @@ public record ShopItem(
         private Double baseSpreadOverride;
         private BigDecimal priceFloorOverride;
         private BigDecimal priceCeilingOverride;
+        private boolean priceFrozen = false;
         private Instant createdAt = Instant.now();
         private Instant updatedAt = Instant.now();
 
@@ -157,6 +159,11 @@ public record ShopItem(
             return this;
         }
 
+        public Builder priceFrozen(boolean priceFrozen) {
+            this.priceFrozen = priceFrozen;
+            return this;
+        }
+
         public Builder createdAt(Instant createdAt) {
             this.createdAt = createdAt;
             return this;
@@ -173,6 +180,7 @@ public record ShopItem(
                     section, enabled, buyable, itemData,
                     maxPriceChangeOverride, baseSpreadOverride,
                     priceFloorOverride, priceCeilingOverride,
+                    priceFrozen,
                     createdAt, updatedAt
             );
         }

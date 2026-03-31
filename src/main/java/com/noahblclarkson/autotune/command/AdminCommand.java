@@ -136,6 +136,10 @@ public class AdminCommand {
                 .append(Component.text(" — Show item config & overrides", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin item reset <item>", NamedTextColor.YELLOW)
                 .append(Component.text(" — Clear all per-item overrides", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin item freeze <item>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Freeze price updates for one item", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin item unfreeze <item>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Unfreeze price updates for one item", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin reload", NamedTextColor.YELLOW)
                 .append(Component.text(" — Reload config and caches", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin transactions [player]", NamedTextColor.YELLOW)
@@ -1260,6 +1264,11 @@ public class AdminCommand {
                 .append(Component.text(ceilingStr,
                         item.priceCeilingOverride() != null ? NamedTextColor.YELLOW : NamedTextColor.WHITE)));
 
+        // Price freeze status
+        sender.sendMessage(Component.text("  Price Freeze: ", NamedTextColor.GRAY)
+                .append(Component.text(item.priceFrozen() ? "FROZEN (no price updates)" : "Normal",
+                        item.priceFrozen() ? NamedTextColor.RED : NamedTextColor.GREEN)));
+
         // Price override
         Optional<PriceOverride> priceOverride = marketEngine.getOverride(item.id());
         if (priceOverride.isPresent()) {
@@ -1298,8 +1307,58 @@ public class AdminCommand {
         shopManager.setMaxPriceChangeOverride(item.id(), null);
         shopManager.setPriceFloorOverride(item.id(), null);
         shopManager.setPriceCeilingOverride(item.id(), null);
+        shopManager.setPriceFrozen(item.id(), false);
         sender.sendMessage(Component.text("All per-item overrides cleared for "
                 + item.getDisplayNameOrMaterial() + ". Using global config values.", NamedTextColor.GREEN));
+    }
+
+    @Command("autotune admin item freeze <material>")
+    @Permission("autotune.admin")
+    public void itemFreeze(
+            CommandSender sender,
+            @Argument(value = "material", suggestions = "price-override-material") String materialName
+    ) {
+        org.bukkit.Material mat = matchMaterial(materialName);
+        if (mat == null) {
+            sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        Optional<ShopItem> shopItem = shopManager.getItemByMaterial(mat);
+        if (shopItem.isEmpty()) {
+            sender.sendMessage(Component.text("Material not in shop: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        ShopItem item = shopItem.get();
+        shopManager.setPriceFrozen(item.id(), true);
+        sender.sendMessage(Component.text("Price updates frozen for " + item.getDisplayNameOrMaterial()
+                + ". The price will stay at " + configManager.formatCurrency(marketEngine.getCurrentPrice(item.id()))
+                + " until you unfreeze it. Spreads continue to update — item remains tradeable.", NamedTextColor.YELLOW));
+    }
+
+    @Command("autotune admin item unfreeze <material>")
+    @Permission("autotune.admin")
+    public void itemUnfreeze(
+            CommandSender sender,
+            @Argument(value = "material", suggestions = "price-override-material") String materialName
+    ) {
+        org.bukkit.Material mat = matchMaterial(materialName);
+        if (mat == null) {
+            sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        Optional<ShopItem> shopItem = shopManager.getItemByMaterial(mat);
+        if (shopItem.isEmpty()) {
+            sender.sendMessage(Component.text("Material not in shop: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        ShopItem item = shopItem.get();
+        shopManager.setPriceFrozen(item.id(), false);
+        sender.sendMessage(Component.text("Price updates unfrozen for " + item.getDisplayNameOrMaterial()
+                + ". Normal price discovery resumes on the next market tick.", NamedTextColor.GREEN));
     }
 
     @Command("autotune admin exchange")

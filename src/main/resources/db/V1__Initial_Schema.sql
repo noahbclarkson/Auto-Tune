@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS at_items (
     base_spread_override DECIMAL(10,5) DEFAULT NULL,
     price_floor DECIMAL(20,2) DEFAULT NULL,
     price_ceiling DECIMAL(20,2) DEFAULT NULL,
+    price_frozen BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

@@ -128,8 +128,9 @@ public class MarketEngine {
                 SpreadResult spread = calculateSpread(item, metrics, onlineCount, globalVolumeMultiplier, economyConfig);
                 newSpreads.put(item.id(), spread);
 
-                // When market is frozen, keep current prices (no calculation)
-                if (frozen) {
+                // When market is globally frozen OR this item is individually frozen,
+                // keep current price (no engine calculation — spreads still update)
+                if (frozen || item.priceFrozen()) {
                     newPrices.put(item.id(), item.price());
                     continue;
                 }
@@ -209,8 +210,8 @@ public class MarketEngine {
                 priceCache.put(item.id(), finalPrice);
                 spreadCache.put(item.id(), spread);
 
-                // When frozen, don't overwrite the DB price — just update the in-memory cache
-                if (!frozen) {
+                // When frozen (global or per-item), don't overwrite the DB price — just update in-memory cache
+                if (!frozen && !item.priceFrozen()) {
                     itemRepository.updatePrice(item.id(), finalPrice);
                 }
 
@@ -219,8 +220,8 @@ public class MarketEngine {
                 itemRepository.recordPriceHistory(
                         item.id(), finalPrice, buyVol, sellVol, spread.bpd(), spread.spd());
 
-                // When frozen, skip trend streak updates (price didn't change)
-                if (!frozen) {
+                // When frozen (global or per-item), skip trend streak updates (price didn't change)
+                if (!frozen && !item.priceFrozen()) {
                     updateTrendStreak(item.id(), finalPrice, item.price());
                 }
             }

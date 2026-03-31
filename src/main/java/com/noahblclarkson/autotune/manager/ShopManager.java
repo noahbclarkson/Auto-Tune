@@ -407,4 +407,18 @@ public class ShopManager {
             idToItemCache.put(updated.id(), updated);
         });
     }
+
+    /**
+     * Freeze or unfreeze price updates for a single item.
+     * When frozen, the item's price stops updating but spreads continue to compute normally.
+     * Use during server events to prevent exploitation on specific high-value items.
+     */
+    public void setPriceFrozen(int itemId, boolean frozen) {
+        itemRepository.updatePriceFrozen(itemId, frozen);
+        getItemById(itemId).ifPresent(item -> {
+            ShopItem updated = item.toBuilder().priceFrozen(frozen).build();
+            hashToItemCache.put(updated.itemHash(), updated);
+            idToItemCache.put(updated.id(), updated);
+        });
+    }
 }

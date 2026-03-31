@@ -44,6 +44,8 @@ public class ItemRepository {
         BigDecimal priceCeilingOverride = rs.getBigDecimal("price_ceiling");
         if (rs.wasNull()) priceCeilingOverride = null;
 
+        boolean priceFrozen = rs.getBoolean("price_frozen");
+
         return ShopItem.builder()
                 .id(rs.getInt("id"))
                 .material(Material.valueOf(rs.getString("material")))
@@ -58,13 +60,14 @@ public class ItemRepository {
                 .baseSpreadOverride(baseSpreadOverride)
                 .priceFloorOverride(priceFloorOverride)
                 .priceCeilingOverride(priceCeilingOverride)
+                .priceFrozen(priceFrozen)
                 .createdAt(rs.getTimestamp("created_at").toInstant())
                 .updatedAt(rs.getTimestamp("updated_at").toInstant())
                 .build();
     }
 
     private static final String SELECT_COLUMNS =
-            "id, material, item_hash, display_name, price, section, enabled, buyable, item_data, max_price_change_override, base_spread_override, price_floor, price_ceiling, created_at, updated_at";
+            "id, material, item_hash, display_name, price, section, enabled, buyable, item_data, max_price_change_override, base_spread_override, price_floor, price_ceiling, price_frozen, created_at, updated_at";
 
     public List<ShopItem> findAll() {
         return jdbi.withHandle(handle ->
@@ -172,6 +175,18 @@ public class ItemRepository {
                                 """)
                         .bind("id", itemId)
                         .bind("ceiling", priceCeiling)
+                        .bind("updatedAt", Timestamp.from(Instant.now()))
+                        .execute());
+    }
+
+    public void updatePriceFrozen(int itemId, boolean frozen) {
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                                UPDATE at_items SET price_frozen = :frozen, updated_at = :updatedAt
+                                WHERE id = :id
+                                """)
+                        .bind("id", itemId)
+                        .bind("frozen", frozen)
                         .bind("updatedAt", Timestamp.from(Instant.now()))
                         .execute());
     }

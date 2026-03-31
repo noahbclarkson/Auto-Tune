@@ -13,6 +13,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 
 import java.math.BigDecimal;
@@ -22,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -55,6 +59,8 @@ public class MarketEventService {
     private final CopyOnWriteArrayList<MarketEvent> activeEvents = new CopyOnWriteArrayList<>();
     /** Guards concurrent access to tick processing */
     private final AtomicBoolean ticking = new AtomicBoolean(false);
+    /** Active boss bars per player — shown when market events are active */
+    private final ConcurrentHashMap<UUID, BossBar> playerBossBars = new ConcurrentHashMap<>();
 
     /** Configured default events loaded at startup */
     private final CopyOnWriteArrayList<AutoTuneConfig.MarketEventConfigEntry> defaultEvents = new CopyOnWriteArrayList<>();
@@ -222,6 +228,7 @@ public class MarketEventService {
 
         eventRepository.updateStatus(id, Status.CANCELLED.name());
         activeEvents.removeIf(e -> e.id().equals(id));
+        dismissAllBossBars();
         broadcast("Market event cancelled: " + event.name());
         log.info("[Auto-Tune] Market event cancelled: " + event.name());
         return true;
@@ -257,6 +264,7 @@ public class MarketEventService {
         eventRepository.updateStatus(event.id(), Status.ACTIVE.name());
         activeEvents.add(active);
         broadcast(event.startMessage());
+        showEventBossBar(event);
         log.info("[Auto-Tune] Market event activated: " + event.name());
     }
 
@@ -264,6 +272,7 @@ public class MarketEventService {
         MarketEvent ended = event.withStatus(Status.ENDED);
         eventRepository.updateStatus(event.id(), Status.ENDED.name());
         activeEvents.removeIf(e -> e.id().equals(event.id()));
+        dismissAllBossBars();
         broadcast(event.endMessage());
         log.info("[Auto-Tune] Market event ended: " + event.name());
     }
@@ -321,6 +330,77 @@ public class MarketEventService {
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.sendMessage(component);
         }
+    }
+
+    /**
+     * Shows a boss bar to all online players for the duration of the event.
+     * The bar automatically dismisses when the event ends.
+     */
+    private void showEventBossBar(MarketEvent event) {
+        AutoTuneConfig config = configManager.getConfig();
+        if (config.marketEvents() != null && !config.marketEvents().bossBar().enabled()) {
+            return;
+        }
+
+        BarColor color = bossBarColor(event.type());
+        String title = event.name();
+
+        // Boss bar shows event name as title
+        BossBar bar = Bukkit.createBossBar(title, color, BarStyle.SOLID);
+
+        // Progress bar depletes as event approaches its end time
+        Duration timeUntilEnd = Duration.between(Instant.now(), event.endsAt());
+        Duration totalDuration = Duration.between(event.startsAt(), event.endsAt());
+        if (!totalDuration.isZero() && !timeUntilEnd.isNegative()) {
+            double progress = Math.max(0.0, Math.min(1.0,
+                    (double) timeUntilEnd.toMillis() / totalDuration.toMillis()));
+            bar.setProgress(progress);
+        }
+
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            bar.addPlayer(player);
+            playerBossBars.put(player.getUniqueId(), bar);
+        }
+
+        // Dismiss the boss bar when the event ends
+        if (!timeUntilEnd.isNegative() && !timeUntilEnd.isZero()) {
+            long ticksUntilEnd = Math.max(20, timeUntilEnd.toSeconds() * 20);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                dismissAllBossBars();
+            }, ticksUntilEnd);
+        }
+    }
+
+    /**
+     * Removes the boss bar from a specific player.
+     */
+    private void dismissBossBar(Player player) {
+        BossBar bar = playerBossBars.remove(player.getUniqueId());
+        if (bar != null) {
+            bar.removeAll();
+        }
+    }
+
+    /**
+     * Removes all active boss bars from all players.
+     */
+    private void dismissAllBossBars() {
+        for (BossBar bar : playerBossBars.values()) {
+            bar.removeAll();
+        }
+        playerBossBars.clear();
+    }
+
+    /**
+     * Returns the boss bar color appropriate for an event type.
+     */
+    private BarColor bossBarColor(EventType type) {
+        return switch (type) {
+            case DEMAND_SURGE, GOLD_RUSH -> BarColor.YELLOW;
+            case SUPPLY_GLUT, DEFLATION_DROP -> BarColor.BLUE;
+            case INFLATION_BOOST -> BarColor.RED;
+            case CUSTOM -> BarColor.GREEN;
+        };
     }
 
     private void loadDefaultEvents() {

@@ -534,15 +534,26 @@ public record AutoTuneConfig(
      * @param enabled            Whether market events are active at all
      * @param defaultEvents      Pre-defined event templates loaded from config
      * @param checkIntervalMinutes How often to check for event lifecycle (minutes)
+     * @param bossBar            Boss bar notification settings
      */
     public record MarketEventConfig(
             boolean enabled,
             @NotNull List<MarketEventConfigEntry> defaultEvents,
-            int checkIntervalMinutes
+            int checkIntervalMinutes,
+            @NotNull BossBarConfig bossBar
     ) {
         public static MarketEventConfig defaults() {
-            return new MarketEventConfig(true, List.of(), 5);
+            return new MarketEventConfig(true, List.of(), 5, BossBarConfig.DEFAULT);
         }
+    }
+
+    /**
+     * Boss bar notification settings for market events.
+     *
+     * @param enabled  Whether to show boss bar announcements when events start
+     */
+    public record BossBarConfig(boolean enabled) {
+        public static BossBarConfig DEFAULT = new BossBarConfig(true);
     }
 
     /**

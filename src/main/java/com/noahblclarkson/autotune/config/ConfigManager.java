@@ -605,10 +605,16 @@ public class ConfigManager {
             }
         }
 
+        ConfigurationSection bossBarSection = section.getConfigurationSection("boss-bar");
+        AutoTuneConfig.BossBarConfig bossBarConfig = bossBarSection != null
+                ? new AutoTuneConfig.BossBarConfig(bossBarSection.getBoolean("enabled", true))
+                : AutoTuneConfig.BossBarConfig.DEFAULT;
+
         return new MarketEventConfig(
                 section.getBoolean("enabled", true),
                 entries,
-                Math.max(1, section.getInt("check-interval-minutes", 5))
+                Math.max(1, section.getInt("check-interval-minutes", 5)),
+                bossBarConfig
         );
     }
 

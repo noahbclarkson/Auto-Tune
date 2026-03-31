@@ -521,6 +521,52 @@ impl Scenario {
     /// Treatment: same economy but Diamond floor=60% of base ($300), Iron ceiling=100% ($50)
     ///
     /// Floor: prevents displayed price from going below floor even when internal price is low.
+    /// GuildStability with 1MM + 1GB + 1GS + 4Cas + 3Far + 2Tra.
+    /// Tests whether GuildSeller (price-spike selling) reduces underselling vs
+    /// guild_stability_mm_fixed_guild (2GB instead of 1GB+1GS).
+    /// Control: guild_stability_mm_fixed_guild (2GB, 0GS)
+    /// Treatment: guild_stability_mm_gs (1GB + 1GS)
+    ///
+    /// Hypothesis: GuildSeller provides downward price pressure on high prices,
+    /// reducing the sell-heavy bias that Farmer-dominated economies exhibit.
+    pub fn guild_stability_mm_gs() -> Self {
+        Self {
+            name: "GuildStability+MM+GB+GS".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildSeller".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Ceiling: prevents displayed price from exceeding ceiling even when internal price is high.
     /// Internal prices still move freely — only displayed buy/sell prices are clamped.
     pub fn floor_ceiling_test() -> Self {
@@ -2600,6 +2646,160 @@ fn run_it_added_test() {
     let _ = std::fs::remove_dir_all(&treat_dir);
 }
 
+fn run_guild_seller_test() {
+    use crate::analyzer::load_summary;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       GUILDSELLER TEST                                     ║");
+    println!("║  Control vs Treatment — 1GB+1GS vs 2GB (structural fix)   ║");
+    println!("╚══════════════════════════════════════════════════════╝\n");
+    println!("  Control: guild_stability_mm_fixed_guild (1MM+2GB@7%+4Cas+3Far+2Tra)");
+    println!("  Treatment: guild_stability_mm_gs (1MM+1GB+1GS+4Cas+3Far+2Tra)");
+    println!("  Seed: {}\n", seed);
+
+    let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let treat_scenario = Scenario::guild_stability_mm_gs();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-gs-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-gs-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl = ctrl_scenario.clone();
+    ctrl.seed = Some(seed);
+    let mut treat = treat_scenario.clone();
+    treat.seed = Some(seed);
+
+    println!("─── Control (2GB, 0GS) ───");
+    if let Err(e) = run_headless(&ctrl, Some(ctrl_dir.clone())) {
+        eprintln!("  Control error: {}", e);
+        return;
+    }
+
+    println!("\n─── Treatment (1GB + 1GS) ───");
+    if let Err(e) = run_headless(&treat, Some(treat_dir.clone())) {
+        eprintln!("  Treatment error: {}", e);
+        return;
+    }
+
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Summary error: {}", e);
+            return;
+        }
+    };
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Summary error: {}", e);
+            return;
+        }
+    };
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  RESULTS — GUILDSELLER vs CONTROL                         ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Metric", "CONTROL (2GB)", "TREATMENT (1GB+1GS)", "Effect"
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "─".repeat(20),
+        "─".repeat(15),
+        "─".repeat(15),
+        "─".repeat(15)
+    );
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
+        "GDP",
+        ctrl_summary.gdp,
+        treat_summary.gdp,
+        (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
+        "Debt",
+        ctrl_summary.debt,
+        treat_summary.debt,
+        (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.3}x {:>15.3}x {:>+14.1}%",
+        "Debt/GDP",
+        ctrl_dg,
+        treat_dg,
+        (treat_dg / ctrl_dg.max(0.001) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.2}% {:>15.2}% {:>+14.2}pp",
+        "Buy Ratio",
+        ctrl_summary.buy_ratio * 100.0,
+        treat_summary.buy_ratio * 100.0,
+        (treat_summary.buy_ratio - ctrl_summary.buy_ratio) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.4} {:>15.4} {:>+14.4}",
+        "Volatility",
+        ctrl_summary.avg_volatility,
+        treat_summary.avg_volatility,
+        treat_summary.avg_volatility - ctrl_summary.avg_volatility
+    );
+    println!(
+        "  {:20} {:>15.2}% {:>15.2}% {:>+14.2}pp",
+        "Avg BPD",
+        ctrl_summary.avg_bpd * 100.0,
+        treat_summary.avg_bpd * 100.0,
+        (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0
+    );
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  VERDICT                                                   ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    let br_change = treat_summary.buy_ratio - ctrl_summary.buy_ratio;
+    let vol_change = treat_summary.avg_volatility - ctrl_summary.avg_volatility;
+    let gdp_change_pct =
+        (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+
+    let improvements = [
+        ("Buy Ratio", br_change > 0.01, format!("{:+.1}pp", br_change * 100.0)),
+        (
+            "Volatility",
+            vol_change < -0.01,
+            format!("{:+.4}", vol_change),
+        ),
+        ("GDP", gdp_change_pct > 2.0, format!("{:+.1}%", gdp_change_pct)),
+    ];
+
+    for (name, passed, val) in improvements {
+        if passed {
+            println!("  ✅ {}: {} (GS improves economy)", name, val);
+        } else {
+            println!("  ⚠️  {}: {} (no improvement)", name, val);
+        }
+    }
+
+    if br_change > 0.01 && vol_change < -0.01 {
+        println!("\n  🎯 GuildSeller structurally addresses underselling — both buy_ratio UP and vol DOWN.");
+    } else if br_change.abs() < 0.01 {
+        println!("\n  ℹ️  GuildSeller has minimal effect on buy_ratio — consider higher GS count.");
+    }
+
+    println!("\n  Hypothesis: GuildSeller provides downward price pressure via proactive spike-selling.");
+    println!("  If buy_ratio improves: GS is a structural fix for Farmer-dominated economies.");
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
 fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), String> {
     use crate::player::set_global_seeded_rng;
     use crate::recorder::DataRecorder;
@@ -4043,6 +4243,7 @@ fn main() -> eframe::Result<()> {
         println!("  --floor-ceiling-test     Floor/ceiling effect: control vs treatment");
         println!("  --floor-strength-sweep   Diamond floor 30-90% — find GDP-neutral level");
         println!("  --multi-server-test     Cross-server price aggregation test");
+        println!("  --guild-seller-test     GuildSeller archetype: control vs 1GB+1GS treatment");
         return Ok(());
     }
 
@@ -4228,6 +4429,12 @@ fn main() -> eframe::Result<()> {
     // ─── Multi-Server Test ───────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--multi-server-test" {
         run_multi_server_test();
+        return Ok(());
+    }
+
+    // ─── GuildSeller Test ───────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--guild-seller-test" {
+        run_guild_seller_test();
         return Ok(());
     }
 

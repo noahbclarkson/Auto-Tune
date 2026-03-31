@@ -1243,6 +1243,7 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                         Archetype::GuildBuyer => egui::Color32::from_rgb(255, 118, 117),
                         Archetype::MarketMaker => egui::Color32::from_rgb(0, 206, 201),
                         Archetype::InsiderTrader => egui::Color32::from_rgb(255, 183, 197),
+                        Archetype::GuildSeller => egui::Color32::from_rgb(255, 165, 77),
                     };
                     ui.colored_label(archetype_color, player.archetype.label());
                 });
@@ -1718,6 +1719,16 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                             player.insider_history_window
                         ));
                         ui.label("Contrarian — fades momentum by buying dips and selling spikes.");
+                    }
+                    Archetype::GuildSeller => {
+                        ui.label("Guild-backed seller: liquidates stock for members at fair prices.");
+                        ui.label(format!(
+                            "Price-spike threshold={:.1}%, sell threshold={:.1}%",
+                            player.guild_sell_threshold * 100.0,
+                            player.sell_threshold * 100.0
+                        ));
+                        ui.label("Sells proactively when price spikes above perceived (anti-bubble).");
+                        ui.label("Liquidates excess inventory when > 2x guild target.");
                     }
                 }
 

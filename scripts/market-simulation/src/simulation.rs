@@ -91,6 +91,7 @@ impl Simulation {
             Archetype::InsiderTrader => {
                 PlayerAgent::new_insider_trader(id, item_count, &base_prices)
             }
+            Archetype::GuildSeller => PlayerAgent::new_guild_seller(id, item_count, &base_prices),
         };
         self.players.push(player);
     }

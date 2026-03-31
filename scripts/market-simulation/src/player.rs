@@ -157,6 +157,11 @@ pub enum Archetype {
     /// significantly above. Counteracts momentum-driven overshoot in both
     /// directions. Distinct from Exploiter (momentum-following).
     InsiderTrader,
+    /// Guild Seller — mirror of GuildBuyer. Guilds liquidate inventory when
+    /// prices spike above perceived value, preventing bubble inflation.
+    /// Sells proactively when sell_price > perceived * (1 + threshold),
+    /// then liquidates excess above guild target. Counteracts price bubbles.
+    GuildSeller,
 }
 
 impl Archetype {
@@ -172,6 +177,7 @@ impl Archetype {
             Self::GuildBuyer => "GuildBuyer",
             Self::MarketMaker => "MarketMaker",
             Self::InsiderTrader => "InsiderTrader",
+            Self::GuildSeller => "GuildSeller",
         }
     }
 }
@@ -232,6 +238,9 @@ pub struct PlayerAgent {
     /// Price-dip threshold: buy when buy_price < perceived * (1.0 - this).
     /// 0.0 = disabled. 0.2 = buy when price is 20%+ below perceived.
     pub guild_price_dip_threshold: f64,
+    /// Sell-spike threshold: sell when sell_price > perceived * (1.0 + this).
+    /// 0.0 = disabled. 0.2 = sell when price is 20%+ above perceived.
+    pub guild_sell_threshold: f64,
     /// Max inventory per item for MarketMaker archetype. Limits position size.
     pub mm_max_inventory: i32,
     /// Target inventory level per item for MarketMaker archetype.
@@ -277,6 +286,7 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
@@ -315,6 +325,7 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
@@ -357,6 +368,7 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
@@ -395,6 +407,7 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
@@ -433,6 +446,7 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
@@ -478,6 +492,7 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
@@ -524,6 +539,7 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
@@ -575,6 +591,7 @@ impl PlayerAgent {
             guild_base_inventory: HashMap::new(),
             // Buy when price drops guild_dip_threshold+% below perceived (proactive price stabilizer)
             guild_price_dip_threshold: guild_dip_threshold,
+            guild_sell_threshold: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             insider_history_window: 0,
@@ -585,6 +602,64 @@ impl PlayerAgent {
         // Pre-fill inventory to represent guild stock
         for i in 0..item_count {
             let qty = rng.random(10..50);
+            agent.inventory.insert(i, qty);
+            agent.guild_target_inventory.insert(i, qty);
+            agent.guild_base_inventory.insert(i, qty);
+        }
+        agent
+    }
+
+    /// Guild Seller: mirror of GuildBuyer. Sells when prices spike above perceived
+    /// value, providing downward pressure to prevent bubble inflation.
+    /// Phase 1: Proactive sell-spike selling — sells when sell_price > perceived*(1+threshold).
+    /// Phase 2: Liquidate excess inventory when above target.
+    pub fn new_guild_seller(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
+        let mut rng = SeededRng;
+        // GuildSellers have moderate capital — they sell guild inventory
+        let budget = rng.random(10000.0..50000.0);
+        // Sell-spike threshold: sell when price > perceived*(1 + this)
+        let sell_spike_threshold = rng.random(0.05..0.15);
+
+        let mut agent = Self {
+            id: index,
+            name: format!("GuildSeller-{index}"),
+            archetype: Archetype::GuildSeller,
+            balance: budget,
+            online_probability: rng.random(0.6..0.9),
+            activity_rate: rng.random(0.6..0.9),
+            // Willing to sell at modest markup
+            buy_threshold: rng.random(0.0..0.05),
+            sell_threshold: rng.random(0.3..0.6),
+            max_trade_amount: rng.random(10..80),
+            risk_tolerance: rng.random(0.4..0.7),
+            // Needs to keep substantial stock for liquidation events
+            inventory_saturation: rng.random(0.3..0.6),
+            // Gathers moderately
+            gather_rate: rng.random(0.05..0.15),
+            // Provides to guild members — low personal use
+            usage_rate: rng.random(0.0..0.05),
+            perceived_values: HashMap::new(),
+            preferences: HashMap::new(),
+            inventory: HashMap::new(),
+            credit_score: 650,
+            total_traded: 0.0,
+            online: false,
+            total_trades: 0,
+            guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            guild_price_dip_threshold: 0.0,
+            // Sell when price spikes guild_sell_threshold+% above perceived
+            guild_sell_threshold: sell_spike_threshold,
+            mm_max_inventory: 0,
+            mm_target_inventory: 0,
+            insider_history_window: 0,
+            insider_price_history: HashMap::new(),
+        };
+        agent.init_perceived_values(item_count, base_prices);
+        agent.init_preferences(item_count);
+        // Pre-fill inventory to represent guild stock for liquidation
+        for i in 0..item_count {
+            let qty = rng.random(15..60);
             agent.inventory.insert(i, qty);
             agent.guild_target_inventory.insert(i, qty);
             agent.guild_base_inventory.insert(i, qty);
@@ -627,6 +702,7 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
             // MarketMaker-specific
@@ -676,6 +752,7 @@ impl PlayerAgent {
             guild_target_inventory: HashMap::new(),
             guild_base_inventory: HashMap::new(),
             guild_price_dip_threshold: 0.0,
+            guild_sell_threshold: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             // InsiderTrader-specific
@@ -812,6 +889,9 @@ impl PlayerAgent {
                     &mut logs,
                     slippage_coeff,
                 );
+            }
+            Archetype::GuildSeller => {
+                self.decide_guildseller(items, &mut decisions, record, &mut logs, slippage_coeff);
             }
             _ => {
                 self.decide_value_based(items, &mut decisions, record, &mut logs, slippage_coeff);
@@ -1231,6 +1311,154 @@ impl PlayerAgent {
                 }
             }
             // Between target and 2x: hold — guild maintains stock
+        }
+    }
+
+    /// Guild Seller: mirror of GuildBuyer. Sells when prices spike above perceived value,
+    /// providing downward pressure to prevent bubble inflation.
+    ///
+    /// Phase 1 — Price-spike selling: when sell_price > perceived*(1+threshold),
+    /// sell proactively regardless of inventory. This is the primary anti-bubble mechanism.
+    ///
+    /// Phase 2 — Excess liquidation: sell surplus when > 2x target inventory.
+    /// (mirrors GuildBuyer's surplus sell behavior)
+    fn decide_guildseller(
+        &mut self,
+        items: &[ItemState],
+        decisions: &mut Vec<PlayerDecision>,
+        record: bool,
+        logs: &mut Vec<DecisionLog>,
+        slippage_coeff: f64,
+    ) {
+        let mut rng = SeededRng;
+
+        // Low-rate gathering — guilds get resources from members
+        if rng.random(0.0..1.0) < 0.2 {
+            for (i, _item) in items.iter().enumerate() {
+                let target = self.guild_target_inventory.get(&i).copied().unwrap_or(50);
+                let current = self.inventory.get(&i).copied().unwrap_or(0);
+                if current < target && rng.random(0.0..1.0) < self.gather_rate {
+                    *self.inventory.entry(i).or_insert(0) += 1;
+                }
+            }
+        }
+
+        // Phase 1: Price-spike selling — proactive anti-bubble mechanism.
+        // When price rises significantly above perceived value, GuildSeller sells
+        // regardless of current inventory level. This creates supply when prices bubble,
+        // acting as an automatic price ceiling and preventing market overheating.
+        if self.guild_sell_threshold > 0.0 {
+            let spike_multiplier = 1.0 + self.guild_sell_threshold;
+            for (i, _item) in items.iter().enumerate() {
+                let perceived = self
+                    .perceived_values
+                    .get(&i)
+                    .copied()
+                    .unwrap_or(items[i].price);
+                let sell_price = items[i].sell_price();
+                let current = self.inventory.get(&i).copied().unwrap_or(0);
+
+                // Price spike detected: market price is guild_sell_threshold+% above perceived
+                // Sell regardless of inventory level (proactive bubble prevention)
+                if sell_price > perceived * spike_multiplier {
+                    // Sell up to available inventory × risk_tolerance (don't dump 100%)
+                    let have = current.max(1);
+                    let max_sell = (have as f64 * self.risk_tolerance).ceil() as i32;
+                    let amount =
+                        rng.random_inclusive(1..=max_sell.min(self.max_trade_amount).max(1));
+                    if amount <= 0 {
+                        continue;
+                    }
+                    let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                    let revenue = sell_price / slippage * amount as f64;
+                    let balance_before = self.balance;
+                    let inventory_before = current;
+                    self.balance += revenue;
+                    *self.inventory.entry(i).or_insert(0) -= amount;
+                    self.total_traded += revenue;
+                    self.total_trades += 1;
+                    decisions.push(PlayerDecision {
+                        item_index: i,
+                        is_buy: false,
+                        amount,
+                    });
+                    if record {
+                        logs.push(DecisionLog {
+                            player_id: self.id,
+                            item_index: i,
+                            is_buy: false,
+                            amount,
+                            price_per_unit: sell_price / slippage,
+                            total_cost: revenue,
+                            perceived_value: perceived,
+                            effective_perceived: perceived * spike_multiplier,
+                            buy_threshold: self.buy_threshold,
+                            sell_threshold: self.sell_threshold,
+                            balance_before,
+                            inventory_before,
+                            reasoning: "guild_price_spike".to_string(),
+                        });
+                    }
+                }
+            }
+        }
+
+        // Phase 2: Liquidate excess inventory when well above target
+        for (i, _item) in items.iter().enumerate() {
+            let target = self.guild_target_inventory.get(&i).copied().unwrap_or(50);
+            let current = self.inventory.get(&i).copied().unwrap_or(0);
+            let sell_price = items[i].sell_price();
+
+            if current > target * 2 {
+                // Well above target — liquidate surplus
+                let surplus = current - target;
+                if surplus > 0 {
+                    let amount =
+                        rng.random_inclusive(1..=surplus.min(self.max_trade_amount).max(1));
+                    if amount <= 0 {
+                        continue;
+                    }
+                    let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                    let revenue = sell_price / slippage * amount as f64;
+                    let balance_before = self.balance;
+                    let inventory_before = current;
+                    self.balance += revenue;
+                    *self.inventory.entry(i).or_insert(0) -= amount;
+                    self.total_traded += revenue;
+                    self.total_trades += 1;
+                    decisions.push(PlayerDecision {
+                        item_index: i,
+                        is_buy: false,
+                        amount,
+                    });
+                    if record {
+                        logs.push(DecisionLog {
+                            player_id: self.id,
+                            item_index: i,
+                            is_buy: false,
+                            amount,
+                            price_per_unit: sell_price / slippage,
+                            total_cost: revenue,
+                            perceived_value: self
+                                .perceived_values
+                                .get(&i)
+                                .copied()
+                                .unwrap_or(items[i].price),
+                            effective_perceived: self
+                                .perceived_values
+                                .get(&i)
+                                .copied()
+                                .unwrap_or(items[i].price),
+                            buy_threshold: self.buy_threshold,
+                            sell_threshold: self.sell_threshold,
+                            balance_before,
+                            inventory_before,
+                            reasoning: "guild_liquidate_excess".to_string(),
+                        });
+                    }
+                }
+            }
+            // Below 2x target: hold — guild maintains stock for members
         }
     }
 

@@ -27,6 +27,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -177,8 +179,37 @@ public class AuctionManager {
             UUID playerId = player.getUniqueId();
             Object lock = playerLocks.computeIfAbsent(playerId, k -> new Object());
             synchronized (lock) {
-                // Deduct from player's balance immediately (escrow)
-                EconomyResponse withdrawResponse = economy.withdrawPlayer(player, totalCost.doubleValue());
+                // ── Escrow withdrawal on main thread ───────────────────────────
+                // Vault Economy must run on Bukkit main thread. Use CountDownLatch
+                // to wait for completion before proceeding.
+                CountDownLatch escrowLatch = new CountDownLatch(1);
+                AtomicReference<EconomyResponse> escrowRef = new AtomicReference<>();
+                AtomicReference<Exception> escrowError = new AtomicReference<>();
+
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    try {
+                        escrowRef.set(economy.withdrawPlayer(player, totalCost.doubleValue()));
+                    } catch (Exception e) {
+                        escrowError.set(e);
+                    } finally {
+                        escrowLatch.countDown();
+                    }
+                });
+
+                try {
+                    if (!escrowLatch.await(10, TimeUnit.SECONDS)) {
+                        throw new RuntimeException("Timed out waiting for escrow withdrawal for " + playerId);
+                    }
+                    if (escrowError.get() != null) {
+                        throw new RuntimeException("Escrow withdrawal failed for " + playerId,
+                                escrowError.get());
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Interrupted while processing buy order for " + playerId, e);
+                }
+
+                EconomyResponse withdrawResponse = escrowRef.get();
                 if (!withdrawResponse.transactionSuccess()) {
                     return AuctionResult.error("Insufficient funds. Need " + configManager.formatCurrency(totalCost));
                 }
@@ -228,8 +259,17 @@ public class AuctionManager {
 
                     return AuctionResult.success(filledMsg, result.matchedOrder(), fills);
                 } catch (Exception e) {
-                    // Matching or DB operation failed — refund the escrowed money
-                    economy.depositPlayer(player, totalCost.doubleValue());
+                    // Matching or DB operation failed — refund the escrowed money on main thread
+                    CountDownLatch refundLatch = new CountDownLatch(1);
+                    Bukkit.getScheduler().runTask(plugin, task -> {
+                        economy.depositPlayer(player, totalCost.doubleValue());
+                        refundLatch.countDown();
+                    });
+                    try {
+                        refundLatch.await(10, TimeUnit.SECONDS);
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                    }
                     plugin.getLogger().log(Level.SEVERE,
                             "Buy order failed after escrow withdrawal for " + playerId
                                     + ", refunded " + totalCost + ": " + e.getMessage(), e);
@@ -260,10 +300,22 @@ public class AuctionManager {
                     return AuctionResult.error("Order is not active");
                 }
 
-                // Refund escrowed funds for buy orders
+                // Refund escrowed funds for buy orders — must run on main thread (Vault Economy)
                 if (order.side() == OrderSide.BUY) {
                     BigDecimal refund = order.price().multiply(BigDecimal.valueOf(order.remainingQuantity()));
-                    economy.depositPlayer(player, refund.doubleValue());
+                    CountDownLatch refundLatch = new CountDownLatch(1);
+                    Bukkit.getScheduler().runTask(plugin, task -> {
+                        economy.depositPlayer(player, refund.doubleValue());
+                        refundLatch.countDown();
+                    });
+                    try {
+                        if (!refundLatch.await(10, TimeUnit.SECONDS)) {
+                            return AuctionResult.error("Order cancellation timed out during refund");
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return AuctionResult.error("Order cancellation interrupted");
+                    }
                 }
 
                 AuctionOrder cancelled = order.withStatusCancelled();

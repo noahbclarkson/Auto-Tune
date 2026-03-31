@@ -11,6 +11,37 @@ async function fetchJson<T>(url: string): Promise<T> {
   return res.json();
 }
 
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(err.error ?? `API returned ${res.status}`);
+  }
+  return res.json();
+}
+
+async function patchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { method: 'PATCH' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(err.error ?? `API returned ${res.status}`);
+  }
+  return res.json();
+}
+
+async function deleteJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(err.error ?? `API returned ${res.status}`);
+  }
+  return res.json();
+}
+
 export interface ItemDto {
   id: number;
   material: string;
@@ -198,6 +229,20 @@ export interface AdminHealthDto {
   timestamp: number;
 }
 
+export interface AlertDto {
+  id: string;
+  playerUuid: string;
+  itemId: number;
+  itemName: string;
+  alertType: 'ABOVE' | 'BELOW';
+  targetPrice: number;
+  currentPrice: number;
+  enabled: boolean;
+  triggered: boolean;
+  createdAt: number;
+  triggeredAt: number | null;
+}
+
 export const api = {
   items: {
     list: (base: string) => fetchJson<ItemDto[]>(`${base}/api/items`),
@@ -239,5 +284,17 @@ export const api = {
   },
   admin: {
     health: (base: string) => fetchJson<AdminHealthDto>(`${base}/api/admin/health`),
+  },
+  alerts: {
+    list: (base: string, playerName: string) =>
+      fetchJson<AlertDto[]>(`${base}/api/alerts/${encodeURIComponent(playerName)}`),
+    create: (base: string, playerName: string, itemId: number, alertType: 'ABOVE' | 'BELOW', targetPrice: number) =>
+      postJson<AlertDto>(`${base}/api/alerts`, { playerName, itemId, alertType, targetPrice }),
+    remove: (base: string, alertId: string, playerName: string) =>
+      deleteJson<{ success: boolean }>(`${base}/api/alerts/${alertId}?playerName=${encodeURIComponent(playerName)}`),
+    toggle: (base: string, alertId: string, playerName: string) =>
+      patchJson<AlertDto>(`${base}/api/alerts/${alertId}/toggle?playerName=${encodeURIComponent(playerName)}`),
+    rearm: (base: string, alertId: string, playerName: string) =>
+      patchJson<AlertDto>(`${base}/api/alerts/${alertId}/rearm?playerName=${encodeURIComponent(playerName)}`),
   },
 };

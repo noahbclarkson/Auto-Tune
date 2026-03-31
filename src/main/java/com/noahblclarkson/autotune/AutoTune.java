@@ -120,6 +120,18 @@ public class AutoTune extends JavaPlugin {
         economicNewsService.onEnable();
         taskScheduler = injector.getInstance(TaskScheduler.class);
 
+        // Seed prices from shared API if configured and economy is still empty
+        if (configManager.getConfig().economy().seedFromSharedPrices()) {
+            var txRepo = injector.getInstance(com.noahblclarkson.autotune.database.TransactionRepository.class);
+            if (txRepo.count() == 0) {
+                var priceReporter = injector.getInstance(com.noahblclarkson.autotune.manager.PriceReporter.class);
+                priceReporter.seedPricesFromApi();
+            } else {
+                getLogger().info("economy.seed-from-shared-prices is enabled but economy already "
+                        + "has transaction history — skipping seed. Run /at admin reseed-prices to override.");
+            }
+        }
+
         // Register commands
         commandManager = injector.getInstance(CommandManager.class);
         commandManager.registerCommands();

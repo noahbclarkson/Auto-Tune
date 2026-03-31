@@ -14,6 +14,7 @@ import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.ExchangeRateService;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.MarketEventService;
+import com.noahblclarkson.autotune.manager.PriceReporter;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
 import com.noahblclarkson.autotune.model.ExchangeRate;
@@ -67,6 +68,7 @@ public class AdminCommand {
     private final TransactionRepository transactionRepository;
     private final ItemRepository itemRepository;
     private final ExchangeRateService exchangeRateService;
+    private final PriceReporter priceReporter;
     private final DatabaseCleanupManager cleanupManager;
     private final MarketEventService marketEventService;
 
@@ -83,7 +85,8 @@ public class AdminCommand {
             ItemRepository itemRepository,
             ExchangeRateService exchangeRateService,
             DatabaseCleanupManager cleanupManager,
-            MarketEventService marketEventService
+            MarketEventService marketEventService,
+            PriceReporter priceReporter
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -97,6 +100,7 @@ public class AdminCommand {
         this.exchangeRateService = exchangeRateService;
         this.cleanupManager = cleanupManager;
         this.marketEventService = marketEventService;
+        this.priceReporter = priceReporter;
     }
 
     @Command("autotune admin")
@@ -1359,6 +1363,24 @@ public class AdminCommand {
         }
         sender.sendMessage(Component.empty());
         sender.sendMessage(Component.text("Rate > 1.0 = more expensive than global average; < 1.0 = cheaper.", NamedTextColor.DARK_GRAY));
+    }
+
+    @Command("autotune admin reseed-prices")
+    @Permission("autotune.admin")
+    public void adminReseedPrices(CommandSender sender) {
+        if (!configManager.getConfig().economy().seedFromSharedPrices()) {
+            sender.sendMessage(Component.text("economy.seed-from-shared-prices is not enabled in config.yml.", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Enable it and run /at admin reload, then try again.", NamedTextColor.GRAY));
+            return;
+        }
+        var cfg = configManager.getConfig().priceReporter();
+        if (cfg.apiKey().isBlank() || cfg.serverId().isBlank()) {
+            sender.sendMessage(Component.text("price-reporter api-key and server-id must be set in config.yml.", NamedTextColor.RED));
+            return;
+        }
+        sender.sendMessage(Component.text("Fetching shared true prices…", NamedTextColor.YELLOW));
+        priceReporter.seedPricesFromApi();
+        sender.sendMessage(Component.text("Shared prices fetch started — check server log for results.", NamedTextColor.GREEN));
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────

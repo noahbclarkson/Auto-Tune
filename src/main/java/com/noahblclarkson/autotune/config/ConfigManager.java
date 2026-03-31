@@ -176,6 +176,7 @@ public class ConfigManager {
                 section.getInt("min-sell-quantity", 1),
                 section.getDouble("min-buy-value", 0.0),
                 section.getDouble("min-sell-value", 0.0),
+                section.getBoolean("seed-from-shared-prices", false),
                 spreadConfig,
                 playerScalingConfig
         );

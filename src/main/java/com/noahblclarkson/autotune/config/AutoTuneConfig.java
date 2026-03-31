@@ -85,6 +85,7 @@ public record AutoTuneConfig(
             int minSellQuantity,
             double minBuyValue,
             double minSellValue,
+            boolean seedFromSharedPrices,
             @NotNull SpreadConfig spread,
             @NotNull PlayerScalingConfig playerScaling
     ) {
@@ -110,6 +111,7 @@ public record AutoTuneConfig(
                     1,
                     0.0,
                     0.0,
+                    false,
                     SpreadConfig.defaults(),
                     PlayerScalingConfig.defaults()
             );

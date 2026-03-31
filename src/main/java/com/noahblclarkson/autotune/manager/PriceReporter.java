@@ -6,8 +6,11 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.model.ShopItem;
+import com.noahblclarkson.autotune.util.ItemSerializer;
 import com.noahblclarkson.autotune.model.Transaction;
+import org.bukkit.Material;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
@@ -46,10 +49,16 @@ public class PriceReporter {
      *  accumulators are not cleared until the retry succeeds. */
     private final ConcurrentLinkedQueue<QueuedSubmission> retryQueue = new ConcurrentLinkedQueue<>();
 
+    private ShopManager shopManager;
+    private ItemRepository itemRepository;
+
     @Inject
-    public PriceReporter(AutoTune plugin, ConfigManager configManager) {
+    public PriceReporter(AutoTune plugin, ConfigManager configManager,
+                          ShopManager shopManager, ItemRepository itemRepository) {
         this.plugin = plugin;
         this.configManager = configManager;
+        this.shopManager = shopManager;
+        this.itemRepository = itemRepository;
     }
 
     public boolean isEnabled() {
@@ -293,6 +302,82 @@ public class PriceReporter {
 
     // -------------------------------------------------------------------------
 
+    /**
+     * Seed initial prices from the shared true-price API.
+     * Called on startup when economy.seedFromSharedPrices is enabled.
+     *
+     * Fetches true prices from GET /api/prices/true and updates local item prices
+     * for any items that match by material name. This gives new servers a
+     * sensible starting point derived from cross-server data instead of
+     * arbitrary shops.yml defaults.
+     */
+    public void seedPricesFromApi() {
+        if (!configManager.getConfig().economy().seedFromSharedPrices()) {
+            return;
+        }
+        AutoTuneConfig.PriceReporterConfig cfg = configManager.getConfig().priceReporter();
+        if (cfg.apiKey().isBlank() || cfg.serverId().isBlank()) {
+            plugin.getLogger().warning("seed-from-shared-prices is enabled but price-reporter "
+                    + "api-key/server-id are missing.");
+            return;
+        }
+
+        String baseUrl = cfg.apiUrl().replaceAll("/$", "");
+        String endpoint = baseUrl + "/api/prices/true";
+
+        HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
+                .timeout(Duration.ofSeconds(15))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + cfg.apiKey())
+                .GET()
+                .build();
+
+        httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenAccept(response -> {
+                    if (response.statusCode() != 200) {
+                        plugin.getLogger().warning("Failed to fetch shared prices: HTTP "
+                                + response.statusCode());
+                        return;
+                    }
+                    try {
+                        TruePricesResponse apiResponse = gson.fromJson(
+                                response.body(), TruePricesResponse.class);
+                        int updated = 0;
+                        for (TruePriceEntry entry : apiResponse.prices()) {
+                            if (entry.price() <= 0) continue;
+                            // Map API item name (e.g. "DIAMOND") to a ShopItem
+                            String itemName = entry.item().toUpperCase(java.util.Locale.ROOT);
+                            Material material = Material.matchMaterial(itemName);
+                            if (material == null) {
+                                plugin.getLogger().fine("Unknown material from API: " + itemName);
+                                continue;
+                            }
+                            String hash = ItemSerializer.getMaterialHash(material);
+                            var optItem = itemRepository.findByHash(hash);
+                            if (optItem.isEmpty()) {
+                                plugin.getLogger().fine("Item not in shop: " + itemName);
+                                continue;
+                            }
+                            int itemId = optItem.get().id();
+                            BigDecimal newPrice = BigDecimal.valueOf(entry.price());
+                            itemRepository.updatePrice(itemId, newPrice);
+                            updated++;
+                            plugin.getLogger().fine("Seeded " + itemName + " = " + newPrice
+                                    + " (conf=" + String.format("%.2f", entry.confidence()) + ")");
+                        }
+                        plugin.getLogger().info("Seeded " + updated + " item prices from shared true-price API.");
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Failed to parse shared prices response: " + e.getMessage());
+                    }
+                })
+                .exceptionally(error -> {
+                    plugin.getLogger().warning("Failed to fetch shared prices: " + error.getMessage());
+                    return null;
+                });
+    }
+
+    // -------------------------------------------------------------------------
+
     private static final class PriceAccumulator {
         private final String itemName;
         private BigDecimal buyTotal = BigDecimal.ZERO;
@@ -344,4 +429,19 @@ public class PriceReporter {
             int player_count
     ) {
     }
+
+    /** Response from GET /api/prices/true */
+    private record TruePricesResponse(
+            List<TruePriceEntry> prices,
+            String last_updated
+    ) {}
+
+    /** Single item entry in the true-prices response */
+    private record TruePriceEntry(
+            String item,
+            double price,
+            double confidence,
+            int servers,
+            boolean anchored
+    ) {}
 }

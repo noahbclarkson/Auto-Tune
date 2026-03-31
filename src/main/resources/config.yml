@@ -103,6 +103,13 @@ economy:
   min-buy-value: 0.0
   min-sell-value: 0.0
 
+  # Seed initial prices from the shared true-price API on first run.
+  # When enabled, on startup (if the economy has no transaction history),
+  # the server fetches true prices from the API server and uses them as
+  # starting prices instead of the configured base prices in shops.yml.
+  # Requires price-reporter.api-url to be set to a valid Auto-Tune API server.
+  seed-from-shared-prices: false
+
   # Spread configuration (difference between buy and sell prices)
   # The spread is split into BPD (buy price difference) and SPD (sell price difference)
   # which are adjusted independently based on trade volume imbalance

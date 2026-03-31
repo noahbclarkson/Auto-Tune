@@ -192,6 +192,7 @@ export interface AdminHealthDto {
     displayName: string;
     pctChange: number;
   }>;
+  avgVolatility: number;
   timestamp: number;
 }
 

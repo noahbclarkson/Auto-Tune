@@ -7,6 +7,7 @@ import { DynamicEconomy } from '@/components/landing/dynamic-economy';
 import { LiveDemo } from '@/components/landing/live-demo';
 import { AlgorithmPreview } from '@/components/landing/algorithm-preview';
 import { KeyFindings } from '@/components/landing/key-findings';
+import { HealthScoreShowcase } from '@/components/landing/health-score-showcase';
 import { QuickStart } from '@/components/landing/quick-start';
 
 export default function Home() {
@@ -58,6 +59,7 @@ export default function Home() {
 
       <AlgorithmPreview />
       <KeyFindings />
+      <HealthScoreShowcase />
       <QuickStart />
     </div>
   );

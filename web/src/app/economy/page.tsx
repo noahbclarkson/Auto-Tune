@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 import { EconomyChart } from '@/components/economy/economy-chart';
 import { VolumeMultiplierGauge } from '@/components/economy/volume-multiplier-gauge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,6 +16,8 @@ import {
   CheckCircle,
   DollarSign,
   Layers,
+  Zap,
+  BarChart3,
 } from 'lucide-react';
 import {
   api,
@@ -24,8 +27,49 @@ import {
   type InflationData,
   type DebtData,
   type VolumeMultiplierDto,
+  type AdminHealthDto,
 } from '@/lib/api';
 import { formatCurrency, formatPercent } from '@/lib/format';
+
+function volatilityLabel(v: number): { label: string; color: string; bg: string; ring: string } {
+  if (v < 0.05) return { label: 'Stable', color: 'text-emerald-500', bg: 'bg-emerald-500', ring: 'ring-emerald-500' };
+  if (v < 0.15) return { label: 'Moderate', color: 'text-amber-500', bg: 'bg-amber-500', ring: 'ring-amber-500' };
+  return { label: 'Unstable', color: 'text-red-500', bg: 'bg-red-500', ring: 'ring-red-500' };
+}
+
+/** Composite economy health score 0–100 derived from admin health endpoint. */
+function computeHealthScore(h: AdminHealthDto): number {
+  // Volatility component (40% weight) — most important
+  const volScore = h.avgVolatility < 0.05 ? 100
+    : h.avgVolatility < 0.10 ? 80
+    : h.avgVolatility < 0.15 ? 60
+    : h.avgVolatility < 0.25 ? 30
+    : 10;
+
+  // Debt/GDP component (30% weight)
+  const d2gScore = h.debtGdpRatio < 0.5 ? 100
+    : h.debtGdpRatio < 1.0 ? 75
+    : h.debtGdpRatio < 3.0 ? 45
+    : 10;
+
+  // Buy/sell balance component (30% weight)
+  const imbalance = Math.abs(h.buyPct - 50) / 50; // 0 = perfect, 1 = extreme
+  const balScore = Math.round((1 - imbalance) * 100);
+
+  return Math.round(volScore * 0.4 + d2gScore * 0.3 + balScore * 0.3);
+}
+
+function healthColor(score: number): string {
+  if (score >= 75) return 'text-emerald-500';
+  if (score >= 45) return 'text-amber-500';
+  return 'text-red-500';
+}
+
+function healthBg(score: number): string {
+  if (score >= 75) return 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400';
+  if (score >= 45) return 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400';
+  return 'bg-red-500/10 border-red-500/30 text-red-500';
+}
 
 export default function EconomyPage() {
   const { apiBase } = useAppContext();
@@ -35,23 +79,27 @@ export default function EconomyPage() {
   const [debt, setDebt] = useState<DebtData | null>(null);
   const [history, setHistory] = useState<EconomySnapshotDto[]>([]);
   const [volumeMultiplier, setVolumeMultiplier] = useState<VolumeMultiplierDto | null>(null);
+  const [health, setHealth] = useState<AdminHealthDto | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [statsData, gdpData, inflationData, debtData, historyData, vmData] = await Promise.all([
-        api.stats(apiBase),
-        api.economy.gdp(apiBase).catch(() => null),
-        api.economy.inflation(apiBase).catch(() => null),
-        api.economy.debt(apiBase).catch(() => null),
-        api.economy.history(apiBase, 500).catch(() => []),
-        api.economy.volumeMultiplier(apiBase).catch(() => null),
-      ]);
+      const [statsData, gdpData, inflationData, debtData, historyData, vmData, healthData] =
+        await Promise.all([
+          api.stats(apiBase),
+          api.economy.gdp(apiBase).catch(() => null),
+          api.economy.inflation(apiBase).catch(() => null),
+          api.economy.debt(apiBase).catch(() => null),
+          api.economy.history(apiBase, 500).catch(() => []),
+          api.economy.volumeMultiplier(apiBase).catch(() => null),
+          api.admin.health(apiBase).catch(() => null),
+        ]);
       setStats(statsData);
       setGdp(gdpData);
       setInflation(inflationData as InflationData | null);
       setDebt(debtData as DebtData | null);
       setHistory((historyData as EconomySnapshotDto[]).reverse());
       setVolumeMultiplier(vmData as VolumeMultiplierDto | null);
+      setHealth(healthData as AdminHealthDto | null);
     } catch {
       // silently fail
     }
@@ -68,8 +116,10 @@ export default function EconomyPage() {
   const debtHealthy = debtToGdp !== null && debtToGdp < 1.0;
   const inflationVal = inflation?.averagePriceChange ?? null;
   const inflationHealthy = inflationVal !== null && Math.abs(inflationVal) < 2.0;
-  const overallHealthy = gdpHealth && debtHealthy && inflationHealthy && (stats?.onlinePlayers ?? 0) > 0;
   const onlinePlayers = stats?.onlinePlayers ?? 0;
+
+  // Composite health score from admin health endpoint
+  const healthScore = health ? computeHealthScore(health) : null;
 
   const inflationColor = inflationVal === null ? 'text-muted-foreground'
     : inflationVal > 3 ? 'text-red-500'
@@ -90,38 +140,58 @@ export default function EconomyPage() {
     : debtToGdp > 0.5 ? 'text-emerald-500'
     : 'text-emerald-400';
 
+  const volInfo = health ? volatilityLabel(health.avgVolatility) : null;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header totalItems={stats?.totalItems ?? 0} onlinePlayers={onlinePlayers} />
-      <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <main className="mx-auto max-w-7xl px-6 py-6 space-y-6 flex-1">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 className="text-2xl font-bold text-foreground">Economy Overview</h2>
-          {/* Overall health badge */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border ${
-            overallHealthy
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-              : gdpHealth && onlinePlayers > 0
-              ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
-              : 'bg-red-500/10 border-red-500/30 text-red-500'
-          }`}>
-            {overallHealthy
-              ? <><CheckCircle className="w-3.5 h-3.5" /> Economy Healthy</>
-              : !gdpHealth && onlinePlayers > 0
-              ? <><AlertTriangle className="w-3.5 h-3.5" /> Economy Flat</>
-              : onlinePlayers === 0
-              ? <><Activity className="w-3.5 h-3.5" /> No Players</>
-              : <><AlertTriangle className="w-3.5 h-3.5" /> Needs Attention</>
-            }
+
+          {/* Composite health score + badge */}
+          <div className="flex items-center gap-3">
+            {healthScore !== null ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Health</span>
+                <span className={`text-lg font-bold ${healthColor(healthScore)}`}>
+                  {healthScore}
+                </span>
+                <span className="text-xs text-muted-foreground">/100</span>
+              </div>
+            ) : null}
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border ${
+              healthScore !== null && healthScore >= 75
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                : healthScore !== null && healthScore >= 45
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
+                : healthScore !== null
+                ? 'bg-red-500/10 border-red-500/30 text-red-500'
+                : onlinePlayers === 0
+                ? 'bg-muted border-muted text-muted-foreground'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
+            }`}>
+              {healthScore !== null && healthScore >= 75
+                ? <><CheckCircle className="w-3.5 h-3.5" /> Economy Healthy</>
+                : healthScore !== null && healthScore >= 45
+                ? <><AlertTriangle className="w-3.5 h-3.5" /> Economy Moderate</>
+                : healthScore !== null
+                ? <><AlertTriangle className="w-3.5 h-3.5" /> Economy Unstable</>
+                : onlinePlayers === 0
+                ? <><Activity className="w-3.5 h-3.5" /> No Players</>
+                : <><Activity className="w-3.5 h-3.5" /> Loading…</>
+              }
+            </div>
           </div>
         </div>
 
-        {/* Summary stat cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Summary stat cards — 5 columns on large screens */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="w-4 h-4 text-amber-500" />
-                <p className="text-sm text-muted-foreground">GDP (24h)</p>
+                <p className="text-sm text-muted-foreground">GDP</p>
               </div>
               <p className="text-xl font-bold text-foreground">
                 {gdp ? formatCurrency(gdp.gdp) : '--'}
@@ -131,7 +201,7 @@ export default function EconomyPage() {
                 const pct = old > 0 ? ((gdp.gdp - old) / old) * 100 : 0;
                 return (
                   <p className={`text-xs font-medium mt-1 ${pct >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {pct >= 0 ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}% vs start of window
+                    {pct >= 0 ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}% vs window start
                   </p>
                 );
               })()}
@@ -151,7 +221,6 @@ export default function EconomyPage() {
                 <div className={`flex items-center gap-1 mt-1 ${inflationTrend.color}`}>
                   <inflationTrend.icon className="w-3 h-3" />
                   <span className="text-xs font-medium">{inflationTrend.label}</span>
-                  <span className="text-xs opacity-70">({inflation?.label ?? '--'})</span>
                 </div>
               )}
             </CardContent>
@@ -188,7 +257,142 @@ export default function EconomyPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Volatility card — from admin health endpoint */}
+          <Card className={volInfo ? `border-l-2 border-l-2 ${volInfo.ring}` : ''}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap className={`w-4 h-4 ${volInfo ? volInfo.color : 'text-muted-foreground'}`} />
+                <p className="text-sm text-muted-foreground">Volatility</p>
+              </div>
+              <p className={`text-xl font-bold ${volInfo ? volInfo.color : 'text-muted-foreground'}`}>
+                {health ? health.avgVolatility.toFixed(4) : '--'}
+              </p>
+              {volInfo && (
+                <div className={`flex items-center gap-1 mt-1 ${volInfo.color}`}>
+                  <BarChart3 className="w-3 h-3" />
+                  <span className="text-xs font-medium">{volInfo.label}</span>
+                </div>
+              )}
+              {!health && <p className="text-xs text-muted-foreground mt-1">Loading…</p>}
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Health score breakdown — visible when health data available */}
+        {health && (
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm font-medium text-foreground mb-3">Health Score Breakdown</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Volatility score */}
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">Volatility</span>
+                    <span className={`font-medium ${volInfo?.color ?? 'text-muted-foreground'}`}>
+                      {health.avgVolatility < 0.05 ? '100' : health.avgVolatility < 0.10 ? '80' : health.avgVolatility < 0.15 ? '60' : health.avgVolatility < 0.25 ? '30' : '10'} / 40
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${volInfo?.bg ?? 'bg-muted-foreground'}`}
+                      style={{ width: `${health.avgVolatility < 0.05 ? 100 : health.avgVolatility < 0.10 ? 80 : health.avgVolatility < 0.15 ? 60 : health.avgVolatility < 0.25 ? 30 : 10}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {health.avgVolatility < 0.05 ? 'Prices are steady' : health.avgVolatility < 0.15 ? 'Normal oscillation' : 'Wild swings — check top movers'}
+                  </p>
+                </div>
+
+                {/* Debt/GDP score */}
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">Debt / GDP</span>
+                    <span className={`font-medium ${health.debtGdpRatio < 0.5 ? 'text-emerald-500' : health.debtGdpRatio < 1.0 ? 'text-emerald-500' : health.debtGdpRatio < 3.0 ? 'text-amber-500' : 'text-red-500'}`}>
+                      {health.debtGdpRatio < 0.5 ? '100' : health.debtGdpRatio < 1.0 ? '75' : health.debtGdpRatio < 3.0 ? '45' : '10'} / 30
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${health.debtGdpRatio < 0.5 ? 'bg-emerald-500' : health.debtGdpRatio < 1.0 ? 'bg-emerald-500' : health.debtGdpRatio < 3.0 ? 'bg-amber-500' : 'bg-red-500'}`}
+                      style={{ width: `${health.debtGdpRatio < 0.5 ? 100 : health.debtGdpRatio < 1.0 ? 75 : health.debtGdpRatio < 3.0 ? 45 : 10}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {health.debtGdpRatio < 0.5 ? 'Minimal debt — economy growing' : health.debtGdpRatio < 1.0 ? 'Healthy debt level' : health.debtGdpRatio < 3.0 ? 'Elevated — monitor closely' : 'Dangerous — circuit breaker active'}
+                  </p>
+                </div>
+
+                {/* Buy/sell balance score */}
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">Buy / Sell Mix</span>
+                    <span className="font-medium text-sky-400">
+                      {Math.round((1 - Math.abs(health.buyPct - 50) / 50) * 100)} / 30
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-sky-500 transition-all"
+                      style={{ width: `${Math.round((1 - Math.abs(health.buyPct - 50) / 50) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Buy {health.buyPct.toFixed(0)}% · Sell {health.sellPct.toFixed(0)}%
+                    {Math.abs(health.buyPct - 50) < 10 ? ' — balanced' : Math.abs(health.buyPct - 50) < 20 ? ' — slight bias' : ' — skewed market'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Top volatile + undersold items */}
+        {health && (health.topVolatile.length > 0 || health.topUndersold.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {health.topVolatile.length > 0 && (
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    Most Volatile Items
+                  </p>
+                  <div className="space-y-2">
+                    {health.topVolatile.slice(0, 5).map((item) => (
+                      <div key={item.id} className="flex items-center justify-between">
+                        <span className="text-sm text-foreground">{item.displayName}</span>
+                        <span className={`text-sm font-medium ${item.pctChange > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {item.pctChange > 0 ? '↑' : '↓'} {Math.abs(item.pctChange).toFixed(1)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {health.topUndersold.length > 0 && (
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                    <TrendingDown className="w-4 h-4 text-orange-500" />
+                    Most Undersold Items
+                  </p>
+                  <div className="space-y-2">
+                    {health.topUndersold.slice(0, 5).map((item) => (
+                      <div key={item.id} className="flex items-center justify-between">
+                        <span className="text-sm text-foreground">{item.displayName}</span>
+                        <span className="text-sm font-medium text-orange-500">
+                          {item.pctChange > 0 ? '↑' : '↓'} {Math.abs(item.pctChange).toFixed(1)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
 
         {/* Debt-to-GDP ratio bar */}
         {debtToGdp !== null && (
@@ -216,7 +420,7 @@ export default function EconomyPage() {
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {debtToGdp > 1
-                  ? '⚠ Debt exceeds GDP. The circuit breaker pauses loan interest accumulation when debt exceeds 10× GDP.'
+                  ? '⚠ Debt exceeds GDP. The circuit breaker pauses loan interest when debt exceeds 10× GDP.'
                   : debtToGdp > 0.5
                   ? 'Debt is elevated but manageable. Monitor for trends.'
                   : 'Debt-to-GDP is healthy. Economy is balanced.'}
@@ -231,6 +435,7 @@ export default function EconomyPage() {
 
         <EconomyChart history={history} />
       </main>
+      <Footer />
     </div>
   );
 }

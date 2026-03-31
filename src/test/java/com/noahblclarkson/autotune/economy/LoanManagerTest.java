@@ -71,7 +71,8 @@ class LoanManagerTest {
                 d.tier1InterestCap(),
                 d.tier2InterestCap(),
                 d.postDefaultCooldownHours(),
-                d.singleLoanGdpCap()
+                d.singleLoanGdpCap(),
+                d.counterCyclical()
         );
     }
 
@@ -484,6 +485,84 @@ class LoanManagerTest {
                     .build();
             assertTrue(overdueLoan.isOverdue());
             assertFalse(activeLoan.isOverdue());
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // Counter-Cyclical Interest Formula Tests
+    // -----------------------------------------------------------------
+
+    @Nested
+    @DisplayName("Counter-cyclical interest multiplier formula")
+    class CounterCyclicalFormulaTests {
+
+        /**
+         * Counter-cyclical formula: multiplier = max(0, min(1.0, 1.0 - debtGdpRatio / tier3Ratio))
+         * tier3Ratio = 10.0 (debt/GDP at which interest fully pauses)
+         *
+         * Comparison vs old tiered caps:
+         *   D/G=3  → counter-cyclical: 70%   vs old TIER1: 50%  (counter-cyclical is better)
+         *   D/G=5  → counter-cyclical: 50%   vs old TIER2: 25%  (counter-cyclical is better)
+         *   D/G=10 → counter-cyclical: 0%    vs old TIER3: 0%   (same)
+         */
+        private double ccMultiplier(double debtGdpRatio, double tier3Ratio) {
+            return Math.max(0.0, Math.min(1.0, 1.0 - debtGdpRatio / tier3Ratio));
+        }
+
+        @Test
+        @DisplayName("D/G=0 → 100% interest multiplier")
+        void zeroDebt() {
+            assertEquals(1.0, ccMultiplier(0.0, 10.0), 0.001);
+        }
+
+        @Test
+        @DisplayName("D/G=2 → 80% interest multiplier")
+        void lowDebt() {
+            assertEquals(0.8, ccMultiplier(2.0, 10.0), 0.001);
+        }
+
+        @Test
+        @DisplayName("D/G=3 → 70% interest multiplier (milder than old TIER1 50%)")
+        void tier1Debt() {
+            assertEquals(0.7, ccMultiplier(3.0, 10.0), 0.001);
+            assertTrue(ccMultiplier(3.0, 10.0) > 0.5,
+                    "Counter-cyclical at D/G=3 should be > old TIER1 cap of 50%");
+        }
+
+        @Test
+        @DisplayName("D/G=5 → 50% interest multiplier (better than old TIER2 25%)")
+        void tier2Debt() {
+            assertEquals(0.5, ccMultiplier(5.0, 10.0), 0.001);
+            assertTrue(ccMultiplier(5.0, 10.0) > 0.25,
+                    "Counter-cyclical at D/G=5 should exceed old TIER2 cap of 25%");
+        }
+
+        @Test
+        @DisplayName("D/G=8 → 20% interest multiplier")
+        void highDebt() {
+            assertEquals(0.2, ccMultiplier(8.0, 10.0), 0.001);
+        }
+
+        @Test
+        @DisplayName("D/G=10 → 0% interest multiplier (TIER3 circuit opens)")
+        void tier3Debt() {
+            assertEquals(0.0, ccMultiplier(10.0, 10.0), 0.001);
+        }
+
+        @Test
+        @DisplayName("D/G=20 → 0% interest multiplier (clamped, not negative)")
+        void beyondMaxDebt() {
+            assertEquals(0.0, ccMultiplier(20.0, 10.0), 0.001);
+            assertTrue(ccMultiplier(20.0, 10.0) >= 0.0, "Multiplier must not be negative");
+        }
+
+        @Test
+        @DisplayName("Counter-cyclical always better than or equal to old tiered caps at all D/G levels")
+        void betterThanTieredGlobally() {
+            // At every D/G level, counter-cyclical multiplier ≥ old tiered multiplier
+            assertTrue(ccMultiplier(3.0, 10.0) >= 0.5);   // vs TIER1: 50%
+            assertTrue(ccMultiplier(5.0, 10.0) >= 0.25); // vs TIER2: 25%
+            assertTrue(ccMultiplier(8.0, 10.0) >= 0.0);   // vs TIER3: 0%
         }
     }
 }

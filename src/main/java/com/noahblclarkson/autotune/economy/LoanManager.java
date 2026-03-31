@@ -299,17 +299,20 @@ public class LoanManager {
         LoanConfig config = configManager.getConfig().loans();
         Duration compoundInterval = Duration.ofHours(config.compoundIntervalHours());
 
-        // Tiered circuit breaker: graduated interest caps based on debt/GDP ratio.
+        // Counter-cyclical interest: smooth linear reduction of interest rate as debt/GDP rises.
+        // multiplier = max(0, min(1.0, 1.0 - debtGdpRatio / tier3Ratio))
+        // At D/G=3  → 70% interest  (vs old TIER1 50%)
+        // At D/G=5  → 50% interest  (vs old TIER2 25%)
+        // At D/G=10 →  0% interest  (vs old TIER3 0%)
+        //
+        // When counterCyclical=false, falls back to the tiered circuit breaker:
         // TIER1 (>3x): 50% interest — warning zone
         // TIER2 (>5x): 25% interest — danger zone
-        // TIER3 (>10x): 0% interest — emergency zone (original behavior)
+        // TIER3 (>10x): 0% interest — emergency zone
+        //
         // Simulation evidence (2026-03-27): old single-ratio breaker fired at 10x
         // but couldn't prevent runaway compounding before that threshold.
-        //
-        // FIX (2026-03-30): Circuit breaker now counts ALL unpaid debt (ACTIVE + DEFAULTED),
-        // not just active. When loans default, their principal was already drawn from the
-        // economy — treating them as zero in the D/G calculation falsely shows "recovered"
-        // and lets players immediately take enormous new loans.
+        // FIX (2026-03-30): Circuit breaker now counts ALL unpaid debt (ACTIVE + DEFAULTED).
         double interestMultiplier = 1.0;
         String currentTier = "NORMAL";
         Optional<EconomySnapshot> latestSnapshot = snapshotRepository.findLatest();
@@ -321,20 +324,38 @@ public class LoanManager {
             }
             if (gdp.compareTo(BigDecimal.ZERO) > 0) {
                 double ratio = totalDebt.divide(gdp, MathContext.DECIMAL128).doubleValue();
-                if (ratio > config.debtGdpTier3Ratio()) {
-                    interestMultiplier = 0.0;
-                    currentTier = "TIER3";
-                } else if (ratio > config.debtGdpTier2Ratio()) {
-                    interestMultiplier = config.tier2InterestCap();
-                    currentTier = "TIER2";
-                } else if (ratio > config.debtGdpTier1Ratio()) {
-                    interestMultiplier = config.tier1InterestCap();
-                    currentTier = "TIER1";
+
+                if (config.counterCyclical()) {
+                    // Continuous counter-cyclical taper: interest falls smoothly from 100% at
+                    // D/G=0 to 0% at D/G=tier3Ratio. Players get proportional relief as debt
+                    // rises, preventing the pre-circuit-breaker debt accumulation spiral.
+                    double maxRatio = config.debtGdpTier3Ratio();
+                    interestMultiplier = Math.max(0.0, Math.min(1.0, 1.0 - ratio / maxRatio));
+                    if (ratio > config.debtGdpTier3Ratio()) {
+                        currentTier = "TIER3";
+                    } else if (ratio > config.debtGdpTier2Ratio()) {
+                        currentTier = "TIER2";
+                    } else if (ratio > config.debtGdpTier1Ratio()) {
+                        currentTier = "TIER1";
+                    }
+                } else {
+                    // Legacy tiered circuit breaker
+                    if (ratio > config.debtGdpTier3Ratio()) {
+                        interestMultiplier = 0.0;
+                        currentTier = "TIER3";
+                    } else if (ratio > config.debtGdpTier2Ratio()) {
+                        interestMultiplier = config.tier2InterestCap();
+                        currentTier = "TIER2";
+                    } else if (ratio > config.debtGdpTier1Ratio()) {
+                        interestMultiplier = config.tier1InterestCap();
+                        currentTier = "TIER1";
+                    }
                 }
 
                 if (!currentTier.equals("NORMAL")) {
-                    String msg = String.format("[Auto-Tune] Loan circuit breaker %s — debt/gdp %.1fx. Interest at %.0f%%.",
-                            currentTier, ratio, interestMultiplier * 100);
+                    String mode = config.counterCyclical() ? "Counter-cyclical" : "Circuit breaker";
+                    String msg = String.format("[Auto-Tune] %s %s — debt/gdp %.1fx. Interest at %.0f%%.",
+                            mode, currentTier, ratio, interestMultiplier * 100);
                     if (currentTier.equals("TIER3") && !interestCircuitOpen) {
                         plugin.getLogger().warning(msg + " Interest paused.");
                     } else if (!currentTier.equals("TIER3")) {
@@ -566,7 +587,7 @@ public class LoanManager {
         Optional<EconomySnapshot> latestSnapshot = snapshotRepository.findLatest();
 
         if (latestSnapshot.isEmpty() || config.debtGdpTier3Ratio() <= 0.0) {
-            return new CircuitBreakerStatus("NORMAL", -1.0, 1.0, false);
+            return new CircuitBreakerStatus("NORMAL", -1.0, 1.0, false, config.counterCyclical());
         }
 
         BigDecimal gdp = latestSnapshot.get().gdp();
@@ -576,25 +597,35 @@ public class LoanManager {
         }
 
         if (gdp.compareTo(BigDecimal.ZERO) <= 0) {
-            return new CircuitBreakerStatus("NORMAL", -1.0, 1.0, false);
+            return new CircuitBreakerStatus("NORMAL", -1.0, 1.0, false, config.counterCyclical());
         }
 
         double ratio = totalDebt.divide(gdp, MathContext.DECIMAL128).doubleValue();
         if (ratio > config.debtGdpTier3Ratio()) {
-            return new CircuitBreakerStatus("TIER3", ratio, 0.0, interestCircuitOpen);
+            return new CircuitBreakerStatus("TIER3", ratio, 0.0, interestCircuitOpen, config.counterCyclical());
         } else if (ratio > config.debtGdpTier2Ratio()) {
-            return new CircuitBreakerStatus("TIER2", ratio, config.tier2InterestCap(), false);
+            double mult = config.counterCyclical()
+                    ? Math.max(0.0, Math.min(1.0, 1.0 - ratio / config.debtGdpTier3Ratio()))
+                    : config.tier2InterestCap();
+            return new CircuitBreakerStatus("TIER2", ratio, mult, false, config.counterCyclical());
         } else if (ratio > config.debtGdpTier1Ratio()) {
-            return new CircuitBreakerStatus("TIER1", ratio, config.tier1InterestCap(), false);
+            double mult = config.counterCyclical()
+                    ? Math.max(0.0, Math.min(1.0, 1.0 - ratio / config.debtGdpTier3Ratio()))
+                    : config.tier1InterestCap();
+            return new CircuitBreakerStatus("TIER1", ratio, mult, false, config.counterCyclical());
         }
-        return new CircuitBreakerStatus("NORMAL", ratio, 1.0, false);
+        double mult = config.counterCyclical()
+                ? Math.max(0.0, Math.min(1.0, 1.0 - ratio / config.debtGdpTier3Ratio()))
+                : 1.0;
+        return new CircuitBreakerStatus("NORMAL", ratio, mult, false, config.counterCyclical());
     }
 
-    /** Current state of the loan circuit breaker. */
+    /** Current state of the loan circuit breaker / counter-cyclical interest system. */
     public record CircuitBreakerStatus(
             String tier,       // NORMAL, TIER1, TIER2, TIER3
             double debtGdpRatio,
             double interestMultiplier,
-            boolean circuitOpen
+            boolean circuitOpen,
+            boolean counterCyclicalMode
     ) {}
 }

@@ -152,7 +152,7 @@ public record AutoTuneConfig(
             double earlyRepaymentBonusMultiplier,
             double inflationRateImpact,
             int defaultPenalty,
-            /// Tiered debt/GDP circuit breaker.
+            /// Tiered debt/GDP circuit breaker (ignored when counterCyclical is enabled).
             /// Above tier1Ratio → interest capped at tier1Cap (50%).
             /// Above tier2Ratio → interest capped at tier2Cap (25%).
             /// Above tier3Ratio → interest fully paused.
@@ -165,7 +165,13 @@ public record AutoTuneConfig(
             int postDefaultCooldownHours,
             /// Maximum size of a single loan as a multiple of economy GDP.
             /// A value of 1.0 means no single loan can exceed total GDP.
-            double singleLoanGdpCap
+            double singleLoanGdpCap,
+            /// Counter-cyclical interest: interest rate is smoothly reduced as economy
+            /// debt/GDP rises, making it easier for players to service debt before it
+            /// becomes critical. Replaces the tiered circuit breaker with a continuous
+            /// linear taper: multiplier = max(0, 1 - debtGdpRatio / tier3Ratio).
+            /// At D/G=3 → 70% interest, D/G=5 → 50%, D/G=10 → 0%.
+            boolean counterCyclical
     ) {
         public static LoanConfig defaults() {
             return new LoanConfig(
@@ -173,7 +179,8 @@ public record AutoTuneConfig(
                     7, 3, 30, 0.002, 24, 1, 24, 1.5, 0.5, 50,
                     3.0, 5.0, 10.0, 0.5, 0.25,
                     168,    // postDefaultCooldownHours: 7 days
-                    1.0     // singleLoanGdpCap: single loan capped at 1× GDP
+                    1.0,    // singleLoanGdpCap: single loan capped at 1× GDP
+                    true    // counterCyclical: enabled by default
             );
         }
     }

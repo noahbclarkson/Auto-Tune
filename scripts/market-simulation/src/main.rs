@@ -1003,6 +1003,49 @@ impl Scenario {
             speed_ticks_per_sec: 200,
         }
     }
+
+    /// VolumeTrader Test: adds 2 VolumeTraders to the GuildStability mix.
+    /// Hypothesis: VolumeTraders provide contrarian pressure on volume extremes,
+    /// buying when spreads widen (volume drought = cheap) and selling when
+    /// spreads tighten (volume surge = expensive). Should reduce volatility
+    /// and improve GDP by stabilising prices around fair value.
+    pub fn volume_trader_test() -> Self {
+        Self {
+            name: "VolumeTrader Test".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "VolumeTrader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
 }
 
 /// Compute Pearson correlation coefficient between two price-change series.
@@ -3020,6 +3063,7 @@ fn add_players_to_sim(sim: &mut Simulation, players: &[ArchetypeConfig]) {
     archetype_map.insert("MarketMaker".into(), Archetype::MarketMaker);
     archetype_map.insert("InsiderTrader".into(), Archetype::InsiderTrader);
     archetype_map.insert("GuildSeller".into(), Archetype::GuildSeller);
+    archetype_map.insert("VolumeTrader".into(), Archetype::VolumeTrader);
 
     for player_cfg in players {
         let archetype = archetype_map
@@ -3029,6 +3073,150 @@ fn add_players_to_sim(sim: &mut Simulation, players: &[ArchetypeConfig]) {
             sim.add_player(*archetype);
         }
     }
+}
+
+/// VolumeTrader Test: GuildStability+MM vs same + 2 VolumeTraders.
+/// Tests whether contrarian volume-trading reduces volatility and improves GDP.
+fn run_volume_trader_test() {
+    use crate::analyzer::load_summary;
+    let seed = 42u64;
+
+    println!(
+        "\n╔══════════════════════════════════════════════════════════════╗\n\
+         ║       VOLUME TRADER TEST                                  ║\n\
+         ║  Contrarian liquidity: buys on wide spreads+low prices,     ║\n\
+         ║  sells on tight spreads+high prices.                       ║\n\
+         ╚══════════════════════════════════════════════════════════════╝\n"
+    );
+    println!("  Control: GuildStability+MM (1MM, 2GB, 4Cas, 3Far, 2Trd)");
+    println!("  Treatment: same + 2 VolumeTraders");
+    println!("  Seed: {}\n", seed);
+
+    let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let treat_scenario = Scenario::volume_trader_test();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-vt-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-vt-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl = ctrl_scenario.clone();
+    ctrl.seed = Some(seed);
+    let mut treat = treat_scenario.clone();
+    treat.seed = Some(seed);
+
+    println!("-- Control (no VolumeTraders) --");
+    if let Err(e) = run_headless(&ctrl, Some(ctrl_dir.clone())) {
+        eprintln!("  Control error: {}", e);
+        return;
+    }
+
+    println!("\n-- Treatment (2 VolumeTraders) --");
+    if let Err(e) = run_headless(&treat, Some(treat_dir.clone())) {
+        eprintln!("  Treatment error: {}", e);
+        return;
+    }
+
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Summary error: {}", e);
+            return;
+        }
+    };
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Summary error: {}", e);
+            return;
+        }
+    };
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║                    RESULTS SUMMARY                          ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    println!(
+        "  {:20} {:>15} {:>15} {:>14} {:>10}",
+        "Metric", "Control", "Treatment", "Effect", "Direction"
+    );
+    println!("  {:─<20} {:─<15} {:─<15} {:─<14} {:─<10}", "", "", "", "", "");
+
+    let gdp_ctrl = ctrl_summary.gdp;
+    let gdp_treat = treat_summary.gdp;
+    let gdp_pct = (gdp_treat - gdp_ctrl) / gdp_ctrl * 100.0;
+    let gdp_dir = if gdp_pct > 0.0 { "↑" } else { "↓" };
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}% {}",
+        "GDP", gdp_ctrl, gdp_treat, gdp_pct, gdp_dir
+    );
+
+    let debt_ctrl = ctrl_summary.debt;
+    let debt_treat = treat_summary.debt;
+    let debt_pct = (debt_treat - debt_ctrl) / debt_ctrl * 100.0;
+    let debt_dir = if debt_pct < 0.0 { "↓" } else { "↑" };
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}% {}",
+        "Total Debt", debt_ctrl, debt_treat, debt_pct, debt_dir
+    );
+
+    let debtgdp_ctrl = ctrl_summary.debt / ctrl_summary.gdp;
+    let debtgdp_treat = treat_summary.debt / treat_summary.gdp;
+    let debtgdp_pct = (debtgdp_treat - debtgdp_ctrl) / debtgdp_ctrl * 100.0;
+    let debtgdp_dir = if debtgdp_pct < 0.0 { "↓" } else { "↑" };
+    println!(
+        "  {:20} {:>15.3}x {:>15.3}x {:>+14.1}% {}",
+        "Debt/GDP", debtgdp_ctrl, debtgdp_treat, debtgdp_pct, debtgdp_dir
+    );
+
+    let buyr_ctrl = ctrl_summary.buy_ratio;
+    let buyr_treat = treat_summary.buy_ratio;
+    let buyr_pct = (buyr_treat - buyr_ctrl) / buyr_ctrl * 100.0;
+    let buyr_dir = if buyr_pct > 0.0 { "↑" } else { "↓" };
+    println!(
+        "  {:20} {:>15.1}% {:>15.1}% {:>+14.1}% {}",
+        "Buy Ratio", buyr_ctrl * 100.0, buyr_treat * 100.0, buyr_pct, buyr_dir
+    );
+
+    let vol_ctrl = ctrl_summary.avg_volatility;
+    let vol_treat = treat_summary.avg_volatility;
+    let vol_pct = (vol_treat - vol_ctrl) / vol_ctrl * 100.0;
+    let vol_dir = if vol_pct < 0.0 { "↓" } else { "↑" };
+    println!(
+        "  {:20} {:>15.4} {:>15.4} {:>+14.1}% {}",
+        "Avg Volatility", vol_ctrl, vol_treat, vol_pct, vol_dir
+    );
+
+    let bpd_ctrl = ctrl_summary.avg_bpd;
+    let bpd_treat = treat_summary.avg_bpd;
+    let bpd_pct = (bpd_treat - bpd_ctrl) / bpd_ctrl * 100.0;
+    let bpd_dir = if bpd_pct < 0.0 { "↓" } else { "↑" };
+    println!(
+        "  {:20} {:>15.4} {:>15.4} {:>+14.1}% {}",
+        "Avg BPD (spread)", bpd_ctrl, bpd_treat, bpd_pct, bpd_dir
+    );
+
+    let spd_ctrl = ctrl_summary.avg_spd;
+    let spd_treat = treat_summary.avg_spd;
+    let spd_pct = (spd_treat - spd_ctrl) / spd_ctrl * 100.0;
+    let spd_dir = if spd_pct < 0.0 { "↓" } else { "↑" };
+    println!(
+        "  {:20} {:>15.4} {:>15.4} {:>+14.1}% {}",
+        "Avg SPD", spd_ctrl, spd_treat, spd_pct, spd_dir
+    );
+
+    println!("\n  VolumeTrader signal interpretation:");
+    println!("    Wide spread + low price -> BUY (volume drought = cheap entry)");
+    println!("    Tight spread + high price -> SELL (volume surge = profit taking)");
+    println!("    5-tick cooldown between decisions per item prevents over-trading");
+    println!("\n  Archetype config (treatment):");
+    println!("    1 MarketMaker + 2 GuildBuyer + 2 VolumeTrader + 4 Casual + 3 Farmer + 2 Trader");
+
+    // Cleanup temp dirs
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
 }
 
 /// Runs the loan_cap_test scenario with tight per-loan GDP cap (0.5× GDP)
@@ -3394,6 +3582,7 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
     archetype_map.insert("MarketMaker".into(), Archetype::MarketMaker);
     archetype_map.insert("InsiderTrader".into(), Archetype::InsiderTrader);
     archetype_map.insert("GuildSeller".into(), Archetype::GuildSeller);
+    archetype_map.insert("VolumeTrader".into(), Archetype::VolumeTrader);
 
     for player_cfg in &scenario.players {
         let archetype = archetype_map
@@ -3404,7 +3593,7 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
         }
     }
     println!(
-        "Players: {} (Casual:{}, Farmer:{}, Trader:{}, Hoarder:{}, Exploiter:{}, Newbie:{}, AFKFarmer:{}, GuildBuyer:{}, MarketMaker:{}, InsiderTrader:{})",
+        "Players: {} (Casual:{}, Farmer:{}, Trader:{}, Hoarder:{}, Exploiter:{}, Newbie:{}, AFKFarmer:{}, GuildBuyer:{}, MarketMaker:{}, InsiderTrader:{}, VolumeTrader:{})",
         sim.players.len(),
         sim.players
             .iter()
@@ -3445,6 +3634,10 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
         sim.players
             .iter()
             .filter(|p| matches!(p.archetype, Archetype::InsiderTrader))
+            .count(),
+        sim.players
+            .iter()
+            .filter(|p| matches!(p.archetype, Archetype::VolumeTrader))
             .count(),
     );
 
@@ -4803,6 +4996,9 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --loan-cap-test          Per-loan GDP cap verification: cap fires, logs events"
         );
+        println!(
+            "  --volume-trader-test     VolumeTrader archetype: contrarian liquidity vs control"
+        );
         println!("  --multi-server-test     Cross-server price aggregation test");
         println!("  --guild-seller-test     GuildSeller archetype: control vs 1GB+1GS treatment");
         return Ok(());
@@ -5008,6 +5204,12 @@ fn main() -> eframe::Result<()> {
     // ─── Loan Cap Test ───────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--loan-cap-test" {
         run_loan_cap_verification();
+        return Ok(());
+    }
+
+    // ─── VolumeTrader Test ───────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--volume-trader-test" {
+        run_volume_trader_test();
         return Ok(());
     }
 

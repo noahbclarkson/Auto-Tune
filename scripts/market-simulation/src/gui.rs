@@ -1244,6 +1244,7 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                         Archetype::MarketMaker => egui::Color32::from_rgb(0, 206, 201),
                         Archetype::InsiderTrader => egui::Color32::from_rgb(255, 183, 197),
                         Archetype::GuildSeller => egui::Color32::from_rgb(255, 165, 77),
+                        Archetype::VolumeTrader => egui::Color32::from_rgb(0, 184, 148),
                     };
                     ui.colored_label(archetype_color, player.archetype.label());
                 });
@@ -1729,6 +1730,18 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                         ));
                         ui.label("Sells proactively when price spikes above perceived (anti-bubble).");
                         ui.label("Liquidates excess inventory when > 2x guild target.");
+                    }
+                    Archetype::VolumeTrader => {
+                        ui.label("Contrarian volume trader: buys when spreads widen AND prices drop.");
+                        ui.label(format!(
+                            "Spread threshold={:.0}% deviation, spread window={}, price window={}",
+                            player.buy_threshold * 100.0,
+                            player.volume_spread_window,
+                            player.volume_price_window
+                        ));
+                        ui.label("Signal: wide spread + low price = buy (volume drought).");
+                        ui.label("Signal: tight spread + high price = sell (volume surge).");
+                        ui.label("5-tick cooldown between decisions per item.");
                     }
                 }
 

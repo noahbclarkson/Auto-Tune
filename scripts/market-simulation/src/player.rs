@@ -162,6 +162,12 @@ pub enum Archetype {
     /// Sells proactively when sell_price > perceived * (1 + threshold),
     /// then liquidates excess above guild target. Counteracts price bubbles.
     GuildSeller,
+    /// Volume Trader — contrarian liquidity provider. Tracks rolling spread
+    /// and price history per item. Buys when spreads are wide AND prices are
+    /// below average (volume drought = buy opportunity). Sells when spreads
+    /// are tight AND prices are above average (volume surge = sell signal).
+    /// Counteracts volume extremes that distort prices in both directions.
+    VolumeTrader,
 }
 
 impl Archetype {
@@ -178,6 +184,7 @@ impl Archetype {
             Self::MarketMaker => "MarketMaker",
             Self::InsiderTrader => "InsiderTrader",
             Self::GuildSeller => "GuildSeller",
+            Self::VolumeTrader => "VolumeTrader",
         }
     }
 }
@@ -251,6 +258,20 @@ pub struct PlayerAgent {
     /// Per-item rolling price history. Updated after each engine tick.
     /// Used by InsiderTrader to compute moving average for mean-reversion.
     pub insider_price_history: HashMap<usize, VecDeque<f64>>,
+    /// Rolling spread history window size (in ticks) for VolumeTrader.
+    /// How many past spread observations to track per item.
+    pub volume_spread_window: usize,
+    /// Per-item rolling spread history. Used by VolumeTrader to detect
+    /// spread deviations from normal — wide spread = low volume = buy signal.
+    pub volume_spread_history: HashMap<usize, VecDeque<f64>>,
+    /// Rolling price history window size (in ticks) for VolumeTrader.
+    /// Used alongside spread to confirm volume-driven price signals.
+    pub volume_price_window: usize,
+    /// Per-item rolling price history for VolumeTrader.
+    pub volume_price_history: HashMap<usize, VecDeque<f64>>,
+    /// Minimum tick cooldown between VolumeTrader decisions per item.
+    /// Prevents over-trading on short-term spread noise.
+    pub volume_cooldown_ticks: HashMap<usize, u64>,
     pub credit_score: i32,
     pub total_traded: f64,
     pub online: bool,
@@ -291,6 +312,11 @@ impl PlayerAgent {
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
+            volume_spread_window: 0,
+            volume_spread_history: HashMap::new(),
+            volume_price_window: 0,
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -330,6 +356,11 @@ impl PlayerAgent {
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
+            volume_spread_window: 0,
+            volume_spread_history: HashMap::new(),
+            volume_price_window: 0,
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -373,6 +404,11 @@ impl PlayerAgent {
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
+            volume_spread_window: 0,
+            volume_spread_history: HashMap::new(),
+            volume_price_window: 0,
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -412,6 +448,11 @@ impl PlayerAgent {
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
+            volume_spread_window: 0,
+            volume_spread_history: HashMap::new(),
+            volume_price_window: 0,
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -451,6 +492,11 @@ impl PlayerAgent {
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
+            volume_spread_window: 0,
+            volume_spread_history: HashMap::new(),
+            volume_price_window: 0,
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent
@@ -497,6 +543,11 @@ impl PlayerAgent {
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
+            volume_spread_window: 0,
+            volume_spread_history: HashMap::new(),
+            volume_price_window: 0,
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         // Newbies prefer cheap basic items
@@ -544,6 +595,11 @@ impl PlayerAgent {
             insider_price_history: HashMap::new(),
             mm_max_inventory: 0,
             mm_target_inventory: 0,
+            volume_spread_window: 0,
+            volume_spread_history: HashMap::new(),
+            volume_price_window: 0,
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         // AFK farmers prefer cheap gathered items (building blocks, ores, drops)
@@ -596,6 +652,11 @@ impl PlayerAgent {
             mm_target_inventory: 0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            volume_spread_window: 0,
+            volume_spread_history: HashMap::new(),
+            volume_price_window: 0,
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -654,6 +715,11 @@ impl PlayerAgent {
             mm_target_inventory: 0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            volume_spread_window: 0,
+            volume_spread_history: HashMap::new(),
+            volume_price_window: 0,
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -708,6 +774,11 @@ impl PlayerAgent {
             // MarketMaker-specific
             mm_max_inventory: max_inv,
             mm_target_inventory: target_inv,
+            volume_spread_window: 0,
+            volume_spread_history: HashMap::new(),
+            volume_price_window: 0,
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -758,6 +829,76 @@ impl PlayerAgent {
             // InsiderTrader-specific
             insider_history_window: history_window,
             insider_price_history: HashMap::new(),
+            // VolumeTrader-specific (zeroed for InsiderTrader)
+            volume_spread_window: 0,
+            volume_spread_history: HashMap::new(),
+            volume_price_window: 0,
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
+        };
+        agent.init_perceived_values(item_count, &[]);
+        agent.init_preferences(item_count);
+        agent
+    }
+
+    /// Create a VolumeTrader — contrarian liquidity provider.
+    /// Monitors spread and price history per item. Buys when spreads are wide
+    /// AND prices are below average (volume drought = buy signal). Sells when
+    /// spreads are tight AND prices are above average (volume surge = sell signal).
+    ///
+    /// Parameters:
+    /// - `spread_threshold`: fraction above/below rolling spread mean to trigger
+    ///   a signal. E.g., 0.30 means trigger when spread is 30%+ deviation.
+    /// - `spread_window`: how many past ticks of spread to track for rolling mean.
+    /// - `price_window`: how many past ticks of price to track for rolling mean.
+    ///   Must be >= spread_window (price history used alongside spread signal).
+    pub fn new_volume_trader(
+        index: usize,
+        item_count: usize,
+        _base_prices: &[f64],
+        spread_threshold: f64,
+        spread_window: usize,
+        price_window: usize,
+    ) -> Self {
+        let mut rng = SeededRng;
+        let budget = rng.random(20_000.0..100_000.0);
+
+        let mut agent = Self {
+            id: index,
+            name: format!("VolumeTrader-{index}"),
+            archetype: Archetype::VolumeTrader,
+            balance: budget,
+            online_probability: rng.random(0.7..0.95),
+            activity_rate: rng.random(0.5..0.8),
+            // Threshold used for spread deviation — symmetric buy/sell trigger
+            buy_threshold: spread_threshold,
+            sell_threshold: spread_threshold,
+            max_trade_amount: rng.random(15..60),
+            risk_tolerance: rng.random(0.4..0.7),
+            inventory_saturation: rng.random(0.10..0.25),
+            gather_rate: rng.random(0.05..0.15),
+            usage_rate: rng.random(0.05..0.12),
+            perceived_values: HashMap::new(),
+            preferences: HashMap::new(),
+            inventory: HashMap::new(),
+            credit_score: 750,
+            total_traded: 0.0,
+            online: false,
+            total_trades: 0,
+            guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            guild_price_dip_threshold: 0.0,
+            guild_sell_threshold: 0.0,
+            mm_max_inventory: 0,
+            mm_target_inventory: 0,
+            insider_history_window: 0,
+            insider_price_history: HashMap::new(),
+            // VolumeTrader-specific
+            volume_spread_window: spread_window.max(3),
+            volume_spread_history: HashMap::new(),
+            volume_price_window: price_window.max(spread_window),
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
         };
         agent.init_perceived_values(item_count, &[]);
         agent.init_preferences(item_count);
@@ -802,8 +943,12 @@ impl PlayerAgent {
             Self::new_afk_farmer(index, item_count, base_prices)
         } else if roll < 0.985 {
             Self::new_guild_buyer(index, item_count, base_prices)
-        } else {
+        } else if roll < 0.9925 {
             Self::new_insider_trader(index, item_count, base_prices)
+        } else if roll < 0.9975 {
+            Self::new_guild_seller(index, item_count, base_prices)
+        } else {
+            Self::new_volume_trader(index, item_count, base_prices, 0.25, 20, 30)
         }
     }
 
@@ -836,6 +981,7 @@ impl PlayerAgent {
         items: &[ItemState],
         record: bool,
         slippage_coeff: f64,
+        current_tick: u64,
     ) -> DecisionResult {
         let mut decisions = Vec::new();
         let mut logs = Vec::new();
@@ -892,6 +1038,16 @@ impl PlayerAgent {
             }
             Archetype::GuildSeller => {
                 self.decide_guildseller(items, &mut decisions, record, &mut logs, slippage_coeff);
+            }
+            Archetype::VolumeTrader => {
+                self.decide_volume_trader(
+                    items,
+                    &mut decisions,
+                    record,
+                    &mut logs,
+                    slippage_coeff,
+                    current_tick,
+                );
             }
             _ => {
                 self.decide_value_based(items, &mut decisions, record, &mut logs, slippage_coeff);
@@ -1787,6 +1943,172 @@ impl PlayerAgent {
                 }
             }
             // NEUTRAL when price is within threshold band — do nothing
+        }
+    }
+
+    fn decide_volume_trader(
+        &mut self,
+        items: &[ItemState],
+        decisions: &mut Vec<PlayerDecision>,
+        record: bool,
+        logs: &mut Vec<DecisionLog>,
+        slippage_coeff: f64,
+        current_tick: u64,
+    ) {
+        let mut rng = SeededRng;
+
+        for (i, item) in items.iter().enumerate() {
+            // Update spread history: record this tick's BPD for use in NEXT tick
+            // (mirrors InsiderTrader — decisions use data from PREVIOUS ticks only)
+            let current_bpd = items[i].spread.bpd;
+
+            let spread_history = self.volume_spread_history.entry(i).or_default();
+            if self.volume_spread_window > 0 {
+                spread_history.push_back(current_bpd);
+                while spread_history.len() > self.volume_spread_window {
+                    spread_history.pop_front();
+                }
+            }
+
+            // Update price history similarly
+            let current_price = item.price;
+            let price_history = self.volume_price_history.entry(i).or_default();
+            if self.volume_price_window > 0 {
+                price_history.push_back(current_price);
+                while price_history.len() > self.volume_price_window {
+                    price_history.pop_front();
+                }
+            }
+
+            // Need enough spread data to compute a meaningful rolling mean
+            if spread_history.len() < 3 {
+                continue;
+            }
+
+            // Compute rolling means
+            let spread_mean: f64 = spread_history.iter().sum::<f64>() / spread_history.len() as f64;
+            let price_mean: f64 = price_history.iter().sum::<f64>() / price_history.len() as f64;
+
+            if spread_mean <= 0.0 || price_mean <= 0.0 {
+                continue;
+            }
+
+            // Check cooldown: don't re-decide on the same item too frequently
+            let last_decided = self.volume_cooldown_ticks.get(&i).copied().unwrap_or(0);
+            if current_tick - last_decided < 5 {
+                continue;
+            }
+
+            // Spread deviation: how much wider/tighter is the current spread vs mean?
+            let spread_deviation = (current_bpd - spread_mean) / spread_mean;
+            // Price deviation: how much is price below/above its rolling mean?
+            let price_deviation = (current_price - price_mean) / price_mean;
+
+            // BUY signal: spread is significantly wider than normal AND price is below mean
+            // This indicates a volume drought — prices artificially depressed, good entry
+            // Require BOTH conditions to be significant to avoid false signals
+            let threshold = self.buy_threshold; // same as sell_threshold (symmetric)
+            let price_threshold = threshold * 0.7; // slightly softer on price
+
+            if spread_deviation > threshold
+                && price_deviation < -price_threshold
+                && items[i].buy_price() <= self.balance
+            {
+                // How extreme is the volume drought?
+                let extremity = (spread_deviation / threshold).min(2.0);
+                let base_amount =
+                    (self.max_trade_amount as f64 * extremity * self.risk_tolerance).ceil();
+                let amount = rng.random_inclusive(1..=base_amount.max(1.0) as i32);
+                if amount > 0 {
+                    let buy_price = items[i].buy_price();
+                    let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                    let cost = buy_price * slippage * amount as f64;
+                    if cost <= self.balance {
+                        let balance_before = self.balance;
+                        let inventory_before = self.inventory.get(&i).copied().unwrap_or(0);
+                        self.balance -= cost;
+                        *self.inventory.entry(i).or_insert(0) += amount;
+                        self.total_traded += cost;
+                        self.total_trades += 1;
+                        self.volume_cooldown_ticks.insert(i, current_tick);
+                        decisions.push(PlayerDecision {
+                            item_index: i,
+                            is_buy: true,
+                            amount,
+                        });
+                        if record {
+                            logs.push(DecisionLog {
+                                player_id: self.id,
+                                item_index: i,
+                                is_buy: true,
+                                amount,
+                                price_per_unit: buy_price * slippage,
+                                total_cost: cost,
+                                perceived_value: price_mean,
+                                effective_perceived: spread_mean,
+                                buy_threshold: self.buy_threshold,
+                                sell_threshold: self.sell_threshold,
+                                balance_before,
+                                inventory_before,
+                                reasoning: format!(
+                                    "vt_buy_spread={:.2}price={:.2}",
+                                    spread_deviation, price_deviation
+                                ),
+                            });
+                        }
+                    }
+                }
+            }
+            // SELL signal: spread is significantly tighter than normal AND price is above mean
+            // This indicates a volume surge — prices elevated, time to liquidate
+            else if spread_deviation < -threshold && price_deviation > price_threshold {
+                let have = self.inventory.get(&i).copied().unwrap_or(0);
+                if have > 0 {
+                    let extremity = ((-spread_deviation) / threshold).min(2.0);
+                    let base_amount = (have as f64 * extremity * self.risk_tolerance).ceil();
+                    let amount = rng
+                        .random_inclusive(1..=base_amount.max(1.0) as i32)
+                        .min(have);
+                    if amount > 0 {
+                        let sell_price = items[i].sell_price();
+                        let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                        let revenue = sell_price / slippage * amount as f64;
+                        let balance_before = self.balance;
+                        let inventory_before = have;
+                        self.balance += revenue;
+                        *self.inventory.entry(i).or_insert(0) -= amount;
+                        self.total_traded += revenue;
+                        self.total_trades += 1;
+                        self.volume_cooldown_ticks.insert(i, current_tick);
+                        decisions.push(PlayerDecision {
+                            item_index: i,
+                            is_buy: false,
+                            amount,
+                        });
+                        if record {
+                            logs.push(DecisionLog {
+                                player_id: self.id,
+                                item_index: i,
+                                is_buy: false,
+                                amount,
+                                price_per_unit: sell_price / slippage,
+                                total_cost: revenue,
+                                perceived_value: price_mean,
+                                effective_perceived: spread_mean,
+                                buy_threshold: self.buy_threshold,
+                                sell_threshold: self.sell_threshold,
+                                balance_before,
+                                inventory_before,
+                                reasoning: format!(
+                                    "vt_sell_spread={:.2}price={:.2}",
+                                    spread_deviation, price_deviation
+                                ),
+                            });
+                        }
+                    }
+                }
+            }
+            // NEUTRAL: no significant spread/price deviation — do nothing
         }
     }
 }

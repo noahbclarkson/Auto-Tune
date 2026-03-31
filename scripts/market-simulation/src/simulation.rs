@@ -111,6 +111,10 @@ impl Simulation {
                 PlayerAgent::new_insider_trader(id, item_count, &base_prices)
             }
             Archetype::GuildSeller => PlayerAgent::new_guild_seller(id, item_count, &base_prices),
+            Archetype::VolumeTrader => {
+                // spread_threshold=0.25, spread_window=20, price_window=30
+                PlayerAgent::new_volume_trader(id, item_count, &base_prices, 0.25, 20, 30)
+            }
         };
         self.players.push(player);
     }
@@ -142,7 +146,12 @@ impl Simulation {
         let mut online_count = 0;
 
         for player in &mut self.players {
-            let result = player.decide(&items_snapshot, recording, slippage_coeff);
+            let result = player.decide(
+                &items_snapshot,
+                recording,
+                slippage_coeff,
+                self.current_tick,
+            );
             if player.online {
                 online_count += 1;
             }

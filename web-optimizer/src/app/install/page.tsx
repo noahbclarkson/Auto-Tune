@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Download, Server, FileText, Zap, CheckCircle, ExternalLink, BookOpen, AlertTriangle } from 'lucide-react';
+import { InstallScreenshots } from '@/components/install/screenshot-mockups';
 
 export const metadata: Metadata = {
   title: 'Install Guide | Auto-Tune',
@@ -189,7 +190,9 @@ export default function InstallPage() {
       </div>
 
       {/* Install steps */}
-      <div className="mb-12">
+      <InstallScreenshots />
+
+      <div className="mb-12 mt-16">
         <h2 className="text-base font-semibold text-white mb-6">Install Steps</h2>
 
         {/* Vertical line */}

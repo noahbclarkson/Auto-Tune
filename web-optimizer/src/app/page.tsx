@@ -9,6 +9,7 @@ import { AlgorithmPreview } from '@/components/landing/algorithm-preview';
 import { KeyFindings } from '@/components/landing/key-findings';
 import { HealthScoreShowcase } from '@/components/landing/health-score-showcase';
 import { QuickStart } from '@/components/landing/quick-start';
+import { PricingSection } from '@/components/landing/pricing-section';
 
 export default function Home() {
   return (
@@ -60,6 +61,7 @@ export default function Home() {
       <AlgorithmPreview />
       <KeyFindings />
       <HealthScoreShowcase />
+      <PricingSection />
       <QuickStart />
     </div>
   );

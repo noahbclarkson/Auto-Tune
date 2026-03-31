@@ -21,9 +21,13 @@ CREATE TABLE IF NOT EXISTS at_items (
     price_floor DECIMAL(20,2) DEFAULT NULL,
     price_ceiling DECIMAL(20,2) DEFAULT NULL,
     price_frozen BOOLEAN DEFAULT FALSE,
+    tier VARCHAR(32) DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Existing installs: run this migration to add the tier column
+-- ALTER TABLE at_items ADD COLUMN tier VARCHAR(32) DEFAULT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_items_material ON at_items(material);
 CREATE INDEX IF NOT EXISTS idx_items_section ON at_items(section);

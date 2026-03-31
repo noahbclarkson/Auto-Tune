@@ -21,6 +21,7 @@ import com.noahblclarkson.autotune.model.ExchangeRate;
 import com.noahblclarkson.autotune.model.MarketEvent;
 import com.noahblclarkson.autotune.model.PriceHistory;
 import com.noahblclarkson.autotune.model.PriceOverride;
+import com.noahblclarkson.autotune.model.ItemTier;
 import com.noahblclarkson.autotune.model.ShopItem;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -1269,6 +1270,21 @@ public class AdminCommand {
                 .append(Component.text(item.priceFrozen() ? "FROZEN (no price updates)" : "Normal",
                         item.priceFrozen() ? NamedTextColor.RED : NamedTextColor.GREEN)));
 
+        // Item tier
+        ItemTier effectiveTier = item.effectiveTier();
+        NamedTextColor tierColor = switch (effectiveTier) {
+            case COMMON -> NamedTextColor.WHITE;
+            case UNCOMMON -> NamedTextColor.GREEN;
+            case RARE -> NamedTextColor.AQUA;
+            case EPIC -> NamedTextColor.LIGHT_PURPLE;
+            case LEGENDARY -> NamedTextColor.GOLD;
+        };
+        String tierLabel = item.tier() != null
+                ? effectiveTier.name() + " (override)"
+                : effectiveTier.name() + " (default — " + item.material().name() + ")";
+        sender.sendMessage(Component.text("  Tier: ", NamedTextColor.GRAY)
+                .append(Component.text(tierLabel, tierColor)));
+
         // Price override
         Optional<PriceOverride> priceOverride = marketEngine.getOverride(item.id());
         if (priceOverride.isPresent()) {
@@ -1308,6 +1324,7 @@ public class AdminCommand {
         shopManager.setPriceFloorOverride(item.id(), null);
         shopManager.setPriceCeilingOverride(item.id(), null);
         shopManager.setPriceFrozen(item.id(), false);
+        shopManager.setTier(item.id(), null);
         sender.sendMessage(Component.text("All per-item overrides cleared for "
                 + item.getDisplayNameOrMaterial() + ". Using global config values.", NamedTextColor.GREEN));
     }
@@ -1332,9 +1349,23 @@ public class AdminCommand {
 
         ShopItem item = shopItem.get();
         shopManager.setPriceFrozen(item.id(), true);
-        sender.sendMessage(Component.text("Price updates frozen for " + item.getDisplayNameOrMaterial()
+
+        // Warn about spread blowout risk for high-tier items (simulation-proven)
+        ItemTier tier = item.effectiveTier();
+        boolean highValueWarning = (tier == ItemTier.LEGENDARY || tier == ItemTier.EPIC);
+
+        Component msg = Component.text("Price updates frozen for " + item.getDisplayNameOrMaterial()
                 + ". The price will stay at " + configManager.formatCurrency(marketEngine.getCurrentPrice(item.id()))
-                + " until you unfreeze it. Spreads continue to update — item remains tradeable.", NamedTextColor.YELLOW));
+                + " until you unfreeze it. Spreads continue to update — item remains tradeable.", NamedTextColor.YELLOW);
+
+        sender.sendMessage(msg);
+
+        if (highValueWarning) {
+            sender.sendMessage(Component.text("⚠ Warning: " + tier.name() + "-tier items like "
+                    + item.getDisplayNameOrMaterial() + " can see spreads blow out 3-4× when frozen "
+                    + "(price can't move → engine compensates with wider spreads). "
+                    + "Consider using InsiderTrader instead for event pricing stability.", NamedTextColor.RED));
+        }
     }
 
     @Command("autotune admin item unfreeze <material>")
@@ -1359,6 +1390,61 @@ public class AdminCommand {
         shopManager.setPriceFrozen(item.id(), false);
         sender.sendMessage(Component.text("Price updates unfrozen for " + item.getDisplayNameOrMaterial()
                 + ". Normal price discovery resumes on the next market tick.", NamedTextColor.GREEN));
+    }
+
+    @Command("autotune admin item tier <material> <tier>")
+    @Permission("tier.admin")
+    public void itemTier(
+            CommandSender sender,
+            @Argument(value = "material", suggestions = "price-override-material") String materialName,
+            @Argument(value = "tier", suggestions = "tier-name") String tierName
+    ) {
+        org.bukkit.Material mat = matchMaterial(materialName);
+        if (mat == null) {
+            sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        Optional<ShopItem> shopItem = shopManager.getItemByMaterial(mat);
+        if (shopItem.isEmpty()) {
+            sender.sendMessage(Component.text("Material not in shop: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        ShopItem item = shopItem.get();
+
+        if (tierName.equalsIgnoreCase("clear") || tierName.equalsIgnoreCase("none")) {
+            shopManager.setTier(item.id(), null);
+            ItemTier defaultTier = item.effectiveTier();
+            sender.sendMessage(Component.text("Tier cleared for " + item.getDisplayNameOrMaterial()
+                    + ". Reverting to default tier: " + defaultTier.name(), NamedTextColor.YELLOW));
+            return;
+        }
+
+        ItemTier tier;
+        try {
+            tier = ItemTier.valueOf(tierName.toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            sender.sendMessage(Component.text("Unknown tier: " + tierName + ". Valid tiers: COMMON, UNCOMMON, RARE, EPIC, LEGENDARY, or 'clear' to remove override.", NamedTextColor.RED));
+            return;
+        }
+
+        shopManager.setTier(item.id(), tier);
+
+        NamedTextColor tierColor = switch (tier) {
+            case COMMON -> NamedTextColor.WHITE;
+            case UNCOMMON -> NamedTextColor.GREEN;
+            case RARE -> NamedTextColor.AQUA;
+            case EPIC -> NamedTextColor.LIGHT_PURPLE;
+            case LEGENDARY -> NamedTextColor.GOLD;
+        };
+
+        sender.sendMessage(Component.text("Tier set to ", NamedTextColor.GRAY)
+                .append(Component.text(tier.name(), tierColor))
+                .append(Component.text(" for " + item.getDisplayNameOrMaterial()
+                        + ". Spread: ×" + tier.spreadMultiplier
+                        + ", MaxPriceChange: ×" + tier.maxPriceChangeMultiplier
+                        + ". Reload to apply.", NamedTextColor.GRAY)));
     }
 
     @Command("autotune admin exchange")

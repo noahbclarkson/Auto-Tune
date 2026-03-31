@@ -2,6 +2,8 @@ package com.noahblclarkson.autotune.config;
 
 import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig.*;
+import com.noahblclarkson.autotune.model.ItemTier;
+import com.noahblclarkson.autotune.config.AutoTuneConfig.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -138,13 +140,37 @@ public class ConfigManager {
         }
 
         ConfigurationSection spreadSection = section.getConfigurationSection("spread");
+        TierMultiplierConfig tierMultiplierConfig = TierMultiplierConfig.defaults();
+        if (spreadSection != null) {
+            ConfigurationSection tierSection = spreadSection.getConfigurationSection("tier-multipliers");
+            if (tierSection != null) {
+                Map<ItemTier, Double> loadedSpread = new HashMap<>();
+                Map<ItemTier, Double> loadedMaxChange = new HashMap<>();
+                for (ItemTier tier : ItemTier.values()) {
+                    String key = tier.name().toLowerCase(java.util.Locale.ROOT);
+                    if (tierSection.contains("spread." + key)) {
+                        loadedSpread.put(tier, tierSection.getDouble("spread." + key));
+                    }
+                    if (tierSection.contains("max-price-change." + key)) {
+                        loadedMaxChange.put(tier, tierSection.getDouble("max-price-change." + key));
+                    }
+                }
+                // Merge with defaults (only override values that are explicitly set)
+                Map<ItemTier, Double> finalSpread = new HashMap<>(TierMultiplierConfig.defaults().tierSpreadMultipliers());
+                Map<ItemTier, Double> finalMaxChange = new HashMap<>(TierMultiplierConfig.defaults().tierMaxPriceChangeMultipliers());
+                loadedSpread.forEach(finalSpread::put);
+                loadedMaxChange.forEach(finalMaxChange::put);
+                tierMultiplierConfig = new TierMultiplierConfig(Map.copyOf(finalSpread), Map.copyOf(finalMaxChange));
+            }
+        }
         SpreadConfig spreadConfig = spreadSection != null
                 ? new SpreadConfig(
                 spreadSection.getDouble("base-spread", 0.20),
                 spreadSection.getDouble("volume-impact", 0.8),
                 spreadSection.getDouble("player-impact", 0.6),
                 spreadSection.getDouble("liquidity-coeff", 0.01),
-                spreadSection.getInt("liquidity-full-effect-traders", 10)
+                spreadSection.getInt("liquidity-full-effect-traders", 10),
+                tierMultiplierConfig
         )
                 : SpreadConfig.defaults();
 

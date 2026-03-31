@@ -204,12 +204,19 @@ class MarketEngineTest {
         @Test
         @DisplayName("price change is bounded by maxPriceChangePercent")
         void boundedByMaxChange() {
-            ShopItem item = makeItem(1, "100.00");
+            // Use a maxPriceChangeOverride so tier multiplier doesn't affect this test
+            ShopItem item = new ShopItem(
+                    1, Material.DIAMOND, "diamond", "Diamond",
+                    new BigDecimal("100.00"), "misc",
+                    true, null, null,
+                    1.5, null, null, null, false, null,
+                    Instant.now(), Instant.now()
+            );
             // Extreme buy pressure
             var metrics = tradeMetrics(10000, 1, 10000, 1, 1);
 
             BigDecimal result = engine.calculateNewPrice(item, metrics, 10, config.economy());
-            // maxPriceChangePercent = 1.5%, so price shouldn't rise more than ~1.5%
+            // maxPriceChangeOverride = 1.5%, so price shouldn't rise more than ~1.5%
             BigDecimal maxAllowed = new BigDecimal("101.50");
             assertTrue(result.compareTo(maxAllowed) <= 0,
                     "Price should not exceed max change %, got " + result);
@@ -585,7 +592,7 @@ class MarketEngineTest {
                     null,
                     null,
                     null, null, floor, ceiling,
-                    false,
+                    false, null,
                     Instant.now(),
                     Instant.now()
             );
@@ -685,7 +692,7 @@ class MarketEngineTest {
                 true,
                 null,
                 null,
-                null, null, null, null, false,
+                null, null, null, null, false, null,
                 Instant.now(),
                 Instant.now()
         );
@@ -702,7 +709,7 @@ class MarketEngineTest {
                 true,
                 null,
                 null,
-                maxChange, null, null, null, false,
+                maxChange, null, null, null, false, null,
                 Instant.now(),
                 Instant.now()
         );

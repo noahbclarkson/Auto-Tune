@@ -356,7 +356,7 @@ public class MarketEngine {
 
         double maxChangePct = (item.maxPriceChangeOverride() != null
                 ? item.maxPriceChangeOverride()
-                : config.maxPriceChangePercent()) / 100.0;
+                : config.maxPriceChangePercent() * item.effectiveMaxPriceChangeMultiplier()) / 100.0;
 
         double priceChangePercent = scaledRatio * maxChangePct;
 
@@ -406,7 +406,7 @@ public class MarketEngine {
 
         double baseSpread = item.baseSpreadOverride() != null
                 ? item.baseSpreadOverride()
-                : spreadConfig.baseSpread();
+                : spreadConfig.baseSpread() * item.effectiveSpreadMultiplier();
 
         double halfSpread = baseSpread / 2.0;
 

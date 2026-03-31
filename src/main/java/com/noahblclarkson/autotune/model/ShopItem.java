@@ -23,9 +23,36 @@ public record ShopItem(
         @Nullable BigDecimal priceFloorOverride,
         @Nullable BigDecimal priceCeilingOverride,
         boolean priceFrozen,
+        @Nullable ItemTier tier,
         @NotNull Instant createdAt,
         @NotNull Instant updatedAt
 ) {
+
+    /**
+     * Returns the effective tier for this item.
+     * Admin override (stored in DB) takes precedence; otherwise falls back to
+     * the default tier classification based on material rarity.
+     */
+    @NotNull
+    public ItemTier effectiveTier() {
+        return tier != null ? tier : ItemTier.defaultTierFor(material.name());
+    }
+
+    /**
+     * Returns the effective base spread for this item.
+     * Explicit override takes precedence; otherwise uses the tier's spread multiplier.
+     */
+    public double effectiveSpreadMultiplier() {
+        return effectiveTier().spreadMultiplier;
+    }
+
+    /**
+     * Returns the effective max price change multiplier for this item.
+     * Explicit override takes precedence; otherwise uses the tier's multiplier.
+     */
+    public double effectiveMaxPriceChangeMultiplier() {
+        return effectiveTier().maxPriceChangeMultiplier;
+    }
 
     public static Builder builder() {
         return new Builder();
@@ -46,6 +73,7 @@ public record ShopItem(
                 .baseSpreadOverride(baseSpreadOverride)
                 .priceFloorOverride(priceFloorOverride)
                 .priceCeilingOverride(priceCeilingOverride)
+                .tier(tier)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt);
     }
@@ -91,6 +119,7 @@ public record ShopItem(
         private BigDecimal priceFloorOverride;
         private BigDecimal priceCeilingOverride;
         private boolean priceFrozen = false;
+        private ItemTier tier;
         private Instant createdAt = Instant.now();
         private Instant updatedAt = Instant.now();
 
@@ -164,6 +193,11 @@ public record ShopItem(
             return this;
         }
 
+        public Builder tier(ItemTier tier) {
+            this.tier = tier;
+            return this;
+        }
+
         public Builder createdAt(Instant createdAt) {
             this.createdAt = createdAt;
             return this;
@@ -180,7 +214,7 @@ public record ShopItem(
                     section, enabled, buyable, itemData,
                     maxPriceChangeOverride, baseSpreadOverride,
                     priceFloorOverride, priceCeilingOverride,
-                    priceFrozen,
+                    priceFrozen, tier,
                     createdAt, updatedAt
             );
         }

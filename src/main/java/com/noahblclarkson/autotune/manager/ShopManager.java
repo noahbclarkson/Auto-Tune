@@ -5,6 +5,7 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.ItemRepository;
+import com.noahblclarkson.autotune.model.ItemTier;
 import com.noahblclarkson.autotune.model.ShopItem;
 import com.noahblclarkson.autotune.util.ItemSerializer;
 import org.bukkit.Material;
@@ -417,6 +418,19 @@ public class ShopManager {
         itemRepository.updatePriceFrozen(itemId, frozen);
         getItemById(itemId).ifPresent(item -> {
             ShopItem updated = item.toBuilder().priceFrozen(frozen).build();
+            hashToItemCache.put(updated.itemHash(), updated);
+            idToItemCache.put(updated.id(), updated);
+        });
+    }
+
+    /**
+     * Sets the rarity tier for an item, overriding the default classification.
+     * Pass null to clear the override and revert to the default tier classification.
+     */
+    public void setTier(int itemId, @Nullable ItemTier tier) {
+        itemRepository.updateTier(itemId, tier);
+        getItemById(itemId).ifPresent(item -> {
+            ShopItem updated = item.toBuilder().tier(tier).build();
             hashToItemCache.put(updated.itemHash(), updated);
             idToItemCache.put(updated.id(), updated);
         });

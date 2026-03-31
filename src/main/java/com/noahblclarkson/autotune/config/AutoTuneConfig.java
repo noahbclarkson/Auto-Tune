@@ -1,5 +1,6 @@
 package com.noahblclarkson.autotune.config;
 
+import com.noahblclarkson.autotune.model.ItemTier;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
@@ -118,15 +119,48 @@ public record AutoTuneConfig(
         }
     }
 
+    /**
+     * Tier spread and price-change multipliers.
+     * These scale base spread and max price change percent per item rarity tier.
+     * LEGENDARY items have wider spreads and more volatile pricing (harder to establish fair value).
+     * Explicit per-item overrides (baseSpreadOverride, maxPriceChangeOverride) always take precedence.
+     *
+     * @param tierSpreadMultipliers         spread multiplier per tier (COMMON=1.0 baseline)
+     * @param tierMaxPriceChangeMultipliers max-price-change multiplier per tier
+     */
+    public record TierMultiplierConfig(
+            @NotNull Map<ItemTier, Double> tierSpreadMultipliers,
+            @NotNull Map<ItemTier, Double> tierMaxPriceChangeMultipliers
+    ) {
+        public static TierMultiplierConfig defaults() {
+            Map<ItemTier, Double> spread = new HashMap<>();
+            spread.put(ItemTier.COMMON, 1.0);
+            spread.put(ItemTier.UNCOMMON, 1.15);
+            spread.put(ItemTier.RARE, 1.30);
+            spread.put(ItemTier.EPIC, 1.50);
+            spread.put(ItemTier.LEGENDARY, 1.70);
+
+            Map<ItemTier, Double> maxChange = new HashMap<>();
+            maxChange.put(ItemTier.COMMON, 1.0);
+            maxChange.put(ItemTier.UNCOMMON, 1.1);
+            maxChange.put(ItemTier.RARE, 1.2);
+            maxChange.put(ItemTier.EPIC, 1.3);
+            maxChange.put(ItemTier.LEGENDARY, 1.5);
+
+            return new TierMultiplierConfig(Map.copyOf(spread), Map.copyOf(maxChange));
+        }
+    }
+
     public record SpreadConfig(
             double baseSpread,
             double volumeImpact,
             double playerImpact,
             double liquidityCoeff,
-            int liquidityFullEffectTraders
+            int liquidityFullEffectTraders,
+            @NotNull TierMultiplierConfig tierMultipliers
     ) {
         public static SpreadConfig defaults() {
-            return new SpreadConfig(0.20, 0.8, 0.6, 0.01, 10);
+            return new SpreadConfig(0.20, 0.8, 0.6, 0.01, 10, TierMultiplierConfig.defaults());
         }
     }
 

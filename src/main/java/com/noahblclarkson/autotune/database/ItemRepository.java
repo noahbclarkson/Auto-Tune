@@ -1,6 +1,7 @@
 package com.noahblclarkson.autotune.database;
 
 import com.noahblclarkson.autotune.model.ItemRatio;
+import com.noahblclarkson.autotune.model.ItemTier;
 import com.noahblclarkson.autotune.model.PriceHistory;
 import com.noahblclarkson.autotune.model.ShopItem;
 import org.bukkit.Material;
@@ -46,6 +47,9 @@ public class ItemRepository {
 
         boolean priceFrozen = rs.getBoolean("price_frozen");
 
+        String tierStr = rs.getString("tier");
+        ItemTier tier = rs.wasNull() ? null : ItemTier.valueOf(tierStr);
+
         return ShopItem.builder()
                 .id(rs.getInt("id"))
                 .material(Material.valueOf(rs.getString("material")))
@@ -61,13 +65,14 @@ public class ItemRepository {
                 .priceFloorOverride(priceFloorOverride)
                 .priceCeilingOverride(priceCeilingOverride)
                 .priceFrozen(priceFrozen)
+                .tier(tier)
                 .createdAt(rs.getTimestamp("created_at").toInstant())
                 .updatedAt(rs.getTimestamp("updated_at").toInstant())
                 .build();
     }
 
     private static final String SELECT_COLUMNS =
-            "id, material, item_hash, display_name, price, section, enabled, buyable, item_data, max_price_change_override, base_spread_override, price_floor, price_ceiling, price_frozen, created_at, updated_at";
+            "id, material, item_hash, display_name, price, section, enabled, buyable, item_data, max_price_change_override, base_spread_override, price_floor, price_ceiling, price_frozen, tier, created_at, updated_at";
 
     public List<ShopItem> findAll() {
         return jdbi.withHandle(handle ->
@@ -103,8 +108,8 @@ public class ItemRepository {
     public int insert(@NotNull ShopItem item) {
         return jdbi.withHandle(handle ->
                 handle.createUpdate("""
-                                INSERT INTO at_items (material, item_hash, display_name, price, section, enabled, buyable, item_data)
-                                VALUES (:material, :itemHash, :displayName, :price, :section, :enabled, :buyable, :itemData)
+                                INSERT INTO at_items (material, item_hash, display_name, price, section, enabled, buyable, item_data, tier)
+                                VALUES (:material, :itemHash, :displayName, :price, :section, :enabled, :buyable, :itemData, :tier)
                                 """)
                         .bind("material", item.material().name())
                         .bind("itemHash", item.itemHash())
@@ -114,6 +119,7 @@ public class ItemRepository {
                         .bind("enabled", item.enabled())
                         .bind("buyable", item.buyable())
                         .bind("itemData", item.itemData())
+                        .bind("tier", item.tier() != null ? item.tier().name() : null)
                         .executeAndReturnGeneratedKeys("id")
                         .mapTo(Integer.class)
                         .one());
@@ -187,6 +193,18 @@ public class ItemRepository {
                                 """)
                         .bind("id", itemId)
                         .bind("frozen", frozen)
+                        .bind("updatedAt", Timestamp.from(Instant.now()))
+                        .execute());
+    }
+
+    public void updateTier(int itemId, @Nullable ItemTier tier) {
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                                UPDATE at_items SET tier = :tier, updated_at = :updatedAt
+                                WHERE id = :id
+                                """)
+                        .bind("id", itemId)
+                        .bind("tier", tier != null ? tier.name() : null)
                         .bind("updatedAt", Timestamp.from(Instant.now()))
                         .execute());
     }

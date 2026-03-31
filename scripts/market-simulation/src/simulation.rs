@@ -390,7 +390,31 @@ impl Simulation {
             {
                 let max_loan =
                     (player.total_traded * self.config.loans.max_loan_multiplier).max(100.0);
-                let amount = max_loan * 0.5;
+                let amount_raw = max_loan * 0.5;
+
+                // Per-loan GDP cap: no single loan can exceed economy GDP × single_loan_gdp_cap
+                // (matches Java LoanManager.processLoanRequest: singleLoanGdpCap check)
+                let amount = if self.config.loans.single_loan_gdp_cap > 0.0 {
+                    let gdp: f64 = self
+                        .transactions
+                        .iter()
+                        .filter(|tx| tx.tx_type == TransactionType::Buy)
+                        .map(|tx| tx.total_price)
+                        .sum();
+                    if gdp > 0.0 {
+                        amount_raw.min(gdp * self.config.loans.single_loan_gdp_cap)
+                    } else {
+                        amount_raw
+                    }
+                } else {
+                    amount_raw
+                };
+
+                // Only create loan if amount is meaningful (> 1.0)
+                if amount < 1.0 {
+                    continue;
+                }
+
                 let rate = calculate_interest_rate(player.credit_score, &self.config);
                 let loan = Loan::new(player_idx, amount, rate, self.current_tick, &self.config);
                 self.players[player_idx].balance += amount;

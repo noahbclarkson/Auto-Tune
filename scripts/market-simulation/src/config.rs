@@ -60,6 +60,9 @@ pub struct LoanConfig {
     pub debt_gdp_tier3_ratio: f64,
     pub tier1_interest_cap: f64,
     pub tier2_interest_cap: f64,
+    /// Per-loan GDP cap: no single loan can exceed economy GDP × this factor.
+    /// Set to 0.0 to disable. Default 1.0 (matches Java LoanManager.singleLoanGdpCap).
+    pub single_loan_gdp_cap: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -155,6 +158,7 @@ impl Default for LoanConfig {
             debt_gdp_tier3_ratio: 10.0,
             tier1_interest_cap: 0.5,
             tier2_interest_cap: 0.25,
+            single_loan_gdp_cap: 1.0,
         }
     }
 }

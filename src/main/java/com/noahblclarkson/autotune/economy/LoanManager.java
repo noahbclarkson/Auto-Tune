@@ -10,6 +10,7 @@ import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.manager.TreasuryService;
+import com.noahblclarkson.autotune.service.BadgeService;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
 import com.noahblclarkson.autotune.model.Loan;
 import com.noahblclarkson.autotune.model.Loan.LoanStatus;
@@ -42,6 +43,7 @@ public class LoanManager {
     private final PlayerRepository playerRepository;
     private final EconomySnapshotRepository snapshotRepository;
     private final TreasuryService treasuryService;
+    private final BadgeService badgeService;
     private volatile boolean interestCircuitOpen = false;
 
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
@@ -55,7 +57,8 @@ public class LoanManager {
             LoanRepository loanRepository,
             PlayerRepository playerRepository,
             EconomySnapshotRepository snapshotRepository,
-            TreasuryService treasuryService
+            TreasuryService treasuryService,
+            BadgeService badgeService
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -65,6 +68,7 @@ public class LoanManager {
         this.playerRepository = playerRepository;
         this.snapshotRepository = snapshotRepository;
         this.treasuryService = treasuryService;
+        this.badgeService = badgeService;
     }
 
     public LoanResult requestLoan(@NotNull Player player, @NotNull BigDecimal amount, int termDays) {
@@ -106,7 +110,11 @@ public class LoanManager {
                     return;
                 }
                 databaseManager.runAsync(() -> loanRepository.insert(result.loan()))
-                        .thenRun(() -> future.complete(result))
+                        .thenRun(() -> {
+                            // Award LOAN_TAKER badge for first loan taken
+                            badgeService.onFirstLoan(player.getUniqueId());
+                            future.complete(result);
+                        })
                         .exceptionally(ex -> {
                             plugin.getLogger().log(Level.WARNING, "Failed to insert loan", ex);
                             future.complete(LoanResult.error("Database error"));
@@ -228,6 +236,8 @@ public class LoanManager {
                                         PlayerData playerData = playerRepository.getOrCreate(playerId, playerName);
                                         playerRepository.updateCreditScore(playerId,
                                                 Math.min(PlayerData.MAX_CREDIT_SCORE, playerData.creditScore() + creditBonus));
+                                        // Award LOAN_SHARK if repaid a large loan
+                                        badgeService.onLoanRepaid(playerId, loan.principal());
                                     }
                                 })
                                 .thenRun(() -> future.complete(LoanResult.repaymentSuccess(updated, paymentAmount)))

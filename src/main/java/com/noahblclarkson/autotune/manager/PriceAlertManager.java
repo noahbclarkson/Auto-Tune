@@ -9,6 +9,7 @@ import com.noahblclarkson.autotune.database.PriceAlertRepository;
 import com.noahblclarkson.autotune.model.PriceAlert;
 import com.noahblclarkson.autotune.model.PriceAlert.AlertType;
 import com.noahblclarkson.autotune.model.ShopItem;
+import com.noahblclarkson.autotune.service.BadgeService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -36,6 +37,7 @@ public class PriceAlertManager {
     private final MarketEngine marketEngine;
     private final ShopManager shopManager;
     private final ConfigManager configManager;
+    private final BadgeService badgeService;
 
     /**
      * Per-item cache of active alerts, rebuilt from DB when prices change.
@@ -50,13 +52,15 @@ public class PriceAlertManager {
             PriceAlertRepository alertRepository,
             MarketEngine marketEngine,
             ShopManager shopManager,
-            ConfigManager configManager
+            ConfigManager configManager,
+            BadgeService badgeService
     ) {
         this.plugin = plugin;
         this.alertRepository = alertRepository;
         this.marketEngine = marketEngine;
         this.shopManager = shopManager;
         this.configManager = configManager;
+        this.badgeService = badgeService;
     }
 
     /**
@@ -155,9 +159,11 @@ public class PriceAlertManager {
                 .append(Component.text("Current price: ", NamedTextColor.GRAY))
                 .append(Component.text(formattedCurrent, NamedTextColor.GREEN));
 
-        plugin.getServer().getGlobalRegionScheduler().run(plugin, task ->
-                player.sendMessage(message)
-        );
+        plugin.getServer().getGlobalRegionScheduler().run(plugin, task -> {
+                player.sendMessage(message);
+                // Award TREND_SPOTTER badge for having an alert fire
+                badgeService.onAlertFired(alert.playerUuid());
+        });
     }
 
     /**

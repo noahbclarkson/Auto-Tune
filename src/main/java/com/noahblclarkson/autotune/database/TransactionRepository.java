@@ -253,4 +253,36 @@ public class TransactionRepository {
                         .mapTo(Long.class)
                         .one());
     }
+
+    /**
+     * Returns the number of distinct items a player has traded.
+     */
+    public int countDistinctItemsTraded(UUID playerUuid) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                        SELECT COUNT(DISTINCT item_id) FROM at_transactions
+                        WHERE player_uuid = :playerUuid
+                        """)
+                        .bind("playerUuid", playerUuid.toString())
+                        .mapTo(Integer.class)
+                        .findOne()
+                        .orElse(0));
+    }
+
+    /**
+     * Returns the number of distinct item sections a player has traded in.
+     * Joins transactions with items to get section information.
+     */
+    public int countDistinctSectionsTraded(UUID playerUuid) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                        SELECT COUNT(DISTINCT i.section) FROM at_transactions t
+                        JOIN at_items i ON t.item_id = i.id
+                        WHERE t.player_uuid = :playerUuid AND i.section IS NOT NULL
+                        """)
+                        .bind("playerUuid", playerUuid.toString())
+                        .mapTo(Integer.class)
+                        .findOne()
+                        .orElse(0));
+    }
 }

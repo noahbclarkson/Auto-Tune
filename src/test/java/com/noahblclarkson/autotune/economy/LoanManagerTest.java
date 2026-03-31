@@ -110,7 +110,7 @@ class LoanManagerTest {
         when(cfgMgr.getConfig()).thenReturn(fullConfig(loanCfg));
         LoanManager lm = new LoanManager(mock(AutoTune.class), cfgMgr, economy,
                 mock(DatabaseManager.class), loanRepo, playerRepo, snapRepo,
-                mock(TreasuryService.class));
+                mock(TreasuryService.class), mock(com.noahblclarkson.autotune.service.BadgeService.class));
         if (playerData != null) {
             when(playerRepo.findByUuid(playerUuid)).thenReturn(Optional.of(playerData));
         }

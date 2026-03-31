@@ -15,6 +15,7 @@ import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.MarketEventRepository;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.service.EconomicNewsService;
+import com.noahblclarkson.autotune.service.BadgeService;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.PriceAlertRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
@@ -149,14 +150,16 @@ public class AutoTuneModule extends AbstractModule {
             PriceAlertRepository priceAlertRepository,
             MarketEngine marketEngine,
             ShopManager shopManager,
-            ConfigManager configManager
+            ConfigManager configManager,
+            BadgeService badgeService
     ) {
         return new PriceAlertManager(
                 plugin,
                 priceAlertRepository,
                 marketEngine,
                 shopManager,
-                configManager
+                configManager,
+                badgeService
         );
     }
 
@@ -204,6 +207,12 @@ public class AutoTuneModule extends AbstractModule {
     ) {
         return new EconomicNewsService(
                 plugin, itemRepository, shopManager, loanManager, configManager, pluginAdapter);
+    }
+
+    @Provides
+    @Singleton
+    public BadgeService provideBadgeService(DatabaseManager databaseManager) {
+        return new BadgeService(databaseManager, plugin);
     }
 
     @Provides

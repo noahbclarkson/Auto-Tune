@@ -279,3 +279,17 @@ CREATE TABLE IF NOT EXISTS at_price_alerts (
 CREATE INDEX IF NOT EXISTS idx_alerts_player ON at_price_alerts(player_uuid);
 CREATE INDEX IF NOT EXISTS idx_alerts_item ON at_price_alerts(item_id);
 CREATE INDEX IF NOT EXISTS idx_alerts_active ON at_price_alerts(enabled) WHERE enabled = TRUE;
+
+-- Player achievement badges: Tracks badges earned by players.
+-- Badges are one-time achievements earned through market activity.
+-- Criteria are evaluated on-demand; once earned the badge is persisted here.
+CREATE TABLE IF NOT EXISTS at_player_badges (
+    player_uuid VARCHAR(36) NOT NULL,
+    badge_type VARCHAR(32) NOT NULL,
+    earned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(player_uuid, badge_type),
+    FOREIGN KEY(player_uuid) REFERENCES at_players(uuid) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_badges_player ON at_player_badges(player_uuid);
+CREATE INDEX IF NOT EXISTS idx_badges_type ON at_player_badges(badge_type);

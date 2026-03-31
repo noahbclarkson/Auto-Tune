@@ -11,6 +11,7 @@ import com.noahblclarkson.autotune.manager.PluginAdapter;
 import com.noahblclarkson.autotune.manager.PriceReporter;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.manager.TreasuryService;
+import com.noahblclarkson.autotune.service.BadgeService;
 import com.noahblclarkson.autotune.model.ShopItem;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -143,7 +144,14 @@ class EconomyManagerTest {
                 db, shop, engine,
                 playerRepo, txRepo, reporter,
                 makeConfigManager(),
-                treasuryService);
+                treasuryService,
+                fakeBadgeService());
+    }
+
+    /** BadgeService stub — no-ops all badge operations. */
+    private static BadgeService fakeBadgeService() {
+        BadgeService bs = mock(BadgeService.class);
+        return bs;
     }
 
     /** TreasuryService stub that returns zero tax — avoids NPE from mock(null) defaults. */
@@ -220,7 +228,8 @@ class EconomyManagerTest {
                     mock(PluginAdapter.class), failingEconomy,
                     syncDbManager(), mock(ShopManager.class), engine,
                     mock(PlayerRepository.class), mock(TransactionRepository.class),
-                    mock(PriceReporter.class), makeConfigManager(), fakeTreasuryService());
+                    mock(PriceReporter.class), makeConfigManager(), fakeTreasuryService(),
+                    fakeBadgeService());
 
             Player player = mockPlayer();
             givePlayerItems(player, Material.DIAMOND, "DIAMOND", 3);

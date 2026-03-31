@@ -17,6 +17,7 @@ import com.noahblclarkson.autotune.model.PlayerData;
 import com.noahblclarkson.autotune.model.ShopItem;
 import com.noahblclarkson.autotune.model.Transaction;
 import com.noahblclarkson.autotune.model.Transaction.TransactionType;
+import com.noahblclarkson.autotune.service.BadgeService;
 import com.noahblclarkson.autotune.util.EnchantmentPricing;
 import com.noahblclarkson.autotune.util.ItemSerializer;
 import org.bukkit.inventory.ItemStack;
@@ -46,6 +47,7 @@ public class EconomyManager {
     private final PriceReporter priceReporter;
     private final ConfigManager configManager;
     private final TreasuryService treasuryService;
+    private final BadgeService badgeService;
 
     @Inject
     public EconomyManager(
@@ -58,7 +60,8 @@ public class EconomyManager {
             TransactionRepository transactionRepository,
             PriceReporter priceReporter,
             ConfigManager configManager,
-            TreasuryService treasuryService
+            TreasuryService treasuryService,
+            BadgeService badgeService
     ) {
         this.plugin = plugin;
         this.economy = economy;
@@ -70,6 +73,7 @@ public class EconomyManager {
         this.priceReporter = priceReporter;
         this.configManager = configManager;
         this.treasuryService = treasuryService;
+        this.badgeService = badgeService;
     }
 
     public double getBalance(@NotNull Player player) {
@@ -162,6 +166,9 @@ public class EconomyManager {
             // 3. Give items — last step.
             giveItems(player, item, amount);
 
+            // Award badges
+            badgeService.onBuy(playerId);
+
             return TransactionResult.success(TransactionType.BUY, amount, totalPrice);
         });
     }
@@ -231,6 +238,9 @@ public class EconomyManager {
                 withdraw(player, netProceeds.doubleValue());
                 return TransactionResult.error("Failed to remove items from inventory");
             }
+
+            // Award badges for sell activity
+            badgeService.onSell(playerId, netProceeds);
 
             return TransactionResult.success(TransactionType.SELL, amount, netProceeds);
         });
@@ -322,6 +332,10 @@ public class EconomyManager {
                 playerRepository.addTransaction(playerId, finalNetProceeds, false);
                 marketEngine.recordSell(item.id(), amount);
                 shopManager.invalidateBuyableCache(item.id());
+
+                // Award badges for sell activity
+                badgeService.onSell(playerId, finalNetProceeds);
+
                 return null;
             }).join();
         } catch (Exception e) {
@@ -501,6 +515,13 @@ public class EconomyManager {
                     deposit(player, finalNetCost.abs().doubleValue());
                 }
                 // netCost == 0: nothing to refund
+            }
+
+            // Award badges for cart transactions
+            if (finalNetCost.compareTo(BigDecimal.ZERO) > 0) {
+                badgeService.onBuy(playerId);
+            } else if (finalNetCost.compareTo(BigDecimal.ZERO) < 0) {
+                badgeService.onSell(playerId, finalNetCost.abs());
             }
 
             return TransactionResult.success(

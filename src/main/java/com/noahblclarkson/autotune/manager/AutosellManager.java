@@ -6,6 +6,7 @@ import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.AutosellRepository;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.economy.EconomyManager;
+import com.noahblclarkson.autotune.service.BadgeService;
 import com.noahblclarkson.autotune.model.ShopItem;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -36,6 +37,7 @@ public class AutosellManager {
     private final ShopManager shopManager;
     private final EconomyManager economyManager;
     private final ConfigManager configManager;
+    private final BadgeService badgeService;
 
     @Inject
     public AutosellManager(
@@ -43,13 +45,15 @@ public class AutosellManager {
             AutosellRepository autosellRepository,
             ShopManager shopManager,
             EconomyManager economyManager,
-            ConfigManager configManager
+            ConfigManager configManager,
+            BadgeService badgeService
     ) {
         this.databaseManager = databaseManager;
         this.autosellRepository = autosellRepository;
         this.shopManager = shopManager;
         this.economyManager = economyManager;
         this.configManager = configManager;
+        this.badgeService = badgeService;
     }
 
     public void loadPlayer(@NotNull Player player) {
@@ -124,6 +128,12 @@ public class AutosellManager {
         boolean finalNewState = newState;
         var unused = databaseManager.runAsync(() -> autosellRepository.setItemEnabled(uuid, itemId, finalNewState));
 
+        // Check for HOARDER badge after enabling an item
+        if (newState) {
+            int count = playerEnabledItems.getOrDefault(uuid, Set.of()).size();
+            badgeService.onAutosellInventoryUpdated(uuid, count);
+        }
+
         Optional<ShopItem> item = shopManager.getItemById(itemId);
         String itemName = item.map(ShopItem::getDisplayNameOrMaterial).orElse("Unknown Item");
         player.sendMessage(configManager.getMessage(
@@ -139,6 +149,10 @@ public class AutosellManager {
         playerEnabledItems.put(uuid, new HashSet<>(allItemIds));
 
         var unused = databaseManager.runAsync(() -> autosellRepository.enableAllItems(uuid, allItemIds));
+
+        // Check for HOARDER badge after enabling all items
+        badgeService.onAutosellInventoryUpdated(uuid, allItemIds.size());
+
         player.sendMessage(configManager.getMessage("autosell.all-enabled"));
     }
 

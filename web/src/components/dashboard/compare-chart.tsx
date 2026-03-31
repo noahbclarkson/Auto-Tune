@@ -14,7 +14,7 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { Search, ChevronDown, TrendingUp, TrendingDown, Minus, ArrowLeftRight, RotateCcw } from 'lucide-react';
+import { Search, ChevronDown, TrendingUp, TrendingDown, Minus, ArrowLeftRight, RotateCcw, Link2, Check } from 'lucide-react';
 import type { ItemDto, PriceHistoryDto } from '@/lib/api';
 
 type Period = '1h' | '6h' | '1d';
@@ -315,18 +315,59 @@ interface SpreadComparisonData {
 interface CompareChartProps {
   items: ItemDto[];
   apiBase: string;
+  /** Material name from URL param ?a=DIAMOND */
+  initialItemA?: string | null;
+  /** Material name from URL param ?b=IRON */
+  initialItemB?: string | null;
 }
 
-export function CompareChart({ items, apiBase }: CompareChartProps) {
+export function CompareChart({ items, apiBase, initialItemA, initialItemB }: CompareChartProps) {
   const [itemA, setItemA] = useState<ItemDto | null>(null);
   const [itemB, setItemB] = useState<ItemDto | null>(null);
   const [period, setPeriod] = useState<Period>('1h');
   const [view, setView] = useState<'ratio' | 'spread'>('ratio');
 
+  // Resolve URL-param items once items list is available
+  useEffect(() => {
+    if (items.length === 0) return;
+    const a = initialItemA
+      ? items.find((i) => i.material.toUpperCase() === initialItemA.toUpperCase()) ?? null
+      : null;
+    const b = initialItemB
+      ? items.find((i) => i.material.toUpperCase() === initialItemB.toUpperCase()) ?? null
+      : null;
+    if (a) setItemA(a);
+    if (b) setItemB(b);
+  }, [items, initialItemA, initialItemB]);
+
   const reset = () => {
     setItemA(null);
     setItemB(null);
   };
+
+  const [shareCopied, setShareCopied] = useState(false);
+
+  async function handleShare() {
+    if (!bothSelected) return;
+    const params = new URLSearchParams({
+      a: itemA!.material,
+      b: itemB!.material,
+    });
+    const url = `${window.location.origin}${window.location.pathname}?${params}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  }
 
   const { history: historyA, loading: loadingA } = useItemHistory(apiBase, itemA?.id ?? null);
   const { history: historyB, loading: loadingB } = useItemHistory(apiBase, itemB?.id ?? null);
@@ -361,6 +402,16 @@ export function CompareChart({ items, apiBase }: CompareChartProps) {
                 title="Reset selection"
               >
                 <RotateCcw className="w-3 h-3" />
+              </button>
+            )}
+            {bothSelected && (
+              <button
+                onClick={handleShare}
+                className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Copy shareable link"
+              >
+                {shareCopied ? <Check className="w-3 h-3 text-emerald-500" /> : <Link2 className="w-3 h-3" />}
+                <span>{shareCopied ? 'Copied!' : 'Share'}</span>
               </button>
             )}
             <div className="flex gap-1 bg-muted rounded p-0.5">

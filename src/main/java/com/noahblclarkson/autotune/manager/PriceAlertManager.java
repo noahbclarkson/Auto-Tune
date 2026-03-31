@@ -134,35 +134,44 @@ public class PriceAlertManager {
 
     /**
      * Send the player a message about their triggered alert.
+     * Called from fireAlert which runs on the async scheduler thread, so the
+     * entire notification (player lookup + shop query + message send) is
+     * dispatched to the Bukkit main thread.
      */
     private void notifyPlayer(PriceAlert alert, BigDecimal currentPrice) {
-        Player player = Bukkit.getPlayer(alert.playerUuid());
-        if (player == null || !player.isOnline()) {
-            return;
-        }
-
-        String itemName = shopManager.getItemById(alert.itemId())
-                .map(ShopItem::getDisplayNameOrMaterial)
-                .orElse("#" + alert.itemId());
-
-        String direction = alert.alertType() == AlertType.ABOVE ? "risen above" : "fallen below";
-        String formattedTarget = configManager.formatCurrency(alert.targetPrice());
-        String formattedCurrent = configManager.formatCurrency(currentPrice);
-
-        Component message = Component.empty()
-                .append(Component.text("⚠ Price Alert!", NamedTextColor.YELLOW, net.kyori.adventure.text.format.TextDecoration.BOLD))
-                .append(Component.newline())
-                .append(Component.text(itemName + " has " + direction + " ", NamedTextColor.GRAY))
-                .append(Component.text(formattedTarget, NamedTextColor.WHITE))
-                .append(Component.text("!", NamedTextColor.GRAY))
-                .append(Component.newline())
-                .append(Component.text("Current price: ", NamedTextColor.GRAY))
-                .append(Component.text(formattedCurrent, NamedTextColor.GREEN));
+        // Capture alert fields for use in the main-thread lambda (effectively final)
+        UUID playerUuid = alert.playerUuid();
+        int itemId = alert.itemId();
+        AlertType alertType = alert.alertType();
+        BigDecimal targetPrice = alert.targetPrice();
 
         plugin.getServer().getGlobalRegionScheduler().run(plugin, task -> {
-                player.sendMessage(message);
-                // Award TREND_SPOTTER badge for having an alert fire
-                badgeService.onAlertFired(alert.playerUuid());
+            Player player = Bukkit.getPlayer(playerUuid);
+            if (player == null || !player.isOnline()) {
+                return;
+            }
+
+            String itemName = shopManager.getItemById(itemId)
+                    .map(ShopItem::getDisplayNameOrMaterial)
+                    .orElse("#" + itemId);
+
+            String direction = alertType == AlertType.ABOVE ? "risen above" : "fallen below";
+            String formattedTarget = configManager.formatCurrency(targetPrice);
+            String formattedCurrent = configManager.formatCurrency(currentPrice);
+
+            Component message = Component.empty()
+                    .append(Component.text("⚠ Price Alert!", NamedTextColor.YELLOW, net.kyori.adventure.text.format.TextDecoration.BOLD))
+                    .append(Component.newline())
+                    .append(Component.text(itemName + " has " + direction + " ", NamedTextColor.GRAY))
+                    .append(Component.text(formattedTarget, NamedTextColor.WHITE))
+                    .append(Component.text("!", NamedTextColor.GRAY))
+                    .append(Component.newline())
+                    .append(Component.text("Current price: ", NamedTextColor.GRAY))
+                    .append(Component.text(formattedCurrent, NamedTextColor.GREEN));
+
+            player.sendMessage(message);
+            // Award TREND_SPOTTER badge for having an alert fire
+            badgeService.onAlertFired(playerUuid);
         });
     }
 

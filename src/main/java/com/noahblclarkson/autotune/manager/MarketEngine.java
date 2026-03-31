@@ -667,14 +667,16 @@ public class MarketEngine {
     public PriceTrend getPriceTrend(int itemId) {
         List<PriceHistory> history = itemRepository.getPriceHistory(itemId, 10);
         if (history.size() < 2) {
-            return new PriceTrend(PriceTrend.Direction.STABLE, BigDecimal.ZERO, "Stable");
+            return new PriceTrend(PriceTrend.Direction.STABLE, BigDecimal.ZERO, "Stable", BigDecimal.ZERO);
         }
 
         BigDecimal newest = history.get(0).price();
         BigDecimal oldest = history.get(history.size() - 1).price();
+        Instant newestTs = history.get(0).timestamp();
+        Instant oldestTs = history.get(history.size() - 1).timestamp();
 
         if (oldest.compareTo(BigDecimal.ZERO) == 0) {
-            return new PriceTrend(PriceTrend.Direction.STABLE, BigDecimal.ZERO, "Stable");
+            return new PriceTrend(PriceTrend.Direction.STABLE, BigDecimal.ZERO, "Stable", BigDecimal.ZERO);
         }
 
         BigDecimal percentChange = newest.subtract(oldest)
@@ -682,13 +684,56 @@ public class MarketEngine {
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(2, RoundingMode.HALF_UP);
 
+        // Project where the price will be in 24 hours using linear extrapolation
+        BigDecimal projected24h = computeProjectedPrice(newest, newestTs, oldestTs, oldest);
+
+        PriceTrend.Direction direction;
+        String label;
         if (percentChange.compareTo(BigDecimal.valueOf(0.5)) > 0) {
-            return new PriceTrend(PriceTrend.Direction.UP, percentChange, "+" + percentChange + "%");
+            direction = PriceTrend.Direction.UP;
+            label = "+" + percentChange + "%";
         } else if (percentChange.compareTo(BigDecimal.valueOf(-0.5)) < 0) {
-            return new PriceTrend(PriceTrend.Direction.DOWN, percentChange, percentChange + "%");
+            direction = PriceTrend.Direction.DOWN;
+            label = percentChange + "%";
+        } else {
+            direction = PriceTrend.Direction.STABLE;
+            label = percentChange + "%";
         }
 
-        return new PriceTrend(PriceTrend.Direction.STABLE, percentChange, percentChange + "%");
+        return new PriceTrend(direction, percentChange, label, projected24h);
+    }
+
+    /**
+     * Linear extrapolation: given two price points (newest at t=newer, oldest at t=older),
+     * estimate the price 24 hours after the newest point.
+     */
+    private BigDecimal computeProjectedPrice(BigDecimal newestPrice, Instant newestTs,
+                                            Instant oldestTs, BigDecimal oldestPrice) {
+        if (newestPrice.compareTo(BigDecimal.ZERO) <= 0 || oldestPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        long elapsedSeconds = newestTs.getEpochSecond() - oldestTs.getEpochSecond();
+        if (elapsedSeconds <= 0) {
+            return newestPrice;
+        }
+        BigDecimal priceDelta = newestPrice.subtract(oldestPrice);
+        // velocity: fractional change per second
+        BigDecimal velocity = priceDelta.divide(oldestPrice, MATH_CONTEXT)
+                .divide(BigDecimal.valueOf(elapsedSeconds), MATH_CONTEXT);
+        BigDecimal projectedFractional = BigDecimal.ONE
+                .add(velocity.multiply(BigDecimal.valueOf(86400))); // 24h in seconds
+        BigDecimal projected = newestPrice.multiply(projectedFractional)
+                .setScale(2, RoundingMode.HALF_UP);
+        // Sanity clamp: don't project more than 5x current price
+        BigDecimal maxProjected = newestPrice.multiply(BigDecimal.valueOf(5));
+        if (projected.compareTo(maxProjected) > 0) {
+            return maxProjected;
+        }
+        BigDecimal minProjected = newestPrice.divide(BigDecimal.valueOf(5), 2, RoundingMode.HALF_UP);
+        if (projected.compareTo(minProjected) < 0) {
+            return minProjected;
+        }
+        return projected;
     }
 
     public BigDecimal get24hChange(int itemId) {
@@ -711,7 +756,14 @@ public class MarketEngine {
                 .orElse(BigDecimal.ZERO);
     }
 
-    public record PriceTrend(Direction direction, BigDecimal percentChange, String label) {
+    /**
+     * Price trend for an item.
+     * @param direction       UP / DOWN / STABLE based on recent price velocity
+     * @param percentChange   % change over the lookback window (10 ticks)
+     * @param label           Human-readable label for display
+     * @param projected24h    Estimated price in 24 hours (linear extrapolation, may be 0 if insufficient data)
+     */
+    public record PriceTrend(Direction direction, BigDecimal percentChange, String label, BigDecimal projected24h) {
         public enum Direction {
             UP,
             DOWN,

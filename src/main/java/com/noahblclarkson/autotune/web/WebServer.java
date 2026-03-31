@@ -347,7 +347,8 @@ public class WebServer {
             ctx.json(Map.of(
                     "direction", direction.name(),
                     "streak", streak,
-                    "percentChange", trend.percentChange().doubleValue()
+                    "percentChange", trend.percentChange().doubleValue(),
+                    "projected24h", trend.projected24h().doubleValue()
             ));
         });
 

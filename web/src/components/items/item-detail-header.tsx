@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Bell } from 'lucide-react';
+import { Bell, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { PriceAlertDialog } from './price-alert-dialog';
 import { EnchantmentSelector } from './enchantment-selector';
 import { formatCurrency, formatPercent } from '@/lib/format';
@@ -103,6 +103,17 @@ export function ItemDetailHeader({ item, trend }: ItemDetailHeaderProps) {
           <span className="text-muted-foreground">Spread</span>
           <span className="font-semibold text-foreground font-mono">{spreadPct}%</span>
         </div>
+        {trend && trend.projected24h > 0 && (
+          <div className="flex items-center gap-1.5" title="Estimated price in 24 hours based on current trend velocity">
+            <span className="text-muted-foreground">24h Fcst</span>
+            <span className="font-semibold text-foreground font-mono">
+              {formatCurrency(trend.projected24h)}
+            </span>
+            {trend.direction === 'UP' && <TrendingUp className="h-3 w-3 text-emerald-500" />}
+            {trend.direction === 'DOWN' && <TrendingDown className="h-3 w-3 text-red-500" />}
+            {trend.direction === 'STABLE' && <Minus className="h-3 w-3 text-muted-foreground" />}
+          </div>
+        )}
       </div>
 
       {/* Enchantment selector */}

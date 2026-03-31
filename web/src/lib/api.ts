@@ -83,6 +83,8 @@ export interface ItemTrendDto {
   direction: 'UP' | 'DOWN' | 'STABLE';
   streak: number;
   percentChange: number;
+  /** Estimated price in 24 hours (linear extrapolation from recent velocity) */
+  projected24h: number;
 }
 
 export interface TransactionFeedDto {

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp, Grid, FlaskConical, Code2, Map, Download } from 'lucide-react';
+import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp, Grid, FlaskConical, Code2, Map, Download, Sliders } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/landing/theme-toggle';
 
@@ -11,6 +11,7 @@ const NAV = [
   { href: '/install', label: 'Install', icon: Download },
   { href: '/how-it-works', label: 'How It Works', icon: BookOpen },
   { href: '/simulator', label: 'Simulator', icon: BarChart2 },
+  { href: '/config-playground', label: 'Config', icon: Sliders },
   { href: '/sweep-results', label: 'Sweep', icon: Grid },
   { href: '/simulation-results', label: 'Sim Results', icon: FlaskConical },
   { href: '/true-prices', label: 'True Prices', icon: DollarSign },

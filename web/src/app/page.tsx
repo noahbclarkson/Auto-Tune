@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { StatsCards } from '@/components/dashboard/stats-cards';
+import { QuickStart } from '@/components/dashboard/quick-start';
 import { EconomyPanel } from '@/components/dashboard/economy-panel';
 import { TransactionFeed } from '@/components/dashboard/transaction-feed';
 import { MarketHealthBar } from '@/components/dashboard/market-health-bar';
@@ -107,6 +108,8 @@ export default function Home() {
             Unable to load market data: {error}
           </div>
         )}
+
+        <QuickStart />
 
         <StatsCards
           totalItems={stats?.totalItems ?? 0}

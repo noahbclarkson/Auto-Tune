@@ -146,6 +146,49 @@ public class PriceReporter {
         }
     }
 
+    /**
+     * Sends a heartbeat to the API server to signal the server is still alive.
+     * Called periodically (every getIntervalMinutes()) even when there is no
+     * new price data to submit — keeps the server's last_seen fresh in the registry.
+     *
+     * Heartbeats are fire-and-forget; failures are logged but not retried.
+     */
+    public void sendHeartbeat() {
+        if (!isEnabled()) {
+            return;
+        }
+        AutoTuneConfig.PriceReporterConfig cfg = configManager.getConfig().priceReporter();
+        if (cfg.apiKey().isBlank() || cfg.serverId().isBlank()) {
+            return;
+        }
+
+        int onlinePlayers = plugin.getServer().getOnlinePlayers().size();
+        String baseUrl = cfg.apiUrl().replaceAll("/$", "");
+        String endpoint = baseUrl + "/api/servers/" + cfg.serverId() + "/heartbeat";
+
+        HeartbeatPayload payload = new HeartbeatPayload(onlinePlayers);
+
+        HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
+                .timeout(Duration.ofSeconds(10))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + cfg.apiKey())
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(payload)))
+                .build();
+
+        httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenAccept(response -> {
+                    if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                        plugin.getLogger().fine("Heartbeat sent to api-server (players: " + onlinePlayers + ").");
+                    } else {
+                        plugin.getLogger().fine("Heartbeat to api-server failed: HTTP " + response.statusCode());
+                    }
+                })
+                .exceptionally(error -> {
+                    plugin.getLogger().fine("Heartbeat to api-server failed: " + error.getMessage());
+                    return null;
+                });
+    }
+
     // -------------------------------------------------------------------------
 
     private Map<Integer, PriceAccumulator> buildSnapshot() {
@@ -444,4 +487,7 @@ public class PriceReporter {
             int servers,
             boolean anchored
     ) {}
+
+    /** Request body for POST /api/servers/{id}/heartbeat */
+    private record HeartbeatPayload(int player_count) {}
 }

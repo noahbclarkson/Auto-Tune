@@ -15,7 +15,7 @@ use routes::{
     auction::configure as configure_auction,
     exchange::get_exchange_rates,
     prices::{get_price_history, get_true_prices, submit_prices},
-    servers::{list_servers, register_server},
+    servers::{heartbeat, list_servers, register_server},
 };
 
 async fn health() -> impl Responder {
@@ -83,7 +83,8 @@ async fn main() -> Result<()> {
             .service(
                 web::scope("/api/servers/{server_id}")
                     .wrap(ApiKeyAuth)
-                    .route("/prices", web::post().to(submit_prices)),
+                    .route("/prices", web::post().to(submit_prices))
+                    .route("/heartbeat", web::post().to(heartbeat)),
             )
     })
     .bind(&bind_addr)?

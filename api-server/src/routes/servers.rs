@@ -3,14 +3,14 @@
 //! POST /api/servers/register  — register a new server, receive API key
 //! GET  /api/servers           — list all registered servers
 
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::{
-    auth::{generate_api_key, hash_api_key},
-    models::{ErrorResponse, RegisterServerRequest, RegisterServerResponse, Server},
+    auth::{generate_api_key, hash_api_key, AuthenticatedServer},
+    models::{ErrorResponse, HeartbeatRequest, HeartbeatResponse, RegisterServerRequest, RegisterServerResponse, Server},
     rate_limit::{client_ip, RateLimitResult, RateLimiter},
 };
 
@@ -137,4 +137,67 @@ fn is_unique_violation(e: &sqlx::Error) -> bool {
         return db_err.code().map(|c| c == "23505").unwrap_or(false);
     }
     false
+}
+
+/// POST /api/servers/:id/heartbeat
+///
+/// Servers call this periodically to signal they are still alive. Updates the
+/// last_seen timestamp and optionally refreshes the player count.
+///
+/// The auth middleware validates the API key and injects AuthenticatedServer.
+/// We additionally verify the path ID matches the authenticated server ID.
+pub async fn heartbeat(
+    pool: web::Data<PgPool>,
+    path: web::Path<Uuid>,
+    req: HttpRequest,
+    body: web::Json<HeartbeatRequest>,
+) -> impl Responder {
+    let auth = match req.extensions().get::<AuthenticatedServer>().cloned() {
+        Some(a) => a,
+        None => {
+            return HttpResponse::Unauthorized()
+                .json(ErrorResponse::new("authentication required"));
+        }
+    };
+
+    let path_server_id = path.into_inner();
+    if auth.server_id != path_server_id {
+        return HttpResponse::Forbidden()
+            .json(ErrorResponse::new("API key does not match the server ID in the path"));
+    }
+
+    let player_count = body.player_count;
+
+    // Build the UPDATE query conditionally — only update player_count if provided
+    let result = if let Some(pc) = player_count {
+        sqlx::query("UPDATE servers SET last_seen = NOW(), player_count = $1 WHERE id = $2 RETURNING last_seen")
+            .bind(pc)
+            .bind(path_server_id)
+            .fetch_one(pool.get_ref())
+            .await
+    } else {
+        sqlx::query("UPDATE servers SET last_seen = NOW() WHERE id = $1 RETURNING last_seen")
+            .bind(path_server_id)
+            .fetch_one(pool.get_ref())
+            .await
+    };
+
+    match result {
+        Ok(row) => {
+            let last_seen: DateTime<Utc> = row
+                .try_get("last_seen")
+                .unwrap_or_else(|_| Utc::now());
+            tracing::debug!(server_id = %path_server_id, "heartbeat received");
+            HttpResponse::Ok().json(HeartbeatResponse {
+                ok: true,
+                server_id: path_server_id,
+                last_seen,
+            })
+        }
+        Err(e) => {
+            tracing::error!(server_id = %path_server_id, "heartbeat failed: {e}");
+            HttpResponse::InternalServerError()
+                .json(ErrorResponse::new("failed to update heartbeat"))
+        }
+    }
 }

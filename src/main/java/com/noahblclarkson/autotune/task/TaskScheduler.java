@@ -41,6 +41,7 @@ public class TaskScheduler {
     private ScheduledTask economySnapshotTask;
     private ScheduledTask priceReporterTask;
     private ScheduledTask priceRetryTask;
+    private ScheduledTask heartbeatTask;
     private ScheduledTask alertCheckTask;
     private ScheduledTask cleanupTask;
     private ScheduledTask exchangeRateTask;
@@ -106,6 +107,9 @@ public class TaskScheduler {
         }
         if (priceRetryTask != null) {
             priceRetryTask.cancel();
+        }
+        if (heartbeatTask != null) {
+            heartbeatTask.cancel();
         }
         if (alertCheckTask != null) {
             alertCheckTask.cancel();
@@ -244,6 +248,22 @@ public class TaskScheduler {
                 },
                 1,
                 1,
+                TimeUnit.MINUTES
+        );
+
+        // Heartbeat — keeps the server alive in the API registry between submissions.
+        // Runs at the same interval as price reporting.
+        heartbeatTask = plugin.getServer().getAsyncScheduler().runAtFixedRate(
+                plugin,
+                task -> {
+                    try {
+                        priceReporter.sendHeartbeat();
+                    } catch (Exception e) {
+                        plugin.getLogger().warning("Error sending heartbeat: " + e.getMessage());
+                    }
+                },
+                intervalMinutes,
+                intervalMinutes,
                 TimeUnit.MINUTES
         );
     }

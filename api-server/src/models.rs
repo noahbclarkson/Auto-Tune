@@ -30,6 +30,24 @@ pub struct RegisterServerResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Server heartbeat
+// ---------------------------------------------------------------------------
+
+/// Request body for a server heartbeat. player_count is optional — if omitted,
+/// the server's last known player count is preserved.
+#[derive(Debug, Deserialize)]
+pub struct HeartbeatRequest {
+    pub player_count: Option<i32>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct HeartbeatResponse {
+    pub ok: bool,
+    pub server_id: Uuid,
+    pub last_seen: DateTime<Utc>,
+}
+
+// ---------------------------------------------------------------------------
 // Price submissions
 // ---------------------------------------------------------------------------
 

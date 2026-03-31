@@ -2766,17 +2766,24 @@ fn run_guild_seller_test() {
 
     let br_change = treat_summary.buy_ratio - ctrl_summary.buy_ratio;
     let vol_change = treat_summary.avg_volatility - ctrl_summary.avg_volatility;
-    let gdp_change_pct =
-        (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let gdp_change_pct = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
 
     let improvements = [
-        ("Buy Ratio", br_change > 0.01, format!("{:+.1}pp", br_change * 100.0)),
+        (
+            "Buy Ratio",
+            br_change > 0.01,
+            format!("{:+.1}pp", br_change * 100.0),
+        ),
         (
             "Volatility",
             vol_change < -0.01,
             format!("{:+.4}", vol_change),
         ),
-        ("GDP", gdp_change_pct > 2.0, format!("{:+.1}%", gdp_change_pct)),
+        (
+            "GDP",
+            gdp_change_pct > 2.0,
+            format!("{:+.1}%", gdp_change_pct),
+        ),
     ];
 
     for (name, passed, val) in improvements {
@@ -2788,12 +2795,16 @@ fn run_guild_seller_test() {
     }
 
     if br_change > 0.01 && vol_change < -0.01 {
-        println!("\n  🎯 GuildSeller structurally addresses underselling — both buy_ratio UP and vol DOWN.");
+        println!(
+            "\n  🎯 GuildSeller structurally addresses underselling — both buy_ratio UP and vol DOWN."
+        );
     } else if br_change.abs() < 0.01 {
         println!("\n  ℹ️  GuildSeller has minimal effect on buy_ratio — consider higher GS count.");
     }
 
-    println!("\n  Hypothesis: GuildSeller provides downward price pressure via proactive spike-selling.");
+    println!(
+        "\n  Hypothesis: GuildSeller provides downward price pressure via proactive spike-selling."
+    );
     println!("  If buy_ratio improves: GS is a structural fix for Farmer-dominated economies.");
 
     let _ = std::fs::remove_dir_all(&ctrl_dir);
@@ -2838,6 +2849,7 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
     archetype_map.insert("GuildBuyer".into(), Archetype::GuildBuyer);
     archetype_map.insert("MarketMaker".into(), Archetype::MarketMaker);
     archetype_map.insert("InsiderTrader".into(), Archetype::InsiderTrader);
+    archetype_map.insert("GuildSeller".into(), Archetype::GuildSeller);
 
     for player_cfg in &scenario.players {
         let archetype = archetype_map
@@ -3587,6 +3599,7 @@ fn run_seeded_headless(scenario: &Scenario, seed: u64, output_dir: &PathBuf) -> 
         ("GuildBuyer".into(), Archetype::GuildBuyer),
         ("MarketMaker".into(), Archetype::MarketMaker),
         ("InsiderTrader".into(), Archetype::InsiderTrader),
+        ("GuildSeller".into(), Archetype::GuildSeller),
     ]
     .into_iter()
     .collect();

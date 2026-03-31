@@ -17,11 +17,13 @@ import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.MarketEventService;
+import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.model.MarketEvent;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
 import com.noahblclarkson.autotune.model.Loan;
 import com.noahblclarkson.autotune.model.PlayerData;
+import com.noahblclarkson.autotune.model.PriceAlert;
 import com.noahblclarkson.autotune.model.PriceHistory;
 import com.noahblclarkson.autotune.model.ShopItem;
 import com.noahblclarkson.autotune.model.PortfolioDto;
@@ -39,6 +41,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -46,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -70,6 +74,7 @@ public class WebServer {
     private final ShopManager shopManager;
     private final EconomyManager economyManager;
     private final MarketEventService marketEventService;
+    private final PriceAlertManager priceAlertManager;
     private final Server server;
     private final PortfolioService portfolioService;
     private final Gson gson;
@@ -92,6 +97,7 @@ public class WebServer {
             ShopManager shopManager,
             EconomyManager economyManager,
             MarketEventService marketEventService,
+            PriceAlertManager priceAlertManager,
             Server server
     ) {
         this.plugin = plugin;
@@ -107,6 +113,7 @@ public class WebServer {
         this.shopManager = shopManager;
         this.economyManager = economyManager;
         this.marketEventService = marketEventService;
+        this.priceAlertManager = priceAlertManager;
         this.server = server;
         this.portfolioService = new PortfolioService(
                 playerRepository, itemRepository, loanRepository, economyManager, server);
@@ -145,7 +152,7 @@ public class WebServer {
 
         app.before(ctx -> {
             ctx.header("Access-Control-Allow-Origin", "*");
-            ctx.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+            ctx.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
             ctx.header("Access-Control-Allow-Headers", "Content-Type");
         });
 
@@ -603,6 +610,161 @@ public class WebServer {
             ctx.json(response);
         });
 
+        // ── Price alerts ───────────────────────────────────────────────────
+        // GET /api/alerts/{playerName} — list all alerts for a player
+        app.get("/api/alerts/{playerName}", ctx -> {
+            String playerName = ctx.pathParam("playerName");
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).json(Map.of("error", "playerName is required"));
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                return;
+            }
+            List<PriceAlert> alerts = priceAlertManager.getPlayerAlerts(player.uuid());
+            List<AlertDto> dtos = alerts.stream()
+                    .map(this::toAlertDto)
+                    .collect(Collectors.toList());
+            ctx.json(dtos);
+        });
+
+        // POST /api/alerts — create a new alert
+        // Body: { "playerName": "...", "itemId": 123, "alertType": "ABOVE|BELOW", "targetPrice": 250.00 }
+        app.post("/api/alerts", ctx -> {
+            CreateAlertRequest req;
+            try {
+                req = gson.fromJson(ctx.body(), CreateAlertRequest.class);
+            } catch (Exception e) {
+                ctx.status(400).json(Map.of("error", "Invalid request body"));
+                return;
+            }
+            if (req.playerName == null || req.playerName.isBlank()) {
+                ctx.status(400).json(Map.of("error", "playerName is required"));
+                return;
+            }
+            if (req.itemId <= 0) {
+                ctx.status(400).json(Map.of("error", "itemId must be a positive integer"));
+                return;
+            }
+            if (req.targetPrice == null || req.targetPrice <= 0) {
+                ctx.status(400).json(Map.of("error", "targetPrice must be a positive number"));
+                return;
+            }
+            PriceAlert.AlertType alertType;
+            try {
+                alertType = PriceAlert.AlertType.valueOf(req.alertType.toUpperCase(Locale.ROOT));
+            } catch (Exception e) {
+                ctx.status(400).json(Map.of("error", "alertType must be ABOVE or BELOW"));
+                return;
+            }
+            // Resolve player UUID
+            PlayerData player = playerRepository.findByName(req.playerName.trim()).orElse(null);
+            UUID playerUuid;
+            if (player != null) {
+                playerUuid = player.uuid();
+            } else {
+                // Fall back to Bukkit lookup
+                var offline = server.getOfflinePlayer(req.playerName);
+                if (offline == null || !offline.hasPlayedBefore()) {
+                    ctx.status(404).json(Map.of("error", "Player not found: " + req.playerName));
+                    return;
+                }
+                playerUuid = offline.getUniqueId();
+            }
+            // Validate item exists
+            if (itemRepository.findById(req.itemId).isEmpty()) {
+                ctx.status(404).json(Map.of("error", "Item not found: " + req.itemId));
+                return;
+            }
+            var result = priceAlertManager.createAlert(
+                    playerUuid, req.itemId, alertType, BigDecimal.valueOf(req.targetPrice));
+            if (!result.success()) {
+                ctx.status(400).json(Map.of("error", result.errorMessage()));
+                return;
+            }
+            ctx.status(201).json(toAlertDto(result.alert()));
+        });
+
+        // DELETE /api/alerts/{alertId}?playerName=X — remove an alert
+        app.delete("/api/alerts/{alertId}", ctx -> {
+            String alertId = ctx.pathParam("alertId");
+            String playerName = ctx.queryParam("playerName");
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).json(Map.of("error", "playerName query param is required"));
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                return;
+            }
+            boolean removed = priceAlertManager.removeAlert(alertId, player.uuid(), false);
+            if (!removed) {
+                ctx.status(404).json(Map.of("error", "Alert not found or not owned by player"));
+                return;
+            }
+            ctx.json(Map.of("success", true));
+        });
+
+        // PATCH /api/alerts/{alertId}/toggle?playerName=X — enable/disable an alert
+        app.patch("/api/alerts/{alertId}/toggle", ctx -> {
+            String alertId = ctx.pathParam("alertId");
+            String playerName = ctx.queryParam("playerName");
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).json(Map.of("error", "playerName query param is required"));
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                return;
+            }
+            boolean toggled = priceAlertManager.toggleAlert(alertId, player.uuid(), false);
+            if (!toggled) {
+                ctx.status(404).json(Map.of("error", "Alert not found or not owned by player"));
+                return;
+            }
+            // Fetch updated alert
+            var alerts = priceAlertManager.getPlayerAlerts(player.uuid());
+            alerts.stream()
+                    .filter(a -> a.id().equals(alertId))
+                    .findFirst()
+                    .ifPresentOrElse(
+                            a -> ctx.json(toAlertDto(a)),
+                            () -> ctx.status(404).json(Map.of("error", "Alert not found after toggle"))
+                    );
+        });
+
+        // PATCH /api/alerts/{alertId}/rearm?playerName=X — rearm a triggered alert
+        app.patch("/api/alerts/{alertId}/rearm", ctx -> {
+            String alertId = ctx.pathParam("alertId");
+            String playerName = ctx.queryParam("playerName");
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).json(Map.of("error", "playerName query param is required"));
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                return;
+            }
+            boolean rearmed = priceAlertManager.rearmAlert(alertId, player.uuid());
+            if (!rearmed) {
+                ctx.status(400).json(Map.of("error", "Alert not found, not triggered, or not owned by player"));
+                return;
+            }
+            var alerts = priceAlertManager.getPlayerAlerts(player.uuid());
+            alerts.stream()
+                    .filter(a -> a.id().equals(alertId))
+                    .findFirst()
+                    .ifPresentOrElse(
+                            a -> ctx.json(toAlertDto(a)),
+                            () -> ctx.status(404).json(Map.of("error", "Alert not found after rearm"))
+                    );
+        });
+
         app.exception(Exception.class, (e, ctx) -> {
             plugin.getLogger().log(Level.WARNING, "Web API error: " + e.getMessage());
             ctx.status(500).json(Map.of("error", "Internal server error"));
@@ -764,5 +926,53 @@ public class WebServer {
             double totalSold,
             int transactionCount
     ) {
+    }
+
+    public record AlertDto(
+            String id,
+            String playerUuid,
+            int itemId,
+            String itemName,
+            String alertType,
+            double targetPrice,
+            double currentPrice,
+            boolean enabled,
+            boolean triggered,
+            long createdAt,
+            Long triggeredAt
+    ) {
+    }
+
+    public record CreateAlertRequest(
+            String playerName,
+            int itemId,
+            String alertType,
+            Double targetPrice
+    ) {
+    }
+
+    private AlertDto toAlertDto(PriceAlert alert) {
+        String itemName = itemRepository.findById(alert.itemId())
+                .map(ShopItem::getDisplayNameOrMaterial)
+                .orElse("#" + alert.itemId());
+        double currentPrice = 0.0;
+        try {
+            currentPrice = marketEngine.getCurrentPrice(alert.itemId()).doubleValue();
+        } catch (Exception e) {
+            // Defensive: item may not have a price yet — leave currentPrice at 0
+        }
+        return new AlertDto(
+                alert.id(),
+                alert.playerUuid().toString(),
+                alert.itemId(),
+                itemName,
+                alert.alertType().name(),
+                alert.targetPrice().doubleValue(),
+                currentPrice,
+                alert.enabled(),
+                alert.isTriggered(),
+                alert.createdAt().toEpochMilli(),
+                alert.triggeredAt() != null ? alert.triggeredAt().toEpochMilli() : null
+        );
     }
 }

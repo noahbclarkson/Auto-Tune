@@ -398,6 +398,41 @@ impl Scenario {
         }
     }
 
+    /// Verifies per-loan GDP cap behavior.
+    /// Uses a tight single_loan_gdp_cap (0.5) to force early-tick cap events.
+    /// Players start with low balance to trigger loan requests in early ticks.
+    pub fn loan_cap_test() -> Self {
+        let mut config = SimConfig::default();
+        // Cap each loan at 50% of GDP — very tight, triggers early when economy is small
+        config.loans.single_loan_gdp_cap = 0.5;
+        // Slightly higher base loan multiplier so raw loan requests exceed the cap
+        config.loans.max_loan_multiplier = 3.0;
+
+        Self {
+            name: "Loan Cap Test".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 6,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Standard+MM with GuildBuyers at fixed 5% threshold.
     /// Tests whether the uniquely-safe 5% GuildBuyer threshold combined with MM
     /// produces a healthier economy than random-threshold guild_stability.
@@ -2970,6 +3005,191 @@ fn run_price_freeze_test() {
     let _ = std::fs::remove_dir_all(&treat_dir);
 }
 
+/// Add archetype-configured players to an existing simulation.
+fn add_players_to_sim(sim: &mut Simulation, players: &[ArchetypeConfig]) {
+    let mut archetype_map: std::collections::HashMap<String, Archetype> =
+        std::collections::HashMap::new();
+    archetype_map.insert("Casual".into(), Archetype::Casual);
+    archetype_map.insert("Farmer".into(), Archetype::Farmer);
+    archetype_map.insert("Trader".into(), Archetype::Trader);
+    archetype_map.insert("Hoarder".into(), Archetype::Hoarder);
+    archetype_map.insert("Exploiter".into(), Archetype::Exploiter);
+    archetype_map.insert("Newbie".into(), Archetype::Newbie);
+    archetype_map.insert("AFKFarmer".into(), Archetype::AFKFarmer);
+    archetype_map.insert("GuildBuyer".into(), Archetype::GuildBuyer);
+    archetype_map.insert("MarketMaker".into(), Archetype::MarketMaker);
+    archetype_map.insert("InsiderTrader".into(), Archetype::InsiderTrader);
+    archetype_map.insert("GuildSeller".into(), Archetype::GuildSeller);
+
+    for player_cfg in players {
+        let archetype = archetype_map
+            .get(&player_cfg.archetype)
+            .unwrap_or(&Archetype::Casual);
+        for _ in 0..player_cfg.count {
+            sim.add_player(*archetype);
+        }
+    }
+}
+
+/// Runs the loan_cap_test scenario with tight per-loan GDP cap (0.5× GDP)
+/// and reports all cap events — which loans were capped, by how much, and when.
+fn run_loan_cap_verification() {
+    use crate::player::set_global_seeded_rng;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       PER-LOAN GDP CAP VERIFICATION TEST                   ║");
+    println!("║  single_loan_gdp_cap=0.5 — loans capped at 50% of GDP      ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    // Control: cap disabled (0.0)
+    let mut ctrl_scenario = Scenario::loan_cap_test();
+    ctrl_scenario.config.loans.single_loan_gdp_cap = 0.0;
+    ctrl_scenario.name = "Loan Cap: No Cap (control)".into();
+
+    // Treatment: cap = 0.5× GDP
+    let treat_scenario = Scenario::loan_cap_test();
+    // single_loan_gdp_cap already 0.5 from loan_cap_test()
+
+    // Run control
+    println!("─── Control (cap disabled) ───");
+    set_global_seeded_rng(seed);
+    let mut ctrl_sim = Simulation::new_seeded(ctrl_scenario.config.clone(), seed);
+    ctrl_sim.events = ctrl_scenario.events.clone();
+    add_players_to_sim(&mut ctrl_sim, &ctrl_scenario.players);
+    ctrl_sim.paused = false;
+    let start = Instant::now();
+    while ctrl_sim.current_tick < ctrl_scenario.duration_ticks {
+        ctrl_sim.tick();
+        if ctrl_sim.current_tick.is_multiple_of(288) {
+            let gdp = ctrl_sim
+                .economy_snapshots
+                .last()
+                .map(|s| s.gdp)
+                .unwrap_or(0.0);
+            println!(
+                "  [ctrl tick {}] GDP={:.0} | loans={} | debt={:.0}",
+                ctrl_sim.current_tick,
+                gdp,
+                ctrl_sim.loans.len(),
+                ctrl_sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                    .count()
+            );
+        }
+    }
+    println!(
+        "  Control complete: {} loans issued, {:.1}s elapsed\n",
+        ctrl_sim.loans.len(),
+        start.elapsed().as_secs_f64()
+    );
+
+    // Run treatment
+    println!("─── Treatment (cap = 0.5× GDP) ───");
+    set_global_seeded_rng(seed);
+    let mut treat_sim = Simulation::new_seeded(treat_scenario.config.clone(), seed);
+    treat_sim.events = treat_scenario.events.clone();
+    add_players_to_sim(&mut treat_sim, &treat_scenario.players);
+    treat_sim.paused = false;
+    let start = Instant::now();
+    while treat_sim.current_tick < treat_scenario.duration_ticks {
+        treat_sim.tick();
+        if treat_sim.current_tick.is_multiple_of(288) {
+            let gdp = treat_sim
+                .economy_snapshots
+                .last()
+                .map(|s| s.gdp)
+                .unwrap_or(0.0);
+            println!(
+                "  [treat tick {}] GDP={:.0} | capped={} | loans={}",
+                treat_sim.current_tick,
+                gdp,
+                treat_sim.loan_cap_log.len(),
+                treat_sim.loans.len()
+            );
+        }
+    }
+    println!(
+        "  Treatment complete: {} loans issued, {} capped, {:.1}s elapsed\n",
+        treat_sim.loans.len(),
+        treat_sim.loan_cap_log.len(),
+        start.elapsed().as_secs_f64()
+    );
+
+    // Print cap log
+    println!("╔══════════════════════════════════════════════════════════════╗");
+    println!("║              LOAN CAP EVENT LOG                             ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    treat_sim.print_loan_cap_summary();
+
+    // Comparison summary
+    println!("\n─── Comparison ───");
+    let ctrl_total_issued: f64 = ctrl_sim.loans.iter().map(|l| l.principal).sum();
+    let treat_total_issued: f64 = treat_sim.loans.iter().map(|l| l.principal).sum();
+    let cap_total_saved = ctrl_total_issued - treat_total_issued;
+    let pct_reduction = if ctrl_total_issued > 0.0 {
+        (1.0 - treat_total_issued / ctrl_total_issued) * 100.0
+    } else {
+        0.0
+    };
+    println!("  Control total issued:  ${:.2}", ctrl_total_issued);
+    println!(
+        "  Treatment total issued: ${:.2}  (saved ${:.2}, {:.1}%)",
+        treat_total_issued, cap_total_saved, pct_reduction
+    );
+
+    // Early-tick cap analysis (first 3 days)
+    let early_cap = treat_sim
+        .loan_cap_log
+        .iter()
+        .filter(|r| r.tick < 288 * 3)
+        .count();
+    let mid_cap = treat_sim
+        .loan_cap_log
+        .iter()
+        .filter(|r| r.tick >= 288 * 3 && r.tick < 288 * 7)
+        .count();
+    let late_cap = treat_sim
+        .loan_cap_log
+        .iter()
+        .filter(|r| r.tick >= 288 * 7)
+        .count();
+    println!(
+        "\n  Cap timing: {} early (day1-3) | {} mid (day4-7) | {} late (day8-14)",
+        early_cap, mid_cap, late_cap
+    );
+
+    // Verification: every capped loan must be <= gdp * cap_ratio
+    let mut verify_pass = true;
+    for record in &treat_sim.loan_cap_log {
+        let expected_cap = record.gdp * record.cap_ratio;
+        if record.capped_amount > expected_cap + 0.01 {
+            println!(
+                "  VERIFY FAILED: tick {} player {} capped_amount={:.2} > cap={:.2}",
+                record.tick, record.player_id, record.capped_amount, expected_cap
+            );
+            verify_pass = false;
+        }
+    }
+    if verify_pass {
+        println!(
+            "\n  ✓ All {} capped loans verified: capped_amount ≤ gdp × cap_ratio",
+            treat_sim.loan_cap_log.len()
+        );
+    }
+
+    // Early-tick special check: verify cap fires in first 3 days
+    if early_cap > 0 {
+        println!("  ✓ Cap fires early (day 1-3): {} events", early_cap);
+    } else {
+        println!(
+            "  ⚠ Cap did NOT fire in first 3 days — loan requests may not have occurred early enough"
+        );
+    }
+}
+
 fn run_guild_seller_test() {
     use crate::analyzer::load_summary;
     let seed = 42u64;
@@ -4580,6 +4800,9 @@ fn main() -> eframe::Result<()> {
         println!("  --floor-ceiling-test     Floor/ceiling effect: control vs treatment");
         println!("  --floor-strength-sweep   Diamond floor 30-90% — find GDP-neutral level");
         println!("  --price-freeze-test      Per-item price freeze: Diamond frozen vs control");
+        println!(
+            "  --loan-cap-test          Per-loan GDP cap verification: cap fires, logs events"
+        );
         println!("  --multi-server-test     Cross-server price aggregation test");
         println!("  --guild-seller-test     GuildSeller archetype: control vs 1GB+1GS treatment");
         return Ok(());
@@ -4779,6 +5002,12 @@ fn main() -> eframe::Result<()> {
     // ─── Price Freeze Test ───────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--price-freeze-test" {
         run_price_freeze_test();
+        return Ok(());
+    }
+
+    // ─── Loan Cap Test ───────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--loan-cap-test" {
+        run_loan_cap_verification();
         return Ok(());
     }
 

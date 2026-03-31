@@ -9,6 +9,24 @@ use crate::recorder::{DataRecorder, LoanEventData, TickSnapshot};
 
 const MAX_TRANSACTIONS: usize = 50_000;
 
+/// Records when a loan request is capped by the per-loan GDP limit.
+#[derive(Clone, Debug)]
+pub struct LoanCapRecord {
+    pub tick: u64,
+    pub player_id: usize,
+    /// Loan amount the player requested (before cap).
+    pub raw_amount: f64,
+    /// Actual amount issued (after cap).
+    pub capped_amount: f64,
+    /// Economy GDP at time of loan request.
+    pub gdp: f64,
+    /// The cap ratio used (single_loan_gdp_cap config).
+    pub cap_ratio: f64,
+    /// What the cap was (gdp * cap_ratio).
+    #[allow(dead_code)]
+    pub cap_value: f64,
+}
+
 #[derive(Clone, Debug)]
 pub struct EconomySnapshot {
     pub tick: u64,
@@ -38,6 +56,8 @@ pub struct Simulation {
     /// When true, interest accrual is paused until debt/GDP drops below threshold.
     interest_circuit_open: bool,
     next_player_id: usize,
+    /// Log of all loans that were capped by the per-loan GDP cap.
+    pub loan_cap_log: Vec<LoanCapRecord>,
 }
 
 impl Simulation {
@@ -59,11 +79,10 @@ impl Simulation {
             events: Vec::new(),
             interest_circuit_open: false,
             next_player_id: 0,
+            loan_cap_log: Vec::new(),
         }
     }
 
-    /// Create a simulation with a seeded RNG for deterministic regression testing.
-    /// The seed is set thread-locally during construction so player setup is reproducible.
     /// Create a simulation with a seeded RNG for deterministic regression testing.
     /// The seed is set thread-locally and remains active for the entire simulation run
     /// to ensure fully deterministic behavior (including during simulation ticks).
@@ -402,7 +421,21 @@ impl Simulation {
                         .map(|tx| tx.total_price)
                         .sum();
                     if gdp > 0.0 {
-                        amount_raw.min(gdp * self.config.loans.single_loan_gdp_cap)
+                        let cap_value = gdp * self.config.loans.single_loan_gdp_cap;
+                        let capped = amount_raw.min(cap_value);
+                        // Record if the cap actually reduced the loan amount
+                        if capped < amount_raw - 0.01 {
+                            self.loan_cap_log.push(LoanCapRecord {
+                                tick: self.current_tick,
+                                player_id: player_idx,
+                                raw_amount: amount_raw,
+                                capped_amount: capped,
+                                gdp,
+                                cap_ratio: self.config.loans.single_loan_gdp_cap,
+                                cap_value,
+                            });
+                        }
+                        capped
                     } else {
                         amount_raw
                     }
@@ -632,5 +665,65 @@ impl Simulation {
         let days = (total_hours / 24.0).floor() as u64;
         let hours = (total_hours % 24.0).floor() as u64;
         format!("{days}d {hours}h")
+    }
+
+    /// Print a summary of all loan cap events recorded during the simulation.
+    pub fn print_loan_cap_summary(&self) {
+        if self.loan_cap_log.is_empty() {
+            println!("  No loans were capped by per-loan GDP limit.");
+            return;
+        }
+        println!(
+            "\n  {:>6} {:>8} {:>12} {:>12} {:>12} {:>10}  Note",
+            "Tick", "Player", "Raw($)", "Capped($)", "GDP($)", "CapRatio"
+        );
+        println!("  {}", "-".repeat(80));
+
+        let mut total_raw = 0.0;
+        let mut total_capped = 0.0;
+        for record in &self.loan_cap_log {
+            let cap_pct = (1.0 - record.capped_amount / record.raw_amount) * 100.0;
+            let note = if cap_pct > 50.0 {
+                "HEAVILY CAPPED"
+            } else if cap_pct > 20.0 {
+                "moderately capped"
+            } else {
+                ""
+            };
+            println!(
+                "  {:>6} {:>8} {:>12.2} {:>12.2} {:>12.2} {:>10.2}  {}",
+                record.tick,
+                record.player_id,
+                record.raw_amount,
+                record.capped_amount,
+                record.gdp,
+                record.cap_ratio,
+                note
+            );
+            total_raw += record.raw_amount;
+            total_capped += record.capped_amount;
+        }
+        println!("  {}", "-".repeat(80));
+        let total_cap_pct = (1.0 - total_capped / total_raw) * 100.0;
+        println!(
+            "  Total: {} capped loans | raw sum=${:.2} | capped sum=${:.2} | {:.1}% reduction",
+            self.loan_cap_log.len(),
+            total_raw,
+            total_capped,
+            total_cap_pct
+        );
+
+        // Show distribution by day
+        let mut by_day: std::collections::HashMap<u64, usize> = std::collections::HashMap::new();
+        for r in &self.loan_cap_log {
+            let day = r.tick / 288;
+            *by_day.entry(day).or_insert(0) += 1;
+        }
+        print!("  Caps by day: ");
+        let mut days: Vec<_> = by_day.keys().collect();
+        days.sort();
+        for day in days {
+            println!("day{}={}", day, by_day[day]);
+        }
     }
 }

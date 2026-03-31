@@ -921,6 +921,53 @@ impl Scenario {
             seed: None,
         }
     }
+
+    /// Price Freeze Test: freeze Diamond price discovery.
+    ///
+    /// Per-item freeze pauses price discovery while spreads still compute.
+    /// Key questions:
+    /// 1. Does freezing Diamond affect broader economy (since Diamond is a key trading item)?
+    /// 2. Does freeze reduce price volatility as intended?
+    /// 3. What happens to Diamond spread when price can't move?
+    pub fn price_freeze_test() -> Self {
+        let mut config = SimConfig::default();
+        // Freeze Diamond price discovery — spreads still compute, item remains tradeable
+        if let Some(diamond) = config.items.iter_mut().find(|ic| ic.name == "Diamond") {
+            diamond.price_frozen = true;
+        }
+
+        Self {
+            name: "Price Freeze Test".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
 }
 
 /// Compute Pearson correlation coefficient between two price-change series.
@@ -2646,6 +2693,283 @@ fn run_it_added_test() {
     let _ = std::fs::remove_dir_all(&treat_dir);
 }
 
+/// Per-item price freeze test: Diamond price discovery frozen vs control.
+///
+/// Freezing Diamond means:
+/// - Price stays at initial value ($500)
+/// - Spreads still compute (item remains fully tradeable)
+/// - Trend streak does not update
+///
+/// Key questions:
+/// 1. Does freezing Diamond affect broader economy metrics?
+/// 2. Does Diamond spread remain reasonable (not degenerate) when price can't move?
+/// 3. Do players substitute toward other items?
+fn run_price_freeze_test() {
+    use crate::analyzer::{load_all_prices, load_summary};
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       PER-ITEM PRICE FREEZE TEST                          ║");
+    println!("║  Diamond price discovery frozen — spreads still compute     ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guild_stability_mm_fixed_guild (no freeze)");
+    println!("  Treatment: same + Diamond price_frozen=true");
+    println!("  Seed: {}\n", seed);
+
+    let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let treat_scenario = Scenario::price_freeze_test();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-pf-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-pf-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl = ctrl_scenario.clone();
+    ctrl.seed = Some(seed);
+    let mut treat = treat_scenario.clone();
+    treat.seed = Some(seed);
+
+    println!("─── Control (no freeze) ───");
+    if let Err(e) = run_headless(&ctrl, Some(ctrl_dir.clone())) {
+        eprintln!("  Control error: {}", e);
+        return;
+    }
+
+    println!("\n─── Treatment (Diamond frozen) ───");
+    if let Err(e) = run_headless(&treat, Some(treat_dir.clone())) {
+        eprintln!("  Treatment error: {}", e);
+        return;
+    }
+
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Summary error: {}", e);
+            return;
+        }
+    };
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Summary error: {}", e);
+            return;
+        }
+    };
+
+    let ctrl_prices = match load_all_prices(&ctrl_dir.join("simulation.db")) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("  Control prices error: {}", e);
+            return;
+        }
+    };
+    let treat_prices = match load_all_prices(&treat_dir.join("simulation.db")) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("  Treatment prices error: {}", e);
+            return;
+        }
+    };
+
+    let ctrl_diamond = ctrl_prices
+        .iter()
+        .find(|(name, _, _)| name == "Diamond")
+        .map(|(_, p, _)| *p)
+        .unwrap_or(500.0);
+    let treat_diamond = treat_prices
+        .iter()
+        .find(|(name, _, _)| name == "Diamond")
+        .map(|(_, p, _)| *p)
+        .unwrap_or(500.0);
+
+    let ctrl_diamond_spread = ctrl_prices
+        .iter()
+        .find(|(name, _, _)| name == "Diamond")
+        .map(|(_, _, s)| *s)
+        .unwrap_or(0.0);
+    let treat_diamond_spread = treat_prices
+        .iter()
+        .find(|(name, _, _)| name == "Diamond")
+        .map(|(_, _, s)| *s)
+        .unwrap_or(0.0);
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  SUMMARY METRICS                                           ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Metric", "CONTROL", "TREATMENT", "Effect"
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "─".repeat(20),
+        "─".repeat(15),
+        "─".repeat(15),
+        "─".repeat(15)
+    );
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
+        "GDP",
+        ctrl_summary.gdp,
+        treat_summary.gdp,
+        (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
+        "Total Debt",
+        ctrl_summary.debt,
+        treat_summary.debt,
+        (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.2}x {:>15.2}x {:>+14.1}%",
+        "Debt / GDP",
+        ctrl_dg,
+        treat_dg,
+        (treat_dg / ctrl_dg.max(0.01) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.1}% {:>15.1}% {:>+14.1}%",
+        "Buy Ratio",
+        ctrl_summary.buy_ratio * 100.0,
+        treat_summary.buy_ratio * 100.0,
+        (treat_summary.buy_ratio - ctrl_summary.buy_ratio) / ctrl_summary.buy_ratio.max(0.01)
+            * 100.0
+    );
+    println!(
+        "  {:20} {:>15.4} {:>15.4} {:>+14.4}",
+        "Avg Volatility",
+        ctrl_summary.avg_volatility,
+        treat_summary.avg_volatility,
+        treat_summary.avg_volatility - ctrl_summary.avg_volatility
+    );
+    println!(
+        "  {:20} {:>15.3}% {:>15.3}% {:>+14.3}%",
+        "Avg BPD",
+        ctrl_summary.avg_bpd * 100.0,
+        treat_summary.avg_bpd * 100.0,
+        (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0
+    );
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  DIAMOND PRICE (14-day final state)                        ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Metric", "CONTROL", "TREATMENT", "Effect"
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "─".repeat(20),
+        "─".repeat(15),
+        "─".repeat(15),
+        "─".repeat(15)
+    );
+    let diamond_ctrl_move = (ctrl_diamond - 500.0) / 500.0 * 100.0;
+    let diamond_treat_move = (treat_diamond - 500.0) / 500.0 * 100.0;
+    println!(
+        "  {:20} {:>15.0} {:>15.0} {:>+14.1}%",
+        "Diamond Price",
+        ctrl_diamond,
+        treat_diamond,
+        ((treat_diamond / ctrl_diamond.max(1.0)) - 1.0) * 100.0
+    );
+    println!(
+        "  {:20} {:>15.1}% {:>15.1}% {:>+14.1}%",
+        "Price Move",
+        diamond_ctrl_move,
+        diamond_treat_move,
+        diamond_treat_move - diamond_ctrl_move
+    );
+    println!(
+        "  {:20} {:>15.2}% {:>15.2}% {:>+14.3}%",
+        "Diamond BPD",
+        ctrl_diamond_spread * 100.0,
+        treat_diamond_spread * 100.0,
+        (treat_diamond_spread - ctrl_diamond_spread) * 100.0
+    );
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  ANALYSIS                                                  ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    // Price freeze effectiveness
+    let freeze_locked = treat_diamond == 500.0 && diamond_treat_move.abs() < 0.1;
+    if freeze_locked {
+        println!(
+            "  ✅ Diamond price frozen at ${:.0} — price discovery paused correctly.",
+            treat_diamond
+        );
+    } else {
+        println!(
+            "  ⚠️  Diamond price moved {:+.1}% despite freeze (expected 0%)",
+            diamond_treat_move
+        );
+    }
+
+    // Economic impact
+    let gdp_eff = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    if gdp_eff.abs() < 2.0 {
+        println!(
+            "  ✅ GDP effect NEUTRAL ({:+.1}%) — freezing Diamond does not harm economy.",
+            gdp_eff
+        );
+    } else if gdp_eff < 0.0 {
+        println!(
+            "  ⚠️  GDP reduced by {:.1}% — Diamond freeze has economic cost.",
+            gdp_eff
+        );
+    } else {
+        println!("  ✅ GDP boosted by {:.1}% — freeze意外地helped.", gdp_eff);
+    }
+
+    // Spread quality
+    let bpd_diff = (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0;
+    if bpd_diff.abs() < 0.5 {
+        println!(
+            "  ✅ Spreads unchanged ({:+.3}%) — freeze does not degenerate spread quality.",
+            bpd_diff
+        );
+    } else {
+        println!(
+            "  ⚠️  Spreads changed by {:+.3}% — freeze may affect liquidity dynamics.",
+            bpd_diff
+        );
+    }
+
+    // Volatility
+    let vol_diff = treat_summary.avg_volatility - ctrl_summary.avg_volatility;
+    if vol_diff.abs() < 0.01 {
+        println!(
+            "  ✅ Volatility unchanged ({:+.4}) — freeze does not destabilize.",
+            vol_diff
+        );
+    } else if vol_diff < 0.0 {
+        println!(
+            "  ✅ Volatility reduced ({:+.4}) — freeze stabilizes economy.",
+            vol_diff
+        );
+    } else {
+        println!(
+            "  ⚠️  Volatility increased ({:+.4}) — freeze may create substitution effects.",
+            vol_diff
+        );
+    }
+
+    println!("\n  Key insight: Per-item freeze allows admins to protect high-value item prices");
+    println!("  during events without freezing the entire economy. Spreads still compute,");
+    println!("  players can still trade, and the frozen price acts as a manual equilibrium.");
+    println!("  This is a manual substitute for what InsiderTraders do automatically.");
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
 fn run_guild_seller_test() {
     use crate::analyzer::load_summary;
     let seed = 42u64;
@@ -4255,6 +4579,7 @@ fn main() -> eframe::Result<()> {
         println!("  --all                   Run all scenarios headlessly");
         println!("  --floor-ceiling-test     Floor/ceiling effect: control vs treatment");
         println!("  --floor-strength-sweep   Diamond floor 30-90% — find GDP-neutral level");
+        println!("  --price-freeze-test      Per-item price freeze: Diamond frozen vs control");
         println!("  --multi-server-test     Cross-server price aggregation test");
         println!("  --guild-seller-test     GuildSeller archetype: control vs 1GB+1GS treatment");
         return Ok(());
@@ -4448,6 +4773,12 @@ fn main() -> eframe::Result<()> {
     // ─── GuildSeller Test ───────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--guild-seller-test" {
         run_guild_seller_test();
+        return Ok(());
+    }
+
+    // ─── Price Freeze Test ───────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--price-freeze-test" {
+        run_price_freeze_test();
         return Ok(());
     }
 

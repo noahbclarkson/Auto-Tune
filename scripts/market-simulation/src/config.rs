@@ -88,6 +88,10 @@ pub struct ItemConfig {
     /// If set, price cannot exceed this value.
     #[serde(default)]
     pub price_ceiling_override: Option<f64>,
+    /// Per-item price freeze: if true, price discovery is paused for this item.
+    /// Spreads still compute normally. Mirrors Java ShopItem.priceFrozen.
+    #[serde(default)]
+    pub price_frozen: bool,
 }
 
 impl Default for SimConfig {
@@ -173,6 +177,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             base_spread_override: None,
             price_floor_override: None,
             price_ceiling_override: None,
+            price_frozen: false,
         },
         ItemConfig {
             name: "Rotten Flesh".into(),
@@ -182,6 +187,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             base_spread_override: None,
             price_floor_override: None,
             price_ceiling_override: None,
+            price_frozen: false,
         },
         ItemConfig {
             name: "Redstone".into(),
@@ -191,6 +197,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             base_spread_override: None,
             price_floor_override: None,
             price_ceiling_override: None,
+            price_frozen: false,
         },
         ItemConfig {
             name: "Iron Ingot".into(),
@@ -200,6 +207,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             base_spread_override: None,
             price_floor_override: None,
             price_ceiling_override: None,
+            price_frozen: false,
         },
         ItemConfig {
             name: "Blaze Rod".into(),
@@ -209,6 +217,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             base_spread_override: None,
             price_floor_override: None,
             price_ceiling_override: None,
+            price_frozen: false,
         },
         ItemConfig {
             name: "Diamond".into(),
@@ -218,6 +227,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             base_spread_override: None,
             price_floor_override: None,
             price_ceiling_override: None,
+            price_frozen: false,
         },
         ItemConfig {
             name: "Golden Apple".into(),
@@ -227,6 +237,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             base_spread_override: None,
             price_floor_override: None,
             price_ceiling_override: None,
+            price_frozen: false,
         },
         ItemConfig {
             name: "Netherite Ingot".into(),
@@ -236,6 +247,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             base_spread_override: None,
             price_floor_override: None,
             price_ceiling_override: None,
+            price_frozen: false,
         },
     ]
 }

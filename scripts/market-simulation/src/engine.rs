@@ -77,6 +77,9 @@ pub struct ItemState {
     pub price_floor_override: Option<f64>,
     /// Per-item ceiling: maximum displayed price (player affordability cap).
     pub price_ceiling_override: Option<f64>,
+    /// Per-item price freeze: if true, price discovery is paused.
+    /// Spreads still compute. Mirrors Java ShopItem.priceFrozen.
+    pub price_frozen: bool,
 }
 
 impl ItemState {
@@ -112,6 +115,7 @@ pub struct MarketEngine {
     pub effective_window_ticks: u64,
 }
 
+#[allow(dead_code)]
 impl MarketEngine {
     pub fn new(config: &SimConfig) -> Self {
         let items = config
@@ -139,6 +143,7 @@ impl MarketEngine {
                 tick_sell_volume: 0,
                 price_floor_override: ic.price_floor_override,
                 price_ceiling_override: ic.price_ceiling_override,
+                price_frozen: ic.price_frozen,
             })
             .collect();
 
@@ -193,14 +198,21 @@ impl MarketEngine {
                 config.economy.player_rate_limit_multiplier,
             );
 
-            let price = self.calculate_new_price(
-                item_idx,
-                &self.items[item_idx].name,
-                &metrics,
-                online_count,
-                config,
-                active_events,
-            );
+            // When frozen: keep current price (price discovery paused).
+            // Spreads still compute so item remains fully tradeable.
+            // Mirrors Java: if (frozen || item.priceFrozen()) { newPrices.put(id, item.price()); }
+            let price = if self.items[item_idx].price_frozen {
+                self.items[item_idx].price
+            } else {
+                self.calculate_new_price(
+                    item_idx,
+                    &self.items[item_idx].name,
+                    &metrics,
+                    online_count,
+                    config,
+                    active_events,
+                )
+            };
             let spread =
                 self.calculate_spread(item_idx, &metrics, online_count, global_vol_mult, config);
 
@@ -241,58 +253,69 @@ impl MarketEngine {
         }
 
         for item_idx in 0..self.items.len() {
+            let frozen = self.items[item_idx].price_frozen;
             let new_price = new_prices[item_idx].max(0.01);
             let new_price = round2(new_price);
             let spread = &new_spreads[item_idx];
 
-            self.items[item_idx].price = new_price;
             self.items[item_idx].spread = spread.clone();
 
-            let buy_price = self.items[item_idx].buy_price();
-            let sell_price = self.items[item_idx].sell_price();
+            // Price and history update: skip for frozen items (price didn't change).
+            // Mirrors Java: if (!frozen && !item.priceFrozen()) { ... update DB ... }
+            if !frozen {
+                self.items[item_idx].price = new_price;
 
-            self.items[item_idx].price_history.push(new_price);
-            self.items[item_idx].buy_price_history.push(buy_price);
-            self.items[item_idx].sell_price_history.push(sell_price);
-            self.items[item_idx].bpd_history.push(spread.bpd);
-            self.items[item_idx].spd_history.push(spread.spd);
+                let buy_price = self.items[item_idx].buy_price();
+                let sell_price = self.items[item_idx].sell_price();
+
+                self.items[item_idx].price_history.push(new_price);
+                self.items[item_idx].buy_price_history.push(buy_price);
+                self.items[item_idx].sell_price_history.push(sell_price);
+                self.items[item_idx].bpd_history.push(spread.bpd);
+                self.items[item_idx].spd_history.push(spread.spd);
+            }
+
             let bv = self.items[item_idx].tick_buy_volume;
             let sv = self.items[item_idx].tick_sell_volume;
             self.items[item_idx].buy_volume_history.push(bv);
             self.items[item_idx].sell_volume_history.push(sv);
 
-            let old_price = old_prices[item_idx];
-            let threshold = config.economy.trend_streak_threshold_percent / 100.0;
-            let tick_dir = if old_price > 0.0 {
-                let pct = (new_price - old_price) / old_price;
-                if pct > threshold {
-                    PriceTrendDirection::Up
-                } else if pct < -threshold {
-                    PriceTrendDirection::Down
+            // When frozen: skip trend streak updates (price didn't change).
+            // Mirrors Java: if (!frozen && !item.priceFrozen()) { updateTrendStreak(...) }
+            if !frozen {
+                let old_price = old_prices[item_idx];
+                let threshold = config.economy.trend_streak_threshold_percent / 100.0;
+                let tick_dir = if old_price > 0.0 {
+                    let pct = (new_price - old_price) / old_price;
+                    if pct > threshold {
+                        PriceTrendDirection::Up
+                    } else if pct < -threshold {
+                        PriceTrendDirection::Down
+                    } else {
+                        PriceTrendDirection::Stable
+                    }
                 } else {
                     PriceTrendDirection::Stable
+                };
+
+                let prev_dir = self.items[item_idx].trend_direction;
+                if tick_dir == prev_dir && tick_dir != PriceTrendDirection::Stable {
+                    self.items[item_idx].trend_streak += 1;
+                } else if tick_dir != PriceTrendDirection::Stable && tick_dir != prev_dir {
+                    self.items[item_idx].trend_streak = 1;
+                } else {
+                    self.items[item_idx].trend_streak = 0;
                 }
-            } else {
-                PriceTrendDirection::Stable
-            };
 
-            let prev_dir = self.items[item_idx].trend_direction;
-            if tick_dir == prev_dir && tick_dir != PriceTrendDirection::Stable {
-                self.items[item_idx].trend_streak += 1;
-            } else if tick_dir != PriceTrendDirection::Stable && tick_dir != prev_dir {
-                self.items[item_idx].trend_streak = 1;
-            } else {
-                self.items[item_idx].trend_streak = 0;
+                if tick_dir != PriceTrendDirection::Stable {
+                    self.items[item_idx].trend_direction = tick_dir;
+                } else {
+                    self.items[item_idx].trend_direction = PriceTrendDirection::Stable;
+                }
+
+                let display_trend = self.calculate_price_trend(item_idx);
+                self.items[item_idx].trend = display_trend;
             }
-
-            if tick_dir != PriceTrendDirection::Stable {
-                self.items[item_idx].trend_direction = tick_dir;
-            } else {
-                self.items[item_idx].trend_direction = PriceTrendDirection::Stable;
-            }
-
-            let display_trend = self.calculate_price_trend(item_idx);
-            self.items[item_idx].trend = display_trend;
 
             self.items[item_idx].tick_buy_volume = 0;
             self.items[item_idx].tick_sell_volume = 0;
@@ -331,6 +354,28 @@ impl MarketEngine {
     pub fn record_sell(&mut self, item_index: usize, amount: i32) {
         if let Some(item) = self.items.get_mut(item_index) {
             item.tick_sell_volume += amount;
+        }
+    }
+
+    /// Freeze price discovery for an item. Mirrors Java AdminCommand.freezeItem().
+    /// When frozen, spreads still compute but price does not update.
+    pub fn freeze_item(&mut self, item_name: &str) -> bool {
+        if let Some(item) = self.items.iter_mut().find(|i| i.name == item_name) {
+            item.price_frozen = true;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Unfreeze price discovery for an item. Mirrors Java AdminCommand.unfreezeItem().
+    #[allow(dead_code)]
+    pub fn unfreeze_item(&mut self, item_name: &str) -> bool {
+        if let Some(item) = self.items.iter_mut().find(|i| i.name == item_name) {
+            item.price_frozen = false;
+            true
+        } else {
+            false
         }
     }
 

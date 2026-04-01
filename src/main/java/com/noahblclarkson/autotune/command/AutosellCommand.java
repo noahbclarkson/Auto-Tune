@@ -15,6 +15,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.incendo.cloud.annotations.Argument;
 import org.incendo.cloud.annotations.Command;
+import org.incendo.cloud.annotations.Default;
 import org.incendo.cloud.annotations.Permission;
 
 import java.math.BigDecimal;
@@ -23,6 +24,9 @@ import java.util.Optional;
 
 @Singleton
 public class AutosellCommand {
+
+    private static final String PERM_AUTOSELL = "autotune.autosell";
+    private static final String MSG_PLAYER_ONLY = "general.player-only";
 
     private final AutoTune plugin;
     private final ConfigManager configManager;
@@ -39,27 +43,27 @@ public class AutosellCommand {
     }
 
     @Command("autosell")
-    @Permission("autotune.autosell")
+    @Permission(PERM_AUTOSELL)
     public void openAutosellGui(CommandSender sender) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(configManager.getMessage("general.player-only"));
+            sender.sendMessage(configManager.getMessage(MSG_PLAYER_ONLY));
             return;
         }
         new AutosellGui(plugin, player).open();
     }
 
     @Command("autosell sell")
-    @Permission("autotune.autosell")
+    @Permission(PERM_AUTOSELL)
     public void sellInventory(CommandSender sender) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(configManager.getMessage("general.player-only"));
+            sender.sendMessage(configManager.getMessage(MSG_PLAYER_ONLY));
             return;
         }
         autosellManager.sellInventory(player);
     }
 
     @Command("autosell minprice")
-    @Permission("autotune.autosell")
+    @Permission(PERM_AUTOSELL)
     public void minpriceHelp(CommandSender sender) {
         sender.sendMessage(Component.empty());
         sender.sendMessage(Component.text("Autosell Min Price", NamedTextColor.GOLD, TextDecoration.BOLD)
@@ -80,12 +84,12 @@ public class AutosellCommand {
     }
 
     @Command("autosell minprice <material> [price]")
-    @Permission("autotune.autosell")
+    @Permission(PERM_AUTOSELL)
     public void minpriceCommand(CommandSender sender,
                                @Argument("material") String materialName,
-                               @Argument("price") Optional<Double> priceArg) {
+                               @Argument("price") @Default("") String priceStr) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(configManager.getMessage("general.player-only"));
+            sender.sendMessage(configManager.getMessage(MSG_PLAYER_ONLY));
             return;
         }
 
@@ -101,13 +105,18 @@ public class AutosellCommand {
             return;
         }
 
-        if (priceArg.isPresent()) {
-            double price = priceArg.get();
-            if (price < 0) {
-                sender.sendMessage(configManager.getMessage("autosell.minprice-invalid"));
+        if (!priceStr.isBlank()) {
+            try {
+                double price = Double.parseDouble(priceStr);
+                if (price < 0) {
+                    sender.sendMessage(configManager.getMessage("autosell.minprice-invalid"));
+                    return;
+                }
+                autosellManager.setMinPrice(player, shopItem.get().id(), price);
+            } catch (NumberFormatException e) {
+                sender.sendMessage(Component.text("Invalid price: " + priceStr, NamedTextColor.RED));
                 return;
             }
-            autosellManager.setMinPrice(player, shopItem.get().id(), price);
         } else {
             // No price given — show current minimum
             Optional<BigDecimal> perItemMin = autosellManager.getMinPrice(player.getUniqueId(), shopItem.get().id());
@@ -127,11 +136,11 @@ public class AutosellCommand {
     }
 
     @Command("autosell minprice remove <material>")
-    @Permission("autotune.autosell")
+    @Permission(PERM_AUTOSELL)
     public void minpriceRemove(CommandSender sender,
                                @Argument("material") String materialName) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(configManager.getMessage("general.player-only"));
+            sender.sendMessage(configManager.getMessage(MSG_PLAYER_ONLY));
             return;
         }
 

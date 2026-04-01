@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { api, type Stats, type PortfolioDto, type HoldingDto, type ActiveLoanDto } from '@/lib/api';
+import { api, type Stats, type PortfolioDto, type HoldingDto } from '@/lib/api';
 import { formatCurrency, formatLargeCurrency, formatPercent } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 

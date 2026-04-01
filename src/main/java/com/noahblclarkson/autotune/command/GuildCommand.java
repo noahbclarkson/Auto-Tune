@@ -14,6 +14,7 @@ import org.incendo.cloud.annotations.Command;
 import org.incendo.cloud.annotations.Permission;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Singleton
@@ -59,7 +60,7 @@ public class GuildCommand {
     @Command("guild stats <guildName>")
     @Permission("autotune.guild")
     public void guildStats(CommandSender sender, @Argument("guildName") String guildName) {
-        String tag = guildName.toLowerCase().trim();
+        String tag = guildName.toLowerCase(Locale.ROOT).trim();
         GuildService.GuildStats stats = guildService.getGuildStats(tag);
 
         if (stats.memberCount() == 0) {

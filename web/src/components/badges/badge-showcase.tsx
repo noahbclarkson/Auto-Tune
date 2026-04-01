@@ -1,6 +1,6 @@
 'use client';
 
-import { Award, TrendingUp, Clock, Star, ShoppingCart, BookOpen, Gem, Package, BarChart3, Users, ShieldCheck } from 'lucide-react';
+import { Award, Star } from 'lucide-react';
 
 interface BadgeDefinition {
   name: string;
@@ -126,12 +126,6 @@ const RARITY_CONFIG = {
   epic: { label: 'Epic', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30', icon: null },
   legendary: { label: 'Legendary', color: 'text-orange-500 dark:text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', icon: null },
 };
-
-function formatThreshold(threshold: number): string {
-  if (threshold >= 1_000_000) return `${(threshold / 1_000_000).toFixed(0)}M`;
-  if (threshold >= 1_000) return `${(threshold / 1_000).toFixed(0)}K`;
-  return threshold.toString();
-}
 
 function BadgeCard({ badge }: { badge: BadgeDefinition }) {
   const rarity = RARITY_CONFIG[badge.rarity];

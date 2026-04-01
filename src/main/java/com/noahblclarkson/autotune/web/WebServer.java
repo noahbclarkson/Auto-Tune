@@ -128,6 +128,12 @@ public class WebServer {
         app = Javalin.create(javalinConfig -> {
             javalinConfig.showJavalinBanner = false;
 
+            // Browser requests with many cookies/headers can exceed Jetty's 8 KB default.
+            javalinConfig.jetty.modifyHttpConfiguration(httpConfig -> {
+                httpConfig.setRequestHeaderSize(16384);
+                httpConfig.setResponseHeaderSize(16384);
+            });
+
             javalinConfig.jsonMapper(new JsonMapper() {
                 @NotNull
                 @Override
@@ -774,6 +780,8 @@ public class WebServer {
     private void registerWebSocket() {
         app.ws("/ws/market", ws -> {
             ws.onConnect(ctx -> {
+                // Keep connections alive for 10 minutes of inactivity (dashboard polls every 30 s).
+                ctx.session.setIdleTimeout(Duration.ofMinutes(10));
                 wsClients.add(ctx);
                 ctx.send(gson.toJson(Map.of("type", "connected", "message", "Connected to market feed")));
             });
@@ -959,7 +967,7 @@ public class WebServer {
         try {
             currentPrice = marketEngine.getCurrentPrice(alert.itemId()).doubleValue();
         } catch (Exception e) {
-            // Defensive: item may not have a price yet — leave currentPrice at 0
+            plugin.getLogger().fine("Price not yet available for alert item " + alert.itemId() + ": " + e.getMessage());
         }
         return new AlertDto(
                 alert.id(),

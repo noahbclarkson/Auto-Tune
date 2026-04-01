@@ -12,7 +12,6 @@ import {
   Shield,
   TrendingUp,
   TrendingDown,
-  Minus,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -162,18 +161,6 @@ export default function AdminPage() {
     : health.debtGdpRatio < 3 ? 'text-emerald-400'
     : health.debtGdpRatio < 10 ? 'text-amber-400'
     : 'text-red-400';
-
-  const buyRatioColor = health.buyPct >= 45 && health.buyPct <= 55 ? 'text-emerald-400'
-    : health.buyPct >= 40 && health.buyPct <= 60 ? 'text-amber-400'
-    : 'text-red-400';
-
-  const spreadColor = health.avgBpd < 5 ? 'text-emerald-400'
-    : health.avgBpd < 10 ? 'text-amber-400'
-    : 'text-red-400';
-
-  const volColor = health.globalVolumeMultiplier > 1.5 ? 'text-amber-400'
-    : health.globalVolumeMultiplier < 0.5 ? 'text-red-400'
-    : 'text-emerald-400';
 
   return (
     <div className="min-h-screen bg-background">

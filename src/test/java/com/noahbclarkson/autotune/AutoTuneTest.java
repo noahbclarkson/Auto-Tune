@@ -7,6 +7,6 @@ public class AutoTuneTest {
 
     @Test
     public void testBasic() {
-        assertTrue(true, "Basic test should pass");
+        assertEquals(2, 1 + 1);
     }
 }

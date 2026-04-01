@@ -72,39 +72,41 @@ public class FakeEconomy extends AbstractEconomy {
         return new EconomyResponse(amount, amount, ResponseType.SUCCESS, null);
     }
 
+    private static final String BANKS_NOT_SUPPORTED = "Banks not supported";
+
     // --- Bank methods ---
     @Override public EconomyResponse createBank(String name, String player) {
-        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, "Banks not supported");
+        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, BANKS_NOT_SUPPORTED);
     }
     @Override public EconomyResponse createBank(String name, OfflinePlayer player) {
-        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, "Banks not supported");
+        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, BANKS_NOT_SUPPORTED);
     }
     @Override public EconomyResponse deleteBank(String name) {
-        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, "Banks not supported");
+        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, BANKS_NOT_SUPPORTED);
     }
     @Override public EconomyResponse bankBalance(String name) {
-        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, "Banks not supported");
+        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, BANKS_NOT_SUPPORTED);
     }
     @Override public EconomyResponse bankHas(String name, double amount) {
-        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, "Banks not supported");
+        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, BANKS_NOT_SUPPORTED);
     }
     @Override public EconomyResponse bankWithdraw(String name, double amount) {
-        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, "Banks not supported");
+        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, BANKS_NOT_SUPPORTED);
     }
     @Override public EconomyResponse bankDeposit(String name, double amount) {
-        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, "Banks not supported");
+        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, BANKS_NOT_SUPPORTED);
     }
     @Override public EconomyResponse isBankOwner(String name, String player) {
-        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, "Banks not supported");
+        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, BANKS_NOT_SUPPORTED);
     }
     @Override public EconomyResponse isBankOwner(String name, OfflinePlayer player) {
-        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, "Banks not supported");
+        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, BANKS_NOT_SUPPORTED);
     }
     @Override public EconomyResponse isBankMember(String name, String player) {
-        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, "Banks not supported");
+        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, BANKS_NOT_SUPPORTED);
     }
     @Override public EconomyResponse isBankMember(String name, OfflinePlayer player) {
-        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, "Banks not supported");
+        return new EconomyResponse(0, 0, ResponseType.NOT_IMPLEMENTED, BANKS_NOT_SUPPORTED);
     }
     @Override public List<String> getBanks() { return List.of(); }
 

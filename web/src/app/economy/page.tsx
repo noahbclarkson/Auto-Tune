@@ -65,12 +65,6 @@ function healthColor(score: number): string {
   return 'text-red-500';
 }
 
-function healthBg(score: number): string {
-  if (score >= 75) return 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400';
-  if (score >= 45) return 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400';
-  return 'bg-red-500/10 border-red-500/30 text-red-500';
-}
-
 export default function EconomyPage() {
   const { apiBase } = useAppContext();
   const [stats, setStats] = useState<Stats | null>(null);
@@ -112,10 +106,7 @@ export default function EconomyPage() {
   }, [fetchData]);
 
   const debtToGdp = gdp && debt && gdp.gdp > 0 ? debt.totalDebt / gdp.gdp : null;
-  const gdpHealth = gdp?.gdp !== null && gdp?.gdp !== undefined && gdp.gdp > 0;
-  const debtHealthy = debtToGdp !== null && debtToGdp < 1.0;
   const inflationVal = inflation?.averagePriceChange ?? null;
-  const inflationHealthy = inflationVal !== null && Math.abs(inflationVal) < 2.0;
   const onlinePlayers = stats?.onlinePlayers ?? 0;
 
   // Composite health score from admin health endpoint

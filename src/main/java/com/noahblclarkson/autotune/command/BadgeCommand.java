@@ -16,6 +16,8 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+
+import java.util.Locale;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -24,6 +26,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.incendo.cloud.annotations.Argument;
 import org.incendo.cloud.annotations.Command;
+import org.incendo.cloud.annotations.Default;
 import org.incendo.cloud.annotations.suggestion.Suggestions;
 import org.incendo.cloud.context.CommandContext;
 
@@ -160,18 +163,24 @@ public class BadgeCommand implements Listener {
     public List<String> badgesTargetSuggestion(CommandContext<?> ctx, String input) {
         return Bukkit.getOnlinePlayers().stream()
                 .map(Player::getName)
-                .filter(name -> name.toLowerCase().startsWith(input.toLowerCase()))
+                .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(input.toLowerCase(Locale.ROOT)))
                 .toList();
     }
 
-    @Command("badges open {player}")
-    public void openBadgesGuiOther(Player sender, @Argument("player") String playerName) {
-        Player target = Bukkit.getPlayer(playerName);
-        if (target == null) {
-            sender.sendMessage(Component.text("Player not found: " + playerName, NamedTextColor.RED));
-            return;
+    @Command("badges open [player]")
+    public void openBadgesGuiOther(Player sender, @Argument("player") @Default("") String playerName) {
+        UUID targetUuid;
+        if (playerName.isBlank()) {
+            targetUuid = sender.getUniqueId();
+        } else {
+            Player target = Bukkit.getPlayer(playerName);
+            if (target == null) {
+                sender.sendMessage(Component.text("Player not found: " + playerName, NamedTextColor.RED));
+                return;
+            }
+            targetUuid = target.getUniqueId();
         }
-        openGui(target.getUniqueId(), sender);
+        openGui(targetUuid, sender);
     }
 
     private void openGui(UUID playerUuid, Player opener) {

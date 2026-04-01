@@ -13,12 +13,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.AnvilInventory;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -81,11 +83,10 @@ public class AnvilMinPriceGui implements Listener {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         OPEN_GUIS.put(player.getUniqueId(), this);
 
-        // Build an anvil inventory with the shop item pre-slit in the left slot.
-        // The player's price input goes into the anvil text field.
+        // Bukkit.createInventory with ANVIL returns CraftInventoryCustom, not AnvilInventory.
+        // Use the Inventory interface — PrepareAnvilEvent still fires from its own inventory.
         String title = "Min Price — " + shopItem.getDisplayNameOrMaterial();
-        AnvilInventory anvil = (AnvilInventory) Bukkit.createInventory(
-                null, InventoryType.ANVIL, Component.text(title));
+        Inventory anvil = Bukkit.createInventory(null, InventoryType.ANVIL, Component.text(title));
 
         // Pre-fill left slot with a hint item showing the current effective price
         ItemStack hintItem = buildHintItem();
@@ -191,9 +192,9 @@ public class AnvilMinPriceGui implements Listener {
     private void cleanup() {
         OPEN_GUIS.remove(player.getUniqueId());
         PLAYER_RENAME_TEXT.remove(player.getUniqueId());
-        InventoryClickEvent.getHandlerList().unregister(plugin);
-        InventoryCloseEvent.getHandlerList().unregister(plugin);
-        PrepareAnvilEvent.getHandlerList().unregister(plugin);
+        // Unregister only this listener instance, not all plugin listeners.
+        // Calling getHandlerList().unregister(plugin) would destroy InventoryFramework's GuiListener.
+        HandlerList.unregisterAll(this);
     }
 
     /**

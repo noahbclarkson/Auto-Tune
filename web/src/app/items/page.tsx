@@ -8,7 +8,7 @@ import { ItemGrid } from '@/components/dashboard/item-grid';
 import { Card, CardContent } from '@/components/ui/card';
 import { ApiErrorBanner } from '@/components/ui/api-error-banner';
 import { api, type ItemDto, type Stats, type TrendDto } from '@/lib/api';
-import { formatPercent, formatCurrency } from '@/lib/format';
+import { formatPercent } from '@/lib/format';
 import { LayoutGrid, List, TrendingUp, TrendingDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 function ItemsStatsBar({ items }: { items: ItemDto[] }) {

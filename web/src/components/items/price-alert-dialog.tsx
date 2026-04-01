@@ -46,7 +46,7 @@ export function PriceAlertDialog({ item, open, onClose, playerName }: PriceAlert
       const list = await api.alerts.list(apiBase, playerName);
       // Filter to this item's alerts only
       setAlerts(list.filter(a => a.itemId === item.id));
-    } catch (e) {
+    } catch {
       setAlertsError('Failed to load alerts');
     } finally {
       setAlertsLoading(false);

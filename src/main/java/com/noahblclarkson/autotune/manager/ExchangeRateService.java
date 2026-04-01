@@ -52,7 +52,7 @@ public class ExchangeRateService {
     private volatile Instant lastFetchedAtInstant;
 
     /** Whether the last fetch encountered an error. */
-    private volatile boolean lastFetchFailed;
+    private volatile boolean fetchFailed;
 
     @Inject
     public ExchangeRateService(AutoTune plugin, ConfigManager configManager) {
@@ -112,7 +112,7 @@ public class ExchangeRateService {
 
     /** Whether the last fetch attempt encountered an error. */
     public boolean lastFetchFailed() {
-        return lastFetchFailed;
+        return fetchFailed;
     }
 
     // -------------------------------------------------------------------------
@@ -146,12 +146,12 @@ public class ExchangeRateService {
                     } else {
                         plugin.getLogger().warning("Exchange rate fetch failed: HTTP "
                                 + response.statusCode() + " — " + response.body());
-                        lastFetchFailed = true;
+                        fetchFailed = true;
                     }
                 })
                 .exceptionally(error -> {
                     plugin.getLogger().warning("Exchange rate fetch failed: " + error.getMessage());
-                    lastFetchFailed = true;
+                    fetchFailed = true;
                     return null;
                 });
     }
@@ -181,13 +181,13 @@ public class ExchangeRateService {
             cache.clear();
             cache.putAll(newCache);
             lastFetchedAtInstant = Instant.now();
-            lastFetchFailed = false;
+            fetchFailed = false;
 
             plugin.getLogger().fine("Exchange rates refreshed: " + newCache.size()
                     + " server(s), fetched at " + lastFetchedAtInstant);
         } catch (Exception e) {
             plugin.getLogger().warning("Failed to parse exchange rate response: " + e.getMessage());
-            lastFetchFailed = true;
+            fetchFailed = true;
         }
     }
 

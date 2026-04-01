@@ -20,6 +20,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -130,7 +131,7 @@ public class EventCommand {
         // Parse event type
         EventType type;
         try {
-            type = EventType.valueOf(typeStr.toUpperCase());
+            type = EventType.valueOf(typeStr.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             sender.sendMessage(Component.text("Unknown event type: " + typeStr, NamedTextColor.RED)
                     .append(Component.text(". Valid types: ", NamedTextColor.GRAY))
@@ -254,7 +255,7 @@ public class EventCommand {
     private Component formatEventTypes() {
         return Component.text(
                 Arrays.stream(EventType.values())
-                        .map(t -> t.name().toLowerCase().replace("_", " "))
+                        .map(t -> t.name().toLowerCase(Locale.ROOT).replace("_", " "))
                         .collect(Collectors.joining(", ")),
                 NamedTextColor.AQUA
         );
@@ -271,7 +272,7 @@ public class EventCommand {
                 .append(Component.text(statusLabel(event.status()), statusColor))
                 .append(Component.text("] ", NamedTextColor.DARK_GRAY))
                 .append(Component.text(event.name(), NamedTextColor.WHITE))
-                .append(Component.text(" (" + event.type().name().toLowerCase().replace("_", " ") + ")", NamedTextColor.GRAY))
+                .append(Component.text(" (" + event.type().name().toLowerCase(Locale.ROOT).replace("_", " ") + ")", NamedTextColor.GRAY))
                 .append(Component.text(" " + event.priceMultiplier() + "x", NamedTextColor.YELLOW))
                 .append(Component.text("  id:", NamedTextColor.DARK_GRAY))
                 .append(idComponent);

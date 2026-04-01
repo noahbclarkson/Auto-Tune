@@ -258,6 +258,10 @@ pub struct PlayerAgent {
     /// Per-item rolling price history. Updated after each engine tick.
     /// Used by InsiderTrader to compute moving average for mean-reversion.
     pub insider_price_history: HashMap<usize, VecDeque<f64>>,
+    /// How aggressively InsiderTrader widens its threshold during volatile markets.
+    /// 0.0 = disabled (fixed threshold). Higher values = more adaptation.
+    /// Range: 0.5..2.0 set at construction.
+    pub insider_volatility_sensitivity: f64,
     /// Rolling spread history window size (in ticks) for VolumeTrader.
     /// How many past spread observations to track per item.
     pub volume_spread_window: usize,
@@ -313,6 +317,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -358,6 +363,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -407,6 +413,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -452,6 +459,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -497,6 +505,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -549,6 +558,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -602,6 +612,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -662,6 +673,7 @@ impl PlayerAgent {
             mm_target_inventory: 0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             volume_spread_window: 0,
             volume_spread_history: HashMap::new(),
             volume_price_window: 0,
@@ -726,6 +738,7 @@ impl PlayerAgent {
             mm_target_inventory: 0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             volume_spread_window: 0,
             volume_spread_history: HashMap::new(),
             volume_price_window: 0,
@@ -783,6 +796,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             // MarketMaker-specific
             mm_max_inventory: max_inv,
             mm_target_inventory: target_inv,
@@ -810,6 +824,9 @@ impl PlayerAgent {
         let threshold = rng.random(0.08..0.20);
         // History window: number of ticks to average. ~20 ticks = ~4 hours of price history.
         let history_window = rng.random(15..35);
+        // Volatility sensitivity: how much to widen threshold during volatile markets.
+        // Higher = more adaptation (tighter threshold in calm markets, wider in volatile ones).
+        let volatility_sensitivity = rng.random(0.5..2.0);
 
         let mut agent = Self {
             id: index,
@@ -842,6 +859,7 @@ impl PlayerAgent {
             // InsiderTrader-specific
             insider_history_window: history_window,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: volatility_sensitivity,
             // VolumeTrader-specific (zeroed for InsiderTrader)
             volume_spread_window: 0,
             volume_spread_history: HashMap::new(),
@@ -907,6 +925,7 @@ impl PlayerAgent {
             mm_target_inventory: 0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             // VolumeTrader-specific
             volume_spread_window: spread_window.max(3),
             volume_spread_history: HashMap::new(),
@@ -1839,7 +1858,6 @@ impl PlayerAgent {
         slippage_coeff: f64,
     ) {
         let mut rng = SeededRng;
-        let threshold = self.buy_threshold; // symmetric buy/sell threshold
 
         for (i, item) in items.iter().enumerate() {
             // Update price history: record current price BEFORE making decisions.
@@ -1867,6 +1885,37 @@ impl PlayerAgent {
                 continue;
             }
 
+            // ── Adaptive threshold: widen threshold during volatile markets ──
+            // Compute rolling volatility from the engine's price history (last N prices
+            // matching the insider's history window). Volatility = coefficient of variation.
+            let vol_window = self.insider_history_window.min(item.price_history.len());
+            let vol_data: &[f64] =
+                &item.price_history[item.price_history.len().saturating_sub(vol_window)..];
+            let vol_mean: f64 = vol_data.iter().sum::<f64>() / vol_data.len() as f64;
+            let vol_std = if vol_data.len() > 1 {
+                let variance = vol_data
+                    .iter()
+                    .map(|&p| {
+                        let d = p - vol_mean;
+                        d * d
+                    })
+                    .sum::<f64>()
+                    / vol_data.len() as f64;
+                variance.sqrt()
+            } else {
+                0.0
+            };
+            let vol_normalized = if vol_mean > 0.0 {
+                vol_std / vol_mean
+            } else {
+                0.0
+            };
+            // When vol is high → threshold widens → InsiderTrader is more selective (avoids noise).
+            // When vol is low → threshold tightens → InsiderTrader reacts to smaller deviations.
+            // Sensitivity controls how aggressively the threshold scales with volatility.
+            let effective_threshold =
+                self.buy_threshold * (1.0 + self.insider_volatility_sensitivity * vol_normalized);
+
             let deviation = (current_price - mean) / mean;
             let perceived = mean; // Use rolling mean as the insider's fair value estimate
             let buy_price = item.buy_price();
@@ -1874,10 +1923,10 @@ impl PlayerAgent {
 
             // BUY when price is significantly below mean (undervalued)
             // deviation is negative → e.g., deviation=-0.15 means price is 15% below mean
-            if deviation < -threshold && buy_price <= self.balance {
+            if deviation < -effective_threshold && buy_price <= self.balance {
                 // Size scales with how extreme the deviation is
-                // At -threshold: min position. At -2x threshold: max position.
-                let extremity = (-deviation / threshold).min(2.0);
+                // At -effective_threshold: min position. At -2x effective_threshold: max position.
+                let extremity = (-deviation / effective_threshold).min(2.0);
                 let base_amount =
                     (self.max_trade_amount as f64 * extremity * self.risk_tolerance).ceil();
                 let amount = rng.random_inclusive(1..=base_amount.max(1.0) as i32);
@@ -1915,10 +1964,10 @@ impl PlayerAgent {
                 }
             }
             // SELL when price is significantly above mean (overvalued)
-            else if deviation > threshold {
+            else if deviation > effective_threshold {
                 let have = self.inventory.get(&i).copied().unwrap_or(0);
                 if have > 0 {
-                    let extremity = (deviation / threshold).min(2.0);
+                    let extremity = (deviation / effective_threshold).min(2.0);
                     let base_amount = (have as f64 * extremity * self.risk_tolerance).ceil();
                     let amount = rng
                         .random_inclusive(1..=base_amount.max(1.0) as i32)

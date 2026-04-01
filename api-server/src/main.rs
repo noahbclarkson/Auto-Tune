@@ -59,8 +59,9 @@ async fn main() -> Result<()> {
 
     // CORS allowed origins — configure via CORS_ALLOWED_ORIGINS env var (comma-separated).
     // Defaults to localhost (dev) and autotune.dev (production).
-    let allowed_origins_raw = std::env::var("CORS_ALLOWED_ORIGINS")
-        .unwrap_or_else(|_| "http://localhost:3000,https://autotune.dev,https://www.autotune.dev".to_owned());
+    let allowed_origins_raw = std::env::var("CORS_ALLOWED_ORIGINS").unwrap_or_else(|_| {
+        "http://localhost:3000,https://autotune.dev,https://www.autotune.dev".to_owned()
+    });
     let allowed_origins: Vec<String> = allowed_origins_raw
         .split(',')
         .map(|s| s.trim().to_owned())

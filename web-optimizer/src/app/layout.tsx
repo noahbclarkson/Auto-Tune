@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
+import { CookieConsent } from '@/components/layout/cookie-consent';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://autotune.dev'),
@@ -43,6 +44,7 @@ export default function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <CookieConsent />
       </body>
     </html>
   );

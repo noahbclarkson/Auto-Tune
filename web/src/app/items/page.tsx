@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/header';
 import { ItemTable } from '@/components/dashboard/item-table';
 import { ItemGrid } from '@/components/dashboard/item-grid';
 import { Card, CardContent } from '@/components/ui/card';
+import { ApiErrorBanner } from '@/components/ui/api-error-banner';
 import { api, type ItemDto, type Stats, type TrendDto } from '@/lib/api';
 import { formatPercent, formatCurrency } from '@/lib/format';
 import { LayoutGrid, List, TrendingUp, TrendingDown, ArrowUp, ArrowDown } from 'lucide-react';
@@ -166,6 +167,7 @@ export default function ItemsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [trends, setTrends] = useState<TrendDto[]>([]);
   const [view, setView] = useState<'table' | 'grid'>('table');
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -177,8 +179,9 @@ export default function ItemsPage() {
       setItems(itemsData);
       setStats(statsData);
       setTrends(trendsData as TrendDto[]);
-    } catch {
-      // silently fail
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load items');
     }
   }, [apiBase]);
 
@@ -192,6 +195,13 @@ export default function ItemsPage() {
     <div className="min-h-screen bg-background">
       <Header totalItems={stats?.totalItems ?? 0} onlinePlayers={stats?.onlinePlayers ?? 0} />
       <main className="mx-auto max-w-7xl px-6 py-6">
+        {error && (
+          <ApiErrorBanner
+            message={`Unable to load items: ${error}`}
+            apiBase={apiBase}
+            onRetry={fetchData}
+          />
+        )}
         <ItemsStatsBar items={items} />
         <TopMoversSection items={items} />
 

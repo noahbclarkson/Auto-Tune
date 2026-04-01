@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ApiErrorBanner } from '@/components/ui/api-error-banner';
 import { api, type AdminHealthDto, type Stats } from '@/lib/api';
 import { formatLargeCurrency, formatPercent } from '@/lib/format';
 import {
@@ -122,9 +123,15 @@ export default function AdminPage() {
       <div className="min-h-screen bg-background">
         <Header totalItems={0} onlinePlayers={0} />
         <main className="mx-auto max-w-7xl px-4 sm:px-6 py-8">
-          <div className="text-red-400 flex items-center gap-2">
-            <XCircle className="w-4 h-4" /> {error ?? 'No data'}
+          <div className="mb-4">
+            <h1 className="text-2xl font-bold text-foreground">Economy Health</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Admin diagnostic</p>
           </div>
+          <ApiErrorBanner
+            message={error ?? 'Could not load economy health data'}
+            apiBase={apiBase}
+            onRetry={fetchData}
+          />
         </main>
       </div>
     );

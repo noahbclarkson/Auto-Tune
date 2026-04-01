@@ -9,6 +9,7 @@ import { EconomyPanel } from '@/components/dashboard/economy-panel';
 import { TransactionFeed } from '@/components/dashboard/transaction-feed';
 import { MarketHealthBar } from '@/components/dashboard/market-health-bar';
 import { MarketDigest } from '@/components/dashboard/market-digest';
+import { ApiErrorBanner } from '@/components/ui/api-error-banner';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { api, type ItemDto, type Stats, type TrendDto, type EconomySnapshotDto } from '@/lib/api';
@@ -104,9 +105,11 @@ export default function Home() {
 
       <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
         {error && (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            Unable to load market data: {error}
-          </div>
+          <ApiErrorBanner
+            message={`Unable to load market data: ${error}`}
+            apiBase={apiBase}
+            onRetry={fetchData}
+          />
         )}
 
         <QuickStart />

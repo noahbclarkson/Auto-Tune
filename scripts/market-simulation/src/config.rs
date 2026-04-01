@@ -79,6 +79,14 @@ pub struct LoanConfig {
     /// of a loan default. Prevents immediate re-borrowing after defaulting.
     /// Set to 0 to disable. Default 168 (7 days, matches Java LoanManager).
     pub post_default_cooldown_hours: i32,
+    /// Whether MarketMaker archetype players can take opening loans.
+    /// When false, MM players start with initial capital only and cannot borrow.
+    /// Rationale: MM's critical role in economy stability means their opening loans
+    /// can cascade catastrophically. Bounding MM loans (single_loan_gdp_cap=0.10) backfires —
+    /// it worsens D/G by preventing MM's two-sided liquidity provision.
+    /// Instead, simply prohibit MM from taking opening loans (MM has $20-100K initial capital).
+    /// Default: true (MM can take opening loans, matching historical behavior).
+    pub mm_opening_loan_allowed: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -184,6 +192,7 @@ impl Default for LoanConfig {
             tier2_interest_cap: 0.25,
             single_loan_gdp_cap: 1.0,
             post_default_cooldown_hours: 168, // 7 days, matches Java LoanManager
+            mm_opening_loan_allowed: true,    // MM can take opening loans by default
         }
     }
 }

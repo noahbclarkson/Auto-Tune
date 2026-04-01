@@ -517,6 +517,50 @@ impl Scenario {
         }
     }
 
+    /// Guildbuyer Failure Test but with MM opening loans PROHIBITED.
+    /// MM is prevented from taking opening loans (mm_opening_loan_allowed = false).
+    /// MM starts with $20-100K initial capital — sufficient for market-making.
+    /// This is the ROOT-CAUSE fix: instead of bounding MM loans (which backfired —
+    /// D/G went from 0.75x to 1.85x), we simply prevent MM from borrowing in the
+    /// first place. MM doesn't need opening loans to function.
+    pub fn guildbuyer_failure_no_mm_opening_loan_test() -> Self {
+        let mut config = SimConfig::default();
+        config.loans.post_default_cooldown_hours = 168;
+        // The key fix: prohibit MM from taking opening loans
+        config.loans.mm_opening_loan_allowed = false;
+        Self {
+            name: "GuildBuyer Failure Test (MM opening loan PROHIBITED)".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Standard+MM with GuildBuyers at fixed 5% threshold.
     /// Tests whether the uniquely-safe 5% GuildBuyer threshold combined with MM
     /// produces a healthier economy than random-threshold guild_stability.
@@ -4543,6 +4587,320 @@ fn run_mm_loan_bounding_test() {
     }
 }
 
+/// MM Opening Loan Prohibition Test.
+/// Compares the ROOT-CAUSAL fix (prevent MM from taking opening loans)
+/// against the cooldown-only baseline.
+///
+/// Control: guildbuyer_failure_test with cooldown=168h (MM CAN take opening loans)
+/// Treatment: guildbuyer_failure_no_mm_opening_loan_test (MM CANNOT take opening loans)
+/// Hypothesis: Preventing MM from borrowing entirely eliminates the cascade
+/// without harming economy (MM has $20-100K initial capital, sufficient for market-making).
+fn run_mm_no_opening_loan_test() {
+    use crate::player::set_global_seeded_rng;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║     MM OPENING LOAN PROHIBITION TEST                        ║");
+    println!("║  mm_opening_loan_allowed: true (control) vs false (treat) ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Question: Does preventing MM from taking opening loans");
+    println!("  eliminate the debt cascade, while keeping GDP healthy?");
+    println!("  MM starts with $20-100K capital — sufficient without borrowing.");
+    println!("\n  Seed: {}\n", seed);
+
+    // ── Control: MM opening loans ALLOWED (cooldown=168 only) ──────────
+    let mut ctrl_scenario = Scenario::guildbuyer_failure_test();
+    ctrl_scenario.config.loans.mm_opening_loan_allowed = true;
+    ctrl_scenario.name = "MM: opening loans ALLOWED (control)".into();
+
+    // ── Treatment: MM opening loans PROHIBITED ─────────────────────────
+    let treat_scenario = Scenario::guildbuyer_failure_no_mm_opening_loan_test();
+    // mm_opening_loan_allowed = false is already set in the scenario
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-mm-noloan-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-mm-noloan-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    // ── Run Control ─────────────────────────────────────────────────────
+    println!("─── Control (MM opening loans ALLOWED) ───");
+    set_global_seeded_rng(seed);
+    let mut ctrl_sim = Simulation::new_seeded(ctrl_scenario.config.clone(), seed);
+    ctrl_sim.events = ctrl_scenario.events.clone();
+    add_players_to_sim(&mut ctrl_sim, &ctrl_scenario.players);
+    ctrl_sim.paused = false;
+
+    let start = Instant::now();
+    while ctrl_sim.current_tick < ctrl_scenario.duration_ticks {
+        ctrl_sim.tick();
+        if ctrl_sim.current_tick.is_multiple_of(288) {
+            let day = ctrl_sim.current_tick / 288;
+            let gdp = ctrl_sim
+                .economy_snapshots
+                .last()
+                .map(|s| s.gdp)
+                .unwrap_or(0.0);
+            let active_debt: f64 = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.current_balance)
+                .sum();
+            let defaulted_debt: f64 = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                .map(|l| l.current_balance)
+                .sum();
+            let total_debt = active_debt + defaulted_debt;
+            let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+            let max_loan = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.principal)
+                .fold(0.0, f64::max);
+            let defaults = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                .count();
+            println!(
+                "  Day {:>2}: GDP={:>9.0} | debt={:>9.0} | D/G={:.3}x | max_loan={:>8.0} | defaults={}",
+                day, gdp, total_debt, dg, max_loan, defaults
+            );
+        }
+    }
+    let ctrl_final = ctrl_sim
+        .economy_snapshots
+        .last()
+        .map(|s| s.gdp)
+        .unwrap_or(0.0);
+    let ctrl_active_debt: f64 = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Active)
+        .map(|l| l.current_balance)
+        .sum();
+    let ctrl_defaulted_debt: f64 = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .map(|l| l.current_balance)
+        .sum();
+    let ctrl_total_debt = ctrl_active_debt + ctrl_defaulted_debt;
+    let ctrl_final_dg = if ctrl_final > 0.0 {
+        ctrl_total_debt / ctrl_final
+    } else {
+        0.0
+    };
+    let ctrl_max_loan = ctrl_sim
+        .loans
+        .iter()
+        .map(|l| l.principal)
+        .fold(0.0, f64::max);
+    let ctrl_defaults = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .count();
+    // Check if MM took an opening loan
+    let ctrl_mm_loans: usize = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| {
+            matches!(
+                ctrl_sim.players.get(l.player_index).map(|p| &p.archetype),
+                Some(Archetype::MarketMaker)
+            )
+        })
+        .count();
+    println!(
+        "  Control complete: {:.1}s | D/G={:.3}x | MM loans taken: {}",
+        start.elapsed().as_secs_f64(),
+        ctrl_final_dg,
+        ctrl_mm_loans
+    );
+
+    // ── Run Treatment ─────────────────────────────────────────────────────
+    println!("\n─── Treatment (MM opening loans PROHIBITED) ───");
+    set_global_seeded_rng(seed);
+    let mut treat_sim = Simulation::new_seeded(treat_scenario.config.clone(), seed);
+    treat_sim.events = treat_scenario.events.clone();
+    add_players_to_sim(&mut treat_sim, &treat_scenario.players);
+    treat_sim.paused = false;
+
+    let start = Instant::now();
+    while treat_sim.current_tick < treat_scenario.duration_ticks {
+        treat_sim.tick();
+        if treat_sim.current_tick.is_multiple_of(288) {
+            let day = treat_sim.current_tick / 288;
+            let gdp = treat_sim
+                .economy_snapshots
+                .last()
+                .map(|s| s.gdp)
+                .unwrap_or(0.0);
+            let active_debt: f64 = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.current_balance)
+                .sum();
+            let defaulted_debt: f64 = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                .map(|l| l.current_balance)
+                .sum();
+            let total_debt = active_debt + defaulted_debt;
+            let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+            let max_loan = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.principal)
+                .fold(0.0, f64::max);
+            let defaults = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                .count();
+            println!(
+                "  Day {:>2}: GDP={:>9.0} | debt={:>9.0} | D/G={:.3}x | max_loan={:>8.0} | defaults={}",
+                day, gdp, total_debt, dg, max_loan, defaults
+            );
+        }
+    }
+    let treat_final = treat_sim
+        .economy_snapshots
+        .last()
+        .map(|s| s.gdp)
+        .unwrap_or(0.0);
+    let treat_active_debt: f64 = treat_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Active)
+        .map(|l| l.current_balance)
+        .sum();
+    let treat_defaulted_debt: f64 = treat_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .map(|l| l.current_balance)
+        .sum();
+    let treat_total_debt = treat_active_debt + treat_defaulted_debt;
+    let treat_final_dg = if treat_final > 0.0 {
+        treat_total_debt / treat_final
+    } else {
+        0.0
+    };
+    let treat_max_loan = treat_sim
+        .loans
+        .iter()
+        .map(|l| l.principal)
+        .fold(0.0, f64::max);
+    let treat_defaults = treat_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .count();
+    let treat_mm_loans: usize = treat_sim
+        .loans
+        .iter()
+        .filter(|l| {
+            matches!(
+                treat_sim.players.get(l.player_index).map(|p| &p.archetype),
+                Some(Archetype::MarketMaker)
+            )
+        })
+        .count();
+    println!(
+        "  Treatment complete: {:.1}s | D/G={:.3}x | MM loans taken: {}",
+        start.elapsed().as_secs_f64(),
+        treat_final_dg,
+        treat_mm_loans
+    );
+
+    // ── Summary ──────────────────────────────────────────────────────────
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("╔    MM OPENING LOAN PROHIBITION — RESULTS                    ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!(
+        "  {:<28} {:>14} {:>14}",
+        "Metric", "MM CAN BORROW", "MM PROHIBITED"
+    );
+    println!("  {:─<28} {:─>14} {:─>14}", "", "", "");
+    println!(
+        "  {:<28} {:>14.0} {:>14.0}",
+        "Final GDP", ctrl_final, treat_final
+    );
+    let gdp_chg = if ctrl_final > 0.0 {
+        (treat_final - ctrl_final) / ctrl_final * 100.0
+    } else {
+        0.0
+    };
+    println!("  {:<28} {:>+13.1}%", "GDP Change", gdp_chg);
+    println!(
+        "  {:<28} {:>14.3}x {:>14.3}x",
+        "Final D/G", ctrl_final_dg, treat_final_dg
+    );
+    let dg_chg_pct = (1.0 - treat_final_dg / ctrl_final_dg.max(0.001)) * 100.0;
+    println!("  {:<28} {:>+13.1}%", "D/G Change", dg_chg_pct);
+    println!(
+        "  {:<28} {:>14.0} {:>14.0}",
+        "Total Debt", ctrl_total_debt, treat_total_debt
+    );
+    let debt_chg = (1.0 - treat_total_debt / ctrl_total_debt.max(1.0)) * 100.0;
+    println!("  {:<28} {:>+13.1}%", "Debt Reduction", debt_chg);
+    println!(
+        "  {:<28} {:>14.0} {:>14.0}",
+        "Max Single Loan", ctrl_max_loan, treat_max_loan
+    );
+    println!(
+        "  {:<28} {:>14} {:>14}",
+        "Total Defaults", ctrl_defaults, treat_defaults
+    );
+    println!(
+        "  {:<28} {:>14} {:>14}",
+        "MM Loans Taken", ctrl_mm_loans, treat_mm_loans
+    );
+
+    println!("\n  KEY INSIGHT:");
+    if treat_mm_loans == 0 && ctrl_mm_loans > 0 {
+        println!(
+            "  ✓ Prohibition worked: MM took {} loans (control) vs 0 (treatment)",
+            ctrl_mm_loans
+        );
+    }
+    if treat_final_dg < ctrl_final_dg * 0.5 && gdp_chg > -10.0 {
+        println!(
+            "  ✓ TREATMENT WINS: D/G {:.3}x → {:.3}x ({:.1}% reduction) with GDP {:.1}%",
+            ctrl_final_dg, treat_final_dg, dg_chg_pct, gdp_chg
+        );
+        println!("    MM's $20-100K initial capital is sufficient for market-making.");
+        println!("    Recommend: mm_opening_loan_allowed = false for production.");
+    } else if treat_final_dg < ctrl_final_dg && gdp_chg > -20.0 {
+        println!(
+            "  → Modest improvement: D/G {:.3}x → {:.3}x, GDP {:.1}%",
+            ctrl_final_dg, treat_final_dg, gdp_chg
+        );
+    } else if gdp_chg < -20.0 {
+        println!(
+            "  ⚠ MM NEEDS opening loans: GDP dropped {:.1}% — prohibit with caution.",
+            gdp_chg
+        );
+        println!("    MM's initial capital may be insufficient for effective market-making.");
+    } else {
+        println!("  ✗ Prohibition had mixed or negative effects.");
+        println!(
+            "    D/G: {:.3}x (ctrl) vs {:.3}x (treat), GDP: {:.1}%",
+            ctrl_final_dg, treat_final_dg, gdp_chg
+        );
+    }
+}
+
 fn run_guild_seller_test() {
     use crate::analyzer::load_summary;
     let seed = 42u64;
@@ -6395,6 +6753,12 @@ fn main() -> eframe::Result<()> {
     // ─── MM Loan Bounding Test ─────────────────────────────────────────
     if args.len() > 1 && args[1] == "--mm-loan-bounding-test" {
         run_mm_loan_bounding_test();
+        return Ok(());
+    }
+
+    // ─── MM No-Opening-Loan Test ─────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--mm-no-opening-loan-test" {
+        run_mm_no_opening_loan_test();
         return Ok(());
     }
 

@@ -469,10 +469,17 @@ impl Simulation {
                 false
             };
 
+            // MM opening loan eligibility: either mm_opening_loan_allowed is true,
+            // or the player is NOT a MarketMaker. This prevents MM from taking
+            // catastrophic opening loans that cascade when MM defaults.
+            let mm_can_borrow = self.config.loans.mm_opening_loan_allowed
+                || !matches!(player.archetype, Archetype::MarketMaker);
+
             if !has_active_loan
                 && !in_default_cooldown
                 && player.balance < 50.0
                 && player.credit_score >= self.config.loans.min_credit_score
+                && mm_can_borrow
                 && rng_next() < 0.1
             {
                 let max_loan =

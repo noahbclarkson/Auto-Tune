@@ -115,6 +115,8 @@ public class AdminCommand {
                 .append(Component.text(" — Full economy diagnostic report", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin audit", NamedTextColor.YELLOW)
                 .append(Component.text(" — System health and consistency check", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin trend [days]", NamedTextColor.YELLOW)
+                .append(Component.text(" — Economy trajectory over N days (default: 7)", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin stats", NamedTextColor.YELLOW)
                 .append(Component.text(" — Detailed market statistics", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin market freeze", NamedTextColor.YELLOW)
@@ -803,6 +805,152 @@ public class AdminCommand {
             sender.sendMessage(Component.text("  " + arrow + " " + label + ": "
                     + String.format("%+.1f%%", v.pctChange()), color));
         }
+    }
+
+    // ─── Economy trend analysis ─────────────────────────────────────────────────
+    @Command("autotune admin trend [days]")
+    @Permission("autotune.admin")
+    public void adminTrend(CommandSender sender, @Argument(value = "days") Optional<Integer> daysArg) {
+        int days = daysArg.orElse(7);
+        if (days < 1 || days > 90) {
+            sender.sendMessage(Component.text("Days must be between 1 and 90.", NamedTextColor.RED));
+            return;
+        }
+
+        Instant windowStart = Instant.now().minus(Duration.ofDays(days));
+        List<EconomySnapshot> snapshots = metricsManager.getSnapshotsInWindow(windowStart, 80);
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Economy Trend — Last " + daysArg + " Day(s)", NamedTextColor.YELLOW, TextDecoration.BOLD)
+                .append(Component.text(" (" + snapshots.size() + " snapshots)", NamedTextColor.DARK_GRAY)));
+        sender.sendMessage(Component.empty());
+
+        if (snapshots.size() < 2) {
+            sender.sendMessage(Component.text("  Not enough snapshot data yet. Check back in a few hours.",
+                    NamedTextColor.YELLOW));
+            sender.sendMessage(Component.empty());
+            return;
+        }
+
+        EconomySnapshot first = snapshots.get(0);
+        EconomySnapshot last = snapshots.get(snapshots.size() - 1);
+
+        // Helper: compute percent change, handle zero base
+        java.util.function.BiFunction<BigDecimal, BigDecimal, Double> pctChange = (start, end) -> {
+            if (start.compareTo(BigDecimal.ZERO) == 0) return end.compareTo(BigDecimal.ZERO) == 0 ? 0.0 : 100.0;
+            return end.subtract(start).divide(start, 4, RoundingMode.HALF_UP).doubleValue() * 100;
+        };
+
+        // GDP trend
+        BigDecimal gdpStart = first.gdp();
+        BigDecimal gdpEnd = last.gdp();
+        double gdpPct = pctChange.apply(gdpStart, gdpEnd);
+        NamedTextColor gdpColor = gdpPct > 5 ? NamedTextColor.GREEN : gdpPct < -5 ? NamedTextColor.RED : NamedTextColor.YELLOW;
+        String gdpArrow = gdpPct > 1 ? "↑" : gdpPct < -1 ? "↓" : "—";
+        sender.sendMessage(Component.text("  GDP", NamedTextColor.GRAY)
+                .append(Component.text("  " + gdpArrow + " " + configManager.formatCurrency(gdpStart)
+                        + " → " + configManager.formatCurrency(gdpEnd), gdpColor))
+                .append(Component.text("  (" + String.format("%+.1f%%", gdpPct) + ")", NamedTextColor.DARK_GRAY)));
+
+        // Debt trend
+        BigDecimal debtStart = first.totalDebt();
+        BigDecimal debtEnd = last.totalDebt();
+        double debtPct = pctChange.apply(debtStart, debtEnd);
+        NamedTextColor debtColor = debtPct < -5 ? NamedTextColor.GREEN : debtPct > 5 ? NamedTextColor.RED : NamedTextColor.YELLOW;
+        String debtArrow = debtPct > 1 ? "↑" : debtPct < -1 ? "↓" : "—";
+        sender.sendMessage(Component.text("  Debt", NamedTextColor.GRAY)
+                .append(Component.text("  " + debtArrow + " " + configManager.formatCurrency(debtStart)
+                        + " → " + configManager.formatCurrency(debtEnd), debtColor))
+                .append(Component.text("  (" + String.format("%+.1f%%", debtPct) + ")", NamedTextColor.DARK_GRAY)));
+
+        // D/G ratio trend
+        double dgStart = gdpStart.compareTo(BigDecimal.ZERO) > 0
+                ? debtStart.divide(gdpStart, 4, RoundingMode.HALF_UP).doubleValue() : 0;
+        double dgEnd = gdpEnd.compareTo(BigDecimal.ZERO) > 0
+                ? debtEnd.divide(gdpEnd, 4, RoundingMode.HALF_UP).doubleValue() : 0;
+        double dgDelta = dgEnd - dgStart;
+        NamedTextColor dgColor = dgEnd < 3 ? NamedTextColor.GREEN : dgEnd < 10 ? NamedTextColor.YELLOW : NamedTextColor.RED;
+        String dgArrow = dgDelta > 0.1 ? "↑" : dgDelta < -0.1 ? "↓" : "—";
+        sender.sendMessage(Component.text("  D/G Ratio", NamedTextColor.GRAY)
+                .append(Component.text("  " + dgArrow + " " + String.format("%.2fx", dgStart)
+                        + " → " + String.format("%.2fx", dgEnd), dgColor))
+                .append(Component.text("  (" + String.format("%+.2f", dgDelta) + ")", NamedTextColor.DARK_GRAY)));
+
+        // Volume trend
+        BigDecimal volStart = first.transactionVolume();
+        BigDecimal volEnd = last.transactionVolume();
+        double volPct = pctChange.apply(volStart, volEnd);
+        NamedTextColor volColor = volPct > 5 ? NamedTextColor.GREEN : volPct < -5 ? NamedTextColor.RED : NamedTextColor.YELLOW;
+        String volArrow = volPct > 1 ? "↑" : volPct < -1 ? "↓" : "—";
+        sender.sendMessage(Component.text("  Volume", NamedTextColor.GRAY)
+                .append(Component.text("  " + volArrow + " " + formatCompact(volStart)
+                        + " → " + formatCompact(volEnd), volColor))
+                .append(Component.text("  (" + String.format("%+.1f%%", volPct) + ")", NamedTextColor.DARK_GRAY)));
+
+        // Avg price change (inflation) trend
+        BigDecimal avgChgStart = first.averagePriceChange();
+        BigDecimal avgChgEnd = last.averagePriceChange();
+        NamedTextColor inflColor = avgChgEnd.compareTo(BigDecimal.valueOf(1)) > 0 ? NamedTextColor.RED
+                : avgChgEnd.compareTo(BigDecimal.valueOf(-1)) < 0 ? NamedTextColor.AQUA : NamedTextColor.GREEN;
+        String inflArrow = avgChgEnd.compareTo(avgChgStart) > 0 ? "↑" : avgChgEnd.compareTo(avgChgStart) < 0 ? "↓" : "—";
+        sender.sendMessage(Component.text("  Avg Price Chg", NamedTextColor.GRAY)
+                .append(Component.text("  " + inflArrow + " " + String.format("%+.2f%%", avgChgStart.doubleValue())
+                        + "/tick → " + String.format("%+.2f%%", avgChgEnd.doubleValue()) + "/tick", inflColor)));
+
+        // Active loans trend
+        int loansStart = first.activeLoans();
+        int loansEnd = last.activeLoans();
+        NamedTextColor loansColor = loansEnd > loansStart ? NamedTextColor.YELLOW : NamedTextColor.GREEN;
+        sender.sendMessage(Component.text("  Active Loans", NamedTextColor.GRAY)
+                .append(Component.text("  " + loansStart + " → " + loansEnd, loansColor)));
+
+        // Player count trend
+        int playersStart = first.playerCount();
+        int playersEnd = last.playerCount();
+        NamedTextColor playersColor = playersEnd > playersStart ? NamedTextColor.GREEN
+                : playersEnd < playersStart ? NamedTextColor.RED : NamedTextColor.GRAY;
+        sender.sendMessage(Component.text("  Online Players", NamedTextColor.GRAY)
+                .append(Component.text("  " + playersStart + " → " + playersEnd, playersColor)));
+
+        // Mini sparkline for GDP across window
+        sender.sendMessage(Component.empty());
+        StringBuilder bar = new StringBuilder();
+        bar.append("  ").append(Component.text("GDP trajectory: ", NamedTextColor.DARK_GRAY));
+        for (EconomySnapshot snap : snapshots) {
+            BigDecimal snapDg = snap.gdp();
+            NamedTextColor barColor;
+            if (gdpEnd.compareTo(gdpStart) >= 0) {
+                // Growing: green at end
+                barColor = snap.equals(last) ? NamedTextColor.GREEN : NamedTextColor.DARK_GRAY;
+            } else {
+                // Shrinking: red at end
+                barColor = snap.equals(last) ? NamedTextColor.RED : NamedTextColor.DARK_GRAY;
+            }
+            bar.append(Component.text("▬", barColor));
+        }
+        sender.sendMessage(Component.text(bar.toString()));
+
+        // Circuit breaker proximity warning
+        LoanManager.CircuitBreakerStatus cb = loanManager.getCircuitBreakerStatus();
+        sender.sendMessage(Component.empty());
+        if (cb.debtGdpRatio() < 0) {
+            sender.sendMessage(Component.text("  Circuit Breaker: " + cb.tier() + " (no GDP data)", NamedTextColor.GRAY));
+        } else {
+            double breakerLimit = configManager.getConfig().loans().debtGdpTier3Ratio();
+            double proximity = cb.debtGdpRatio() / breakerLimit;
+            NamedTextColor cbColor = proximity < 0.3 ? NamedTextColor.GREEN
+                    : proximity < 0.7 ? NamedTextColor.YELLOW : NamedTextColor.RED;
+            sender.sendMessage(Component.text("  Circuit Breaker: " + cb.tier()
+                    + "  [" + String.format("%.2fx", cb.debtGdpRatio()) + " / "
+                    + String.format("%.1fx", breakerLimit) + " limit]",
+                    cbColor));
+            if (proximity >= 0.7) {
+                sender.sendMessage(Component.text("  ⚠️  Debt/GDP is >70% of breaker limit — monitor closely.",
+                        NamedTextColor.RED));
+            }
+        }
+
+        sender.sendMessage(Component.empty());
     }
 
     @Command("autotune admin stats")
@@ -1549,5 +1697,15 @@ public class AdminCommand {
             mat = org.bukkit.Material.matchMaterial(name);
         }
         return mat;
+    }
+
+    /** Formats a large number compactly: 1,234,567 → "1.23M", 123,456 → "123K" */
+    private String formatCompact(BigDecimal amount) {
+        if (amount == null) return "0";
+        double v = amount.doubleValue();
+        if (v >= 1_000_000_000) return String.format("%.1fB", v / 1_000_000_000);
+        if (v >= 1_000_000) return String.format("%.1fM", v / 1_000_000);
+        if (v >= 1_000) return String.format("%.1fK", v / 1_000);
+        return configManager.formatCurrency(amount);
     }
 }

@@ -143,4 +143,27 @@ public class EconomyMetricsManager {
         }
         return "Stable";
     }
+
+    /**
+     * Returns economy snapshots within the given time window, sampled down to
+     * at most `maxPoints` evenly-spaced data points for display purposes.
+     */
+    public List<EconomySnapshot> getSnapshotsInWindow(Instant since, int maxPoints) {
+        List<EconomySnapshot> all = snapshotRepository.findSince(since);
+        if (all.size() <= maxPoints) {
+            return all;
+        }
+        // Evenly sample across the window
+        double step = (double) all.size() / maxPoints;
+        List<EconomySnapshot> sampled = new java.util.ArrayList<>(maxPoints);
+        for (int i = 0; i < maxPoints; i++) {
+            sampled.add(all.get((int) Math.round(i * step)));
+        }
+        // Always include the last snapshot
+        EconomySnapshot last = all.get(all.size() - 1);
+        if (!sampled.get(sampled.size() - 1).equals(last)) {
+            sampled.set(sampled.size() - 1, last);
+        }
+        return sampled;
+    }
 }

@@ -36,10 +36,18 @@ import org.incendo.cloud.annotations.Permission;
 import org.incendo.cloud.annotations.suggestion.Suggestions;
 import org.incendo.cloud.context.CommandContext;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -50,6 +58,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("PMD")
 @Singleton
@@ -1200,6 +1209,218 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
+    // ─── Bulk price CSV export / import ───────────────────────────────────────
+
+    private static final String CSV_HEADER =
+            "material,display_name,section,price,price_floor,price_ceiling,spread_override,max_change_override,price_frozen";
+
+    @Command("autotune admin prices export")
+    @Permission("autotune.admin")
+    public void pricesExport(CommandSender sender) {
+        String filename = "autotune-prices-" + LocalDate.now() + ".csv";
+        exportPrices(sender, filename);
+    }
+
+    @Command("autotune admin prices export <filename>")
+    @Permission("autotune.admin")
+    public void pricesExportFile(CommandSender sender, @Argument("filename") String filename) {
+        exportPrices(sender, filename);
+    }
+
+    private void exportPrices(CommandSender sender, String filename) {
+        List<ShopItem> items = shopManager.getAllItems();
+        if (items.isEmpty()) {
+            sender.sendMessage(Component.text("No items in shop to export.", NamedTextColor.YELLOW));
+            return;
+        }
+
+        Path path = Paths.get(filename);
+        try (BufferedWriter writer = Files.newBufferedWriter(path)) {
+            writer.write(CSV_HEADER);
+            writer.newLine();
+
+            for (ShopItem item : items) {
+                String line = String.join(",",
+                        escape(item.material().name()),
+                        escape(item.displayName()),
+                        escape(item.section()),
+                        item.price().toPlainString(),
+                        nullOrEmpty(item.priceFloorOverride()),
+                        nullOrEmpty(item.priceCeilingOverride()),
+                        nullOrEmpty(item.baseSpreadOverride()),
+                        nullOrEmpty(item.maxPriceChangeOverride()),
+                        String.valueOf(item.priceFrozen())
+                );
+                writer.write(line);
+                writer.newLine();
+            }
+
+            sender.sendMessage(Component.text("✅ Exported " + items.size() + " items to " + filename,
+                    NamedTextColor.GREEN));
+            sender.sendMessage(Component.text("  Edit in a spreadsheet, then import with /at admin prices import <filename>",
+                    NamedTextColor.GRAY));
+        } catch (IOException e) {
+            sender.sendMessage(Component.text("❌ Export failed: " + e.getMessage(), NamedTextColor.RED));
+        }
+    }
+
+    @Command("autotune admin prices import <filename>")
+    @Permission("autotune.admin")
+    public void pricesImport(CommandSender sender, @Argument("filename") String filename) {
+        Path path = Paths.get(filename);
+        if (!Files.exists(path)) {
+            sender.sendMessage(Component.text("File not found: " + filename, NamedTextColor.RED));
+            sender.sendMessage(Component.text("  Put the CSV in the server root directory (where you run the JAR).",
+                    NamedTextColor.GRAY));
+            return;
+        }
+
+        // Build material → ShopItem map for fast lookup
+        Map<String, ShopItem> byMaterial = shopManager.getAllItems().stream()
+                .collect(Collectors.toMap(
+                        it -> it.material().name().toLowerCase(Locale.ROOT),
+                        it -> it,
+                        (a, b) -> a
+                ));
+
+        int updated = 0;
+        int skipped = 0;
+        int errors = 0;
+        List<String> errorLines = new ArrayList<>();
+
+        try (BufferedReader reader = Files.newBufferedReader(path)) {
+            String header = reader.readLine();
+            if (header == null) {
+                sender.sendMessage(Component.text("Empty CSV file.", NamedTextColor.RED));
+                return;
+            }
+
+            String line;
+            int rowNum = 1; // already read header
+            while ((line = reader.readLine()) != null) {
+                rowNum++;
+                if (line.isBlank() || line.startsWith("#")) continue;
+
+                String[] cols = parseCsvLine(line);
+                if (cols.length < 4) {
+                    errors++;
+                    errorLines.add("row " + rowNum + ": too few columns (need at least material + price)");
+                    continue;
+                }
+
+                String materialName = cols[0].trim().toUpperCase(Locale.ROOT);
+                ShopItem item = byMaterial.get(materialName.toLowerCase(Locale.ROOT));
+
+                if (item == null) {
+                    skipped++;
+                    continue; // material not in shop — skip silently
+                }
+
+                boolean changed = false;
+
+                // Column 3 = price (index 3)
+                if (cols.length > 3 && !cols[3].isBlank()) {
+                    try {
+                        BigDecimal newPrice = new BigDecimal(cols[3].trim());
+                        if (newPrice.compareTo(BigDecimal.ZERO) > 0) {
+                            shopManager.setPrice(item.id(), newPrice);
+                            changed = true;
+                        }
+                    } catch (NumberFormatException ignored) {
+                        // skip invalid price
+                    }
+                }
+
+                // Column 4 = price_floor (index 4)
+                if (cols.length > 4 && !cols[4].isBlank()) {
+                    try {
+                        BigDecimal floor = new BigDecimal(cols[4].trim());
+                        shopManager.setPriceFloorOverride(item.id(), floor);
+                        changed = true;
+                    } catch (NumberFormatException ignored) {
+                        // skip invalid floor
+                    }
+                } else if (cols.length > 4 && cols[4].isBlank()) {
+                    shopManager.setPriceFloorOverride(item.id(), null); // clear
+                }
+
+                // Column 5 = price_ceiling (index 5)
+                if (cols.length > 5 && !cols[5].isBlank()) {
+                    try {
+                        BigDecimal ceiling = new BigDecimal(cols[5].trim());
+                        shopManager.setPriceCeilingOverride(item.id(), ceiling);
+                        changed = true;
+                    } catch (NumberFormatException ignored) {
+                        // skip invalid ceiling
+                    }
+                } else if (cols.length > 5 && cols[5].isBlank()) {
+                    shopManager.setPriceCeilingOverride(item.id(), null); // clear
+                }
+
+                // Column 6 = spread_override (index 6)
+                if (cols.length > 6 && !cols[6].isBlank()) {
+                    try {
+                        Double spread = Double.parseDouble(cols[6].trim());
+                        shopManager.setBaseSpreadOverride(item.id(), spread);
+                        changed = true;
+                    } catch (NumberFormatException ignored) {
+                        // skip invalid spread
+                    }
+                } else if (cols.length > 6 && cols[6].isBlank()) {
+                    shopManager.setBaseSpreadOverride(item.id(), null);
+                }
+
+                // Column 7 = max_change_override (index 7)
+                if (cols.length > 7 && !cols[7].isBlank()) {
+                    try {
+                        Double maxChange = Double.parseDouble(cols[7].trim());
+                        shopManager.setMaxPriceChangeOverride(item.id(), maxChange);
+                        changed = true;
+                    } catch (NumberFormatException ignored) {
+                        // skip invalid max change
+                    }
+                } else if (cols.length > 7 && cols[7].isBlank()) {
+                    shopManager.setMaxPriceChangeOverride(item.id(), null);
+                }
+
+                // Column 8 = price_frozen (index 8)
+                if (cols.length > 8 && !cols[8].isBlank()) {
+                    boolean frozen = cols[8].trim().equalsIgnoreCase("true")
+                            || cols[8].trim().equalsIgnoreCase("1")
+                            || cols[8].trim().equalsIgnoreCase("yes");
+                    shopManager.setPriceFrozen(item.id(), frozen);
+                    changed = true;
+                }
+
+                if (changed) updated++;
+            }
+
+            // Refresh market engine cache so new prices/spreads take effect immediately
+            marketEngine.refreshOverrideCache();
+
+            Component summary = Component.text("Import complete: ", NamedTextColor.GREEN)
+                    .append(Component.text(updated + " updated", NamedTextColor.AQUA))
+                    .append(Component.text(", " + skipped + " not-in-shop (skipped)", NamedTextColor.GRAY))
+                    .append(Component.text(", " + errors + " parse errors", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.empty());
+            sender.sendMessage(summary);
+
+            if (!errorLines.isEmpty()) {
+                sender.sendMessage(Component.text("  Errors: " + String.join("; ", errorLines.subList(0, Math.min(3, errorLines.size()))),
+                        NamedTextColor.YELLOW));
+                if (errorLines.size() > 3) {
+                    sender.sendMessage(Component.text("  ...and " + (errorLines.size() - 3) + " more.",
+                            NamedTextColor.YELLOW));
+                }
+            }
+
+            sender.sendMessage(Component.text("Run /at admin reload to repopulate shop cache.", NamedTextColor.GRAY));
+
+        } catch (IOException e) {
+            sender.sendMessage(Component.text("❌ Import failed: " + e.getMessage(), NamedTextColor.RED));
+        }
+    }
+
     // ─── Per-item config override subcommands ──────────────────────────────────
 
     @Command("autotune admin item spread <material> <value>")
@@ -1707,5 +1928,58 @@ public class AdminCommand {
         if (v >= 1_000_000) return String.format("%.1fM", v / 1_000_000);
         if (v >= 1_000) return String.format("%.1fK", v / 1_000);
         return configManager.formatCurrency(amount);
+    }
+
+    // ─── CSV helpers ───────────────────────────────────────────────────────────
+
+    /** Escape a string for CSV: quotes around it if it contains comma/quote/newline. */
+    private String escape(String s) {
+        if (s == null) return "";
+        boolean needsQuotes = s.contains(",") || s.contains("\"") || s.contains("\n");
+        return needsQuotes ? "\"" + s.replace("\"", "\"\"") + "\"" : s;
+    }
+
+    /** Format a nullable BigDecimal as plain string, or empty string if null. */
+    private String nullOrEmpty(BigDecimal val) {
+        return val == null ? "" : val.toPlainString();
+    }
+
+    /** Format a nullable Double as plain string, or empty string if null. */
+    private String nullOrEmpty(Double val) {
+        return val == null ? "" : String.valueOf(val);
+    }
+
+    /** Parse a CSV line, respecting double-quote wrapping and comma/quote escaping. */
+    private String[] parseCsvLine(String line) {
+        List<String> fields = new ArrayList<>();
+        StringBuilder field = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (inQuotes) {
+                if (c == '"') {
+                    if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                        field.append('"');
+                        i++; // skip next quote
+                    } else {
+                        inQuotes = false;
+                    }
+                } else {
+                    field.append(c);
+                }
+            } else {
+                if (c == '"') {
+                    inQuotes = true;
+                } else if (c == ',') {
+                    fields.add(field.toString());
+                    field = new StringBuilder();
+                } else {
+                    field.append(c);
+                }
+            }
+        }
+        fields.add(field.toString());
+        return fields.toArray(new String[0]);
     }
 }

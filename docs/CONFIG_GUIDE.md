@@ -58,8 +58,41 @@ The scaling formula uses a `tanh` curve: `tanh(onlineCount * atanh(0.99) / fullE
 | `loans.overdue.default-points` | `50` | Credit score penalty on loan default |
 | `loans.term.premium-min` | `0.0` | Minimum term premium added to interest |
 | `loans.term.premium-max` | `0.05` | Maximum term premium added to interest |
+| `loans.counter-cyclical` | `true` | Reduce interest rate as Debt/GDP rises (0% at D/G ≥ circuit-breaker-ratio) |
+| `loans.post-default-cooldown-hours` | `168` | Lock borrowers from new loans after default (7 days) |
+| `loans.single-loan-gdp-cap` | `1.0` | Maximum loan size as multiple of 24h GDP (cap at ~1.0; values ≤ 0.10 backfire) |
 
 **debt-gdp-circuit-breaker-ratio**: When system-wide total debt exceeds `GDP × ratio`, loan interest accrual is paused for that cycle. It auto-resumes when debt drops back below the threshold. Default 10.0 means circuit opens when debt is 10× the 24h GDP.
+
+**counter-cyclical** (default `true`): Interest rate is linearly reduced as Debt/GDP rises. At D/G=0 → 100% rate; at D/G = circuit-breaker-ratio → 0% rate. Formula: `multiplier = max(0, min(1.0, 1.0 - D/G / circuitBreakerRatio))`. This dampens debt accumulation before the circuit breaker fires.
+
+**post-default-cooldown-hours** (default `168` / 7 days): After a loan defaults, the borrower cannot take new loans for this duration. Verified in simulation to reduce final D/G by ~65% in cascade scenarios. Re-borrow events drop to zero after cooldown is enforced.
+
+**single-loan-gdp-cap**: ⚠️ **Do NOT set this below 0.10.** Simulation testing (guildbuyer-failure-test archetype, seed=42, 14 days) showed that a 10% GDP cap worsens D/G from 0.75× → 1.85×. Bounding MM loans reduces MM's market-making ability → price volatility increases → economy shrinks → D/G worsens. Leave at default 1.0 (each loan capped at one economy GDP).
+
+### `spread.*` — Floor and Ceiling Price Bounds
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `spread.floor-percent` | `0.60` | Price floor as fraction of base price (0.60 = 60% of base) |
+
+**floor-percent** (default `0.60`): Items cannot fall below `basePrice × floorPercent`. Floor is applied after all other price calculations. A 60% floor (+6.5% GDP vs no floor) is the sweet spot — floors above 70% choke the economy by suppressing natural correction. Floor paradox confirmed: at 80-90%, Diamond internal price collapses to $0.35-2.04 despite a displayed price of $350-450.
+
+---
+
+## `guildbuyer.*` — GuildBuyer Archetype
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `guildbuyer.enabled` | `true` | Enable GuildBuyer player archetype |
+| `guildbuyer.guild-price-dip-threshold` | `0.07` | Buy when price falls within this fraction of perceived value (7% = recommended) |
+
+**guild-price-dip-threshold**: The single most important GuildBuyer parameter. Simulation found:
+- **7%** (default): Uniquely safe — D/G < 0.1× consistently across all seeds
+- **5%**: Net positive but D/G varies wildly (0.03× to 27× across seeds — catastrophic on some)
+- **≥10%**: Selectivity causes massive single purchases on credit → debt spiral (D/G 5-20×)
+
+Recommendation: leave at 7%. Lower values require careful monitoring.
 
 ---
 
@@ -160,9 +193,13 @@ player-scaling:
 
 ```yaml
 loans:
-  debt-gdp-circuit-breaker-ratio: 5.0  # tighter circuit
-  compound-interval-hours: 48           # slower compounding
+  debt-gdp-circuit-breaker-ratio: 5.0  # tighter circuit (fires at 5× GDP vs default 10×)
+  compound-interval-hours: 48           # slower compounding (every 2 days vs 1)
+  counter-cyclical: true                # reduces interest as D/G rises (default: true)
+  post-default-cooldown-hours: 168      # 7-day lock after default (default: 168)
 ```
+
+The simulation-recommended approach: **counter-cyclical + post-default cooldown + default circuit-breaker ratio**. This reduces D/G by ~65% in cascade scenarios. Do NOT set `single-loan-gdp-cap` below 0.10 — it constrains MarketMaker inventory and worsens price volatility, which paradoxically increases D/G.
 
 ---
 

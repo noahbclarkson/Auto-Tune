@@ -423,6 +423,26 @@ public class WebServer {
                     );
         });
 
+        app.get("/api/portfolio/{playerName}/transactions", ctx -> {
+            String playerName = ctx.pathParam("playerName");
+            int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(50);
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).result("playerName is required");
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).result("Player not found: " + playerName);
+                return;
+            }
+            List<Transaction> transactions = transactionRepository.findByPlayer(
+                    player.uuid(), Math.min(limit, 200));
+            List<TransactionFeedDto> dtos = transactions.stream()
+                    .map(this::toTransactionDto)
+                    .collect(Collectors.toList());
+            ctx.json(dtos);
+        });
+
         app.get("/api/leaderboard", ctx -> {
             int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(20);
             List<PlayerData> topTraders = playerRepository.findTopTraders(Math.min(limit, 100));

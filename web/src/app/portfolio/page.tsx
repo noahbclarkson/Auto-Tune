@@ -4,9 +4,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { api, type Stats, type PortfolioDto, type HoldingDto } from '@/lib/api';
+import { api, type Stats, type PortfolioDto, type HoldingDto, type TransactionFeedDto } from '@/lib/api';
 import { formatCurrency, formatLargeCurrency, formatPercent } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
+
+type Tab = 'holdings' | 'trades';
 
 export default function PortfolioPage() {
   const { apiBase } = useAppContext();
@@ -14,7 +16,10 @@ export default function PortfolioPage() {
   const [searchName, setSearchName] = useState('');
   const [playerName, setPlayerName] = useState<string | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioDto | null>(null);
+  const [transactions, setTransactions] = useState<TransactionFeedDto[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>('holdings');
   const [loading, setLoading] = useState(false);
+  const [loadingTrades, setLoadingTrades] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -30,13 +35,12 @@ export default function PortfolioPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleSearch = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    const name = searchName.trim();
-    if (!name) return;
+  const loadPortfolio = useCallback((name: string) => {
     setPlayerName(name);
     setPortfolio(null);
+    setTransactions([]);
     setError(null);
+    setActiveTab('holdings');
     setLoading(true);
 
     api.portfolio.get(apiBase, name)
@@ -49,7 +53,20 @@ export default function PortfolioPage() {
         }
       })
       .finally(() => setLoading(false));
-  }, [searchName, apiBase]);
+
+    setLoadingTrades(true);
+    api.portfolio.transactions(apiBase, name, 50)
+      .then(setTransactions)
+      .catch(() => setTransactions([]))
+      .finally(() => setLoadingTrades(false));
+  }, [apiBase]);
+
+  const handleSearch = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    const name = searchName.trim();
+    if (!name) return;
+    loadPortfolio(name);
+  }, [searchName, loadPortfolio]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -61,7 +78,7 @@ export default function PortfolioPage() {
           <div>
             <h2 className="text-2xl font-bold text-foreground">Player Portfolio</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              See any player&apos;s holdings, P&amp;L, and net worth
+              Holdings, P&amp;L, and trading history
             </p>
           </div>
           <form onSubmit={handleSearch} className="flex gap-2">
@@ -87,7 +104,7 @@ export default function PortfolioPage() {
             <div className="text-5xl mb-4">📊</div>
             <h3 className="text-lg font-semibold text-foreground mb-1">Enter a player name</h3>
             <p className="text-sm text-muted-foreground max-w-xs">
-              Search for any player who has traded on this server to see their portfolio, holdings, and P&amp;L.
+              Search for any player who has traded on this server to see their portfolio, holdings, P&amp;L, and trade history.
             </p>
           </div>
         )}
@@ -102,8 +119,8 @@ export default function PortfolioPage() {
         {/* Loading skeleton */}
         {loading && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[...Array(4)].map((_, i) => (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {[...Array(5)].map((_, i) => (
                 <div key={i} className="h-24 rounded-xl bg-muted animate-pulse" />
               ))}
             </div>
@@ -115,7 +132,7 @@ export default function PortfolioPage() {
         {portfolio && !loading && (
           <div className="space-y-6">
             {/* Summary cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <StatCard
                 label="Net Worth"
                 value={formatLargeCurrency(portfolio.netWorth)}
@@ -131,6 +148,15 @@ export default function PortfolioPage() {
                 label="Holdings Value"
                 value={formatLargeCurrency(portfolio.holdingsValue)}
                 sub={`${portfolio.holdings.length} item${portfolio.holdings.length !== 1 ? 's' : ''}`}
+              />
+              <StatCard
+                label="Realized P&amp;L"
+                value={portfolio.totalRealizedPnl > 0
+                  ? '+' + formatCurrency(portfolio.totalRealizedPnl)
+                  : formatCurrency(portfolio.totalRealizedPnl)}
+                sub="from completed trades"
+                highlight={portfolio.totalRealizedPnl > 0}
+                danger={portfolio.totalRealizedPnl < 0}
               />
               <StatCard
                 label="Total Debt"
@@ -156,15 +182,59 @@ export default function PortfolioPage() {
               )}
             </div>
 
-            {/* Holdings table */}
-            {portfolio.holdings.length > 0 ? (
-              <HoldingsTable holdings={portfolio.holdings} />
-            ) : (
-              <Card>
-                <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                  No holdings found in the last 90 days of transaction history.
-                </CardContent>
-              </Card>
+            {/* Tabs */}
+            <div className="flex gap-1 border-b border-border">
+              <button
+                onClick={() => setActiveTab('holdings')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                  activeTab === 'holdings'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Holdings
+              </button>
+              <button
+                onClick={() => setActiveTab('trades')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                  activeTab === 'trades'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Recent Trades
+                {transactions.length > 0 && (
+                  <span className="ml-1.5 text-xs text-muted-foreground">({transactions.length})</span>
+                )}
+              </button>
+            </div>
+
+            {/* Holdings tab */}
+            {activeTab === 'holdings' && (
+              portfolio.holdings.length > 0 ? (
+                <HoldingsTable holdings={portfolio.holdings} />
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    No holdings found in the last 90 days of transaction history.
+                  </CardContent>
+                </Card>
+              )
+            )}
+
+            {/* Trades tab */}
+            {activeTab === 'trades' && (
+              loadingTrades ? (
+                <div className="h-48 rounded-xl bg-muted animate-pulse" />
+              ) : transactions.length > 0 ? (
+                <TransactionsTable transactions={transactions} />
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    No trades found for this player.
+                  </CardContent>
+                </Card>
+              )
             )}
 
             {/* Active loans */}
@@ -219,7 +289,7 @@ function StatCard({ label, value, sub, highlight, danger }: {
     <Card className={highlight ? 'border-primary/40 bg-primary/[0.03]' : danger ? 'border-destructive/30' : ''}>
       <CardContent className="p-4">
         <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
-        <p className={`text-2xl font-bold mt-1 font-mono ${danger ? 'text-destructive' : 'text-foreground'}`}>
+        <p className={`text-2xl font-bold mt-1 font-mono ${danger ? 'text-destructive' : highlight ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
           {value}
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
@@ -245,13 +315,19 @@ function HoldingsTable({ holdings }: { holdings: HoldingDto[] }) {
                 <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Current</th>
                 <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Value</th>
                 <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Unreal. P&amp;L</th>
+                <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Realized P&amp;L</th>
               </tr>
             </thead>
             <tbody>
               {holdings.map((h) => {
-                const pnlClass = h.unrealizedPnl > 0
+                const unrealClass = h.unrealizedPnl > 0
                   ? 'text-emerald-600 dark:text-emerald-400'
                   : h.unrealizedPnl < 0
+                  ? 'text-destructive'
+                  : 'text-muted-foreground';
+                const realizedClass = h.realizedPnl > 0
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : h.realizedPnl < 0
                   ? 'text-destructive'
                   : 'text-muted-foreground';
                 return (
@@ -266,11 +342,79 @@ function HoldingsTable({ holdings }: { holdings: HoldingDto[] }) {
                     <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{formatCurrency(h.avgBuyPrice)}</td>
                     <td className="px-3 py-2.5 text-right font-mono">{formatCurrency(h.currentPrice)}</td>
                     <td className="px-3 py-2.5 text-right font-mono font-medium">{formatCurrency(h.currentValue)}</td>
-                    <td className={`px-3 py-2.5 text-right font-mono ${pnlClass}`}>
+                    <td className={`px-3 py-2.5 text-right font-mono ${unrealClass}`}>
                       <div className="flex flex-col items-end">
                         <span>{h.unrealizedPnl >= 0 ? '+' : ''}{formatCurrency(h.unrealizedPnl)}</span>
                         <span className="text-xs opacity-75">{formatPercent(h.pnlPct)}</span>
                       </div>
+                    </td>
+                    <td className={`px-3 py-2.5 text-right font-mono ${realizedClass}`}>
+                      {h.realizedPnl !== 0
+                        ? <span>{h.realizedPnl >= 0 ? '+' : ''}{formatCurrency(h.realizedPnl)}</span>
+                        : <span className="text-muted-foreground">—</span>
+                      }
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TransactionsTable({ transactions }: { transactions: TransactionFeedDto[] }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Recent Trades</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="rounded-md border border-border overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">Time</th>
+                <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">Item</th>
+                <th className="px-3 py-2.5 text-center font-medium text-muted-foreground">Type</th>
+                <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Qty</th>
+                <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Unit Price</th>
+                <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map((tx) => {
+                const isBuy = tx.type === 'BUY';
+                return (
+                  <tr key={tx.id} className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors">
+                    <td className="px-3 py-2.5 text-muted-foreground text-xs whitespace-nowrap">
+                      {new Date(tx.timestamp * 1000).toLocaleString(undefined, {
+                        month: 'short', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                      })}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-foreground">{tx.itemName}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                        isBuy
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      }`}>
+                        {tx.type}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono">{tx.amount.toLocaleString()}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">
+                      {formatCurrency(tx.pricePerUnit)}
+                    </td>
+                    <td className={`px-3 py-2.5 text-right font-mono font-medium ${isBuy ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                      {isBuy ? '-' : '+'}{formatCurrency(tx.totalPrice)}
                     </td>
                   </tr>
                 );

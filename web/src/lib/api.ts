@@ -173,6 +173,7 @@ export interface HoldingDto {
   currentValue: number;
   unrealizedPnl: number;
   pnlPct: number;
+  realizedPnl: number;
 }
 
 export interface ActiveLoanDto {
@@ -192,6 +193,7 @@ export interface PortfolioDto {
   holdingsValue: number;
   totalDebt: number;
   netWorth: number;
+  totalRealizedPnl: number;
   creditScore: number;
   transactionCount: number;
   holdings: HoldingDto[];
@@ -281,6 +283,10 @@ export const api = {
   portfolio: {
     get: (base: string, playerName: string) =>
       fetchJson<PortfolioDto>(`${base}/api/portfolio/${encodeURIComponent(playerName)}`),
+    transactions: (base: string, playerName: string, limit = 50) =>
+      fetchJson<TransactionFeedDto[]>(
+        `${base}/api/portfolio/${encodeURIComponent(playerName)}/transactions?limit=${limit}`
+      ),
   },
   admin: {
     health: (base: string) => fetchJson<AdminHealthDto>(`${base}/api/admin/health`),

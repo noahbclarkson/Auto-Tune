@@ -109,6 +109,10 @@ public class PortfolioService {
                 .mapToDouble(HoldingDto::currentValue)
                 .sum();
 
+        double totalRealizedPnl = holdings.stream()
+                .mapToDouble(HoldingDto::realizedPnl)
+                .sum();
+
         double netWorth = vaultBalance + holdingsValue - totalDebt;
 
         String displayName = player != null && player.username() != null
@@ -121,6 +125,7 @@ public class PortfolioService {
                 holdingsValue,
                 totalDebt,
                 netWorth,
+                round(totalRealizedPnl, 2),
                 creditScore,
                 transactionCount,
                 holdings,
@@ -139,7 +144,9 @@ public class PortfolioService {
                     GROUP BY item_id
                 ),
                 sell_stats AS (
-                    SELECT item_id, SUM(amount) AS total_sold
+                    SELECT item_id,
+                           SUM(amount) AS total_sold,
+                           SUM(amount * price_per_unit) AS total_received
                     FROM at_transactions
                     WHERE player_uuid = :uuid AND transaction_type = 'SELL' AND timestamp >= :cutoff
                     GROUP BY item_id
@@ -154,7 +161,10 @@ public class PortfolioService {
                     COALESCE(ss.total_sold, 0) AS total_sold,
                     CASE WHEN COALESCE(bs.total_bought, 0) > 0
                          THEN bs.total_spent / bs.total_bought
-                         ELSE 0.0 END AS avg_buy_price
+                         ELSE 0.0 END AS avg_buy_price,
+                    CASE WHEN COALESCE(ss.total_sold, 0) > 0
+                         THEN ss.total_received / ss.total_sold
+                         ELSE 0.0 END AS avg_sell_price
                 FROM at_items i
                 LEFT JOIN buy_stats bs ON bs.item_id = i.id
                 LEFT JOIN sell_stats ss ON ss.item_id = i.id
@@ -174,9 +184,13 @@ public class PortfolioService {
                 int totalSold = rs.getInt("total_sold");
                 int netQty = totalBought - totalSold;
                 double avgBuyPrice = rs.getDouble("avg_buy_price");
+                double avgSellPrice = rs.getDouble("avg_sell_price");
                 double currentPrice = rs.getDouble("current_price");
                 double currentValue = netQty * currentPrice;
                 double unrealizedPnl = netQty * (currentPrice - avgBuyPrice);
+                double realizedPnl = totalSold > 0
+                        ? totalSold * (avgSellPrice - avgBuyPrice)
+                        : 0.0;
                 double pnlPct = avgBuyPrice > 0.0
                         ? ((currentPrice - avgBuyPrice) / avgBuyPrice) * 100.0
                         : 0.0;
@@ -191,7 +205,8 @@ public class PortfolioService {
                         round(currentPrice, 2),
                         round(currentValue, 2),
                         round(unrealizedPnl, 2),
-                        round(pnlPct, 2)
+                        round(pnlPct, 2),
+                        round(realizedPnl, 2)
                 );
             }).list();
             holdings.addAll(results);

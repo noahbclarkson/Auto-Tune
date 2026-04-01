@@ -48,18 +48,21 @@ public class AuctionCommand {
     private final AuctionRepository auctionRepo;
     private final ConfigManager configManager;
     private final Economy economy;
+    private final AutoTune plugin;
 
     @Inject
     public AuctionCommand(
             AuctionManager auctionManager,
             AuctionRepository auctionRepo,
             Economy economy,
-            ConfigManager configManager
+            ConfigManager configManager,
+            AutoTune plugin
     ) {
         this.auctionManager = auctionManager;
         this.auctionRepo = auctionRepo;
         this.configManager = configManager;
         this.economy = economy;
+        this.plugin = plugin;
     }
 
     @Command("auction")
@@ -153,8 +156,10 @@ public class AuctionCommand {
                             }
                         }
                     } else {
-                        // DB write failed — restore items to player's hand
-                        player.getInventory().addItem(toRestore);
+                        // DB write failed — restore items to player's hand.
+                        // Must run on main thread (Inventory.addItem is not thread-safe).
+                        plugin.getServer().getGlobalRegionScheduler().run(plugin, task ->
+                                player.getInventory().addItem(toRestore));
                         player.sendMessage(Component.text("✗ " + result.message(), NamedTextColor.RED));
                     }
                 });

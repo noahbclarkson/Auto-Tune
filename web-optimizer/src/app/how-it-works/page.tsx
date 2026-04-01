@@ -1,6 +1,7 @@
 import { ArrowRight, Calculator } from 'lucide-react';
 import Link from 'next/link';
 import { SpreadCalculator } from '@/components/landing/spread-calculator';
+import { SpreadSimulator } from '@/components/landing/spread-simulator';
 
 const steps = [
   {
@@ -179,6 +180,17 @@ export default function HowItWorks() {
             buyPrice = basePrice × (1 + BPD) · sellPrice = basePrice × (1 − SPD)
           </code>
         </div>
+      </div>
+
+      {/* Interactive Spread Simulator */}
+      <div className="mt-10">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-white mb-1">Try It: Spread Calculator</h2>
+          <p className="text-sm text-gray-400">
+            Adjust the market conditions below to see how the spread factors compound into real buy and sell prices.
+          </p>
+        </div>
+        <SpreadSimulator />
       </div>
 
       <SpreadCalculator />

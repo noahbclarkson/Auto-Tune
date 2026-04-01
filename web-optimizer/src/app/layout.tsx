@@ -4,9 +4,32 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://autotune.dev'),
   title: 'Auto-Tune — Adaptive Market Pricing for Minecraft',
   description:
     'A sophisticated market engine for Minecraft Paper servers with dynamic pricing based on supply, demand, and player activity.',
+  openGraph: {
+    title: 'Auto-Tune — Adaptive Market Pricing for Minecraft',
+    description:
+      'A sophisticated market engine for Minecraft servers with supply-and-demand pricing, loans, auctions, and cross-server price discovery.',
+    url: 'https://autotune.dev',
+    siteName: 'Auto-Tune',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Auto-Tune — Adaptive Minecraft Market Engine',
+      },
+    ],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Auto-Tune — Adaptive Market Pricing for Minecraft',
+    description:
+      'A sophisticated market engine for Minecraft servers with supply-and-demand pricing, loans, auctions, and cross-server price discovery.',
+  },
 };
 
 export default function RootLayout({

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Suspense, useEffect, useState, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { ItemTable } from '@/components/dashboard/item-table';
@@ -162,12 +163,27 @@ function TopMoversSection({ items }: { items: ItemDto[] }) {
 }
 
 export default function ItemsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background"><div className="mx-auto max-w-7xl px-6 py-6"><p className="text-muted-foreground">Loading...</p></div></div>}>
+      <ItemsPageContent />
+    </Suspense>
+  );
+}
+
+function ItemsPageContent() {
   const { apiBase } = useAppContext();
+  const searchParams = useSearchParams();
+  const sectionFilter = searchParams.get('section');
   const [items, setItems] = useState<ItemDto[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [trends, setTrends] = useState<TrendDto[]>([]);
   const [view, setView] = useState<'table' | 'grid'>('table');
   const [error, setError] = useState<string | null>(null);
+
+  const displayedItems = useMemo(() => {
+    if (!sectionFilter) return items;
+    return items.filter((i) => i.section === sectionFilter);
+  }, [items, sectionFilter]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -202,13 +218,22 @@ export default function ItemsPage() {
             onRetry={fetchData}
           />
         )}
-        <ItemsStatsBar items={items} />
-        <TopMoversSection items={items} />
+        {!sectionFilter && <ItemsStatsBar items={items} />}
+        {sectionFilter && (
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Showing:</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/30 px-3 py-1 text-sm font-medium text-primary">
+              {sectionFilter}
+            </span>
+            <a href="/items/" className="text-xs text-muted-foreground hover:text-foreground underline">Clear filter</a>
+          </div>
+        )}
+        {!sectionFilter && <TopMoversSection items={items} />}
 
         {/* View toggle */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
-            {items.length} items across {new Set(items.map(i => i.section)).size} sections
+            {displayedItems.length} {sectionFilter ? `item${displayedItems.length !== 1 ? 's' : ''} in ${sectionFilter}` : `items across ${new Set(items.map(i => i.section)).size} sections`}
           </p>
           <div className="flex items-center gap-1 border border-border rounded-lg p-0.5">
             <button
@@ -234,13 +259,13 @@ export default function ItemsPage() {
 
         {view === 'table' ? (
           <ItemTable
-            items={items}
+            items={displayedItems}
             trends={trends}
             linkToDetail={true}
             pageSize={25}
           />
         ) : (
-          <ItemGrid items={items} trends={trends} linkToDetail={true} />
+          <ItemGrid items={displayedItems} trends={trends} linkToDetail={true} />
         )}
       </main>
     </div>

@@ -521,6 +521,96 @@ impl Scenario {
         }
     }
 
+    /// GuildBuyer Failure Test — MM quits specifically at day 7.
+    /// Control: no exodus (baseline guildbuyer_failure_test)
+    /// Treatment: only the MarketMaker quits at day 7 (exodus_target_archetype = "MarketMaker")
+    /// Tests: can the economy survive without MM (market-making vacuum)?
+    pub fn guildbuyer_failure_mm_quit_test() -> Self {
+        let mut config = SimConfig::default();
+        config.loans.post_default_cooldown_hours = 168;
+        config.player_exodus_tick = Some(288 * 7); // day 7
+        config.player_exodus_fraction = 1.0; // all matching archetype quit
+        config.exodus_target_archetype = Some("MarketMaker".to_string());
+        config.exodus_spread_multiplier = 2.0;
+        config.exodus_shock_duration_ticks = 288;
+        Self {
+            name: "GuildBuyer Failure Test — MM quits at Day 7".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// GuildBuyer Failure Test — GuildBuyer quits specifically at day 7.
+    /// Control: no exodus (baseline guildbuyer_failure_test)
+    /// Treatment: one GuildBuyer quits at day 7 (exodus_target_archetype = "GuildBuyer")
+    /// Tests: what happens to economy when the primary demand-side archetype leaves?
+    pub fn guildbuyer_failure_gb_quit_test() -> Self {
+        let mut config = SimConfig::default();
+        config.loans.post_default_cooldown_hours = 168;
+        config.player_exodus_tick = Some(288 * 7); // day 7
+        config.player_exodus_fraction = 1.0; // all matching archetype quit
+        config.exodus_target_archetype = Some("GuildBuyer".to_string());
+        config.exodus_spread_multiplier = 2.0;
+        config.exodus_shock_duration_ticks = 288;
+        Self {
+            name: "GuildBuyer Failure Test — GB quits at Day 7".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Guildbuyer Failure Test but with MM loan BOUNDED via single_loan_gdp_cap=0.10.
     /// MM's opening loan on Day 2 was $183K = 28.5% of economy GDP — the cascade driver.
     /// Bounding loans to 10% of GDP would cap MM's opening loan at ~$64K instead.
@@ -5927,6 +6017,378 @@ fn run_mm_competition_test() {
     println!();
 }
 
+// ─── MM Quit Test ────────────────────────────────────────────────────────
+/// Tests what happens when the MarketMaker specifically quits at day 7.
+/// Control: guildbuyer_failure_test (no exodus)
+/// Treatment: guildbuyer_failure_mm_quit_test (MM quits at day 7)
+/// Key questions:
+///   - Does the economy collapse without MM's two-sided liquidity?
+///   - Do spreads blow out?
+///   - Do remaining players compensate by taking more loans?
+fn run_mm_quit_test() {
+    use crate::analyzer::load_summary;
+    use rusqlite::Connection;
+
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       MM QUIT TEST                                          ║");
+    println!("║  MM quits at day 7 — can economy survive without MM?    ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guildbuyer_failure_test (no exodus)");
+    println!("  Treat:   guildbuyer_failure_mm_quit_test (MM quits day 7)");
+    println!("  Seed: {}\n", seed);
+
+    // Helper to query loan stats from DB
+    fn get_loan_counts(db_path: &std::path::Path) -> (usize, usize, usize) {
+        let conn = Connection::open(db_path).ok();
+        if let Some(conn) = conn {
+            let taken: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loan_events WHERE event_type = 'Taken'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            let defaulted: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loan_events WHERE event_type = 'Defaulted'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            let active: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loans WHERE status = 'Active'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            return (taken, defaulted, active);
+        }
+        (0, 0, 0)
+    }
+
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8}",
+        "GDP", "Debt", "D/G", "BPD%", "Buy%"
+    );
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8}",
+        "─".repeat(12),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8)
+    );
+
+    // Control: no exodus
+    let ctrl_dir = PathBuf::from("/tmp/autotune-mm-quit-ctrl");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    let ctrl_scenario = Scenario::guildbuyer_failure_test();
+    if let Err(e) = run_seeded_headless(&ctrl_scenario, seed, &ctrl_dir) {
+        eprintln!("  Control error: {}", e);
+        return;
+    }
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Control summary error: {}", e);
+            return;
+        }
+    };
+    let ctrl_loans = get_loan_counts(&ctrl_dir.join("simulation.db"));
+
+    // Treatment: MM quits at day 7
+    let treat_dir = PathBuf::from("/tmp/autotune-mm-quit-treat");
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&treat_dir).ok();
+    let treat_scenario = Scenario::guildbuyer_failure_mm_quit_test();
+    if let Err(e) = run_seeded_headless(&treat_scenario, seed, &treat_dir) {
+        eprintln!("  Treatment error: {}", e);
+        return;
+    }
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treatment summary error: {}", e);
+            return;
+        }
+    };
+    let treat_loans = get_loan_counts(&treat_dir.join("simulation.db"));
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+
+    println!(
+        "  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}% (ctrl, {} def, {} act)",
+        ctrl_summary.gdp,
+        ctrl_summary.debt,
+        ctrl_dg,
+        ctrl_summary.avg_bpd * 100.0,
+        ctrl_summary.buy_ratio * 100.0,
+        ctrl_loans.1,
+        ctrl_loans.2
+    );
+    println!(
+        "  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}% (treat, {} def, {} act)",
+        treat_summary.gdp,
+        treat_summary.debt,
+        treat_dg,
+        treat_summary.avg_bpd * 100.0,
+        treat_summary.buy_ratio * 100.0,
+        treat_loans.1,
+        treat_loans.2
+    );
+
+    println!();
+    let gdp_pct = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let debt_pct = (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0;
+    let dg_chg = treat_dg - ctrl_dg;
+    let bpd_chg = (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0;
+    let vol_chg = treat_summary.avg_volatility - ctrl_summary.avg_volatility;
+    let buy_chg = (treat_summary.buy_ratio - ctrl_summary.buy_ratio) * 100.0;
+
+    println!("  === IMPACT ANALYSIS ===");
+    println!(
+        "  GDP change:          {:+.1}% {}",
+        gdp_pct,
+        if gdp_pct > 0.0 { "✅" } else { "❌" }
+    );
+    println!(
+        "  Debt change:         {:+.1}% {}",
+        debt_pct,
+        if debt_pct < 0.0 { "✅" } else { "❌" }
+    );
+    println!(
+        "  D/G change:          {:+.2}x {}",
+        dg_chg,
+        if dg_chg < 0.0 { "✅" } else { "❌" }
+    );
+    println!(
+        "  BPD change:           {:+.2}pp {}",
+        bpd_chg,
+        if bpd_chg < 0.0 {
+            "✅ (tighter)"
+        } else {
+            "⚠️ (wider spreads)"
+        }
+    );
+    println!("  Buy ratio change:    {:+.1}pp", buy_chg);
+    println!(
+        "  Volatility change:   {:+.4} {}",
+        vol_chg,
+        if vol_chg < 0.0 {
+            "✅ (more stable)"
+        } else {
+            "⚠️ (less stable)"
+        }
+    );
+
+    println!();
+    println!("  === VERDICT ===");
+    if gdp_pct > -10.0 && dg_chg < 1.0 && bpd_chg < 1.0 {
+        println!("  ✅ Economy SURVIVES without MM — GuildBuyers absorb demand");
+    } else if gdp_pct < -30.0 || dg_chg > 5.0 {
+        println!("  ❌ Economy COLLAPSES without MM — MM is essential");
+    } else {
+        println!(
+            "  ⚠️  Mixed: GDP {:+.1}%, D/G {:+.2}x, BPD {:+.2}pp",
+            gdp_pct, dg_chg, bpd_chg
+        );
+    }
+    println!(
+        "  Key insight: MM quit → {} spread shock on remaining players",
+        if treat_summary.avg_bpd > ctrl_summary.avg_bpd * 1.5 {
+            "LARGE (blowout)"
+        } else if treat_summary.avg_bpd > ctrl_summary.avg_bpd * 1.1 {
+            "MODERATE"
+        } else {
+            "MINIMAL"
+        }
+    );
+    println!();
+}
+
+// ─── GB Quit Test ─────────────────────────────────────────────────────────
+/// Tests what happens when a GuildBuyer specifically quits at day 7.
+/// Control: guildbuyer_failure_test (no exodus)
+/// Treatment: guildbuyer_failure_gb_quit_test (one GB quits at day 7)
+/// Key questions:
+///   - Does economy buy/sell balance shift when primary buyer leaves?
+///   - Do prices drop (demand vacuum)?
+///   - Does remaining GB absorb the slack?
+fn run_gb_quit_test() {
+    use crate::analyzer::load_summary;
+    use rusqlite::Connection;
+
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       GB QUIT TEST                                           ║");
+    println!("║  GuildBuyer quits at day 7 — demand vacuum test          ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guildbuyer_failure_test (no exodus)");
+    println!("  Treat:   guildbuyer_failure_gb_quit_test (GB quits day 7)");
+    println!("  Seed: {}\n", seed);
+
+    fn get_loan_counts(db_path: &std::path::Path) -> (usize, usize, usize) {
+        let conn = Connection::open(db_path).ok();
+        if let Some(conn) = conn {
+            let taken: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loan_events WHERE event_type = 'Taken'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            let defaulted: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loan_events WHERE event_type = 'Defaulted'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            let active: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loans WHERE status = 'Active'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            return (taken, defaulted, active);
+        }
+        (0, 0, 0)
+    }
+
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8}",
+        "GDP", "Debt", "D/G", "BPD%", "Buy%"
+    );
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8}",
+        "─".repeat(12),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8)
+    );
+
+    // Control
+    let ctrl_dir = PathBuf::from("/tmp/autotune-gb-quit-ctrl");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    let ctrl_scenario = Scenario::guildbuyer_failure_test();
+    if let Err(e) = run_seeded_headless(&ctrl_scenario, seed, &ctrl_dir) {
+        eprintln!("  Control error: {}", e);
+        return;
+    }
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Control summary error: {}", e);
+            return;
+        }
+    };
+    let ctrl_loans = get_loan_counts(&ctrl_dir.join("simulation.db"));
+
+    // Treatment
+    let treat_dir = PathBuf::from("/tmp/autotune-gb-quit-treat");
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&treat_dir).ok();
+    let treat_scenario = Scenario::guildbuyer_failure_gb_quit_test();
+    if let Err(e) = run_seeded_headless(&treat_scenario, seed, &treat_dir) {
+        eprintln!("  Treatment error: {}", e);
+        return;
+    }
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treatment summary error: {}", e);
+            return;
+        }
+    };
+    let treat_loans = get_loan_counts(&treat_dir.join("simulation.db"));
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+
+    println!(
+        "  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}% (ctrl, {} def, {} act)",
+        ctrl_summary.gdp,
+        ctrl_summary.debt,
+        ctrl_dg,
+        ctrl_summary.avg_bpd * 100.0,
+        ctrl_summary.buy_ratio * 100.0,
+        ctrl_loans.1,
+        ctrl_loans.2
+    );
+    println!(
+        "  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}% (treat, {} def, {} act)",
+        treat_summary.gdp,
+        treat_summary.debt,
+        treat_dg,
+        treat_summary.avg_bpd * 100.0,
+        treat_summary.buy_ratio * 100.0,
+        treat_loans.1,
+        treat_loans.2
+    );
+
+    println!();
+    let gdp_pct = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let debt_pct = (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0;
+    let dg_chg = treat_dg - ctrl_dg;
+    let bpd_chg = (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0;
+    let vol_chg = treat_summary.avg_volatility - ctrl_summary.avg_volatility;
+    let buy_chg = (treat_summary.buy_ratio - ctrl_summary.buy_ratio) * 100.0;
+
+    println!("  === IMPACT ANALYSIS ===");
+    println!(
+        "  GDP change:          {:+.1}% {}",
+        gdp_pct,
+        if gdp_pct > 0.0 { "✅" } else { "❌" }
+    );
+    println!(
+        "  Debt change:         {:+.1}% {}",
+        debt_pct,
+        if debt_pct < 0.0 { "✅" } else { "❌" }
+    );
+    println!(
+        "  D/G change:          {:+.2}x {}",
+        dg_chg,
+        if dg_chg < 0.0 { "✅" } else { "❌" }
+    );
+    println!(
+        "  BPD change:           {:+.2}pp {}",
+        bpd_chg,
+        if bpd_chg < 0.0 {
+            "✅ (tighter)"
+        } else {
+            "⚠️ (wider spreads)"
+        }
+    );
+    println!(
+        "  Buy ratio change:    {:+.1}pp (demand vacuum → more sell-heavy?)",
+        buy_chg
+    );
+    println!("  Volatility change:   {:+.4}", vol_chg);
+
+    println!();
+    println!("  === VERDICT ===");
+    if gdp_pct > -10.0 && buy_chg.abs() < 20.0 {
+        println!("  ✅ Economy absorbs GB quit — remaining GB fills the gap");
+    } else if gdp_pct < -20.0 || buy_chg < -20.0 {
+        println!("  ❌ Severe demand vacuum — 1 GB insufficient for economy balance");
+    } else {
+        println!(
+            "  ⚠️  Moderate impact: GDP {:+.1}%, buy ratio {:+.1}pp",
+            gdp_pct, buy_chg
+        );
+    }
+    println!();
+}
+
 // ─── Exploiter Stress Test ─────────────────────────────────────────────────
 
 /// Head-to-head comparison of standard+MM vs standard+MM+2 Exploiters.
@@ -6762,6 +7224,8 @@ fn main() -> eframe::Result<()> {
             "  --guildbuyer-failure-test  GB default cascade: cooldown prevs re-borrow bypass"
         );
         println!("  --mm-competition-test   1MM+2GB vs 2MM+2GB: does extra MM improve stability?");
+        println!("  --mm-quit-test         MM quits at day 7: can economy survive without MM?");
+        println!("  --gb-quit-test         GB quits at day 7: demand vacuum test");
         println!(
             "  --volume-trader-test     VolumeTrader archetype: contrarian liquidity vs control"
         );
@@ -7005,6 +7469,18 @@ fn main() -> eframe::Result<()> {
     // ─── MM Competition Test ──────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--mm-competition-test" {
         run_mm_competition_test();
+        return Ok(());
+    }
+
+    // ─── MM Quit Test ─────────────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--mm-quit-test" {
+        run_mm_quit_test();
+        return Ok(());
+    }
+
+    // ─── GB Quit Test ──────────────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--gb-quit-test" {
+        run_gb_quit_test();
         return Ok(());
     }
 

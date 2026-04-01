@@ -141,30 +141,55 @@ impl Simulation {
         // Simulates mass player departure at a specific tick (e.g. half the server quits).
         // Players with highest outstanding debt quit first (most realistic).
         // Also triggers a spread shock (liquidity panic) for the configured duration.
+        // If exodus_target_archetype is set, only players of that archetype quit.
         if self.current_tick == self.config.player_exodus_tick.unwrap_or(u64::MAX) {
-            let num_to_remove =
-                (self.players.len() as f64 * self.config.player_exodus_fraction) as usize;
-            if num_to_remove > 0 {
-                // Compute each player's total outstanding debt from active loans
-                let mut player_debts: Vec<(usize, f64)> = (0..self.players.len())
-                    .map(|i| {
-                        let debt = self
-                            .loans
-                            .iter()
-                            .filter(|l| l.player_index == i && l.status != LoanStatus::Defaulted)
-                            .map(|l| l.current_balance)
-                            .sum::<f64>();
-                        (i, debt)
-                    })
-                    .collect();
-                // Sort by debt descending (highest-debt players quit first)
-                player_debts
-                    .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-                let quit_indices: Vec<usize> = player_debts
+            let quit_indices: Vec<usize> = if let Some(ref target_arch) =
+                self.config.exodus_target_archetype
+            {
+                // Target specific archetype: find all players of this type, quit all
+                self.players
                     .iter()
-                    .take(num_to_remove)
-                    .map(|&(i, _)| i)
-                    .collect();
+                    .enumerate()
+                    .filter(|(_, p)| {
+                        format!("{:?}", p.archetype).to_lowercase() == target_arch.to_lowercase()
+                    })
+                    .map(|(i, _)| i)
+                    .collect()
+            } else {
+                // Default: highest-debt-first exodus
+                let num_to_remove =
+                    (self.players.len() as f64 * self.config.player_exodus_fraction) as usize;
+                if num_to_remove == 0 {
+                    Vec::new()
+                } else {
+                    let mut player_debts: Vec<(usize, f64)> = (0..self.players.len())
+                        .map(|i| {
+                            let debt = self
+                                .loans
+                                .iter()
+                                .filter(|l| {
+                                    l.player_index == i && l.status != LoanStatus::Defaulted
+                                })
+                                .map(|l| l.current_balance)
+                                .sum::<f64>();
+                            (i, debt)
+                        })
+                        .collect();
+                    player_debts
+                        .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                    player_debts
+                        .iter()
+                        .take(num_to_remove)
+                        .map(|&(i, _)| i)
+                        .collect()
+                }
+            };
+            if !quit_indices.is_empty() {
+                let archetype_label = self
+                    .config
+                    .exodus_target_archetype
+                    .clone()
+                    .unwrap_or_else(|| "highest-debt".to_string());
                 for &idx in &quit_indices {
                     self.players[idx].online = false;
                 }
@@ -172,9 +197,10 @@ impl Simulation {
                 self.engine.spread_shock = self.config.exodus_spread_multiplier;
                 self.engine.shock_remaining_ticks = self.config.exodus_shock_duration_ticks;
                 println!(
-                    "  [EXODUS] tick {} — {} players quit (highest-debt first): {:?} | spread shock: {:.1}x for {} ticks",
+                    "  [EXODUS] tick {} — {} {} players quit: {:?} | spread shock: {:.1}x for {} ticks",
                     self.current_tick,
-                    num_to_remove,
+                    quit_indices.len(),
+                    archetype_label,
                     quit_indices,
                     self.config.exodus_spread_multiplier,
                     self.config.exodus_shock_duration_ticks

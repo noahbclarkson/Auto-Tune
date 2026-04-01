@@ -19,6 +19,10 @@ pub struct SimConfig {
     /// Number of ticks the spread shock lasts before decaying (spread decay: 5%/tick).
     /// Default 288 (1 day). Set to 0 to disable shock.
     pub exodus_shock_duration_ticks: u64,
+    /// If set, only players of this archetype quit during exodus.
+    /// Overrides exodus_fraction — all players of this archetype quit.
+    /// Examples: "MarketMaker", "GuildBuyer", "Casual".
+    pub exodus_target_archetype: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -130,6 +134,7 @@ impl Default for SimConfig {
             player_exodus_fraction: 0.5,
             exodus_spread_multiplier: 2.0,
             exodus_shock_duration_ticks: 288,
+            exodus_target_archetype: None,
         }
     }
 }

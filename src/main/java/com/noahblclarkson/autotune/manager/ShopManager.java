@@ -110,6 +110,25 @@ public class ShopManager {
         logger.info("Loaded " + loaded + " default shop items from shops.yml");
     }
 
+    /**
+     * Reload shop items from shops.yml, replacing the current in-memory cache and
+     * repopulating the database with the current shops.yml contents.
+     *
+     * This is called by /at admin reload so admins can edit shops.yml and apply
+     * changes without restarting the server.
+     *
+     * Note: If you have customized item prices via /at admin item commands, those
+     * DB overrides will be overwritten by this reload. Re-edit shops.yml and
+     * reload again to set new prices.
+     */
+    public void reload() {
+        hashToItemCache.clear();
+        idToItemCache.clear();
+        buyableCache.clear();
+        loadDefaultItems();
+        loadCache();
+    }
+
     public void refreshCache() {
         hashToItemCache.clear();
         idToItemCache.clear();

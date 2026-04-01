@@ -203,6 +203,7 @@ public class AutoTune extends JavaPlugin {
         // Repopulate market caches synchronously so prices/spreads are correct
         // immediately after reload (don't wait up to 5 min for next async tick)
         marketEngine.tick();
+        shopManager.reload();
         priceAlertManager.rebuildCache();
         if (webServer != null && configManager.getConfig().web().enabled()) {
             webServer.stop();

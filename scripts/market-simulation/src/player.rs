@@ -276,6 +276,9 @@ pub struct PlayerAgent {
     pub total_traded: f64,
     pub online: bool,
     pub total_trades: u32,
+    /// Tick when player last defaulted a loan. Used for post-default cooldown.
+    /// None = has never defaulted (or cooldown has expired).
+    pub last_defaulted_at: Option<u64>,
 }
 
 impl PlayerAgent {
@@ -317,6 +320,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -361,6 +365,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -409,6 +414,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -453,6 +459,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -497,6 +504,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent
@@ -548,6 +556,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
         // Newbies prefer cheap basic items
@@ -600,6 +609,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
         // AFK farmers prefer cheap gathered items (building blocks, ores, drops)
@@ -657,6 +667,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -720,6 +731,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -779,6 +791,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -835,6 +848,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, &[]);
         agent.init_preferences(item_count);
@@ -899,6 +913,7 @@ impl PlayerAgent {
             volume_price_window: price_window.max(spread_window),
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, &[]);
         agent.init_preferences(item_count);

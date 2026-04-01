@@ -313,7 +313,7 @@ impl Simulation {
             let total_debt: f64 = self
                 .loans
                 .iter()
-                .filter(|l| l.status == LoanStatus::Active)
+                .filter(|l| matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted))
                 .map(|l| l.current_balance)
                 .sum();
             let gdp: f64 = self
@@ -353,7 +353,7 @@ impl Simulation {
             let total_debt: f64 = self
                 .loans
                 .iter()
-                .filter(|l| l.status == LoanStatus::Active)
+                .filter(|l| matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted))
                 .map(|l| l.current_balance)
                 .sum();
             let gdp_window = 288u64;
@@ -402,6 +402,7 @@ impl Simulation {
                 if let Some(player) = self.players.get_mut(loan.player_index) {
                     player.credit_score =
                         (player.credit_score - self.config.loans.default_penalty).max(0);
+                    player.last_defaulted_at = Some(self.current_tick);
                 }
             }
         }
@@ -456,7 +457,20 @@ impl Simulation {
                 .iter()
                 .any(|l| l.player_index == player_idx && l.status == LoanStatus::Active);
 
+            // Post-default cooldown: player cannot take new loans within cooldown period
+            let in_default_cooldown = if self.config.loans.post_default_cooldown_hours > 0 {
+                if let Some(last_default) = self.players[player_idx].last_defaulted_at {
+                    let cooldown_ticks = self.config.loans.post_default_cooldown_hours as u64 * 12;
+                    self.current_tick.saturating_sub(last_default) < cooldown_ticks
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
             if !has_active_loan
+                && !in_default_cooldown
                 && player.balance < 50.0
                 && player.credit_score >= self.config.loans.min_credit_score
                 && rng_next() < 0.1
@@ -572,7 +586,7 @@ impl Simulation {
         let total_debt: f64 = self
             .loans
             .iter()
-            .filter(|l| l.status == LoanStatus::Active)
+            .filter(|l| matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted))
             .map(|l| l.current_balance)
             .sum();
 

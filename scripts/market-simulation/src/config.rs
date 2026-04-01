@@ -75,6 +75,10 @@ pub struct LoanConfig {
     /// Per-loan GDP cap: no single loan can exceed economy GDP × this factor.
     /// Set to 0.0 to disable. Default 1.0 (matches Java LoanManager.singleLoanGdpCap).
     pub single_loan_gdp_cap: f64,
+    /// Post-default cooldown: players cannot take new loans within this many hours
+    /// of a loan default. Prevents immediate re-borrowing after defaulting.
+    /// Set to 0 to disable. Default 168 (7 days, matches Java LoanManager).
+    pub post_default_cooldown_hours: i32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -179,6 +183,7 @@ impl Default for LoanConfig {
             tier1_interest_cap: 0.5,
             tier2_interest_cap: 0.25,
             single_loan_gdp_cap: 1.0,
+            post_default_cooldown_hours: 168, // 7 days, matches Java LoanManager
         }
     }
 }

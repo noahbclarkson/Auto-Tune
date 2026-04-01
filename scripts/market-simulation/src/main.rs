@@ -398,6 +398,52 @@ impl Scenario {
         }
     }
 
+    /// GuildStability with 2 MarketMakers (replaces 1 Casual with 2nd MM).
+    /// Tests: Does a second MM improve economy health, or do they step on each other's toes?
+    ///
+    /// Control: guild_stability_mm_fixed_guild (1MM + 2GB + 4Cas + 3Far + 2Tra = 12 players)
+    /// Treatment: guild_stability_2mm_fixed_guild (2MM + 2GB + 3Cas + 3Far + 2Tra = 12 players)
+    ///
+    /// Hypotheses:
+    /// - H1 (YES): 2 MMs provide redundant two-sided liquidity → tighter spreads, lower vol
+    /// - H2 (NO): MMs compete on same quotes → one dominates, other gets starved → no improvement
+    /// - H3 (MAYBE): 2 MMs mean more capital deployed → more resilient to liquidity shocks
+    ///
+    /// Key metrics: GDP, D/G, vol, avg BPD, buy ratio
+    pub fn guild_stability_2mm_fixed_guild() -> Self {
+        Self {
+            name: "GuildStability+2MM+7%GB".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 2, // ← 2 MMs instead of 1
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 3, // ← 3 instead of 4 (replaced 1 Casual with 1 MM)
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42), // Same seed as control for fair head-to-head
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Verifies per-loan GDP cap behavior.
     /// Uses a tight single_loan_gdp_cap (0.5) to force early-tick cap events.
     /// Players start with low balance to trigger loan requests in early ticks.
@@ -5688,6 +5734,199 @@ fn run_guild_threshold_sweep() {
     println!("\n  CSV saved to: {}", csv_path.display());
 }
 
+// ─── MM Competition Test ───────────────────────────────────────────────────
+
+/// Head-to-head comparison: 1MM+2GB vs 2MM+2GB (same seed, same archetypes).
+///
+/// Core question: Does adding a 2nd MarketMaker improve economy health,
+/// or do MMs step on each other's quotes?
+///
+/// Control: guild_stability_mm_fixed_guild (1MM + 2GB + 4Cas + 3Far + 2Tra)
+/// Treatment: guild_stability_2mm_fixed_guild (2MM + 2GB + 3Cas + 3Far + 2Tra)
+///
+/// Hypotheses:
+/// - H1 (YES): 2 MMs provide redundant two-sided liquidity → tighter spreads
+/// - H2 (NO): MMs compete on same quotes → one dominates, no net improvement
+/// - H3 (RISKY): More MMs → more capital deployed → bigger positions when MM defaults
+fn run_mm_competition_test() {
+    use crate::analyzer::load_summary;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       MM COMPETITION TEST                                  ║");
+    println!("║  1MM+2GB vs 2MM+2GB — Does more MM improve stability?   ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  Control: 1MM + 2GB + 4Cas + 3Far + 2Tra (12 players, seed={})",
+        seed
+    );
+    println!(
+        "  Treat:   2MM + 2GB + 3Cas + 3Far + 2Tra (12 players, seed={})",
+        seed
+    );
+    println!("  Same seed = same RNG state = fair head-to-head\n");
+
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8} {:>8}  |  {:>12} {:>12} {:>10} {:>8} {:>8} {:>8}",
+        "GDP",
+        "Debt",
+        "D/G",
+        "BPD%",
+        "Buy%",
+        "Vol×1000",
+        "GDP",
+        "Debt",
+        "D/G",
+        "BPD%",
+        "Buy%",
+        "Vol×1000"
+    );
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8} {:>8}  |  {:>12} {:>12} {:>10} {:>8} {:>8} {:>8}",
+        "─".repeat(12),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(12),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(8)
+    );
+
+    // Run control
+    let ctrl_dir = PathBuf::from("/tmp/autotune-mm-ctrl");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    let control = Scenario::guild_stability_mm_fixed_guild();
+    if let Err(e) = run_seeded_headless(&control, seed, &ctrl_dir) {
+        eprintln!("  Control run error: {}", e);
+        return;
+    }
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Control summary error: {}", e);
+            return;
+        }
+    };
+
+    // Run treatment
+    let treat_dir = PathBuf::from("/tmp/autotune-mm-treat");
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&treat_dir).ok();
+    let treatment = Scenario::guild_stability_2mm_fixed_guild();
+    if let Err(e) = run_seeded_headless(&treatment, seed, &treat_dir) {
+        eprintln!("  Treatment run error: {}", e);
+        return;
+    }
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treatment summary error: {}", e);
+            return;
+        }
+    };
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+
+    println!(
+        "  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}% {:>7.3}  |  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}% {:>7.3}",
+        ctrl_summary.gdp,
+        ctrl_summary.debt,
+        ctrl_dg,
+        ctrl_summary.avg_bpd * 100.0,
+        ctrl_summary.buy_ratio * 100.0,
+        ctrl_summary.avg_volatility * 1000.0,
+        treat_summary.gdp,
+        treat_summary.debt,
+        treat_dg,
+        treat_summary.avg_bpd * 100.0,
+        treat_summary.buy_ratio * 100.0,
+        treat_summary.avg_volatility * 1000.0
+    );
+
+    println!();
+    println!("  === ANALYSIS ===");
+    let gdp_pct = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let vol_pct =
+        (treat_summary.avg_volatility / ctrl_summary.avg_volatility.max(0.0001) - 1.0) * 100.0;
+    let bpd_pct = (treat_summary.avg_bpd / ctrl_summary.avg_bpd.max(0.0001) - 1.0) * 100.0;
+
+    println!(
+        "  GDP change:          {:+.1}% ({})",
+        gdp_pct,
+        if gdp_pct < -5.0 {
+            "2MM harms GDP"
+        } else if gdp_pct > 5.0 {
+            "2MM boosts GDP"
+        } else {
+            "2MM neutral on GDP"
+        }
+    );
+    println!(
+        "  Volatility change:  {:+.1}% ({})",
+        vol_pct,
+        if vol_pct > 50.0 {
+            "2MM raises vol"
+        } else if vol_pct < -50.0 {
+            "2MM reduces vol"
+        } else {
+            "2MM stable vol"
+        }
+    );
+    println!(
+        "  Spread (BPD) change: {:+.1}% ({})",
+        bpd_pct,
+        if bpd_pct < -20.0 {
+            "2MM compresses spreads"
+        } else if bpd_pct > 20.0 {
+            "2MM widens spreads"
+        } else {
+            "2MM neutral on spreads"
+        }
+    );
+    println!("  D/G: {:.2}x (ctrl) → {:.2}x (treat)", ctrl_dg, treat_dg);
+    let dg_chg = treat_dg - ctrl_dg;
+    println!(
+        "  D/G delta: {:+.2}x ({})",
+        dg_chg,
+        if dg_chg < -0.1 {
+            "2MM improves debt health"
+        } else if dg_chg > 0.1 {
+            "2MM worsens debt health"
+        } else {
+            "2MM neutral on debt"
+        }
+    );
+
+    // Verdict
+    println!();
+    let improvements = [
+        gdp_pct > 5.0,
+        vol_pct < -20.0,
+        bpd_pct < -10.0,
+        dg_chg < -0.1,
+    ];
+    let regressions = [gdp_pct < -5.0, vol_pct > 50.0, bpd_pct > 20.0, dg_chg > 0.1];
+    let n_improve = improvements.iter().filter(|&&x| x).count();
+    let n_regress = regressions.iter().filter(|&&x| x).count();
+    if n_improve >= 2 && n_regress == 0 {
+        println!("  ✅ VERDICT: 2 MMs improve economy — ADD A 2ND MM TO PRODUCTION CONFIG");
+    } else if n_regress >= 2 && n_improve == 0 {
+        println!("  ❌ VERDICT: 2 MMs harm economy — 1 MM is sufficient");
+    } else if n_improve > 0 && n_regress > 0 {
+        println!("  ⚠️  VERDICT: Mixed — 2 MMs trade-offs specific to your priorities");
+    } else {
+        println!("  ➖ VERDICT: No meaningful difference — 2 MMs offer no benefit");
+    }
+    println!();
+}
+
 // ─── Exploiter Stress Test ─────────────────────────────────────────────────
 
 /// Head-to-head comparison of standard+MM vs standard+MM+2 Exploiters.
@@ -6522,6 +6761,7 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --guildbuyer-failure-test  GB default cascade: cooldown prevs re-borrow bypass"
         );
+        println!("  --mm-competition-test   1MM+2GB vs 2MM+2GB: does extra MM improve stability?");
         println!(
             "  --volume-trader-test     VolumeTrader archetype: contrarian liquidity vs control"
         );
@@ -6759,6 +6999,12 @@ fn main() -> eframe::Result<()> {
     // ─── MM No-Opening-Loan Test ─────────────────────────────────────────
     if args.len() > 1 && args[1] == "--mm-no-opening-loan-test" {
         run_mm_no_opening_loan_test();
+        return Ok(());
+    }
+
+    // ─── MM Competition Test ──────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--mm-competition-test" {
+        run_mm_competition_test();
         return Ok(());
     }
 

@@ -134,6 +134,84 @@ An item with Sharpness II + Efficiency IV sells at `basePrice × 1.75 × 2.20` =
 |-----|---------|-------------|
 | `autosell.enabled` | `true` | Enable per-player autosell |
 | `autosell.broadcast` | `false` | Announce autosell transactions in chat |
+| `autosell.minimum-price` | `0.01` | Items below this price are NOT autosold (0 = sell everything) |
+| `autosell.sound-on-pickup` | `ENTITY_ITEM_PICKUP` | Sound on autosell of picked-up items |
+| `autosell.sound-on-inventory-sell` | `UI_LOOT_YOUR_FILLED_CONTAINER` | Sound after inventory autosell |
+
+---
+
+## `cleanup.*` — Database Cleanup
+
+Prevents unbounded growth. All sections are independently configurable.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `cleanup.cleanup-interval-hours` | `24` | How often to run cleanup (0 = disabled) |
+| `cleanup.transactions.retention-days` | `14` | Trade transaction history |
+| `cleanup.market-history.retention-days` | `7` | Price/volume sparkline history |
+| `cleanup.economy-snapshots.retention-days` | `30` | Economy-wide GDP/debt snapshots |
+| `cleanup.auction-orders.retention-days` | `30` | Terminal auction orders (FILLED/EXPIRED/CANCELLED only) |
+| `cleanup.auction-fills.retention-days` | `60` | Individual auction fill records |
+| `cleanup.market-events.retention-days` | `7` | Ended market event history |
+
+Active OPEN / PARTIALLY_FILLED auction orders are **never deleted** regardless of retention settings.
+
+---
+
+## `auction.*` — Auction House
+
+In-game order-book auction system. Players place buy/sell orders, matched by price-time priority.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `auction.default-duration-hours` | `72` | How long orders remain active before expiring |
+| `auction.expiration-check-interval-minutes` | `15` | How often to process expired orders (0 = disabled) |
+
+**Expiration behavior:**
+- Buy orders: escrowed funds are **automatically refunded** when expired
+- Sell orders: items are **NOT returned automatically** — players must reclaim via `/auction reclaim`
+
+Set `expiration-check-interval-minutes: 0` only if you want to manage order expiry manually via `/auction cancel`.
+
+---
+
+## `market-events.*` — Dynamic Market Events
+
+Server-wide events that amplify or dampen price movements for matching items. Events affect **price velocity** (how fast prices change), not absolute prices — natural market forces still apply, so exploits are not possible.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `market-events.enabled` | `true` | Enable market events |
+| `market-events.check-interval-minutes` | `5` | How often to check event lifecycle |
+
+**Event types:**
+
+| Type | Effect |
+|------|--------|
+| `DEMAND_SURGE` | Amplifies upward price moves |
+| `SUPPLY_GLUT` | Amplifies downward price moves |
+| `INFLATION_BOOST` | Always adds upward drift |
+| `DEFLATION_DROP` | Always adds downward drift |
+| `GOLD_RUSH` | Symmetric multiplier on price changes |
+| `CUSTOM` | Custom multiplier (specify `value`) |
+
+**Material patterns:** Supports wildcards — `"DIAMOND"` (exact), `"GOLD_*"` (prefix), `"*_INGOT"` (suffix).
+
+Events are triggered at runtime via `/at event` commands — not persisted in config. Use `/at event schedule` to pre-plan events.
+
+---
+
+## `scoreboard.*` — Economy Scoreboard
+
+Per-player sidebar scoreboard showing live economy stats.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `scoreboard.enabled` | `false` | Show scoreboard to all players on join |
+| `scoreboard.title` | `Auto-Tune Economy` | Sidebar title (max 32 chars) |
+| `scoreboard.update-interval-seconds` | `30` | How often to refresh (min 10) |
+
+Players see: GDP, Debt, Loans, Activity, Inflation. Each stat updates in place — no flickering.
 
 ---
 

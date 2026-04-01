@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { Download, Server, FileText, Zap, CheckCircle, ExternalLink, BookOpen, AlertTriangle } from 'lucide-react';
+import { Download, Server, FileText, Zap, CheckCircle, ExternalLink, BookOpen, AlertTriangle, Play, Video } from 'lucide-react';
 import { InstallScreenshots } from '@/components/install/screenshot-mockups';
 
 export const metadata: Metadata = {
@@ -189,6 +189,9 @@ export default function InstallPage() {
         </div>
       </div>
 
+      {/* Video demo */}
+      <VideoDemoSection />
+
       {/* Install steps */}
       <InstallScreenshots />
 
@@ -288,6 +291,85 @@ export default function InstallPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+function VideoDemoSection() {
+  return (
+    <section className="mb-16">
+      <div className="mb-6">
+        <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">See It Live</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+          Watch Auto-Tune in action
+        </h2>
+        <p className="text-gray-400 text-sm leading-relaxed max-w-xl">
+          See the full player experience — from joining a server to browsing the market, making a trade,
+          and watching prices adjust in real time.
+        </p>
+      </div>
+
+      {/* Video placeholder — replace src with actual video file or YouTube/Vimeo embed */}
+      <div className="relative rounded-2xl overflow-hidden border border-gray-800 bg-gray-900 aspect-video flex items-center justify-center group cursor-pointer">
+        {/* Background pattern */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-950 to-emerald-950/20" />
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)`,
+            backgroundSize: '32px 32px',
+          }}
+        />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center text-center px-8">
+          {/* Play button */}
+          <div className="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-500/60 flex items-center justify-center mb-6 group-hover:scale-105 group-hover:bg-emerald-500/30 transition-all">
+            <Play className="w-8 h-8 text-emerald-400 ml-1" fill="currentColor" />
+          </div>
+          <p className="text-white font-semibold text-lg mb-1">Demo Video — Coming Soon</p>
+          <p className="text-gray-500 text-sm max-w-sm">
+            30-second walkthrough of the full player experience
+          </p>
+        </div>
+
+        {/* Corner decoration */}
+        <div className="absolute top-4 right-4">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-800/80 border border-gray-700 text-xs text-gray-400 font-medium">
+            <Video className="w-3 h-3" />
+            0:30
+          </span>
+        </div>
+      </div>
+
+      {/* What to record instructions */}
+      <div className="mt-4 rounded-xl border border-gray-800 bg-gray-900/40 p-4">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Recording instructions (for maintainers)</p>
+        <div className="grid sm:grid-cols-2 gap-2 text-xs text-gray-400">
+          {[
+            { step: '1', cmd: '/shop', desc: 'Open the in-game market browser' },
+            { step: '2', cmd: 'Buy an item', desc: 'Purchase Diamond or Emerald to show pricing' },
+            { step: '3', cmd: '/sell', desc: 'Open the sell GUI and show pricing spread' },
+            { step: '4', cmd: '/loans', desc: 'Show loan UI — interest rate, repay button' },
+            { step: '5', cmd: ':8989', desc: 'Open the bundled web dashboard in a browser' },
+            { step: '6', cmd: ':8989/economy', desc: 'Show GDP chart, Debt/GDP, volatility' },
+          ].map(({ step, cmd, desc }) => (
+            <div key={cmd} className="flex items-start gap-2.5">
+              <span className="w-5 h-5 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-[10px] font-mono text-gray-500 shrink-0">
+                {step}
+              </span>
+              <div>
+                <code className="text-sky-300 font-mono">{cmd}</code>
+                <span className="text-gray-600 ml-1.5">{desc}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-gray-600 mt-3">
+          Save as <code className="text-gray-500 font-mono">/public/demo.mp4</code> and update the <code className="text-gray-500 font-mono">src</code> attribute in the{' '}
+          <code className="text-gray-500 font-mono">VideoDemoSection</code> above.
+        </p>
+      </div>
+    </section>
   );
 }
 

@@ -2,6 +2,7 @@ import { ArrowRight, Calculator } from 'lucide-react';
 import Link from 'next/link';
 import { SpreadCalculator } from '@/components/landing/spread-calculator';
 import { SpreadSimulator } from '@/components/landing/spread-simulator';
+import { SpreadFlowDiagram } from '@/components/landing/spread-flow-diagram';
 
 const steps = [
   {
@@ -182,10 +183,15 @@ export default function HowItWorks() {
         </div>
       </div>
 
+      {/* Spread Flow Diagram */}
+      <div className="mt-10">
+        <SpreadFlowDiagram />
+      </div>
+
       {/* Interactive Spread Simulator */}
       <div className="mt-10">
         <div className="mb-4">
-          <h2 className="text-xl font-bold text-white mb-1">Try It: Spread Calculator</h2>
+          <h2 className="text-xl font-bold text-white mb-1">Try It: Spread Simulator</h2>
           <p className="text-sm text-gray-400">
             Adjust the market conditions below to see how the spread factors compound into real buy and sell prices.
           </p>

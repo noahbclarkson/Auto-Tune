@@ -433,6 +433,48 @@ impl Scenario {
         }
     }
 
+    /// GuildStability+MM but with a 168h (7-day) post-default cooldown ENABLED.
+    /// This is the FIXED treatment: when GuildBuyers default, they cannot immediately
+    /// re-borrow, preventing the cascade bypass of the circuit breaker.
+    /// Used to verify the fix (9521dcb) works as intended.
+    pub fn guildbuyer_failure_test() -> Self {
+        let mut config = SimConfig::default();
+        // Cooldown: 7 days × 24 hours = 168 hours (same as Java default)
+        config.loans.post_default_cooldown_hours = 168;
+        // Circuit breaker counts Active + Defaulted (already the default in SimConfig)
+        Self {
+            name: "GuildBuyer Failure Test (cooldown ENABLED)".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Standard+MM with GuildBuyers at fixed 5% threshold.
     /// Tests whether the uniquely-safe 5% GuildBuyer threshold combined with MM
     /// produces a healthier economy than random-threshold guild_stability.
@@ -3751,6 +3793,435 @@ fn run_loan_cap_verification() {
     }
 }
 
+/// Tracks a GuildBuyer default event with cooldown status.
+#[derive(Debug)]
+#[allow(dead_code)]
+struct GbDefaultRecord {
+    tick: u64,
+    day: u64,
+    player_name: String,
+    loan_principal: f64,
+    loan_balance: f64,
+    gdp_at_default: f64,
+    debt_gdp_at_default: f64,
+    cooldown_expires_tick: u64,
+    cooldown_expires_day: u64,
+}
+
+fn run_guildbuyer_failure_test() {
+    use crate::player::set_global_seeded_rng;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║     GUILDBUYER FAILURE CASCADE TEST                        ║");
+    println!("║  2 GB + MM — post-default cooldown ENABLED (168h)         ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Question: When GuildBuyers default, can they immediately");
+    println!("  re-borrow to bypass the circuit breaker? (Post-default");
+    println!("  cooldown = 7 days should prevent this)");
+    println!("\n  Seed: {}\n", seed);
+
+    // Control: cooldown DISABLED (0h) — this is the BYPASS vulnerability
+    let mut ctrl_scenario = Scenario::guildbuyer_failure_test();
+    ctrl_scenario.config.loans.post_default_cooldown_hours = 0;
+    ctrl_scenario.name = "GB Failure: cooldown DISABLED (control)".into();
+
+    // Treatment: cooldown ENABLED (168h = 7 days)
+    let treat_scenario = Scenario::guildbuyer_failure_test();
+    // cooldown already 168 from guildbuyer_failure_test()
+
+    // ── Run Control (cooldown disabled) ─────────────────────────────────
+    println!("─── Control (cooldown DISABLED — bypass risk) ───");
+    set_global_seeded_rng(seed);
+    let mut ctrl_sim = Simulation::new_seeded(ctrl_scenario.config.clone(), seed);
+    ctrl_sim.events = ctrl_scenario.events.clone();
+    add_players_to_sim(&mut ctrl_sim, &ctrl_scenario.players);
+    ctrl_sim.paused = false;
+
+    let start = Instant::now();
+    while ctrl_sim.current_tick < ctrl_scenario.duration_ticks {
+        ctrl_sim.tick();
+        if ctrl_sim.current_tick.is_multiple_of(288) {
+            let day = ctrl_sim.current_tick / 288;
+            let gdp = ctrl_sim
+                .economy_snapshots
+                .last()
+                .map(|s| s.gdp)
+                .unwrap_or(0.0);
+            let active_debt: f64 = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.current_balance)
+                .sum();
+            let defaulted_debt: f64 = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                .map(|l| l.current_balance)
+                .sum();
+            let total_debt = active_debt + defaulted_debt;
+            let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+            println!(
+                "  Day {:>2}: GDP={:>9.0} | debt={:>9.0} | D/G={:.3}x | active={:>2} | def={:>2}",
+                day,
+                gdp,
+                total_debt,
+                dg,
+                ctrl_sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                    .count(),
+                ctrl_sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                    .count()
+            );
+        }
+    }
+    println!(
+        "  Control complete: {} ticks, {:.1}s\n",
+        ctrl_sim.current_tick,
+        start.elapsed().as_secs_f64()
+    );
+
+    // ── Run Treatment (cooldown enabled) ───────────────────────────────
+    println!("─── Treatment (cooldown ENABLED — 7 days) ───");
+    set_global_seeded_rng(seed);
+    let mut treat_sim = Simulation::new_seeded(treat_scenario.config.clone(), seed);
+    treat_sim.events = treat_scenario.events.clone();
+    add_players_to_sim(&mut treat_sim, &treat_scenario.players);
+    treat_sim.paused = false;
+
+    let mut gb_default_records: Vec<GbDefaultRecord> = Vec::new();
+    let mut prev_defaulted: usize = 0;
+
+    let start = Instant::now();
+    while treat_sim.current_tick < treat_scenario.duration_ticks {
+        treat_sim.tick();
+        let tick = treat_sim.current_tick;
+
+        // Detect new defaults
+        let current_defaulted = treat_sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+            .count();
+        if current_defaulted > prev_defaulted {
+            // New defaults occurred this tick
+            for loan in treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+            {
+                let gdp = treat_sim
+                    .economy_snapshots
+                    .last()
+                    .map(|s| s.gdp)
+                    .unwrap_or(0.0);
+                let active_debt: f64 = treat_sim
+                    .loans
+                    .iter()
+                    .filter(|l| {
+                        matches!(
+                            l.status,
+                            crate::loan::LoanStatus::Active | crate::loan::LoanStatus::Defaulted
+                        )
+                    })
+                    .map(|l| l.current_balance)
+                    .sum();
+                let defaulted_debt: f64 = treat_sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                    .map(|l| l.current_balance)
+                    .sum();
+                let total_debt = active_debt + defaulted_debt;
+                let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+                let player_name = treat_sim
+                    .players
+                    .get(loan.player_index)
+                    .map(|p| p.name.clone())
+                    .unwrap_or_else(|| format!("Player-{}", loan.player_index));
+                let cooldown_ticks = treat_sim.config.loans.post_default_cooldown_hours as u64 * 12;
+                let cooldown_expires = tick + cooldown_ticks;
+                let record = GbDefaultRecord {
+                    tick,
+                    day: tick / 288,
+                    player_name,
+                    loan_principal: loan.principal,
+                    loan_balance: loan.current_balance,
+                    gdp_at_default: gdp,
+                    debt_gdp_at_default: dg,
+                    cooldown_expires_tick: cooldown_expires,
+                    cooldown_expires_day: cooldown_expires / 288,
+                };
+                gb_default_records.push(record);
+            }
+            prev_defaulted = current_defaulted;
+        }
+
+        if tick.is_multiple_of(288) {
+            let day = tick / 288;
+            let gdp = treat_sim
+                .economy_snapshots
+                .last()
+                .map(|s| s.gdp)
+                .unwrap_or(0.0);
+            let active_debt: f64 = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.current_balance)
+                .sum();
+            let defaulted_debt: f64 = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                .map(|l| l.current_balance)
+                .sum();
+            let total_debt = active_debt + defaulted_debt;
+            let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+            // Count how many GB players are currently in cooldown
+            let gb_in_cooldown: usize = treat_sim
+                .players
+                .iter()
+                .filter(|p| p.archetype == crate::player::Archetype::GuildBuyer)
+                .filter(|p| {
+                    if let Some(last_def) = p.last_defaulted_at {
+                        tick.saturating_sub(last_def)
+                            < treat_sim.config.loans.post_default_cooldown_hours as u64 * 12
+                    } else {
+                        false
+                    }
+                })
+                .count();
+            println!(
+                "  Day {:>2}: GDP={:>9.0} | debt={:>9.0} | D/G={:.3}x | def={:>2} | GB_cooldown={}",
+                day,
+                gdp,
+                total_debt,
+                dg,
+                treat_sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                    .count(),
+                gb_in_cooldown
+            );
+        }
+    }
+    println!(
+        "  Treatment complete: {} ticks, {:.1}s\n",
+        treat_sim.current_tick,
+        start.elapsed().as_secs_f64()
+    );
+
+    // ── GB Default Event Log ─────────────────────────────────────────────
+    println!("╔══════════════════════════════════════════════════════════════╗");
+    println!("║       GUILDBUYER DEFAULT EVENT LOG                          ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    if gb_default_records.is_empty() {
+        println!("  (No GuildBuyer defaults occurred in this run)");
+    } else {
+        println!(
+            "  {:>4} {:>8} {:>20} {:>12} {:>12} {:>8} {:>10} {:>14}",
+            "Day",
+            "Tick",
+            "Player",
+            "Principal",
+            "Balance",
+            "D/G",
+            "Cooldown(h)",
+            "Cooldown Expires"
+        );
+        println!("  {}", "-".repeat(100));
+        for r in &gb_default_records {
+            let cooldown_h = (r.cooldown_expires_tick.saturating_sub(r.tick)) / 12;
+            println!(
+                "  {:>4} {:>8} {:>20} {:>12.0} {:>12.0} {:>8.3} {:>10}h {:>14}",
+                r.day,
+                r.tick,
+                r.player_name,
+                r.loan_principal,
+                r.loan_balance,
+                r.debt_gdp_at_default,
+                cooldown_h,
+                format!("Day {}", r.cooldown_expires_day)
+            );
+        }
+    }
+
+    // ── Circuit Breaker Tier Analysis ───────────────────────────────────
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       CIRCUIT BREAKER TIER ANALYSIS                         ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    // Control analysis
+    let ctrl_final_gdp = ctrl_sim
+        .economy_snapshots
+        .last()
+        .map(|s| s.gdp)
+        .unwrap_or(0.0);
+    let ctrl_final_active: f64 = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Active)
+        .map(|l| l.current_balance)
+        .sum();
+    let ctrl_final_def: f64 = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .map(|l| l.current_balance)
+        .sum();
+    let ctrl_final_debt = ctrl_final_active + ctrl_final_def;
+    let ctrl_final_dg = if ctrl_final_gdp > 0.0 {
+        ctrl_final_debt / ctrl_final_gdp
+    } else {
+        0.0
+    };
+
+    // Treatment analysis
+    let treat_final_gdp = treat_sim
+        .economy_snapshots
+        .last()
+        .map(|s| s.gdp)
+        .unwrap_or(0.0);
+    let treat_final_active: f64 = treat_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Active)
+        .map(|l| l.current_balance)
+        .sum();
+    let treat_final_def: f64 = treat_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .map(|l| l.current_balance)
+        .sum();
+    let treat_final_debt = treat_final_active + treat_final_def;
+    let treat_final_dg = if treat_final_gdp > 0.0 {
+        treat_final_debt / treat_final_gdp
+    } else {
+        0.0
+    };
+
+    println!(
+        "  {:<40} {:>15} {:>15}",
+        "Metric", "Control (0h CD)", "Treatment (7d CD)"
+    );
+    println!("  {}", "-".repeat(72));
+    println!(
+        "  {:<40} {:>15.0} {:>15.0}",
+        "Final GDP", ctrl_final_gdp, treat_final_gdp
+    );
+    println!(
+        "  {:<40} {:>15.0} {:>15.0}",
+        "Active Debt",
+        ctrl_final_active.abs(),
+        treat_final_active.abs()
+    );
+    println!(
+        "  {:<40} {:>15.0} {:>15.0}",
+        "Defaulted Debt", ctrl_final_def, treat_final_def
+    );
+    println!(
+        "  {:<40} {:>15.0} {:>15.0}",
+        "Total Debt", ctrl_final_debt, treat_final_debt
+    );
+    println!(
+        "  {:<40} {:>15.3}x {:>15.3}x",
+        "Debt/GDP (final)", ctrl_final_dg, treat_final_dg
+    );
+
+    // Reborrowing check: for each default record, did the player take a new loan after cooldown?
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       RE-BORROWING AFTER COOLDOWN VERIFICATION               ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    if gb_default_records.is_empty() {
+        println!("  (No defaults — cooldown effect cannot be measured)");
+    } else {
+        for r in &gb_default_records {
+            let cooldown_end = r.cooldown_expires_tick;
+            // Find new loans taken by this player after cooldown expires
+            let player_idx = treat_sim
+                .players
+                .iter()
+                .position(|p| p.name == r.player_name)
+                .unwrap_or(usize::MAX);
+            let reborrow_loans: Vec<_> = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.player_index == player_idx)
+                .filter(|l| {
+                    let created_tick = l
+                        .due_tick
+                        .saturating_sub(treat_sim.config.loan_duration_ticks());
+                    created_tick >= cooldown_end
+                })
+                .collect();
+            if reborrow_loans.is_empty() {
+                println!(
+                    "  Day {:>2} {}: No re-borrow after cooldown ✓",
+                    r.day, r.player_name
+                );
+            } else {
+                println!(
+                    "  Day {:>2} {}: RE-BORROWED {} loans after cooldown ✓",
+                    r.day,
+                    r.player_name,
+                    reborrow_loans.len()
+                );
+                for loan in &reborrow_loans {
+                    let created_tick = loan
+                        .due_tick
+                        .saturating_sub(treat_sim.config.loan_duration_ticks());
+                    println!(
+                        "    - Loan: principal={:.0} at tick {}",
+                        loan.principal, created_tick
+                    );
+                }
+            }
+        }
+    }
+
+    // Key verdict
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       KEY VERDICT                                            ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    let total_defaults = gb_default_records.len();
+    if total_defaults == 0 {
+        println!("\n  ⚠  NO defaults occurred in this run.");
+        println!("  The economy is too healthy to trigger a failure cascade.");
+        println!("  Try a different seed or a more stressed archetype mix.");
+    } else if treat_final_dg < ctrl_final_dg * 0.5 {
+        println!("\n  ✓ TREATMENT EFFECT CONFIRMED");
+        println!("  7-day post-default cooldown prevents cascading re-borrowing.");
+        println!(
+            "  Control D/G: {:.3}x → Treatment D/G: {:.3}x ({:.1}% reduction)",
+            ctrl_final_dg,
+            treat_final_dg,
+            (1.0 - treat_final_dg / ctrl_final_dg.max(0.001)) * 100.0
+        );
+    } else if treat_final_dg < ctrl_final_dg * 0.9 {
+        println!("\n  → MEASURABLE BUT MODEST EFFECT");
+        println!(
+            "  Control D/G: {:.3}x | Treatment D/G: {:.3}x",
+            ctrl_final_dg, treat_final_dg
+        );
+        println!("  The cooldown helps but does not fully prevent debt accumulation.");
+    } else {
+        println!("\n  ⚠  NO MEANINGFUL DIFFERENCE");
+        println!(
+            "  Control D/G: {:.3}x | Treatment D/G: {:.3}x",
+            ctrl_final_dg, treat_final_dg
+        );
+    }
+}
+
 fn run_guild_seller_test() {
     use crate::analyzer::load_summary;
     let seed = 42u64;
@@ -5370,6 +5841,9 @@ fn main() -> eframe::Result<()> {
             "  --loan-cap-test          Per-loan GDP cap verification: cap fires, logs events"
         );
         println!(
+            "  --guildbuyer-failure-test  GB default cascade: cooldown prevs re-borrow bypass"
+        );
+        println!(
             "  --volume-trader-test     VolumeTrader archetype: contrarian liquidity vs control"
         );
         println!(
@@ -5591,6 +6065,12 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    // ─── GuildBuyer Failure Cascade Test ───────────────────────────────
+    if args.len() > 1 && args[1] == "--guildbuyer-failure-test" {
+        run_guildbuyer_failure_test();
+        return Ok(());
+    }
+
     // ─── VolumeTrader Test ───────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--volume-trader-test" {
         run_volume_trader_test();
@@ -5624,6 +6104,12 @@ fn main() -> eframe::Result<()> {
             eprintln!("Analysis error: {e}");
             std::process::exit(1);
         }
+        return Ok(());
+    }
+
+    // Intercept --help / -h before eframe tries to open a display
+    if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
+        print_usage();
         return Ok(());
     }
 

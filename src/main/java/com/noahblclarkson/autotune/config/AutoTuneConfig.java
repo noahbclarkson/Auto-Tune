@@ -26,6 +26,7 @@ public record AutoTuneConfig(
         @NotNull MarketEventConfig marketEvents,
         @NotNull EconomicNewsConfig news,
         @NotNull AdminWebhookConfig webhook,
+        @NotNull MarketDigestConfig marketDigest,
         boolean marketFrozen
 ) {
 
@@ -637,6 +638,35 @@ public record AutoTuneConfig(
         public static AdminWebhookConfig defaults() {
             return new AdminWebhookConfig(false, null, "Auto-Tune Economy", null,
                     false, true, true, true, 8.0);
+        }
+    }
+
+    /**
+     * Market digest configuration — scheduled periodic economy summary posted to Discord (or generic HTTP).
+     *
+     * @param enabled           whether the digest is active
+     * @param interval          "daily" or "weekly"
+     * @param dayOfWeek         0=Sun..6=Sat (used when interval=weekly)
+     * @param hourOfDay         0-23 UTC hour at which to send the digest
+     * @param includeTopMovers  include top-5 price gainers and losers
+     * @param includeHealthStats include GDP, debt, circuit breaker status
+     * @param includeActiveEvents include currently active market events
+     * @param includeLoanStats  include loan count, total debt, D/G ratio
+     * @param webhookUrl        optional override webhook URL (falls back to admin-webhook.url if null)
+     */
+    public record MarketDigestConfig(
+            boolean enabled,
+            @NotNull String interval,
+            int dayOfWeek,
+            int hourOfDay,
+            boolean includeTopMovers,
+            boolean includeHealthStats,
+            boolean includeActiveEvents,
+            boolean includeLoanStats,
+            @Nullable String webhookUrl
+    ) {
+        public static MarketDigestConfig defaults() {
+            return new MarketDigestConfig(false, "daily", 0, 9, true, true, true, true, null);
         }
     }
 }

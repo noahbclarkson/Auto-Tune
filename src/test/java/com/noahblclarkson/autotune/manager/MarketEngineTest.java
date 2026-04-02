@@ -79,6 +79,7 @@ class MarketEngineTest {
                 AutoTuneConfig.MarketEventConfig.defaults(),
                 AutoTuneConfig.EconomicNewsConfig.defaults(),
                 AutoTuneConfig.AdminWebhookConfig.defaults(),
+                AutoTuneConfig.MarketDigestConfig.defaults(),
                 false
         );
 

@@ -17,11 +17,13 @@ import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.service.AdminWebhookService;
 import com.noahblclarkson.autotune.service.EconomicNewsService;
 import com.noahblclarkson.autotune.service.BadgeService;
+import com.noahblclarkson.autotune.service.MarketDigestService;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.PriceAlertRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.manager.DatabaseCleanupManager;
+import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.DefaultPluginAdapter;
 import com.noahblclarkson.autotune.manager.ExchangeRateService;
 import com.noahblclarkson.autotune.manager.MarketEngine;
@@ -234,5 +236,23 @@ public class AutoTuneModule extends AbstractModule {
         return new DatabaseCleanupManager(
                 plugin, configManager, transactionRepository, itemRepository,
                 snapshotRepository, auctionRepository, marketEventRepository, databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public MarketDigestService provideMarketDigestService(
+            AutoTune plugin,
+            ConfigManager configManager,
+            MarketEventService marketEventService,
+            EconomyMetricsManager economyMetricsManager,
+            LoanManager loanManager,
+            MarketEngine marketEngine,
+            ItemRepository itemRepository,
+            TransactionRepository transactionRepository,
+            ShopManager shopManager
+    ) {
+        return new MarketDigestService(
+                plugin, configManager, marketEventService, economyMetricsManager,
+                loanManager, marketEngine, itemRepository, transactionRepository, shopManager);
     }
 }

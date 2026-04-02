@@ -80,6 +80,7 @@ public class ConfigManager {
                 parseMarketEventConfig(cfg.getConfigurationSection("market-events")),
                 parseEconomicNewsConfig(cfg.getConfigurationSection("news")),
                 parseAdminWebhookConfig(cfg.getConfigurationSection("admin-webhook")),
+                parseMarketDigestConfig(cfg.getConfigurationSection("market-digest")),
                 this.marketFrozen
         );
     }
@@ -648,6 +649,23 @@ public class ConfigManager {
                 Math.max(5, section.getInt("history-window-minutes", 60)),
                 Math.max(1, section.getInt("max-items-per-cycle", 3)),
                 Math.max(5, section.getInt("item-cooldown-minutes", 30))
+        );
+    }
+
+    private MarketDigestConfig parseMarketDigestConfig(ConfigurationSection section) {
+        if (section == null || !section.getBoolean("enabled", false)) {
+            return MarketDigestConfig.defaults();
+        }
+        return new MarketDigestConfig(
+                section.getBoolean("enabled", false),
+                section.getString("interval", "daily"),
+                Math.max(0, Math.min(6, section.getInt("day-of-week", 0))),
+                Math.max(0, Math.min(23, section.getInt("hour-of-day", 9))),
+                section.getBoolean("include-top-movers", true),
+                section.getBoolean("include-health-stats", true),
+                section.getBoolean("include-active-events", true),
+                section.getBoolean("include-loan-stats", true),
+                section.getString("webhook-url")
         );
     }
 }

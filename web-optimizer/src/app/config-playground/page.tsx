@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { DEFAULT_CONFIG, calculateSpread, type MarketConfig } from '@/lib/market-engine';
 import {
   LineChart,
@@ -12,44 +12,109 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts';
-import { Sliders, RotateCcw, Info, Copy, Check } from 'lucide-react';
+import { Sliders, RotateCcw, Info, Copy, Check, AlertTriangle, TrendingUp, TrendingDown, Minus, Zap } from 'lucide-react';
 
-const PRESETS: Record<string, { label: string; desc: string; config: Partial<MarketConfig>; players: number; traders: number; volume: number; zScore: number }> = {
+type Regime = 'BALANCED' | 'BUYER_HEAVY' | 'SELLER_HEAVY' | 'VOLATILE' | 'THIN_LIQUIDITY';
+
+const REGIME_INFO: Record<Regime, { label: string; color: string; bg: string; desc: string; Icon: React.ElementType }> = {
+  BALANCED: {
+    label: 'Balanced', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30',
+    desc: 'Buy/sell pressure is roughly equal. Prices are stable and fair for both sides.',
+    Icon: Minus,
+  },
+  BUYER_HEAVY: {
+    label: 'Buyer Heavy', color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/30',
+    desc: 'More players want to buy than sell. Prices are rising — buyers pay a premium.',
+    Icon: TrendingUp,
+  },
+  SELLER_HEAVY: {
+    label: 'Seller Heavy', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30',
+    desc: 'More players want to sell than buy. Prices are falling — sellers receive less.',
+    Icon: TrendingDown,
+  },
+  VOLATILE: {
+    label: 'Volatile', color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/30',
+    desc: 'High price swings possible. Max change is large and volume is active — prices can move sharply each tick.',
+    Icon: Zap,
+  },
+  THIN_LIQUIDITY: {
+    label: 'Thin Liquidity', color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/30',
+    desc: 'Few players, low volume. Spreads are wide — each trade has outsized price impact.',
+    Icon: AlertTriangle,
+  },
+};
+
+function computeRegime(
+  buyRatio: number, baseSpread: number, maxPriceChange: number,
+  players: number, traders: number, volume: number, zScore: number
+): Regime {
+  const liquidityScore = traders / Math.max(players, 1);
+  const isThinLiquidity = players <= 4 || liquidityScore < 0.4;
+  const isVolatile = maxPriceChange >= 3.0 && (zScore >= 1.0 || volume >= 200);
+
+  if (isVolatile && !isThinLiquidity) return 'VOLATILE';
+  if (isThinLiquidity) return 'THIN_LIQUIDITY';
+  if (buyRatio >= 0.62) return 'BUYER_HEAVY';
+  if (buyRatio <= 0.38) return 'SELLER_HEAVY';
+  return 'BALANCED';
+}
+
+function RiskWarning({ warning }: { warning: string }) {
+  return (
+    <div className="flex items-start gap-2 p-2.5 rounded-lg bg-red-950/30 border border-red-900/40">
+      <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
+      <p className="text-[11px] text-red-300/80 leading-relaxed">{warning}</p>
+    </div>
+  );
+}
+
+function computeRiskWarnings(baseSpread: number, maxPriceChange: number, players: number, traders: number, volume: number): string[] {
+  const warnings: string[] = [];
+  if (baseSpread >= 0.40) warnings.push('base-spread ≥ 40% is extreme — only appropriate for experimental or very small servers.');
+  if (baseSpread >= 0.30 && players <= 5) warnings.push('Wide base spread with few players can make all items feel overpriced and discourage trading.');
+  if (maxPriceChange >= 3.0) warnings.push('max-price-change ≥ 3% allows large price swings per tick. High-volume servers may see erratic pricing.');
+  if (players <= 3 && traders <= 2) warnings.push('With 2–3 players, spreads will be very wide and price discovery is unreliable. Consider reducing base-spread to 15–20%.');
+  if (traders > players) warnings.push('Active traders exceed online players — likely a data entry issue. Check the active traders count.');
+  if (volume <= 10 && players >= 10) warnings.push('Volume is very low for the player count — economy may be stagnating. Check if trades are completing.');
+  return warnings;
+}
+
+const PRESETS: Record<string, { label: string; desc: string; config: Partial<MarketConfig>; players: number; traders: number; volume: number; zScore: number; note?: string }> = {
   small: {
-    label: 'Small Server',
+    label: 'Small Server', note: 'Casual economy, few players',
     desc: '5 players, casual trading',
     config: { baseSpread: 0.25 },
-    players: 5,
-    traders: 4,
-    volume: 50,
-    zScore: 0,
+    players: 5, traders: 4, volume: 50, zScore: 0,
   },
   vanilla: {
-    label: 'Standard Mix',
+    label: 'Standard Mix', note: 'Balanced player types',
     desc: '10 players, balanced economy',
     config: { baseSpread: 0.20 },
-    players: 10,
-    traders: 8,
-    volume: 100,
-    zScore: 0,
+    players: 10, traders: 8, volume: 100, zScore: 0,
   },
   busy: {
-    label: 'Busy Trading Hub',
+    label: 'Busy Trading Hub', note: 'High activity',
     desc: '25 players, high activity',
     config: { baseSpread: 0.15 },
-    players: 25,
-    traders: 20,
-    volume: 300,
-    zScore: 0.5,
+    players: 25, traders: 20, volume: 300, zScore: 0.5,
   },
   stressed: {
-    label: 'Low Activity',
+    label: 'Low Activity', note: 'Warning: thin liquidity',
     desc: '3 players, thin liquidity',
     config: { baseSpread: 0.30 },
-    players: 3,
-    traders: 2,
-    volume: 10,
-    zScore: -1.5,
+    players: 3, traders: 2, volume: 10, zScore: -1.5,
+  },
+  mm_healthy: {
+    label: 'Healthy Economy', note: 'MM + GuildBuyers',
+    desc: '2 MarketMakers + GuildBuyers, 14 players',
+    config: { baseSpread: 0.20, maxPriceChangePercent: 1.5 },
+    players: 14, traders: 12, volume: 250, zScore: 0.3,
+  },
+  guild_economy: {
+    label: 'Guild Economy', note: 'Guild-heavy player base',
+    desc: '2 MMs + 2 GBs, 16 players, high demand',
+    config: { baseSpread: 0.18 },
+    players: 16, traders: 14, volume: 350, zScore: 0.5,
   },
 };
 
@@ -180,12 +245,13 @@ spread:
     const p = PRESETS[key];
     if (!p) return;
     setPreset(key);
-    setBaseSpread(p.config.baseSpread ?? baseSpread);
+    setBaseSpread(p.config.baseSpread ?? 0.20);
+    setMaxPriceChange(p.config.maxPriceChangePercent ?? 1.5);
     setPlayers(p.players);
     setTraders(p.traders);
     setVolume(p.volume);
     setZScore(p.zScore);
-  }, [baseSpread]);
+  }, []);
 
   const config: MarketConfig = useMemo(() => ({
     ...DEFAULT_CONFIG,
@@ -216,6 +282,10 @@ spread:
   }, [players, zScore, volume, traders, config]);
 
   const currentPoint = chartData.find((d) => d.ratio === Math.round(buyRatio * 100)) ?? chartData[10];
+
+  const regime = computeRegime(buyRatio, baseSpread, maxPriceChange, players, traders, volume, zScore);
+  const regimeInfo = REGIME_INFO[regime];
+  const riskWarnings = computeRiskWarnings(baseSpread, maxPriceChange, players, traders, volume);
 
   const exampleBase = 250;
   const buyPrice = exampleBase * (1 + bpd);
@@ -252,19 +322,20 @@ spread:
             <RotateCcw className="h-3.5 w-3.5 text-emerald-500" />
             Start from a Preset
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {Object.entries(PRESETS).map(([key, p]) => (
               <button
                 key={key}
                 onClick={() => applyPreset(key)}
-                className={`p-3 rounded-lg border text-left transition-all ${
+                className={`p-2.5 rounded-lg border text-left transition-all ${
                   preset === key
                     ? 'border-emerald-600/60 bg-emerald-950/30'
                     : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700'
                 }`}
               >
-                <p className="text-xs font-semibold text-zinc-200">{p.label}</p>
-                <p className="text-[11px] text-zinc-500 mt-0.5">{p.desc}</p>
+                <p className="text-xs font-semibold text-zinc-200 leading-tight">{p.label}</p>
+                {p.note && <p className="text-[10px] text-emerald-500/70 mt-0.5">{p.note}</p>}
+                <p className="text-[10px] text-zinc-500 mt-0.5">{p.desc}</p>
               </button>
             ))}
           </div>
@@ -376,10 +447,18 @@ spread:
             <div className="p-5 rounded-xl border border-emerald-900/40 bg-gradient-to-br from-emerald-950/60 to-zinc-950/60 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-zinc-200">Spread at {Math.round(buyRatio * 100)}% Buy Ratio</h3>
-                <div className={`text-sm font-mono font-bold ${spreadColor(bpd, spd)}`}>
-                  ±{((bpd + spd) * 50).toFixed(2)}%
+                <div className="flex items-center gap-3">
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-semibold border ${regimeInfo.bg} ${regimeInfo.color}`}>
+                    <regimeInfo.Icon className="w-3 h-3" />
+                    {regimeInfo.label}
+                  </span>
+                  <div className={`text-sm font-mono font-bold ${spreadColor(bpd, spd)}`}>
+                    ±{((bpd + spd) * 50).toFixed(2)}%
+                  </div>
                 </div>
               </div>
+
+              <p className="text-xs text-zinc-400 leading-relaxed -mt-1">{regimeInfo.desc}</p>
 
               <SpreadBar bpd={bpd} spd={spd} />
 
@@ -490,6 +569,19 @@ spread:
                 ))}
               </div>
             </div>
+
+            {/* Risk warnings */}
+            {riskWarnings.length > 0 && (
+              <div className="p-4 rounded-xl border border-red-900/40 bg-red-950/20">
+                <h4 className="text-xs font-semibold text-red-300 mb-3 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Configuration Warnings
+                </h4>
+                <div className="space-y-2">
+                  {riskWarnings.map((w, i) => <RiskWarning key={i} warning={w} />)}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -16,6 +16,7 @@ import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.service.EconomicNewsService;
+import com.noahblclarkson.autotune.service.MarketDigestService;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ScoreboardManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
@@ -49,6 +50,7 @@ public class AutoTune extends JavaPlugin {
     private TreasuryService treasuryService;
     private MarketEventService marketEventService;
     private EconomicNewsService economicNewsService;
+    private MarketDigestService marketDigestService;
     private CommandManager commandManager;
     private TaskScheduler taskScheduler;
     private WebServer webServer;
@@ -118,6 +120,8 @@ public class AutoTune extends JavaPlugin {
         marketEventService.onEnable();
         economicNewsService = injector.getInstance(EconomicNewsService.class);
         economicNewsService.onEnable();
+        marketDigestService = injector.getInstance(MarketDigestService.class);
+        marketDigestService.start();
         taskScheduler = injector.getInstance(TaskScheduler.class);
 
         // Seed prices from shared API if configured and economy is still empty
@@ -169,6 +173,10 @@ public class AutoTune extends JavaPlugin {
 
         if (taskScheduler != null) {
             taskScheduler.stop();
+        }
+
+        if (marketDigestService != null) {
+            marketDigestService.stop();
         }
 
         if (treasuryService != null) {

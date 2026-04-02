@@ -183,6 +183,10 @@ public class AutoTune extends JavaPlugin {
             treasuryService.shutdown();
         }
 
+        if (economicNewsService != null) {
+            economicNewsService.shutdown();
+        }
+
         if (scoreboardManager != null) {
             scoreboardManager.stop();
         }
@@ -213,6 +217,7 @@ public class AutoTune extends JavaPlugin {
         marketEngine.tick();
         shopManager.reload();
         priceAlertManager.rebuildCache();
+        economicNewsService.reload();
         if (webServer != null && configManager.getConfig().web().enabled()) {
             webServer.stop();
             webServer.start();

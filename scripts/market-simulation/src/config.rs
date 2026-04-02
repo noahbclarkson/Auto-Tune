@@ -95,6 +95,13 @@ pub struct LoanConfig {
     /// Instead, simply prohibit MM from taking opening loans (MM has $20-100K initial capital).
     /// Default: true (MM can take opening loans, matching historical behavior).
     pub mm_opening_loan_allowed: bool,
+    /// Counter-cyclical interest: continuous taper instead of discrete tiered circuit breaker.
+    /// When enabled (default, matching Java LoanManager): interestMultiplier = max(0, min(1, 1 - D/G/tier3Ratio)).
+    /// Interest falls smoothly from 100% at D/G=0 to 0% at D/G=tier3Ratio.
+    /// This prevents the pre-circuit-breaker debt accumulation spiral better than tiered caps.
+    /// When disabled: falls back to legacy tiered circuit breaker (TIER1/TIER2/TIER3 caps).
+    /// Default: true (matches Java LoanManager.counterCyclical default).
+    pub counter_cyclical: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -204,6 +211,7 @@ impl Default for LoanConfig {
             single_loan_gdp_cap: 1.0,
             post_default_cooldown_hours: 168, // 7 days, matches Java LoanManager
             mm_opening_loan_allowed: true,    // MM can take opening loans by default
+            counter_cyclical: true, // continuous taper, matches Java LoanManager (default: true)
         }
     }
 }

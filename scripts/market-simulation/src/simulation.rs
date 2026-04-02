@@ -340,10 +340,9 @@ impl Simulation {
         let recording = self.recorder.is_some();
         let mut events = Vec::new();
 
-        // Tiered circuit breaker: compute interest_multiplier based on debt/GDP ratio.
-        // Tier 1 (>tier1_ratio): cap at tier1_cap (50%) — warning zone
-        // Tier 2 (>tier2_ratio): cap at tier2_cap (25%) — danger zone
-        // Tier 3 (>tier3_ratio): full pause (0%) — emergency zone
+        // Interest multiplier: compute based on debt/GDP ratio.
+        // Uses counter-cyclical continuous taper when counter_cyclical=true (default, matching Java).
+        // Falls back to legacy tiered circuit breaker when counter_cyclical=false.
         let lc = &self.config.loans;
         let (interest_multiplier, tier_name) = if lc.debt_gdp_tier3_ratio > 0.0 {
             let total_debt: f64 = self
@@ -352,31 +351,57 @@ impl Simulation {
                 .filter(|l| matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted))
                 .map(|l| l.current_balance)
                 .sum();
+
+            // Use 288-tick windowed GDP (matches Java: last 24h at 5min/tick)
+            let gdp_window = 288u64;
+            let window_start = self.current_tick.saturating_sub(gdp_window);
             let gdp: f64 = self
                 .transactions
                 .iter()
-                .filter(|tx| tx.tx_type == TransactionType::Buy)
+                .filter(|tx| tx.tick >= window_start && tx.tx_type == TransactionType::Buy)
                 .map(|tx| tx.total_price)
                 .sum();
 
             // Guard: skip circuit breaker if no transactions yet (initialization phase).
             // At tick 0, gdp=0 → ratio=f64::MAX → TIER3 would fire spuriously.
             // Once transactions exist, ratio is meaningful and circuit breaker applies.
-            let ratio = if gdp > 0.0 {
-                total_debt / gdp
-            } else {
-                // No GDP yet — circuit breaker inactive until economy is running.
-                -1.0
-            };
+            let ratio = if gdp > 0.0 { total_debt / gdp } else { -1.0 };
 
-            if ratio > lc.debt_gdp_tier3_ratio {
-                (0.0, "TIER3")
-            } else if ratio > lc.debt_gdp_tier2_ratio {
-                (lc.tier2_interest_cap, "TIER2")
-            } else if ratio > lc.debt_gdp_tier1_ratio {
-                (lc.tier1_interest_cap, "TIER1")
+            if lc.counter_cyclical {
+                // Counter-cyclical continuous taper (Java default, matching Java LoanManager):
+                // multiplier = max(0, min(1, 1 - ratio / tier3_ratio))
+                // D/G=0 → 100%, D/G=3 → 70%, D/G=5 → 50%, D/G=10 → 0%
+                // Tier name is still tracked for logging purposes.
+                let max_ratio = lc.debt_gdp_tier3_ratio;
+                let multiplier = if ratio >= 0.0 {
+                    (1.0 - ratio / max_ratio).clamp(0.0, 1.0)
+                } else {
+                    1.0 // No GDP yet — full interest
+                };
+                let tier = if ratio > lc.debt_gdp_tier3_ratio {
+                    "TIER3"
+                } else if ratio > lc.debt_gdp_tier2_ratio {
+                    "TIER2"
+                } else if ratio > lc.debt_gdp_tier1_ratio {
+                    "TIER1"
+                } else {
+                    "NORMAL"
+                };
+                (multiplier, tier)
             } else {
-                (1.0, "NORMAL")
+                // Legacy tiered circuit breaker:
+                // Tier 1 (>tier1_ratio): cap at tier1_cap (50%) — warning zone
+                // Tier 2 (>tier2_ratio): cap at tier2_cap (25%) — danger zone
+                // Tier 3 (>tier3_ratio): full pause (0%) — emergency zone
+                if ratio > lc.debt_gdp_tier3_ratio {
+                    (0.0, "TIER3")
+                } else if ratio > lc.debt_gdp_tier2_ratio {
+                    (lc.tier2_interest_cap, "TIER2")
+                } else if ratio > lc.debt_gdp_tier1_ratio {
+                    (lc.tier1_interest_cap, "TIER1")
+                } else {
+                    (1.0, "NORMAL")
+                }
             }
         } else {
             (1.0, "NORMAL")

@@ -566,6 +566,51 @@ impl Scenario {
         }
     }
 
+    /// Counter-Cyclical Interest Test: compares counter-cyclical (continuous taper)
+    /// vs tiered circuit breaker on a stressed economy.
+    /// Control: counter_cyclical=false (legacy tiered: TIER1→50%, TIER2→25%, TIER3→0%)
+    /// Treatment: counter_cyclical=true (continuous: multiplier = max(0, min(1, 1-D/G/tier3)))
+    /// Both run with post_default_cooldown=168h (7 days) to isolate the interest variable.
+    /// Uses guildbuyer_failure_test archetype (1MM + 2GB + 4Cas + 3Far + 2Tra).
+    /// Hypothesis: counter-cyclical reduces debt accumulation more smoothly because
+    /// interest relief begins at D/G=0 (not at D/G=3) and scales continuously.
+    pub fn counter_cyclical_test() -> Self {
+        let mut config = SimConfig::default();
+        config.loans.post_default_cooldown_hours = 168; // 7 days, same for both arms
+        config.loans.counter_cyclical = true; // Treatment: enabled
+        Self {
+            name: "Counter-Cyclical Interest Test (continuous taper)".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// GuildBuyer Failure Test — GuildBuyer quits specifically at day 7.
     /// Control: no exodus (baseline guildbuyer_failure_test)
     /// Treatment: one GuildBuyer quits at day 7 (exodus_target_archetype = "GuildBuyer")
@@ -4531,6 +4576,211 @@ fn run_guildbuyer_failure_test() {
     }
 }
 
+fn run_counter_cyclical_test() {
+    use crate::player::set_global_seeded_rng;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║     COUNTER-CYCLICAL INTEREST TEST                          ║");
+    println!("║  Continuous taper vs tiered circuit breaker                 ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Java LoanManager (default): counter_cyclical=true");
+    println!("  Formula: multiplier = max(0, min(1, 1 - D/G / tier3_ratio))");
+    println!("  D/G=3→70%, D/G=5→50%, D/G=10→0% (smooth taper)");
+    println!("  Tiered: D/G>3→50%, D/G>5→25%, D/G>10→0% (discrete steps)\n");
+    println!("  Seed: {}\n", seed);
+
+    // Control: legacy tiered circuit breaker
+    let mut ctrl_scenario = Scenario::counter_cyclical_test();
+    ctrl_scenario.config.loans.counter_cyclical = false;
+    ctrl_scenario.name = "Counter-Cyclical: DISABLED (legacy tiered)".into();
+
+    // Treatment: counter-cyclical continuous taper (Java default)
+    let treat_scenario = Scenario::counter_cyclical_test();
+    // counter_cyclical already = true from the scenario
+
+    // Helper closure to run one arm and collect per-day stats
+    let run_arm = |scenario: &Scenario, label: &str| -> (Vec<(u64, f64, f64, f64)>, Simulation) {
+        println!("─── {} ───", label);
+        set_global_seeded_rng(seed);
+        let mut sim = Simulation::new_seeded(scenario.config.clone(), seed);
+        sim.events = scenario.events.clone();
+        add_players_to_sim(&mut sim, &scenario.players);
+        sim.paused = false;
+
+        let mut daily: Vec<(u64, f64, f64, f64)> = Vec::new(); // (day, gdp, total_debt, dg)
+
+        let start = Instant::now();
+        while sim.current_tick < scenario.duration_ticks {
+            sim.tick();
+            let tick = sim.current_tick;
+            if tick.is_multiple_of(288) {
+                let day = tick / 288;
+                let gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+                let total_debt: f64 = sim
+                    .loans
+                    .iter()
+                    .filter(|l| {
+                        matches!(
+                            l.status,
+                            crate::loan::LoanStatus::Active | crate::loan::LoanStatus::Defaulted
+                        )
+                    })
+                    .map(|l| l.current_balance)
+                    .sum();
+                let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+                println!(
+                    "  Day {:>2}: GDP={:>9.0} | total_debt={:>9.0} | D/G={:.3}x | loans={:>2}",
+                    day,
+                    gdp,
+                    total_debt,
+                    dg,
+                    sim.loans
+                        .iter()
+                        .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                        .count(),
+                );
+                daily.push((day, gdp, total_debt, dg));
+            }
+        }
+        println!(
+            "  Done: {} ticks, {:.1}s\n",
+            sim.current_tick,
+            start.elapsed().as_secs_f64()
+        );
+        (daily, sim)
+    };
+
+    let (ctrl_daily, ctrl_sim) = run_arm(&ctrl_scenario, "Control (TIERED circuit breaker)");
+    let (treat_daily, treat_sim) = run_arm(&treat_scenario, "Treatment (COUNTER-CYCLICAL taper)");
+
+    // Summary table
+    let extract_final = |sim: &Simulation| -> (f64, f64, f64, f64, usize, f64) {
+        let gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+        let active_debt: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Active)
+            .map(|l| l.current_balance)
+            .sum();
+        let defaulted_debt: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+            .map(|l| l.current_balance)
+            .sum();
+        let total_debt = active_debt + defaulted_debt;
+        let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+        let defaults = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+            .count();
+        // Approximate: sum of (balance - principal) for all loans as interest accumulated
+        let interest_approx: f64 = sim
+            .loans
+            .iter()
+            .map(|l| (l.current_balance - l.principal).max(0.0))
+            .sum();
+        (gdp, total_debt, dg, active_debt, defaults, interest_approx)
+    };
+
+    let (ctrl_gdp, ctrl_debt, ctrl_dg, ctrl_active, ctrl_def, ctrl_interest) =
+        extract_final(&ctrl_sim);
+    let (treat_gdp, treat_debt, treat_dg, treat_active, treat_def, treat_interest) =
+        extract_final(&treat_sim);
+
+    // Per-day D/G comparison
+    println!("╔══════════════════════════════════════════════════════════════╗");
+    println!("║       PER-DAY D/G COMPARISON                                 ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:>5} {:>15} {:>15} {:>12}",
+        "Day", "Tiered D/G", "CC D/G", "Diff"
+    );
+    println!("  {}", "-".repeat(50));
+    for (ctrl_row, treat_row) in ctrl_daily.iter().zip(treat_daily.iter()) {
+        let diff = treat_row.3 - ctrl_row.3;
+        let marker = if diff < -0.1 {
+            "✓ CC lower"
+        } else if diff > 0.1 {
+            "✗ CC higher"
+        } else {
+            "~"
+        };
+        println!(
+            "  {:>5} {:>15.3}x {:>15.3}x {:>+12.3} {}",
+            ctrl_row.0, ctrl_row.3, treat_row.3, diff, marker
+        );
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       FINAL COMPARISON (Day 14)                              ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:<40} {:>15} {:>15}",
+        "Metric", "Tiered (ctrl)", "Counter-Cycl"
+    );
+    println!("  {}", "-".repeat(72));
+    println!(
+        "  {:<40} {:>15.0} {:>15.0}",
+        "Final GDP", ctrl_gdp, treat_gdp
+    );
+    println!(
+        "  {:<40} {:>15.0} {:>15.0}",
+        "Total Debt", ctrl_debt, treat_debt
+    );
+    println!(
+        "  {:<40} {:>15.3}x {:>15.3}x",
+        "Debt/GDP (D/G)", ctrl_dg, treat_dg
+    );
+    println!(
+        "  {:<40} {:>15.0} {:>15.0}",
+        "Active Debt", ctrl_active, treat_active
+    );
+    println!("  {:<40} {:>15} {:>15}", "Defaults", ctrl_def, treat_def);
+    println!(
+        "  {:<40} {:>15.0} {:>15.0}",
+        "Total Interest Paid", ctrl_interest, treat_interest
+    );
+
+    // GDP pct diff
+    let gdp_pct = (treat_gdp - ctrl_gdp) / ctrl_gdp.max(1.0) * 100.0;
+    let dg_chg = treat_dg - ctrl_dg;
+    let debt_pct = (treat_debt - ctrl_debt) / ctrl_debt.max(1.0) * 100.0;
+    let interest_pct = (treat_interest - ctrl_interest) / ctrl_interest.max(1.0) * 100.0;
+
+    println!("\n  Changes (counter-cyclical vs tiered):");
+    println!("    GDP:           {:+.1}%", gdp_pct);
+    println!(
+        "    D/G:           {:+.3}x ({:+.1}%)",
+        dg_chg,
+        (dg_chg / ctrl_dg.max(0.001)) * 100.0
+    );
+    println!("    Total Debt:    {:+.1}%", debt_pct);
+    println!("    Interest Paid: {:+.1}%", interest_pct);
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       VERDICT                                                 ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    if treat_dg < ctrl_dg * 0.9 && treat_gdp >= ctrl_gdp * 0.95 {
+        println!("\n  ✓ COUNTER-CYCLICAL IS BETTER");
+        println!("  Continuous taper reduces D/G while preserving GDP.");
+        println!("  Java's counter-cyclical=true default is validated by simulation.");
+    } else if treat_dg > ctrl_dg * 1.1 {
+        println!("\n  ✗ COUNTER-CYCLICAL MAKES D/G WORSE");
+        println!("  Tiered circuit breaker performs better in this scenario.");
+        println!("  Consider re-evaluating the Java default (counter_cyclical=true).");
+    } else {
+        println!("\n  ~ SIMILAR PERFORMANCE");
+        println!("  Both mechanisms produce comparable D/G outcomes.");
+        println!("  Counter-cyclical is smoother but not a dramatic improvement here.");
+    }
+    println!(
+        "\n  Java default: loans.counter-cyclical: true → Rust now matches (counter_cyclical: true)"
+    );
+}
+
 fn run_mm_loan_bounding_test() {
     use crate::player::set_global_seeded_rng;
     use std::path::PathBuf;
@@ -8270,6 +8520,7 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --guildbuyer-failure-test  GB default cascade: cooldown prevs re-borrow bypass"
         );
+        println!("  --counter-cyclical-test  Counter-cyclical taper vs tiered circuit breaker");
         println!("  --mm-competition-test   1MM+2GB vs 2MM+2GB: does extra MM improve stability?");
         println!("  --mm-quit-test         MM quits at day 7: can economy survive without MM?");
         println!("  --gb-quit-test         GB quits at day 7: demand vacuum test");
@@ -8511,6 +8762,11 @@ fn main() -> eframe::Result<()> {
     }
 
     // ─── MM Loan Bounding Test ─────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--counter-cyclical-test" {
+        run_counter_cyclical_test();
+        return Ok(());
+    }
+
     if args.len() > 1 && args[1] == "--mm-loan-bounding-test" {
         run_mm_loan_bounding_test();
         return Ok(());

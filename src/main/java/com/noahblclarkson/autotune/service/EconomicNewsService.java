@@ -3,6 +3,7 @@ package com.noahblclarkson.autotune.service;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.ItemRepository;
@@ -70,6 +71,9 @@ public class EconomicNewsService {
     /** Round-robin counter for fair item selection across cycles */
     private final AtomicInteger roundRobinCounter = new AtomicInteger(0);
 
+    /** The repeating news broadcast task — null when disabled */
+    private ScheduledTask newsTask;
+
     /** Rolling buffer of recent news items for the /news command — max 30 entries */
     private final CopyOnWriteArrayList<RecentNewsItem> recentNewsItems = new CopyOnWriteArrayList<>();
     private static final int MAX_RECENT_NEWS = 30;
@@ -124,7 +128,7 @@ public class EconomicNewsService {
             } catch (Exception e) {
                 log.log(Level.WARNING, "Error in initial news check", e);
             }
-            Bukkit.getScheduler().runTaskTimer(plugin, task -> {
+            newsTask = Bukkit.getScheduler().runTaskTimer(plugin, task -> {
                 try {
                     checkAndBroadcastNews();
                 } catch (Exception e) {
@@ -132,6 +136,33 @@ public class EconomicNewsService {
                 }
             }, ticksInterval, ticksInterval);
         }, 60L);
+    }
+
+    /**
+     * Cancels the news broadcast task. Called on plugin shutdown and reload.
+     */
+    public void shutdown() {
+        if (newsTask != null) {
+            newsTask.cancel();
+            newsTask = null;
+        }
+    }
+
+    /**
+     * Reloads the news service: cancels the existing task and reschedules with the
+     * current config. Called when an admin runs /at admin reload.
+     */
+    public void reload() {
+        shutdown();
+        AutoTuneConfig.EconomicNewsConfig cfg = configManager.getConfig().news();
+        if (!cfg.enabled()) {
+            log.info("[Auto-Tune] Economic news feed is disabled.");
+            return;
+        }
+        scheduleNewsTask(cfg.intervalMinutes());
+        log.info("[Auto-Tune] Economic news feed reloaded (interval: " + cfg.intervalMinutes()
+                + " min, price threshold: " + cfg.priceChangeThresholdPercent()
+                + "%, volume spike: " + cfg.volumeSpikeMultiplier() + "x).");
     }
 
     /**

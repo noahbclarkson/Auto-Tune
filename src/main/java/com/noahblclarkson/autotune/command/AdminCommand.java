@@ -176,6 +176,8 @@ public class AdminCommand {
                 .append(Component.text(" — Cancel an active or scheduled event", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin digest", NamedTextColor.YELLOW)
                 .append(Component.text(" — Send market digest to Discord webhook now", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin digest config", NamedTextColor.YELLOW)
+                .append(Component.text(" — Show digest settings and next send time", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
     }
 
@@ -2081,6 +2083,42 @@ public class AdminCommand {
     public void adminDigest(CommandSender sender) {
         sender.sendMessage(Component.text("Sending market digest to Discord...", NamedTextColor.YELLOW));
         marketDigestService.sendDigestNow();
+    }
+
+    @Command("autotune admin digest config")
+    @Permission("autotune.admin")
+    public void adminDigestConfig(CommandSender sender) {
+        AutoTuneConfig.MarketDigestConfig cfg = configManager.getConfig().marketDigest();
+        String webhook = cfg.webhookUrl() != null ? cfg.webhookUrl()
+                : configManager.getConfig().webhook().webhookUrl();
+        String maskedWebhook = webhook != null && webhook.length() > 20
+                ? webhook.substring(0, 8) + "..." + webhook.substring(webhook.length() - 8)
+                : (webhook != null ? webhook : "(not set)");
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Market Digest Configuration", NamedTextColor.GOLD, TextDecoration.BOLD));
+        sender.sendMessage(Component.text("Enabled: ", NamedTextColor.YELLOW)
+                .append(Component.text(cfg.enabled() ? "YES" : "NO", cfg.enabled() ? NamedTextColor.GREEN : NamedTextColor.RED)));
+        sender.sendMessage(Component.text("Schedule: ", NamedTextColor.YELLOW)
+                .append(Component.text(cfg.interval().toUpperCase()
+                        + " at " + cfg.hourOfDay() + ":00 UTC"
+                        + (cfg.interval().equals("weekly") ? " (day " + cfg.dayOfWeek() + ")" : ""),
+                        NamedTextColor.WHITE)));
+        sender.sendMessage(Component.text("Webhook: ", NamedTextColor.YELLOW)
+                .append(Component.text(maskedWebhook, NamedTextColor.WHITE)));
+        sender.sendMessage(Component.text("Sections:", NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("  Top movers: ", NamedTextColor.DARK_GRAY)
+                .append(Component.text(cfg.includeTopMovers() ? "ON" : "OFF",
+                        cfg.includeTopMovers() ? NamedTextColor.GREEN : NamedTextColor.RED)));
+        sender.sendMessage(Component.text("  Health stats: ", NamedTextColor.DARK_GRAY)
+                .append(Component.text(cfg.includeHealthStats() ? "ON" : "OFF",
+                        cfg.includeHealthStats() ? NamedTextColor.GREEN : NamedTextColor.RED)));
+        sender.sendMessage(Component.text("  Active events: ", NamedTextColor.DARK_GRAY)
+                .append(Component.text(cfg.includeActiveEvents() ? "ON" : "OFF",
+                        cfg.includeActiveEvents() ? NamedTextColor.GREEN : NamedTextColor.RED)));
+        sender.sendMessage(Component.text("  Loan stats: ", NamedTextColor.DARK_GRAY)
+                .append(Component.text(cfg.includeLoanStats() ? "ON" : "OFF",
+                        cfg.includeLoanStats() ? NamedTextColor.GREEN : NamedTextColor.RED)));
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────

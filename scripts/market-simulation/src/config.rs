@@ -23,6 +23,10 @@ pub struct SimConfig {
     /// Overrides exodus_fraction — all players of this archetype quit.
     /// Examples: "MarketMaker", "GuildBuyer", "Casual".
     pub exodus_target_archetype: Option<String>,
+    /// MarketMaker initial capital range. If set, overrides the default $50-200K.
+    /// Recommended: $200-300K so MMs don't need opening loans.
+    pub mm_initial_capital_min: Option<f64>,
+    pub mm_initial_capital_max: Option<f64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -135,6 +139,8 @@ impl Default for SimConfig {
             exodus_spread_multiplier: 2.0,
             exodus_shock_duration_ticks: 288,
             exodus_target_archetype: None,
+            mm_initial_capital_min: None,
+            mm_initial_capital_max: None,
         }
     }
 }

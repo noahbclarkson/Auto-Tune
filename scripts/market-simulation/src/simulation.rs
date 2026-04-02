@@ -58,6 +58,10 @@ pub struct Simulation {
     next_player_id: usize,
     /// Log of all loans that were capped by the per-loan GDP cap.
     pub loan_cap_log: Vec<LoanCapRecord>,
+    /// Total count of opening loans taken by MarketMakers.
+    pub mm_opening_loan_count: u32,
+    /// Total amount of opening loans taken by MarketMakers.
+    pub mm_opening_loan_total: f64,
 }
 
 impl Simulation {
@@ -80,6 +84,8 @@ impl Simulation {
             interest_circuit_open: false,
             next_player_id: 0,
             loan_cap_log: Vec::new(),
+            mm_opening_loan_count: 0,
+            mm_opening_loan_total: 0.0,
         }
     }
 
@@ -106,7 +112,11 @@ impl Simulation {
             Archetype::Newbie => PlayerAgent::new_newbie(id, item_count, &base_prices),
             Archetype::AFKFarmer => PlayerAgent::new_afk_farmer(id, item_count, &base_prices),
             Archetype::GuildBuyer => PlayerAgent::new_guild_buyer(id, item_count, &base_prices),
-            Archetype::MarketMaker => PlayerAgent::new_market_maker(id, item_count, &base_prices),
+            Archetype::MarketMaker => {
+                let min_cap = self.config.mm_initial_capital_min.unwrap_or(50_000.0);
+                let max_cap = self.config.mm_initial_capital_max.unwrap_or(200_000.0);
+                PlayerAgent::new_market_maker(id, item_count, &base_prices, min_cap, max_cap)
+            }
             Archetype::InsiderTrader => {
                 PlayerAgent::new_insider_trader(id, item_count, &base_prices)
             }
@@ -498,8 +508,8 @@ impl Simulation {
             // MM opening loan eligibility: either mm_opening_loan_allowed is true,
             // or the player is NOT a MarketMaker. This prevents MM from taking
             // catastrophic opening loans that cascade when MM defaults.
-            let mm_can_borrow = self.config.loans.mm_opening_loan_allowed
-                || !matches!(player.archetype, Archetype::MarketMaker);
+            let is_market_maker = matches!(player.archetype, Archetype::MarketMaker);
+            let mm_can_borrow = self.config.loans.mm_opening_loan_allowed || !is_market_maker;
 
             if !has_active_loan
                 && !in_default_cooldown
@@ -545,7 +555,9 @@ impl Simulation {
                 };
 
                 // Only create loan if amount is meaningful (> 1.0)
-                if amount < 1.0 {
+                let taken_amount = amount;
+                let taken_is_mm = is_market_maker && !has_active_loan;
+                if taken_amount < 1.0 {
                     continue;
                 }
 
@@ -564,6 +576,11 @@ impl Simulation {
                     });
                 }
                 self.loans.push(loan);
+                // Track MM opening loans after loan is confirmed
+                if taken_is_mm {
+                    self.mm_opening_loan_count += 1;
+                    self.mm_opening_loan_total += taken_amount;
+                }
             }
 
             if has_active_loan {

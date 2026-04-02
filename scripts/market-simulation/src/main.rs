@@ -1407,6 +1407,51 @@ impl Scenario {
             speed_ticks_per_sec: 200,
         }
     }
+
+    /// GuildStability + MM (high initial capital) + 2x GuildBuyers @ 7%.
+    /// Same as guild_stability_mm_fixed_guild but MM starts with $200-300K
+    /// instead of default $50-200K.
+    /// Tests: does higher MM starting capital reduce or eliminate MM opening loans?
+    /// Recommendation: if MM needs no/opening loans at $200-300K, this is the
+    /// preferred production config (reduces loan cascade risk without bounding loans).
+    pub fn guild_stability_mm_high_capital() -> Self {
+        let config = SimConfig {
+            mm_initial_capital_min: Some(200_000.0),
+            mm_initial_capital_max: Some(300_000.0),
+            ..Default::default()
+        };
+        Self {
+            name: "GuildStability+MM-HighCapital+7%GB".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
 }
 
 /// Compute Pearson correlation coefficient between two price-change series.
@@ -6603,6 +6648,233 @@ fn run_volume_trader_multi_seed() {
     println!();
 }
 
+// ─── MM Capital Sweep ─────────────────────────────────────────────────────
+/// Tests whether increasing MM starting capital eliminates/reduces opening loans.
+///
+/// Key question: does MM at $200-300K starting capital need fewer/opening loans
+/// than MM at $50-200K? This tests the hypothesis that higher initial capital
+/// reduces MM borrowing dependency without bounding loans (which backfires).
+///
+/// Uses guild_stability_2mm_fixed_guild (2MM + 2GB) as the base scenario.
+/// Capital levels: $50-200K (control), $100-200K, $200-300K, $300-400K, $500-600K.
+/// Runs 3 seeds each (42, 12345, 98765).
+fn run_mm_capital_sweep() {
+    use crate::analyzer::load_summary;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765];
+    // (min, max, label) for MM initial capital range
+    let capital_levels: Vec<(f64, f64, &'static str)> = vec![
+        (50_000.0, 200_000.0, "$50-200K (default)"),
+        (100_000.0, 200_000.0, "$100-200K"),
+        (200_000.0, 300_000.0, "$200-300K"),
+        (300_000.0, 400_000.0, "$300-400K"),
+        (500_000.0, 600_000.0, "$500-600K"),
+    ];
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║         MM INITIAL CAPITAL SWEEP                            ║");
+    println!("║  5 capital levels × 3 seeds — guild_stability_2mm          ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Base scenario: GuildStability+2MM+2GB (4Cas+3Far+2Tra)");
+    println!("  Key question: does higher MM capital → fewer/opening loans?\n");
+
+    struct LevelResult {
+        #[allow(dead_code)]
+        label: String,
+        gdp: f64,
+        dg: f64,
+        bpd: f64,
+        vol: f64,
+        buy_ratio: f64,
+        mm_loan_count: u32,
+        mm_loan_total: f64,
+    }
+
+    let mut all_results: Vec<(String, Vec<LevelResult>)> = Vec::new();
+
+    for (min_cap, max_cap, label) in &capital_levels {
+        let mut level_results: Vec<LevelResult> = Vec::new();
+        println!("  ── {} ──", label);
+
+        for seed in &seeds {
+            // Build scenario with this capital level
+            let mut scenario = Scenario::guild_stability_2mm_fixed_guild();
+            scenario.config.mm_initial_capital_min = Some(*min_cap);
+            scenario.config.mm_initial_capital_max = Some(*max_cap);
+            scenario.seed = Some(*seed);
+
+            // Run with DB recorder to get summary metrics
+            let out_dir = PathBuf::from(format!(
+                "/tmp/autotune-mmcap-{}-{}-{}",
+                min_cap, max_cap, seed
+            ));
+            let _ = std::fs::remove_dir_all(&out_dir);
+            std::fs::create_dir_all(&out_dir).ok();
+
+            let sim = match run_seeded_headless(&scenario, *seed, &out_dir) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("\n  Error seed={}: {}", seed, e);
+                    continue;
+                }
+            };
+
+            let summary = match load_summary(&out_dir.join("simulation.db")) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("\n  Summary error seed={}: {}", seed, e);
+                    continue;
+                }
+            };
+
+            let dg = summary.debt / summary.gdp.max(1.0);
+
+            level_results.push(LevelResult {
+                label: label.to_string(),
+                gdp: summary.gdp,
+                dg,
+                bpd: summary.avg_bpd,
+                vol: summary.avg_volatility,
+                buy_ratio: summary.buy_ratio,
+                mm_loan_count: sim.mm_opening_loan_count,
+                mm_loan_total: sim.mm_opening_loan_total,
+            });
+
+            eprint!(
+                "\r    seed={} → GDP={:.0}  D/G={:.2}x  MM_loans={}  ",
+                seed, summary.gdp, dg, sim.mm_opening_loan_count
+            );
+            std::io::stderr().flush().ok();
+            let _ = std::fs::remove_dir_all(&out_dir);
+        }
+        println!();
+        all_results.push((label.to_string(), level_results));
+    }
+    println!();
+
+    // ── Aggregate per level ───────────────────────────────────────────────
+    let avg_fn = |results: &[LevelResult], field: &str| -> f64 {
+        let sum = match field {
+            "gdp" => results.iter().map(|r| r.gdp).sum::<f64>(),
+            "dg" => results.iter().map(|r| r.dg).sum::<f64>(),
+            "bpd" => results.iter().map(|r| r.bpd).sum::<f64>(),
+            "vol" => results.iter().map(|r| r.vol).sum::<f64>(),
+            "buy_ratio" => results.iter().map(|r| r.buy_ratio).sum::<f64>(),
+            "mm_loan_count" => results.iter().map(|r| r.mm_loan_count as f64).sum::<f64>(),
+            "mm_loan_total" => results.iter().map(|r| r.mm_loan_total).sum::<f64>(),
+            _ => 0.0,
+        };
+        sum / results.len().max(1) as f64
+    };
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║                 MM CAPITAL SWEEP RESULTS                        ║");
+    println!("║                 Mean across 3 seeds (42, 12345, 98765)          ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:22}  {:>10}  {:>8}  {:>9}  {:>9}  {:>8}  {:>10}  {:>12}",
+        "Capital Level", "GDP", "D/G", "BPD%", "Vol×1000", "Buy%", "MM Loans", "MM Loan Amt"
+    );
+    println!(
+        "  {:22}  {:>10}  {:>8}  {:>9}  {:>9}  {:>8}  {:>10}  {:>12}",
+        "─".repeat(11),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(9),
+        "─".repeat(9),
+        "─".repeat(8),
+        "─".repeat(10),
+        "─".repeat(12)
+    );
+
+    for (label, results) in &all_results {
+        let gdp = avg_fn(results, "gdp");
+        let dg = avg_fn(results, "dg");
+        let bpd = avg_fn(results, "bpd") * 100.0;
+        let vol = avg_fn(results, "vol") * 1000.0;
+        let buy = avg_fn(results, "buy_ratio") * 100.0;
+        let mm_loans = avg_fn(results, "mm_loan_count");
+        let loan_amt = avg_fn(results, "mm_loan_total");
+        println!(
+            "  {:22}  {:>10.0}  {:>7.2}x  {:>8.2}%  {:>8.3}  {:>7.1}%  {:>9.0}  {:>11.0}",
+            label, gdp, dg, bpd, vol, buy, mm_loans, loan_amt
+        );
+    }
+
+    // ── Interpretation ────────────────────────────────────────────────────
+    let default_results = &all_results[0].1;
+    let high_cap_results = &all_results[2].1; // $200-300K
+    let highest_results = &all_results[4].1; // $500-600K
+
+    let default_mm_loans = avg_fn(default_results, "mm_loan_count");
+    let high_mm_loans = avg_fn(high_cap_results, "mm_loan_count");
+    let highest_mm_loans = avg_fn(highest_results, "mm_loan_count");
+    let default_dg = avg_fn(default_results, "dg");
+    let high_dg = avg_fn(high_cap_results, "dg");
+    let default_gdp = avg_fn(default_results, "gdp");
+    let high_gdp = avg_fn(high_cap_results, "gdp");
+
+    println!("\n  === INTERPRETATION ===");
+    if high_mm_loans < default_mm_loans {
+        println!(
+            "  ✅ Higher capital REDUCES MM opening loans: {:.1} → {:.1} ({:+.1}%)",
+            default_mm_loans,
+            high_mm_loans,
+            (high_mm_loans / default_mm_loans.max(1.0) - 1.0) * 100.0
+        );
+    } else if high_mm_loans > default_mm_loans {
+        println!(
+            "  ⚠️  Higher capital INCREASES MM opening loans: {:.1} → {:.1} ({:+.1}%)",
+            default_mm_loans,
+            high_mm_loans,
+            (high_mm_loans / default_mm_loans.max(1.0) - 1.0) * 100.0
+        );
+    } else {
+        println!(
+            "  ➡️  MM opening loans UNCHANGED by capital level ({:.1})",
+            high_mm_loans
+        );
+    }
+
+    if highest_mm_loans == 0.0 {
+        println!("  💡 At $500-600K, MM takes ZERO opening loans — self-sufficient!");
+    } else {
+        println!(
+            "  📊 At $500-600K, MM still takes {:.1} opening loans/season",
+            highest_mm_loans
+        );
+    }
+
+    println!(
+        "  D/G: {:.2}x → {:.2}x ({:+.2}x)",
+        default_dg,
+        high_dg,
+        high_dg - default_dg
+    );
+    println!(
+        "  GDP: {:.0} → {:.0} ({:+.1}%)",
+        default_gdp,
+        high_gdp,
+        (high_gdp / default_gdp.max(1.0) - 1.0) * 100.0
+    );
+
+    let loan_change = high_mm_loans / default_mm_loans.max(0.5);
+    if loan_change < 0.5 && high_mm_loans < 1.0 {
+        println!("\n  ✅ VERDICT: $200-300K MM capital is EFFECTIVE — reduces/opening loans ≥50%");
+        println!("     Recommendation: set mm_initial_capital = [200000, 300000] in production");
+    } else if loan_change > 0.8 {
+        println!("\n  ❌ VERDICT: Capital level has MINIMAL effect on MM opening loans");
+        println!("     MM opening loans are driven by trading behavior, not starting capital");
+    } else {
+        println!(
+            "\n  ⚠️  VERDICT: MIXED — capital helps somewhat but doesn't fully solve borrowing"
+        );
+        println!("     Consider pairing with other safeguards (cooldown, circuit breaker)");
+    }
+    println!();
+}
+
 // ─── InsiderTrader Healthy Economy Test ─────────────────────────────────
 /// Tests whether InsiderTraders add value when added to an already-healthy
 /// economy (MM + GB). Previous IT test was IT alone vs control (no MM/GB).
@@ -7316,7 +7588,11 @@ use crate::analyzer::load_summary;
 use crate::player::set_fixed_guild_threshold;
 
 /// Run a headless simulation with a specific seed, returning the SimSummary.
-fn run_seeded_headless(scenario: &Scenario, seed: u64, output_dir: &PathBuf) -> Result<(), String> {
+fn run_seeded_headless(
+    scenario: &Scenario,
+    seed: u64,
+    output_dir: &PathBuf,
+) -> Result<Simulation, String> {
     use crate::recorder::DataRecorder;
 
     let archetype_map: std::collections::HashMap<String, Archetype> = [
@@ -7363,7 +7639,7 @@ fn run_seeded_headless(scenario: &Scenario, seed: u64, output_dir: &PathBuf) -> 
         let _ = recorder.finalize();
     }
 
-    Ok(())
+    Ok(sim)
 }
 
 /// Multi-seed comparison: GuildBuyer 7% vs 10% threshold, 5 seeds each.
@@ -8261,6 +8537,12 @@ fn main() -> eframe::Result<()> {
     // ─── VolumeTrader Multi-Seed ───────────────────────────────────────────
     if args.len() > 1 && args[1] == "--vt-multi-seed" {
         run_volume_trader_multi_seed();
+        return Ok(());
+    }
+
+    // ─── MM Capital Sweep ────────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--mm-capital-sweep" {
+        run_mm_capital_sweep();
         return Ok(());
     }
 

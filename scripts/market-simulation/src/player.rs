@@ -761,10 +761,16 @@ impl PlayerAgent {
     /// Market Maker: posts two-sided limit orders around perceived fair value.
     /// Earns from the bid-ask spread. Trades in both directions, providing
     /// liquidity that counteracts Farmer-dominated sell pressure.
-    pub fn new_market_maker(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
+    pub fn new_market_maker(
+        index: usize,
+        item_count: usize,
+        base_prices: &[f64],
+        mm_capital_min: f64,
+        mm_capital_max: f64,
+    ) -> Self {
         let mut rng = SeededRng;
         // MarketMakers need substantial capital to maintain two-sided positions
-        let budget = rng.random(50000.0..200000.0);
+        let budget = rng.random(mm_capital_min..mm_capital_max);
         let max_inv = rng.random(30..80);
         let target_inv = rng.random(15..40);
 

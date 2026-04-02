@@ -298,3 +298,15 @@ CREATE TABLE IF NOT EXISTS at_player_badges (
 
 CREATE INDEX IF NOT EXISTS idx_badges_player ON at_player_badges(player_uuid);
 CREATE INDEX IF NOT EXISTS idx_badges_type ON at_player_badges(badge_type);
+
+-- Pending notifications: queued messages for offline players
+CREATE TABLE IF NOT EXISTS at_pending_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_uuid VARCHAR(36) NOT NULL,
+    message TEXT NOT NULL,
+    category VARCHAR(32) NOT NULL DEFAULT 'PRICE_ALERT',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(player_uuid) REFERENCES at_players(uuid) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_notifs_player ON at_pending_notifications(player_uuid);

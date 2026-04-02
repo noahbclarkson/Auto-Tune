@@ -516,3 +516,43 @@ news:
   # Don't re-announce the same item within this window (in minutes).
   # Prevents a single volatile item from dominating the feed.
   item-cooldown-minutes: 30
+
+# ============================================================
+# Admin Webhook — optional Discord or generic HTTP notifications
+# ============================================================
+# When enabled, Auto-Tune posts an embed to your Discord webhook
+# (or any HTTP endpoint accepting POST application/json) when
+# the economy enters a dangerous state:
+#   - Circuit breaker tier-2 or tier-3 activation
+#   - Aggregate economy volatility spikes into UNSTABLE zone
+#   - Debt/GDP ratio exceeds a configurable threshold
+#
+# All HTTP calls run asynchronously — no main-thread blocking.
+admin-webhook:
+  # Set to true to enable webhook notifications.
+  enabled: false
+
+  # Your Discord webhook URL (Server Settings → Integrations → Webhooks).
+  # Also accepts any HTTP endpoint that takes POST application/json.
+  webhook-url: ""
+
+  # Display name for webhook messages (Discord: overrides webhook name).
+  username: "Auto-Tune Economy"
+
+  # Optional avatar URL for the webhook message.
+  # avatar-url: "https://example.com/autotune-icon.png"
+
+  # Fire on circuit breaker tier-2 (interest reduced to 25%). Default: false.
+  notify-tier2: false
+
+  # Fire on circuit breaker tier-3 (all interest paused). Default: true.
+  notify-tier3: true
+
+  # Fire when aggregate price volatility spikes into UNSTABLE zone (>= 0.15).
+  notify-volatility: true
+
+  # Fire when Debt/GDP ratio exceeds notify-high-debt-threshold.
+  notify-high-debt: true
+
+  # Debt/GDP ratio that triggers the high-debt alert. Default: 8.0x
+  notify-high-debt-threshold: 8.0

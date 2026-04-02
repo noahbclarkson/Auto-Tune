@@ -14,6 +14,7 @@ import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.MarketEventRepository;
 import com.noahblclarkson.autotune.economy.LoanManager;
+import com.noahblclarkson.autotune.service.AdminWebhookService;
 import com.noahblclarkson.autotune.service.EconomicNewsService;
 import com.noahblclarkson.autotune.service.BadgeService;
 import com.noahblclarkson.autotune.database.PlayerRepository;
@@ -151,7 +152,8 @@ public class AutoTuneModule extends AbstractModule {
             MarketEngine marketEngine,
             ShopManager shopManager,
             ConfigManager configManager,
-            BadgeService badgeService
+            BadgeService badgeService,
+            com.noahblclarkson.autotune.database.PendingNotificationRepository pendingNotificationRepository
     ) {
         return new PriceAlertManager(
                 plugin,
@@ -159,7 +161,8 @@ public class AutoTuneModule extends AbstractModule {
                 marketEngine,
                 shopManager,
                 configManager,
-                badgeService
+                badgeService,
+                pendingNotificationRepository
         );
     }
 
@@ -203,10 +206,12 @@ public class AutoTuneModule extends AbstractModule {
             ShopManager shopManager,
             LoanManager loanManager,
             ConfigManager configManager,
-            PluginAdapter pluginAdapter
+            PluginAdapter pluginAdapter,
+            AdminWebhookService adminWebhookService
     ) {
         return new EconomicNewsService(
-                plugin, itemRepository, shopManager, loanManager, configManager, pluginAdapter);
+                plugin, itemRepository, shopManager, loanManager, configManager, pluginAdapter,
+                adminWebhookService);
     }
 
     @Provides

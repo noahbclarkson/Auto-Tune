@@ -2,6 +2,7 @@ package com.noahblclarkson.autotune.config;
 
 import com.noahblclarkson.autotune.model.ItemTier;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +25,7 @@ public record AutoTuneConfig(
         @NotNull AuctionConfig auction,
         @NotNull MarketEventConfig marketEvents,
         @NotNull EconomicNewsConfig news,
+        @NotNull AdminWebhookConfig webhook,
         boolean marketFrozen
 ) {
 
@@ -605,6 +607,36 @@ public record AutoTuneConfig(
     ) {
         public static EconomicNewsConfig defaults() {
             return new EconomicNewsConfig(true, 5, 5.0, 3.0, 60, 3, 30);
+        }
+    }
+
+    /**
+     * Admin webhook configuration — POST economy alerts to a Discord (or generic HTTP) webhook.
+     *
+     * @param enabled         whether webhook notifications are active
+     * @param webhookUrl      the Discord webhook URL (or any HTTP endpoint accepting POST JSON)
+     * @param username        optional display name for the webhook message
+     * @param avatarUrl       optional avatar URL for the webhook message
+     * @param notifyTier2     fire on circuit breaker tier-2 activation
+     * @param notifyTier3     fire on circuit breaker tier-3 activation
+     * @param notifyVolatility fire when aggregate economy volatility spikes into UNSTABLE zone
+     * @param notifyHighDebt  fire when D/G ratio exceeds notifyHighDebtThreshold
+     * @param notifyHighDebtThreshold  D/G threshold that triggers a debt alert
+     */
+    public record AdminWebhookConfig(
+            boolean enabled,
+            @Nullable String webhookUrl,
+            @Nullable String username,
+            @Nullable String avatarUrl,
+            boolean notifyTier2,
+            boolean notifyTier3,
+            boolean notifyVolatility,
+            boolean notifyHighDebt,
+            double notifyHighDebtThreshold
+    ) {
+        public static AdminWebhookConfig defaults() {
+            return new AdminWebhookConfig(false, null, "Auto-Tune Economy", null,
+                    false, true, true, true, 8.0);
         }
     }
 }

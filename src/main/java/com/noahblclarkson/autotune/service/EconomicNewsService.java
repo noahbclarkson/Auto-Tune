@@ -59,6 +59,7 @@ public class EconomicNewsService {
     private final LoanManager loanManager;
     private final ConfigManager configManager;
     private final PluginAdapter adapter;
+    private final AdminWebhookService webhookService;
 
     /** Tracks the last announced circuit breaker tier to avoid repeat announcements */
     private final AtomicReference<String> lastCircuitBreakerTier = new AtomicReference<>(null);
@@ -91,7 +92,8 @@ public class EconomicNewsService {
             ShopManager shopManager,
             LoanManager loanManager,
             ConfigManager configManager,
-            PluginAdapter adapter
+            PluginAdapter adapter,
+            AdminWebhookService webhookService
     ) {
         this.plugin = plugin;
         this.itemRepository = itemRepository;
@@ -99,6 +101,7 @@ public class EconomicNewsService {
         this.loanManager = loanManager;
         this.configManager = configManager;
         this.adapter = adapter;
+        this.webhookService = webhookService;
     }
 
     public void onEnable() {
@@ -141,6 +144,17 @@ public class EconomicNewsService {
 
         List<NewsItem> candidates = new ArrayList<>();
         gatherCandidates(cfg, candidates);
+
+        // Check D/G for webhook high-debt alert
+        AutoTuneConfig.AdminWebhookConfig webhookCfg = configManager.getConfig().webhook();
+        if (webhookCfg.enabled() && webhookCfg.notifyHighDebt()) {
+            double debtGdp = computeCurrentDebtGdpRatio();
+            if (debtGdp > webhookCfg.notifyHighDebtThreshold()) {
+                webhookService.onHighDebt(debtGdp);
+            } else {
+                webhookService.onDebtRecovered();
+            }
+        }
 
         if (candidates.isEmpty()) return;
 
@@ -271,6 +285,10 @@ public class EconomicNewsService {
             String msg = "⚠️ <red>ECONOMY VOLATILITY SPIKE</red> — prices are oscillating wildly! "
                     + "Run <aqua>/at admin health</aqua> to diagnose.";
             out.add(new NewsItem(msg, NamedTextColor.RED, "/at admin health", "Run /at admin health"));
+            // Webhook notification
+            webhookService.onVolatilitySpike(avgVolatility);
+        } else if (avgVolatility < 0.15 && prev >= 0.15) {
+            webhookService.onVolatilityRecovered();
         }
     }
 
@@ -287,12 +305,14 @@ public class EconomicNewsService {
                         "/at admin health",
                         "Run /at admin health for details"
                 ));
+                webhookService.onCircuitBreakerChange("NORMAL");
             }
             return;
         }
 
         String prev = lastCircuitBreakerTier.getAndSet(tier);
         if (tier.equals(prev)) return;
+        webhookService.onCircuitBreakerChange(tier);
 
         String msg;
         TextColor col;
@@ -381,6 +401,18 @@ public class EconomicNewsService {
 
     private String stripTags(String msg) {
         return msg.replaceAll("<[^>]+>", "");
+    }
+
+    /**
+     * Computes the current debt/GDP ratio via the circuit breaker status (which already has it).
+     * Returns -1.0 if unavailable.
+     */
+    private double computeCurrentDebtGdpRatio() {
+        try {
+            return loanManager.getCircuitBreakerStatus().debtGdpRatio();
+        } catch (Exception e) {
+            return -1.0;
+        }
     }
 
     /** Internal news item — holds the formatted message and metadata for a news broadcast. */

@@ -79,6 +79,7 @@ public class ConfigManager {
                 parseAuctionConfig(cfg.getConfigurationSection("auction")),
                 parseMarketEventConfig(cfg.getConfigurationSection("market-events")),
                 parseEconomicNewsConfig(cfg.getConfigurationSection("news")),
+                parseAdminWebhookConfig(cfg.getConfigurationSection("admin-webhook")),
                 this.marketFrozen
         );
     }
@@ -615,6 +616,23 @@ public class ConfigManager {
                 entries,
                 Math.max(1, section.getInt("check-interval-minutes", 5)),
                 bossBarConfig
+        );
+    }
+
+    private AutoTuneConfig.AdminWebhookConfig parseAdminWebhookConfig(ConfigurationSection section) {
+        if (section == null || !section.getBoolean("enabled", false)) {
+            return AutoTuneConfig.AdminWebhookConfig.defaults();
+        }
+        return new AutoTuneConfig.AdminWebhookConfig(
+                section.getBoolean("enabled", false),
+                section.getString("webhook-url"),
+                section.getString("username", "Auto-Tune Economy"),
+                section.getString("avatar-url"),
+                section.getBoolean("notify-tier2", false),
+                section.getBoolean("notify-tier3", true),
+                section.getBoolean("notify-volatility", true),
+                section.getBoolean("notify-high-debt", true),
+                section.getDouble("notify-high-debt-threshold", 8.0)
         );
     }
 

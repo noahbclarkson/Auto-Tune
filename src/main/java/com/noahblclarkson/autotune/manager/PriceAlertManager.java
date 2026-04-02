@@ -9,6 +9,7 @@ import com.noahblclarkson.autotune.database.PriceAlertRepository;
 import com.noahblclarkson.autotune.model.PriceAlert;
 import com.noahblclarkson.autotune.model.PriceAlert.AlertType;
 import com.noahblclarkson.autotune.model.ShopItem;
+import com.noahblclarkson.autotune.database.PendingNotificationRepository;
 import com.noahblclarkson.autotune.service.BadgeService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -38,6 +39,7 @@ public class PriceAlertManager {
     private final ShopManager shopManager;
     private final ConfigManager configManager;
     private final BadgeService badgeService;
+    private final PendingNotificationRepository pendingNotificationRepository;
 
     /**
      * Per-item cache of active alerts, rebuilt from DB when prices change.
@@ -53,7 +55,8 @@ public class PriceAlertManager {
             MarketEngine marketEngine,
             ShopManager shopManager,
             ConfigManager configManager,
-            BadgeService badgeService
+            BadgeService badgeService,
+            PendingNotificationRepository pendingNotificationRepository
     ) {
         this.plugin = plugin;
         this.alertRepository = alertRepository;
@@ -61,6 +64,7 @@ public class PriceAlertManager {
         this.shopManager = shopManager;
         this.configManager = configManager;
         this.badgeService = badgeService;
+        this.pendingNotificationRepository = pendingNotificationRepository;
     }
 
     /**
@@ -146,11 +150,6 @@ public class PriceAlertManager {
         BigDecimal targetPrice = alert.targetPrice();
 
         plugin.getServer().getGlobalRegionScheduler().run(plugin, task -> {
-            Player player = Bukkit.getPlayer(playerUuid);
-            if (player == null || !player.isOnline()) {
-                return;
-            }
-
             String itemName = shopManager.getItemById(itemId)
                     .map(ShopItem::getDisplayNameOrMaterial)
                     .orElse("#" + itemId);
@@ -159,8 +158,20 @@ public class PriceAlertManager {
             String formattedTarget = configManager.formatCurrency(targetPrice);
             String formattedCurrent = configManager.formatCurrency(currentPrice);
 
+            Player player = Bukkit.getPlayer(playerUuid);
+            if (player == null || !player.isOnline()) {
+                // Player is offline — queue the notification for delivery on next login
+                String offlineMsg = "\u26a0 Price Alert: " + itemName
+                        + " has " + direction + " " + formattedTarget
+                        + " (current: " + formattedCurrent + ")";
+                pendingNotificationRepository.insert(playerUuid, offlineMsg, "PRICE_ALERT");
+                // Still award badge even when offline
+                badgeService.onAlertFired(playerUuid);
+                return;
+            }
+
             Component message = Component.empty()
-                    .append(Component.text("⚠ Price Alert!", NamedTextColor.YELLOW, net.kyori.adventure.text.format.TextDecoration.BOLD))
+                    .append(Component.text("\u26a0 Price Alert!", NamedTextColor.YELLOW, net.kyori.adventure.text.format.TextDecoration.BOLD))
                     .append(Component.newline())
                     .append(Component.text(itemName + " has " + direction + " ", NamedTextColor.GRAY))
                     .append(Component.text(formattedTarget, NamedTextColor.WHITE))

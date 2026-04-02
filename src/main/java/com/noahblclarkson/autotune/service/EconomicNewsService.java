@@ -3,7 +3,7 @@ package com.noahblclarkson.autotune.service;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
-import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
+import org.bukkit.scheduler.BukkitTask;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.ItemRepository;
@@ -72,7 +72,7 @@ public class EconomicNewsService {
     private final AtomicInteger roundRobinCounter = new AtomicInteger(0);
 
     /** The repeating news broadcast task — null when disabled */
-    private ScheduledTask newsTask;
+    private BukkitTask newsTask;
 
     /** Rolling buffer of recent news items for the /news command — max 30 entries */
     private final CopyOnWriteArrayList<RecentNewsItem> recentNewsItems = new CopyOnWriteArrayList<>();
@@ -128,14 +128,16 @@ public class EconomicNewsService {
             } catch (Exception e) {
                 log.log(Level.WARNING, "Error in initial news check", e);
             }
-            newsTask = Bukkit.getScheduler().runTaskTimer(plugin, task -> {
-                try {
-                    checkAndBroadcastNews();
-                } catch (Exception e) {
-                    log.log(Level.WARNING, "Error in news feed tick", e);
-                }
-            }, ticksInterval, ticksInterval);
+            newsTask = Bukkit.getScheduler().runTaskTimer(plugin, this::tickNews, ticksInterval, ticksInterval);
         }, 60L);
+    }
+
+    private void tickNews() {
+        try {
+            checkAndBroadcastNews();
+        } catch (Exception e) {
+            log.log(Level.WARNING, "Error in news feed tick", e);
+        }
     }
 
     /**

@@ -7,6 +7,15 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { api, type Stats, type PortfolioDto, type HoldingDto, type TransactionFeedDto } from '@/lib/api';
 import { formatCurrency, formatLargeCurrency, formatPercent } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 
 type Tab = 'holdings' | 'trades';
 
@@ -170,6 +179,11 @@ export default function PortfolioPage() {
               />
             </div>
 
+            {/* P&L chart */}
+            {portfolio.holdings.length > 1 && (
+              <PnLChart holdings={portfolio.holdings} />
+            )}
+
             {/* Credit score + player info bar */}
             <div className="flex items-center gap-3 flex-wrap">
               <Badge variant={portfolio.creditScore >= 700 ? 'success' : portfolio.creditScore >= 400 ? 'secondary' : 'destructive'}>
@@ -293,6 +307,85 @@ function StatCard({ label, value, sub, highlight, danger }: {
           {value}
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PnLChart({ holdings }: { holdings: HoldingDto[] }) {
+  // Sort by absolute P&L descending, take top 10
+  const data = [...holdings]
+    .sort((a, b) => Math.abs(b.unrealizedPnl) - Math.abs(a.unrealizedPnl))
+    .slice(0, 10)
+    .map((h) => ({
+      name: h.displayName.length > 18 ? h.displayName.slice(0, 17) + '…' : h.displayName,
+      fullName: h.displayName,
+      pnl: h.unrealizedPnl,
+      pct: h.pnlPct,
+    }));
+
+  if (data.length === 0) return null;
+
+  const maxAbs = Math.max(...data.map((d) => Math.abs(d.pnl)));
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Unrealized P&amp;L by Item</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} layout="vertical" margin={{ left: 0, right: 16 }}>
+              <XAxis
+                type="number"
+                domain={[-maxAbs * 1.1, maxAbs * 1.1]}
+                tickFormatter={(v) => `$${Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + 'K' : v.toFixed(0)}`}
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={130}
+                tick={{ fontSize: 11, fill: 'hsl(var(--foreground))' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                formatter={(value) => [formatCurrency(value as number), 'Unrealized P&L']}
+                labelFormatter={(label) => data.find((d) => d.name === label)?.fullName ?? (label as string)}
+                contentStyle={{
+                  background: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '0.5rem',
+                  fontSize: '12px',
+                }}
+              />
+              <Bar dataKey="pnl" radius={[0, 4, 4, 0]}>
+                {data.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.pnl >= 0
+                      ? 'hsl(160, 84%, 39%)' // emerald-500
+                      : 'hsl(0, 84%, 60%)'}  // red-500
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="mt-2 flex items-center gap-4 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-1.5 rounded-sm bg-emerald-500" />
+            Profit
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-1.5 rounded-sm bg-red-500" />
+            Loss
+          </span>
+        </div>
       </CardContent>
     </Card>
   );

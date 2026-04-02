@@ -16,12 +16,14 @@ export const metadata: Metadata = {
     url: 'https://autotune.dev',
     siteName: 'Auto-Tune',
     type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Auto-Tune — Dynamic Minecraft Economies' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Auto-Tune — Adaptive Market Pricing for Minecraft',
     description:
       'A sophisticated market engine for Minecraft servers with supply-and-demand pricing, loans, auctions, and cross-server price discovery.',
+    images: ['/og-image.png'],
   },
 };
 

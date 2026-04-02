@@ -7,6 +7,13 @@ export const metadata: Metadata = {
   title: 'Install Guide | Auto-Tune',
   description:
     'Get Auto-Tune running on your Minecraft Paper server in under 10 minutes. Prerequisites, install steps, basic configuration, and first verification.',
+  openGraph: {
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Auto-Tune Install Guide' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/og-image.png'],
+  },
 };
 
 const PREREQUISITES = [

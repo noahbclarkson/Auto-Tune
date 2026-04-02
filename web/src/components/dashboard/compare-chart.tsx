@@ -2,6 +2,28 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+
+const RECENT_KEY = 'autotune_recent_comparisons';
+const MAX_RECENT = 5;
+
+function useRecentComparisons() {
+  const [recent, setRecent] = useState<Array<{ a: string; b: string; label: string }>>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RECENT_KEY);
+      if (stored) setRecent(JSON.parse(stored));
+    } catch { /* ignore */ }
+  }, []);
+
+  function addComparison(a: string, b: string, label: string) {
+    const next = [{ a, b, label }, ...recent.filter((r) => !(r.a === a && r.b === b))].slice(0, MAX_RECENT);
+    setRecent(next);
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  }
+
+  return { recent, addComparison };
+}
 import {
   LineChart,
   Line,
@@ -399,6 +421,16 @@ export function CompareChart({ items, apiBase, initialItemA, initialItemB }: Com
 
   const loading = loadingA || loadingB;
   const bothSelected = itemA !== null && itemB !== null;
+  const { recent, addComparison } = useRecentComparisons();
+
+  // Persist comparison to recent list when both items are selected
+  const prevBoth = useRef(false);
+  useEffect(() => {
+    if (bothSelected && !prevBoth.current && itemA && itemB) {
+      addComparison(itemA.material, itemB.material, `${itemA.displayName} / ${itemB.displayName}`);
+    }
+    prevBoth.current = bothSelected;
+  }, [bothSelected, itemA, itemB, addComparison]);
   const currentRatio = itemB && itemB.price !== 0 && itemA ? itemA.price / itemB.price : null;
 
   return (
@@ -514,6 +546,29 @@ export function CompareChart({ items, apiBase, initialItemA, initialItemB }: Com
                     {item.displayName}
                   </button>
                 ))}
+              </div>
+            )}
+            {recent.length > 0 && (
+              <div className="mt-1 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Recent</p>
+                <div className="flex flex-wrap justify-center gap-2 max-w-md mx-auto">
+                  {recent.map((r, i) => {
+                    const itemA_data = items.find((it) => it.material.toUpperCase() === r.a.toUpperCase());
+                    const itemB_data = items.find((it) => it.material.toUpperCase() === r.b.toUpperCase());
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          if (itemA_data) setItemA(itemA_data);
+                          if (itemB_data) setItemB(itemB_data);
+                        }}
+                        className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground hover:border-amber-500/50 hover:text-amber-500 transition-colors"
+                      >
+                        {r.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

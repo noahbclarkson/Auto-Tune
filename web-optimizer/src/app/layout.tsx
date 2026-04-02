@@ -15,14 +15,6 @@ export const metadata: Metadata = {
       'A sophisticated market engine for Minecraft servers with supply-and-demand pricing, loans, auctions, and cross-server price discovery.',
     url: 'https://autotune.dev',
     siteName: 'Auto-Tune',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'Auto-Tune — Adaptive Minecraft Market Engine',
-      },
-    ],
     type: 'website',
   },
   twitter: {

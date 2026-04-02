@@ -24,10 +24,12 @@ This web app lets you experiment with all those parameters in real-time via an i
 | Route | Description |
 |-------|-------------|
 | `/` | Landing page — overview, social proof, feature highlights |
+| `/install` | Step-by-step install guide for server admins |
 | `/how-it-works` | Deep-dive explanation of the pricing algorithm |
 | `/simulator` | Interactive simulator with sliders, charts, market events & stability forecast |
 | `/sweep-results` | 840-config parameter sweep results — filter, sort & find optimal settings |
 | `/simulation-results` | Cross-run simulation analysis from the Rust market simulator |
+| `/config-playground` | Interactive engine parameter tuning with live spread calculation |
 | `/true-prices` | Cross-server true-price discovery from ratio matrices |
 | `/exchange-rates` | Per-server economy multipliers vs. global baseline |
 | `/servers` | Registered servers & their submission status |

@@ -14,7 +14,7 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { Search, ChevronDown, TrendingUp, TrendingDown, Minus, ArrowLeftRight, RotateCcw, Link2, Check } from 'lucide-react';
+import { Search, ChevronDown, TrendingUp, TrendingDown, Minus, ArrowLeftRight, RotateCcw, Link2, Check, ArrowRightLeft } from 'lucide-react';
 import type { ItemDto, PriceHistoryDto } from '@/lib/api';
 
 type Period = '1h' | '6h' | '1d';
@@ -345,6 +345,18 @@ export function CompareChart({ items, apiBase, initialItemA, initialItemB }: Com
     setItemB(null);
   };
 
+  const swap = () => {
+    const tmp = itemA;
+    setItemA(itemB);
+    setItemB(tmp);
+  };
+
+  // Popular items for quick-select chips (shown when fewer than 2 items selected)
+  const POPULAR_MATERIALS = ['DIAMOND', 'GOLD_INGOT', 'IRON_INGOT', 'EMERALD', 'NETHERITE_INGOT', 'LAPIS_LAZULI'];
+  const popularItems = POPULAR_MATERIALS
+    .map((m) => items.find((i) => i.material.toUpperCase() === m))
+    .filter(Boolean) as ItemDto[];
+
   const [shareCopied, setShareCopied] = useState(false);
 
   async function handleShare() {
@@ -435,13 +447,21 @@ export function CompareChart({ items, apiBase, initialItemA, initialItemB }: Com
             <PeriodToggle period={period} onChange={setPeriod} />
           </div>
         </div>
-        <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-2 grid grid-cols-[1fr_auto_1fr] gap-2 sm:grid-cols-[1fr_auto_1fr] items-center">
           <ItemSelector
             items={items}
             selected={itemA}
             onSelect={setItemA}
             label="Select Item A"
           />
+          <button
+            onClick={swap}
+            disabled={!itemA && !itemB}
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed self-end mb-0.5"
+            title="Swap items"
+          >
+            <ArrowRightLeft className="w-4 h-4" />
+          </button>
           <ItemSelector
             items={items}
             selected={itemB}
@@ -471,14 +491,31 @@ export function CompareChart({ items, apiBase, initialItemA, initialItemB }: Com
 
         {/* Chart area */}
         {!bothSelected ? (
-          <div className="flex h-72 flex-col items-center justify-center gap-3 text-center">
+          <div className="flex h-72 flex-col items-center justify-center gap-4 text-center">
             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
               <ArrowLeftRight className="w-5 h-5 text-muted-foreground" />
             </div>
             <div>
               <p className="text-sm font-medium text-foreground mb-1">Select two items to compare</p>
-              <p className="text-xs text-muted-foreground">Choose items above to see their price ratio over time or spread comparison</p>
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto">Choose items above to see their price ratio over time or spread comparison</p>
             </div>
+            {popularItems.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-2 max-w-md mx-auto">
+                {popularItems.map((item) => (
+                  <button
+                    key={item.material}
+                    onClick={() => {
+                      if (!itemA) setItemA(item);
+                      else if (!itemB) setItemB(item);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/60" />
+                    {item.displayName}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : loading ? (
           <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">

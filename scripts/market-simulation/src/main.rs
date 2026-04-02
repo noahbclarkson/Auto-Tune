@@ -1365,6 +1365,48 @@ impl Scenario {
             speed_ticks_per_sec: 200,
         }
     }
+
+    /// Healthy economy + 2 InsiderTraders: tests whether ITs add value
+    /// when the economy already has strong MM + GB coverage.
+    /// Control: guild_stability_mm_fixed_guild (1MM + 2GB + 4Cas + 3Far + 2Tra)
+    /// Treatment: same + 2 InsiderTraders
+    pub fn guild_stability_mm_fixed_guild_plus_it() -> Self {
+        Self {
+            name: "GuildStability+MM+IT".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "InsiderTrader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
 }
 
 /// Compute Pearson correlation coefficient between two price-change series.
@@ -6017,14 +6059,742 @@ fn run_mm_competition_test() {
     println!();
 }
 
-// ─── MM Quit Test ────────────────────────────────────────────────────────
-/// Tests what happens when the MarketMaker specifically quits at day 7.
-/// Control: guildbuyer_failure_test (no exodus)
-/// Treatment: guildbuyer_failure_mm_quit_test (MM quits at day 7)
-/// Key questions:
-///   - Does the economy collapse without MM's two-sided liquidity?
-///   - Do spreads blow out?
-///   - Do remaining players compensate by taking more loans?
+// ─── MM Competition Multi-Seed ───────────────────────────────────────────
+/// Runs 1MM vs 2MM across 5 seeds to establish statistical confidence.
+/// Controls for RNG variance — same player archetypes, different seeds.
+// ─── MM Competition Multi-Seed ───────────────────────────────────────────
+/// Runs 1MM vs 2MM across 5 seeds to establish statistical confidence.
+fn run_mm_competition_multi_seed() {
+    use crate::analyzer::load_summary;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       MM COMPETITION — MULTI-SEED (5 seeds)               ║");
+    println!("║  1MM+2GB vs 2MM+2GB — Statistical robustness check       ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Control: guild_stability_mm_fixed_guild (1MM + 2GB)");
+    println!("  Treat:   guild_stability_2mm_fixed_guild (2MM + 2GB)\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct RunResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        spd: f64,
+        vol: f64,
+        buy_ratio: f64,
+    }
+
+    impl RunResult {
+        fn from_summary(s: &crate::analyzer::SimSummary, seed: u64) -> Self {
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<RunResult> = Vec::new();
+    let mut treat_results: Vec<RunResult> = Vec::new();
+    let total = seeds.len() * 2;
+
+    for (i, seed) in seeds.iter().enumerate() {
+        eprint!("\r  [{}/{}] seed={}", i * 2 + 1, total, seed);
+        std::io::stderr().flush().ok();
+
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-mmms-ctrl-{}", seed));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_dir).ok();
+        let ctrl = Scenario::guild_stability_mm_fixed_guild();
+        if let Err(e) = run_seeded_headless(&ctrl, *seed, &ctrl_dir) {
+            eprintln!("\n  Ctrl error seed={}: {}", seed, e);
+            continue;
+        }
+        if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db")) {
+            ctrl_results.push(RunResult::from_summary(&s, *seed));
+        }
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+
+        eprint!("\r  [{}/{}] seed={}", i * 2 + 2, total, seed);
+        std::io::stderr().flush().ok();
+
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-mmms-treat-{}", seed));
+        let _ = std::fs::remove_dir_all(&treat_dir);
+        std::fs::create_dir_all(&treat_dir).ok();
+        let treat = Scenario::guild_stability_2mm_fixed_guild();
+        if let Err(e) = run_seeded_headless(&treat, *seed, &treat_dir) {
+            eprintln!("\n  Treat error seed={}: {}", seed, e);
+            continue;
+        }
+        if let Ok(s) = load_summary(&treat_dir.join("simulation.db")) {
+            treat_results.push(RunResult::from_summary(&s, *seed));
+        }
+        let _ = std::fs::remove_dir_all(&treat_dir);
+    }
+    println!();
+
+    if ctrl_results.is_empty() || treat_results.is_empty() {
+        eprintln!("  ✗ No results collected");
+        return;
+    }
+
+    let n = ctrl_results.len();
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║                    PER-SEED RESULTS                         ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    // Pre-format per-seed table
+    println!(
+        "  {:>6}  {:>12}  {:>7}  {:>7}  {:>7}  {:>7}  |  {:>12}  {:>7}  {:>7}  {:>7}  {:>7}",
+        "seed",
+        "GDP(ctrl)",
+        "D/G(c)",
+        "BPD(c)",
+        "Vol(c)",
+        "Buy(c)",
+        "GDP(tr)",
+        "D/G(t)",
+        "BPD(t)",
+        "Vol(t)",
+        "Buy(t)"
+    );
+    for (c, t) in ctrl_results.iter().zip(treat_results.iter()) {
+        let row = format!(
+            "  {:>6}  {:>12.0}  {:>6.2}x  {:>6.2}%  {:>6.3}  {:>6.1}%  |  {:>12.0}  {:>6.2}x  {:>6.2}%  {:>6.3}  {:>6.1}%",
+            c.seed,
+            c.gdp,
+            c.dg,
+            c.bpd * 100.0,
+            c.vol * 1000.0,
+            c.buy_ratio * 100.0,
+            t.gdp,
+            t.dg,
+            t.bpd * 100.0,
+            t.vol * 1000.0,
+            t.buy_ratio * 100.0
+        );
+        println!("{}", row);
+    }
+
+    // ── Compute stats ─────────────────────────────────────────────────────
+    let avg = |v: &[RunResult], f: &str| -> f64 {
+        let field_sum = match f {
+            "gdp" => v.iter().map(|r| r.gdp).sum::<f64>(),
+            "dg" => v.iter().map(|r| r.dg).sum::<f64>(),
+            "bpd" => v.iter().map(|r| r.bpd).sum::<f64>(),
+            "vol" => v.iter().map(|r| r.vol).sum::<f64>(),
+            "buy_ratio" => v.iter().map(|r| r.buy_ratio).sum::<f64>(),
+            _ => 0.0,
+        };
+        field_sum / v.len().max(1) as f64
+    };
+    let std_dev = |v: &[RunResult], f: &str, m: f64| -> f64 {
+        let variance = v
+            .iter()
+            .map(|r| {
+                let val = match f {
+                    "gdp" => r.gdp,
+                    "dg" => r.dg,
+                    "bpd" => r.bpd,
+                    "vol" => r.vol,
+                    "buy_ratio" => r.buy_ratio,
+                    _ => 0.0,
+                };
+                (val - m).powi(2)
+            })
+            .sum::<f64>()
+            / v.len().max(1) as f64;
+        variance.sqrt()
+    };
+
+    let c_gdp = avg(&ctrl_results, "gdp");
+    let t_gdp = avg(&treat_results, "gdp");
+    let c_dg = avg(&ctrl_results, "dg");
+    let t_dg = avg(&treat_results, "dg");
+    let c_bpd = avg(&ctrl_results, "bpd");
+    let t_bpd = avg(&treat_results, "bpd");
+    let c_vol = avg(&ctrl_results, "vol");
+    let t_vol = avg(&treat_results, "vol");
+    let c_buy = avg(&ctrl_results, "buy_ratio");
+    let t_buy = avg(&treat_results, "buy_ratio");
+
+    let c_gdp_s = std_dev(&ctrl_results, "gdp", c_gdp);
+    let t_gdp_s = std_dev(&treat_results, "gdp", t_gdp);
+    let c_dg_s = std_dev(&ctrl_results, "dg", c_dg);
+    let t_dg_s = std_dev(&treat_results, "dg", t_dg);
+    let c_bpd_s = std_dev(&ctrl_results, "bpd", c_bpd);
+    let t_bpd_s = std_dev(&treat_results, "bpd", t_bpd);
+    let c_vol_s = std_dev(&ctrl_results, "vol", c_vol);
+    let t_vol_s = std_dev(&treat_results, "vol", t_vol);
+    let c_buy_s = std_dev(&ctrl_results, "buy_ratio", c_buy);
+    let t_buy_s = std_dev(&treat_results, "buy_ratio", t_buy);
+
+    let gdp_chg = (t_gdp / c_gdp.max(1.0) - 1.0) * 100.0;
+    let dg_chg = t_dg - c_dg;
+    let bpd_chg = (t_bpd / c_bpd.max(0.0001) - 1.0) * 100.0;
+    let vol_chg = (t_vol / c_vol.max(0.0001) - 1.0) * 100.0;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!(
+        "║               AGGREGATE: MEAN ± STD (N={})                  ║",
+        n
+    );
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20}  {:>22}  {:>22}",
+        "Metric", "1MM (control)", "2MM (treatment)"
+    );
+    println!("  {:─<20}  {:─<22}  {:─<22}", "", "", "");
+
+    println!(
+        "  GDP:                {:>10.0} ± {:>8.0}   {:>10.0} ± {:>8.0}  ({:+.1}% GDP)",
+        c_gdp, c_gdp_s, t_gdp, t_gdp_s, gdp_chg
+    );
+    println!(
+        "  Debt/GDP (x):      {:>10.2} ± {:>8.2}   {:>10.2} ± {:>8.2}  ({:+.2}x D/G)",
+        c_dg, c_dg_s, t_dg, t_dg_s, dg_chg
+    );
+    println!(
+        "  Buy-Price-Diff (%):{:>10.2} ± {:>8.3}  {:>10.2} ± {:>8.3}  ({:+.1}% BPD)",
+        c_bpd * 100.0,
+        c_bpd_s * 100.0,
+        t_bpd * 100.0,
+        t_bpd_s * 100.0,
+        bpd_chg
+    );
+    println!(
+        "  Volatility (x1000): {:>10.4} ± {:>8.5}  {:>10.4} ± {:>8.5}  ({:+.1}% vol)",
+        c_vol * 1000.0,
+        c_vol_s * 1000.0,
+        t_vol * 1000.0,
+        t_vol_s * 1000.0,
+        vol_chg
+    );
+    println!(
+        "  Buy Ratio (%):     {:>10.1} ± {:>8.1}  {:>10.1} ± {:>8.1}",
+        c_buy * 100.0,
+        c_buy_s * 100.0,
+        t_buy * 100.0,
+        t_buy_s * 100.0
+    );
+
+    println!("\n  === INTERPRETATION ===");
+    let gdp_wins = t_gdp > c_gdp;
+    let vol_wins = t_vol < c_vol;
+    let bpd_wins = t_bpd < c_bpd;
+    println!(
+        "  GDP:  {} ({:+.1}% with 2MM)",
+        if gdp_wins { "2MM ↑" } else { "1MM ↑" },
+        gdp_chg.abs()
+    );
+    println!(
+        "  Vol:  {} ({:+.1}% with 2MM)",
+        if vol_wins { "2MM ↓" } else { "1MM ↓" },
+        vol_chg.abs()
+    );
+    println!(
+        "  Spd:  {} ({:+.1}%pp with 2MM)",
+        if bpd_wins { "2MM ↓" } else { "1MM ↓" },
+        bpd_chg.abs()
+    );
+    println!("  D/G:  {:.2}x → {:.2}x ({:+.2}x)", c_dg, t_dg, dg_chg);
+
+    let wins = [gdp_wins, vol_wins, bpd_wins]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+    println!();
+    if wins >= 2 && gdp_wins && vol_wins {
+        println!(
+            "  ✅ VERDICT: 2 MMs win {}/3 categories — recommend adding 2nd MM to production",
+            wins
+        );
+    } else if wins == 0 || (!gdp_wins && !vol_wins) {
+        println!(
+            "  ❌ VERDICT: 1MM wins or ties {}/3 — 1 MM is sufficient",
+            wins
+        );
+    } else {
+        println!(
+            "  ⚠️  VERDICT: Mixed ({}/3) — trade-off dependent on admin priorities",
+            wins
+        );
+    }
+    println!();
+}
+
+// ─── VolumeTrader Multi-Seed ─────────────────────────────────────────────
+/// Runs healthy economy vs healthy+2VT across 5 seeds.
+fn run_volume_trader_multi_seed() {
+    use crate::analyzer::load_summary;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       VOLUME TRADER — MULTI-SEED (5 seeds)                  ║");
+    println!("║  Healthy economy vs +2 VolumeTraders                        ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Control: GuildStability+MM (1MM + 2GB + 4Cas + 3Far + 2Tra)");
+    println!("  Treat:   same + 2 VolumeTraders\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct RunResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        spd: f64,
+        vol: f64,
+        buy_ratio: f64,
+    }
+
+    impl RunResult {
+        fn from_summary(s: &crate::analyzer::SimSummary, seed: u64) -> Self {
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<RunResult> = Vec::new();
+    let mut treat_results: Vec<RunResult> = Vec::new();
+    let total = seeds.len() * 2;
+
+    for (i, seed) in seeds.iter().enumerate() {
+        eprint!("\r  [{}/{}] seed={}", i * 2 + 1, total, seed);
+        std::io::stderr().flush().ok();
+
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-vtms-ctrl-{}", seed));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_dir).ok();
+        let ctrl = Scenario::guild_stability_mm_fixed_guild();
+        if let Err(e) = run_seeded_headless(&ctrl, *seed, &ctrl_dir) {
+            eprintln!("\n  Ctrl error seed={}: {}", seed, e);
+            continue;
+        }
+        if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db")) {
+            ctrl_results.push(RunResult::from_summary(&s, *seed));
+        }
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+
+        eprint!("\r  [{}/{}] seed={}", i * 2 + 2, total, seed);
+        std::io::stderr().flush().ok();
+
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-vtms-treat-{}", seed));
+        let _ = std::fs::remove_dir_all(&treat_dir);
+        std::fs::create_dir_all(&treat_dir).ok();
+        let treat = Scenario::volume_trader_test();
+        if let Err(e) = run_seeded_headless(&treat, *seed, &treat_dir) {
+            eprintln!("\n  Treat error seed={}: {}", seed, e);
+            continue;
+        }
+        if let Ok(s) = load_summary(&treat_dir.join("simulation.db")) {
+            treat_results.push(RunResult::from_summary(&s, *seed));
+        }
+        let _ = std::fs::remove_dir_all(&treat_dir);
+    }
+    println!();
+
+    if ctrl_results.is_empty() || treat_results.is_empty() {
+        eprintln!("  ✗ No results collected");
+        return;
+    }
+
+    let n = ctrl_results.len();
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║                    PER-SEED RESULTS                         ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    println!(
+        "  {:>6}  {:>12}  {:>7}  {:>7}  {:>7}  {:>7}  |  {:>12}  {:>7}  {:>7}  {:>7}  {:>7}",
+        "seed",
+        "GDP(ctrl)",
+        "D/G(c)",
+        "BPD(c)",
+        "Vol(c)",
+        "Buy(c)",
+        "GDP(tr)",
+        "D/G(t)",
+        "BPD(t)",
+        "Vol(t)",
+        "Buy(t)"
+    );
+    for (c, t) in ctrl_results.iter().zip(treat_results.iter()) {
+        println!(
+            "  {:>6}  {:>12.0}  {:>6.2}x  {:>6.2}%  {:>6.3}  {:>6.1}%  |  {:>12.0}  {:>6.2}x  {:>6.2}%  {:>6.3}  {:>6.1}%",
+            c.seed,
+            c.gdp,
+            c.dg,
+            c.bpd * 100.0,
+            c.vol * 1000.0,
+            c.buy_ratio * 100.0,
+            t.gdp,
+            t.dg,
+            t.bpd * 100.0,
+            t.vol * 1000.0,
+            t.buy_ratio * 100.0
+        );
+    }
+
+    let avg = |v: &[RunResult], f: &str| -> f64 {
+        let field_sum = match f {
+            "gdp" => v.iter().map(|r| r.gdp).sum::<f64>(),
+            "dg" => v.iter().map(|r| r.dg).sum::<f64>(),
+            "bpd" => v.iter().map(|r| r.bpd).sum::<f64>(),
+            "vol" => v.iter().map(|r| r.vol).sum::<f64>(),
+            "buy_ratio" => v.iter().map(|r| r.buy_ratio).sum::<f64>(),
+            _ => 0.0,
+        };
+        field_sum / v.len().max(1) as f64
+    };
+    let std_dev = |v: &[RunResult], f: &str, m: f64| -> f64 {
+        let variance = v
+            .iter()
+            .map(|r| {
+                let val = match f {
+                    "gdp" => r.gdp,
+                    "dg" => r.dg,
+                    "bpd" => r.bpd,
+                    "vol" => r.vol,
+                    "buy_ratio" => r.buy_ratio,
+                    _ => 0.0,
+                };
+                (val - m).powi(2)
+            })
+            .sum::<f64>()
+            / v.len().max(1) as f64;
+        variance.sqrt()
+    };
+
+    let c_gdp = avg(&ctrl_results, "gdp");
+    let t_gdp = avg(&treat_results, "gdp");
+    let c_dg = avg(&ctrl_results, "dg");
+    let t_dg = avg(&treat_results, "dg");
+    let c_bpd = avg(&ctrl_results, "bpd");
+    let t_bpd = avg(&treat_results, "bpd");
+    let c_vol = avg(&ctrl_results, "vol");
+    let t_vol = avg(&treat_results, "vol");
+    let c_buy = avg(&ctrl_results, "buy_ratio");
+    let t_buy = avg(&treat_results, "buy_ratio");
+
+    let c_gdp_s = std_dev(&ctrl_results, "gdp", c_gdp);
+    let t_gdp_s = std_dev(&treat_results, "gdp", t_gdp);
+    let c_dg_s = std_dev(&ctrl_results, "dg", c_dg);
+    let t_dg_s = std_dev(&treat_results, "dg", t_dg);
+    let c_bpd_s = std_dev(&ctrl_results, "bpd", c_bpd);
+    let t_bpd_s = std_dev(&treat_results, "bpd", t_bpd);
+    let c_vol_s = std_dev(&ctrl_results, "vol", c_vol);
+    let t_vol_s = std_dev(&treat_results, "vol", t_vol);
+    let c_buy_s = std_dev(&ctrl_results, "buy_ratio", c_buy);
+    let t_buy_s = std_dev(&treat_results, "buy_ratio", t_buy);
+
+    let gdp_chg = (t_gdp / c_gdp.max(1.0) - 1.0) * 100.0;
+    let dg_chg = t_dg - c_dg;
+    let bpd_chg = (t_bpd / c_bpd.max(0.0001) - 1.0) * 100.0;
+    let vol_chg = (t_vol / c_vol.max(0.0001) - 1.0) * 100.0;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!(
+        "║               AGGREGATE: MEAN ± STD (N={})                  ║",
+        n
+    );
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20}  {:>22}  {:>22}",
+        "Metric", "Healthy (ctrl)", "Healthy+VT (treat)"
+    );
+    println!("  {:─<20}  {:─<22}  {:─<22}", "", "", "");
+
+    println!(
+        "  GDP:                {:>10.0} ± {:>8.0}   {:>10.0} ± {:>8.0}  ({:+.1}% GDP)",
+        c_gdp, c_gdp_s, t_gdp, t_gdp_s, gdp_chg
+    );
+    println!(
+        "  Debt/GDP (x):      {:>10.2} ± {:>8.2}   {:>10.2} ± {:>8.2}  ({:+.2}x D/G)",
+        c_dg, c_dg_s, t_dg, t_dg_s, dg_chg
+    );
+    println!(
+        "  Buy-Price-Diff (%):{:>10.2} ± {:>8.3}  {:>10.2} ± {:>8.3}  ({:+.1}% BPD)",
+        c_bpd * 100.0,
+        c_bpd_s * 100.0,
+        t_bpd * 100.0,
+        t_bpd_s * 100.0,
+        bpd_chg
+    );
+    println!(
+        "  Volatility (x1000): {:>10.4} ± {:>8.5}  {:>10.4} ± {:>8.5}  ({:+.1}% vol)",
+        c_vol * 1000.0,
+        c_vol_s * 1000.0,
+        t_vol * 1000.0,
+        t_vol_s * 1000.0,
+        vol_chg
+    );
+    println!(
+        "  Buy Ratio (%):     {:>10.1} ± {:>8.1}  {:>10.1} ± {:>8.1}",
+        c_buy * 100.0,
+        c_buy_s * 100.0,
+        t_buy * 100.0,
+        t_buy_s * 100.0
+    );
+
+    println!("\n  === INTERPRETATION ===");
+    let gdp_wins = t_gdp > c_gdp;
+    let vol_wins = t_vol < c_vol;
+    let bpd_wins = t_bpd < c_bpd;
+    println!(
+        "  GDP:  {} ({:+.1}% with VT)",
+        if gdp_wins { "VT ↑" } else { "Ctrl ↑" },
+        gdp_chg.abs()
+    );
+    println!(
+        "  Vol:  {} ({:+.1}% with VT)",
+        if vol_wins { "VT ↓" } else { "Ctrl ↓" },
+        vol_chg.abs()
+    );
+    println!(
+        "  Spd:  {} ({:+.1}%pp with VT)",
+        if bpd_wins { "VT ↓" } else { "Ctrl ↓" },
+        bpd_chg.abs()
+    );
+    println!("  D/G:  {:.2}x → {:.2}x ({:+.2}x)", c_dg, t_dg, dg_chg);
+
+    let wins = [gdp_wins, vol_wins, bpd_wins]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+    println!();
+    if wins >= 2 && gdp_wins {
+        println!(
+            "  ✅ VERDICT: VT wins {}/3 — recommend adding 2 VolumeTraders to production",
+            wins
+        );
+    } else if wins == 0 {
+        println!(
+            "  ❌ VERDICT: Control wins {}/3 — VolumeTraders don't reliably help healthy economy",
+            wins
+        );
+    } else {
+        println!(
+            "  ⚠️  VERDICT: Mixed ({}/3) — VT effect is marginal in healthy economy",
+            wins
+        );
+    }
+    println!();
+}
+
+// ─── InsiderTrader Healthy Economy Test ─────────────────────────────────
+/// Tests whether InsiderTraders add value when added to an already-healthy
+/// economy (MM + GB). Previous IT test was IT alone vs control (no MM/GB).
+fn run_it_healthy_economy_test() {
+    use crate::analyzer::load_summary;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       INSIDERTRADER + HEALTHY ECONOMY TEST                  ║");
+    println!("║  Healthy (MM+GB) vs +2 InsiderTraders                      ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: GuildStability+MM (1MM + 2GB + 4Cas + 3Far + 2Tra)");
+    println!("  Treat:   same + 2 InsiderTraders");
+    println!("  Seed: {}\n", seed);
+
+    let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let treat_scenario = Scenario::guild_stability_mm_fixed_guild_plus_it();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-it-healthy-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-it-healthy-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    println!("  Running control...");
+    if let Err(e) = run_seeded_headless(&ctrl_scenario, seed, &ctrl_dir) {
+        eprintln!("  Control error: {}", e);
+        return;
+    }
+
+    println!("  Running treatment...");
+    if let Err(e) = run_seeded_headless(&treat_scenario, seed, &treat_dir) {
+        eprintln!("  Treatment error: {}", e);
+        return;
+    }
+
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Ctrl summary error: {}", e);
+            return;
+        }
+    };
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treat summary error: {}", e);
+            return;
+        }
+    };
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+    let gdp_pct = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let vol_pct =
+        (treat_summary.avg_volatility / ctrl_summary.avg_volatility.max(0.0001) - 1.0) * 100.0;
+    let bpd_pct = (treat_summary.avg_bpd / ctrl_summary.avg_bpd.max(0.0001) - 1.0) * 100.0;
+    let buy_pct = (treat_summary.buy_ratio / ctrl_summary.buy_ratio.max(0.0001) - 1.0) * 100.0;
+    let dg_chg = treat_dg - ctrl_dg;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║                    RESULTS (seed=42)                         ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    // Pre-format for table display
+    let gdp_s1 = format!("{:.0}", ctrl_summary.gdp);
+    let gdp_s2 = format!("{:.0}", treat_summary.gdp);
+    let gdp_pct_s = format!("{:+.1}%", gdp_pct);
+    let dg_s1 = format!("{:.2}x", ctrl_dg);
+    let dg_s2 = format!("{:.2}x", treat_dg);
+    let dg_chg_s = format!("{:+.2}x", dg_chg);
+    let bpd_s1 = format!("{:.2}%", ctrl_summary.avg_bpd * 100.0);
+    let bpd_s2 = format!("{:.2}%", treat_summary.avg_bpd * 100.0);
+    let bpd_pct_s = format!("{:+.1}%", bpd_pct);
+    let vol_s1 = format!("{:.4}", ctrl_summary.avg_volatility * 1000.0);
+    let vol_s2 = format!("{:.4}", treat_summary.avg_volatility * 1000.0);
+    let vol_pct_s = format!("{:+.1}%", vol_pct);
+    let buy_s1 = format!("{:.1}%", ctrl_summary.buy_ratio * 100.0);
+    let buy_s2 = format!("{:.1}%", treat_summary.buy_ratio * 100.0);
+    let buy_pct_s = format!("{:+.1}%", buy_pct);
+
+    println!(
+        "  {:20}  {:>15}  {:>15}  {:>11}",
+        "Metric", "Healthy", "Healthy+IT", "Effect"
+    );
+    println!("  {:─<20}  {:─<15}  {:─<15}  {:─<11}", "", "", "", "");
+    println!(
+        "  {:20}  {:>15}  {:>15}  {:>+11}",
+        "GDP", gdp_s1, gdp_s2, gdp_pct_s
+    );
+    println!(
+        "  {:20}  {:>15}  {:>15}  {:>+11}",
+        "Debt/GDP", dg_s1, dg_s2, dg_chg_s
+    );
+    println!(
+        "  {:20}  {:>15}  {:>15}  {:>+11}",
+        "Buy-Price-Diff%", bpd_s1, bpd_s2, bpd_pct_s
+    );
+    println!(
+        "  {:20}  {:>15}  {:>15}  {:>+11}",
+        "Volatility (x1000)", vol_s1, vol_s2, vol_pct_s
+    );
+    println!(
+        "  {:20}  {:>15}  {:>15}  {:>+11}",
+        "Buy Ratio", buy_s1, buy_s2, buy_pct_s
+    );
+
+    println!("\n  === ANALYSIS ===");
+    println!(
+        "  GDP:     {:+.1}% ({})",
+        gdp_pct,
+        if gdp_pct > 5.0 {
+            "IT boosts GDP"
+        } else if gdp_pct < -5.0 {
+            "IT hurts GDP"
+        } else {
+            "neutral"
+        }
+    );
+    println!(
+        "  Vol:     {:+.1}% ({})",
+        vol_pct,
+        if vol_pct < -10.0 {
+            "IT reduces volatility"
+        } else if vol_pct > 10.0 {
+            "IT raises volatility"
+        } else {
+            "neutral"
+        }
+    );
+    println!(
+        "  BPD:     {:+.1}%pp ({})",
+        bpd_pct,
+        if bpd_pct < -10.0 {
+            "IT compresses spreads"
+        } else if bpd_pct > 10.0 {
+            "IT widens spreads"
+        } else {
+            "neutral"
+        }
+    );
+    println!(
+        "  Buy ratio: {:+.1}% ({})",
+        buy_pct,
+        if buy_pct > 5.0 {
+            "IT improves buy ratio"
+        } else if buy_pct < -5.0 {
+            "IT worsens buy ratio"
+        } else {
+            "neutral"
+        }
+    );
+    println!(
+        "  D/G: {:.2}x → {:.2}x ({:+.2}x)",
+        ctrl_dg, treat_dg, dg_chg
+    );
+
+    println!("\n  === CONTEXT ===");
+    println!("  IT alone vs no-archetypes: +80.6% GDP, -28% vol, D/G 1.85x vs 0.75x");
+    println!("  This test: IT + MM + GB vs MM + GB");
+
+    let improvements = [
+        gdp_pct > 5.0,
+        vol_pct < -10.0,
+        bpd_pct < -5.0,
+        buy_pct > 5.0,
+    ];
+    let regressions = [gdp_pct < -5.0, dg_chg > 0.5];
+    let n_imp = improvements.iter().filter(|&&x| x).count();
+    let n_reg = regressions.iter().filter(|&&x| x).count();
+
+    println!();
+    if n_imp >= 2 && n_reg == 0 {
+        println!(
+            "  ✅ VERDICT: ITs reliably improve healthy economy — consider adding to recommended config"
+        );
+    } else if n_reg >= 1 {
+        println!(
+            "  ⚠️  VERDICT: ITs add D/G risk in healthy economy — check whether debt is productive"
+        );
+    } else {
+        println!(
+            "  ➖ VERDICT: ITs are neutral in healthy economy — no strong case to add or remove"
+        );
+    }
+    println!();
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
 fn run_mm_quit_test() {
     use crate::analyzer::load_summary;
     use rusqlite::Connection;
@@ -7234,6 +8004,15 @@ fn main() -> eframe::Result<()> {
         );
         println!("  --multi-server-test     Cross-server price aggregation test");
         println!("  --guild-seller-test     GuildSeller archetype: control vs 1GB+1GS treatment");
+        println!(
+            "  --mm-competition-multi-seed  1MM vs 2MM across 5 seeds (statistical robustness)"
+        );
+        println!(
+            "  --vt-multi-seed         Healthy vs +2VT across 5 seeds (statistical robustness)"
+        );
+        println!(
+            "  --it-healthy-test      IT + MM+GB vs MM+GB: does IT still help healthy economy?"
+        );
         return Ok(());
     }
 
@@ -7469,6 +8248,24 @@ fn main() -> eframe::Result<()> {
     // ─── MM Competition Test ──────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--mm-competition-test" {
         run_mm_competition_test();
+        return Ok(());
+    }
+
+    // ─── MM Competition Multi-Seed ─────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--mm-competition-multi-seed" {
+        run_mm_competition_multi_seed();
+        return Ok(());
+    }
+
+    // ─── VolumeTrader Multi-Seed ───────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--vt-multi-seed" {
+        run_volume_trader_multi_seed();
+        return Ok(());
+    }
+
+    // ─── IT Healthy Economy Test ───────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--it-healthy-test" {
+        run_it_healthy_economy_test();
         return Ok(());
     }
 

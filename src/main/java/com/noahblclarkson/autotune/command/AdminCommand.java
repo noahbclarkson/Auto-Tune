@@ -160,6 +160,10 @@ public class AdminCommand {
                 .append(Component.text(" — Show cross-server exchange rates", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin transaction-min", NamedTextColor.YELLOW)
                 .append(Component.text(" — Show minimum transaction size settings", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin prices export [filename]", NamedTextColor.YELLOW)
+                .append(Component.text(" — Export all item prices to CSV", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin prices import <filename>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Import price changes from CSV", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
     }
 

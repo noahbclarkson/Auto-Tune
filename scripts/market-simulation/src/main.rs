@@ -7331,6 +7331,7 @@ fn run_seeded_headless(scenario: &Scenario, seed: u64, output_dir: &PathBuf) -> 
         ("MarketMaker".into(), Archetype::MarketMaker),
         ("InsiderTrader".into(), Archetype::InsiderTrader),
         ("GuildSeller".into(), Archetype::GuildSeller),
+        ("VolumeTrader".into(), Archetype::VolumeTrader),
     ]
     .into_iter()
     .collect();

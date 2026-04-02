@@ -16,6 +16,7 @@ import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.manager.PriceReporter;
 import com.noahblclarkson.autotune.manager.ShopManager;
+import com.noahblclarkson.autotune.service.MarketDigestService;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
 import com.noahblclarkson.autotune.model.ExchangeRate;
 import com.noahblclarkson.autotune.model.MarketEvent;
@@ -81,6 +82,7 @@ public class AdminCommand {
     private final PriceReporter priceReporter;
     private final DatabaseCleanupManager cleanupManager;
     private final MarketEventService marketEventService;
+    private final MarketDigestService marketDigestService;
 
     @Inject
     public AdminCommand(
@@ -96,7 +98,8 @@ public class AdminCommand {
             ExchangeRateService exchangeRateService,
             DatabaseCleanupManager cleanupManager,
             MarketEventService marketEventService,
-            PriceReporter priceReporter
+            PriceReporter priceReporter,
+            MarketDigestService marketDigestService
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -111,6 +114,7 @@ public class AdminCommand {
         this.cleanupManager = cleanupManager;
         this.marketEventService = marketEventService;
         this.priceReporter = priceReporter;
+        this.marketDigestService = marketDigestService;
     }
 
     @Command("autotune admin")
@@ -170,6 +174,8 @@ public class AdminCommand {
                 .append(Component.text(" — Create and trigger a market event", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin event cancel <id>", NamedTextColor.YELLOW)
                 .append(Component.text(" — Cancel an active or scheduled event", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin digest", NamedTextColor.YELLOW)
+                .append(Component.text(" — Send market digest to Discord webhook now", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
     }
 
@@ -2068,6 +2074,13 @@ public class AdminCommand {
             sender.sendMessage(Component.text("Event not found or already ended.", NamedTextColor.RED));
             sender.sendMessage(Component.text("Use /at admin event list to see active event IDs.", NamedTextColor.GRAY));
         }
+    }
+
+    @Command("autotune admin digest")
+    @Permission("autotune.admin")
+    public void adminDigest(CommandSender sender) {
+        sender.sendMessage(Component.text("Sending market digest to Discord...", NamedTextColor.YELLOW));
+        marketDigestService.sendDigestNow();
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────

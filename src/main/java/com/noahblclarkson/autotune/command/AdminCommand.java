@@ -164,6 +164,12 @@ public class AdminCommand {
                 .append(Component.text(" — Export all item prices to CSV", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin prices import <filename>", NamedTextColor.YELLOW)
                 .append(Component.text(" — Import price changes from CSV", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin event list", NamedTextColor.YELLOW)
+                .append(Component.text(" — List active and recent market events", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin event create <name> <type> <items> <mult> <hrs> [start-msg] [end-msg]", NamedTextColor.YELLOW)
+                .append(Component.text(" — Create and trigger a market event", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin event cancel <id>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Cancel an active or scheduled event", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
     }
 
@@ -1901,6 +1907,169 @@ public class AdminCommand {
         sender.sendMessage(Component.text("Shared prices fetch started — check server log for results.", NamedTextColor.GREEN));
     }
 
+    // ─── Market Event Commands ────────────────────────────────────────────────
+
+    @Command("autotune admin event list")
+    @Permission("autotune.admin")
+    public void adminEventList(CommandSender sender) {
+        List<MarketEvent> allEvents = marketEventService.listEvents();
+        List<MarketEvent> activeEvents = marketEventService.getActiveEvents();
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Market Events", NamedTextColor.GOLD, TextDecoration.BOLD));
+
+        if (activeEvents.isEmpty()) {
+            sender.sendMessage(Component.text("  No active events.", NamedTextColor.GRAY));
+        } else {
+            sender.sendMessage(Component.text("  Active (" + activeEvents.size() + "):", NamedTextColor.YELLOW));
+            for (MarketEvent event : activeEvents) {
+                String matList = event.materials().isEmpty() ? "all items"
+                        : String.join(", ", event.materials().subList(0, Math.min(3, event.materials().size())))
+                        + (event.materials().size() > 3 ? " +" + (event.materials().size() - 3) + " more" : "");
+                sender.sendMessage(Component.text("    ⦾ " + event.name() + " ", NamedTextColor.WHITE)
+                        .append(Component.text("[" + event.type().name() + "]", NamedTextColor.AQUA))
+                        .append(Component.text(" x" + String.format(Locale.ROOT, "%.1f", event.priceMultiplier())
+                                + " — " + matList, NamedTextColor.GRAY)));
+                Duration remaining = Duration.between(Instant.now(), event.endsAt());
+                sender.sendMessage(Component.text("       ID: " + event.id()
+                        + "  |  Ends: " + formatDuration(remaining) + " remaining", NamedTextColor.DARK_GRAY));
+            }
+        }
+
+        // Show recent history (exclude active)
+        List<MarketEvent> history = allEvents.stream()
+                .filter(e -> e.status() != MarketEvent.Status.ACTIVE && e.status() != MarketEvent.Status.SCHEDULED)
+                .limit(10)
+                .toList();
+
+        if (history.isEmpty()) {
+            sender.sendMessage(Component.text("  No recent history.", NamedTextColor.GRAY));
+        } else {
+            sender.sendMessage(Component.text("  Recent history:", NamedTextColor.YELLOW));
+            for (MarketEvent event : history) {
+                sender.sendMessage(Component.text("    " + statusIcon(event.status()) + " " + event.name() + " ", NamedTextColor.WHITE)
+                        .append(Component.text("[" + event.type().name() + "]", NamedTextColor.AQUA))
+                        .append(Component.text(" x" + String.format(Locale.ROOT, "%.1f", event.priceMultiplier()), NamedTextColor.GRAY))
+                        .append(Component.text("  " + DATE_FORMAT.format(event.startsAt()), NamedTextColor.DARK_GRAY)));
+            }
+        }
+
+        sender.sendMessage(Component.text("\n  Types: DEMAND_SURGE, SUPPLY_GLUT, INFLATION_BOOST, DEFLATION_DROP, GOLD_RUSH, CUSTOM", NamedTextColor.DARK_GRAY));
+        sender.sendMessage(Component.text("  Use /at admin event create to trigger an event.", NamedTextColor.DARK_GRAY));
+        sender.sendMessage(Component.empty());
+    }
+
+    @Command("autotune admin event create")
+    @Permission("autotune.admin")
+    public void adminEventCreate(
+            CommandSender sender,
+            @Argument("name") String name,
+            @Argument("type") String typeStr,
+            @Argument("materials") String materialsStr,
+            @Argument("multiplier") String multiplierStr,
+            @Argument("durationHours") String durationStr
+    ) {
+        // Parse event type
+        MarketEvent.EventType type;
+        try {
+            type = MarketEvent.EventType.valueOf(typeStr.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            sender.sendMessage(Component.text("Unknown event type: '" + typeStr + "'", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Valid types: DEMAND_SURGE, SUPPLY_GLUT, INFLATION_BOOST, DEFLATION_DROP, GOLD_RUSH, CUSTOM", NamedTextColor.GRAY));
+            return;
+        }
+
+        // Parse multiplier
+        double multiplier;
+        try {
+            multiplier = Double.parseDouble(multiplierStr);
+        } catch (NumberFormatException e) {
+            sender.sendMessage(Component.text("Invalid multiplier: '" + multiplierStr + "'", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Example: 2.0 = double price change velocity, 0.5 = half", NamedTextColor.GRAY));
+            return;
+        }
+
+        if (multiplier <= 0 || multiplier > 10) {
+            sender.sendMessage(Component.text("Multiplier must be between 0.01 and 10.0", NamedTextColor.RED));
+            return;
+        }
+
+        // Parse duration
+        int durationHours;
+        try {
+            durationHours = Integer.parseInt(durationStr);
+        } catch (NumberFormatException e) {
+            sender.sendMessage(Component.text("Invalid duration: '" + durationStr + "'", NamedTextColor.RED));
+            return;
+        }
+
+        if (durationHours < 1 || durationHours > 720) {
+            sender.sendMessage(Component.text("Duration must be between 1 and 720 hours (30 days)", NamedTextColor.RED));
+            return;
+        }
+
+        // Parse materials (comma-separated, supports wildcards like DIAMOND_*)
+        List<String> materials = new ArrayList<>();
+        for (String m : materialsStr.split(",")) {
+            String trimmed = m.trim();
+            if (!trimmed.isEmpty()) {
+                materials.add(trimmed.toUpperCase(Locale.ROOT));
+            }
+        }
+        if (materials.isEmpty()) {
+            sender.sendMessage(Component.text("No materials specified. Use a material name, comma-separated list, or '*' for all.", NamedTextColor.RED));
+            return;
+        }
+
+        String createdBy = sender.getName();
+        String startMsg = buildEventStartMessage(type, name, multiplier, materials);
+        String endMsg = buildEventEndMessage(type, name);
+
+        MarketEvent event = marketEventService.triggerEvent(
+                name,
+                type,
+                materials,
+                multiplier,
+                Duration.ofHours(durationHours),
+                startMsg,
+                endMsg,
+                createdBy
+        );
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("\u26a1 Market event triggered!", NamedTextColor.GREEN, TextDecoration.BOLD));
+        sender.sendMessage(Component.text("  Name: " + event.name(), NamedTextColor.WHITE));
+        sender.sendMessage(Component.text("  Type: " + event.type().name(), NamedTextColor.AQUA));
+        sender.sendMessage(Component.text("  Items: " + String.join(", ", materials), NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  Multiplier: x" + String.format(Locale.ROOT, "%.2f", event.priceMultiplier()), NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  Duration: " + durationHours + " hours (" + formatDuration(Duration.ofHours(durationHours)) + ")", NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  ID: " + event.id(), NamedTextColor.DARK_GRAY));
+        sender.sendMessage(Component.text("\n  Boss bar sent to all online players.", NamedTextColor.DARK_GRAY));
+        sender.sendMessage(Component.text("  Use '/at admin event cancel " + event.id() + "' to end it early.", NamedTextColor.DARK_GRAY));
+        sender.sendMessage(Component.empty());
+    }
+
+    @Command("autotune admin event cancel")
+    @Permission("autotune.admin")
+    public void adminEventCancel(CommandSender sender, @Argument("eventId") String eventIdStr) {
+        UUID eventId;
+        try {
+            eventId = UUID.fromString(eventIdStr.trim());
+        } catch (IllegalArgumentException e) {
+            sender.sendMessage(Component.text("Invalid event ID: '" + eventIdStr + "'", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Use /at admin event list to see event IDs.", NamedTextColor.GRAY));
+            return;
+        }
+
+        boolean cancelled = marketEventService.cancelEvent(eventId);
+        if (cancelled) {
+            sender.sendMessage(Component.text("Event cancelled. Boss bars dismissed, players notified.", NamedTextColor.GREEN));
+        } else {
+            sender.sendMessage(Component.text("Event not found or already ended.", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Use /at admin event list to see active event IDs.", NamedTextColor.GRAY));
+        }
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────────────────
 
     private String formatDuration(Duration d) {
@@ -1908,6 +2077,38 @@ public class AdminCommand {
         if (d.toMinutes() < 60) return d.toMinutes() + " min";
         if (d.toHours() < 24) return d.toHours() + " h";
         return d.toDays() + " d";
+    }
+
+    private String statusIcon(MarketEvent.Status status) {
+        return switch (status) {
+            case ACTIVE -> "\u26a1";
+            case SCHEDULED -> "\u23f0";
+            case ENDED -> "\u2714";
+            case CANCELLED -> "\u2716";
+        };
+    }
+
+    private String buildEventStartMessage(MarketEvent.EventType type, String name, double mult, List<String> materials) {
+        String items = materials.size() <= 3 ? String.join(", ", materials) : String.join(", ", materials.subList(0, 3)) + " and more";
+        return switch (type) {
+            case DEMAND_SURGE -> "\u26a1 DEMAND SURGE: " + name + " is active! Buy prices boosted for " + items + " for the next hour.";
+            case SUPPLY_GLUT -> "\u2b06 SUPPLY GLUT: " + name + " is active! Sell prices boosted for " + items + ".";
+            case INFLATION_BOOST -> "\u2191 INFLATION BOOST: " + name + " — prices are drifting upward!";
+            case DEFLATION_DROP -> "\u2193 DEFLATION DROP: " + name + " — prices are falling!";
+            case GOLD_RUSH -> "\ud83d\udcb2 GOLD RUSH: " + name + " — specific items more valuable!";
+            case CUSTOM -> "\u2728 MARKET EVENT: " + name + " is active! Multiplier: x" + String.format(Locale.ROOT, "%.1f", mult);
+        };
+    }
+
+    private String buildEventEndMessage(MarketEvent.EventType type, String name) {
+        return switch (type) {
+            case DEMAND_SURGE -> "\u26a1 Demand surge ended: " + name + ". Markets returning to normal.";
+            case SUPPLY_GLUT -> "\u2b06 Supply glut ended: " + name + ". Sell bonuses fading.";
+            case INFLATION_BOOST -> "\u2191 Inflation event ended: " + name + ". Price drift stabilizing.";
+            case DEFLATION_DROP -> "\u2193 Deflation event ended: " + name + ". Price floor stabilizing.";
+            case GOLD_RUSH -> "\ud83d\udcb2 Gold rush ended: " + name + ". Special pricing over.";
+            case CUSTOM -> "\u2728 Market event ended: " + name + ". Economy returning to normal.";
+        };
     }
 
     private String formatNumber(long n) {

@@ -455,4 +455,47 @@ Floor prevents items from being given away; ceiling prevents price gouging on es
 
 ---
 
+## Player Economy Design
+
+Auto-Tune's economy health depends heavily on your **player archetype mix** — the types of trading behaviors your players exhibit. The Rust market simulation (`scripts/market-simulation/`) models these as AI player archetypes so you can test configurations before deploying.
+
+### Archetypes and Their Effects
+
+| Archetype | Role | Effect on Economy |
+|---|---|---|
+| **Casual** | Balanced buyer/seller | Baseline normal activity |
+| **Farmer** | Heavy seller | Natural supply; can cause underselling |
+| **GuildBuyer** | Proactive buyer at dips | Buy pressure; counteracts farmer oversupply |
+| **MarketMaker** | Two-sided liquidity | Tightens spreads dramatically; stabilizes prices |
+| **InsiderTrader** | Mean-reversion | Compresses spreads; adds debt risk |
+| **VolumeTrader** | Spread compressor | Reduces BPD/SPD; adds modest debt |
+
+### Recommended Archetype Config (2MM + 2GB)
+
+Simulation testing across 5 seeds confirms: **2 MarketMakers + 2 GuildBuyers @ 7% threshold** produces the healthiest economy:
+
+| Metric | 1MM + 2GB | 2MM + 2GB | Change |
+|---|---|---|---|
+| GDP | baseline | **+99.7%** | ✅ doubled |
+| Volatility | baseline | **-48.9%** | ✅ 2× more stable |
+| Spreads (BPD) | baseline | **-21.4%** | ✅ tighter |
+| Debt/GDP | baseline | **+0.17×** | neutral |
+| Buy ratio | baseline | **-14pp** | acceptable tradeoff |
+
+**GuildBuyer threshold: 7%** is the sweet spot — proven across 5 random seeds. At 5%, some seeds produce catastrophic D/G spikes. At 10%+, GuildBuyers are too selective and accumulate dangerous debt on single purchases.
+
+### Tuning for Your Server Size
+
+- **Small server (5–10 players):** 1 MarketMaker + 1 GuildBuyer. More MMs than players causes over-trading.
+- **Medium server (10–20 players):** 2 MarketMaker + 2 GuildBuyer. This is the validated recommended config.
+- **Large server (20–50 players):** 2 MarketMaker + 2 GuildBuyer + 1–2 VolumeTraders. VTs compress spreads but add debt — cap at 2.
+- **Avoid:** 2+ InsiderTraders without MMs (worsens D/G). GuildSellers (confirmed dead-end — sell-heavy bias with no demand benefit).
+
+### The Floor Percent
+
+Set `spread.floor-percent: 0.60` (60% of base price). Simulation confirms this is the sweet spot:
+- **50–55%:** barely binds, marginal benefit
+- **60%:** uniquely beneficial — +6.5% GDP vs no floor
+- **70%+:** destructive — internal prices collapse while displayed prices stay artificially high
+
 _For full config documentation, see [CONFIG_GUIDE.md](./CONFIG_GUIDE.md). For architecture internals, see [ARCHITECTURE.md](./ARCHITECTURE.md)._

@@ -378,11 +378,11 @@ impl Simulation {
                 } else {
                     1.0 // No GDP yet — full interest
                 };
-                let tier = if ratio > lc.debt_gdp_tier3_ratio {
+                let tier = if ratio >= lc.debt_gdp_tier3_ratio {
                     "TIER3"
-                } else if ratio > lc.debt_gdp_tier2_ratio {
+                } else if ratio >= lc.debt_gdp_tier2_ratio {
                     "TIER2"
-                } else if ratio > lc.debt_gdp_tier1_ratio {
+                } else if ratio >= lc.debt_gdp_tier1_ratio {
                     "TIER1"
                 } else {
                     "NORMAL"
@@ -390,14 +390,14 @@ impl Simulation {
                 (multiplier, tier)
             } else {
                 // Legacy tiered circuit breaker:
-                // Tier 1 (>tier1_ratio): cap at tier1_cap (50%) — warning zone
-                // Tier 2 (>tier2_ratio): cap at tier2_cap (25%) — danger zone
-                // Tier 3 (>tier3_ratio): full pause (0%) — emergency zone
-                if ratio > lc.debt_gdp_tier3_ratio {
+                // Tier 1 (>=tier1_ratio): cap at tier1_cap (50%) — warning zone
+                // Tier 2 (>=tier2_ratio): cap at tier2_cap (25%) — danger zone
+                // Tier 3 (>=tier3_ratio): full pause (0%) — emergency zone
+                if ratio >= lc.debt_gdp_tier3_ratio {
                     (0.0, "TIER3")
-                } else if ratio > lc.debt_gdp_tier2_ratio {
+                } else if ratio >= lc.debt_gdp_tier2_ratio {
                     (lc.tier2_interest_cap, "TIER2")
-                } else if ratio > lc.debt_gdp_tier1_ratio {
+                } else if ratio >= lc.debt_gdp_tier1_ratio {
                     (lc.tier1_interest_cap, "TIER1")
                 } else {
                     (1.0, "NORMAL")

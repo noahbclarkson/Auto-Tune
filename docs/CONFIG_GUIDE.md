@@ -291,3 +291,5 @@ The simulation-recommended approach: **counter-cyclical + post-default cooldown 
 | 50+ players | 20 | 0.10 | 0.5 |
 
 Auto-Tune's market engine is stable across the full parameter range (840-config sweep confirmed). Start conservative and tune based on observed behavior, not preemptively.
+
+> **Archetype mix matters more than parameters.** The 2MM + 2GB@7% archetype configuration (2 MarketMakers + 2 GuildBuyers) doubles GDP and halves volatility. See [SERVER_ADMIN_GUIDE.md](./SERVER_ADMIN_GUIDE.md) for the full player economy design guide.

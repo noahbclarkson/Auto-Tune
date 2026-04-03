@@ -52,6 +52,7 @@ public class ShopGui {
     private final ConfigManager configManager;
     private final DatabaseManager databaseManager;
     private final MarketEngine marketEngine;
+    private final com.noahblclarkson.autotune.database.TransactionRepository transactionRepository;
 
     private ChestGui gui;
     private PaginatedPane itemsPane;
@@ -67,6 +68,7 @@ public class ShopGui {
         this.configManager = plugin.getConfigManager();
         this.databaseManager = plugin.getDatabaseManager();
         this.marketEngine = plugin.getMarketEngine();
+        this.transactionRepository = plugin.getTransactionRepository();
         this.currentTitle = configManager.getConfig().gui().titles().shop();
     }
 
@@ -295,6 +297,9 @@ public class ShopGui {
             }
         }
 
+        // Per-player price memory: show last buy/sell for this item
+        appendPlayerPriceMemory(lore, shopItem, mutedColor);
+
         lore.add(Component.empty());
         lore.add(Component.text("Click to buy/sell", mutedColor)
                 .decoration(TextDecoration.ITALIC, false));
@@ -496,6 +501,81 @@ public class ShopGui {
         }
 
         return pane;
+    }
+
+    /**
+     * Appends per-player price memory lines to the item lore.
+     * Shows the player's most recent BUY and SELL price for this item so they
+     * can quickly assess whether now is a good time to trade vs. last time.
+     *
+     * Examples:
+     *   Last bought: $245.90 (now $230.10 −$15.80)
+     *   Last sold:   $238.40 (now $222.80 −$15.60)
+     */
+    private void appendPlayerPriceMemory(
+            List<Component> lore,
+            ShopItem shopItem,
+            TextColor mutedColor
+    ) {
+        try {
+            List<com.noahblclarkson.autotune.model.Transaction> recent =
+                    transactionRepository.findByPlayerAndItem(player.getUniqueId(), shopItem.id(), 20);
+
+            com.noahblclarkson.autotune.model.Transaction lastBuy = null;
+            com.noahblclarkson.autotune.model.Transaction lastSell = null;
+            for (com.noahblclarkson.autotune.model.Transaction tx : recent) {
+                if (lastBuy == null && tx.type() == com.noahblclarkson.autotune.model.Transaction.TransactionType.BUY) {
+                    lastBuy = tx;
+                }
+                if (lastSell == null && tx.type() == com.noahblclarkson.autotune.model.Transaction.TransactionType.SELL) {
+                    lastSell = tx;
+                }
+                if (lastBuy != null && lastSell != null) break;
+            }
+
+            if (lastBuy == null && lastSell == null) return;
+
+            lore.add(Component.empty());
+
+            BigDecimal nowBuy = shopManager.getBuyPrice(shopItem);
+            BigDecimal nowSell = shopManager.getSellPrice(shopItem);
+
+            if (lastBuy != null) {
+                BigDecimal then = lastBuy.pricePerUnit();
+                BigDecimal delta = nowBuy.subtract(then).setScale(2, java.math.RoundingMode.HALF_UP);
+                boolean up = delta.compareTo(BigDecimal.ZERO) >= 0;
+                TextColor deltaColor = up
+                        ? configManager.resolveColor(configManager.getConfig().gui().colors().positive())
+                        : configManager.resolveColor(configManager.getConfig().gui().colors().negative());
+                String deltaStr = (up ? "+" : "") + configManager.formatCurrency(delta);
+                lore.add(Component.text("Last bought: ", mutedColor)
+                        .append(Component.text(configManager.formatCurrency(then),
+                                net.kyori.adventure.text.format.NamedTextColor.WHITE))
+                        .append(Component.text(" (now ", mutedColor))
+                        .append(Component.text(deltaStr, deltaColor))
+                        .append(Component.text(")", mutedColor))
+                        .decoration(TextDecoration.ITALIC, false));
+            }
+
+            if (lastSell != null) {
+                BigDecimal then = lastSell.pricePerUnit();
+                BigDecimal delta = nowSell.subtract(then).setScale(2, java.math.RoundingMode.HALF_UP);
+                boolean up = delta.compareTo(BigDecimal.ZERO) >= 0;
+                TextColor deltaColor = up
+                        ? configManager.resolveColor(configManager.getConfig().gui().colors().positive())
+                        : configManager.resolveColor(configManager.getConfig().gui().colors().negative());
+                String deltaStr = (up ? "+" : "") + configManager.formatCurrency(delta);
+                lore.add(Component.text("Last sold:   ", mutedColor)
+                        .append(Component.text(configManager.formatCurrency(then),
+                                net.kyori.adventure.text.format.NamedTextColor.WHITE))
+                        .append(Component.text(" (now ", mutedColor))
+                        .append(Component.text(deltaStr, deltaColor))
+                        .append(Component.text(")", mutedColor))
+                        .decoration(TextDecoration.ITALIC, false));
+            }
+        } catch (Exception ignored) {
+            // Price memory is informational — never crash the GUI on DB error
+        }
     }
 
     private GuiItem createNavigationItem(Material material, String name, TextColor color,

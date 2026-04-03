@@ -168,6 +168,8 @@ public class AdminCommand {
                 .append(Component.text(" — Export all item prices to CSV", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin prices import <filename>", NamedTextColor.YELLOW)
                 .append(Component.text(" — Import price changes from CSV", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin prices reset <material>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Reset item price to shops.yml base and clear history", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin event list", NamedTextColor.YELLOW)
                 .append(Component.text(" — List active and recent market events", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin event create <name> <type> <items> <mult> <hrs> [start-msg] [end-msg]", NamedTextColor.YELLOW)
@@ -1437,6 +1439,50 @@ public class AdminCommand {
         } catch (IOException e) {
             sender.sendMessage(Component.text("❌ Import failed: " + e.getMessage(), NamedTextColor.RED));
         }
+    }
+
+    // ─── Prices reset ──────────────────────────────────────────────────────────
+
+    @Command("autotune admin prices reset <material>")
+    @Permission("autotune.admin")
+    public void pricesReset(
+            CommandSender sender,
+            @Argument(value = "material", suggestions = "price-override-material") String materialName
+    ) {
+        org.bukkit.Material mat = matchMaterial(materialName);
+        if (mat == null) {
+            sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        Optional<ShopItem> shopItem = shopManager.getItemByMaterial(mat);
+        if (shopItem.isEmpty()) {
+            sender.sendMessage(Component.text("Material not in shop: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        ShopItem item = shopItem.get();
+        BigDecimal priorPrice = marketEngine.getCurrentPrice(item.id());
+
+        Optional<BigDecimal> result = shopManager.resetPriceToBase(item.id(), mat);
+        if (result.isEmpty()) {
+            sender.sendMessage(Component.text(
+                    "Could not find base price for " + item.getDisplayNameOrMaterial()
+                    + " in shops.yml. Use /at admin prices import to set a base price instead.",
+                    NamedTextColor.RED));
+            return;
+        }
+
+        BigDecimal basePrice = result.get();
+        sender.sendMessage(Component.text("✅ Price reset for ", NamedTextColor.GREEN)
+                .append(Component.text(item.getDisplayNameOrMaterial(), NamedTextColor.AQUA))
+                .append(Component.text(": ", NamedTextColor.GREEN))
+                .append(Component.text(configManager.formatCurrency(priorPrice), NamedTextColor.GRAY))
+                .append(Component.text(" → ", NamedTextColor.WHITE))
+                .append(Component.text(configManager.formatCurrency(basePrice), NamedTextColor.GOLD))
+                .append(Component.text(". Price history cleared. Normal price discovery resumes next tick.",
+                        NamedTextColor.GREEN))
+                .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
     }
 
     // ─── Per-item config override subcommands ──────────────────────────────────

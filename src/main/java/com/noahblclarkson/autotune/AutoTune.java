@@ -51,6 +51,7 @@ public class AutoTune extends JavaPlugin {
     private MarketEventService marketEventService;
     private EconomicNewsService economicNewsService;
     private MarketDigestService marketDigestService;
+    private com.noahblclarkson.autotune.database.TransactionRepository transactionRepository;
     private CommandManager commandManager;
     private TaskScheduler taskScheduler;
     private WebServer webServer;
@@ -124,10 +125,11 @@ public class AutoTune extends JavaPlugin {
         marketDigestService.start();
         taskScheduler = injector.getInstance(TaskScheduler.class);
 
+        transactionRepository = injector.getInstance(com.noahblclarkson.autotune.database.TransactionRepository.class);
+
         // Seed prices from shared API if configured and economy is still empty
         if (configManager.getConfig().economy().seedFromSharedPrices()) {
-            var txRepo = injector.getInstance(com.noahblclarkson.autotune.database.TransactionRepository.class);
-            if (txRepo.count() == 0) {
+            if (transactionRepository.count() == 0) {
                 var priceReporter = injector.getInstance(com.noahblclarkson.autotune.manager.PriceReporter.class);
                 priceReporter.seedPricesFromApi();
             } else {
@@ -336,5 +338,10 @@ public class AutoTune extends JavaPlugin {
     @Nullable
     public WebServer getWebServer() {
         return webServer;
+    }
+
+    @NotNull
+    public com.noahblclarkson.autotune.database.TransactionRepository getTransactionRepository() {
+        return transactionRepository;
     }
 }

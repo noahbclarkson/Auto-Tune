@@ -454,4 +454,64 @@ public class ShopManager {
             idToItemCache.put(updated.id(), updated);
         });
     }
+
+    /**
+     * Look up the base (shops.yml) price for a material.
+     * Returns null if the material is not found in shops.yml.
+     * This is the canonical "starting price" before any market drift.
+     */
+    @Nullable
+    public BigDecimal getBasePriceFromShopsYaml(Material material) {
+        YamlConfiguration shopsConfig = configManager.loadShopsConfig();
+        List<?> itemList = shopsConfig.getList("items");
+        if (itemList == null) return null;
+
+        String targetName = material.name().toLowerCase(java.util.Locale.ROOT);
+        for (Object entry : itemList) {
+            String materialName = null;
+            double price = -1;
+
+            if (entry instanceof ConfigurationSection section) {
+                materialName = section.getString("material");
+                price = section.getDouble("price", -1);
+            } else if (entry instanceof java.util.Map<?, ?> map) {
+                materialName = (String) map.get("material");
+                Number priceNum = (Number) map.get("price");
+                if (priceNum != null) price = priceNum.doubleValue();
+            }
+
+            if (materialName != null && materialName.toLowerCase(java.util.Locale.ROOT).equals(targetName) && price >= 0) {
+                return BigDecimal.valueOf(price);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Reset an item's current price to its shops.yml base price and clear its
+     * price history. Useful when an item has drifted due to exploits or bugs.
+     *
+     * This does NOT clear admin overrides (floor/ceiling/spread etc.) — use
+     * itemReset for that. This ONLY resets the floating market price.
+     *
+     * Returns the base price the item was reset to, or empty if base price not found.
+     */
+    public java.util.Optional<BigDecimal> resetPriceToBase(int itemId, Material material) {
+        BigDecimal basePrice = getBasePriceFromShopsYaml(material);
+        if (basePrice == null) return java.util.Optional.empty();
+
+        // Reset the DB price
+        itemRepository.updatePrice(itemId, basePrice);
+        // Clear all market history so stale data doesn't bias new price discovery
+        itemRepository.deleteMarketHistoryForItem(itemId);
+        // Evict from MarketEngine's live price cache too
+        marketEngine.resetPriceCache(itemId, basePrice);
+        // Refresh the in-memory shop cache
+        getItemById(itemId).ifPresent(item -> {
+            ShopItem updated = item.toBuilder().price(basePrice).build();
+            hashToItemCache.put(updated.itemHash(), updated);
+            idToItemCache.put(updated.id(), updated);
+        });
+        return java.util.Optional.of(basePrice);
+    }
 }

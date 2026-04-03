@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, Play, TrendingUp, TrendingDown } from 'lucide-react';
+import { QuickSimulator } from './quick-simulator';
 
 /* ------------------------------------------------------------------ */
 /* Fake sparkline data — upward-trending with realistic noise          */
@@ -149,6 +150,11 @@ export function Hero() {
                   <p className="text-white font-mono font-semibold">{value}</p>
                 </div>
               ))}
+            </div>
+
+            {/* Inline quick simulator */}
+            <div className="mt-8">
+              <QuickSimulator embedded />
             </div>
           </div>
 

@@ -322,11 +322,136 @@ cleanup:
 | `/sell` | Open the sell panel (sells items in hand or opens inventory sell) |
 | `/autosell` | Configure autosell settings |
 | `/autosell toggle` | Enable/disable autosell for your account |
+| `/autosell minprice <item> [price]` | Set per-item minimum sell price (anvil GUI) |
 | `/loan` | Loan management — take, repay, list |
 | `/transactions` | View your transaction history |
-| `/at admin` | Admin commands — market freeze, price override, item config |
+| `/auction` | Auction house — browse, sell, buy, manage orders |
+| `/badges` | View your earned achievement badges |
+| `/treasury` | Server economy treasury — balance, deposit, withdraw |
+| `/pricealert <item> <above|below> <price>` | Set a price alert for an item |
+| `/at admin` | Admin commands — market freeze, price override, item config, prices management |
 
 For per-item price tuning: `/at admin item spread <material> <value>` to set a custom spread for a specific item, or `/at admin item reset <material>` to clear the override.
+
+### Price Recovery After Exploits
+
+If an item becomes completely mispriced due to a bug or exploit:
+
+```
+/at admin prices reset <material>
+```
+
+This resets the item's floating price to its `shops.yml` base price, clears all market history for that item (so stale trade data can't bias recovery), and evicts it from the price cache. Takes effect immediately.
+
+For bulk price operations: `/at admin prices export` saves all current prices to a file; `/at admin prices import <file>` loads them back. Useful for migrating prices between servers.
+
+### Shop Tooltips — Personal P&L
+
+When browsing `/shop`, each item's tooltip shows your personal trading history:
+
+```
+Last bought: $245.90 (now -$15.80)   ← green = price fell since you bought
+Last sold: $238.40 (now +$2.20)      ← green = price rose since you sold
+```
+
+This is computed from your transaction history — no extra data stored. It gives players personal anchoring in the market and creates P&L awareness without a full portfolio system.
+
+### Price Alerts
+
+Players can set price alerts to be notified when an item crosses a threshold:
+
+```
+/pricealert add DIAMOND below 200
+/pricealert list
+/pricealert remove 1
+/pricealert toggle     ← pause/resume all alerts
+```
+
+Alerts trigger when the next market tick crosses the threshold. Alerts persist across restarts.
+
+### Auction House
+
+The auction house provides a traditional order-book marketplace:
+
+```
+/auction browse        ← view buy/sell orders
+/auction sell <price>  ← list item in hand for sale
+/auction buy <order-id> ← fill a sell order
+/auction my            ← view your active orders
+/auction cancel <id>   ← cancel your order
+/auction history       ← your fill history
+```
+
+Orders expire after 72 hours (configurable). When an order expires, buy orders refund escrowed funds automatically; sell orders return items to the player if online.
+
+### Achievement Badges
+
+Players earn badges through market activity:
+
+| Badge | How to earn |
+|-------|-------------|
+| First Sale | First item sold |
+| First Buyer | First item bought |
+| Loan Shark | Repaid a loan of 100K+ |
+| Loan Taker | Taken your first loan |
+| Big Spender | Bought 1M+ worth in one transaction |
+| Centurion | Traded 100+ times |
+| Market Maker | Provided liquidity across 10+ items |
+| Hoarder | Autosell collected 50+ items |
+| Diversified | Traded 20+ different materials |
+| Stable Hand | Held the same item for 7+ days without selling |
+| Trend Spotter | Had a price alert fire |
+
+Run `/badges` to see your earned badges. Use `/badges gui` for a visual showcase.
+
+### Treasury System
+
+The server maintains a treasury funded by transaction taxes:
+
+```
+/treasury balance       ← view current treasury balance
+/treasury deposit <amt> ← deposit from your balance to treasury
+/treasury withdraw <amt>← withdraw from treasury to your balance (admin only)
+/treasury status        ← tax rates and collection summary
+```
+
+Taxes are collected on every buy, sell, auction fill, and loan interest compound. Configure rates in `config.yml` under `treasury.*`.
+
+### Market Events
+
+Scheduled server-wide events that temporarily influence prices:
+
+```
+/at admin event list          ← show active/scheduled events
+/at admin event create <name> <type> <multiplier> <minutes> [materials...]
+/at admin event cancel <name>
+```
+
+Event types: `DEMAND_SURGE` (buy pressure), `SUPPLY_GLUT` (sell pressure), `INFLATION_BOOST`, `DEFLATION_DROP`, `GOLD_RUSH`, `CUSTOM`. When an event activates, all online players see a boss bar announcing it.
+
+### Admin Digest
+
+Configure a scheduled economy digest:
+
+```
+/at admin digest         ← send digest now
+/at admin digest config  ← show current digest settings
+```
+
+The digest posts to a Discord webhook (configured in `config.yml`) with economy health stats, top movers, and notable events. Admins get daily/weekly summaries without checking the web dashboard.
+
+### Per-Item Price Bounds
+
+Admins can set hard floor and ceiling prices per item:
+
+```
+/at admin item floor <material> <value>    ← minimum buy/sell price
+/at admin item ceiling <material> <value>  ← maximum buy/sell price
+/at admin item info <material>              ← show floor/ceiling if set
+/at admin item reset <material>             ← clear all overrides including floor/ceiling
+```
+
+Floor prevents items from being given away; ceiling prevents price gouging on essential items.
 
 ---
 

@@ -248,6 +248,9 @@ pub struct PlayerAgent {
     /// Sell-spike threshold: sell when sell_price > perceived * (1.0 + this).
     /// 0.0 = disabled. 0.2 = sell when price is 20%+ above perceived.
     pub guild_sell_threshold: f64,
+    /// Minimum tick cooldown between GuildSeller Phase 1 sells per item.
+    /// Prevents sell avalanche when spike condition persists across many ticks.
+    pub guild_sell_cooldown_ticks: HashMap<usize, u64>,
     /// Max inventory per item for MarketMaker archetype. Limits position size.
     pub mm_max_inventory: i32,
     /// Target inventory level per item for MarketMaker archetype.
@@ -325,6 +328,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -371,6 +375,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -421,6 +426,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -467,6 +473,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -513,6 +520,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -566,6 +574,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -620,6 +629,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -679,6 +689,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -744,6 +755,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -811,6 +823,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -872,6 +885,7 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, &[]);
@@ -938,6 +952,7 @@ impl PlayerAgent {
             volume_price_window: price_window.max(spread_window),
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, &[]);
@@ -1077,7 +1092,14 @@ impl PlayerAgent {
                 );
             }
             Archetype::GuildSeller => {
-                self.decide_guildseller(items, &mut decisions, record, &mut logs, slippage_coeff);
+                self.decide_guildseller(
+                    items,
+                    &mut decisions,
+                    record,
+                    &mut logs,
+                    slippage_coeff,
+                    current_tick,
+                );
             }
             Archetype::VolumeTrader => {
                 self.decide_volume_trader(
@@ -1513,8 +1535,10 @@ impl PlayerAgent {
     /// Guild Seller: mirror of GuildBuyer. Sells when prices spike above perceived value,
     /// providing downward pressure to prevent bubble inflation.
     ///
-    /// Phase 1 — Price-spike selling: when sell_price > perceived*(1+threshold),
-    /// sell proactively regardless of inventory. This is the primary anti-bubble mechanism.
+    /// Phase 1 — Price-spike selling: when sell_price > perceived*(1+threshold)
+    /// AND GuildSeller has inventory available. Creates supply when prices bubble,
+    /// acting as an automatic price ceiling and preventing market overheating.
+    /// Per-item cooldown prevents sell avalanche during sustained spike conditions.
     ///
     /// Phase 2 — Excess liquidation: sell surplus when > 2x target inventory.
     /// (mirrors GuildBuyer's surplus sell behavior)
@@ -1525,6 +1549,7 @@ impl PlayerAgent {
         record: bool,
         logs: &mut Vec<DecisionLog>,
         slippage_coeff: f64,
+        current_tick: u64,
     ) {
         let mut rng = SeededRng;
 
@@ -1554,17 +1579,27 @@ impl PlayerAgent {
                 let sell_price = items[i].sell_price();
                 let current = self.inventory.get(&i).copied().unwrap_or(0);
 
-                // Price spike detected: market price is guild_sell_threshold+% above perceived
-                // Sell regardless of inventory level (proactive bubble prevention)
+                // Price spike detected: sell if we have inventory (cooldown prevents avalanche)
                 if sell_price > perceived * spike_multiplier {
+                    // Per-item cooldown: don't re-sell the same item too frequently
+                    let last_spike_sold =
+                        self.guild_sell_cooldown_ticks.get(&i).copied().unwrap_or(0);
+                    if current_tick - last_spike_sold < 5 {
+                        continue;
+                    }
+                    let have = current;
+                    if have <= 0 {
+                        continue;
+                    }
                     // Sell up to available inventory × risk_tolerance (don't dump 100%)
-                    let have = current.max(1);
                     let max_sell = (have as f64 * self.risk_tolerance).ceil() as i32;
                     let amount =
                         rng.random_inclusive(1..=max_sell.min(self.max_trade_amount).max(1));
                     if amount <= 0 {
                         continue;
                     }
+                    // Record this tick so we don't sell the same item again too soon
+                    self.guild_sell_cooldown_ticks.insert(i, current_tick);
                     let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                     let revenue = sell_price / slippage * amount as f64;
                     let balance_before = self.balance;

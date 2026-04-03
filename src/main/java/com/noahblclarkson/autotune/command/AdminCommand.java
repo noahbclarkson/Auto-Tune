@@ -1485,6 +1485,54 @@ public class AdminCommand {
                 .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
     }
 
+    // ─── Bulk prices reset ─────────────────────────────────────────────────────
+
+    /**
+     * Resets ALL item prices to their shops.yml base prices and clears all market history.
+     * Use when the economy is severely mispriced and per-item resets are impractical.
+     */
+    @Command("autotune admin prices reset all")
+    @Permission("autotune.admin")
+    public void pricesResetAll(CommandSender sender) {
+        List<ShopItem> allItems = shopManager.getAllItems();
+        if (allItems.isEmpty()) {
+            sender.sendMessage(Component.text("No items in shop — nothing to reset.", NamedTextColor.RED));
+            return;
+        }
+
+        int reset = 0;
+        int skipped = 0;
+        for (ShopItem item : allItems) {
+            Optional<BigDecimal> result = shopManager.resetPriceToBase(item.id(), item.material());
+            if (result.isPresent()) {
+                reset++;
+            } else {
+                skipped++;
+            }
+        }
+
+        Component summary = Component.text("✅ Full price reset complete", NamedTextColor.GREEN)
+                .append(Component.text(": ", NamedTextColor.GRAY))
+                .append(Component.text(reset + "", NamedTextColor.AQUA))
+                .append(Component.text(" items reset", NamedTextColor.GREEN));
+        if (skipped > 0) {
+            summary = summary
+                    .append(Component.text(", ", NamedTextColor.GRAY))
+                    .append(Component.text(skipped + "", NamedTextColor.YELLOW))
+                    .append(Component.text(" skipped (no base price in shops.yml)", NamedTextColor.YELLOW));
+        }
+        sender.sendMessage(summary);
+
+        Component broadcast = Component.text("⚠️ ", NamedTextColor.YELLOW)
+                .append(Component.text("Economy prices have been reset to defaults by an admin.", NamedTextColor.GRAY))
+                .append(Component.text(" Market price discovery resumes — expect prices to diverge naturally.", NamedTextColor.GRAY))
+                .decoration(TextDecoration.ITALIC, false);
+        plugin.getServer().broadcast(broadcast);
+
+        plugin.getLogger().info("[Auto-Tune] Admin " + sender.getName()
+                + " executed full price reset: " + reset + " items reset, " + skipped + " skipped.");
+    }
+
     // ─── Per-item config override subcommands ──────────────────────────────────
 
     @Command("autotune admin item spread <material> <value>")

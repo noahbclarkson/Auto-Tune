@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { TradingTimeline } from '@/components/portfolio/trading-timeline';
 import { api, type Stats, type PortfolioDto, type HoldingDto, type TransactionFeedDto } from '@/lib/api';
 import { formatCurrency, formatLargeCurrency, formatPercent } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
@@ -241,7 +242,7 @@ export default function PortfolioPage() {
               loadingTrades ? (
                 <div className="h-48 rounded-xl bg-muted animate-pulse" />
               ) : transactions.length > 0 ? (
-                <TransactionsTable transactions={transactions} />
+                <TradingTimeline transactions={transactions} />
               ) : (
                 <Card>
                   <CardContent className="py-8 text-center text-sm text-muted-foreground">

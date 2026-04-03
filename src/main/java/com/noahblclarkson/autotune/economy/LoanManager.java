@@ -331,22 +331,22 @@ public class LoanManager {
                     // rises, preventing the pre-circuit-breaker debt accumulation spiral.
                     double maxRatio = config.debtGdpTier3Ratio();
                     interestMultiplier = Math.max(0.0, Math.min(1.0, 1.0 - ratio / maxRatio));
-                    if (ratio > config.debtGdpTier3Ratio()) {
+                    if (ratio >= config.debtGdpTier3Ratio()) {
                         currentTier = "TIER3";
-                    } else if (ratio > config.debtGdpTier2Ratio()) {
+                    } else if (ratio >= config.debtGdpTier2Ratio()) {
                         currentTier = "TIER2";
-                    } else if (ratio > config.debtGdpTier1Ratio()) {
+                    } else if (ratio >= config.debtGdpTier1Ratio()) {
                         currentTier = "TIER1";
                     }
                 } else {
                     // Legacy tiered circuit breaker
-                    if (ratio > config.debtGdpTier3Ratio()) {
+                    if (ratio >= config.debtGdpTier3Ratio()) {
                         interestMultiplier = 0.0;
                         currentTier = "TIER3";
-                    } else if (ratio > config.debtGdpTier2Ratio()) {
+                    } else if (ratio >= config.debtGdpTier2Ratio()) {
                         interestMultiplier = config.tier2InterestCap();
                         currentTier = "TIER2";
-                    } else if (ratio > config.debtGdpTier1Ratio()) {
+                    } else if (ratio >= config.debtGdpTier1Ratio()) {
                         interestMultiplier = config.tier1InterestCap();
                         currentTier = "TIER1";
                     }
@@ -601,14 +601,14 @@ public class LoanManager {
         }
 
         double ratio = totalDebt.divide(gdp, MathContext.DECIMAL128).doubleValue();
-        if (ratio > config.debtGdpTier3Ratio()) {
+        if (ratio >= config.debtGdpTier3Ratio()) {
             return new CircuitBreakerStatus("TIER3", ratio, 0.0, interestCircuitOpen, config.counterCyclical());
-        } else if (ratio > config.debtGdpTier2Ratio()) {
+        } else if (ratio >= config.debtGdpTier2Ratio()) {
             double mult = config.counterCyclical()
                     ? Math.max(0.0, Math.min(1.0, 1.0 - ratio / config.debtGdpTier3Ratio()))
                     : config.tier2InterestCap();
             return new CircuitBreakerStatus("TIER2", ratio, mult, false, config.counterCyclical());
-        } else if (ratio > config.debtGdpTier1Ratio()) {
+        } else if (ratio >= config.debtGdpTier1Ratio()) {
             double mult = config.counterCyclical()
                     ? Math.max(0.0, Math.min(1.0, 1.0 - ratio / config.debtGdpTier3Ratio()))
                     : config.tier1InterestCap();

@@ -2748,6 +2748,314 @@ fn run_floor_strength_sweep() {
     let _ = std::fs::remove_dir_all(&ctrl_dir);
 }
 
+/// ─── Floor Strength Multi-Seed Test ───────────────────────────────────────
+/// Tests whether the 60% floor finding is robust across multiple random seeds.
+///
+/// The original run_floor_strength_sweep (seed=42) found:
+///   60% floor = +6.5% GDP (BEST), 70% = -10.7%, 80% = -19.1%
+///
+/// This test runs the same 60% treatment vs no-floor control across 5 seeds
+/// to validate the finding is not a single-seed artifact.
+///
+/// Key question: Is 60% Diamond floor consistently beneficial, or does the
+/// finding depend on the specific archetype randomisation of seed=42?
+fn run_floor_strength_multi_seed() {
+    use crate::analyzer::{load_all_prices, load_summary};
+    use std::io::Write;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+    let diamond_base = 500.0;
+    let treatment_floor_pct = 0.60;
+    let treatment_floor = diamond_base * treatment_floor_pct; // $300
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║       DIAMOND FLOOR 60% — MULTI-SEED ROBUSTNESS (5 seeds)    ║");
+    println!("║  60% Diamond floor ($300) vs no floor — 5 seeds              ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Treatment: Diamond floor = 60% of base ($300)");
+    println!("  Control:   no floor (natural price discovery)");
+    println!("  Scenario:  guild_stability_mm_fixed_guild (1MM + 2GB@7% + 4Cas + 3Far + 2Tra)");
+    println!("  Duration:  14 days (4032 ticks)\n");
+
+    #[derive(Debug)]
+    struct FloorResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        spd: f64,
+        vol: f64,
+        buy_ratio: f64,
+        diamond_internal: f64,
+        diamond_displayed: f64,
+        floor_binds: bool,
+    }
+
+    impl FloorResult {
+        fn from_summary_and_prices(
+            s: &crate::analyzer::SimSummary,
+            prices: &[(String, f64, f64)],
+            seed: u64,
+            treatment_floor: f64,
+        ) -> Self {
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (diamond_internal, diamond_displayed) =
+                diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+                diamond_internal,
+                diamond_displayed,
+                floor_binds: diamond_displayed >= treatment_floor - 0.01,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<FloorResult> = Vec::new();
+    let mut treat_results: Vec<FloorResult> = Vec::new();
+    let total = seeds.len() * 2;
+
+    for (i, seed) in seeds.iter().enumerate() {
+        // ── Control (no floor) ──────────────────────────────────────────
+        eprint!("\r  [{}/{}] seed={} ctrl", i * 2 + 1, total, seed);
+        std::io::stderr().flush().ok();
+
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-fsm-ctrl-{}", seed));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_dir).ok();
+        let mut ctrl = Scenario::guild_stability_mm_fixed_guild();
+        ctrl.seed = Some(*seed);
+        if let Err(e) = run_seeded_headless(&ctrl, *seed, &ctrl_dir) {
+            eprintln!("\n  Ctrl error seed={}: {}", seed, e);
+        } else if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db")) {
+            if let Ok(p) = load_all_prices(&ctrl_dir.join("simulation.db")) {
+                ctrl_results.push(FloorResult::from_summary_and_prices(&s, &p, *seed, 0.0));
+            }
+        }
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+
+        // ── Treatment (60% Diamond floor) ──────────────────────────────
+        eprint!("\r  [{}/{}] seed={} treat", i * 2 + 2, total, seed);
+        std::io::stderr().flush().ok();
+
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-fsm-treat-{}", seed));
+        let _ = std::fs::remove_dir_all(&treat_dir);
+        std::fs::create_dir_all(&treat_dir).ok();
+        let mut treat = Scenario::guild_stability_mm_fixed_guild();
+        if let Some(d) = treat
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
+            d.price_floor_override = Some(treatment_floor);
+        }
+        treat.seed = Some(*seed);
+        if let Err(e) = run_seeded_headless(&treat, *seed, &treat_dir) {
+            eprintln!("\n  Treat error seed={}: {}", seed, e);
+        } else if let Ok(s) = load_summary(&treat_dir.join("simulation.db")) {
+            if let Ok(p) = load_all_prices(&treat_dir.join("simulation.db")) {
+                treat_results.push(FloorResult::from_summary_and_prices(&s, &p, *seed, treatment_floor));
+            }
+        }
+        let _ = std::fs::remove_dir_all(&treat_dir);
+    }
+    println!();
+
+    if ctrl_results.is_empty() || treat_results.is_empty() {
+        eprintln!("  ✗ No results collected");
+        return;
+    }
+
+    // ── Per-seed comparison table ──────────────────────────────────────
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║                    PER-SEED RESULTS                           ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+
+    println!(
+        "  {:>6}  {:>10}  {:>7}  {:>7}  {:>7}  |  {:>10}  {:>7}  {:>7}  {:>7}  {:>7}",
+        "seed",
+        "GDP(ctrl)",
+        "D/G(c)",
+        "BPD(c)",
+        "Buy(c)",
+        "GDP(tr)",
+        "D/G(t)",
+        "BPD(t)",
+        "Buy(t)",
+        "Floor?"
+    );
+    for (c, t) in ctrl_results.iter().zip(treat_results.iter()) {
+        println!(
+            "  {:>6}  {:>10.0}  {:>6.2}x  {:>6.2}%  {:>6.1}% |  {:>10.0}  {:>6.2}x  {:>6.2}%  {:>6.1}%  {:>7}",
+            c.seed,
+            c.gdp,
+            c.dg,
+            c.bpd * 100.0,
+            c.buy_ratio * 100.0,
+            t.gdp,
+            t.dg,
+            t.bpd * 100.0,
+            t.buy_ratio * 100.0,
+            if t.floor_binds { "✓ binds" } else { "✗ no" }
+        );
+    }
+
+    // ── Statistical summary ────────────────────────────────────────────
+    let n = ctrl_results.len() as f64;
+
+    let avg = |v: &[FloorResult], f: &str| -> f64 {
+        let field_sum = match f {
+            "gdp" => v.iter().map(|r| r.gdp).sum::<f64>(),
+            "dg" => v.iter().map(|r| r.dg).sum::<f64>(),
+            "bpd" => v.iter().map(|r| r.bpd).sum::<f64>(),
+            "vol" => v.iter().map(|r| r.vol).sum::<f64>(),
+            "buy_ratio" => v.iter().map(|r| r.buy_ratio).sum::<f64>(),
+            "diamond_internal" => v.iter().map(|r| r.diamond_internal).sum::<f64>(),
+            _ => 0.0,
+        };
+        field_sum / n
+    };
+    let std_dev = |v: &[FloorResult], f: &str, m: f64| -> f64 {
+        let variance = v
+            .iter()
+            .map(|r| {
+                let val: f64 = match f {
+                    "gdp" => r.gdp,
+                    "dg" => r.dg,
+                    "bpd" => r.bpd,
+                    "vol" => r.vol,
+                    "buy_ratio" => r.buy_ratio,
+                    "diamond_internal" => r.diamond_internal,
+                    _ => 0.0,
+                };
+                (val - m).powi(2)
+            })
+            .sum::<f64>()
+            / n;
+        variance.sqrt()
+    };
+
+    let ctrl_gdp_mean = avg(&ctrl_results, "gdp");
+    let treat_gdp_mean = avg(&treat_results, "gdp");
+    let ctrl_gdp_std = std_dev(&ctrl_results, "gdp", ctrl_gdp_mean);
+    let treat_gdp_std = std_dev(&treat_results, "gdp", treat_gdp_mean);
+
+    let ctrl_dg_mean = avg(&ctrl_results, "dg");
+    let treat_dg_mean = avg(&treat_results, "dg");
+    let ctrl_dg_std = std_dev(&ctrl_results, "dg", ctrl_dg_mean);
+    let treat_dg_std = std_dev(&treat_results, "dg", treat_dg_mean);
+
+    let ctrl_bpd_mean = avg(&ctrl_results, "bpd");
+    let treat_bpd_mean = avg(&treat_results, "bpd");
+    let ctrl_bpd_std = std_dev(&ctrl_results, "bpd", ctrl_bpd_mean);
+    let treat_bpd_std = std_dev(&treat_results, "bpd", treat_bpd_mean);
+
+    let ctrl_vol_mean = avg(&ctrl_results, "vol");
+    let treat_vol_mean = avg(&treat_results, "vol");
+    let ctrl_vol_std = std_dev(&ctrl_results, "vol", ctrl_vol_mean);
+    let treat_vol_std = std_dev(&treat_results, "vol", treat_vol_mean);
+
+    let ctrl_buy_mean = avg(&ctrl_results, "buy_ratio");
+    let treat_buy_mean = avg(&treat_results, "buy_ratio");
+
+    let ctrl_di_mean = avg(&ctrl_results, "diamond_internal");
+    let treat_di_mean = avg(&treat_results, "diamond_internal");
+
+    let gdp_pct_change = (treat_gdp_mean - ctrl_gdp_mean) / ctrl_gdp_mean * 100.0;
+    let floor_binds_pct = treat_results.iter().filter(|t| t.floor_binds).count() as f64 / n * 100.0;
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║                   STATISTICAL SUMMARY                           ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+
+    println!(
+        "  {:>18}  {:>14}  {:>14}  {:>10}",
+        "Metric", "Control", "Treatment", "Δ"
+    );
+    println!(
+        "  {:>18}  {:>14}  {:>14}  {:>10}",
+        "─".repeat(18),
+        "─".repeat(14),
+        "─".repeat(14),
+        "─".repeat(10)
+    );
+    println!(
+        "  {:>18}  {:>11.0} ±{:<5.0}  {:>11.0} ±{:<5.0}  {:>+9.1}%",
+        "GDP", ctrl_gdp_mean, ctrl_gdp_std, treat_gdp_mean, treat_gdp_std, gdp_pct_change
+    );
+    println!(
+        "  {:>18}  {:>11.2} +/- {:>5.1}  {:>11.2} +/- {:>5.1}  {:>+9.2}x",
+        "Debt/GDP",
+        ctrl_dg_mean,
+        ctrl_dg_std,
+        treat_dg_mean,
+        treat_dg_std,
+        treat_dg_mean - ctrl_dg_mean
+    );
+    println!(
+        "  {:>18}  {:>11.3} +/- {:>5.2}  {:>11.3} +/- {:>5.2}  {:>+9.1}%",
+        "Volatility (×1000)",
+        ctrl_vol_mean * 1000.0,
+        ctrl_vol_std * 1000.0,
+        treat_vol_mean * 1000.0,
+        treat_vol_std * 1000.0,
+        (treat_vol_mean - ctrl_vol_mean) / ctrl_vol_mean.max(0.001) * 100.0
+    );
+    println!(
+        "  {:>18}  {:>11.2}%  +/- {:>5.2}%  {:>11.2}%  +/- {:>5.2}%  {:>+9.1}pp",
+        "BPD",
+        ctrl_bpd_mean * 100.0,
+        ctrl_bpd_std * 100.0,
+        treat_bpd_mean * 100.0,
+        treat_bpd_std * 100.0,
+        (treat_bpd_mean - ctrl_bpd_mean) * 100.0
+    );
+    println!(
+        "  {:>18}  {:>11.1}%            {:>11.1}%            {:>+9.1}pp",
+        "Buy Ratio",
+        ctrl_buy_mean * 100.0,
+        treat_buy_mean * 100.0,
+        (treat_buy_mean - ctrl_buy_mean) * 100.0
+    );
+    println!(
+        "  {:>18}  {:>13.0}         {:>13.0}",
+        "Diamond internal$", ctrl_di_mean, treat_di_mean
+    );
+
+    println!("\n╠══════════════════════════════════════════════════════════════════╣");
+    println!(
+        "║  Floor binds: {:.0}% of treatment runs ({:.0}/{:.0} seeds)       ║",
+        floor_binds_pct,
+        treat_results.iter().filter(|t| t.floor_binds).count() as f64,
+        n
+    );
+    println!("╚══════════════════════════════════════════════════════════════════╝");
+
+    // ── Verdict ────────────────────────────────────────────────────────
+    println!("\n╠══════════════════════════════════════════════════════════════════╣");
+    print!("║  VERDICT: 60% Diamond floor is ");
+    if gdp_pct_change > 2.0 {
+        println!("CONSISTENTLY BENEFICIAL (+{:.1}% GDP avg)", gdp_pct_change);
+        println!("║  → Recommendation: ADOPT 60% floor as production default     ║");
+    } else if gdp_pct_change > -2.0 {
+        println!("MARGINALLY NEUTRAL ({:+.1}% GDP avg)", gdp_pct_change);
+        println!("║  → Recommendation: CAUTION — effect too small to be reliable ║");
+    } else {
+        println!("CONSISTENTLY HARMFUL ({:+.1}% GDP avg)", gdp_pct_change);
+        println!("║  → Recommendation: DO NOT ADOPT — seed=42 result was artifact   ║");
+    }
+    println!("╚══════════════════════════════════════════════════════════════════╝");
+}
+
 // ─── Multi-Server Coordination Test ────────────────────────────────────────
 
 /// Multi-Server Simulation: Tests cross-server price aggregation.
@@ -8541,6 +8849,9 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --it-healthy-test      IT + MM+GB vs MM+GB: does IT still help healthy economy?"
         );
+        println!(
+            "  --floor-multi-seed     60% Diamond floor across 5 seeds: statistical robustness"
+        );
         return Ok(());
     }
 
@@ -8805,6 +9116,12 @@ fn main() -> eframe::Result<()> {
     // ─── IT Healthy Economy Test ───────────────────────────────────────────
     if args.len() > 1 && args[1] == "--it-healthy-test" {
         run_it_healthy_economy_test();
+        return Ok(());
+    }
+
+    // ─── Floor 60% Multi-Seed Robustness ───────────────────────────────────
+    if args.len() > 1 && args[1] == "--floor-multi-seed" {
+        run_floor_strength_multi_seed();
         return Ok(());
     }
 

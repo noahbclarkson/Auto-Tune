@@ -8,6 +8,7 @@
 
 ### Added
 
+- **`price-milestone notifications` (plugin)** — New `PriceMilestoneService` broadcasts action bar messages when items cross round-number price thresholds (e.g. Diamond breaks through $300). Announces both upward (🚀) and downward (📉) crossings with previous price for context. Per-item+threshold cooldown (default 60 min) prevents spam. Config: `price-milestone.enabled`, `interval-minutes`, `thresholds` (default [50/100/200/300/500/1000/2000]), `cooldown-minutes`. Disabled by default to avoid duplicating EconomicNewsService. Closes feature idea: "Price milestone notifications — broadcast on round-number price crossings"
 - **`docs/SERVER_ADMIN_GUIDE.md`** — Practical guide for server admins covering quick-start checklist, how the market engine works (accessible language), configuration cookbook, monitoring guide, common issues & fixes, fine-tuning reference, and commands reference (~13KB)
 - **`docs/MIGRATION.md`** — Comprehensive rewrite-2 migration guide covering auction house move to in-game, config format changes, Cloud 2.x command syntax changes, new dependency requirements, bundled Javalin web server, price reporting architecture, separate Rust API server, new market engine behaviour, enchantment pricing, and upgrade checklist (~10KB)
 - **`web-optimizer/` — Roadmap page** (`/roadmap`) — 5 categories (Market Engine, Cross-Server Ecosystem, Analytics & UX, Security & Operations, Developer Experience), each item with Done/In Progress/Planned status, GitHub Issues CTA

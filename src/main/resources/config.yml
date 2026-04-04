@@ -556,3 +556,35 @@ admin-webhook:
 
   # Debt/GDP ratio that triggers the high-debt alert. Default: 8.0x
   notify-high-debt-threshold: 8.0
+
+# ============================================================
+# Price Milestones — broadcasts when items cross round-number prices
+# ============================================================
+# When enabled, players see action bar notifications when an item's
+# mid-price crosses a round-number threshold (e.g. Diamond breaks through
+# $300, or falls below $200). Announces both upward and downward crossings.
+#
+# Cooldown is per item + threshold combination — the same threshold on the
+# same item can't be re-announced within the cooldown window.
+price-milestone:
+  # Set to false to disable milestone announcements.
+  enabled: false
+
+  # How often to scan for milestone crossings (in minutes). Default: 1.
+  # Keep this short since announcements are milestone-triggered (not periodic).
+  interval-minutes: 1
+
+  # Round-number price thresholds to watch. Sorted automatically.
+  # Diamond at $100, $200, $300, $500, $1000, $2000 are common.
+  thresholds:
+    - 50
+    - 100
+    - 200
+    - 300
+    - 500
+    - 1000
+    - 2000
+
+  # Minimum minutes between announcements for the same item+threshold.
+  # Prevents spam if an item oscillates around a threshold.
+  cooldown-minutes: 60

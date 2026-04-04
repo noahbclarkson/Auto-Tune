@@ -45,6 +45,13 @@ public class LoanManager {
     private final TreasuryService treasuryService;
     private final BadgeService badgeService;
     private volatile boolean interestCircuitOpen = false;
+    /**
+     * Hysteresis lock for TIER3 circuit breaker (legacy non-counter-cyclical path).
+     * Once TIER3 fires (D/G >= tier3Ratio), the circuit stays locked (0% interest)
+     * until D/G drops below 90% of tier3Ratio (a 10% hysteresis band).
+     * This prevents rapid open/close cycling when D/G hovers near the boundary.
+     */
+    private volatile boolean tier3CircuitLocked = false;
 
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
 
@@ -339,8 +346,27 @@ public class LoanManager {
                         currentTier = "TIER1";
                     }
                 } else {
-                    // Legacy tiered circuit breaker
-                    if (ratio >= config.debtGdpTier3Ratio()) {
+                    // Legacy tiered circuit breaker with hysteresis for TIER3:
+                    // Once TIER3 fires (D/G >= tier3Ratio), the circuit stays locked (0% interest)
+                    // until D/G drops below 90% of tier3Ratio (a 10% hysteresis band).
+                    // This prevents rapid open/close cycling when D/G hovers near 10.0x.
+                    double hysteresisThreshold = config.debtGdpTier3Ratio() * 0.9;
+
+                    // Check hysteresis unlock: if locked and ratio dropped below band, unlock.
+                    if (tier3CircuitLocked && ratio < hysteresisThreshold) {
+                        tier3CircuitLocked = false;
+                        plugin.getLogger().info(String.format(
+                            "[Auto-Tune] TIER3 hysteresis unlock — D/G %.1fx (below %.1fx threshold). Interest may resume.",
+                            ratio, hysteresisThreshold));
+                    }
+
+                    if (tier3CircuitLocked) {
+                        // Circuit locked in TIER3 — hold at 0% interest until hysteresis threshold.
+                        interestMultiplier = 0.0;
+                        currentTier = "TIER3";
+                    } else if (ratio >= config.debtGdpTier3Ratio()) {
+                        // First time crossing TIER3 threshold — engage the lock.
+                        tier3CircuitLocked = true;
                         interestMultiplier = 0.0;
                         currentTier = "TIER3";
                     } else if (ratio >= config.debtGdpTier2Ratio()) {

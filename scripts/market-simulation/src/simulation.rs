@@ -55,6 +55,11 @@ pub struct Simulation {
     /// Tracks the previous circuit breaker tier to detect transitions.
     /// "NORMAL" | "TIER1" | "TIER2" | "TIER3"
     prev_circuit_tier: String,
+    /// Hysteresis lock for TIER3 circuit breaker (legacy non-counter-cyclical path).
+    /// Once TIER3 fires (D/G >= tier3_ratio), the circuit stays locked until D/G
+    /// drops below 90% of tier3_ratio (a 10% hysteresis band). This prevents
+    /// rapid open/close cycling when D/G hovers near the boundary.
+    circuit_tier3_locked: bool,
     next_player_id: usize,
     /// Log of all loans that were capped by the per-loan GDP cap.
     pub loan_cap_log: Vec<LoanCapRecord>,
@@ -65,6 +70,12 @@ pub struct Simulation {
 }
 
 impl Simulation {
+    /// Returns whether the TIER3 circuit breaker is currently locked (hysteresis engaged).
+    #[allow(dead_code)]
+    pub(crate) fn is_circuit_tier3_locked(&self) -> bool {
+        self.circuit_tier3_locked
+    }
+
     pub fn new(config: SimConfig) -> Self {
         let engine = MarketEngine::new(&config);
         Self {
@@ -82,6 +93,7 @@ impl Simulation {
             recorder: None,
             events: Vec::new(),
             prev_circuit_tier: "NORMAL".to_string(),
+            circuit_tier3_locked: false,
             next_player_id: 0,
             loan_cap_log: Vec::new(),
             mm_opening_loan_count: 0,
@@ -391,11 +403,27 @@ impl Simulation {
                 };
                 (multiplier, tier)
             } else {
-                // Legacy tiered circuit breaker:
+                // Legacy tiered circuit breaker with hysteresis for TIER3:
+                // Once TIER3 fires (D/G >= tier3_ratio), the circuit stays locked (0% interest)
+                // until D/G drops below 90% of tier3_ratio (a 10% hysteresis band).
+                // This prevents rapid open/close cycling when D/G hovers near 10.0x.
                 // Tier 1 (>=tier1_ratio): cap at tier1_cap (50%) — warning zone
                 // Tier 2 (>=tier2_ratio): cap at tier2_cap (25%) — danger zone
                 // Tier 3 (>=tier3_ratio): full pause (0%) — emergency zone
-                if ratio >= lc.debt_gdp_tier3_ratio {
+                // TIER3 unlocks when D/G < 90% of tier3_ratio (hysteresis band).
+                let hysteresis_threshold = lc.debt_gdp_tier3_ratio * 0.9;
+
+                // Check hysteresis unlock first: if locked and ratio dropped below band, unlock.
+                if self.circuit_tier3_locked && ratio < hysteresis_threshold {
+                    self.circuit_tier3_locked = false;
+                }
+
+                if self.circuit_tier3_locked {
+                    // Circuit locked in TIER3 — hold at 0% interest until hysteresis threshold.
+                    (0.0, "TIER3")
+                } else if ratio >= lc.debt_gdp_tier3_ratio {
+                    // First time crossing TIER3 threshold — engage the lock.
+                    self.circuit_tier3_locked = true;
                     (0.0, "TIER3")
                 } else if ratio >= lc.debt_gdp_tier2_ratio {
                     (lc.tier2_interest_cap, "TIER2")

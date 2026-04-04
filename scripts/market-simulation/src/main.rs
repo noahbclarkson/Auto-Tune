@@ -8914,6 +8914,9 @@ fn main() -> eframe::Result<()> {
             "  --production-config-test  2MM+2GB+floor vs 1MM+2GB: proposed default head-to-head"
         );
         println!("  --long-run-test        2MM+2GB+floor: 14 days vs 30 days stability check");
+        println!(
+            "  --circuit-breaker-hysteresis-test  TIER3 hysteresis: prevents D/G boundary cycling"
+        );
         return Ok(());
     }
 
@@ -9250,6 +9253,11 @@ fn main() -> eframe::Result<()> {
     // ─── Long-Run Stability Test ────────────────────────────────────────
     if args.len() > 1 && args[1] == "--long-run-test" {
         run_long_run_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--circuit-breaker-hysteresis-test" {
+        run_circuit_breaker_hysteresis_test();
         return Ok(());
     }
 
@@ -9681,6 +9689,211 @@ fn run_long_run_test() {
     println!();
     println!("  Key insight: Long-run (30d) economy behavior vs 14-day standard test.");
     println!("  If stable: no hidden instability emerges over extended play periods.");
+    println!();
+}
+
+/// Circuit Breaker Hysteresis Test
+///
+/// Demonstrates the TIER3 hysteresis fix: when D/G hits tier3_ratio (10.0x),
+/// the circuit stays locked in TIER3 (0% interest) until D/G drops below 90%
+/// of tier3_ratio (9.0x). Without hysteresis, the circuit rapidly toggles
+/// on/off as D/G hovers near the boundary.
+///
+/// This test runs a stressed economy (legacy circuit breaker, counter_cyclical=false)
+/// and counts:
+/// - NEW TIER3 engagements (with hysteresis): circuit locks at first crossing, holds
+/// - OLD oscillations (no hysteresis): each D/G crossing of 10.0 fires a new TIER3 event
+///
+/// Expected result: hysteresis eliminates ~N-1 TIER3 oscillations for N boundary crossings.
+fn run_circuit_breaker_hysteresis_test() {
+    use crate::player::set_global_seeded_rng;
+
+    // Use seed 98765 — known to oscillate near D/G boundary in floor-multi-seed tests.
+    // Force legacy circuit breaker (counter_cyclical=false) to exercise the tiered path.
+    let seed = 98765u64;
+    let tier3_ratio = 10.0;
+    let hysteresis_threshold = tier3_ratio * 0.9; // 9.0 — unlock when D/G drops here
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║       CIRCUIT BREAKER HYSTERESIS TEST                          ║");
+    println!("║  TIER3 lock: fires at D/G >= 10.0x, unlocks at D/G < 9.0x    ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  Seed: {} (known boundary oscillator from floor-multi-seed)",
+        seed
+    );
+    println!("  Scenario: guildbuyer_failure_test with counter_cyclical=false");
+    println!("  Duration: 14 days (4032 ticks)\n");
+
+    // Build scenario: use guildbuyer_failure_test as base but force legacy circuit breaker
+    let mut scenario = Scenario::guildbuyer_failure_test();
+    scenario.config.loans.counter_cyclical = false; // Force legacy tiered path
+    scenario.name = "CB Hysteresis Test (legacy circuit breaker)".into();
+
+    set_global_seeded_rng(seed);
+    let mut sim = Simulation::new_seeded(scenario.config.clone(), seed);
+    sim.events = scenario.events.clone();
+    add_players_to_sim(&mut sim, &scenario.players);
+    sim.paused = false;
+
+    // ── Tracking state ────────────────────────────────────────────────
+    let mut new_tier3_engagements: u32 = 0; // NEW behavior: circuit locks once
+    let mut new_tier3_held_ticks: u32 = 0; // How long TIER3 is held
+    let mut new_in_tier3: bool = false;
+
+    let mut old_tier3_oscillations: u32 = 0; // OLD behavior: each crossing fires
+    let mut old_was_in_tier3: bool = false; // Track old logic TIER3 state
+
+    println!("  Running simulation with hysteresis-enabled circuit breaker...");
+    let start = Instant::now();
+
+    while sim.current_tick < scenario.duration_ticks {
+        sim.tick();
+
+        // ── Compute D/G at end of this tick (same as circuit breaker uses) ──
+        let cb_total_debt: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| {
+                matches!(
+                    l.status,
+                    crate::loan::LoanStatus::Active | crate::loan::LoanStatus::Defaulted
+                )
+            })
+            .map(|l| l.current_balance)
+            .sum();
+        let gdp_window = 288u64;
+        let window_start = sim.current_tick.saturating_sub(gdp_window);
+        let cb_gdp: f64 = sim
+            .transactions
+            .iter()
+            .filter(|tx| {
+                tx.tick >= window_start && tx.tx_type == crate::engine::TransactionType::Buy
+            })
+            .map(|tx| tx.total_price)
+            .sum();
+        let dg = if cb_gdp > 0.0 {
+            cb_total_debt / cb_gdp
+        } else {
+            0.0
+        };
+
+        // ── NEW behavior (with hysteresis): circuit_tier3_locked in simulation ──
+        let new_in_tier3_now = sim.is_circuit_tier3_locked() || (cb_gdp > 0.0 && dg >= tier3_ratio);
+
+        if new_in_tier3_now && !new_in_tier3 {
+            new_tier3_engagements += 1;
+        }
+        if new_in_tier3_now {
+            new_tier3_held_ticks += 1;
+        }
+        new_in_tier3 = new_in_tier3_now;
+
+        // ── OLD behavior (no hysteresis): TIER3 when ratio >= 10.0 ──
+        let old_in_tier3_now = cb_gdp > 0.0 && dg >= tier3_ratio;
+        if old_in_tier3_now && !old_was_in_tier3 {
+            old_tier3_oscillations += 1;
+        }
+        old_was_in_tier3 = old_in_tier3_now;
+
+        // Progress dot every 1000 ticks
+        if sim.current_tick.is_multiple_of(1000) {
+            print!(".");
+        }
+    }
+    println!(" done in {:.1}s\n", start.elapsed().as_secs_f64());
+
+    // ── Final D/G for context ──────────────────────────────────────────
+    let cb_total_debt: f64 = sim
+        .loans
+        .iter()
+        .filter(|l| {
+            matches!(
+                l.status,
+                crate::loan::LoanStatus::Active | crate::loan::LoanStatus::Defaulted
+            )
+        })
+        .map(|l| l.current_balance)
+        .sum();
+    let gdp_window = 288u64;
+    let window_start = sim.current_tick.saturating_sub(gdp_window);
+    let cb_gdp: f64 = sim
+        .transactions
+        .iter()
+        .filter(|tx| tx.tick >= window_start && tx.tx_type == crate::engine::TransactionType::Buy)
+        .map(|tx| tx.total_price)
+        .sum();
+    let final_dg = if cb_gdp > 0.0 {
+        cb_total_debt / cb_gdp
+    } else {
+        0.0
+    };
+    let final_tier = if sim.is_circuit_tier3_locked() {
+        "TIER3 (locked)"
+    } else if final_dg >= tier3_ratio {
+        "TIER3"
+    } else {
+        "NORMAL/TIER1/TIER2"
+    };
+
+    println!(
+        "  {:<30} {:>15} {:>15}",
+        "Metric", "OLD (no hysteresis)", "NEW (with hysteresis)"
+    );
+    println!("  {:-<30} {:->15} {:->15}", "", "", "");
+    println!(
+        "  {:<30} {:>15} {:>15}",
+        "TIER3 oscillations",
+        format!("{} events", old_tier3_oscillations),
+        format!("{} events", new_tier3_engagements)
+    );
+    println!(
+        "  {:<30} {:>15} {:>15}",
+        "TIER3 held ticks",
+        format!("N/A"),
+        format!("{}", new_tier3_held_ticks)
+    );
+    println!(
+        "  {:<30} {:>15} {:>15}",
+        "Final D/G",
+        format!("{:.3}x", final_dg),
+        format!("{:.3}x ({})", final_dg, final_tier)
+    );
+    println!();
+
+    let oscillation_reduction = if old_tier3_oscillations > 0 {
+        ((old_tier3_oscillations as f64 - new_tier3_engagements as f64)
+            / old_tier3_oscillations as f64
+            * 100.0)
+            .max(0.0)
+    } else {
+        0.0
+    };
+
+    if old_tier3_oscillations > 1 && oscillation_reduction > 0.0 {
+        println!(
+            "  ✓ HYSTERESIS EFFECT: {} fewer TIER3 oscillations ({:.0}% reduction)",
+            old_tier3_oscillations - new_tier3_engagements,
+            oscillation_reduction
+        );
+        println!(
+            "  ✓ Circuit stays locked until D/G drops below {:.1}x (hysteresis band)",
+            hysteresis_threshold
+        );
+    } else if new_tier3_engagements == 0 {
+        println!(
+            "  ℹ️  No TIER3 events triggered in this run — D/G stayed below {:.1}x",
+            tier3_ratio
+        );
+        println!(
+            "  ℹ️  This can happen with certain seeds/scenarios. Try seed=42 for a more active run."
+        );
+    } else {
+        println!(
+            "  ✓ TIER3 engaged {} time(s) with hysteresis — circuit held through oscillation",
+            new_tier3_engagements
+        );
+    }
     println!();
 }
 

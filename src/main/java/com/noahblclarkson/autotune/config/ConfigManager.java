@@ -80,6 +80,7 @@ public class ConfigManager {
                 parseMarketEventConfig(cfg.getConfigurationSection("market-events")),
                 parseEconomicNewsConfig(cfg.getConfigurationSection("news")),
                 parseAdminWebhookConfig(cfg.getConfigurationSection("admin-webhook")),
+                parsePriceMilestoneConfig(cfg.getConfigurationSection("price-milestone")),
                 parseMarketDigestConfig(cfg.getConfigurationSection("market-digest")),
                 this.marketFrozen
         );
@@ -649,6 +650,22 @@ public class ConfigManager {
                 Math.max(5, section.getInt("history-window-minutes", 60)),
                 Math.max(1, section.getInt("max-items-per-cycle", 3)),
                 Math.max(5, section.getInt("item-cooldown-minutes", 30))
+        );
+    }
+
+    private PriceMilestoneConfig parsePriceMilestoneConfig(ConfigurationSection section) {
+        if (section == null || !section.getBoolean("enabled", true)) {
+            return PriceMilestoneConfig.defaults();
+        }
+        List<Integer> thresholds = section.getIntegerList("thresholds");
+        if (thresholds == null || thresholds.isEmpty()) {
+            thresholds = List.of(50, 100, 200, 300, 500, 1000, 2000);
+        }
+        return new PriceMilestoneConfig(
+                section.getBoolean("enabled", true),
+                Math.max(1, section.getInt("interval-minutes", 1)),
+                thresholds.stream().sorted().toList(),
+                Math.max(5, section.getInt("cooldown-minutes", 60))
         );
     }
 

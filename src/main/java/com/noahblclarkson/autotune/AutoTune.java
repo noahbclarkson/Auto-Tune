@@ -16,6 +16,7 @@ import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.service.EconomicNewsService;
+import com.noahblclarkson.autotune.service.PriceMilestoneService;
 import com.noahblclarkson.autotune.service.MarketDigestService;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ScoreboardManager;
@@ -50,6 +51,7 @@ public class AutoTune extends JavaPlugin {
     private TreasuryService treasuryService;
     private MarketEventService marketEventService;
     private EconomicNewsService economicNewsService;
+    private PriceMilestoneService priceMilestoneService;
     private MarketDigestService marketDigestService;
     private com.noahblclarkson.autotune.database.TransactionRepository transactionRepository;
     private CommandManager commandManager;
@@ -121,6 +123,8 @@ public class AutoTune extends JavaPlugin {
         marketEventService.onEnable();
         economicNewsService = injector.getInstance(EconomicNewsService.class);
         economicNewsService.onEnable();
+        priceMilestoneService = injector.getInstance(PriceMilestoneService.class);
+        priceMilestoneService.onEnable();
         marketDigestService = injector.getInstance(MarketDigestService.class);
         marketDigestService.start();
         taskScheduler = injector.getInstance(TaskScheduler.class);
@@ -189,6 +193,10 @@ public class AutoTune extends JavaPlugin {
             economicNewsService.shutdown();
         }
 
+        if (priceMilestoneService != null) {
+            priceMilestoneService.shutdown();
+        }
+
         if (scoreboardManager != null) {
             scoreboardManager.stop();
         }
@@ -220,6 +228,7 @@ public class AutoTune extends JavaPlugin {
         shopManager.reload();
         priceAlertManager.rebuildCache();
         economicNewsService.reload();
+        priceMilestoneService.reload();
         if (webServer != null && configManager.getConfig().web().enabled()) {
             webServer.stop();
             webServer.start();

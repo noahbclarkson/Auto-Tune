@@ -26,6 +26,7 @@ public record AutoTuneConfig(
         @NotNull MarketEventConfig marketEvents,
         @NotNull EconomicNewsConfig news,
         @NotNull AdminWebhookConfig webhook,
+        @NotNull PriceMilestoneConfig priceMilestones,
         @NotNull MarketDigestConfig marketDigest,
         boolean marketFrozen
 ) {
@@ -608,6 +609,25 @@ public record AutoTuneConfig(
     ) {
         public static EconomicNewsConfig defaults() {
             return new EconomicNewsConfig(true, 5, 5.0, 3.0, 60, 3, 30);
+        }
+    }
+
+    /**
+     * Price milestone notifications — broadcast when items cross round-number price thresholds.
+     *
+     * @param enabled          whether milestone notifications are active
+     * @param intervalMinutes  how often to scan for milestone crossings (1–5 recommended)
+     * @param thresholds       ascending list of round-number prices to watch (e.g. 50, 100, 200…)
+     * @param cooldownMinutes  minimum minutes between announcements for the same item+threshold
+     */
+    public record PriceMilestoneConfig(
+            boolean enabled,
+            int intervalMinutes,
+            @NotNull List<Integer> thresholds,
+            int cooldownMinutes
+    ) {
+        public static PriceMilestoneConfig defaults() {
+            return new PriceMilestoneConfig(true, 1, List.of(50, 100, 200, 300, 500, 1000, 2000), 60);
         }
     }
 

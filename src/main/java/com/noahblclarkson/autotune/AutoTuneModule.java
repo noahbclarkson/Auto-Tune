@@ -18,6 +18,7 @@ import com.noahblclarkson.autotune.service.AdminWebhookService;
 import com.noahblclarkson.autotune.service.EconomicNewsService;
 import com.noahblclarkson.autotune.service.BadgeService;
 import com.noahblclarkson.autotune.service.MarketDigestService;
+import com.noahblclarkson.autotune.service.PriceMilestoneService;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.PriceAlertRepository;
 import com.noahblclarkson.autotune.database.ShopFavoriteRepository;
@@ -261,5 +262,16 @@ public class AutoTuneModule extends AbstractModule {
         return new MarketDigestService(
                 plugin, configManager, marketEventService, economyMetricsManager,
                 loanManager, marketEngine, itemRepository, transactionRepository, shopManager);
+    }
+
+    @Provides
+    @Singleton
+    public PriceMilestoneService providePriceMilestoneService(
+            AutoTune plugin,
+            MarketEngine marketEngine,
+            ShopManager shopManager,
+            ConfigManager configManager
+    ) {
+        return new PriceMilestoneService(plugin, marketEngine, shopManager, configManager);
     }
 }

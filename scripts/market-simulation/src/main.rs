@@ -2779,6 +2779,7 @@ fn run_floor_strength_multi_seed() {
     println!("  Duration:  14 days (4032 ticks)\n");
 
     #[derive(Debug)]
+    #[allow(dead_code)]
     struct FloorResult {
         seed: u64,
         gdp: f64,
@@ -2835,11 +2836,10 @@ fn run_floor_strength_multi_seed() {
         ctrl.seed = Some(*seed);
         if let Err(e) = run_seeded_headless(&ctrl, *seed, &ctrl_dir) {
             eprintln!("\n  Ctrl error seed={}: {}", seed, e);
-        } else if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db")) {
-            if let Ok(p) = load_all_prices(&ctrl_dir.join("simulation.db")) {
+        } else if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db"))
+            && let Ok(p) = load_all_prices(&ctrl_dir.join("simulation.db")) {
                 ctrl_results.push(FloorResult::from_summary_and_prices(&s, &p, *seed, 0.0));
             }
-        }
         let _ = std::fs::remove_dir_all(&ctrl_dir);
 
         // ── Treatment (60% Diamond floor) ──────────────────────────────
@@ -2861,11 +2861,10 @@ fn run_floor_strength_multi_seed() {
         treat.seed = Some(*seed);
         if let Err(e) = run_seeded_headless(&treat, *seed, &treat_dir) {
             eprintln!("\n  Treat error seed={}: {}", seed, e);
-        } else if let Ok(s) = load_summary(&treat_dir.join("simulation.db")) {
-            if let Ok(p) = load_all_prices(&treat_dir.join("simulation.db")) {
+        } else if let Ok(s) = load_summary(&treat_dir.join("simulation.db"))
+            && let Ok(p) = load_all_prices(&treat_dir.join("simulation.db")) {
                 treat_results.push(FloorResult::from_summary_and_prices(&s, &p, *seed, treatment_floor));
             }
-        }
         let _ = std::fs::remove_dir_all(&treat_dir);
     }
     println!();

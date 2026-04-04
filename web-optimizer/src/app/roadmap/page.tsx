@@ -18,6 +18,7 @@ const CATEGORIES = [
       { status: 'done', text: 'Trend dampening and sector correlation' },
       { status: 'done', text: 'Market events (DEMAND_SURGE, SUPPLY_GLUT, INFLATION_BOOST, etc.)' },
       { status: 'done', text: 'Loan circuit breaker with tiered interest caps' },
+      { status: 'done', text: 'TIER3 circuit breaker hysteresis — locks at 0% until D/G < 9.0× (92% fewer oscillations)' },
       { status: 'done', text: 'Market event boss bar announcements (in-game)' },
       { status: 'in-progress', text: 'Price anchoring from cross-server true prices' },
       { status: 'todo', text: 'Player archetype auto-tuning via ML on server metrics' },

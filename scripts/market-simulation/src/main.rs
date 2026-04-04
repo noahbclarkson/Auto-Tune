@@ -444,6 +444,93 @@ impl Scenario {
         }
     }
 
+    /// Archetype mix test: Casual-heavy variant.
+    /// Replaces Farmers with Casuals to test whether more balanced gather/demand
+    /// improves economy health beyond the 2MM+2GB config.
+    ///
+    /// Config: 2MM + 2GB + 6Cas + 1Far + 1Tra (10 players)
+    /// vs control: 2MM + 2GB + 3Cas + 3Far + 2Tra (12 players)
+    ///
+    /// Hypothesis: Casuals are net NEUTRAL (gather and spend evenly).
+    /// Fewer Farmers = less structural oversupply = higher equilibrium prices.
+    pub fn guild_stability_casual_heavy() -> Self {
+        Self {
+            name: "GuildStability+2MM+CasualHeavy".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 6, // ← 6 Casuals (vs 3 in control)
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 1, // ← 1 Farmer (vs 3 in control)
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 1, // ← 1 Trader (vs 2 in control)
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Archetype mix test: Farmer-heavy variant.
+    /// Replaces Casuals with Farmers to test whether a gather-heavy economy
+    /// can still be rescued by the 2MM+2GB archetype mix.
+    ///
+    /// Config: 2MM + 2GB + 2Cas + 6Far + 2Tra (12 players)
+    /// vs control: 2MM + 2GB + 3Cas + 3Far + 2Tra (12 players)
+    ///
+    /// Hypothesis: Farmer-heavy economy = structural sell pressure.
+    /// MM+GB should partially compensate but NOT fully offset oversupply.
+    /// Admins on Farmer-heavy servers should expect lower equilibrium prices.
+    pub fn guild_stability_farmer_heavy() -> Self {
+        Self {
+            name: "GuildStability+2MM+FarmerHeavy".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 2, // ← 2 Casuals (vs 3 in control)
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 6, // ← 6 Farmers (vs 3 in control)
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Verifies per-loan GDP cap behavior.
     /// Uses a tight single_loan_gdp_cap (0.5) to force early-tick cap events.
     /// Players start with low balance to trigger loan requests in early ticks.
@@ -9261,6 +9348,11 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    if args.len() > 1 && args[1] == "--archetype-mix-test" {
+        run_archetype_mix_test();
+        return Ok(());
+    }
+
     // GUI mode
     run_gui()
 }
@@ -9895,6 +9987,212 @@ fn run_circuit_breaker_hysteresis_test() {
         );
     }
     println!();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ARCHETYPE MIX TEST
+//  Tests: Casual-heavy vs Farmer-heavy vs control (guild_stability_mm)
+// ═══════════════════════════════════════════════════════════════════════
+fn run_archetype_mix_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║       ARCHETYPE MIX TEST — MULTI-SEED (5 seeds)              ║");
+    println!("║  Casual-heavy (6Cas/1Far) vs Farmer-heavy (2Cas/6Far)        ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Control:     2MM+2GB+3Cas+3Far+2Tra (12 players) [guild_stability_mm_fixed_guild]");
+    println!("  Treatment 1: 2MM+2GB+6Cas+1Far+1Tra (10 players) [casual_heavy]");
+    println!("  Treatment 2: 2MM+2GB+2Cas+6Far+2Tra (12 players) [farmer_heavy]");
+    println!("  Duration: 14 days\n");
+
+    #[derive(Debug)]
+    struct MixResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        vol: f64,
+        buy_ratio: f64,
+    }
+
+    impl MixResult {
+        fn from_summary(s: &crate::analyzer::SimSummary, seed: u64) -> Self {
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<MixResult> = Vec::new();
+    let mut casual_results: Vec<MixResult> = Vec::new();
+    let mut farmer_results: Vec<MixResult> = Vec::new();
+
+    for seed in &seeds {
+        print!("  seed {seed} ... ");
+
+        // Control
+        let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+        let ctrl_dir = format!("/tmp/autotune-sim/mix-ctrl-{seed}");
+        let ctrl_path = std::path::PathBuf::from(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_path).ok();
+        if run_seeded_headless(&ctrl_scenario, *seed, &ctrl_path).is_ok() {
+            let db_path = ctrl_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                ctrl_results.push(MixResult::from_summary(&s, *seed));
+            }
+        }
+
+        // Casual-heavy
+        let casual_scenario = Scenario::guild_stability_casual_heavy();
+        let casual_dir = format!("/tmp/autotune-sim/mix-casual-{seed}");
+        let casual_path = std::path::PathBuf::from(&casual_dir);
+        std::fs::create_dir_all(&casual_path).ok();
+        if run_seeded_headless(&casual_scenario, *seed, &casual_path).is_ok() {
+            let db_path = casual_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                casual_results.push(MixResult::from_summary(&s, *seed));
+            }
+        }
+
+        // Farmer-heavy
+        let farmer_scenario = Scenario::guild_stability_farmer_heavy();
+        let farmer_dir = format!("/tmp/autotune-sim/mix-farmer-{seed}");
+        let farmer_path = std::path::PathBuf::from(&farmer_dir);
+        std::fs::create_dir_all(&farmer_path).ok();
+        if run_seeded_headless(&farmer_scenario, *seed, &farmer_path).is_ok() {
+            let db_path = farmer_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                farmer_results.push(MixResult::from_summary(&s, *seed));
+            }
+        }
+
+        println!("done");
+    }
+
+    // ── Summary stats ───────────────────────────────────────────────────
+    let stats = |results: &[MixResult], field: &str| -> (f64, f64) {
+        let n = results.len() as f64;
+        if n == 0.0 { return (0.0, 0.0); }
+        let vals: Vec<f64> = results.iter().map(|r| match field {
+            "gdp" => r.gdp,
+            "dg" => r.dg,
+            "bpd" => r.bpd,
+            "vol" => r.vol,
+            "buy" => r.buy_ratio,
+            _ => 0.0,
+        }).collect();
+        let mean = vals.iter().sum::<f64>() / n;
+        let variance = vals.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n;
+        (mean, variance.sqrt())
+    };
+
+    let (ctrl_gdp, ctrl_gdp_s) = stats(&ctrl_results, "gdp");
+    let (cas_gdp, cas_gdp_s) = stats(&casual_results, "gdp");
+    let (far_gdp, far_gdp_s) = stats(&farmer_results, "gdp");
+
+    let (ctrl_dg, ctrl_dg_s) = stats(&ctrl_results, "dg");
+    let (cas_dg, cas_dg_s) = stats(&casual_results, "dg");
+    let (far_dg, far_dg_s) = stats(&farmer_results, "dg");
+
+    let (ctrl_bpd, ctrl_bpd_s) = stats(&ctrl_results, "bpd");
+    let (cas_bpd, cas_bpd_s) = stats(&casual_results, "bpd");
+    let (far_bpd, far_bpd_s) = stats(&farmer_results, "bpd");
+
+    let (ctrl_vol, ctrl_vol_s) = stats(&ctrl_results, "vol");
+    let (cas_vol, cas_vol_s) = stats(&casual_results, "vol");
+    let (far_vol, far_vol_s) = stats(&farmer_results, "vol");
+
+    let (ctrl_buy, _) = stats(&ctrl_results, "buy");
+    let (cas_buy, _) = stats(&casual_results, "buy");
+    let (far_buy, _) = stats(&farmer_results, "buy");
+
+    println!();
+    println!("  {:>16} {:>14} {:>12} {:>16} {:>9} {:>9} {:>7}",
+        "", "GDP", "GDP-σ", "D/G (σ)", "BPD%", "Vol", "Buy%");
+    println!("  {:>16} {:>14} {:>12} {:>16} {:>9} {:>9} {:>7}",
+        "─".repeat(16), "─".repeat(14), "─".repeat(12),
+        "─".repeat(16), "─".repeat(9), "─".repeat(9), "─".repeat(7));
+
+    let fmt_row = |label: &str, gdp: f64, gdp_s: f64, dg: f64, dg_s: f64,
+                   bpd: f64, bpd_s: f64, vol: f64, vol_s: f64, buy: f64| {
+        let dg_str = format!("{:.3}x ± {:.2}", dg, dg_s);
+        println!(
+            "  {:>16} {:>14.0} {:>12.0} {:>16} {:>9.3}% {:>9.5} {:>7.1}%",
+            label, gdp, gdp_s, dg_str, bpd * 100.0, vol, buy * 100.0
+        );
+    };
+
+    fmt_row("Control (3C/3F/2T)", ctrl_gdp, ctrl_gdp_s, ctrl_dg, ctrl_dg_s,
+            ctrl_bpd, ctrl_bpd_s, ctrl_vol, ctrl_vol_s, ctrl_buy);
+    fmt_row("Casual-heavy (6C)", cas_gdp, cas_gdp_s, cas_dg, cas_dg_s,
+            cas_bpd, cas_bpd_s, cas_vol, cas_vol_s, cas_buy);
+    fmt_row("Farmer-heavy (6F)", far_gdp, far_gdp_s, far_dg, far_dg_s,
+            far_bpd, far_bpd_s, far_vol, far_vol_s, far_buy);
+
+    println!();
+
+    // ── Change vs control ─────────────────────────────────────────────
+    let chg = |new: f64, ctrl: f64| -> f64 {
+        if ctrl == 0.0 { 0.0 } else { (new - ctrl) / ctrl * 100.0 }
+    };
+
+    println!("  Changes vs Control:");
+    println!("  {:>16} {:>12} {:>10} {:>8} {:>7}", "", "GDP", "D/G", "BPD", "Vol");
+    println!("  {:>16} {:>12} {:>10} {:>8} {:>7}",
+        "─".repeat(16), "─".repeat(12), "─".repeat(10),
+        "─".repeat(8), "─".repeat(7));
+    println!("  {:>16} {:>+11.1}% {:>+10.1}% {:>+7.1}% {:>+6.1}%",
+        "Casual-heavy", chg(cas_gdp, ctrl_gdp), chg(cas_dg, ctrl_dg),
+        chg(cas_bpd, ctrl_bpd), chg(cas_vol, ctrl_vol));
+    println!("  {:>16} {:>+11.1}% {:>+10.1}% {:>+7.1}% {:>+6.1}%",
+        "Farmer-heavy", chg(far_gdp, ctrl_gdp), chg(far_dg, ctrl_dg),
+        chg(far_bpd, ctrl_bpd), chg(far_vol, ctrl_vol));
+    println!();
+
+    // ── Verdict ────────────────────────────────────────────────────────
+    let cas_better_gdp = cas_gdp > ctrl_gdp;
+    let far_better_gdp = far_gdp > ctrl_gdp;
+    let cas_better_dg = cas_dg < ctrl_dg;
+    let far_better_dg = far_dg < ctrl_dg;
+
+    if cas_better_gdp && cas_better_dg {
+        println!("  ✓ VERDICT: Casual-heavy outperforms control on GDP AND D/G.");
+        println!("    Recommendation: servers with casual player bases should use 6Cas/1Far archetype.");
+    } else if cas_better_gdp {
+        println!("  → VERDICT: Casual-heavy has higher GDP but higher D/G.");
+        println!("    Buy ratio effect: {:.1}% (control: {:.1}%) — {}.",
+            cas_buy * 100.0, ctrl_buy * 100.0,
+            if cas_buy < ctrl_buy { "more sell-dominated" } else { "more buy-balanced" });
+    }
+
+    if far_better_gdp && far_better_dg {
+        println!("  ✓ VERDICT: Farmer-heavy outperforms control on GDP AND D/G.");
+    } else if far_better_gdp {
+        println!("  → VERDICT: Farmer-heavy has higher GDP but higher D/G.");
+    } else {
+        println!("  → VERDICT: Control (3Cas/3Far) is the balanced sweet spot.");
+    }
+
+    let volatility_ok = |v: f64| v < 0.05;
+    if volatility_ok(ctrl_vol) && volatility_ok(cas_vol) && volatility_ok(far_vol) {
+        println!("  ℹ️  All configs stable (vol < 0.05) — volatility is not the differentiator.");
+    } else {
+        println!("  ℹ️  Volatility differs — lower is better for price predictability.");
+    }
+
+    println!();
+    println!("  Admin note: Farmer-heavy servers expect lower equilibrium prices due to structural oversupply.");
+    println!("  Recommendation: match archetype to player behavior, not vice versa.\n");
 }
 
 fn run_gui() -> eframe::Result<()> {

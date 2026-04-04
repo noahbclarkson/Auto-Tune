@@ -2660,7 +2660,7 @@ fn run_floor_strength_sweep() {
         });
     }
 
-    println!("\n");
+    println!();
 
     // ── Analysis ─────────────────────────────────────────────────────────
     println!("╔══════════════════════════════════════════════════════════════════╗");
@@ -6420,7 +6420,7 @@ fn run_guild_threshold_sweep() {
         });
     }
 
-    println!("\n");
+    println!();
     if results.is_empty() {
         println!("  No results collected.");
         return;
@@ -8699,7 +8699,7 @@ fn run_fine_threshold_sweep() {
         });
     }
 
-    println!("\n");
+    println!();
     if results.is_empty() {
         println!("  No results collected.");
         return;
@@ -8910,6 +8910,10 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --floor-multi-seed     60% Diamond floor across 5 seeds: statistical robustness"
         );
+        println!(
+            "  --production-config-test  2MM+2GB+floor vs 1MM+2GB: proposed default head-to-head"
+        );
+        println!("  --long-run-test        2MM+2GB+floor: 14 days vs 30 days stability check");
         return Ok(());
     }
 
@@ -9237,8 +9241,447 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    // ─── Production Config Test ──────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--production-config-test" {
+        run_production_config_test();
+        return Ok(());
+    }
+
+    // ─── Long-Run Stability Test ────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--long-run-test" {
+        run_long_run_test();
+        return Ok(());
+    }
+
     // GUI mode
     run_gui()
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  PRODUCTION CONFIG TEST
+//  Compares: 1MM+2GB (current rec.) vs 2MM+2GB+60% floor (proposed)
+// ═══════════════════════════════════════════════════════════════════════
+fn run_production_config_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+    let diamond_floor = 500.0 * 0.60; // $300
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║       PRODUCTION CONFIG TEST — MULTI-SEED (5 seeds)          ║");
+    println!("║  2MM + 60% Diamond floor vs 1MM (no floor)                   ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Control: 1MM + 2GB + no floor (guild_stability_mm_fixed_guild)");
+    println!("  Treat:   2MM + 2GB + Diamond floor=60% ($300)");
+    println!("  Duration: 14 days\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct RunResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        vol: f64,
+        buy_ratio: f64,
+        diamond_internal: f64,
+        diamond_displayed: f64,
+        floor_binds: bool,
+    }
+
+    impl RunResult {
+        fn from_summary(
+            s: &crate::analyzer::SimSummary,
+            prices: &[(String, f64, f64)],
+            seed: u64,
+            floor_val: f64,
+        ) -> Self {
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (diamond_internal, diamond_displayed) =
+                diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+                diamond_internal,
+                diamond_displayed,
+                floor_binds: diamond_displayed >= floor_val - 0.01,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<RunResult> = Vec::new();
+    let mut treat_results: Vec<RunResult> = Vec::new();
+
+    for seed in &seeds {
+        // Control: 1MM + 2GB
+        let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+        let ctrl_dir = format!("/tmp/autotune-sim/ctrl-pcfg-{seed}");
+        let ctrl_path = std::path::PathBuf::from(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_path).ok();
+        if run_seeded_headless(&ctrl_scenario, *seed, &ctrl_path).is_ok() {
+            let db_path = ctrl_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                let prices = crate::analyzer::load_all_prices(&db_path).unwrap_or_default();
+                ctrl_results.push(RunResult::from_summary(&s, &prices, *seed, 0.0));
+            }
+        }
+
+        // Treatment: 2MM + 2GB + 60% Diamond floor
+        let mut treat_scenario = Scenario::guild_stability_2mm_fixed_guild();
+        treat_scenario.name = "Production Config (2MM+floor)".to_string();
+        if let Some(diamond) = treat_scenario
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
+            diamond.price_floor_override = Some(diamond.base_price * 0.6);
+        }
+        let treat_dir = format!("/tmp/autotune-sim/treat-pcfg-{seed}");
+        let treat_path = std::path::PathBuf::from(&treat_dir);
+        std::fs::create_dir_all(&treat_path).ok();
+        if run_seeded_headless(&treat_scenario, *seed, &treat_path).is_ok() {
+            let db_path = treat_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                let prices = crate::analyzer::load_all_prices(&db_path).unwrap_or_default();
+                treat_results.push(RunResult::from_summary(&s, &prices, *seed, diamond_floor));
+            }
+        }
+    }
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7} {:>8}",
+        "Seed", "GDP", "D/G", "BPD%", "Buy%", "DmdInt", "DmdDisp"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7} {:>8}",
+        "─".repeat(6),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(7),
+        "─".repeat(7),
+        "─".repeat(8)
+    );
+
+    for (c, t) in ctrl_results.iter().zip(treat_results.iter()) {
+        println!(
+            "CNTL {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>6.1}% {:>7.0} {:>8.0}",
+            c.seed,
+            c.gdp,
+            c.dg,
+            c.bpd * 100.0,
+            c.buy_ratio * 100.0,
+            c.diamond_internal,
+            c.diamond_displayed
+        );
+        println!(
+            "TRAT {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>6.1}% {:>7.0} {:>8.0} {}",
+            t.seed,
+            t.gdp,
+            t.dg,
+            t.bpd * 100.0,
+            t.buy_ratio * 100.0,
+            t.diamond_internal,
+            t.diamond_displayed,
+            if t.floor_binds { " [FLOOR]" } else { "" }
+        );
+    }
+
+    let avg = |v: &[RunResult], f: &str| -> f64 {
+        let n = v.len() as f64;
+        if n == 0.0 {
+            return 0.0;
+        }
+        match f {
+            "gdp" => v.iter().map(|r| r.gdp).sum::<f64>() / n,
+            "dg" => v.iter().map(|r| r.dg).sum::<f64>() / n,
+            "bpd" => v.iter().map(|r| r.bpd).sum::<f64>() / n,
+            "vol" => v.iter().map(|r| r.vol).sum::<f64>() / n,
+            "buy" => v.iter().map(|r| r.buy_ratio).sum::<f64>() / n,
+            _ => 0.0,
+        }
+    };
+
+    let ctrl_avg_gdp = avg(&ctrl_results, "gdp");
+    let treat_avg_gdp = avg(&treat_results, "gdp");
+    let gdp_chg = (treat_avg_gdp - ctrl_avg_gdp) / ctrl_avg_gdp * 100.0;
+
+    let ctrl_avg_dg = avg(&ctrl_results, "dg");
+    let treat_avg_dg = avg(&treat_results, "dg");
+    let dg_chg = (treat_avg_dg - ctrl_avg_dg) / ctrl_avg_dg.max(0.001) * 100.0;
+
+    let ctrl_avg_bpd = avg(&ctrl_results, "bpd");
+    let treat_avg_bpd = avg(&treat_results, "bpd");
+    let bpd_chg = (treat_avg_bpd - ctrl_avg_bpd) / ctrl_avg_bpd.max(0.001) * 100.0;
+
+    let ctrl_avg_vol = avg(&ctrl_results, "vol");
+    let treat_avg_vol = avg(&treat_results, "vol");
+    let vol_chg = (treat_avg_vol - ctrl_avg_vol) / ctrl_avg_vol.max(0.001) * 100.0;
+
+    let floor_binds = treat_results.iter().filter(|r| r.floor_binds).count();
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7} {:>8}",
+        "AVG", "GDP", "D/G", "BPD%", "Buy%", "DmdInt", "DmdDisp"
+    );
+    println!(
+        "  {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>6.1}%",
+        "Ctrl",
+        ctrl_avg_gdp,
+        ctrl_avg_dg,
+        ctrl_avg_bpd * 100.0,
+        avg(&ctrl_results, "buy") * 100.0
+    );
+    println!(
+        "  {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>6.1}%",
+        "Treat",
+        treat_avg_gdp,
+        treat_avg_dg,
+        treat_avg_bpd * 100.0,
+        avg(&treat_results, "buy") * 100.0
+    );
+    println!();
+    println!(
+        "  Changes: GDP {:+.1}%, D/G {:+.1}%, BPD {:+.1}%, Vol {:+.1}%",
+        gdp_chg, dg_chg, bpd_chg, vol_chg
+    );
+    println!("  Floor binds: {}/{} seeds\n", floor_binds, seeds.len());
+
+    // Strong recommendation when: GDP large gain OR (floor binds consistently AND D/G manageable)
+    let floor_binds_all = floor_binds == seeds.len();
+    let strong_recommend = gdp_chg > 50.0 || (floor_binds_all && dg_chg < 50.0);
+    if strong_recommend {
+        println!("  ✓ RECOMMENDATION: Adopt 2MM + 60% floor as production default.");
+        println!(
+            "    GDP +{:.0}%, floor binds {}/{} seeds — economy is larger and more stable.",
+            gdp_chg,
+            floor_binds,
+            seeds.len()
+        );
+    } else if gdp_chg > 5.0 && dg_chg < 20.0 {
+        println!("  ✓ RECOMMENDATION: Adopt 2MM + 60% floor as production default.");
+        println!("    GDP improved substantially with manageable D/G change.");
+    } else if gdp_chg > 0.0 {
+        println!("  → RECOMMENDATION: 2MM+floor is an incremental improvement.");
+        println!("    Monitor floor binding rate and internal price divergence.");
+    } else {
+        println!("  → RECOMMENDATION: Re-evaluate. Combined config may have interaction effects.");
+    }
+    println!();
+    println!("  Java default: loans.counter-cyclical: true, floor: 60% ($300 for Diamond)");
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  LONG-RUN STABILITY TEST
+//  Tests whether economy remains stable at 30 days vs 14 days
+// ═══════════════════════════════════════════════════════════════════════
+fn run_long_run_test() {
+    use crate::analyzer::load_summary;
+
+    let seed = 42u64;
+    let diamond_floor = 500.0 * 0.60; // $300
+
+    println!("\n╔════════════════════════════════════════════════════════════════╗");
+    println!("║       LONG-RUN STABILITY TEST                              ║");
+    println!("║  2MM + 2GB + 60% Diamond floor — 14 days vs 30 days       ║");
+    println!("╚════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seed: {}", seed);
+    println!("  Config: 2MM + 2GB @ 7% + 3Cas + 3Far + 2Tra + 60% Diamond floor\n");
+
+    // Control: 14-day
+    let mut ctrl = Scenario::guild_stability_2mm_fixed_guild();
+    ctrl.name = "LongRun_14day".to_string();
+    ctrl.duration_ticks = 288 * 14;
+    if let Some(diamond) = ctrl.config.items.iter_mut().find(|ic| ic.name == "Diamond") {
+        diamond.price_floor_override = Some(diamond.base_price * 0.6);
+    }
+    let ctrl_dir = "/tmp/autotune-sim/longrun-14d";
+    let ctrl_path = std::path::PathBuf::from(ctrl_dir);
+    std::fs::create_dir_all(&ctrl_path).ok();
+    run_seeded_headless(&ctrl, seed, &ctrl_path).ok();
+
+    // Treatment: 30-day
+    let mut treat = Scenario::guild_stability_2mm_fixed_guild();
+    treat.name = "LongRun_30day".to_string();
+    treat.duration_ticks = 288 * 30;
+    if let Some(diamond) = treat
+        .config
+        .items
+        .iter_mut()
+        .find(|ic| ic.name == "Diamond")
+    {
+        diamond.price_floor_override = Some(diamond.base_price * 0.6);
+    }
+    let treat_dir = "/tmp/autotune-sim/longrun-30d";
+    let treat_path = std::path::PathBuf::from(treat_dir);
+    std::fs::create_dir_all(&treat_path).ok();
+    run_seeded_headless(&treat, seed, &treat_path).ok();
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct Result {
+        days: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        spd: f64,
+        vol: f64,
+        buy_ratio: f64,
+        diamond_internal: f64,
+        diamond_displayed: f64,
+    }
+
+    impl Result {
+        fn from_db(db_path: &std::path::Path, days: u64) -> Option<Self> {
+            let s = load_summary(db_path).ok()?;
+            let prices = crate::analyzer::load_all_prices(db_path).unwrap_or_default();
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            Some(Self {
+                days,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+                diamond_internal: di,
+                diamond_displayed: dd,
+            })
+        }
+    }
+
+    let ctrl_r = Result::from_db(&ctrl_path.join("simulation.db"), 14);
+    let treat_r = Result::from_db(&treat_path.join("simulation.db"), 30);
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>8}",
+        "Days", "GDP", "D/G", "BPD%", "SPD%", "Vol", "Buy%"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>8}",
+        "─".repeat(6),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(8)
+    );
+
+    if let Some(c) = &ctrl_r {
+        println!(
+            "  {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>7.3}% {:>8.4} {:>7.1}%",
+            "14d",
+            c.gdp,
+            c.dg,
+            c.bpd * 100.0,
+            c.spd * 100.0,
+            c.vol,
+            c.buy_ratio * 100.0
+        );
+    } else {
+        println!(
+            "  {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>8}",
+            "14d", "—", "—", "—", "—", "—", "—"
+        );
+    }
+    if let Some(t) = &treat_r {
+        println!(
+            "  {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>7.3}% {:>8.4} {:>7.1}%",
+            "30d",
+            t.gdp,
+            t.dg,
+            t.bpd * 100.0,
+            t.spd * 100.0,
+            t.vol,
+            t.buy_ratio * 100.0
+        );
+    } else {
+        println!(
+            "  {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>8}",
+            "30d", "—", "—", "—", "—", "—", "—"
+        );
+    }
+
+    if let (Some(c), Some(t)) = (&ctrl_r, &treat_r) {
+        let gdp_chg = (t.gdp - c.gdp) / c.gdp * 100.0;
+        let dg_chg = (t.dg - c.dg) / c.dg.max(0.001) * 100.0;
+        let bpd_chg = (t.bpd - c.bpd) / c.bpd.max(0.001) * 100.0;
+        let vol_chg = (t.vol - c.vol) / c.vol.max(0.001) * 100.0;
+        let buy_chg = (t.buy_ratio - c.buy_ratio) / c.buy_ratio.max(0.001) * 100.0;
+
+        println!();
+        println!("  Changes (30d vs 14d):");
+        println!(
+            "    GDP: {:+.1}%  D/G: {:+.1}%  BPD: {:+.1}%  Vol: {:+.1}%  Buy%: {:+.1}pp",
+            gdp_chg, dg_chg, bpd_chg, vol_chg, buy_chg
+        );
+        println!(
+            "    Diamond internal: {:.0} → {:.0}  (floor=${:.0})",
+            c.diamond_internal, t.diamond_internal, diamond_floor
+        );
+        println!();
+
+        let vol_stable = t.vol < 0.05;
+        let bpd_stable = bpd_chg.abs() < 30.0;
+        let buy_balanced = t.buy_ratio > 0.35 && t.buy_ratio < 0.75;
+        let gd_growing = t.gdp > c.gdp;
+
+        if vol_stable && bpd_stable && buy_balanced {
+            println!("  ✓ ECONOMY STABLE at 30 days. No cyclical degradation detected.");
+            println!(
+                "    Vol={:.4} < 0.05, BPD drift < 30%, buy ratio balanced",
+                t.vol
+            );
+        } else {
+            if !vol_stable {
+                println!(
+                    "  ⚠ Volatility concern at 30d: {:.4} (threshold: 0.05)",
+                    t.vol
+                );
+            }
+            if !bpd_stable {
+                println!(
+                    "  ⚠ Spread drift: BPD changed {:+.1}% over 16 extra days",
+                    bpd_chg
+                );
+            }
+            if !buy_balanced {
+                println!(
+                    "  ⚠ Buy ratio drifted to {:.1}% (out of 35-75% balanced band)",
+                    t.buy_ratio * 100.0
+                );
+            }
+        }
+        if gd_growing {
+            println!("  ✓ Economy continued growing (GDP +{:.1}%)", gdp_chg);
+        } else {
+            println!("  ⚠ Economy contracted at 30d (GDP {:.1}%)", gdp_chg);
+        }
+        if t.dg > 10.0 {
+            println!(
+                "  ⚠ D/G {:.2}x > 10.0x at 30d — circuit breaker should have fired",
+                t.dg
+            );
+        } else {
+            println!("  ✓ D/G {:.3}x within healthy range at 30d", t.dg);
+        }
+    }
+    println!();
+    println!("  Key insight: Long-run (30d) economy behavior vs 14-day standard test.");
+    println!("  If stable: no hidden instability emerges over extended play periods.");
+    println!();
 }
 
 fn run_gui() -> eframe::Result<()> {

@@ -145,7 +145,7 @@ struct ConfigChangeRow {
 /// Tracks every TIER1/TIER2/TIER3 transition for post-run analysis.
 struct CircuitBreakerEventRow {
     tick: u64,
-    tier: String,       // "TIER1", "TIER2", "TIER3", "NORMAL"
+    tier: String, // "TIER1", "TIER2", "TIER3", "NORMAL"
     debt_gdp_ratio: f64,
     interest_multiplier: f64,
 }
@@ -481,12 +481,14 @@ impl DataRecorder {
     /// Record a loan interest circuit breaker transition.
     /// Called whenever the tier changes (NORMAL → TIER1/2/3 or vice versa).
     pub fn record_circuit_breaker_event(&mut self, data: &CircuitBreakerEventData) {
-        self.batch.circuit_breaker_events.push(CircuitBreakerEventRow {
-            tick: data.tick,
-            tier: data.tier.clone(),
-            debt_gdp_ratio: data.debt_gdp_ratio,
-            interest_multiplier: data.interest_multiplier,
-        });
+        self.batch
+            .circuit_breaker_events
+            .push(CircuitBreakerEventRow {
+                tick: data.tick,
+                tier: data.tier.clone(),
+                debt_gdp_ratio: data.debt_gdp_ratio,
+                interest_multiplier: data.interest_multiplier,
+            });
     }
 
     fn flush(&mut self) -> Result<(), RecorderError> {

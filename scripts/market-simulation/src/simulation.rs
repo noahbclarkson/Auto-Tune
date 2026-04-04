@@ -424,7 +424,11 @@ impl Simulation {
                 }
                 eprintln!(
                     "[SIMULATION] Circuit breaker {} → {} at tick {} — D/G {:.2}x, multiplier {:.2}",
-                    prev_tier, tier_name, self.current_tick, ratio.max(0.0), interest_multiplier
+                    prev_tier,
+                    tier_name,
+                    self.current_tick,
+                    ratio.max(0.0),
+                    interest_multiplier
                 );
             }
             self.prev_circuit_tier = tier_name.to_string();

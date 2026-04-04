@@ -141,6 +141,24 @@ struct ConfigChangeRow {
     config_json: String,
 }
 
+/// Recorded when the loan interest circuit breaker changes tier.
+/// Tracks every TIER1/TIER2/TIER3 transition for post-run analysis.
+struct CircuitBreakerEventRow {
+    tick: u64,
+    tier: String,       // "TIER1", "TIER2", "TIER3", "NORMAL"
+    debt_gdp_ratio: f64,
+    interest_multiplier: f64,
+}
+
+/// Data passed from Simulation when a circuit breaker transition occurs.
+#[derive(Clone, Debug)]
+pub struct CircuitBreakerEventData {
+    pub tick: u64,
+    pub tier: String,
+    pub debt_gdp_ratio: f64,
+    pub interest_multiplier: f64,
+}
+
 struct RecordBatch {
     ticks: Vec<TickRow>,
     item_states: Vec<ItemStateRow>,
@@ -149,6 +167,7 @@ struct RecordBatch {
     economy_snapshots: Vec<EconomySnapshotRow>,
     loan_events: Vec<LoanEventRow>,
     config_changes: Vec<ConfigChangeRow>,
+    circuit_breaker_events: Vec<CircuitBreakerEventRow>,
 }
 
 impl RecordBatch {
@@ -161,6 +180,7 @@ impl RecordBatch {
             economy_snapshots: Vec::new(),
             loan_events: Vec::new(),
             config_changes: Vec::new(),
+            circuit_breaker_events: Vec::new(),
         }
     }
 
@@ -172,6 +192,7 @@ impl RecordBatch {
         self.economy_snapshots.clear();
         self.loan_events.clear();
         self.config_changes.clear();
+        self.circuit_breaker_events.clear();
     }
 
     fn is_empty(&self) -> bool {
@@ -323,6 +344,16 @@ impl DataRecorder {
                 FOREIGN KEY (session_id) REFERENCES sessions(id)
             );
 
+            CREATE TABLE IF NOT EXISTS circuit_breaker_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                tick INTEGER NOT NULL,
+                tier TEXT NOT NULL,
+                debt_gdp_ratio REAL NOT NULL,
+                interest_multiplier REAL NOT NULL,
+                FOREIGN KEY (session_id) REFERENCES sessions(id)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_decisions_player ON decisions(player_id);
             CREATE INDEX IF NOT EXISTS idx_decisions_item ON decisions(item_index);
             CREATE INDEX IF NOT EXISTS idx_loan_events_player ON loan_events(player_id);",
@@ -447,6 +478,17 @@ impl DataRecorder {
         });
     }
 
+    /// Record a loan interest circuit breaker transition.
+    /// Called whenever the tier changes (NORMAL → TIER1/2/3 or vice versa).
+    pub fn record_circuit_breaker_event(&mut self, data: &CircuitBreakerEventData) {
+        self.batch.circuit_breaker_events.push(CircuitBreakerEventRow {
+            tick: data.tick,
+            tier: data.tier.clone(),
+            debt_gdp_ratio: data.debt_gdp_ratio,
+            interest_multiplier: data.interest_multiplier,
+        });
+    }
+
     fn flush(&mut self) -> Result<(), RecorderError> {
         if self.batch.is_empty()
             && self.batch.item_states.is_empty()
@@ -455,6 +497,7 @@ impl DataRecorder {
             && self.batch.economy_snapshots.is_empty()
             && self.batch.loan_events.is_empty()
             && self.batch.config_changes.is_empty()
+            && self.batch.circuit_breaker_events.is_empty()
         {
             self.ticks_since_flush = 0;
             return Ok(());
@@ -595,6 +638,22 @@ impl DataRecorder {
             )?;
             for row in &self.batch.config_changes {
                 stmt.execute(params![self.session_id, row.tick as i64, row.config_json,])?;
+            }
+        }
+
+        {
+            let mut stmt = tx.prepare_cached(
+                "INSERT INTO circuit_breaker_events (session_id, tick, tier, debt_gdp_ratio, interest_multiplier)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+            )?;
+            for row in &self.batch.circuit_breaker_events {
+                stmt.execute(params![
+                    self.session_id,
+                    row.tick as i64,
+                    row.tier,
+                    row.debt_gdp_ratio,
+                    row.interest_multiplier,
+                ])?;
             }
         }
 

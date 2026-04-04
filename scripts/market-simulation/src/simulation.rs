@@ -5,7 +5,7 @@ use crate::engine::{MarketEngine, Transaction, TransactionType};
 use crate::events::MarketEvent;
 use crate::loan::{Loan, LoanStatus, calculate_interest_rate};
 use crate::player::{Archetype, DecisionLog, PlayerAgent, rng_next, set_global_seeded_rng};
-use crate::recorder::{DataRecorder, LoanEventData, TickSnapshot};
+use crate::recorder::{CircuitBreakerEventData, DataRecorder, LoanEventData, TickSnapshot};
 
 const MAX_TRANSACTIONS: usize = 50_000;
 
@@ -52,9 +52,9 @@ pub struct Simulation {
     pub recorder: Option<DataRecorder>,
     /// Active market events that apply price velocity modifiers.
     pub events: Vec<MarketEvent>,
-    /// Tracks whether the loan interest circuit breaker is currently open.
-    /// When true, interest accrual is paused until debt/GDP drops below threshold.
-    interest_circuit_open: bool,
+    /// Tracks the previous circuit breaker tier to detect transitions.
+    /// "NORMAL" | "TIER1" | "TIER2" | "TIER3"
+    prev_circuit_tier: String,
     next_player_id: usize,
     /// Log of all loans that were capped by the per-loan GDP cap.
     pub loan_cap_log: Vec<LoanCapRecord>,
@@ -81,7 +81,7 @@ impl Simulation {
             config_dirty: false,
             recorder: None,
             events: Vec::new(),
-            interest_circuit_open: false,
+            prev_circuit_tier: "NORMAL".to_string(),
             next_player_id: 0,
             loan_cap_log: Vec::new(),
             mm_opening_loan_count: 0,
@@ -344,34 +344,36 @@ impl Simulation {
         // Uses counter-cyclical continuous taper when counter_cyclical=true (default, matching Java).
         // Falls back to legacy tiered circuit breaker when counter_cyclical=false.
         let lc = &self.config.loans;
+
+        // Compute debt/GDP ratio once, before the interest multiplier computation,
+        // so it is available for circuit breaker event recording.
+        let cb_total_debt: f64 = self
+            .loans
+            .iter()
+            .filter(|l| matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted))
+            .map(|l| l.current_balance)
+            .sum();
+        let gdp_window = 288u64;
+        let window_start = self.current_tick.saturating_sub(gdp_window);
+        let cb_gdp: f64 = self
+            .transactions
+            .iter()
+            .filter(|tx| tx.tick >= window_start && tx.tx_type == TransactionType::Buy)
+            .map(|tx| tx.total_price)
+            .sum();
+        // Guard: skip circuit breaker if no transactions yet (initialization phase).
+        // At tick 0, gdp=0 → ratio=f64::MAX → TIER3 would fire spuriously.
+        let ratio = if cb_gdp > 0.0 {
+            cb_total_debt / cb_gdp
+        } else {
+            -1.0
+        };
+
         let (interest_multiplier, tier_name) = if lc.debt_gdp_tier3_ratio > 0.0 {
-            let total_debt: f64 = self
-                .loans
-                .iter()
-                .filter(|l| matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted))
-                .map(|l| l.current_balance)
-                .sum();
-
-            // Use 288-tick windowed GDP (matches Java: last 24h at 5min/tick)
-            let gdp_window = 288u64;
-            let window_start = self.current_tick.saturating_sub(gdp_window);
-            let gdp: f64 = self
-                .transactions
-                .iter()
-                .filter(|tx| tx.tick >= window_start && tx.tx_type == TransactionType::Buy)
-                .map(|tx| tx.total_price)
-                .sum();
-
-            // Guard: skip circuit breaker if no transactions yet (initialization phase).
-            // At tick 0, gdp=0 → ratio=f64::MAX → TIER3 would fire spuriously.
-            // Once transactions exist, ratio is meaningful and circuit breaker applies.
-            let ratio = if gdp > 0.0 { total_debt / gdp } else { -1.0 };
-
             if lc.counter_cyclical {
                 // Counter-cyclical continuous taper (Java default, matching Java LoanManager):
                 // multiplier = max(0, min(1, 1 - ratio / tier3_ratio))
-                // D/G=0 → 100%, D/G=3 → 70%, D/G=5 → 50%, D/G=10 → 0%
-                // Tier name is still tracked for logging purposes.
+                // D/G=0 → 100%, D/G=tier3 → 0%
                 let max_ratio = lc.debt_gdp_tier3_ratio;
                 let multiplier = if ratio >= 0.0 {
                     (1.0 - ratio / max_ratio).clamp(0.0, 1.0)
@@ -407,40 +409,26 @@ impl Simulation {
             (1.0, "NORMAL")
         };
 
-        // Log tier transitions
-        let prev_tier = self.interest_circuit_open; // repurposed: true = TIER3, false = normal
-        let currently_in_tier3 = tier_name == "TIER3";
-        if currently_in_tier3 && !prev_tier && recording {
-            let total_debt: f64 = self
-                .loans
-                .iter()
-                .filter(|l| matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted))
-                .map(|l| l.current_balance)
-                .sum();
-            let gdp_window = 288u64;
-            let window_start = self.current_tick.saturating_sub(gdp_window);
-            let gdp: f64 = self
-                .transactions
-                .iter()
-                .filter(|tx| tx.tick >= window_start && tx.tx_type == TransactionType::Buy)
-                .map(|tx| tx.total_price)
-                .sum();
-            let ratio = if gdp > 0.0 {
-                total_debt / gdp
-            } else {
-                f64::MAX
+        // Record circuit breaker tier transitions (all tier changes, not just TIER3).
+        let prev_tier = &self.prev_circuit_tier;
+        if tier_name != *prev_tier {
+            let tier_event = CircuitBreakerEventData {
+                tick: self.current_tick,
+                tier: tier_name.to_string(),
+                debt_gdp_ratio: ratio.max(0.0), // -1.0 means "no GDP yet"; use 0.0 for display
+                interest_multiplier,
             };
-            eprintln!(
-                "[SIMULATION] Loan circuit breaker TIER3 OPEN at tick {} — debt/GDP {:.1}x > {:.1}x. Interest paused.",
-                self.current_tick, ratio, lc.debt_gdp_tier3_ratio
-            );
-        } else if !currently_in_tier3 && prev_tier && recording {
-            eprintln!(
-                "[SIMULATION] Loan circuit breaker CLOSED at tick {}.",
-                self.current_tick
-            );
+            if recording {
+                if let Some(rec) = &mut self.recorder {
+                    rec.record_circuit_breaker_event(&tier_event);
+                }
+                eprintln!(
+                    "[SIMULATION] Circuit breaker {} → {} at tick {} — D/G {:.2}x, multiplier {:.2}",
+                    prev_tier, tier_name, self.current_tick, ratio.max(0.0), interest_multiplier
+                );
+            }
+            self.prev_circuit_tier = tier_name.to_string();
         }
-        self.interest_circuit_open = currently_in_tier3;
 
         // Always process defaults even when interest is paused/tiered
         for loan in &mut self.loans {

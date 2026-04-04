@@ -1103,6 +1103,58 @@ impl Scenario {
         }
     }
 
+    /// Worst-case mass exodus stress test: 80% of players quit at day 7.
+    /// Based on guild_stability_mm_fixed_guild archetype mix (12 players).
+    /// 80% quit → ~2 players remain (only 1 MM + 1 GB possible).
+    ///
+    /// Key questions:
+    /// - Does TIER3 circuit breaker fire? When? At what D/G?
+    /// - How long until the economy stabilizes / recovers?
+    /// - Do spreads blow out permanently or recover?
+    /// - Is there a permanent GDP loss vs control?
+    pub fn worst_case_exodus_test() -> Self {
+        // Day 7 = tick 2016 (288 ticks/day × 7 days)
+        // exodus_spread_multiplier=2.0x for 288 ticks (1 day) then decays 5%/tick
+        let config = SimConfig {
+            player_exodus_tick: Some(288 * 7),
+            player_exodus_fraction: 0.80, // 80% quit — worst case
+            exodus_spread_multiplier: 2.0,
+            exodus_shock_duration_ticks: 288,
+            ..SimConfig::default()
+        };
+        Self {
+            name: "Worst Case Exodus Test".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14, // 14 days total
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Sector correlation stress test: injects a price shock to Diamond (ores section)
     /// at day 3, then measures how strongly other ores items follow.
     /// Runs with sector_correlation=0.05 (treatment) vs sector_correlation=0.0 (control)

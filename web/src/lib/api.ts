@@ -251,6 +251,21 @@ export interface AlertDto {
   triggeredAt: number | null;
 }
 
+export interface PriceChangeDto {
+  timestamp: number;
+  currentPrice: number;
+  previousPrice: number;
+  percentChange: number;
+  bpd: number;
+  spd: number;
+  totalVolume: number;
+  volumeVsNormal: number;
+  eventMultiplier: number;
+  attribution: string;
+  attributionKey: 'NORMAL' | 'EVENT' | 'VOLUME' | 'TREND' | 'STABLE';
+  hasActiveEvent: boolean;
+}
+
 export const api = {
   items: {
     list: (base: string) => fetchJson<ItemDto[]>(`${base}/api/items`),
@@ -261,6 +276,8 @@ export const api = {
       fetchJson<TransactionFeedDto[]>(`${base}/api/items/${id}/transactions?limit=${limit}`),
     trend: (base: string, id: number) =>
       fetchJson<ItemTrendDto>(`${base}/api/items/${id}/trend`),
+    attribution: (base: string, id: number, limit = 50) =>
+      fetchJson<PriceChangeDto[]>(`${base}/api/items/${id}/attribution?limit=${limit}`),
   },
   stats: (base: string) => fetchJson<Stats>(`${base}/api/stats`),
   prices: (base: string) => fetchJson<Record<number, number>>(`${base}/api/prices`),

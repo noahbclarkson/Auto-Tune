@@ -20,6 +20,7 @@ import com.noahblclarkson.autotune.service.BadgeService;
 import com.noahblclarkson.autotune.service.MarketDigestService;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.PriceAlertRepository;
+import com.noahblclarkson.autotune.database.ShopFavoriteRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.manager.DatabaseCleanupManager;
@@ -145,6 +146,12 @@ public class AutoTuneModule extends AbstractModule {
     @Singleton
     public PriceAlertRepository providePriceAlertRepository(DatabaseManager databaseManager) {
         return new PriceAlertRepository(databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public ShopFavoriteRepository provideShopFavoriteRepository(DatabaseManager databaseManager) {
+        return new ShopFavoriteRepository(databaseManager);
     }
 
     @Provides

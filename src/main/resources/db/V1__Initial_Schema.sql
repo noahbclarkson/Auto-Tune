@@ -310,3 +310,17 @@ CREATE TABLE IF NOT EXISTS at_pending_notifications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_pending_notifs_player ON at_pending_notifications(player_uuid);
+
+-- Shop favorites: player-starred items for quick access in /shop
+CREATE TABLE IF NOT EXISTS at_shop_favorites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_uuid VARCHAR(36) NOT NULL,
+    item_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_uuid) REFERENCES at_players(uuid) ON DELETE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES at_items(id) ON DELETE CASCADE,
+    UNIQUE(player_uuid, item_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_favorites_player ON at_shop_favorites(player_uuid);
+CREATE INDEX IF NOT EXISTS idx_favorites_item ON at_shop_favorites(item_id);

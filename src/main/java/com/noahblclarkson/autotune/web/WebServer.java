@@ -12,6 +12,7 @@ import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
+import com.noahblclarkson.autotune.database.ShopFavoriteRepository;
 import com.noahblclarkson.autotune.economy.EconomyManager;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
@@ -70,6 +71,7 @@ public class WebServer {
     private final TransactionRepository transactionRepository;
     private final LoanRepository loanRepository;
     private final PlayerRepository playerRepository;
+    private final ShopFavoriteRepository shopFavoriteRepository;
     private final LoanManager loanManager;
     private final ShopManager shopManager;
     private final EconomyManager economyManager;
@@ -93,6 +95,7 @@ public class WebServer {
             TransactionRepository transactionRepository,
             LoanRepository loanRepository,
             PlayerRepository playerRepository,
+            ShopFavoriteRepository shopFavoriteRepository,
             LoanManager loanManager,
             ShopManager shopManager,
             EconomyManager economyManager,
@@ -109,6 +112,7 @@ public class WebServer {
         this.transactionRepository = transactionRepository;
         this.loanRepository = loanRepository;
         this.playerRepository = playerRepository;
+        this.shopFavoriteRepository = shopFavoriteRepository;
         this.loanManager = loanManager;
         this.shopManager = shopManager;
         this.economyManager = economyManager;
@@ -789,6 +793,101 @@ public class WebServer {
                             a -> ctx.json(toAlertDto(a)),
                             () -> ctx.status(404).json(Map.of("error", "Alert not found after rearm"))
                     );
+        });
+
+        // ---- Shop Favorites API ----
+
+        // GET /api/shop/favorites/{playerName} — list player's favorited item IDs
+        app.get("/api/shop/favorites/{playerName}", ctx -> {
+            String playerName = ctx.pathParam("playerName");
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).json(Map.of("error", "playerName is required"));
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                return;
+            }
+            Set<Integer> favoriteIds = shopFavoriteRepository.getFavoriteItemIds(player.uuid());
+            List<Map<String, Object>> favorites = favoriteIds.stream()
+                    .map(id -> itemRepository.findById(id))
+                    .filter(Optional::isPresent)
+                    .map(item -> {
+                        ShopItem si = item.get();
+                        return Map.<String, Object>of(
+                                "id", si.id(),
+                                "material", si.material().name(),
+                                "displayName", si.getDisplayNameOrMaterial(),
+                                "section", si.section() != null ? si.section() : ""
+                        );
+                    })
+                    .toList();
+            ctx.json(Map.of("playerName", playerName, "favorites", favorites, "count", favorites.size()));
+        });
+
+        // POST /api/shop/favorites/{playerName}/{itemId} — add item to favorites
+        app.post("/api/shop/favorites/{playerName}/{itemId}", ctx -> {
+            String playerName = ctx.pathParam("playerName");
+            int itemId = Integer.parseInt(ctx.pathParam("itemId"));
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).json(Map.of("error", "playerName is required"));
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                return;
+            }
+            if (itemRepository.findById(itemId).isEmpty()) {
+                ctx.status(404).json(Map.of("error", "Item not found: " + itemId));
+                return;
+            }
+            shopFavoriteRepository.addFavorite(player.uuid(), itemId);
+            ctx.status(201).json(Map.of("playerName", playerName, "itemId", itemId, "favorited", true));
+        });
+
+        // DELETE /api/shop/favorites/{playerName}/{itemId} — remove item from favorites
+        app.delete("/api/shop/favorites/{playerName}/{itemId}", ctx -> {
+            String playerName = ctx.pathParam("playerName");
+            int itemId = Integer.parseInt(ctx.pathParam("itemId"));
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).json(Map.of("error", "playerName is required"));
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                return;
+            }
+            shopFavoriteRepository.removeFavorite(player.uuid(), itemId);
+            ctx.status(200).json(Map.of("playerName", playerName, "itemId", itemId, "favorited", false));
+        });
+
+        // PATCH /api/shop/favorites/{playerName}/{itemId} — toggle favorite
+        app.patch("/api/shop/favorites/{playerName}/{itemId}", ctx -> {
+            String playerName = ctx.pathParam("playerName");
+            int itemId = Integer.parseInt(ctx.pathParam("itemId"));
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).json(Map.of("error", "playerName is required"));
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                return;
+            }
+            if (itemRepository.findById(itemId).isEmpty()) {
+                ctx.status(404).json(Map.of("error", "Item not found: " + itemId));
+                return;
+            }
+            boolean isFav = shopFavoriteRepository.isFavorite(player.uuid(), itemId);
+            if (isFav) {
+                shopFavoriteRepository.removeFavorite(player.uuid(), itemId);
+            } else {
+                shopFavoriteRepository.addFavorite(player.uuid(), itemId);
+            }
+            ctx.json(Map.of("playerName", playerName, "itemId", itemId, "favorited", !isFav));
         });
 
         app.exception(Exception.class, (e, ctx) -> {

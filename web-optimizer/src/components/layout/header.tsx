@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp, Grid, FlaskConical, Code2, Map, Download, Sliders } from 'lucide-react';
+import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp, Grid, FlaskConical, Code2, Map, Download, Sliders, GitCommit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/landing/theme-toggle';
 
@@ -18,6 +18,7 @@ const NAV = [
   { href: '/exchange-rates', label: 'Rates', icon: TrendingUp },
   { href: '/servers', label: 'Servers', icon: Server },
   { href: '/roadmap', label: 'Roadmap', icon: Map },
+  { href: '/changelog', label: 'Changelog', icon: GitCommit },
   { href: '/api-docs', label: 'API', icon: Code2 },
 ];
 

@@ -4,6 +4,36 @@ import { GitCommit, Zap, Users, Gavel, Bell, ShieldCheck, Globe } from 'lucide-r
 
 const UPDATES = [
   {
+    date: '2026-04-04',
+    icon: Zap,
+    accent: 'text-amber-400',
+    accentBg: 'bg-amber-950/60 border-amber-800/50',
+    tag: 'ADMIN TOOL',
+    title: 'Economy Recovery Advisor + price reset all',
+    detail: 'Rules-based expert system reads live health metrics and produces plain-English diagnosis + actionable YAML config snippets with copy button. Also: bulk /at admin prices reset all for full economy recovery.',
+    href: '/changelog',
+  },
+  {
+    date: '2026-04-04',
+    icon: Users,
+    accent: 'text-emerald-400',
+    accentBg: 'bg-emerald-950/60 border-emerald-800/50',
+    tag: 'PLAYER FEATURE',
+    title: 'Shop favorites — star items in /shop',
+    detail: 'Star up to 20 favorite items. Starred items appear at the top of /shop with a ★ indicator. Favorites persist across sessions.',
+    href: '/changelog',
+  },
+  {
+    date: '2026-04-04',
+    icon: ShieldCheck,
+    accent: 'text-rose-400',
+    accentBg: 'bg-rose-950/60 border-rose-800/50',
+    tag: 'FIX',
+    title: 'GuildSeller bug + circuit breaker boundary fix',
+    detail: 'GuildSeller Phase 1 phantom sell bug (have = current.max(1)) fixed. Circuit breaker Java LoanManager updated with >= boundary check. GuildSeller remains a dead-end archetype.',
+    href: '/changelog',
+  },
+  {
     date: '2026-03-29',
     icon: ShieldCheck,
     accent: 'text-amber-400',
@@ -111,6 +141,16 @@ export function ChangelogSection() {
                 </div>
               );
             })}
+          </div>
+
+          {/* CTA */}
+          <div className="mt-6 pt-4 border-t border-gray-800/40 text-center">
+            <a
+              href="/changelog"
+              className="inline-flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
+            >
+              View full changelog →
+            </a>
           </div>
         </div>
       </div>

@@ -9353,6 +9353,11 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    if args.len() > 1 && args[1] == "--floor-impact-test" {
+        run_floor_impact_test();
+        return Ok(());
+    }
+
     // GUI mode
     run_gui()
 }
@@ -10193,6 +10198,229 @@ fn run_archetype_mix_test() {
     println!();
     println!("  Admin note: Farmer-heavy servers expect lower equilibrium prices due to structural oversupply.");
     println!("  Recommendation: match archetype to player behavior, not vice versa.\n");
+}
+
+/// Floor Impact Test: Does the 60% Diamond floor ADD volatility?
+/// Compares 2MM+2GB WITH and WITHOUT 60% Diamond floor across 5 seeds.
+fn run_floor_impact_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+    let diamond_floor = 500.0 * 0.60; // $300
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║       FLOOR IMPACT TEST — 2MM+2GB: WITH vs WITHOUT FLOOR  ║");
+    println!("║  Question: Does 60% Diamond floor ADD volatility?         ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Control: guild_stability_2mm_fixed_guild (2MM+2GB, NO floor)");
+    println!("  Treat:   Same + Diamond floor=60% ($300)");
+    println!("  Duration: 14 days\n");
+
+    #[derive(Debug)]
+    struct FloorImpactResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        vol: f64,
+        buy_ratio: f64,
+        diamond_displayed: f64,
+        floor_binds: bool,
+    }
+
+    impl FloorImpactResult {
+        fn from_summary(
+            s: &crate::analyzer::SimSummary,
+            prices: &[(String, f64, f64)],
+            seed: u64,
+            floor_val: f64,
+        ) -> Self {
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let diamond_displayed = diamond.map(|(_, _, d)| *d).unwrap_or(0.0);
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+                diamond_displayed,
+                floor_binds: diamond_displayed >= floor_val - 0.01,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<FloorImpactResult> = Vec::new();
+    let mut treat_results: Vec<FloorImpactResult> = Vec::new();
+
+    for seed in &seeds {
+        print!("  seed {seed} ... ");
+
+        // Control: 2MM+2GB, NO floor
+        let ctrl_scenario = Scenario::guild_stability_2mm_fixed_guild();
+        let ctrl_dir = format!("/tmp/autotune-sim/floor-impact-ctrl-{seed}");
+        let ctrl_path = std::path::PathBuf::from(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_path).ok();
+        if run_seeded_headless(&ctrl_scenario, *seed, &ctrl_path).is_ok() {
+            let db_path = ctrl_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                let prices = crate::analyzer::load_all_prices(&db_path).unwrap_or_default();
+                ctrl_results.push(FloorImpactResult::from_summary(&s, &prices, *seed, 0.0));
+                print!("ctrl ");
+            }
+        }
+
+        // Treatment: 2MM+2GB + 60% Diamond floor
+        let mut treat_scenario = Scenario::guild_stability_2mm_fixed_guild();
+        treat_scenario.name = "2MM+GB+Floor".to_string();
+        if let Some(diamond) = treat_scenario
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
+            diamond.price_floor_override = Some(diamond.base_price * 0.6);
+        }
+        let treat_dir = format!("/tmp/autotune-sim/floor-impact-treat-{seed}");
+        let treat_path = std::path::PathBuf::from(&treat_dir);
+        std::fs::create_dir_all(&treat_path).ok();
+        if run_seeded_headless(&treat_scenario, *seed, &treat_path).is_ok() {
+            let db_path = treat_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                let prices = crate::analyzer::load_all_prices(&db_path).unwrap_or_default();
+                treat_results
+                    .push(FloorImpactResult::from_summary(&s, &prices, *seed, diamond_floor));
+                println!("treat done");
+            }
+        }
+    }
+
+    // ── Per-seed table
+    println!("\n╔════════════════════════════════════════════════════════════════════════════════════════════╗");
+    println!("║  PER-SEED RESULTS                                                                     ║");
+    println!("╚════════════════════════════════════════════════════════════════════════════════════════════╝");
+    println!("  {:>6}  {:>10}  {:>7}  {:>7}  {:>7}  {:>9}  |  {:>10}  {:>7}  {:>7}  {:>7}  {:>9}  {:>6}",
+        "seed", "GDP(c)", "D/G(c)", "Vol(c)", "BPD(c)", "Diamond(c)",
+        "GDP(t)", "D/G(t)", "Vol(t)", "BPD(t)", "Diamond(t)", "Floor?");
+    println!("  {}", "─".repeat(105));
+
+    for seed in &seeds {
+        let cr = ctrl_results.iter().find(|r| r.seed == *seed);
+        let tr = treat_results.iter().find(|r| r.seed == *seed);
+        if let (Some(c), Some(t)) = (cr, tr) {
+            println!(
+                "  {:>6}  {:>10.0}  {:>6.3}x  {:>6.4}  {:>6.3}%  {:>8.0} |  {:>10.0}  {:>6.3}x  {:>6.4}  {:>6.3}%  {:>8.0}  {:>6}",
+                c.seed,
+                c.gdp, c.dg, c.vol, c.bpd * 100.0, c.diamond_displayed,
+                t.gdp, t.dg, t.vol, t.bpd * 100.0, t.diamond_displayed,
+                if t.floor_binds { "YES" } else { "no" }
+            );
+        }
+    }
+
+    // ── Summary
+    if ctrl_results.len() == 5 && treat_results.len() == 5 {
+        let n = 5.0;
+        let avg = |v: &[FloorImpactResult], field: &str| -> f64 {
+            let vals: Vec<f64> = v.iter().map(|r| match field {
+                "gdp" => r.gdp,
+                "dg" => r.dg,
+                "bpd" => r.bpd,
+                "vol" => r.vol,
+                "buy" => r.buy_ratio,
+                _ => 0.0,
+            }).collect();
+            vals.iter().sum::<f64>() / n
+        };
+
+        let ctrl_gdp = avg(&ctrl_results, "gdp");
+        let treat_gdp = avg(&treat_results, "gdp");
+        let ctrl_dg = avg(&ctrl_results, "dg");
+        let treat_dg = avg(&treat_results, "dg");
+        let ctrl_vol = avg(&ctrl_results, "vol");
+        let treat_vol = avg(&treat_results, "vol");
+        let ctrl_bpd = avg(&ctrl_results, "bpd") * 100.0;
+        let treat_bpd = avg(&treat_results, "bpd") * 100.0;
+        let ctrl_buy = avg(&ctrl_results, "buy") * 100.0;
+        let treat_buy = avg(&treat_results, "buy") * 100.0;
+        let floor_binds = treat_results.iter().filter(|r| r.floor_binds).count();
+
+        let pct_str = |a: f64, b: f64| -> String {
+            let pct = (b - a) / a.max(1.0) * 100.0;
+            format!("{:+.1}%", pct)
+        };
+        let abs_str = |a: f64, b: f64| -> String {
+            format!("{:+.4}", b - a)
+        };
+
+        println!("\n╔════════════════════════════════════════════════════════════════════════════════════════════╗");
+        println!("║  FLOOR IMPACT SUMMARY (5 seeds avg)                                                    ║");
+        println!("╚════════════════════════════════════════════════════════════════════════════════════════════╝");
+        println!("  {:<20}  {:>14}  {:>14}  {:>12}", "Metric", "NO FLOOR", "WITH FLOOR", "Change");
+        println!("  {}", "─".repeat(65));
+        println!("  {:<20}  {:>14.0}  {:>14.0}  {:>12}", "GDP", ctrl_gdp, treat_gdp, pct_str(ctrl_gdp, treat_gdp));
+        println!("  {:<20}  {:>14.3}x  {:>14.3}x  {:>12}", "D/G", ctrl_dg, treat_dg, pct_str(ctrl_dg, treat_dg));
+        println!("  {:<20}  {:>14.4}   {:>14.4}   {:>12}", "Volatility", ctrl_vol, treat_vol, abs_str(ctrl_vol, treat_vol));
+        println!("  {:<20}  {:>14.3}%  {:>14.3}%  {:>12}", "BPD avg", ctrl_bpd, treat_bpd, pct_str(ctrl_bpd, treat_bpd));
+        println!("  {:<20}  {:>14.1}%  {:>14.1}%  {:>12}", "Buy ratio", ctrl_buy, treat_buy, pct_str(ctrl_buy, treat_buy));
+        println!("\n  Floor binds: {}/5 seeds", floor_binds);
+
+        println!("\n╔════════════════════════════════════════════════════════════════════════════════════════════╗");
+        println!("║  KEY FINDINGS                                                                       ║");
+        println!("╚════════════════════════════════════════════════════════════════════════════════════════════╝");
+
+        let vol_change = treat_vol - ctrl_vol;
+        if vol_change > 0.01 {
+            println!("  CAUTION: FLOOR ADDS VOLATILITY: vol +{:.4} (ctrl {:.4} -> {:.4})",
+                vol_change, ctrl_vol, treat_vol);
+        } else if vol_change < -0.01 {
+            println!("  GOOD: FLOOR REDUCES VOLATILITY: vol {:.4} -> {:.4}",
+                ctrl_vol, treat_vol);
+        } else {
+            println!("  NEUTRAL: FLOOR EFFECT ON VOLATILITY: {:.4} -> {:.4}",
+                ctrl_vol, treat_vol);
+        }
+
+        let gdp_pct = (treat_gdp - ctrl_gdp) / ctrl_gdp * 100.0;
+        if gdp_pct > 5.0 {
+            println!("  GOOD: FLOOR BOOSTS GDP: +{:.1}% ({:.0} -> {:.0})",
+                gdp_pct, ctrl_gdp, treat_gdp);
+        } else if gdp_pct < -5.0 {
+            println!("  BAD: FLOOR HURTS GDP: {:.1}% ({:.0} -> {:.0})",
+                gdp_pct, ctrl_gdp, treat_gdp);
+        } else {
+            println!("  NEUTRAL: FLOOR ON GDP: {:+.1}%", gdp_pct);
+        }
+
+        if treat_dg < ctrl_dg * 0.9 {
+            println!("  GOOD: FLOOR REDUCES D/G: {:.3}x -> {:.3}x", ctrl_dg, treat_dg);
+        } else if treat_dg > ctrl_dg * 1.1 {
+            println!("  BAD: FLOOR INCREASES D/G: {:.3}x -> {:.3}x", ctrl_dg, treat_dg);
+        } else {
+            println!("  NEUTRAL: FLOOR ON D/G: {:.3}x -> {:.3}x", ctrl_dg, treat_dg);
+        }
+
+        println!("\n  VERDICT:");
+        if floor_binds == 5 {
+            println!("  - Floor binds in 5/5 seeds — Diamond displayed always = $300");
+            println!("  - Floor creates price rigidity: internal price can collapse below floor");
+            println!("  - Recommendation: try 40% floor (binds only in stressed seeds)");
+        } else if floor_binds > 0 {
+            println!("  - Floor binds in {}/5 seeds", floor_binds);
+        }
+        if treat_vol > 0.05 && floor_binds > 0 {
+            println!("  - Vol > 0.05 WITH floor — consider weaker floor or higher vol threshold");
+        }
+        if treat_vol > 0.05 && ctrl_vol <= 0.05 {
+            println!("  - CONFIRMED: floor is the volatility source");
+        }
+        if treat_vol > 0.05 && ctrl_vol > 0.05 {
+            println!("  - Vol > 0.05 in BOTH configs — floor is not the sole cause");
+        }
+    }
 }
 
 fn run_gui() -> eframe::Result<()> {

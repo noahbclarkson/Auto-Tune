@@ -27,6 +27,7 @@ import com.noahblclarkson.autotune.model.PlayerData;
 import com.noahblclarkson.autotune.model.PriceAlert;
 import com.noahblclarkson.autotune.model.PriceHistory;
 import com.noahblclarkson.autotune.model.ShopItem;
+import com.noahblclarkson.autotune.model.PriceChangeDto;
 import com.noahblclarkson.autotune.model.PnLHistoryDto;
 import com.noahblclarkson.autotune.model.PortfolioDto;
 import com.noahblclarkson.autotune.model.Transaction;
@@ -219,6 +220,94 @@ public class WebServer {
                             h.timestamp().toEpochMilli()
                     ))
                     .collect(Collectors.toList());
+
+            ctx.json(dtos);
+        });
+
+        // ── Price attribution endpoint ──────────────────────────────────────
+        // Returns price history with "what moved this price" attribution per point.
+        app.get("/api/items/{id}/attribution", ctx -> {
+            int id = Integer.parseInt(ctx.pathParam("id"));
+            int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(50);
+
+            List<PriceHistory> history = itemRepository.getPriceHistory(id, limit);
+            if (history.isEmpty()) {
+                ctx.json(List.of());
+                return;
+            }
+
+            String materialName = itemRepository.findById(id)
+                    .map(item -> item.material().name())
+                    .orElse("");
+            List<MarketEvent> activeEvents = marketEventService.getActiveEvents();
+
+            // Compute average volume for volume-vs-normal ratio
+            double avgVol = history.stream()
+                    .mapToInt(PriceHistory::totalVolume)
+                    .average()
+                    .orElse(1.0);
+
+            List<PriceChangeDto> dtos = new ArrayList<>();
+            for (int i = 0; i < history.size(); i++) {
+                PriceHistory curr = history.get(i);
+                PriceHistory prev = i > 0 ? history.get(i - 1) : null;
+
+                double currPrice = curr.price().doubleValue();
+                double prevPrice = prev != null ? prev.price().doubleValue() : currPrice;
+                double pctChange = prevPrice > 0
+                        ? ((currPrice - prevPrice) / prevPrice) * 100.0
+                        : 0.0;
+                double volRatio = avgVol > 0 ? curr.totalVolume() / avgVol : 1.0;
+
+                // Find active event multiplier for this item at this time
+                double eventMult = 1.0;
+                boolean hasEvent = false;
+                String eventName = null;
+                Instant pointTime = curr.timestamp();
+                for (MarketEvent evt : activeEvents) {
+                    if (evt.isActive(pointTime) && evt.matchesMaterial(materialName)) {
+                        eventMult = evt.priceMultiplier();
+                        hasEvent = true;
+                        eventName = evt.name();
+                        break;
+                    }
+                }
+
+                // Attribution logic
+                String attribution;
+                String key;
+                if (hasEvent && Math.abs(pctChange) > 2.0) {
+                    attribution = "Due to market event: " + (eventName != null ? eventName : "active event");
+                    key = "EVENT";
+                } else if (volRatio > 2.5) {
+                    attribution = String.format("High volume spike (%.1f× normal)", volRatio);
+                    key = "VOLUME";
+                } else if (Math.abs(pctChange) > 5.0) {
+                    attribution = String.format("Significant price movement (%.1f%%)", pctChange);
+                    key = "TREND";
+                } else if (Math.abs(pctChange) < 0.5) {
+                    attribution = "Stable price — minimal change";
+                    key = "STABLE";
+                } else {
+                    attribution = "Normal market activity";
+                    key = "NORMAL";
+                }
+
+                dtos.add(new PriceChangeDto(
+                        curr.timestamp().toEpochMilli(),
+                        currPrice,
+                        prevPrice,
+                        pctChange,
+                        curr.bpd().doubleValue(),
+                        curr.spd().doubleValue(),
+                        curr.totalVolume(),
+                        volRatio,
+                        eventMult,
+                        attribution,
+                        key,
+                        hasEvent
+                ));
+            }
 
             ctx.json(dtos);
         });

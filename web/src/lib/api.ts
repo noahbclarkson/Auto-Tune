@@ -129,6 +129,12 @@ export interface TransactionFeedDto {
   timestamp: number;
 }
 
+export interface PnLHistoryDto {
+  timestamp: number;
+  dayLabel: string;
+  netPnl: number;
+}
+
 export interface AnonLoanDto {
   index: number;
   principal: number;
@@ -286,6 +292,10 @@ export const api = {
     transactions: (base: string, playerName: string, limit = 50) =>
       fetchJson<TransactionFeedDto[]>(
         `${base}/api/portfolio/${encodeURIComponent(playerName)}/transactions?limit=${limit}`
+      ),
+    pnlHistory: (base: string, playerName: string) =>
+      fetchJson<PnLHistoryDto[]>(
+        `${base}/api/portfolio/${encodeURIComponent(playerName)}/pnl-history`
       ),
   },
   admin: {

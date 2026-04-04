@@ -27,6 +27,7 @@ import com.noahblclarkson.autotune.model.PlayerData;
 import com.noahblclarkson.autotune.model.PriceAlert;
 import com.noahblclarkson.autotune.model.PriceHistory;
 import com.noahblclarkson.autotune.model.ShopItem;
+import com.noahblclarkson.autotune.model.PnLHistoryDto;
 import com.noahblclarkson.autotune.model.PortfolioDto;
 import com.noahblclarkson.autotune.model.Transaction;
 import com.noahblclarkson.autotune.service.PortfolioService;
@@ -120,7 +121,7 @@ public class WebServer {
         this.priceAlertManager = priceAlertManager;
         this.server = server;
         this.portfolioService = new PortfolioService(
-                playerRepository, itemRepository, loanRepository, economyManager, server);
+                playerRepository, itemRepository, loanRepository, transactionRepository, economyManager, server);
         this.gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .create();
@@ -445,6 +446,16 @@ public class WebServer {
                     .map(this::toTransactionDto)
                     .collect(Collectors.toList());
             ctx.json(dtos);
+        });
+
+        app.get("/api/portfolio/{playerName}/pnl-history", ctx -> {
+            String playerName = ctx.pathParam("playerName");
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).result("playerName is required");
+                return;
+            }
+            List<PnLHistoryDto> history = portfolioService.getPnlHistory(playerName.trim());
+            ctx.json(history);
         });
 
         app.get("/api/leaderboard", ctx -> {

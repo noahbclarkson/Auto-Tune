@@ -5,7 +5,8 @@ import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { TradingTimeline } from '@/components/portfolio/trading-timeline';
-import { api, type Stats, type PortfolioDto, type HoldingDto, type TransactionFeedDto } from '@/lib/api';
+import { PnLHistoryChart } from '@/components/portfolio/pnl-history-chart';
+import { api, type Stats, type PortfolioDto, type HoldingDto, type TransactionFeedDto, type PnLHistoryDto } from '@/lib/api';
 import { formatCurrency, formatLargeCurrency, formatPercent } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -27,6 +28,7 @@ export default function PortfolioPage() {
   const [playerName, setPlayerName] = useState<string | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioDto | null>(null);
   const [transactions, setTransactions] = useState<TransactionFeedDto[]>([]);
+  const [pnlHistory, setPnlHistory] = useState<PnLHistoryDto[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('holdings');
   const [loading, setLoading] = useState(false);
   const [loadingTrades, setLoadingTrades] = useState(false);
@@ -49,6 +51,7 @@ export default function PortfolioPage() {
     setPlayerName(name);
     setPortfolio(null);
     setTransactions([]);
+    setPnlHistory([]);
     setError(null);
     setActiveTab('holdings');
     setLoading(true);
@@ -69,6 +72,10 @@ export default function PortfolioPage() {
       .then(setTransactions)
       .catch(() => setTransactions([]))
       .finally(() => setLoadingTrades(false));
+
+    api.portfolio.pnlHistory(apiBase, name)
+      .then(setPnlHistory)
+      .catch(() => setPnlHistory([]));
   }, [apiBase]);
 
   const handleSearch = useCallback((e: React.FormEvent) => {
@@ -183,6 +190,11 @@ export default function PortfolioPage() {
             {/* P&L chart */}
             {portfolio.holdings.length > 1 && (
               <PnLChart holdings={portfolio.holdings} />
+            )}
+
+            {/* P&L history over time */}
+            {pnlHistory.length > 1 && (
+              <PnLHistoryChart history={pnlHistory} />
             )}
 
             {/* Credit score + player info bar */}

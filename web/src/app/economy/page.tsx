@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { EconomyChart } from '@/components/economy/economy-chart';
 import { VolumeMultiplierGauge } from '@/components/economy/volume-multiplier-gauge';
+import { EconomyTemperatureGauge } from '@/components/dashboard/economy-temperature-gauge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Activity,
@@ -142,15 +143,15 @@ export default function EconomyPage() {
 
           {/* Composite health score + badge */}
           <div className="flex items-center gap-3">
-            {healthScore !== null ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Health</span>
-                <span className={`text-lg font-bold ${healthColor(healthScore)}`}>
-                  {healthScore}
-                </span>
-                <span className="text-xs text-muted-foreground">/100</span>
-              </div>
-            ) : null}
+            {health && (
+              <EconomyTemperatureGauge
+                score={healthScore ?? 0}
+                label={healthScore !== null && healthScore >= 75 ? 'Healthy' : healthScore !== null && healthScore >= 45 ? 'Moderate' : 'Critical'}
+                debtGdpRatio={health.debtGdpRatio}
+                avgVolatility={health.avgVolatility}
+                buyPct={health.buyPct}
+              />
+            )}
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border ${
               healthScore !== null && healthScore >= 75
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'

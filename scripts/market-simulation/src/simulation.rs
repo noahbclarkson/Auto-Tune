@@ -76,6 +76,13 @@ impl Simulation {
         self.circuit_tier3_locked
     }
 
+    /// Returns the previous circuit breaker tier name ("NORMAL" | "TIER1" | "TIER2" | "TIER3").
+    /// Updated at the end of each tick's circuit breaker computation.
+    #[allow(dead_code)]
+    pub fn prev_circuit_tier(&self) -> &str {
+        &self.prev_circuit_tier
+    }
+
     pub fn new(config: SimConfig) -> Self {
         let engine = MarketEngine::new(&config);
         Self {

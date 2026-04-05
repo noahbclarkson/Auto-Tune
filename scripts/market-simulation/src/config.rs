@@ -213,7 +213,7 @@ impl Default for LoanConfig {
             default_penalty: 50,
             debt_gdp_tier1_ratio: 3.0,
             debt_gdp_tier2_ratio: 5.0,
-            debt_gdp_tier3_ratio: 10.0,
+            debt_gdp_tier3_ratio: 15.0,
             tier1_interest_cap: 0.5,
             tier2_interest_cap: 0.25,
             single_loan_gdp_cap: 1.0,

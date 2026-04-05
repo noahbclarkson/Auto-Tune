@@ -10227,6 +10227,352 @@ fn run_circuit_breaker_hysteresis_test() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+//  CIRCUIT BREAKER SENSITIVITY TEST
+//  Sweeps: TIER3 ratio (8, 10, 12, 15) × min_interest (0, 5%, 10%, 20%)
+//  Question: How does the counter-cyclical interest floor affect stability?
+//  Multi-seed (5 seeds) for statistical robustness.
+// ═══════════════════════════════════════════════════════════════════════
+fn run_circuit_breaker_sensitivity_test() {
+    use crate::analyzer::load_summary;
+    use crate::player::set_global_seeded_rng;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+    let tier3_ratios: Vec<f64> = vec![8.0, 10.0, 12.0, 15.0];
+    let min_interests: Vec<f64> = vec![0.0, 0.05, 0.10, 0.20];
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║    CIRCUIT BREAKER SENSITIVITY — TIER3 ratio × min interest  ║");
+    println!("║  4×4 sweep × 5 seeds | guildbuyer_failure_test | 14d        ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!("  tier3_ratios: {:?}", tier3_ratios);
+    println!("  min_interests: {:?}", min_interests);
+    println!("  seeds: {:?}", seeds);
+    println!("  scenario: guildbuyer_failure_test (1MM + 2GB + 4Cas + 3Far + 2Tra)\n");
+
+    /// Result tuple: (seed, gdp, dg, vol, t3_ev_f64, t3_ev_u32)
+    type CbSensTuple = (u64, f64, f64, f64, f64, u32);
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct CbSensResult {
+        tier3_ratio: f64,
+        min_interest: f64,
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        bpd: f64,
+        buy_ratio: f64,
+        tier3_events: u32,
+    }
+
+    // (tier3_idx, mi_idx) → vec of CbSensTuple
+    let mut results_by_params: Vec<Vec<Vec<CbSensTuple>>> =
+        vec![vec![vec![]; min_interests.len()]; tier3_ratios.len()];
+    let mut failed_runs: u32 = 0;
+
+    for (t3i, &tier3_ratio) in tier3_ratios.iter().enumerate() {
+        for (mii, &min_interest) in min_interests.iter().enumerate() {
+            for &seed in &seeds {
+                print!("  t3={tier3_ratio:.0} mi={min_interest:.2} seed={seed} ... ");
+
+                // Build scenario with swept parameters
+                let mut scenario = Scenario::guildbuyer_failure_test();
+                scenario.name = format!("CB Sens t3={tier3_ratio:.0} mi={min_interest:.2}");
+                scenario.config.loans.debt_gdp_tier3_ratio = tier3_ratio;
+                scenario.config.loans.min_interest_multiplier = min_interest;
+                scenario.config.loans.tier1_interest_cap = 0.50;
+                scenario.config.loans.tier2_interest_cap = 0.25;
+                // Tier caps match default LoanConfig
+                // Counter-cyclical ON (default, matching Java)
+                scenario.config.loans.counter_cyclical = true;
+
+                let out_dir = format!(
+                    "/tmp/autotune-sim/cb-sens-t3-{tier3_ratio:.0}-mi-{min_interest:.2}-s-{seed}"
+                );
+                let out_path = std::path::PathBuf::from(&out_dir);
+                std::fs::create_dir_all(&out_path).ok();
+
+                let start = std::time::Instant::now();
+
+                let sim_result: Result<CbSensResult, String> = {
+                    set_global_seeded_rng(seed);
+                    let mut sim = Simulation::new_seeded(scenario.config.clone(), seed);
+                    add_players_to_sim(&mut sim, &scenario.players);
+                    sim.paused = false;
+
+                    let mut tier3_events = 0u32;
+                    let mut prev_tier = String::from("NORMAL");
+
+                    while sim.current_tick < scenario.duration_ticks {
+                        sim.tick();
+
+                        let current_tier = sim.prev_circuit_tier().to_string();
+                        if current_tier == "TIER3" && prev_tier != "TIER3" {
+                            tier3_events += 1;
+                        }
+                        prev_tier = current_tier;
+                    }
+
+                    // Compute D/G using same window as circuit breaker
+                    let cb_total_debt: f64 = sim
+                        .loans
+                        .iter()
+                        .filter(|l| {
+                            matches!(
+                                l.status,
+                                crate::loan::LoanStatus::Active
+                                    | crate::loan::LoanStatus::Defaulted
+                            )
+                        })
+                        .map(|l| l.current_balance)
+                        .sum();
+                    let gdp_window = 288u64;
+                    let window_start = sim.current_tick.saturating_sub(gdp_window);
+                    let cb_gdp: f64 = sim
+                        .transactions
+                        .iter()
+                        .filter(|tx| {
+                            tx.tick >= window_start
+                                && tx.tx_type == crate::engine::TransactionType::Buy
+                        })
+                        .map(|tx| tx.total_price)
+                        .sum();
+                    let dg = if cb_gdp > 0.0 {
+                        cb_total_debt / cb_gdp
+                    } else {
+                        0.0
+                    };
+
+                    Ok(CbSensResult {
+                        tier3_ratio,
+                        min_interest,
+                        seed,
+                        gdp: cb_gdp,
+                        dg,
+                        vol: 0.0, // filled from summary below
+                        bpd: 0.0,
+                        buy_ratio: 0.0,
+                        tier3_events,
+                    })
+                };
+
+                match sim_result {
+                    Ok(mut result) => {
+                        // Augment with full summary stats, then clean up DB
+                        let db_path = out_path.join("simulation.db");
+                        if let Ok(s) = load_summary(&db_path) {
+                            result.vol = s.avg_volatility;
+                            result.bpd = s.avg_bpd;
+                            result.buy_ratio = s.buy_ratio;
+                        }
+                        let _ = std::fs::remove_dir_all(&out_path);
+                        results_by_params[t3i][mii].push((
+                            seed,
+                            result.gdp,
+                            result.dg,
+                            result.vol,
+                            result.tier3_events as f64,
+                            result.tier3_events,
+                        ));
+                        println!(
+                            "OK (t3_ev={}, dg={:.2}x, gdp={:.0}, {:.1}s)",
+                            result.tier3_events,
+                            result.dg,
+                            result.gdp,
+                            start.elapsed().as_secs_f64()
+                        );
+                    }
+                    Err(e) => {
+                        println!("FAIL: {e}");
+                        failed_runs += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Print summary table ─────────────────────────────────────────────
+    println!(
+        "\n╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗"
+    );
+    println!(
+        "║  SUMMARY TABLE — avg across 5 seeds (D/G ratio, TIER3 event sum)                                     ║"
+    );
+    println!(
+        "╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝"
+    );
+    println!();
+
+    // D/G table
+    print!("  {:^8}", "t3\\mi");
+    for &mi in &min_interests {
+        print!("  {:^10}", format!("{:.0}%", mi * 100.0));
+    }
+    println!();
+    println!("  {:─<8}", "");
+    for _ in &min_interests {
+        print!("  {:─>10}", "");
+    }
+    println!();
+
+    for (t3i, &t3) in tier3_ratios.iter().enumerate() {
+        print!("  {:^6.0}", t3);
+        for (mii, _mi) in min_interests.iter().enumerate() {
+            if let Some(vals) = results_by_params.get(t3i).and_then(|r| r.get(mii)) {
+                if !vals.is_empty() {
+                    let count = vals.len() as f64;
+                    let avg_dg = vals.iter().map(|v| v.2).sum::<f64>() / count;
+                    let sum_ev: u32 = vals.iter().map(|v| v.5).sum();
+                    print!("  {:>5.2}x{:>3.0}e", avg_dg, sum_ev);
+                } else {
+                    print!("  {:>10}", "—");
+                }
+            } else {
+                print!("  {:>10}", "—");
+            }
+        }
+        println!();
+    }
+
+    println!();
+    // Volatility table
+    print!("  {:^8}", "t3\\mi");
+    for &mi in &min_interests {
+        print!("  {:^12}", format!("vol {:.0}%", mi * 100.0));
+    }
+    println!();
+    println!("  {:─<8}", "");
+    for _ in &min_interests {
+        print!("  {:─>12}", "");
+    }
+    println!();
+
+    for (t3i, &t3) in tier3_ratios.iter().enumerate() {
+        print!("  {:^6.0}", t3);
+        for (mii, _mi) in min_interests.iter().enumerate() {
+            if let Some(vals) = results_by_params.get(t3i).and_then(|r| r.get(mii)) {
+                if !vals.is_empty() {
+                    let count = vals.len() as f64;
+                    let avg_vol = vals.iter().map(|v| v.3).sum::<f64>() / count;
+                    print!("  {:>12.4}", avg_vol);
+                } else {
+                    print!("  {:>12}", "—");
+                }
+            } else {
+                print!("  {:>12}", "—");
+            }
+        }
+        println!();
+    }
+
+    // ── Key findings ────────────────────────────────────────────────────
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║  KEY FINDINGS                                                       ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝");
+
+    // Best D/G by tier3_ratio
+    println!("  Best D/G by tier3_ratio (lower is better):");
+    let mut best_by_t3: Vec<(f64, f64, f64)> = Vec::new();
+    for (t3i, &t3) in tier3_ratios.iter().enumerate() {
+        let mut best = (f64::MAX, 0.0f64);
+        for (mii, &mi) in min_interests.iter().enumerate() {
+            if let Some(vals) = results_by_params.get(t3i).and_then(|r| r.get(mii))
+                && !vals.is_empty()
+            {
+                let avg_dg = vals.iter().map(|v| v.2).sum::<f64>() / vals.len() as f64;
+                if avg_dg < best.0 {
+                    best = (avg_dg, mi);
+                }
+            }
+        }
+        if best.0 < f64::MAX {
+            best_by_t3.push((t3, best.1, best.0));
+            println!(
+                "    tier3={t3:.0}: min_interest={mi_pct:.0}% → D/G={dg:.2}x",
+                mi_pct = best.1 * 100.0,
+                dg = best.0
+            );
+        }
+    }
+
+    // min_interest floor effect at default tier3=10
+    // tier3=10.0 is at index 1, min_interest=0.0 is at index 0
+    let t3_10_idx = tier3_ratios
+        .iter()
+        .position(|&v| (v - 10.0).abs() < 0.01)
+        .unwrap();
+    let mi_0_idx = min_interests
+        .iter()
+        .position(|&v| (v - 0.0).abs() < 0.001)
+        .unwrap();
+
+    if let Some(baseline) = results_by_params
+        .get(t3_10_idx)
+        .and_then(|r| r.get(mi_0_idx))
+        && !baseline.is_empty()
+    {
+        let base_dg: f64 = baseline.iter().map(|v| v.2).sum::<f64>() / baseline.len() as f64;
+        let base_ev: u32 = baseline.iter().map(|v| v.5).sum();
+        println!("\n  At tier3=10 (current default):");
+        println!(
+            "    baseline min_int=0%:  D/G={:.2}x, T3_ev_sum={}",
+            base_dg, base_ev
+        );
+        for &mi in &[0.05, 0.10, 0.20] {
+            if let Some(mii) = min_interests.iter().position(|&v| (v - mi).abs() < 0.001)
+                && let Some(with_mi) = results_by_params.get(t3_10_idx).and_then(|r| r.get(mii))
+                && !with_mi.is_empty()
+            {
+                let mi_dg: f64 = with_mi.iter().map(|v| v.2).sum::<f64>() / with_mi.len() as f64;
+                let mi_ev: u32 = with_mi.iter().map(|v| v.5).sum();
+                let delta = (mi_dg - base_dg) / base_dg * 100.0;
+                println!(
+                    "    min_int={:.0}%: D/G={:.2}x ({:+.1}%), T3_ev={} ({:+})",
+                    mi * 100.0,
+                    mi_dg,
+                    delta,
+                    mi_ev,
+                    mi_ev as i32 - base_ev as i32
+                );
+            }
+        }
+    }
+
+    // tier3_ratio sweep effect (min_int=0 baseline)
+    if let Some(baseline) = results_by_params
+        .get(t3_10_idx)
+        .and_then(|r| r.get(mi_0_idx))
+        && !baseline.is_empty()
+    {
+        let base_dg: f64 = baseline.iter().map(|v| v.2).sum::<f64>() / baseline.len() as f64;
+        println!("\n  tier3_ratio sweep effect (min_int=0, vs tier3=10 baseline):");
+        for &t3 in &[8.0, 12.0, 15.0] {
+            if let Some(t3i) = tier3_ratios.iter().position(|&v| (v - t3).abs() < 0.01)
+                && let Some(vals) = results_by_params.get(t3i).and_then(|r| r.get(mi_0_idx))
+                && !vals.is_empty()
+            {
+                let t3_dg: f64 = vals.iter().map(|v| v.2).sum::<f64>() / vals.len() as f64;
+                let t3_ev: u32 = vals.iter().map(|v| v.5).sum();
+                let delta = (t3_dg - base_dg) / base_dg * 100.0;
+                println!(
+                    "    tier3={:.0}: D/G={:.2}x ({:+.1}%), T3_ev_sum={}",
+                    t3, t3_dg, delta, t3_ev
+                );
+            }
+        }
+    }
+
+    println!(
+        "\n  Failed runs: {}/{} total combinations",
+        failed_runs,
+        4 * 4 * 5
+    );
+    println!("  Recommend: commit code, verify build, run in main session:\n");
+    println!("    cargo run --release -- --circuit-breaker-sensitivity-test");
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 //  ARCHETYPE MIX TEST
 //  Tests: Casual-heavy vs Farmer-heavy vs control (guild_stability_mm)
 // ═══════════════════════════════════════════════════════════════════════

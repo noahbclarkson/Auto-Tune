@@ -233,7 +233,7 @@ public class ConfigManager {
                 section.getInt("default-penalty", 50),
                 section.getDouble("debt-gdp-tier1-ratio", 3.0),
                 section.getDouble("debt-gdp-tier2-ratio", 5.0),
-                section.getDouble("debt-gdp-tier3-ratio", 10.0),
+                section.getDouble("debt-gdp-tier3-ratio", 15.0),
                 section.getDouble("tier1-interest-cap", 0.5),
                 section.getDouble("tier2-interest-cap", 0.25),
                 section.getInt("post-default-cooldown-hours", 168),

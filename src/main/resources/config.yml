@@ -200,12 +200,13 @@ loans:
   # snowball before it reaches catastrophic levels (>10x where full pause fires).
   # Tier 1 (>3x): interest capped at 50% of normal
   # Tier 2 (>5x): interest capped at 25% of normal
-  # Tier 3 (>10x): interest fully paused (original single-threshold behavior)
-  # Evidence (2026-03-27): stressed-economy hit 23,196x debt/GDP because the
-  # old single-ratio breaker couldn't slow compounding before it exploded.
+  # Tier 3 (>15x): interest fully paused (last-resort circuit breaker)
+  # Evidence (2026-04-05): tier3_ratio=10 caused TIER3 oscillations near the
+  # 10x boundary. tier3_ratio=15 eliminates TIER3 noise in healthy economies
+  # while counter-cyclical=true handles gradual deleveraging smoothly.
   debt-gdp-tier1-ratio: 3.0
   debt-gdp-tier2-ratio: 5.0
-  debt-gdp-tier3-ratio: 10.0
+  debt-gdp-tier3-ratio: 15.0
   tier1-interest-cap: 0.5
   tier2-interest-cap: 0.25
 

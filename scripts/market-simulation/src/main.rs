@@ -9225,6 +9225,7 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --circuit-breaker-hysteresis-test  TIER3 hysteresis: prevents D/G boundary cycling"
         );
+        println!("  --circuit-breaker-sensitivity-test  TIER3 thresholds × min interest sweep");
         return Ok(());
     }
 
@@ -9571,6 +9572,11 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--circuit-breaker-hysteresis-test" {
         run_circuit_breaker_hysteresis_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--circuit-breaker-sensitivity-test" {
+        run_circuit_breaker_sensitivity_test();
         return Ok(());
     }
 

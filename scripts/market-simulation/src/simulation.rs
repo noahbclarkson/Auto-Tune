@@ -388,7 +388,7 @@ impl Simulation {
                 // D/G=0 → 100%, D/G=tier3 → 0%
                 let max_ratio = lc.debt_gdp_tier3_ratio;
                 let multiplier = if ratio >= 0.0 {
-                    (1.0 - ratio / max_ratio).clamp(0.0, 1.0)
+                    (1.0 - ratio / max_ratio).clamp(lc.min_interest_multiplier, 1.0)
                 } else {
                     1.0 // No GDP yet — full interest
                 };

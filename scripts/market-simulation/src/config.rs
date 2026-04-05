@@ -96,12 +96,20 @@ pub struct LoanConfig {
     /// Default: true (MM can take opening loans, matching historical behavior).
     pub mm_opening_loan_allowed: bool,
     /// Counter-cyclical interest: continuous taper instead of discrete tiered circuit breaker.
-    /// When enabled (default, matching Java LoanManager): interestMultiplier = max(0, min(1, 1 - D/G/tier3Ratio)).
-    /// Interest falls smoothly from 100% at D/G=0 to 0% at D/G=tier3Ratio.
+    /// When enabled (default, matching Java LoanManager): interestMultiplier = max(MIN, max(0, min(1, 1 - D/G/tier3Ratio))).
+    /// Interest falls smoothly from 100% at D/G=0 to MIN at D/G=tier3Ratio.
     /// This prevents the pre-circuit-breaker debt accumulation spiral better than tiered caps.
     /// When disabled: falls back to legacy tiered circuit breaker (TIER1/TIER2/TIER3 caps).
     /// Default: true (matches Java LoanManager.counterCyclical default).
     pub counter_cyclical: bool,
+    /// Minimum interest multiplier during counter-cyclical mode.
+    /// When the counter-cyclical multiplier would reach 0 (D/G >= tier3Ratio), this floor
+    /// prevents total interest pause and the associated D/G oscillation trap.
+    /// Set to 0.0 to disable (matches pure counter-cyclical: 0% interest at D/G=tier3Ratio).
+    /// Recommended: 0.005 (0.5%) — allows deleveraging to continue even at D/G >= tier3Ratio.
+    /// This prevents the economy from getting stuck at D/G ~= tier3Ratio boundary.
+    /// Default: 0.0 (matches pure counter-cyclical behavior).
+    pub min_interest_multiplier: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -212,6 +220,7 @@ impl Default for LoanConfig {
             post_default_cooldown_hours: 168, // 7 days, matches Java LoanManager
             mm_opening_loan_allowed: true,    // MM can take opening loans by default
             counter_cyclical: true, // continuous taper, matches Java LoanManager (default: true)
+            min_interest_multiplier: 0.0, // pure counter-cyclical: 0% at D/G=tier3Ratio
         }
     }
 }

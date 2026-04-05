@@ -5,6 +5,7 @@ import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { StatsCards } from '@/components/dashboard/stats-cards';
 import { QuickStart } from '@/components/dashboard/quick-start';
+import { EconomyTemperatureGauge } from '@/components/dashboard/economy-temperature-gauge';
 import { EconomyPanel } from '@/components/dashboard/economy-panel';
 import { TransactionFeed } from '@/components/dashboard/transaction-feed';
 import { MarketHealthBar } from '@/components/dashboard/market-health-bar';
@@ -99,6 +100,30 @@ export default function Home() {
       .slice(0, 5);
   }, [items]);
 
+  /** Composite health score 0–100 derived from live item data. */
+  function computeHealthScore(items: ItemDto[]): number {
+    const vol = computeVolatility(items) ?? 0;
+    const volScore = vol < 0.05 ? 100 : vol < 0.10 ? 80 : vol < 0.15 ? 60 : vol < 0.25 ? 30 : 10;
+    // Debt score unavailable on home page — use neutral mid-point
+    return Math.round(volScore * 0.7 + 50 * 0.3);
+  }
+
+  function healthScoreLabel(score: number): string {
+    if (score >= 80) return 'Healthy';
+    if (score >= 55) return 'Moderate';
+    if (score >= 30) return 'Stressed';
+    return 'Critical';
+  }
+
+  /** Aggregate price volatility across items. */
+  function computeVolatility(items: ItemDto[]): number | null {
+    if (items.length === 0) return null;
+    const changes = items.map((i) => i.change24h);
+    const mean = changes.reduce((s, v) => s + Math.abs(v), 0) / changes.length;
+    const variance = changes.reduce((s, v) => s + Math.pow(Math.abs(v) - mean, 2), 0) / changes.length;
+    return Math.sqrt(variance);
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header totalItems={stats?.totalItems ?? 0} onlinePlayers={stats?.onlinePlayers ?? 0} />
@@ -128,6 +153,14 @@ export default function Home() {
           gdp={gdp}
           inflation={inflation}
           onlinePlayers={stats?.onlinePlayers ?? 0}
+        />
+
+        <EconomyTemperatureGauge
+          score={computeHealthScore(items)}
+          label={healthScoreLabel(computeHealthScore(items))}
+          debtGdpRatio={null}
+          avgVolatility={computeVolatility(items)}
+          buyPct={null}
         />
 
         <MarketDigest items={items} trends={trends} />

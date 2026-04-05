@@ -537,6 +537,55 @@ public class WebServer {
             ctx.json(dtos);
         });
 
+
+        app.get("/api/portfolio/{playerName}/transactions.csv", ctx -> {
+            String playerName = ctx.pathParam("playerName");
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).result("playerName is required");
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).result("Player not found: " + playerName);
+                return;
+            }
+
+            // Parse optional from/to query params (ISO-8601 timestamps)
+            String fromStr = ctx.queryParam("from");
+            String toStr = ctx.queryParam("to");
+            String limitStr = ctx.queryParam("limit");
+            int limit = Math.min(Integer.parseInt(limitStr != null ? limitStr : "1000"), 10000);
+
+
+            List<Transaction> transactions;
+            if (fromStr != null && toStr != null) {
+                Instant from = Instant.parse(fromStr);
+                Instant to = Instant.parse(toStr);
+                transactions = transactionRepository.findByPlayerRange(player.uuid(), from, to, limit);
+            } else {
+                transactions = transactionRepository.findByPlayer(player.uuid(), limit);
+            }
+
+            StringBuilder csv = new StringBuilder();
+            csv.append("date,type,material,quantity,pricePerUnit,totalValue\n");
+            for (Transaction tx : transactions) {
+                String itemName = itemRepository.findById(tx.itemId())
+                        .map(ShopItem::getDisplayNameOrMaterial)
+                        .orElse("Unknown");
+                csv.append(tx.timestamp()).append(',')          // ISO-8601
+                        .append(tx.type().name()).append(',')
+                        .append(itemName).append(',')
+                        .append(tx.amount()).append(',')
+                        .append(tx.pricePerUnit()).append(',')
+                        .append(tx.totalPrice()).append('\n');
+            }
+
+            String filename = "autotune-trades-" + playerName.trim() + ".csv";
+            ctx.contentType("text/csv")
+                    .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                    .result(csv.toString());
+        });
+
         app.get("/api/portfolio/{playerName}/pnl-history", ctx -> {
             String playerName = ctx.pathParam("playerName");
             if (playerName == null || playerName.isBlank()) {

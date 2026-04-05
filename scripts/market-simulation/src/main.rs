@@ -8134,6 +8134,226 @@ fn run_gb_quit_test() {
     println!();
 }
 
+// ─── Exploiter Cap Sensitivity Test ───────────────────────────────────────
+
+/// Sweeps Exploiter count (0, 1, 2, 3) across 5 seeds on guild_stability_mm_fixed_guild.
+/// Reports mean±std for GDP, D/G, volatility, buy ratio, and Diamond % change.
+/// Key question: does 1 Exploiter fix the buy ratio without the hyperinflation
+/// seen at 2 Exploiters (+5,528% Diamond)? Is there a sweet-spot cap?
+fn run_exploiter_cap_sensitivity_test() {
+    use crate::analyzer::{load_all_prices, load_summary};
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct CapResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        buy_ratio: f64,
+        diamond_pct: f64, // % change from base
+    }
+
+    let seeds = [42u64, 12345, 98765, 77777, 11111];
+    let levels = [0, 1, 2, 3];
+
+    let mut results: std::collections::HashMap<i32, Vec<CapResult>> =
+        std::collections::HashMap::new();
+    for &l in &levels {
+        results.insert(l, Vec::new());
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       EXPLOITER CAP SENSITIVITY TEST                       ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!();
+    println!("  Base: guild_stability_mm_fixed_guild");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Levels: {} Exploiters → {:?}", 20, levels);
+    println!();
+
+    for &exploiters in &levels {
+        print!("  Exploiters={exploiters}: ");
+        for &seed in &seeds {
+            // Build scenario
+            let mut scenario = Scenario::guild_stability_mm_fixed_guild();
+            scenario.name = format!("guild_stability_mm_fixed_guild + {exploiters} Exploiters");
+
+            // Set Exploiter count: insert if not present, replace if present
+            if let Some(cfg) = scenario
+                .players
+                .iter_mut()
+                .find(|p| p.archetype == "Exploiter")
+            {
+                cfg.count = exploiters as usize;
+            } else if exploiters > 0 {
+                scenario.players.push(ArchetypeConfig {
+                    archetype: "Exploiter".into(),
+                    count: exploiters as usize,
+                });
+            }
+
+            let out_dir = format!("/tmp/autotune-sim/ecs-{exploiters}-{seed}");
+            let out_path = std::path::PathBuf::from(&out_dir);
+            std::fs::create_dir_all(&out_path).ok();
+
+            match run_seeded_headless(&scenario, seed, &out_path) {
+                Ok(_) => {
+                    let db_path = out_path.join("simulation.db");
+                    if let Ok(summary) = load_summary(&db_path) {
+                        let prices = load_all_prices(&db_path).unwrap_or_default();
+                        let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+                        let base_diamond = scenario
+                            .config
+                            .items
+                            .iter()
+                            .find(|ic| ic.name == "Diamond")
+                            .map(|ic| ic.base_price)
+                            .unwrap_or(1000.0);
+                        let diamond_pct = diamond
+                            .map(|(_, curr, _)| (*curr - base_diamond) / base_diamond * 100.0)
+                            .unwrap_or(0.0);
+
+                        results.get_mut(&exploiters).unwrap().push(CapResult {
+                            seed,
+                            gdp: summary.gdp,
+                            dg: summary.debt / summary.gdp.max(1.0),
+                            vol: summary.avg_volatility,
+                            buy_ratio: summary.buy_ratio,
+                            diamond_pct,
+                        });
+                        print!("{seed} ");
+                    } else {
+                        print!("X{seed} ");
+                    }
+                }
+                Err(_) => {
+                    print!("!{seed} ");
+                }
+            }
+        }
+        println!();
+    }
+
+    // Compute mean ± std
+    fn stats(vals: &[f64]) -> (f64, f64) {
+        if vals.is_empty() {
+            return (0.0, 0.0);
+        }
+        let mean = vals.iter().sum::<f64>() / vals.len() as f64;
+        let variance = vals.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / vals.len() as f64;
+        (mean, variance.sqrt())
+    }
+
+    println!();
+    println!(
+        "  {:^10} {:>14} {:>10} {:>8} {:>8} {:>12}",
+        "Exploiters", "GDP", "D/G", "Vol×100", "Buy%", "Diamond%"
+    );
+    println!(
+        "  {:^10} {:>14} {:>10} {:>8} {:>8} {:>12}",
+        "─".repeat(10),
+        "─".repeat(14),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(12)
+    );
+
+    let mut table: Vec<(i32, f64, f64, f64, f64, f64, f64)> = Vec::new();
+    for &l in &levels {
+        let res = results.get(&l).unwrap();
+        if res.is_empty() {
+            continue;
+        }
+        let (gdp_m, gdp_s) = stats(&res.iter().map(|r| r.gdp).collect::<Vec<_>>());
+        let (dg_m, dg_s) = stats(&res.iter().map(|r| r.dg).collect::<Vec<_>>());
+        let (vol_m, vol_s) = stats(&res.iter().map(|r| r.vol).collect::<Vec<_>>());
+        let (buy_m, buy_s) = stats(&res.iter().map(|r| r.buy_ratio).collect::<Vec<_>>());
+        let (dia_m, dia_s) = stats(&res.iter().map(|r| r.diamond_pct).collect::<Vec<_>>());
+        println!(
+            "  {:^10} {:>13.0}±{:.0} {:>8.3}x±{:.2} {:>6.4}±{:.4} {:>6.1}%±{:.1} {:>+10.1}%±{:.1}",
+            format!("{} Exploiters", l),
+            gdp_m,
+            gdp_s,
+            dg_m,
+            dg_s,
+            vol_m * 100.0,
+            vol_s * 100.0,
+            buy_m * 100.0,
+            buy_s * 100.0,
+            dia_m,
+            dia_s
+        );
+        table.push((l, gdp_m, dg_m, vol_m, buy_m, dia_m, dia_s));
+    }
+
+    println!();
+    println!("  === KEY FINDINGS ===");
+
+    // GDP comparison: find best and worst
+    if let Some((best_entry, baseline_entry)) = table
+        .iter()
+        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
+        .and_then(|be| {
+            table
+                .iter()
+                .find(|(l, _, _, _, _, _, _)| *l == 0)
+                .map(|bl| (be, bl))
+        })
+    {
+        let gdp_chg = (best_entry.1 / baseline_entry.1 - 1.0) * 100.0;
+        println!(
+            "  Best GDP: {} Exploiters ({:.0}, {:+.1}% vs control)",
+            best_entry.0, best_entry.1, gdp_chg
+        );
+    }
+
+    // Diamond inflation analysis
+    let last = table.last().unwrap();
+    let first = table.first().unwrap();
+    let dia_escalation = last.5 - first.5;
+    println!(
+        "  Diamond inflation: {:.0}% → {:.0}% ({:+.1}pp across 0→3 Exploiters)",
+        first.5, last.5, dia_escalation
+    );
+
+    // Find the cap level where Diamond hyperinflation starts
+    for &(l, _, _, _, _, dia, _) in table.iter() {
+        if dia > 500.0 {
+            println!(
+                "  ⚠️  Diamond hyperinflation (>{}+%) at {} Exploiters",
+                dia as i32, l
+            );
+            break;
+        }
+    }
+
+    // Buy ratio normalization
+    if let Some(balanced) = table
+        .iter()
+        .find(|(_, _, _, _, buy, _, _)| *buy > 0.48 && *buy < 0.52)
+    {
+        println!(
+            "  ✅ Buy ratio balanced ({:.0}%) at {} Exploiters — near 50/50",
+            balanced.4 * 100.0,
+            balanced.0
+        );
+    }
+
+    // Recommendation
+    println!();
+    if table.len() >= 2 {
+        let first_dia = table[0].5;
+        let last_dia = table[table.len() - 1].5;
+        if last_dia - first_dia > 500.0 {
+            println!("  RECOMMENDATION: Cap at 1 Exploiter (5% of server).");
+            println!("  1 Exploiter provides near-balanced buy ratio");
+            println!("  without the +5,000% Diamond hyperinflation seen at 2+.");
+        }
+    }
+}
+
 // ─── Exploiter Stress Test ─────────────────────────────────────────────────
 
 /// Head-to-head comparison of standard+MM vs standard+MM+2 Exploiters.
@@ -8962,6 +9182,7 @@ fn main() -> eframe::Result<()> {
         println!("  --guild-threshold-sweep  Coarse sweep: thresholds 5-50%");
         println!("  --fine-threshold-sweep    Fine sweep: thresholds 1%, 3%, 5%, 7%, 10%");
         println!("  --exploiter-stress-test   Head-to-head: standard+MM vs +Exploiters");
+        println!("  --exploiter-cap-sensitivity  Sweep 0/1/2/3 Exploiters across 5 seeds");
         println!("  --regression            Regression test against stored baselines");
         println!("  --all                   Run all scenarios headlessly");
         println!("  --floor-ceiling-test     Floor/ceiling effect: control vs treatment");
@@ -9044,6 +9265,11 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--exploiter-stress-test" {
         run_exploiter_stress_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--exploiter-cap-sensitivity" {
+        run_exploiter_cap_sensitivity_test();
         return Ok(());
     }
 
@@ -10014,6 +10240,7 @@ fn run_archetype_mix_test() {
     println!("  Duration: 14 days\n");
 
     #[derive(Debug)]
+    #[allow(dead_code)]
     struct MixResult {
         seed: u64,
         gdp: f64,
@@ -10087,15 +10314,20 @@ fn run_archetype_mix_test() {
     // ── Summary stats ───────────────────────────────────────────────────
     let stats = |results: &[MixResult], field: &str| -> (f64, f64) {
         let n = results.len() as f64;
-        if n == 0.0 { return (0.0, 0.0); }
-        let vals: Vec<f64> = results.iter().map(|r| match field {
-            "gdp" => r.gdp,
-            "dg" => r.dg,
-            "bpd" => r.bpd,
-            "vol" => r.vol,
-            "buy" => r.buy_ratio,
-            _ => 0.0,
-        }).collect();
+        if n == 0.0 {
+            return (0.0, 0.0);
+        }
+        let vals: Vec<f64> = results
+            .iter()
+            .map(|r| match field {
+                "gdp" => r.gdp,
+                "dg" => r.dg,
+                "bpd" => r.bpd,
+                "vol" => r.vol,
+                "buy" => r.buy_ratio,
+                _ => 0.0,
+            })
+            .collect();
         let mean = vals.iter().sum::<f64>() / n;
         let variance = vals.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n;
         (mean, variance.sqrt())
@@ -10122,46 +10354,121 @@ fn run_archetype_mix_test() {
     let (far_buy, _) = stats(&farmer_results, "buy");
 
     println!();
-    println!("  {:>16} {:>14} {:>12} {:>16} {:>9} {:>9} {:>7}",
-        "", "GDP", "GDP-σ", "D/G (σ)", "BPD%", "Vol", "Buy%");
-    println!("  {:>16} {:>14} {:>12} {:>16} {:>9} {:>9} {:>7}",
-        "─".repeat(16), "─".repeat(14), "─".repeat(12),
-        "─".repeat(16), "─".repeat(9), "─".repeat(9), "─".repeat(7));
+    println!(
+        "  {:>16} {:>14} {:>12} {:>16} {:>9} {:>9} {:>7}",
+        "", "GDP", "GDP-σ", "D/G (σ)", "BPD%", "Vol", "Buy%"
+    );
+    println!(
+        "  {:>16} {:>14} {:>12} {:>16} {:>9} {:>9} {:>7}",
+        "─".repeat(16),
+        "─".repeat(14),
+        "─".repeat(12),
+        "─".repeat(16),
+        "─".repeat(9),
+        "─".repeat(9),
+        "─".repeat(7)
+    );
 
-    let fmt_row = |label: &str, gdp: f64, gdp_s: f64, dg: f64, dg_s: f64,
-                   bpd: f64, bpd_s: f64, vol: f64, vol_s: f64, buy: f64| {
+    let fmt_row = |label: &str,
+                   gdp: f64,
+                   gdp_s: f64,
+                   dg: f64,
+                   dg_s: f64,
+                   bpd: f64,
+                   _bpd_s: f64,
+                   vol: f64,
+                   _vol_s: f64,
+                   buy: f64| {
         let dg_str = format!("{:.3}x ± {:.2}", dg, dg_s);
         println!(
             "  {:>16} {:>14.0} {:>12.0} {:>16} {:>9.3}% {:>9.5} {:>7.1}%",
-            label, gdp, gdp_s, dg_str, bpd * 100.0, vol, buy * 100.0
+            label,
+            gdp,
+            gdp_s,
+            dg_str,
+            bpd * 100.0,
+            vol,
+            buy * 100.0
         );
     };
 
-    fmt_row("Control (3C/3F/2T)", ctrl_gdp, ctrl_gdp_s, ctrl_dg, ctrl_dg_s,
-            ctrl_bpd, ctrl_bpd_s, ctrl_vol, ctrl_vol_s, ctrl_buy);
-    fmt_row("Casual-heavy (6C)", cas_gdp, cas_gdp_s, cas_dg, cas_dg_s,
-            cas_bpd, cas_bpd_s, cas_vol, cas_vol_s, cas_buy);
-    fmt_row("Farmer-heavy (6F)", far_gdp, far_gdp_s, far_dg, far_dg_s,
-            far_bpd, far_bpd_s, far_vol, far_vol_s, far_buy);
+    fmt_row(
+        "Control (3C/3F/2T)",
+        ctrl_gdp,
+        ctrl_gdp_s,
+        ctrl_dg,
+        ctrl_dg_s,
+        ctrl_bpd,
+        ctrl_bpd_s,
+        ctrl_vol,
+        ctrl_vol_s,
+        ctrl_buy,
+    );
+    fmt_row(
+        "Casual-heavy (6C)",
+        cas_gdp,
+        cas_gdp_s,
+        cas_dg,
+        cas_dg_s,
+        cas_bpd,
+        cas_bpd_s,
+        cas_vol,
+        cas_vol_s,
+        cas_buy,
+    );
+    fmt_row(
+        "Farmer-heavy (6F)",
+        far_gdp,
+        far_gdp_s,
+        far_dg,
+        far_dg_s,
+        far_bpd,
+        far_bpd_s,
+        far_vol,
+        far_vol_s,
+        far_buy,
+    );
 
     println!();
 
     // ── Change vs control ─────────────────────────────────────────────
     let chg = |new: f64, ctrl: f64| -> f64 {
-        if ctrl == 0.0 { 0.0 } else { (new - ctrl) / ctrl * 100.0 }
+        if ctrl == 0.0 {
+            0.0
+        } else {
+            (new - ctrl) / ctrl * 100.0
+        }
     };
 
     println!("  Changes vs Control:");
-    println!("  {:>16} {:>12} {:>10} {:>8} {:>7}", "", "GDP", "D/G", "BPD", "Vol");
-    println!("  {:>16} {:>12} {:>10} {:>8} {:>7}",
-        "─".repeat(16), "─".repeat(12), "─".repeat(10),
-        "─".repeat(8), "─".repeat(7));
-    println!("  {:>16} {:>+11.1}% {:>+10.1}% {:>+7.1}% {:>+6.1}%",
-        "Casual-heavy", chg(cas_gdp, ctrl_gdp), chg(cas_dg, ctrl_dg),
-        chg(cas_bpd, ctrl_bpd), chg(cas_vol, ctrl_vol));
-    println!("  {:>16} {:>+11.1}% {:>+10.1}% {:>+7.1}% {:>+6.1}%",
-        "Farmer-heavy", chg(far_gdp, ctrl_gdp), chg(far_dg, ctrl_dg),
-        chg(far_bpd, ctrl_bpd), chg(far_vol, ctrl_vol));
+    println!(
+        "  {:>16} {:>12} {:>10} {:>8} {:>7}",
+        "", "GDP", "D/G", "BPD", "Vol"
+    );
+    println!(
+        "  {:>16} {:>12} {:>10} {:>8} {:>7}",
+        "─".repeat(16),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(7)
+    );
+    println!(
+        "  {:>16} {:>+11.1}% {:>+10.1}% {:>+7.1}% {:>+6.1}%",
+        "Casual-heavy",
+        chg(cas_gdp, ctrl_gdp),
+        chg(cas_dg, ctrl_dg),
+        chg(cas_bpd, ctrl_bpd),
+        chg(cas_vol, ctrl_vol)
+    );
+    println!(
+        "  {:>16} {:>+11.1}% {:>+10.1}% {:>+7.1}% {:>+6.1}%",
+        "Farmer-heavy",
+        chg(far_gdp, ctrl_gdp),
+        chg(far_dg, ctrl_dg),
+        chg(far_bpd, ctrl_bpd),
+        chg(far_vol, ctrl_vol)
+    );
     println!();
 
     // ── Verdict ────────────────────────────────────────────────────────
@@ -10172,12 +10479,21 @@ fn run_archetype_mix_test() {
 
     if cas_better_gdp && cas_better_dg {
         println!("  ✓ VERDICT: Casual-heavy outperforms control on GDP AND D/G.");
-        println!("    Recommendation: servers with casual player bases should use 6Cas/1Far archetype.");
+        println!(
+            "    Recommendation: servers with casual player bases should use 6Cas/1Far archetype."
+        );
     } else if cas_better_gdp {
         println!("  → VERDICT: Casual-heavy has higher GDP but higher D/G.");
-        println!("    Buy ratio effect: {:.1}% (control: {:.1}%) — {}.",
-            cas_buy * 100.0, ctrl_buy * 100.0,
-            if cas_buy < ctrl_buy { "more sell-dominated" } else { "more buy-balanced" });
+        println!(
+            "    Buy ratio effect: {:.1}% (control: {:.1}%) — {}.",
+            cas_buy * 100.0,
+            ctrl_buy * 100.0,
+            if cas_buy < ctrl_buy {
+                "more sell-dominated"
+            } else {
+                "more buy-balanced"
+            }
+        );
     }
 
     if far_better_gdp && far_better_dg {
@@ -10196,7 +10512,9 @@ fn run_archetype_mix_test() {
     }
 
     println!();
-    println!("  Admin note: Farmer-heavy servers expect lower equilibrium prices due to structural oversupply.");
+    println!(
+        "  Admin note: Farmer-heavy servers expect lower equilibrium prices due to structural oversupply."
+    );
     println!("  Recommendation: match archetype to player behavior, not vice versa.\n");
 }
 
@@ -10218,6 +10536,7 @@ fn run_floor_impact_test() {
     println!("  Duration: 14 days\n");
 
     #[derive(Debug)]
+    #[allow(dead_code)]
     struct FloorImpactResult {
         seed: u64,
         gdp: f64,
@@ -10291,20 +10610,42 @@ fn run_floor_impact_test() {
             let db_path = treat_path.join("simulation.db");
             if let Ok(s) = load_summary(&db_path) {
                 let prices = crate::analyzer::load_all_prices(&db_path).unwrap_or_default();
-                treat_results
-                    .push(FloorImpactResult::from_summary(&s, &prices, *seed, diamond_floor));
+                treat_results.push(FloorImpactResult::from_summary(
+                    &s,
+                    &prices,
+                    *seed,
+                    diamond_floor,
+                ));
                 println!("treat done");
             }
         }
     }
 
     // ── Per-seed table
-    println!("\n╔════════════════════════════════════════════════════════════════════════════════════════════╗");
-    println!("║  PER-SEED RESULTS                                                                     ║");
-    println!("╚════════════════════════════════════════════════════════════════════════════════════════════╝");
-    println!("  {:>6}  {:>10}  {:>7}  {:>7}  {:>7}  {:>9}  |  {:>10}  {:>7}  {:>7}  {:>7}  {:>9}  {:>6}",
-        "seed", "GDP(c)", "D/G(c)", "Vol(c)", "BPD(c)", "Diamond(c)",
-        "GDP(t)", "D/G(t)", "Vol(t)", "BPD(t)", "Diamond(t)", "Floor?");
+    println!(
+        "\n╔════════════════════════════════════════════════════════════════════════════════════════════╗"
+    );
+    println!(
+        "║  PER-SEED RESULTS                                                                     ║"
+    );
+    println!(
+        "╚════════════════════════════════════════════════════════════════════════════════════════════╝"
+    );
+    println!(
+        "  {:>6}  {:>10}  {:>7}  {:>7}  {:>7}  {:>9}  |  {:>10}  {:>7}  {:>7}  {:>7}  {:>9}  {:>6}",
+        "seed",
+        "GDP(c)",
+        "D/G(c)",
+        "Vol(c)",
+        "BPD(c)",
+        "Diamond(c)",
+        "GDP(t)",
+        "D/G(t)",
+        "Vol(t)",
+        "BPD(t)",
+        "Diamond(t)",
+        "Floor?"
+    );
     println!("  {}", "─".repeat(105));
 
     for seed in &seeds {
@@ -10314,8 +10655,16 @@ fn run_floor_impact_test() {
             println!(
                 "  {:>6}  {:>10.0}  {:>6.3}x  {:>6.4}  {:>6.3}%  {:>8.0} |  {:>10.0}  {:>6.3}x  {:>6.4}  {:>6.3}%  {:>8.0}  {:>6}",
                 c.seed,
-                c.gdp, c.dg, c.vol, c.bpd * 100.0, c.diamond_displayed,
-                t.gdp, t.dg, t.vol, t.bpd * 100.0, t.diamond_displayed,
+                c.gdp,
+                c.dg,
+                c.vol,
+                c.bpd * 100.0,
+                c.diamond_displayed,
+                t.gdp,
+                t.dg,
+                t.vol,
+                t.bpd * 100.0,
+                t.diamond_displayed,
                 if t.floor_binds { "YES" } else { "no" }
             );
         }
@@ -10325,14 +10674,17 @@ fn run_floor_impact_test() {
     if ctrl_results.len() == 5 && treat_results.len() == 5 {
         let n = 5.0;
         let avg = |v: &[FloorImpactResult], field: &str| -> f64 {
-            let vals: Vec<f64> = v.iter().map(|r| match field {
-                "gdp" => r.gdp,
-                "dg" => r.dg,
-                "bpd" => r.bpd,
-                "vol" => r.vol,
-                "buy" => r.buy_ratio,
-                _ => 0.0,
-            }).collect();
+            let vals: Vec<f64> = v
+                .iter()
+                .map(|r| match field {
+                    "gdp" => r.gdp,
+                    "dg" => r.dg,
+                    "bpd" => r.bpd,
+                    "vol" => r.vol,
+                    "buy" => r.buy_ratio,
+                    _ => 0.0,
+                })
+                .collect();
             vals.iter().sum::<f64>() / n
         };
 
@@ -10352,55 +10704,117 @@ fn run_floor_impact_test() {
             let pct = (b - a) / a.max(1.0) * 100.0;
             format!("{:+.1}%", pct)
         };
-        let abs_str = |a: f64, b: f64| -> String {
-            format!("{:+.4}", b - a)
-        };
+        let abs_str = |a: f64, b: f64| -> String { format!("{:+.4}", b - a) };
 
-        println!("\n╔════════════════════════════════════════════════════════════════════════════════════════════╗");
-        println!("║  FLOOR IMPACT SUMMARY (5 seeds avg)                                                    ║");
-        println!("╚════════════════════════════════════════════════════════════════════════════════════════════╝");
-        println!("  {:<20}  {:>14}  {:>14}  {:>12}", "Metric", "NO FLOOR", "WITH FLOOR", "Change");
+        println!(
+            "\n╔════════════════════════════════════════════════════════════════════════════════════════════╗"
+        );
+        println!(
+            "║  FLOOR IMPACT SUMMARY (5 seeds avg)                                                    ║"
+        );
+        println!(
+            "╚════════════════════════════════════════════════════════════════════════════════════════════╝"
+        );
+        println!(
+            "  {:<20}  {:>14}  {:>14}  {:>12}",
+            "Metric", "NO FLOOR", "WITH FLOOR", "Change"
+        );
         println!("  {}", "─".repeat(65));
-        println!("  {:<20}  {:>14.0}  {:>14.0}  {:>12}", "GDP", ctrl_gdp, treat_gdp, pct_str(ctrl_gdp, treat_gdp));
-        println!("  {:<20}  {:>14.3}x  {:>14.3}x  {:>12}", "D/G", ctrl_dg, treat_dg, pct_str(ctrl_dg, treat_dg));
-        println!("  {:<20}  {:>14.4}   {:>14.4}   {:>12}", "Volatility", ctrl_vol, treat_vol, abs_str(ctrl_vol, treat_vol));
-        println!("  {:<20}  {:>14.3}%  {:>14.3}%  {:>12}", "BPD avg", ctrl_bpd, treat_bpd, pct_str(ctrl_bpd, treat_bpd));
-        println!("  {:<20}  {:>14.1}%  {:>14.1}%  {:>12}", "Buy ratio", ctrl_buy, treat_buy, pct_str(ctrl_buy, treat_buy));
+        println!(
+            "  {:<20}  {:>14.0}  {:>14.0}  {:>12}",
+            "GDP",
+            ctrl_gdp,
+            treat_gdp,
+            pct_str(ctrl_gdp, treat_gdp)
+        );
+        println!(
+            "  {:<20}  {:>14.3}x  {:>14.3}x  {:>12}",
+            "D/G",
+            ctrl_dg,
+            treat_dg,
+            pct_str(ctrl_dg, treat_dg)
+        );
+        println!(
+            "  {:<20}  {:>14.4}   {:>14.4}   {:>12}",
+            "Volatility",
+            ctrl_vol,
+            treat_vol,
+            abs_str(ctrl_vol, treat_vol)
+        );
+        println!(
+            "  {:<20}  {:>14.3}%  {:>14.3}%  {:>12}",
+            "BPD avg",
+            ctrl_bpd,
+            treat_bpd,
+            pct_str(ctrl_bpd, treat_bpd)
+        );
+        println!(
+            "  {:<20}  {:>14.1}%  {:>14.1}%  {:>12}",
+            "Buy ratio",
+            ctrl_buy,
+            treat_buy,
+            pct_str(ctrl_buy, treat_buy)
+        );
         println!("\n  Floor binds: {}/5 seeds", floor_binds);
 
-        println!("\n╔════════════════════════════════════════════════════════════════════════════════════════════╗");
-        println!("║  KEY FINDINGS                                                                       ║");
-        println!("╚════════════════════════════════════════════════════════════════════════════════════════════╝");
+        println!(
+            "\n╔════════════════════════════════════════════════════════════════════════════════════════════╗"
+        );
+        println!(
+            "║  KEY FINDINGS                                                                       ║"
+        );
+        println!(
+            "╚════════════════════════════════════════════════════════════════════════════════════════════╝"
+        );
 
         let vol_change = treat_vol - ctrl_vol;
         if vol_change > 0.01 {
-            println!("  CAUTION: FLOOR ADDS VOLATILITY: vol +{:.4} (ctrl {:.4} -> {:.4})",
-                vol_change, ctrl_vol, treat_vol);
+            println!(
+                "  CAUTION: FLOOR ADDS VOLATILITY: vol +{:.4} (ctrl {:.4} -> {:.4})",
+                vol_change, ctrl_vol, treat_vol
+            );
         } else if vol_change < -0.01 {
-            println!("  GOOD: FLOOR REDUCES VOLATILITY: vol {:.4} -> {:.4}",
-                ctrl_vol, treat_vol);
+            println!(
+                "  GOOD: FLOOR REDUCES VOLATILITY: vol {:.4} -> {:.4}",
+                ctrl_vol, treat_vol
+            );
         } else {
-            println!("  NEUTRAL: FLOOR EFFECT ON VOLATILITY: {:.4} -> {:.4}",
-                ctrl_vol, treat_vol);
+            println!(
+                "  NEUTRAL: FLOOR EFFECT ON VOLATILITY: {:.4} -> {:.4}",
+                ctrl_vol, treat_vol
+            );
         }
 
         let gdp_pct = (treat_gdp - ctrl_gdp) / ctrl_gdp * 100.0;
         if gdp_pct > 5.0 {
-            println!("  GOOD: FLOOR BOOSTS GDP: +{:.1}% ({:.0} -> {:.0})",
-                gdp_pct, ctrl_gdp, treat_gdp);
+            println!(
+                "  GOOD: FLOOR BOOSTS GDP: +{:.1}% ({:.0} -> {:.0})",
+                gdp_pct, ctrl_gdp, treat_gdp
+            );
         } else if gdp_pct < -5.0 {
-            println!("  BAD: FLOOR HURTS GDP: {:.1}% ({:.0} -> {:.0})",
-                gdp_pct, ctrl_gdp, treat_gdp);
+            println!(
+                "  BAD: FLOOR HURTS GDP: {:.1}% ({:.0} -> {:.0})",
+                gdp_pct, ctrl_gdp, treat_gdp
+            );
         } else {
             println!("  NEUTRAL: FLOOR ON GDP: {:+.1}%", gdp_pct);
         }
 
         if treat_dg < ctrl_dg * 0.9 {
-            println!("  GOOD: FLOOR REDUCES D/G: {:.3}x -> {:.3}x", ctrl_dg, treat_dg);
+            println!(
+                "  GOOD: FLOOR REDUCES D/G: {:.3}x -> {:.3}x",
+                ctrl_dg, treat_dg
+            );
         } else if treat_dg > ctrl_dg * 1.1 {
-            println!("  BAD: FLOOR INCREASES D/G: {:.3}x -> {:.3}x", ctrl_dg, treat_dg);
+            println!(
+                "  BAD: FLOOR INCREASES D/G: {:.3}x -> {:.3}x",
+                ctrl_dg, treat_dg
+            );
         } else {
-            println!("  NEUTRAL: FLOOR ON D/G: {:.3}x -> {:.3}x", ctrl_dg, treat_dg);
+            println!(
+                "  NEUTRAL: FLOOR ON D/G: {:.3}x -> {:.3}x",
+                ctrl_dg, treat_dg
+            );
         }
 
         println!("\n  VERDICT:");

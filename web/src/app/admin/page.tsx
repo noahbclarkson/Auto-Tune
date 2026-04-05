@@ -5,6 +5,7 @@ import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EconomyRecoveryAdvisor } from '@/components/admin/economy-recovery-advisor';
+import { ConfigHealthCard } from '@/components/admin/config-health-card';
 import { ApiErrorBanner } from '@/components/ui/api-error-banner';
 import { api, type AdminHealthDto, type Stats } from '@/lib/api';
 import { formatLargeCurrency, formatPercent } from '@/lib/format';
@@ -370,6 +371,9 @@ export default function AdminPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Config Health Dashboard */}
+        <ConfigHealthCard />
 
         {/* Economy Recovery Advisor */}
         <EconomyRecoveryAdvisor health={health} />

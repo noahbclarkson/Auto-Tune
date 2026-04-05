@@ -237,6 +237,45 @@ export interface AdminHealthDto {
   timestamp: number;
 }
 
+// Config health entry — single tunable parameter
+interface ConfigEntry {
+  current: number | boolean;
+  default?: number;
+  rangeMin?: number;
+  rangeMax?: number;
+  unit: string;
+  label: string;
+}
+
+export interface AdminConfigDto {
+  spread: {
+    baseSpread: ConfigEntry;
+    volumeImpact: ConfigEntry;
+    playerImpact: ConfigEntry;
+  };
+  loans: {
+    baseInterestRate: ConfigEntry;
+    debtGdpTier3Ratio: ConfigEntry;
+    postDefaultCooldownHours: ConfigEntry;
+    counterCyclical: boolean;
+    singleLoanGdpCap: number;
+  };
+  economy: {
+    tradeWindowDays: ConfigEntry;
+    maxPriceChangePercent: ConfigEntry;
+    minBuyQuantity: ConfigEntry;
+    minSellQuantity: ConfigEntry;
+  };
+  marketDigest: {
+    enabled: boolean;
+    interval: string;
+    includeTopMovers: boolean;
+    includeHealthStats: boolean;
+    includeActiveEvents: boolean;
+    includeLoanStats: boolean;
+  };
+}
+
 export interface AlertDto {
   id: string;
   playerUuid: string;
@@ -317,6 +356,7 @@ export const api = {
   },
   admin: {
     health: (base: string) => fetchJson<AdminHealthDto>(`${base}/api/admin/health`),
+    config: (base: string) => fetchJson<AdminConfigDto>(`${base}/api/admin/config`),
   },
   alerts: {
     list: (base: string, playerName: string) =>

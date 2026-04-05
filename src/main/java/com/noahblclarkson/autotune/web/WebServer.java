@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
+import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.AutoTuneConfig.WebConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
@@ -786,6 +787,123 @@ public class WebServer {
             response.put("topVolatile", volatilities.stream().limit(5).collect(Collectors.toList()));
             response.put("topUndersold", undersells.stream().limit(5).collect(Collectors.toList()));
             response.put("timestamp", System.currentTimeMillis());
+            ctx.json(response);
+        });
+
+        // GET /api/admin/config — current config values vs defaults vs recommended ranges
+        app.get("/api/admin/config", ctx -> {
+            AutoTuneConfig cfg = configManager.getConfig();
+            AutoTuneConfig.EconomyConfig econ = cfg.economy();
+            AutoTuneConfig.SpreadConfig spd = econ.spread();
+            AutoTuneConfig.LoanConfig loan = cfg.loans();
+
+            Map<String, Object> response = new HashMap<>();
+
+            // Spread section
+            response.put("spread", Map.of(
+                "baseSpread", Map.of(
+                    "current", spd.baseSpread(),
+                    "default", 0.20,
+                    "rangeMin", 0.15,
+                    "rangeMax", 0.30,
+                    "unit", "decimal",
+                    "label", "Base Spread"
+                ),
+                "volumeImpact", Map.of(
+                    "current", spd.volumeImpact(),
+                    "default", 0.80,
+                    "rangeMin", 0.50,
+                    "rangeMax", 1.00,
+                    "unit", "decimal",
+                    "label", "Volume Impact"
+                ),
+                "playerImpact", Map.of(
+                    "current", spd.playerImpact(),
+                    "default", 0.60,
+                    "rangeMin", 0.50,
+                    "rangeMax", 1.00,
+                    "unit", "decimal",
+                    "label", "Player Impact"
+                )
+            ));
+
+            // Loan section
+            response.put("loans", Map.of(
+                "baseInterestRate", Map.of(
+                    "current", loan.baseInterestRate(),
+                    "default", 0.05,
+                    "rangeMin", 0.03,
+                    "rangeMax", 0.10,
+                    "unit", "percent",
+                    "label", "Base Interest Rate"
+                ),
+                "debtGdpTier3Ratio", Map.of(
+                    "current", loan.debtGdpTier3Ratio(),
+                    "default", 15.0,
+                    "rangeMin", 12.0,
+                    "rangeMax", 15.0,
+                    "unit", "ratio",
+                    "label", "Circuit Breaker Threshold"
+                ),
+                "postDefaultCooldownHours", Map.of(
+                    "current", loan.postDefaultCooldownHours(),
+                    "default", 168,
+                    "rangeMin", 72,
+                    "rangeMax", 336,
+                    "unit", "hours",
+                    "label", "Post-Default Cooldown"
+                ),
+                "counterCyclical", loan.counterCyclical(),
+                "singleLoanGdpCap", loan.singleLoanGdpCap()
+            ));
+
+            // Economy section
+            response.put("economy", Map.of(
+                "tradeWindowDays", Map.of(
+                    "current", econ.tradeWindowDays(),
+                    "default", 7,
+                    "rangeMin", 5,
+                    "rangeMax", 14,
+                    "unit", "days",
+                    "label", "Trade Window"
+                ),
+                "maxPriceChangePercent", Map.of(
+                    "current", econ.maxPriceChangePercent(),
+                    "default", 1.5,
+                    "rangeMin", 1.0,
+                    "rangeMax", 2.0,
+                    "unit", "percent",
+                    "label", "Max Price Change"
+                ),
+                "minBuyQuantity", Map.of(
+                    "current", econ.minBuyQuantity(),
+                    "default", 1,
+                    "rangeMin", 1,
+                    "rangeMax", 5,
+                    "unit", "items",
+                    "label", "Min Buy Quantity"
+                ),
+                "minSellQuantity", Map.of(
+                    "current", econ.minSellQuantity(),
+                    "default", 1,
+                    "rangeMin", 1,
+                    "rangeMax", 5,
+                    "unit", "items",
+                    "label", "Min Sell Quantity"
+                )
+            ));
+
+            // Market digest
+            AutoTuneConfig.MarketDigestConfig md = cfg.marketDigest();
+            response.put("marketDigest", Map.of(
+                "enabled", md.enabled(),
+                "interval", md.interval(),
+                "includeTopMovers", md.includeTopMovers(),
+                "includeHealthStats", md.includeHealthStats(),
+                "includeActiveEvents", md.includeActiveEvents(),
+                "includeLoanStats", md.includeLoanStats()
+            ));
+
             ctx.json(response);
         });
 

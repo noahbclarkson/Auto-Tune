@@ -189,6 +189,11 @@ public class EconomicNewsService {
             }
         }
 
+        // Check per-item volume for low-volume webhook alerts
+        if (webhookCfg.enabled() && webhookCfg.notifyLowVolume()) {
+            checkLowVolumeItems(webhookCfg);
+        }
+
         if (candidates.isEmpty()) return;
 
         int maxItems = Math.min(cfg.maxItemsPerCycle(), candidates.size());
@@ -322,6 +327,25 @@ public class EconomicNewsService {
             webhookService.onVolatilitySpike(avgVolatility);
         } else if (avgVolatility < 0.15 && prev >= 0.15) {
             webhookService.onVolatilityRecovered();
+        }
+    }
+
+    /**
+     * Scans all shop items for low trading volume and fires a webhook alert
+     * for any item whose 24h volume is below the configured threshold.
+     * Per-item cooldown is handled inside AdminWebhookService.onLowVolumeAlert.
+     */
+    private void checkLowVolumeItems(AutoTuneConfig.AdminWebhookConfig webhookCfg) {
+        int threshold = webhookCfg.lowVolumeThreshold();
+        Instant oneDayAgo = Instant.now().minus(Duration.ofDays(1));
+        for (ShopItem item : shopManager.getAllItems()) {
+            List<PriceHistory> history = itemRepository.getPriceHistorySince(
+                    item.id(), oneDayAgo, 1);
+            if (history.isEmpty()) continue;
+            int vol = history.get(0).totalVolume();
+            if (vol < threshold) {
+                webhookService.onLowVolumeAlert(item.id(), item.material().name(), vol);
+            }
         }
     }
 

@@ -641,8 +641,10 @@ public record AutoTuneConfig(
      * @param notifyTier2     fire on circuit breaker tier-2 activation
      * @param notifyTier3     fire on circuit breaker tier-3 activation
      * @param notifyVolatility fire when aggregate economy volatility spikes into UNSTABLE zone
-     * @param notifyHighDebt  fire when D/G ratio exceeds notifyHighDebtThreshold
-     * @param notifyHighDebtThreshold  D/G threshold that triggers a debt alert
+     * @param notifyHighDebt         fire when D/G ratio exceeds notifyHighDebtThreshold
+     * @param notifyHighDebtThreshold   D/G threshold that triggers a debt alert
+     * @param notifyLowVolume       fire when any item's 24h trade volume drops below lowVolumeThreshold
+     * @param lowVolumeThreshold     minimum trades per item per scan window to avoid a low-volume alert
      */
     public record AdminWebhookConfig(
             boolean enabled,
@@ -653,11 +655,13 @@ public record AutoTuneConfig(
             boolean notifyTier3,
             boolean notifyVolatility,
             boolean notifyHighDebt,
-            double notifyHighDebtThreshold
+            double notifyHighDebtThreshold,
+            boolean notifyLowVolume,
+            int lowVolumeThreshold
     ) {
         public static AdminWebhookConfig defaults() {
             return new AdminWebhookConfig(false, null, "Auto-Tune Economy", null,
-                    false, true, true, true, 8.0);
+                    false, true, true, true, 8.0, false, 2);
         }
     }
 

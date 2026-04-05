@@ -557,6 +557,14 @@ admin-webhook:
   # Debt/GDP ratio that triggers the high-debt alert. Default: 8.0x
   notify-high-debt-threshold: 8.0
 
+  # Fire when any item's 24h trade volume drops below low-volume-threshold.
+  # Useful for detecting stagnant items that may need admin attention.
+  notify-low-volume: false
+
+  # Minimum trades in the last 24 hours before the low-volume alert fires.
+  # Default: 2 — only items with 0-1 total trades trigger the alert.
+  low-volume-threshold: 2
+
 # ============================================================
 # Price Milestones — broadcasts when items cross round-number prices
 # ============================================================

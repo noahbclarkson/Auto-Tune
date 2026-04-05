@@ -9,8 +9,12 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -46,6 +50,8 @@ public class AdminWebhookService {
     private volatile String lastCircuitBreakerTier = "NORMAL";
     private volatile boolean lastVolatilityUnstable = false;
     private volatile boolean lastHighDebtFired = false;
+    /** Per-item cooldown for low-volume alerts (itemId → last alert instant) */
+    private final Map<Integer, Instant> lastLowVolumeAlertTimes = new ConcurrentHashMap<>();
 
     @Inject
     public AdminWebhookService(ConfigManager configManager) {
@@ -128,6 +134,32 @@ public class AdminWebhookService {
      */
     public void onDebtRecovered() {
         lastHighDebtFired = false;
+    }
+
+    /**
+     * Called when an item's 24h volume drops below the configured threshold.
+     * Fires once per item, with a per-item cooldown to prevent spam.
+     *
+     * @param itemId    the shop item's database ID
+     * @param material  the material name for display
+     * @param volume    the item's current 24h total trade volume
+     */
+    public void onLowVolumeAlert(int itemId, String material, int volume) {
+        AdminWebhookConfig cfg = configManager.getConfig().webhook();
+        if (!cfg.enabled() || cfg.webhookUrl() == null) return;
+        if (!cfg.notifyLowVolume()) return;
+
+        // Per-item cooldown: don't re-alert for the same item within 30 minutes
+        Instant cutoff = Instant.now().minusSeconds(30 * 60L);
+        Instant last = lastLowVolumeAlertTimes.get(itemId);
+        if (last != null && last.isAfter(cutoff)) return;
+        lastLowVolumeAlertTimes.put(itemId, Instant.now());
+
+        String msg = String.format(
+                "📉 **Low Volume Alert:** `%s` has only **%d trades** in the last 24 hours. " +
+                "The item may be stagnating — consider reviewing base prices or triggering a market event.",
+                material, volume);
+        postAlert("📉 Low Trade Volume — " + material, msg, 0xFF8800);
     }
 
     /**

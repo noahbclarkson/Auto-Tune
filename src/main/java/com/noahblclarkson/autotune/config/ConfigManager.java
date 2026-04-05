@@ -634,7 +634,9 @@ public class ConfigManager {
                 section.getBoolean("notify-tier3", true),
                 section.getBoolean("notify-volatility", true),
                 section.getBoolean("notify-high-debt", true),
-                section.getDouble("notify-high-debt-threshold", 8.0)
+                section.getDouble("notify-high-debt-threshold", 8.0),
+                section.getBoolean("notify-low-volume", false),
+                section.getInt("low-volume-threshold", 2)
         );
     }
 

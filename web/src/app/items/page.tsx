@@ -11,6 +11,7 @@ import { ApiErrorBanner } from '@/components/ui/api-error-banner';
 import { api, type ItemDto, type Stats, type TrendDto } from '@/lib/api';
 import { formatPercent } from '@/lib/format';
 import { LayoutGrid, List, TrendingUp, TrendingDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { DiscoveryOverlay } from '@/components/onboarding/discovery-overlay';
 
 function ItemsStatsBar({ items }: { items: ItemDto[] }) {
   const stats = useMemo(() => {
@@ -209,6 +210,7 @@ function ItemsPageContent() {
 
   return (
     <div className="min-h-screen bg-background">
+      <DiscoveryOverlay page="items" />
       <Header totalItems={stats?.totalItems ?? 0} onlinePlayers={stats?.onlinePlayers ?? 0} />
       <main className="mx-auto max-w-7xl px-6 py-6">
         {error && (

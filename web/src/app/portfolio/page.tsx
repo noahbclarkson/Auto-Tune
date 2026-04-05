@@ -18,6 +18,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
+import { DiscoveryOverlay } from '@/components/onboarding/discovery-overlay';
 
 type Tab = 'holdings' | 'trades';
 
@@ -87,6 +88,7 @@ export default function PortfolioPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <DiscoveryOverlay page="portfolio" />
       <Header totalItems={stats?.totalItems ?? 0} onlinePlayers={stats?.onlinePlayers ?? 0} />
       <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
 

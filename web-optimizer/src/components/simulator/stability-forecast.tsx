@@ -245,8 +245,8 @@ export function StabilityForecast({
           <span className="text-amber-400 text-sm mt-0.5">⛓</span>
           <p className="text-xs text-amber-200/80 leading-relaxed">
             <strong className="text-amber-300">Loan circuit breaker:</strong> Interest pauses when
-            debt exceeds <span className="font-mono text-amber-300">GDP × {config.maxPriceChangePercent > 2 ? '10' : '10'}</span>.
-            Set <span className="font-mono">debt-gdp-circuit-breaker-ratio</span> in config.yml.
+            debt exceeds <span className="font-mono text-amber-300">GDP × 15</span>.
+            Set <span className="font-mono">loans.tier3-ratio</span> in config.yml (default: 15, range: 10–20).
             Never disable it — pre-breaker simulations showed catastrophic compound loops.
           </p>
         </div>

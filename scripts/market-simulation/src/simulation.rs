@@ -139,7 +139,9 @@ impl Simulation {
             Archetype::InsiderTrader => {
                 PlayerAgent::new_insider_trader(id, item_count, &base_prices)
             }
-            Archetype::GuildSeller => PlayerAgent::new_guild_seller(id, item_count, &base_prices),
+            Archetype::GuildSeller => {
+                PlayerAgent::new_guild_seller(id, item_count, &base_prices, self.config.guild_phase2_dip_threshold)
+            }
             Archetype::VolumeTrader => {
                 // spread_threshold=0.25, spread_window=20, price_window=30
                 PlayerAgent::new_volume_trader(id, item_count, &base_prices, 0.25, 20, 30)

@@ -2,11 +2,11 @@
 
 import { useWizard, ServerType } from './wizard-context';
 import { cn } from '@/lib/utils';
-import { Pickaxe, Island, Sword, ShoppingCart, Sliders } from 'lucide-react';
+import { Axe, Mountain, Sword, ShoppingCart, Sliders } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  pickaxe: Pickaxe,
-  island: Island,
+  axe: Axe,
+  mountain: Mountain,
   swords: Sword,
   cart: ShoppingCart,
   sliders: Sliders,

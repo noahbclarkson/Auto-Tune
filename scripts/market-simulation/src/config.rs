@@ -27,6 +27,11 @@ pub struct SimConfig {
     /// Recommended: $200-300K so MMs don't need opening loans.
     pub mm_initial_capital_min: Option<f64>,
     pub mm_initial_capital_max: Option<f64>,
+    /// GuildSeller Phase 2 dip threshold. When set, GuildSellers use price-dip detection
+    /// in Phase 2: sell when price < perceived * (1 - threshold).
+    /// This enables the redesigned Phase 2 (anti-oversupply mechanism).
+    /// None = use random per-instance value (legacy behavior).
+    pub guild_phase2_dip_threshold: Option<f64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -156,6 +161,7 @@ impl Default for SimConfig {
             exodus_target_archetype: None,
             mm_initial_capital_min: None,
             mm_initial_capital_max: None,
+            guild_phase2_dip_threshold: None,
         }
     }
 }

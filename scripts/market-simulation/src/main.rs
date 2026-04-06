@@ -134,6 +134,46 @@ impl Scenario {
         }
     }
 
+    /// Stressed economy scaled to 30 days — same archetype mix + stress events
+    /// as `stressed()` but extended to measure floor effect under chronic oversupply.
+    pub fn stressed_30day() -> Self {
+        Self {
+            name: "Stressed Economy (30d)".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 5,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Hoarder".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Exploiter".into(),
+                    count: 1,
+                },
+            ],
+            stress_events: vec![
+                StressEvent::Exploit { at_tick: 288 * 3 },
+                StressEvent::LowPlayers { at_tick: 288 * 7 },
+                StressEvent::LoanCascade { at_tick: 288 * 5 },
+            ],
+            seed: None,
+            events: Vec::new(),
+            duration_ticks: 288 * 30, // 30 days
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     pub fn high_activity() -> Self {
         Self {
             name: "High Activity Economy".to_string(),
@@ -964,6 +1004,55 @@ impl Scenario {
         Self {
             name: "GuildStability+MM+GB+GS".to_string(),
             config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildSeller".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// GuildStability with 1MM + 1GB + 1GS but Phase 2 redesigned to use price-dip detection.
+    /// GS sells when price dips below perceived*(1 - threshold) — active anti-oversupply.
+    /// Hypotheses:
+    /// - H1: Phase 2 redesign prevents price collapse by proactively selling during oversupply
+    /// - H2: Phase 2 redesign has no effect (price dips are already self-correcting)
+    /// - H3: Phase 2 redesign is counterproductive (GS sells into downturns amplifying losses)
+    pub fn guild_stability_mm_gs_phase2_redesign() -> Self {
+        // Redesigned Phase 2: sell when price < perceived * 0.80 (20% dip = oversupply signal)
+        let config = SimConfig {
+            guild_phase2_dip_threshold: Some(0.20),
+            ..Default::default()
+        };
+        Self {
+            name: "GuildStability+MM+GB+GS-Phase2".to_string(),
+            config,
             players: vec![
                 ArchetypeConfig {
                     archetype: "MarketMaker".into(),
@@ -2340,6 +2429,193 @@ fn run_event_control_test() {
 /// Control: guild_stability_mm_fixed_guild (no floor/ceiling)
 /// Treatment: same but Diamond floor=60% base ($300), Iron ceiling=100% base ($50)
 ///
+/// 30-day stressed economy: Does the 60% floor still hold, or does the floor
+/// paradox become catastrophic under chronic oversupply?
+///
+/// Q: Does the Diamond floor paradox (D/G worsens despite floor protecting displayed
+///    prices) persist or amplify over 30 days of chronic Farmer oversupply + stress events?
+/// Q: Does the floor prevent price discovery or stabilize it?
+/// Q: Is GDP different when floor is active under chronic stress?
+fn run_stressed_30d_floor_test() {
+    use crate::analyzer::load_summary;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║   STRESSED ECONOMY 30-DAY FLOOR TEST                       ║");
+    println!("║  60% Diamond floor vs NO floor — chronic oversupply        ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: stressed_30day (no floor)");
+    println!("  Treatment: same + Diamond floor at 60% of base ($300)\n");
+    println!("  Seed: {}\n", seed);
+
+    // Control: stressed_30day without floor
+    let ctrl_scenario = Scenario::stressed_30day();
+
+    // Treatment: same but with 60% Diamond floor
+    let mut treat_scenario = Scenario::stressed_30day();
+    if let Some(diamond) = treat_scenario
+        .config
+        .items
+        .iter_mut()
+        .find(|ic| ic.name == "Diamond")
+    {
+        diamond.price_floor_override = Some(diamond.base_price * 0.6);
+    }
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-s30d-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-s30d-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl = ctrl_scenario.clone();
+    ctrl.seed = Some(seed);
+    let mut treat = treat_scenario.clone();
+    treat.seed = Some(seed);
+
+    println!("─── Control (no floor) ───");
+    let start = Instant::now();
+    if let Err(e) = run_headless(&ctrl, Some(ctrl_dir.clone())) {
+        eprintln!("  Control run error: {}", e);
+        return;
+    }
+    println!("  Control complete: {:.1}s\n", start.elapsed().as_secs_f64());
+
+    println!("─── Treatment (60% Diamond floor) ───");
+    let start = Instant::now();
+    if let Err(e) = run_headless(&treat, Some(treat_dir.clone())) {
+        eprintln!("  Treatment run error: {}", e);
+        return;
+    }
+    println!("  Treatment complete: {:.1}s\n", start.elapsed().as_secs_f64());
+
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Control summary error: {}", e);
+            return;
+        }
+    };
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treatment summary error: {}", e);
+            return;
+        }
+    };
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  SUMMARY METRICS (30-day stressed economy)                ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Metric", "CONTROL", "TREATMENT", "Effect"
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "GDP",
+        &format!("{:.0}", ctrl_summary.gdp),
+        &format!("{:.0}", treat_summary.gdp),
+        &format!(
+            "{:+.1}%",
+            (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0
+        )
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Total Debt",
+        &format!("{:.0}", ctrl_summary.debt),
+        &format!("{:.0}", treat_summary.debt),
+        &format!(
+            "{:+.1}%",
+            (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0
+        )
+    );
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Debt/GDP",
+        &format!("{:.2}x", ctrl_dg),
+        &format!("{:.2}x", treat_dg),
+        &format!("{:+.2}x", treat_dg - ctrl_dg)
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Buy Ratio",
+        &format!("{:.1}%", ctrl_summary.buy_ratio * 100.0),
+        &format!("{:.1}%", treat_summary.buy_ratio * 100.0),
+        &format!(
+            "{:+.1}%",
+            (treat_summary.buy_ratio - ctrl_summary.buy_ratio) * 100.0
+        )
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Avg Volatility",
+        &format!("{:.4}", ctrl_summary.avg_volatility),
+        &format!("{:.4}", treat_summary.avg_volatility),
+        &format!(
+            "{:+.4}",
+            treat_summary.avg_volatility - ctrl_summary.avg_volatility
+        )
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Avg BPD",
+        &format!("{:.3}%", ctrl_summary.avg_bpd * 100.0),
+        &format!("{:.3}%", treat_summary.avg_bpd * 100.0),
+        &format!(
+            "{:+.3}%",
+            (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0
+        )
+    );
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  FLOOR PARADOX CHECK                                     ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    let dg_delta = treat_dg - ctrl_dg;
+    if dg_delta > 0.5 {
+        println!(
+            "  ⚠️  Floor paradox AMPLIFIED: D/G worse by {:+.2}x at 30 days",
+            dg_delta
+        );
+        println!(
+            "     Floor protects displayed prices but internal debt accumulates more."
+        );
+    } else if dg_delta > 0.1 {
+        println!(
+            "  ⚠️  Floor paradox persists: D/G worse by {:+.2}x",
+            dg_delta
+        );
+    } else if dg_delta < -0.1 {
+        println!(
+            "  ✅ Floor paradox INVERTED: D/G better by {:+.2}x — floor helps!",
+            -dg_delta
+        );
+    } else {
+        println!("  ✅ D/G essentially unchanged ({:+.2}x) — floor neutral over 30 days", dg_delta);
+    }
+
+    let gdp_delta = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    if gdp_delta > 1.0 {
+        println!("  ✅ Floor BOOSTS GDP by {:+.1}% in stressed economy", gdp_delta);
+    } else if gdp_delta < -1.0 {
+        println!("  ⚠️  Floor HURTS GDP by {:+.1}% — dampens trade", gdp_delta);
+    } else {
+        println!("  ✅ Floor GDP-neutral ({:+.1}%) — floor does not suppress activity", gdp_delta);
+    }
+
+    println!("\n  Key insight: 14-day floor paradox (+19.1% D/G worse with floor) was measured");
+    println!("  on healthy 2MM+2GB economy. This test extends to chronic stress.");
+    println!("  If floor paradox persists at 30 days in stressed economy, floor is a");
+    println!("  structural liability — it protects displayed prices but worsens debt.");
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
 /// Key question: Does floor/ceiling change the INTERNAL prices, or only the displayed ones?
 /// Per the Java implementation, floor/ceiling is applied to getBuyPrice/getSellPrice,
 /// NOT to the internal price update. So internal prices should be identical between
@@ -9156,6 +9432,7 @@ fn main() -> eframe::Result<()> {
         println!("Available scenarios:");
         println!("  standard         - Normal economy: 5 Casual + 3 Farmer + 2 Trader + 1 Hoarder");
         println!("  stressed         - Exploit, low players, loan cascade injected");
+        println!("  stressed-30day   - Stressed scaled to 30 days — chronic oversupply test");
         println!("  high-activity    - High activity, 20 players, 7 days");
         println!("  low-player       - 3 players, 14 days");
         println!("  spread-stability - Farmer/Trader mix, 10 days");
@@ -9165,6 +9442,7 @@ fn main() -> eframe::Result<()> {
             "  guild-stability  - 2 GuildBuyer + 4 Casual + 3 Farmer + 2 Trader (15-30% threshold)"
         );
         println!("  guild-stability-mm-fixed-guild - 1 MM + 2 GB @ 7% + 4Cas + 3Far + 2Trader");
+        println!("  guild-stability-mm-gs-phase2-redesign - GS Phase 2 price-dip detection test");
         println!(
             "  marketmaker-test - 1 GuildBuyer + 1 MarketMaker + 4 Casual + 3 Farmer + 2 Trader"
         );
@@ -9186,6 +9464,7 @@ fn main() -> eframe::Result<()> {
         println!("  --regression            Regression test against stored baselines");
         println!("  --all                   Run all scenarios headlessly");
         println!("  --floor-ceiling-test     Floor/ceiling effect: control vs treatment");
+        println!("  --stressed-30d-floor-test  30-day stressed economy: floor paradox amplified?");
         println!("  --floor-strength-sweep   Diamond floor 30-90% — find GDP-neutral level");
         println!("  --price-freeze-test      Per-item price freeze: Diamond frozen vs control");
         println!(
@@ -9366,6 +9645,10 @@ fn main() -> eframe::Result<()> {
                     Scenario::standard_plus_mm_gb_it()
                 }
                 "floor-ceiling-test" | "floor_ceiling_test" => Scenario::floor_ceiling_test(),
+                "stressed-30day" | "stressed_30day" => Scenario::stressed_30day(),
+                "guild-stability-mm-gs-phase2" | "guild_stability_mm_gs_phase2_redesign" => {
+                    Scenario::guild_stability_mm_gs_phase2_redesign()
+                }
                 "correlation" => Scenario::correlation(),
                 _ => {
                     eprintln!(
@@ -9430,6 +9713,12 @@ fn main() -> eframe::Result<()> {
     // ─── GuildSeller Test ───────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--guild-seller-test" {
         run_guild_seller_test();
+        return Ok(());
+    }
+
+    // ─── Stressed Economy 30-Day Floor Test ─────────────────────────────
+    if args.len() > 1 && args[1] == "--stressed-30d-floor-test" {
+        run_stressed_30d_floor_test();
         return Ok(());
     }
 

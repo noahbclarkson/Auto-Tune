@@ -6,9 +6,10 @@ export const wizardArchetypes = {
     smp: {
       name: 'SMP / Vanilla+',
       description: 'Standard survival. Moderate trading, moderate griefing risk.',
-      icon: 'pickaxe',
+      icon: 'axe',
       archetype: { MarketMaker: 2, GuildBuyer: 2, GuildBuyerThreshold: 7 },
       spread: 0.20,
+      loans: null,
       stability: {
         buyRatio: '50-55%',
         volatility: 'Low (0.05-0.10)',
@@ -20,7 +21,12 @@ export const wizardArchetypes = {
     skyblock: {
       name: 'Skyblock',
       description: 'Island economies, limited resources, high scarcity.',
-      icon: 'island',
+      icon: 'mountain',
+      loans: {
+        tier3Ratio: 15,
+        creditScoreMultiplier: 1.0,
+        postDefaultCooldownHours: 168,
+      },
       archetype: { MarketMaker: 1, GuildBuyer: 3, GuildBuyerThreshold: 7 },
       spread: 0.20,
       stability: {
@@ -54,6 +60,11 @@ export const wizardArchetypes = {
       name: 'Economy / Shop',
       description: 'Trading-focused, minimal PvP. Tight spreads reward active traders.',
       icon: 'cart',
+      loans: {
+        tier3Ratio: 15,
+        creditScoreMultiplier: 1.0,
+        postDefaultCooldownHours: 168,
+      },
       archetype: { MarketMaker: 3, GuildBuyer: 1, GuildBuyerThreshold: 7 },
       spread: 0.15,
       stability: {
@@ -70,6 +81,11 @@ export const wizardArchetypes = {
       icon: 'sliders',
       archetype: null,
       spread: 0.20,
+      loans: {
+        tier3Ratio: 15,
+        creditScoreMultiplier: 1.0,
+        postDefaultCooldownHours: 168,
+      },
       stability: null,
     },
   },

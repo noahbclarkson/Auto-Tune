@@ -107,7 +107,6 @@ export function ConfigExport() {
 
   if (!serverType || !playerCount) return null;
 
-  const serverData = (archetypeData.serverTypes as Record<string, typeof archetypeData.serverTypes.smp>)[serverType];
   const yaml = generateYaml(serverType, playerCount as PlayerCount, goals as GoalKey[]);
 
   const handleCopy = () => {

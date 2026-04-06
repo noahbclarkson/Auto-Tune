@@ -9,6 +9,12 @@ import { Globe, Clock, TrendingUp, Shield, TrendingDown, CheckCircle, AlertTrian
 export const metadata = {
   title: 'Servers | Auto-Tune',
   description: 'Registered Auto-Tune servers and their latest submissions',
+  openGraph: {
+    title: 'Servers | Auto-Tune',
+    description: 'Registered Auto-Tune servers and their latest submissions',
+    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
+  },
+  twitter: { card: 'summary_large_image', images: ['/og-image.png'] },
 };
 
 function NetworkStat({ icon: Icon, label, value }: { icon: typeof Globe; label: string; value: string }) {

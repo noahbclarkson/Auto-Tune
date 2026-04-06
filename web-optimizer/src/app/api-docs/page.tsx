@@ -7,6 +7,12 @@ export const metadata = {
   title: 'API Reference | Auto-Tune',
   description:
     'HTTP API reference for Auto-Tune cross-server price submission and true-price aggregation. Server authentication, rate limits, and endpoint documentation.',
+  openGraph: {
+    title: 'API Reference | Auto-Tune',
+    description: 'HTTP API reference for Auto-Tune cross-server price submission and true-price aggregation.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
+  },
+  twitter: { card: 'summary_large_image', images: ['/og-image.png'] },
 };
 
 function Endpoint({

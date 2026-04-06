@@ -10,7 +10,9 @@ export const metadata: Metadata = {
   description:
     'Understand the math behind Auto-Tune\'s supply-and-demand pricing engine. Asymmetric spreads, player scaling, trend dampening, and sector correlation explained.',
   openGraph: {
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'How Auto-Tune\'s market engine works' }],
+    title: 'How It Works | Auto-Tune',
+    description: "Understand the math behind Auto-Tune's supply-and-demand pricing engine.",
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: "How Auto-Tune's market engine works" }],
   },
   twitter: {
     card: 'summary_large_image',

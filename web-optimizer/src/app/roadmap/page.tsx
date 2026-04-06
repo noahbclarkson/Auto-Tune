@@ -4,7 +4,13 @@ import { ArrowLeft, CheckCircle2, Circle, Clock, Zap, Globe, BarChart2, Shield, 
 
 export const metadata: Metadata = {
   title: 'Roadmap — Auto-Tune',
-  description: 'What\'s coming next for Auto-Tune',
+  description: "What's coming next for Auto-Tune",
+  openGraph: {
+    title: 'Roadmap — Auto-Tune',
+    description: "What's coming next for Auto-Tune",
+    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
+  },
+  twitter: { card: 'summary_large_image', images: ['/og-image.png'] },
 };
 
 const CATEGORIES = [

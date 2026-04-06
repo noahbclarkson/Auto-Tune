@@ -8,6 +8,12 @@ export const metadata = {
   title: "True Prices | Auto-Tune",
   description:
     "Cross-server price discovery using least-squares optimization on ratio matrices",
+  openGraph: {
+    title: "True Prices | Auto-Tune",
+    description: "Cross-server price consensus computed from verified server submissions",
+    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
+  },
+  twitter: { card: 'summary_large_image', images: ['/og-image.png'] },
 };
 
 export default async function TruePricesPage() {

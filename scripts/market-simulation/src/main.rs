@@ -5526,6 +5526,228 @@ fn run_counter_cyclical_test() {
     );
 }
 
+/// Result of a single VWAP test arm.
+#[derive(Debug)]
+struct VwapArmResult {
+    daily: Vec<(u64, f64, f64, f64)>, // (tick, gdp, total_debt, dg)
+    final_gdp: f64,
+    final_debt: f64,
+    final_dg: f64,
+    avg_dg: f64,
+    max_dg: f64,
+    total_trades: u32,
+}
+
+// ─── VWAP-Anchored Price Targets Test ───────────────────────────────────
+// Hypothesis: Using rolling VWAP instead of subjective "perceived" value as the
+// GuildBuyer price-dip anchor reduces D/G oscillation. VWAP is grounded in actual
+// trade history; perceived is subjective and can drift.
+//
+// Control: guild_stability_mm_fixed_guild, use_vwap_targets=false (uses perceived)
+// Treatment: same, use_vwap_targets=true (uses rolling VWAP window=100)
+fn run_vwap_test() {
+    use crate::player::set_global_seeded_rng;
+
+    println!("\n");
+    println!("═══════════════════════════════════════════════════════════════");
+    println!("  VWAP-Anchored Price Targets Test");
+    println!("═══════════════════════════════════════════════════════════════");
+    println!("  Hypothesis: VWAP anchoring reduces D/G vs subjective perceived");
+    println!("  Control:  guild_stability_mm_fixed_guild, use_vwap_targets=false");
+    println!("  Treatment: same, use_vwap_targets=true (rolling VWAP window=100)");
+    println!("  Scenario:  guild_stability_mm_fixed_guild (1MM+2GB@7%, 14d)");
+    println!("═══════════════════════════════════════════════════════════════\n");
+
+    let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let mut treat_scenario = Scenario::guild_stability_mm_fixed_guild();
+    treat_scenario.config.guild_vwap_targets = true;
+
+    let seed = 42u64;
+
+    let run_arm = |scenario: &Scenario, label: &str| -> VwapArmResult {
+        set_global_seeded_rng(seed);
+        let mut sim = Simulation::new_seeded(scenario.config.clone(), seed);
+        sim.events = scenario.events.clone();
+        add_players_to_sim(&mut sim, &scenario.players);
+        sim.paused = false;
+
+        let mut daily: Vec<(u64, f64, f64, f64)> = Vec::new();
+        while sim.current_tick < scenario.duration_ticks {
+            sim.tick();
+            if sim.current_tick > 0 && sim.current_tick.is_multiple_of(288) {
+                let gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+                let active_debt: f64 = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                    .map(|l| l.current_balance)
+                    .sum();
+                let defaulted_debt: f64 = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                    .map(|l| l.current_balance)
+                    .sum();
+                let total_debt = active_debt + defaulted_debt;
+                let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+                daily.push((sim.current_tick, gdp, total_debt, dg));
+            }
+        }
+
+        // Final metrics
+        let final_gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+        let active_debt: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Active)
+            .map(|l| l.current_balance)
+            .sum();
+        let defaulted_debt: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+            .map(|l| l.current_balance)
+            .sum();
+        let final_debt = active_debt + defaulted_debt;
+        let final_dg = if final_gdp > 0.0 {
+            final_debt / final_gdp
+        } else {
+            0.0
+        };
+
+        let avg_dg = if !daily.is_empty() {
+            daily.iter().map(|(_, _, _, d)| d).sum::<f64>() / daily.len() as f64
+        } else {
+            0.0
+        };
+        let max_dg = daily
+            .iter()
+            .map(|(_, _, _, d)| *d)
+            .fold(0.0f64, |a, b| a.max(b));
+
+        let total_trades: u32 = sim.players.iter().map(|p| p.total_trades).sum();
+
+        println!(
+            "  [{}] Final: GDP=${:.0}, D/G={:.3}x, trades={}",
+            label, final_gdp, final_dg, total_trades
+        );
+
+        VwapArmResult {
+            daily,
+            final_gdp,
+            final_debt,
+            final_dg,
+            avg_dg,
+            max_dg,
+            total_trades,
+        }
+    };
+
+    println!("  Running control (perceived anchor)...");
+    let ctrl = run_arm(&ctrl_scenario, "Control");
+    println!("  Running treatment (VWAP anchor)...");
+    let treat = run_arm(&treat_scenario, "Treatment");
+
+    // Per-day D/G comparison
+    println!("\n  Per-day D/G comparison:");
+    println!("  {:>6}  {:>12}  {:>12}", "Day", "Control", "Treatment");
+    println!("  {:─>6}  {:─>12}  {:─>12}", "", "", "");
+    for &(tick, _, _, ctrl_dg) in &ctrl.daily {
+        let day = tick / 288;
+        let treat_dg = treat
+            .daily
+            .iter()
+            .find(|(t, _, _, _)| *t == tick)
+            .map(|(_, _, _, d)| *d)
+            .unwrap_or(0.0);
+        let delta = treat_dg - ctrl_dg;
+        let arrow = if delta < -0.01 {
+            "↓"
+        } else if delta > 0.01 {
+            "↑"
+        } else {
+            "~"
+        };
+        println!(
+            "  {:>6}  {:>12.3}x  {:>12.3}x  ({}{:.3})",
+            day, ctrl_dg, treat_dg, arrow, delta
+        );
+    }
+
+    // Summary
+    println!("\n  ── Summary ─────────────────────────────────────────────────");
+    println!(
+        "  {:>12}  {:>12}  {:>12}  {:>10}",
+        "Metric", "Control", "Treatment", "Change"
+    );
+    println!("  {:─>12}  {:─>12}  {:─>12}  {:─>10}", "", "", "", "");
+    println!(
+        "  {:>12}  {:>12.0}  {:>12.0}  {:>+10.1}%",
+        "GDP",
+        ctrl.final_gdp,
+        treat.final_gdp,
+        (treat.final_gdp - ctrl.final_gdp) / ctrl.final_gdp.max(1.0) * 100.0
+    );
+    println!(
+        "  {:>12}  {:>12.0}  {:>12.0}  {:>+10.1}%",
+        "Total Debt",
+        ctrl.final_debt,
+        treat.final_debt,
+        (treat.final_debt - ctrl.final_debt) / ctrl.final_debt.max(1.0) * 100.0
+    );
+    println!(
+        "  {:>12}  {:>12.3}x  {:>12.3}x  {:>+10.3}x",
+        "D/G (final)",
+        ctrl.final_dg,
+        treat.final_dg,
+        treat.final_dg - ctrl.final_dg
+    );
+    println!(
+        "  {:>12}  {:>12.3}x  {:>12.3}x  {:>+10.3}x",
+        "D/G (avg)",
+        ctrl.avg_dg,
+        treat.avg_dg,
+        treat.avg_dg - ctrl.avg_dg
+    );
+    println!(
+        "  {:>12}  {:>12.3}x  {:>12.3}x  {:>+10.3}x",
+        "D/G (max)",
+        ctrl.max_dg,
+        treat.max_dg,
+        treat.max_dg - ctrl.max_dg
+    );
+    println!(
+        "  {:>12}  {:>12}  {:>12}  {:>+10}",
+        "Trades",
+        ctrl.total_trades,
+        treat.total_trades,
+        format!("{:+}", treat.total_trades as i32 - ctrl.total_trades as i32)
+    );
+
+    println!("\n  Verdict:");
+    let dg_delta = treat.final_dg - ctrl.final_dg;
+    let dg_pct = dg_delta / ctrl.final_dg.max(0.001) * 100.0;
+    if dg_delta < -0.05 {
+        println!(
+            "  ✓ VWAP reduces final D/G: {:.3}x → {:.3}x ({:+.1}%)",
+            ctrl.final_dg, treat.final_dg, dg_pct
+        );
+        println!("  → VWAP anchoring is recommended for D/G stability.");
+    } else if dg_delta > 0.05 {
+        println!(
+            "  ✗ VWAP increases final D/G: {:.3}x → {:.3}x ({:+.1}%)",
+            ctrl.final_dg, treat.final_dg, dg_pct
+        );
+        println!("  → VWAP anchoring is NOT recommended — perceived is better.");
+    } else {
+        println!(
+            "  ~ VWAP has negligible D/G effect: {:.3}x → {:.3}x ({:+.1}%)",
+            ctrl.final_dg, treat.final_dg, dg_pct
+        );
+        println!("  → VWAP neither helps nor hurts D/G stability.");
+    }
+}
+
 fn run_mm_loan_bounding_test() {
     use crate::player::set_global_seeded_rng;
     use std::path::PathBuf;
@@ -10138,6 +10360,12 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--floor-impact-test" {
         run_floor_impact_test();
+        return Ok(());
+    }
+
+    // ─── VWAP Test ────────────────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--vwap-test" {
+        run_vwap_test();
         return Ok(());
     }
 

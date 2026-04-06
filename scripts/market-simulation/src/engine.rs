@@ -100,6 +100,43 @@ impl ItemState {
         self.price_ceiling_override
             .map_or(p, |ceiling| p.min(ceiling))
     }
+
+    /// Rolling volume-weighted average price over the last `window` ticks.
+    /// Combines buy and sell transactions: sum(vol * price) / sum(vol).
+    /// Falls back to current price if no volume history is available.
+    pub fn rolling_vwap(&self, window: usize) -> f64 {
+        let bv = &self.buy_volume_history;
+        let sv = &self.sell_volume_history;
+        let bp = &self.buy_price_history;
+        let sp = &self.sell_price_history;
+
+        let len = bv.len().min(sv.len()).min(bp.len()).min(sp.len());
+        if len == 0 {
+            return self.price;
+        }
+
+        let start = len.saturating_sub(window);
+        let mut total_vol = 0i64;
+        let mut weighted_sum = 0.0f64;
+
+        for i in start..len {
+            let b_vol = bv[i] as i64;
+            let s_vol = sv[i] as i64;
+            let b_price = bp[i];
+            let s_price = sp[i];
+            let vol = b_vol + s_vol;
+            if vol > 0 {
+                total_vol += vol;
+                weighted_sum += (b_vol as f64) * b_price + (s_vol as f64) * s_price;
+            }
+        }
+
+        if total_vol > 0 {
+            weighted_sum / total_vol as f64
+        } else {
+            self.price
+        }
+    }
 }
 
 struct TradeMetrics {

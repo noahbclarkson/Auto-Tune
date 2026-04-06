@@ -32,6 +32,11 @@ pub struct SimConfig {
     /// This enables the redesigned Phase 2 (anti-oversupply mechanism).
     /// None = use random per-instance value (legacy behavior).
     pub guild_phase2_dip_threshold: Option<f64>,
+    /// If true, GuildBuyers use rolling VWAP as their price target instead of
+    /// subjective perceived_value. VWAP tracks actual transaction prices, making
+    /// the price-dip trigger more grounded in real market activity rather than
+    /// drifting perceived values. May reduce D/G oscillation in stable economies.
+    pub guild_vwap_targets: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -162,6 +167,7 @@ impl Default for SimConfig {
             mm_initial_capital_min: None,
             mm_initial_capital_max: None,
             guild_phase2_dip_threshold: None,
+            guild_vwap_targets: false,
         }
     }
 }

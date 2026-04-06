@@ -130,7 +130,12 @@ impl Simulation {
             Archetype::Exploiter => PlayerAgent::new_exploiter(id, item_count, &base_prices),
             Archetype::Newbie => PlayerAgent::new_newbie(id, item_count, &base_prices),
             Archetype::AFKFarmer => PlayerAgent::new_afk_farmer(id, item_count, &base_prices),
-            Archetype::GuildBuyer => PlayerAgent::new_guild_buyer(id, item_count, &base_prices),
+            Archetype::GuildBuyer => PlayerAgent::new_guild_buyer(
+                id,
+                item_count,
+                &base_prices,
+                self.config.guild_vwap_targets,
+            ),
             Archetype::MarketMaker => {
                 let min_cap = self.config.mm_initial_capital_min.unwrap_or(50_000.0);
                 let max_cap = self.config.mm_initial_capital_max.unwrap_or(200_000.0);

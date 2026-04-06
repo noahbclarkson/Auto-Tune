@@ -255,6 +255,9 @@ pub struct PlayerAgent {
     /// Redesigned Phase 2 trigger — detects market oversupply via price depression.
     /// When 0.0, Phase 2 is disabled (legacy behavior: inventory > 2x target only).
     pub guild_phase2_dip_threshold: f64,
+    /// If true, GuildBuyer uses rolling VWAP as its price anchor instead of
+    /// subjective perceived_value. VWAP is grounded in actual transaction prices.
+    pub use_vwap_targets: bool,
     /// Max inventory per item for MarketMaker archetype. Limits position size.
     pub mm_max_inventory: i32,
     /// Target inventory level per item for MarketMaker archetype.
@@ -334,6 +337,7 @@ impl PlayerAgent {
             volume_cooldown_ticks: HashMap::new(),
             guild_sell_cooldown_ticks: HashMap::new(),
             guild_phase2_dip_threshold: 0.0,
+            use_vwap_targets: false,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -382,6 +386,7 @@ impl PlayerAgent {
             volume_cooldown_ticks: HashMap::new(),
             guild_sell_cooldown_ticks: HashMap::new(),
             guild_phase2_dip_threshold: 0.0,
+            use_vwap_targets: false,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -434,6 +439,7 @@ impl PlayerAgent {
             volume_cooldown_ticks: HashMap::new(),
             guild_sell_cooldown_ticks: HashMap::new(),
             guild_phase2_dip_threshold: 0.0,
+            use_vwap_targets: false,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -482,6 +488,7 @@ impl PlayerAgent {
             volume_cooldown_ticks: HashMap::new(),
             guild_sell_cooldown_ticks: HashMap::new(),
             guild_phase2_dip_threshold: 0.0,
+            use_vwap_targets: false,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -530,6 +537,7 @@ impl PlayerAgent {
             volume_cooldown_ticks: HashMap::new(),
             guild_sell_cooldown_ticks: HashMap::new(),
             guild_phase2_dip_threshold: 0.0,
+            use_vwap_targets: false,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -585,6 +593,7 @@ impl PlayerAgent {
             volume_cooldown_ticks: HashMap::new(),
             guild_sell_cooldown_ticks: HashMap::new(),
             guild_phase2_dip_threshold: 0.0,
+            use_vwap_targets: false,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -641,6 +650,7 @@ impl PlayerAgent {
             volume_cooldown_ticks: HashMap::new(),
             guild_sell_cooldown_ticks: HashMap::new(),
             guild_phase2_dip_threshold: 0.0,
+            use_vwap_targets: false,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -651,7 +661,12 @@ impl PlayerAgent {
 
     /// Guild Buyer: maintains a target inventory for guild members.
     /// Buys heavily when stock is low, rarely sells (guild benefit).
-    pub fn new_guild_buyer(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
+    pub fn new_guild_buyer(
+        index: usize,
+        item_count: usize,
+        base_prices: &[f64],
+        use_vwap_targets: bool,
+    ) -> Self {
         let mut rng = SeededRng;
         let budget = rng.random(50000.0..200000.0);
 
@@ -702,6 +717,7 @@ impl PlayerAgent {
             volume_cooldown_ticks: HashMap::new(),
             guild_sell_cooldown_ticks: HashMap::new(),
             guild_phase2_dip_threshold: 0.0,
+            use_vwap_targets,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -777,6 +793,7 @@ impl PlayerAgent {
             // This makes GS an active anti-oversupply mechanism, not just excess-liquidator.
             guild_phase2_dip_threshold: phase2_dip_threshold
                 .unwrap_or_else(|| rng.random(0.10..0.25)),
+            use_vwap_targets: false,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -846,6 +863,7 @@ impl PlayerAgent {
             volume_cooldown_ticks: HashMap::new(),
             guild_sell_cooldown_ticks: HashMap::new(),
             guild_phase2_dip_threshold: 0.0,
+            use_vwap_targets: false,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -909,6 +927,7 @@ impl PlayerAgent {
             volume_cooldown_ticks: HashMap::new(),
             guild_sell_cooldown_ticks: HashMap::new(),
             guild_phase2_dip_threshold: 0.0,
+            use_vwap_targets: false,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, &[]);
@@ -977,6 +996,7 @@ impl PlayerAgent {
             volume_cooldown_ticks: HashMap::new(),
             guild_sell_cooldown_ticks: HashMap::new(),
             guild_phase2_dip_threshold: 0.0,
+            use_vwap_targets: false,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, &[]);
@@ -1021,7 +1041,7 @@ impl PlayerAgent {
         } else if roll < 0.97 {
             Self::new_afk_farmer(index, item_count, base_prices)
         } else if roll < 0.985 {
-            Self::new_guild_buyer(index, item_count, base_prices)
+            Self::new_guild_buyer(index, item_count, base_prices, false)
         } else if roll < 0.9925 {
             Self::new_insider_trader(index, item_count, base_prices)
         } else if roll < 0.9975 {
@@ -1393,13 +1413,22 @@ impl PlayerAgent {
                     .get(&i)
                     .copied()
                     .unwrap_or(items[i].price);
+                // VWAP-anchored target: if enabled, use rolling volume-weighted average
+                // price instead of subjective perceived value. VWAP tracks actual transaction
+                // prices, so the price-dip trigger is more grounded in real market activity.
+                let price_anchor = if self.use_vwap_targets {
+                    items[i].rolling_vwap(100)
+                } else {
+                    perceived
+                };
                 let buy_price = items[i].buy_price();
                 let current = self.inventory.get(&i).copied().unwrap_or(0);
                 let target = self.guild_target_inventory.get(&i).copied().unwrap_or(50);
 
                 // Price dip detected: market price is guild_price_dip_threshold+% below perceived
                 // Buy regardless of inventory level (proactive stabilization)
-                if buy_price < perceived * dip_multiplier && self.balance > buy_price {
+                // Uses price_anchor (VWAP when enabled, perceived otherwise) for the trigger
+                if buy_price < price_anchor * dip_multiplier && self.balance > buy_price {
                     // Can buy up to target inventory when seeing a dip (stock up opportunistically)
                     let room = (target - current).max(0) as f64;
                     let max_affordable = (self.balance / buy_price).floor() as i32;
@@ -1434,8 +1463,8 @@ impl PlayerAgent {
                                 amount,
                                 price_per_unit: buy_price * slippage,
                                 total_cost: cost,
-                                perceived_value: perceived,
-                                effective_perceived: perceived * dip_multiplier,
+                                perceived_value: price_anchor,
+                                effective_perceived: price_anchor * dip_multiplier,
                                 buy_threshold: 0.0,
                                 sell_threshold: self.sell_threshold,
                                 balance_before,
@@ -1462,7 +1491,12 @@ impl PlayerAgent {
                     .get(&i)
                     .copied()
                     .unwrap_or(items[i].price);
-                let max_willing = perceived * 1.5;
+                let price_anchor = if self.use_vwap_targets {
+                    items[i].rolling_vwap(100)
+                } else {
+                    perceived
+                };
+                let max_willing = price_anchor * 1.5;
 
                 if buy_price <= max_willing && self.balance > buy_price {
                     let deficit = (target - current) as f64;
@@ -1495,7 +1529,7 @@ impl PlayerAgent {
                                 amount,
                                 price_per_unit: buy_price * slippage,
                                 total_cost: cost,
-                                perceived_value: perceived,
+                                perceived_value: price_anchor,
                                 effective_perceived: max_willing,
                                 buy_threshold: 0.0,
                                 sell_threshold: self.sell_threshold,

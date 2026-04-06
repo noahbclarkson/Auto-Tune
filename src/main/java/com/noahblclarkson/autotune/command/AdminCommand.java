@@ -32,6 +32,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.incendo.cloud.annotations.Argument;
 import org.incendo.cloud.annotations.Command;
+import org.incendo.cloud.annotations.Default;
 import org.incendo.cloud.annotations.Permission;
 import org.incendo.cloud.annotations.suggestion.Suggestions;
 import org.incendo.cloud.context.CommandContext;
@@ -810,8 +811,7 @@ public class AdminCommand {
     // ─── Economy trend analysis ─────────────────────────────────────────────────
     @Command("autotune admin trend [days]")
     @Permission("autotune.admin")
-    public void adminTrend(CommandSender sender, @Argument(value = "days") Optional<Integer> daysArg) {
-        int days = daysArg.orElse(7);
+    public void adminTrend(CommandSender sender, @Argument("days") @Default("7") int days) {
         if (days < 1 || days > 90) {
             sender.sendMessage(Component.text("Days must be between 1 and 90.", NamedTextColor.RED));
             return;
@@ -821,7 +821,7 @@ public class AdminCommand {
         List<EconomySnapshot> snapshots = metricsManager.getSnapshotsInWindow(windowStart, 80);
 
         sender.sendMessage(Component.empty());
-        sender.sendMessage(Component.text("Economy Trend — Last " + daysArg + " Day(s)", NamedTextColor.YELLOW, TextDecoration.BOLD)
+        sender.sendMessage(Component.text("Economy Trend — Last " + days + " Day(s)", NamedTextColor.YELLOW, TextDecoration.BOLD)
                 .append(Component.text(" (" + snapshots.size() + " snapshots)", NamedTextColor.DARK_GRAY)));
         sender.sendMessage(Component.empty());
 
@@ -1027,7 +1027,7 @@ public class AdminCommand {
 
     @Command("autotune admin transactions [player]")
     @Permission("autotune.admin")
-    public void adminTransactions(CommandSender sender, @Argument(value = "player", suggestions = "minecraft-player") Optional<String> playerNameArg) {
+    public void adminTransactions(CommandSender sender, @Argument(value = "player", suggestions = "minecraft-player") @Default("") String playerNameStr) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(Component.text("This command must be used as a player.", NamedTextColor.RED));
             return;
@@ -1035,8 +1035,8 @@ public class AdminCommand {
 
         UUID filterUuid = null;
 
-        if (!playerNameArg.isEmpty() && !playerNameArg.get().isBlank()) {
-            String playerName = playerNameArg.get();
+        if (!playerNameStr.isBlank()) {
+            String playerName = playerNameStr;
             // Look up the player's UUID from their name
             org.bukkit.OfflinePlayer offlineTarget = org.bukkit.Bukkit.getOfflinePlayerIfCached(playerName);
             if (offlineTarget == null) {
@@ -1107,9 +1107,8 @@ public class AdminCommand {
             CommandSender sender,
             @Argument("material") String materialName,
             @Argument("price") BigDecimal price,
-            @Argument("hours") Optional<Integer> hoursArg
+            @Argument("hours") @Default("0") Integer hours
     ) {
-        Integer hours = hoursArg.orElse(null);
         org.bukkit.Material mat = matchMaterial(materialName);
         if (mat == null) {
             sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));

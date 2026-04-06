@@ -6,10 +6,15 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
 import org.bukkit.command.CommandSender;
 import org.incendo.cloud.annotations.AnnotationParser;
+import org.incendo.cloud.context.CommandInput;
 import org.incendo.cloud.execution.ExecutionCoordinator;
+import org.incendo.cloud.parser.ArgumentParseResult;
+import org.incendo.cloud.parser.ArgumentParser;
+import org.incendo.cloud.parser.ParserDescriptor;
 import org.incendo.cloud.paper.LegacyPaperCommandManager;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Set;
 
@@ -45,6 +50,14 @@ public class CommandManager {
                 org.incendo.cloud.bukkit.CloudBukkitCapabilities.BRIGADIER);
         removeCapabilityField(commandManager,
                 org.incendo.cloud.bukkit.CloudBukkitCapabilities.NATIVE_BRIGADIER);
+
+        // Register BigDecimal parser — Cloud core 2.0.0 ships double/float/int/long but not BigDecimal
+        commandManager.parserRegistry().registerParser(
+                ParserDescriptor.of(
+                        new BigDecimalParserImpl(),
+                        BigDecimal.class
+                )
+        );
 
         AnnotationParser<CommandSender> parser = new AnnotationParser<>(commandManager, CommandSender.class);
 
@@ -96,6 +109,20 @@ public class CommandManager {
             parser.parse(injector.getInstance(cls));
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to register command '" + name + "': " + e.getMessage());
+        }
+    }
+
+    private static final class BigDecimalParserImpl implements ArgumentParser<CommandSender, BigDecimal> {
+        @Override
+        public ArgumentParseResult<BigDecimal> parse(
+                org.incendo.cloud.context.CommandContext<CommandSender> ctx,
+                CommandInput input) {
+            String text = input.readString();
+            try {
+                return ArgumentParseResult.success(new BigDecimal(text));
+            } catch (NumberFormatException e) {
+                return ArgumentParseResult.failure(e);
+            }
         }
     }
 }

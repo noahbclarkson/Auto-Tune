@@ -258,13 +258,11 @@ public class ConfigValidator {
         if (c.apiUrl() == null || c.apiUrl().isBlank()) {
             v.add(S_PRICE_REPORTER + ".apiUrl must not be blank.");
         }
-        if (c.serverId() == null || c.serverId().isBlank() || c.serverId().equals("your-server-uuid")) {
-            v.add(S_PRICE_REPORTER + ".serverId must be set to a unique server identifier. "
-                    + "Using the default placeholder 'your-server-uuid' will cause all servers to report as the same server.");
+        if (c.serverId() == null || c.serverId().isBlank()) {
+            v.add(S_PRICE_REPORTER + ".serverId must not be blank.");
         }
-        if (c.apiKey() == null || c.apiKey().isBlank() || c.apiKey().equals("your-server-api-key")) {
-            v.add(S_PRICE_REPORTER + ".apiKey must be set to your server's API key. "
-                    + "Using the default placeholder will cause submissions to be rejected.");
+        if (c.apiKey() == null || c.apiKey().isBlank()) {
+            v.add(S_PRICE_REPORTER + ".apiKey is not set — price reporting will be skipped until a valid key is configured.");
         }
     }
 

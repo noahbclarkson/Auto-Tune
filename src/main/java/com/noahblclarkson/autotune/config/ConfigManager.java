@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class ConfigManager {
 
@@ -327,13 +328,32 @@ public class ConfigManager {
         if (section == null) {
             return PriceReporterConfig.defaults();
         }
+        String serverId = section.getString("server-id", "your-server-uuid");
+        if (serverId == null || serverId.isBlank() || serverId.equals("your-server-uuid")) {
+            serverId = UUID.randomUUID().toString();
+            plugin.getLogger().info("Generated price-reporter server-id: " + serverId
+                    + " — set a permanent value in config.yml to preserve it across restarts.");
+            section.set("server-id", serverId);
+            saveConfigIfPresent(section);
+        }
         return new PriceReporterConfig(
                 section.getBoolean("enabled", true),
                 section.getString("api-url", "https://prices.auto-tune.io"),
                 section.getString("api-key", "your-server-api-key"),
-                section.getString("server-id", "your-server-uuid"),
+                serverId,
                 section.getLong("report-interval-minutes", 5)
         );
+    }
+
+    private void saveConfigIfPresent(ConfigurationSection section) {
+        File configFile = new File(plugin.getDataFolder(), "config.yml");
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(configFile);
+        yaml.set("priceReporter.server-id", section.getString("server-id"));
+        try {
+            yaml.save(configFile);
+        } catch (IOException e) {
+            plugin.getLogger().warning("Failed to persist generated server-id to config.yml: " + e.getMessage());
+        }
     }
 
     private AutosellConfig parseAutosellConfig(ConfigurationSection section) {

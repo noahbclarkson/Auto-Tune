@@ -176,7 +176,7 @@ export function ConfigExport() {
       </div>
 
       <p className="text-center text-gray-600 text-xs mt-6">
-        {serverData.name} · {playerCount} players · {goals.length > 0 ? `${goals.length} goal(s) selected` : 'no goals'}
+        {wizardArchetypes.serverTypes[serverType as ServerType]?.name ?? serverType} · {playerCount} players · {goals.length > 0 ? `${goals.length} goal(s) selected` : 'no goals'}
       </p>
     </div>
   );

@@ -13,7 +13,6 @@ mod routes;
 use auth::ApiKeyAuth;
 use rate_limit::{RateLimitConfig, RateLimiter};
 use routes::{
-    auction::configure as configure_auction,
     exchange::get_exchange_rates,
     prices::{get_price_history, get_true_prices, submit_prices},
     servers::{heartbeat, list_servers, register_server},
@@ -111,9 +110,6 @@ async fn main() -> Result<()> {
                 "/api/servers/exchange-rates",
                 web::get().to(get_exchange_rates),
             )
-            // Auction house — removed 2026-03-26. Was: full in-game GUI in Java plugin.
-            // These routes now return 410 Gone.
-            .configure(configure_auction)
             // Authenticated endpoints
             .service(
                 web::scope("/api/servers/{server_id}")

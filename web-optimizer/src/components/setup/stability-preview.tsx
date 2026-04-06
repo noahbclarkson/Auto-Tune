@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils';
 import { wizardArchetypes } from '@/lib/wizard-data';
 import { Activity, TrendingUp, DollarSign, Clock, Shield, Zap } from 'lucide-react';
 
-type StabilityData = typeof wizardArchetypes.serverTypes.smp.stability;
+// All server type stability shapes vary; use loose Record so TypeScript accepts any field name
+type StabilityData = Record<string, string>;
 
 interface StatCardProps {
   icon: React.ElementType;

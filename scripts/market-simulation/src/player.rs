@@ -720,7 +720,12 @@ impl PlayerAgent {
     /// value, providing downward pressure to prevent bubble inflation.
     /// Phase 1: Proactive sell-spike selling — sells when sell_price > perceived*(1+threshold).
     /// Phase 2: Liquidate excess inventory when above target.
-    pub fn new_guild_seller(index: usize, item_count: usize, base_prices: &[f64], phase2_dip_threshold: Option<f64>) -> Self {
+    pub fn new_guild_seller(
+        index: usize,
+        item_count: usize,
+        base_prices: &[f64],
+        phase2_dip_threshold: Option<f64>,
+    ) -> Self {
         let mut rng = SeededRng;
         // GuildSellers have moderate capital — they sell guild inventory
         let budget = rng.random(10000.0..50000.0);
@@ -770,7 +775,8 @@ impl PlayerAgent {
             guild_sell_cooldown_ticks: HashMap::new(),
             // Phase 2 redesigned: sell when price dips below perceived*(1 - dip_threshold).
             // This makes GS an active anti-oversupply mechanism, not just excess-liquidator.
-            guild_phase2_dip_threshold: phase2_dip_threshold.unwrap_or_else(|| rng.random(0.10..0.25)),
+            guild_phase2_dip_threshold: phase2_dip_threshold
+                .unwrap_or_else(|| rng.random(0.10..0.25)),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -1689,7 +1695,8 @@ impl PlayerAgent {
                 let dip_floor = perceived * (1.0 - self.guild_phase2_dip_threshold);
                 let dip_severity = ((dip_floor - sell_price) / dip_floor).clamp(0.0, 1.0);
                 // Sell: dip_severity * risk_tolerance * current, min 1
-                let base_amount = (dip_severity * self.risk_tolerance * (current as f64)).ceil() as i32;
+                let base_amount =
+                    (dip_severity * self.risk_tolerance * (current as f64)).ceil() as i32;
                 rng.random_inclusive(1..=base_amount.min(self.max_trade_amount).max(1))
             };
 

@@ -4,7 +4,43 @@
 
 ---
 
-## [Unreleased] — 2026-04-04
+## [Unreleased] — 2026-04-06
+
+### Added
+
+- **`Seasonal Economy Events — Event Scheduling` (plugin)** — `/at event` command tree with three new subcommands: `templates` (lists available event templates from config.yml), `invoke <name>` (triggers a named template immediately), and `schedule <type> <materials> <multiplier> <duration> <offset>` (schedules an event to start in N minutes). Admins define reusable event templates in `config.yml` under `market-events.events`, then trigger them on demand or pre-schedule them. Scheduled events appear in `/at event list` as `[S]` (SCHEDULED) status and auto-activate when `onMarketTick()` fires. Boss bars and broadcasts fire on activation. Builds on existing `MarketEventService` (SCHEDULED status + auto-activation via `onMarketTick()`).
+- **`docs/SERVER_ADMIN_GUIDE.md`** — Practical guide for server admins covering quick-start checklist, how the market engine works (accessible language), configuration cookbook, monitoring guide, common issues & fixes, fine-tuning reference, and commands reference (~13KB)
+- **`docs/MIGRATION.md`** — Comprehensive rewrite-2 migration guide covering auction house move to in-game, config format changes, Cloud 2.x command syntax changes, new dependency requirements, bundled Javalin web server, price reporting architecture, separate Rust API server, new market engine behaviour, enchantment pricing, and upgrade checklist (~10KB)
+
+### Changed
+
+- **`docs/CHANGELOG.md`** — 9 days of missing entries added (2026-03-27 → 2026-04-04), ~85 total entries across 4 dated sections + unreleased. Merged duplicate `## 2026-03-26` sections into one.
+
+---
+
+## 2026-04-05
+
+### Added
+
+- **`GuildSeller Phase 2 Redesign` (sim)** — New `guild_phase2_dip_threshold` field in SimConfig + PlayerAgent. Phase 2 trigger: GS sells when price < perceived × (1 − dip_threshold). Active anti-oversupply mechanism vs legacy passive liquidation. Scenario: `guild_stability_mm_gs_phase2_redesign` (1MM+1GB+1GS+4Cas+3Far+2Tra). Verified counterproductive (H3 confirmed): GDP −96%, D/G +813%, prices catastrophic. GuildSeller remains a dead-end at both Phase 1 and Phase 2.
+- **`--stressed-30d-floor-test` CLI (sim)** — 30-day stressed-economy scenario (chronic oversupply: 3Cas+5Far+2Tra+2Hoa+1Exp + stress events @ ticks 864/1440/2016). Control (no floor) vs treatment (60% Diamond floor). Key finding: floor paradox INVERTED in stressed economy — floor acts as economic circuit breaker, preventing cascading oscillation. Control: GDP≈0, 14 TIER3 oscillations. Treatment: GDP=4,144, D/G=2,055x, only 1 TIER3 event (−93%). Floor is a valuable safety mechanism in stressed economies.
+- **`--circuit-breaker-sensitivity-test` CLI (sim)** — 80-run sweep: 4×4×5 seeds (tier3_ratio ∈ {8,10,12,15} × min_interest ∈ {0%,5%,10%,20%} × 5 seeds). Key finding: tier3_ratio=15 eliminates TIER3 events even in stress test (0 events across all 20 combos). min_interest is counterproductive. **Production recommendation: tier3_ratio=15, counter_cyclical=true, min_interest=0.**
+- **`EconomyTemperatureGauge` component (web/)** — Visual thermostat on home page showing economy heat. Compact SVG gauge with color gradient (blue=cold/healthy → red=overheating). Integrated into home page header area.
+- **`EconomyTemperatureGauge` on /economy page (web/)** — Same gauge component dropped into the /economy page using `AdminHealthDto` fields.
+- **`Config Health Dashboard` (web/ /admin)** — Config health matrix: each config section shown as a card with current value + recommended range indicator. Admin sees at a glance which parameters are in safe ranges vs need attention.
+- **`Post-Install Discovery Funnel` (web/)** — `DiscoveryOverlay` component: floating dismissible tip card on first visit to `/items` and `/portfolio`. Random contextual tip per session (1 of 3 per page), 8s auto-dismiss with progress bar. Tips for /items: price discovery, loans, shift-click history. Tips for /portfolio: P&L tracking, trading timeline, strategy adjustment. localStorage-persisted dismissal.
+- **`Portfolio CSV Export` (web/ + plugin)** — New Java endpoint `GET /api/portfolio/{player}/transactions.csv` generates a CSV of all player transactions with columns: timestamp, item, type, quantity, unit_price, total, balance_after. Export button on /portfolio page. Uses existing `TransactionRepository`.
+- **`Player Achievement Timeline` (web/ /badges)** — Search any player to see their earned badges with earn dates, rarity, and progress bar. Chronological display showing the player's "economy journey".
+- **`Server Setup Wizard` (web-optimizer/)** — 5-step interactive config generator: Server Type → Player Count → Key Parameters → Stability Preview → YAML Export. Pre-computed sim data, fully client-side. Icon keys fixed (pickaxe→axe, island→mountain). All archetypes now include tier3=15 loans config.
+
+### Changed
+
+- **`LoanManager tier3-ratio default → 15` (plugin)** — Updated default from 10 to 15 in `ConfigManager.java`. Counter-cyclical at tier3=15 gives multiplier=33% at D/G=10x, vs 0% at tier3=10. Eliminates TIER3 event noise in healthy economies while maintaining circuit breaker protection.
+- **`config.rs tier3_ratio default → 15` (sim)** — Rust `LoanConfig.debt_gdp_tier3_ratio` updated to 15.0. Matches Java default exactly. Regression: 5/5 PASS.
+
+---
+
+## 2026-04-04
 
 ### Added
 

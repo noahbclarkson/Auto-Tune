@@ -330,6 +330,11 @@ cleanup:
 | `/treasury` | Server economy treasury — balance, deposit, withdraw |
 | `/pricealert <item> <above|below> <price>` | Set a price alert for an item |
 | `/at admin` | Admin commands — market freeze, price override, item config, prices management |
+| `/at event templates` | List available event templates from config.yml |
+| `/at event invoke <name>` | Trigger a named event template immediately |
+| `/at event schedule <type> <mats> <mult> <dur> <offset>` | Schedule an event to start in N minutes |
+| `/at event list` | Show active and scheduled market events |
+| `/at event cancel <id>` | Cancel a scheduled event |
 
 For per-item price tuning: `/at admin item spread <material> <value>` to set a custom spread for a specific item, or `/at admin item reset <material>` to clear the override.
 
@@ -419,15 +424,33 @@ Taxes are collected on every buy, sell, auction fill, and loan interest compound
 
 ### Market Events
 
-Scheduled server-wide events that temporarily influence prices:
+Scheduled server-wide events that temporarily influence prices. Events affect price velocity (how fast prices change), not absolute prices — exploits are not possible.
+
+Define reusable event templates in `config.yml` under `market-events.events`:
+
+```yaml
+market-events:
+  events:
+    diamond-rush:
+      type: DEMAND_SURGE
+      materials: [DIAMOND, DIAMOND_ORE, DEEPSLATE_DIAMOND_ORE]
+      multiplier: 2.0
+      duration-minutes: 60
+```
+
+Then trigger them via command:
+
 
 ```
-/at admin event list          ← show active/scheduled events
-/at admin event create <name> <type> <multiplier> <minutes> [materials...]
-/at admin event cancel <name>
+/at event templates              ← list available templates from config.yml
+/at event invoke <name>           ← trigger a named template immediately
+/at event schedule <type> <mats> <mult> <duration> <offset-mins>
+                                ← schedule event to start in N minutes
+/at event list                   ← show active/scheduled events
+/at event cancel <id>            ← cancel a scheduled event
 ```
 
-Event types: `DEMAND_SURGE` (buy pressure), `SUPPLY_GLUT` (sell pressure), `INFLATION_BOOST`, `DEFLATION_DROP`, `GOLD_RUSH`, `CUSTOM`. When an event activates, all online players see a boss bar announcing it.
+Event types: `DEMAND_SURGE` (buy pressure), `SUPPLY_GLUT` (sell pressure), `INFLATION_BOOST`, `DEFLATION_DROP`, `GOLD_RUSH`, `CUSTOM`. When an event activates, all online players see a boss bar announcing it. Events auto-activate when the server's market tick fires (every 5 minutes by default).
 
 ### Admin Digest
 

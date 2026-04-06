@@ -357,8 +357,10 @@ export const api = {
     list: (base: string) => fetchJson<AnonLoanDto[]>(`${base}/api/loans`),
     stats: (base: string) => fetchJson<LoanStatsDto>(`${base}/api/loans/stats`),
   },
-  leaderboard: (base: string, limit = 20) =>
-    fetchJson<LeaderboardEntryDto[]>(`${base}/api/leaderboard?limit=${limit}`),
+  leaderboard: (base: string, limit = 20, period = 'all') =>
+    fetchJson<LeaderboardEntryDto[]>(
+      `${base}/api/leaderboard?limit=${limit}&period=${period}`
+    ),
   portfolio: {
     get: (base: string, playerName: string) =>
       fetchJson<PortfolioDto>(`${base}/api/portfolio/${encodeURIComponent(playerName)}`),

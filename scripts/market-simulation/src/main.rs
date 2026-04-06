@@ -8046,6 +8046,190 @@ fn run_it_healthy_economy_test() {
     let _ = std::fs::remove_dir_all(&treat_dir);
 }
 
+fn run_guild_threshold_multi_seed() {
+    use crate::analyzer::load_summary;
+    use crate::player::set_fixed_guild_threshold;
+    use std::collections::HashMap;
+
+    let thresholds: Vec<f64> = vec![0.05, 0.07, 0.10, 0.15, 0.20];
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+    let base_scenario = Scenario::guild_stability_mm_fixed_guild();
+
+    let mut results: HashMap<f64, Vec<GuildSweepResult>> = HashMap::new();
+    for &t in &thresholds {
+        results.insert(t, Vec::new());
+    }
+
+    let total = thresholds.len() * seeds.len();
+    let mut completed = 0usize;
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║       GUILDBUYER THRESHOLD MULTI-SEED VALIDATION                 ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝");
+    println!();
+    println!("  Scenario: guild_stability_mm_fixed_guild (2MM + 2GB + 3Cas + 3Far + 2Tra)");
+    println!("  Duration: 14 days ({} ticks)", base_scenario.duration_ticks);
+    println!("  Thresholds: {:?}", thresholds.iter().map(|t| format!("{:.0}%", t * 100.0)).collect::<Vec<_>>());
+    println!("  Seeds: {:?}", seeds);
+    println!("  Total runs: {} × {} = {}", thresholds.len(), seeds.len(), total);
+    println!();
+
+    for &threshold in &thresholds {
+        for &seed in &seeds {
+            completed += 1;
+            eprint!("\r  [{}/{}] threshold={:.0}% seed={}",
+                completed, total, threshold * 100.0, seed);
+            std::io::stderr().flush().ok();
+
+            let out_dir = PathBuf::from(format!(
+                "/tmp/autotune-gt-ms-{:02}-{}-{}",
+                (threshold * 100.0) as i32, seed,
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs() % 100000
+            ));
+            let _ = std::fs::remove_dir_all(&out_dir);
+            std::fs::create_dir_all(&out_dir).ok();
+
+            set_fixed_guild_threshold(Some(threshold));
+            let _ = run_seeded_headless(seed, &base_scenario, Some(out_dir.clone()));
+            set_fixed_guild_threshold(None);
+
+            let db_path = out_dir.join("simulation.db");
+            if let Ok(summary) = load_summary(&db_path) {
+                let debt_gdp = summary.debt / summary.gdp.max(0.01);
+                let threshold_pct = threshold * 100.0;
+                let vol = summary.avg_volatility.unwrap_or(0.0);
+                let buy_pct = if summary.total_trades > 0 {
+                    summary.total_buys as f64 / summary.total_trades as f64 * 100.0
+                } else {
+                    0.0
+                };
+                let r = GuildSweepResult {
+                    threshold: threshold_pct,
+                    gdp: summary.gdp,
+                    debt: summary.debt,
+                    debt_gdp_ratio: debt_gdp,
+                    bpd_pct: summary.avg_bpd_pct,
+                    spd_pct: summary.avg_spd_pct,
+                    volatility: vol,
+                    buy_pct,
+                };
+                results.get_mut(&threshold).unwrap().push(r);
+            }
+
+            let _ = std::fs::remove_dir_all(&out_dir);
+        }
+    }
+    eprintln!();
+    println!();
+
+    // Summary table: mean ± std per threshold
+    println!("  {:>8} {:>14} {:>10} {:>10} {:>8} {:>8}",
+        "Thresh", "GDP", "D/G", "BPD%", "SPD%", "Vol×100");
+    println!("  {:>8} {:>14} {:>10} {:>10} {:>8} {:>8}",
+        "─".repeat(8), "─".repeat(14), "─".repeat(10),
+        "─".repeat(10), "─".repeat(8), "─".repeat(8));
+
+    let mut best_gdp = 0.0_f64;
+    let mut best_dg = f64::MAX;
+    let mut best_vol = f64::MAX;
+    let mut best_threshold = 0.05_f64;
+
+    for &threshold in &thresholds {
+        let vals = results.get(&threshold).unwrap();
+        if vals.is_empty() { continue; }
+
+        let mean = |field: fn(&GuildSweepResult) -> f64| -> f64 {
+            let sum: f64 = vals.iter().map(field).sum();
+            sum / vals.len() as f64
+        };
+        let std = |field: fn(&GuildSweepResult) -> f64| -> f64 {
+            let m = mean(field);
+            let variance: f64 = vals.iter()
+                .map(|v| { let d = field(v) - m; d * d })
+                .sum::<f64>() / vals.len() as f64;
+            variance.sqrt()
+        };
+
+        let gdp_m = mean(|v| v.gdp);
+        let dg_m = mean(|v| v.debt_gdp_ratio);
+        let bpd_m = mean(|v| v.bpd_pct);
+        let vol_m = mean(|v| v.volatility) * 100.0;
+
+        if gdp_m > best_gdp { best_gdp = gdp_m; }
+        if dg_m < best_dg { best_dg = dg_m; }
+        if vol_m < best_vol { best_vol = vol_m; }
+        if dg_m == best_dg && gdp_m > mean(|v| v.gdp) {
+            best_threshold = threshold;
+        }
+
+        let gdp_s = std(|v| v.gdp);
+        let dg_s = std(|v| v.debt_gdp_ratio);
+        let bpd_s = std(|v| v.bpd_pct);
+        let vol_s = std(|v| v.volatility) * 100.0;
+
+        println!(
+            "  {:>6.0f}%  {:>6.0}K±{:<4.0}  {:>5.2f}±{:<3.2}  {:>5.2}±{:<3.2}  {:>6.3}  {:>6.2}",
+            threshold * 100.0,
+            gdp_m / 1000.0,
+            gdp_s / 1000.0,
+            dg_m, dg_s,
+            bpd_m, bpd_s,
+            vol_m, vol_s
+        );
+    }
+
+    println!();
+    println!("  ═══════════════════════════════════════════════════════════════════");
+    println!("  RECOMMENDATION (guild_stability_mm_fixed_guild, 5 seeds):");
+    println!();
+
+    // Find best by GDP, D/G, and volatility
+    let mut gdp_ranked = results.keys().copied().collect::<Vec<_>>();
+    gdp_ranked.sort_by(|a, b| {
+        let ma = results[a].iter().map(|v| v.gdp).sum::<f64>() / results[a].len().max(1) as f64;
+        let mb = results[b].iter().map(|v| v.gdp).sum::<f64>() / results[b].len().max(1) as f64;
+        mb.partial_cmp(&ma).unwrap()
+    });
+
+    let mut dg_ranked = results.keys().copied().collect::<Vec<_>>();
+    dg_ranked.sort_by(|a, b| {
+        let ma = results[a].iter().map(|v| v.debt_gdp_ratio).sum::<f64>() / results[a].len().max(1) as f64;
+        let mb = results[b].iter().map(|v| v.debt_gdp_ratio).sum::<f64>() / results[b].len().max(1) as f64;
+        ma.partial_cmp(&mb).unwrap()
+    });
+
+    let top_gdp = gdp_ranked[0];
+    let top_dg = dg_ranked[0];
+
+    println!("  • Best GDP:       {:.0}% threshold ({:.0}K avg GDP)",
+        top_gdp * 100.0,
+        results[&top_gdp].iter().map(|v| v.gdp).sum::<f64>() / results[&top_gdp].len().max(1) as f64 / 1000.0);
+    println!("  • Lowest D/G:    {:.0}% threshold ({:.2}x avg)",
+        top_dg * 100.0,
+        results[&top_dg].iter().map(|v| v.debt_gdp_ratio).sum::<f64>() / results[&top_dg].len().max(1) as f64);
+
+    // Volatility analysis
+    for &threshold in &thresholds {
+        let vol = results[&threshold].iter().map(|v| v.volatility).sum::<f64>()
+            / results[&threshold].len().max(1) as f64;
+        let unstable = results[&threshold].iter().filter(|v| v.volatility > 0.05).count();
+        print!("  • {:.0}%: vol={:.4}", threshold * 100.0, vol);
+        if unstable > 0 {
+            print!(" ⚠️  {}/{} seeds UNSTABLE (vol>0.05)", unstable, seeds.len());
+        } else {
+            print!(" ✅ stable");
+        }
+        println!();
+    }
+
+    println!();
+    println!("  ➡️  VERDICT: See table above. Prioritize vol<0.05 AND D/G reasonable.");
+    println!();
+}
+
 fn run_mm_quit_test() {
     use crate::analyzer::load_summary;
     use rusqlite::Connection;
@@ -9784,6 +9968,12 @@ fn main() -> eframe::Result<()> {
     // ─── IT Healthy Economy Test ───────────────────────────────────────────
     if args.len() > 1 && args[1] == "--it-healthy-test" {
         run_it_healthy_economy_test();
+        return Ok(());
+    }
+
+    // ─── Guild Threshold Multi-Seed ───────────────────────────────────────
+    if args.len() > 1 && args[1] == "--guild-threshold-multi-seed" {
+        run_guild_threshold_multi_seed();
         return Ok(());
     }
 

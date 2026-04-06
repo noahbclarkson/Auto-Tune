@@ -338,4 +338,69 @@ public class TransactionRepository {
                         .findOne()
                         .orElse(0));
     }
+
+    /**
+     * Aggregates transaction history for the given time period.
+     * Used for leaderboard period filtering (day / week / month).
+     * Returns aggregated transaction counts and volumes per player,
+     * ranked by total volume (buys + sells) descending.
+     *
+     * @param period "day" (24h), "week" (7d), "month" (30d), or "all" (returns empty list)
+     * @param limit  max rows to return
+     * @return list of period aggregates, never null
+     */
+    public List<TransactionPeriodAggregate> findTopTradersByPeriod(String period, int limit) {
+        return jdbi.withHandle(handle -> {
+            String since = switch (period) {
+                case "day" -> "datetime('now', '-1 day')";
+                case "week" -> "datetime('now', '-7 days')";
+                case "month" -> "datetime('now', '-30 days')";
+                default -> null;
+            };
+
+            if (since == null) {
+                return List.of();
+            }
+
+            String sql = """
+                SELECT
+                    t.player_uuid,
+                    COALESCE(p.username, SUBSTR(t.player_uuid, 1, 8)) AS username,
+                    COALESCE(SUM(CASE WHEN t.transaction_type = 'BUY' THEN t.amount ELSE 0 END), 0) AS total_bought,
+                    COALESCE(SUM(CASE WHEN t.transaction_type = 'SELL' THEN t.amount ELSE 0 END), 0) AS total_sold,
+                    COUNT(*) AS transaction_count,
+                    COALESCE(SUM(CASE WHEN t.transaction_type = 'BUY' THEN t.total_price ELSE 0 END), 0) AS total_spent,
+                    COALESCE(SUM(CASE WHEN t.transaction_type = 'SELL' THEN t.total_price ELSE 0 END), 0) AS total_earned
+                FROM at_transactions t
+                LEFT JOIN at_players p ON t.player_uuid = p.uuid
+                WHERE t.timestamp >= """ + since + """
+                GROUP BY t.player_uuid
+                ORDER BY (total_bought + total_sold) DESC
+                LIMIT :limit
+                """;
+
+            return handle.createQuery(sql)
+                .bind("limit", limit)
+                .map((rs, ctx) -> new TransactionPeriodAggregate(
+                    rs.getString("player_uuid"),
+                    rs.getString("username"),
+                    rs.getLong("total_bought"),
+                    rs.getLong("total_sold"),
+                    rs.getLong("transaction_count"),
+                    rs.getBigDecimal("total_spent"),
+                    rs.getBigDecimal("total_earned")
+                ))
+                .list();
+        });
+    }
+
+    public record TransactionPeriodAggregate(
+        String playerUuid,
+        String username,
+        long totalBought,
+        long totalSold,
+        long transactionCount,
+        BigDecimal totalSpent,
+        BigDecimal totalEarned
+    ) {}
 }

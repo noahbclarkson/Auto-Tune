@@ -604,18 +604,45 @@ public class WebServer {
 
         app.get("/api/leaderboard", ctx -> {
             int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(20);
-            List<PlayerData> topTraders = playerRepository.findTopTraders(Math.min(limit, 100));
-            AtomicInteger rank = new AtomicInteger(1);
-            List<LeaderboardEntryDto> dtos = topTraders.stream()
-                    .map(p -> new LeaderboardEntryDto(
-                            rank.getAndIncrement(),
-                            p.username() != null ? p.username() : "Unknown",
-                            p.totalTraded().doubleValue(),
-                            p.totalBought().doubleValue(),
-                            p.totalSold().doubleValue(),
-                            p.transactionCount()
-                    ))
-                    .collect(Collectors.toList());
+            int cappedLimit = Math.min(limit, 100);
+            String period = ctx.queryParam("period");
+            List<LeaderboardEntryDto> dtos;
+
+            if (period != null && !period.equals("all")) {
+                // Period-filtered leaderboard — aggregate from transactions table
+                List<TransactionRepository.TransactionPeriodAggregate> aggregates =
+                        transactionRepository.findTopTradersByPeriod(period, cappedLimit);
+                AtomicInteger rank = new AtomicInteger(1);
+                dtos = aggregates.stream()
+                        .map(a -> {
+                            double totalTraded = a.totalBought() + a.totalSold();
+                            // netTrade = earnings (sells) - spending (buys); negative = net buyer
+                            double netTrade = a.totalEarned().subtract(a.totalSpent()).doubleValue();
+                            return new LeaderboardEntryDto(
+                                    rank.getAndIncrement(),
+                                    a.username() != null ? a.username() : "Unknown",
+                                    totalTraded,
+                                    (double) a.totalBought(),
+                                    (double) a.totalSold(),
+                                    (int) a.transactionCount()
+                            );
+                        })
+                        .collect(Collectors.toList());
+            } else {
+                // All-time leaderboard — use persisted cumulative counters
+                List<PlayerData> topTraders = playerRepository.findTopTraders(cappedLimit);
+                AtomicInteger rank = new AtomicInteger(1);
+                dtos = topTraders.stream()
+                        .map(p -> new LeaderboardEntryDto(
+                                rank.getAndIncrement(),
+                                p.username() != null ? p.username() : "Unknown",
+                                p.totalTraded().doubleValue(),
+                                p.totalBought().doubleValue(),
+                                p.totalSold().doubleValue(),
+                                p.transactionCount()
+                        ))
+                        .collect(Collectors.toList());
+            }
             ctx.json(dtos);
         });
 

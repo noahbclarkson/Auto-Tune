@@ -58,6 +58,14 @@ Chronological record of every significant change to rewrite-2, grouped by date.
 
 ---
 
+## I have a problem
+
+→ **[FAQ](FAQ.md)**
+
+Covers: pricing behavior, economy distress, loan issues, configuration, market events, dashboard problems, cross-server setup, performance, and troubleshooting.
+
+---
+
 ## I want to integrate with the bundled dashboard API
 
 → **[Dashboard API Reference](DASHBOARD_API.md)**
@@ -105,4 +113,5 @@ See the Server Admin Guide for the full commands reference table.
 | `CHANGELOG.md` | What's changed, by date | Everyone |
 | `DASHBOARD_API.md` | Bundled dashboard REST + WebSocket API | Developers |
 | `API.md` | Cross-server Rust API | Developers |
+| `FAQ.md` | Common admin questions with direct answers | Server admins |
 | `README.md` | This file | Everyone |

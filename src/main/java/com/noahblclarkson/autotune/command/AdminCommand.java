@@ -6,6 +6,7 @@ import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.ItemRepository;
+import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.economy.LoanManager;
@@ -52,6 +53,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -83,6 +85,7 @@ public class AdminCommand {
     private final DatabaseCleanupManager cleanupManager;
     private final MarketEventService marketEventService;
     private final MarketDigestService marketDigestService;
+    private final EconomySnapshotRepository economySnapshotRepository;
 
     @Inject
     public AdminCommand(
@@ -99,7 +102,8 @@ public class AdminCommand {
             DatabaseCleanupManager cleanupManager,
             MarketEventService marketEventService,
             PriceReporter priceReporter,
-            MarketDigestService marketDigestService
+            MarketDigestService marketDigestService,
+            EconomySnapshotRepository economySnapshotRepository
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -115,6 +119,7 @@ public class AdminCommand {
         this.marketEventService = marketEventService;
         this.priceReporter = priceReporter;
         this.marketDigestService = marketDigestService;
+        this.economySnapshotRepository = economySnapshotRepository;
     }
 
     @Command("autotune admin")
@@ -130,6 +135,8 @@ public class AdminCommand {
                 .append(Component.text(" — System health and consistency check", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin trend [days]", NamedTextColor.YELLOW)
                 .append(Component.text(" — Economy trajectory over N days (default: 7)", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin history [limit]", NamedTextColor.YELLOW)
+                .append(Component.text(" — Snapshot history table (default: 10, max: 100)", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin stats", NamedTextColor.YELLOW)
                 .append(Component.text(" — Detailed market statistics", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin market freeze", NamedTextColor.YELLOW)
@@ -981,6 +988,113 @@ public class AdminCommand {
 
         sender.sendMessage(Component.empty());
     }
+
+
+    @Command("autotune admin history [limit]")
+    @Permission("autotune.admin")
+    public void adminHistory(CommandSender sender,
+                            @Argument(value = "limit") Optional<Integer> limitArg) {
+        int n = (limitArg == null || limitArg.orElse(0) < 1) ? 10 : Math.min(limitArg.orElse(10), 100);
+
+        List<EconomySnapshot> snapshots = economySnapshotRepository.findRecent(n);
+        if (snapshots.isEmpty()) {
+            sender.sendMessage(Component.text("No economy history available yet.", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.text("Snapshots are recorded every 5 minutes during market ticks.", NamedTextColor.GRAY));
+            return;
+        }
+
+        // Header
+        sender.sendMessage(Component.text("═══════════════════════════════════════", NamedTextColor.AQUA));
+        sender.sendMessage(Component.text("  Economy History — Last " + n + " Snapshots", NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("═══════════════════════════════════════", NamedTextColor.AQUA));
+
+        // Column headers
+        sender.sendMessage(
+            Component.text("  #  GDp▲                    DeBt▼               D/G      VoLuMe▲           Loans   ΔGDP%   ΔDebt%", NamedTextColor.GRAY)
+        );
+        sender.sendMessage(Component.text("─────────────────────────────────────────────", NamedTextColor.GRAY));
+
+        // Show oldest → newest (chronological order)
+        List<EconomySnapshot> ordered = new ArrayList<>(snapshots);
+        Collections.reverse(ordered); // oldest first
+
+        for (int i = 0; i < ordered.size(); i++) {
+            EconomySnapshot snap = ordered.get(i);
+            EconomySnapshot prev = (i > 0) ? ordered.get(i - 1) : null;
+
+            String idx = String.format("%3d", i + 1);
+            String gdpStr = formatCompact(snap.gdp());
+            String debtStr = formatCompact(snap.totalDebt());
+            String dgStr = snap.gdp().compareTo(BigDecimal.ZERO) > 0
+                ? String.format("%.1fx", snap.totalDebt().divide(snap.gdp(), 2, RoundingMode.HALF_UP))
+                : "N/A";
+            String volStr = formatCompact(snap.transactionVolume());
+            String loansStr = String.valueOf(snap.activeLoans());
+
+            // Trend deltas vs previous snapshot
+            String gdpDelta = "";
+            String debtDelta = "";
+            if (prev != null) {
+                double gdpPct = computePctChange(prev.gdp(), snap.gdp());
+                double debtPct = computePctChange(prev.totalDebt(), snap.totalDebt());
+                gdpDelta = formatDelta(gdpPct);
+                debtDelta = formatDelta(debtPct);
+            }
+
+            NamedTextColor idxColor = (i == ordered.size() - 1) ? NamedTextColor.GREEN : NamedTextColor.AQUA;
+            NamedTextColor gdpColor = gdpDelta.startsWith("+") ? NamedTextColor.GREEN : (gdpDelta.startsWith("-") ? NamedTextColor.RED : NamedTextColor.WHITE);
+            NamedTextColor debtColor = debtDelta.startsWith("-") ? NamedTextColor.GREEN : (debtDelta.startsWith("+") ? NamedTextColor.RED : NamedTextColor.WHITE);
+
+            sender.sendMessage(Component.text(idx + " ", idxColor)
+                .append(Component.text(gdpStr, NamedTextColor.WHITE))
+                .append(Component.text("  ", NamedTextColor.GRAY))
+                .append(Component.text(debtStr, NamedTextColor.WHITE))
+                .append(Component.text("  ", NamedTextColor.GRAY))
+                .append(Component.text(dgStr, dgColor(dgStr)))
+                .append(Component.text("  ", NamedTextColor.GRAY))
+                .append(Component.text(volStr, NamedTextColor.WHITE))
+                .append(Component.text("  ", NamedTextColor.GRAY))
+                .append(Component.text(loansStr, NamedTextColor.WHITE))
+                .append(Component.text("  " + gdpDelta, gdpColor))
+                .append(Component.text("  " + debtDelta, debtColor))
+            );
+        }
+
+        sender.sendMessage(Component.text("─────────────────────────────────────────────", NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  ▲ = most recent   Δ = change from previous", NamedTextColor.GRAY));
+
+        // Summary stats: total span and average GDP growth
+        EconomySnapshot oldest = ordered.get(0);
+        EconomySnapshot newest = ordered.get(ordered.size() - 1);
+        double totalGdpPct = computePctChange(oldest.gdp(), newest.gdp());
+        double totalDebtPct = computePctChange(oldest.totalDebt(), newest.totalDebt());
+        String trend = totalGdpPct >= 0 ? "📈" : "📉";
+        sender.sendMessage(Component.text(trend + " Over " + n + " snapshots: GDP " + formatDelta(totalGdpPct)
+            + " | Debt " + formatDelta(totalDebtPct), NamedTextColor.AQUA));
+    }
+
+    private NamedTextColor dgColor(String dgStr) {
+        try {
+            double dg = Double.parseDouble(dgStr.replace("x", ""));
+            if (dg < 1.0) return NamedTextColor.GREEN;
+            if (dg < 3.0) return NamedTextColor.YELLOW;
+            if (dg < 8.0) return NamedTextColor.GOLD;
+            return NamedTextColor.RED;
+        } catch (NumberFormatException e) {
+            return NamedTextColor.WHITE;
+        }
+    }
+
+    private double computePctChange(BigDecimal oldVal, BigDecimal newVal) {
+        if (oldVal == null || oldVal.compareTo(BigDecimal.ZERO) == 0) return 0;
+        return newVal.subtract(oldVal).divide(oldVal, 4, RoundingMode.HALF_UP).doubleValue() * 100;
+    }
+
+    private String formatDelta(double pct) {
+        String sign = pct >= 0 ? "+" : "";
+        return sign + String.format("%.1f%%", pct);
+    }
+
 
     @Command("autotune admin stats")
     @Permission("autotune.admin")

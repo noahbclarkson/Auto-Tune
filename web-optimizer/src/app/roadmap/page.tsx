@@ -34,7 +34,7 @@ const CATEGORIES = [
       { status: 'done', text: 'Server registration and API key auth' },
       { status: 'done', text: 'Exchange rate computation (per-server vs true-price baseline)' },
       { status: 'done', text: 'Cross-server exchange rate plugin integration (ExchangeRateService)' },
-      { status: 'in-progress', text: 'Per-server reputation weighting for submissions' },
+      { status: 'todo', text: 'Per-server reputation weighting for submissions (longer history = higher weight in LS solver)' },
       { status: 'todo', text: 'Server health leaderboard with voluntary reporting' },
     ],
   },
@@ -50,7 +50,7 @@ const CATEGORIES = [
       { status: 'done', text: 'Market simulator with StabilityForecast' },
       { status: 'done', text: 'Player achievement badges and trading milestones' },
       { status: 'done', text: 'Market digest Discord webhook (admin alerts + weekly digest)' },
-      { status: 'in-progress', text: 'web-optimizer public dashboard with live cross-server data' },
+      { status: 'in-progress', text: 'web-optimizer public dashboard with live cross-server data (code complete, API deployment needed)' },
     ],
   },
   {

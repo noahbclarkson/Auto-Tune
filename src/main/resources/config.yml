@@ -200,12 +200,13 @@ loans:
   # snowball before it reaches catastrophic levels (>10x where full pause fires).
   # Tier 1 (>3x): interest capped at 50% of normal
   # Tier 2 (>5x): interest capped at 25% of normal
-  # Tier 3 (>10x): interest fully paused (original single-threshold behavior)
-  # Evidence (2026-03-27): stressed-economy hit 23,196x debt/GDP because the
-  # old single-ratio breaker couldn't slow compounding before it exploded.
+  # Tier 3 (>15x): interest fully paused (last-resort circuit breaker)
+  # Evidence (2026-04-05): tier3_ratio=10 caused TIER3 oscillations near the
+  # 10x boundary. tier3_ratio=15 eliminates TIER3 noise in healthy economies
+  # while counter-cyclical=true handles gradual deleveraging smoothly.
   debt-gdp-tier1-ratio: 3.0
   debt-gdp-tier2-ratio: 5.0
-  debt-gdp-tier3-ratio: 10.0
+  debt-gdp-tier3-ratio: 15.0
   tier1-interest-cap: 0.5
   tier2-interest-cap: 0.25
 
@@ -516,3 +517,83 @@ news:
   # Don't re-announce the same item within this window (in minutes).
   # Prevents a single volatile item from dominating the feed.
   item-cooldown-minutes: 30
+
+# ============================================================
+# Admin Webhook — optional Discord or generic HTTP notifications
+# ============================================================
+# When enabled, Auto-Tune posts an embed to your Discord webhook
+# (or any HTTP endpoint accepting POST application/json) when
+# the economy enters a dangerous state:
+#   - Circuit breaker tier-2 or tier-3 activation
+#   - Aggregate economy volatility spikes into UNSTABLE zone
+#   - Debt/GDP ratio exceeds a configurable threshold
+#
+# All HTTP calls run asynchronously — no main-thread blocking.
+admin-webhook:
+  # Set to true to enable webhook notifications.
+  enabled: false
+
+  # Your Discord webhook URL (Server Settings → Integrations → Webhooks).
+  # Also accepts any HTTP endpoint that takes POST application/json.
+  webhook-url: ""
+
+  # Display name for webhook messages (Discord: overrides webhook name).
+  username: "Auto-Tune Economy"
+
+  # Optional avatar URL for the webhook message.
+  # avatar-url: "https://example.com/autotune-icon.png"
+
+  # Fire on circuit breaker tier-2 (interest reduced to 25%). Default: false.
+  notify-tier2: false
+
+  # Fire on circuit breaker tier-3 (all interest paused). Default: true.
+  notify-tier3: true
+
+  # Fire when aggregate price volatility spikes into UNSTABLE zone (>= 0.15).
+  notify-volatility: true
+
+  # Fire when Debt/GDP ratio exceeds notify-high-debt-threshold.
+  notify-high-debt: true
+
+  # Debt/GDP ratio that triggers the high-debt alert. Default: 8.0x
+  notify-high-debt-threshold: 8.0
+
+  # Fire when any item's 24h trade volume drops below low-volume-threshold.
+  # Useful for detecting stagnant items that may need admin attention.
+  notify-low-volume: false
+
+  # Minimum trades in the last 24 hours before the low-volume alert fires.
+  # Default: 2 — only items with 0-1 total trades trigger the alert.
+  low-volume-threshold: 2
+
+# ============================================================
+# Price Milestones — broadcasts when items cross round-number prices
+# ============================================================
+# When enabled, players see action bar notifications when an item's
+# mid-price crosses a round-number threshold (e.g. Diamond breaks through
+# $300, or falls below $200). Announces both upward and downward crossings.
+#
+# Cooldown is per item + threshold combination — the same threshold on the
+# same item can't be re-announced within the cooldown window.
+price-milestone:
+  # Set to false to disable milestone announcements.
+  enabled: false
+
+  # How often to scan for milestone crossings (in minutes). Default: 1.
+  # Keep this short since announcements are milestone-triggered (not periodic).
+  interval-minutes: 1
+
+  # Round-number price thresholds to watch. Sorted automatically.
+  # Diamond at $100, $200, $300, $500, $1000, $2000 are common.
+  thresholds:
+    - 50
+    - 100
+    - 200
+    - 300
+    - 500
+    - 1000
+    - 2000
+
+  # Minimum minutes between announcements for the same item+threshold.
+  # Prevents spam if an item oscillates around a threshold.
+  cooldown-minutes: 60

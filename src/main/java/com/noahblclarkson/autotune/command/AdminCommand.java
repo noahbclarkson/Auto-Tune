@@ -6,6 +6,7 @@ import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.ItemRepository;
+import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.economy.LoanManager;
@@ -16,6 +17,7 @@ import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.manager.PriceReporter;
 import com.noahblclarkson.autotune.manager.ShopManager;
+import com.noahblclarkson.autotune.service.MarketDigestService;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
 import com.noahblclarkson.autotune.model.ExchangeRate;
 import com.noahblclarkson.autotune.model.MarketEvent;
@@ -37,13 +39,22 @@ import org.incendo.cloud.annotations.Permission;
 import org.incendo.cloud.annotations.suggestion.Suggestions;
 import org.incendo.cloud.context.CommandContext;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -51,6 +62,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("PMD")
 @Singleton
@@ -73,6 +85,8 @@ public class AdminCommand {
     private final PriceReporter priceReporter;
     private final DatabaseCleanupManager cleanupManager;
     private final MarketEventService marketEventService;
+    private final MarketDigestService marketDigestService;
+    private final EconomySnapshotRepository economySnapshotRepository;
 
     @Inject
     public AdminCommand(
@@ -88,7 +102,9 @@ public class AdminCommand {
             ExchangeRateService exchangeRateService,
             DatabaseCleanupManager cleanupManager,
             MarketEventService marketEventService,
-            PriceReporter priceReporter
+            PriceReporter priceReporter,
+            MarketDigestService marketDigestService,
+            EconomySnapshotRepository economySnapshotRepository
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -103,6 +119,8 @@ public class AdminCommand {
         this.cleanupManager = cleanupManager;
         this.marketEventService = marketEventService;
         this.priceReporter = priceReporter;
+        this.marketDigestService = marketDigestService;
+        this.economySnapshotRepository = economySnapshotRepository;
     }
 
     @Command("autotune admin")
@@ -118,6 +136,8 @@ public class AdminCommand {
                 .append(Component.text(" — System health and consistency check", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin trend [days]", NamedTextColor.YELLOW)
                 .append(Component.text(" — Economy trajectory over N days (default: 7)", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin history [limit]", NamedTextColor.YELLOW)
+                .append(Component.text(" — Snapshot history table (default: 10, max: 100)", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin stats", NamedTextColor.YELLOW)
                 .append(Component.text(" — Detailed market statistics", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin market freeze", NamedTextColor.YELLOW)
@@ -152,6 +172,22 @@ public class AdminCommand {
                 .append(Component.text(" — Show cross-server exchange rates", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin transaction-min", NamedTextColor.YELLOW)
                 .append(Component.text(" — Show minimum transaction size settings", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin prices export [filename]", NamedTextColor.YELLOW)
+                .append(Component.text(" — Export all item prices to CSV", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin prices import <filename>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Import price changes from CSV", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin prices reset <material>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Reset item price to shops.yml base and clear history", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin event list", NamedTextColor.YELLOW)
+                .append(Component.text(" — List active and recent market events", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin event create <name> <type> <items> <mult> <hrs> [start-msg] [end-msg]", NamedTextColor.YELLOW)
+                .append(Component.text(" — Create and trigger a market event", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin event cancel <id>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Cancel an active or scheduled event", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin digest", NamedTextColor.YELLOW)
+                .append(Component.text(" — Send market digest to Discord webhook now", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin digest config", NamedTextColor.YELLOW)
+                .append(Component.text(" — Show digest settings and next send time", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
     }
 
@@ -953,6 +989,113 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
+
+    @Command("autotune admin history [limit]")
+    @Permission("autotune.admin")
+    public void adminHistory(CommandSender sender,
+                            @Argument(value = "limit") Optional<Integer> limitArg) {
+        int n = (limitArg == null || limitArg.orElse(0) < 1) ? 10 : Math.min(limitArg.orElse(10), 100);
+
+        List<EconomySnapshot> snapshots = economySnapshotRepository.findRecent(n);
+        if (snapshots.isEmpty()) {
+            sender.sendMessage(Component.text("No economy history available yet.", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.text("Snapshots are recorded every 5 minutes during market ticks.", NamedTextColor.GRAY));
+            return;
+        }
+
+        // Header
+        sender.sendMessage(Component.text("═══════════════════════════════════════", NamedTextColor.AQUA));
+        sender.sendMessage(Component.text("  Economy History — Last " + n + " Snapshots", NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("═══════════════════════════════════════", NamedTextColor.AQUA));
+
+        // Column headers
+        sender.sendMessage(
+            Component.text("  #  GDp▲                    DeBt▼               D/G      VoLuMe▲           Loans   ΔGDP%   ΔDebt%", NamedTextColor.GRAY)
+        );
+        sender.sendMessage(Component.text("─────────────────────────────────────────────", NamedTextColor.GRAY));
+
+        // Show oldest → newest (chronological order)
+        List<EconomySnapshot> ordered = new ArrayList<>(snapshots);
+        Collections.reverse(ordered); // oldest first
+
+        for (int i = 0; i < ordered.size(); i++) {
+            EconomySnapshot snap = ordered.get(i);
+            EconomySnapshot prev = (i > 0) ? ordered.get(i - 1) : null;
+
+            String idx = String.format("%3d", i + 1);
+            String gdpStr = formatCompact(snap.gdp());
+            String debtStr = formatCompact(snap.totalDebt());
+            String dgStr = snap.gdp().compareTo(BigDecimal.ZERO) > 0
+                ? String.format("%.1fx", snap.totalDebt().divide(snap.gdp(), 2, RoundingMode.HALF_UP))
+                : "N/A";
+            String volStr = formatCompact(snap.transactionVolume());
+            String loansStr = String.valueOf(snap.activeLoans());
+
+            // Trend deltas vs previous snapshot
+            String gdpDelta = "";
+            String debtDelta = "";
+            if (prev != null) {
+                double gdpPct = computePctChange(prev.gdp(), snap.gdp());
+                double debtPct = computePctChange(prev.totalDebt(), snap.totalDebt());
+                gdpDelta = formatDelta(gdpPct);
+                debtDelta = formatDelta(debtPct);
+            }
+
+            NamedTextColor idxColor = (i == ordered.size() - 1) ? NamedTextColor.GREEN : NamedTextColor.AQUA;
+            NamedTextColor gdpColor = gdpDelta.startsWith("+") ? NamedTextColor.GREEN : (gdpDelta.startsWith("-") ? NamedTextColor.RED : NamedTextColor.WHITE);
+            NamedTextColor debtColor = debtDelta.startsWith("-") ? NamedTextColor.GREEN : (debtDelta.startsWith("+") ? NamedTextColor.RED : NamedTextColor.WHITE);
+
+            sender.sendMessage(Component.text(idx + " ", idxColor)
+                .append(Component.text(gdpStr, NamedTextColor.WHITE))
+                .append(Component.text("  ", NamedTextColor.GRAY))
+                .append(Component.text(debtStr, NamedTextColor.WHITE))
+                .append(Component.text("  ", NamedTextColor.GRAY))
+                .append(Component.text(dgStr, dgColor(dgStr)))
+                .append(Component.text("  ", NamedTextColor.GRAY))
+                .append(Component.text(volStr, NamedTextColor.WHITE))
+                .append(Component.text("  ", NamedTextColor.GRAY))
+                .append(Component.text(loansStr, NamedTextColor.WHITE))
+                .append(Component.text("  " + gdpDelta, gdpColor))
+                .append(Component.text("  " + debtDelta, debtColor))
+            );
+        }
+
+        sender.sendMessage(Component.text("─────────────────────────────────────────────", NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  ▲ = most recent   Δ = change from previous", NamedTextColor.GRAY));
+
+        // Summary stats: total span and average GDP growth
+        EconomySnapshot oldest = ordered.get(0);
+        EconomySnapshot newest = ordered.get(ordered.size() - 1);
+        double totalGdpPct = computePctChange(oldest.gdp(), newest.gdp());
+        double totalDebtPct = computePctChange(oldest.totalDebt(), newest.totalDebt());
+        String trend = totalGdpPct >= 0 ? "📈" : "📉";
+        sender.sendMessage(Component.text(trend + " Over " + n + " snapshots: GDP " + formatDelta(totalGdpPct)
+            + " | Debt " + formatDelta(totalDebtPct), NamedTextColor.AQUA));
+    }
+
+    private NamedTextColor dgColor(String dgStr) {
+        try {
+            double dg = Double.parseDouble(dgStr.replace("x", ""));
+            if (dg < 1.0) return NamedTextColor.GREEN;
+            if (dg < 3.0) return NamedTextColor.YELLOW;
+            if (dg < 8.0) return NamedTextColor.GOLD;
+            return NamedTextColor.RED;
+        } catch (NumberFormatException e) {
+            return NamedTextColor.WHITE;
+        }
+    }
+
+    private double computePctChange(BigDecimal oldVal, BigDecimal newVal) {
+        if (oldVal == null || oldVal.compareTo(BigDecimal.ZERO) == 0) return 0;
+        return newVal.subtract(oldVal).divide(oldVal, 4, RoundingMode.HALF_UP).doubleValue() * 100;
+    }
+
+    private String formatDelta(double pct) {
+        String sign = pct >= 0 ? "+" : "";
+        return sign + String.format("%.1f%%", pct);
+    }
+
+
     @Command("autotune admin stats")
     @Permission("autotune.admin")
     public void adminStats(CommandSender sender) {
@@ -1197,6 +1340,310 @@ public class AdminCommand {
         }
 
         sender.sendMessage(Component.empty());
+    }
+
+    // ─── Bulk price CSV export / import ───────────────────────────────────────
+
+    private static final String CSV_HEADER =
+            "material,display_name,section,price,price_floor,price_ceiling,spread_override,max_change_override,price_frozen";
+
+    @Command("autotune admin prices export")
+    @Permission("autotune.admin")
+    public void pricesExport(CommandSender sender) {
+        String filename = "autotune-prices-" + LocalDate.now() + ".csv";
+        exportPrices(sender, filename);
+    }
+
+    @Command("autotune admin prices export <filename>")
+    @Permission("autotune.admin")
+    public void pricesExportFile(CommandSender sender, @Argument("filename") String filename) {
+        exportPrices(sender, filename);
+    }
+
+    private void exportPrices(CommandSender sender, String filename) {
+        List<ShopItem> items = shopManager.getAllItems();
+        if (items.isEmpty()) {
+            sender.sendMessage(Component.text("No items in shop to export.", NamedTextColor.YELLOW));
+            return;
+        }
+
+        Path path = Paths.get(filename);
+        try (BufferedWriter writer = Files.newBufferedWriter(path)) {
+            writer.write(CSV_HEADER);
+            writer.newLine();
+
+            for (ShopItem item : items) {
+                String line = String.join(",",
+                        escape(item.material().name()),
+                        escape(item.displayName()),
+                        escape(item.section()),
+                        item.price().toPlainString(),
+                        nullOrEmpty(item.priceFloorOverride()),
+                        nullOrEmpty(item.priceCeilingOverride()),
+                        nullOrEmpty(item.baseSpreadOverride()),
+                        nullOrEmpty(item.maxPriceChangeOverride()),
+                        String.valueOf(item.priceFrozen())
+                );
+                writer.write(line);
+                writer.newLine();
+            }
+
+            sender.sendMessage(Component.text("✅ Exported " + items.size() + " items to " + filename,
+                    NamedTextColor.GREEN));
+            sender.sendMessage(Component.text("  Edit in a spreadsheet, then import with /at admin prices import <filename>",
+                    NamedTextColor.GRAY));
+        } catch (IOException e) {
+            sender.sendMessage(Component.text("❌ Export failed: " + e.getMessage(), NamedTextColor.RED));
+        }
+    }
+
+    @Command("autotune admin prices import <filename>")
+    @Permission("autotune.admin")
+    public void pricesImport(CommandSender sender, @Argument("filename") String filename) {
+        Path path = Paths.get(filename);
+        if (!Files.exists(path)) {
+            sender.sendMessage(Component.text("File not found: " + filename, NamedTextColor.RED));
+            sender.sendMessage(Component.text("  Put the CSV in the server root directory (where you run the JAR).",
+                    NamedTextColor.GRAY));
+            return;
+        }
+
+        // Build material → ShopItem map for fast lookup
+        Map<String, ShopItem> byMaterial = shopManager.getAllItems().stream()
+                .collect(Collectors.toMap(
+                        it -> it.material().name().toLowerCase(Locale.ROOT),
+                        it -> it,
+                        (a, b) -> a
+                ));
+
+        int updated = 0;
+        int skipped = 0;
+        int errors = 0;
+        List<String> errorLines = new ArrayList<>();
+
+        try (BufferedReader reader = Files.newBufferedReader(path)) {
+            String header = reader.readLine();
+            if (header == null) {
+                sender.sendMessage(Component.text("Empty CSV file.", NamedTextColor.RED));
+                return;
+            }
+
+            String line;
+            int rowNum = 1; // already read header
+            while ((line = reader.readLine()) != null) {
+                rowNum++;
+                if (line.isBlank() || line.startsWith("#")) continue;
+
+                String[] cols = parseCsvLine(line);
+                if (cols.length < 4) {
+                    errors++;
+                    errorLines.add("row " + rowNum + ": too few columns (need at least material + price)");
+                    continue;
+                }
+
+                String materialName = cols[0].trim().toUpperCase(Locale.ROOT);
+                ShopItem item = byMaterial.get(materialName.toLowerCase(Locale.ROOT));
+
+                if (item == null) {
+                    skipped++;
+                    continue; // material not in shop — skip silently
+                }
+
+                boolean changed = false;
+
+                // Column 3 = price (index 3)
+                if (cols.length > 3 && !cols[3].isBlank()) {
+                    try {
+                        BigDecimal newPrice = new BigDecimal(cols[3].trim());
+                        if (newPrice.compareTo(BigDecimal.ZERO) > 0) {
+                            shopManager.setPrice(item.id(), newPrice);
+                            changed = true;
+                        }
+                    } catch (NumberFormatException ignored) {
+                        // skip invalid price
+                    }
+                }
+
+                // Column 4 = price_floor (index 4)
+                if (cols.length > 4 && !cols[4].isBlank()) {
+                    try {
+                        BigDecimal floor = new BigDecimal(cols[4].trim());
+                        shopManager.setPriceFloorOverride(item.id(), floor);
+                        changed = true;
+                    } catch (NumberFormatException ignored) {
+                        // skip invalid floor
+                    }
+                } else if (cols.length > 4 && cols[4].isBlank()) {
+                    shopManager.setPriceFloorOverride(item.id(), null); // clear
+                }
+
+                // Column 5 = price_ceiling (index 5)
+                if (cols.length > 5 && !cols[5].isBlank()) {
+                    try {
+                        BigDecimal ceiling = new BigDecimal(cols[5].trim());
+                        shopManager.setPriceCeilingOverride(item.id(), ceiling);
+                        changed = true;
+                    } catch (NumberFormatException ignored) {
+                        // skip invalid ceiling
+                    }
+                } else if (cols.length > 5 && cols[5].isBlank()) {
+                    shopManager.setPriceCeilingOverride(item.id(), null); // clear
+                }
+
+                // Column 6 = spread_override (index 6)
+                if (cols.length > 6 && !cols[6].isBlank()) {
+                    try {
+                        Double spread = Double.parseDouble(cols[6].trim());
+                        shopManager.setBaseSpreadOverride(item.id(), spread);
+                        changed = true;
+                    } catch (NumberFormatException ignored) {
+                        // skip invalid spread
+                    }
+                } else if (cols.length > 6 && cols[6].isBlank()) {
+                    shopManager.setBaseSpreadOverride(item.id(), null);
+                }
+
+                // Column 7 = max_change_override (index 7)
+                if (cols.length > 7 && !cols[7].isBlank()) {
+                    try {
+                        Double maxChange = Double.parseDouble(cols[7].trim());
+                        shopManager.setMaxPriceChangeOverride(item.id(), maxChange);
+                        changed = true;
+                    } catch (NumberFormatException ignored) {
+                        // skip invalid max change
+                    }
+                } else if (cols.length > 7 && cols[7].isBlank()) {
+                    shopManager.setMaxPriceChangeOverride(item.id(), null);
+                }
+
+                // Column 8 = price_frozen (index 8)
+                if (cols.length > 8 && !cols[8].isBlank()) {
+                    boolean frozen = cols[8].trim().equalsIgnoreCase("true")
+                            || cols[8].trim().equalsIgnoreCase("1")
+                            || cols[8].trim().equalsIgnoreCase("yes");
+                    shopManager.setPriceFrozen(item.id(), frozen);
+                    changed = true;
+                }
+
+                if (changed) updated++;
+            }
+
+            // Refresh market engine cache so new prices/spreads take effect immediately
+            marketEngine.refreshOverrideCache();
+
+            Component summary = Component.text("Import complete: ", NamedTextColor.GREEN)
+                    .append(Component.text(updated + " updated", NamedTextColor.AQUA))
+                    .append(Component.text(", " + skipped + " not-in-shop (skipped)", NamedTextColor.GRAY))
+                    .append(Component.text(", " + errors + " parse errors", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.empty());
+            sender.sendMessage(summary);
+
+            if (!errorLines.isEmpty()) {
+                sender.sendMessage(Component.text("  Errors: " + String.join("; ", errorLines.subList(0, Math.min(3, errorLines.size()))),
+                        NamedTextColor.YELLOW));
+                if (errorLines.size() > 3) {
+                    sender.sendMessage(Component.text("  ...and " + (errorLines.size() - 3) + " more.",
+                            NamedTextColor.YELLOW));
+                }
+            }
+
+            sender.sendMessage(Component.text("Run /at admin reload to repopulate shop cache.", NamedTextColor.GRAY));
+
+        } catch (IOException e) {
+            sender.sendMessage(Component.text("❌ Import failed: " + e.getMessage(), NamedTextColor.RED));
+        }
+    }
+
+    // ─── Prices reset ──────────────────────────────────────────────────────────
+
+    @Command("autotune admin prices reset <material>")
+    @Permission("autotune.admin")
+    public void pricesReset(
+            CommandSender sender,
+            @Argument(value = "material", suggestions = "price-override-material") String materialName
+    ) {
+        org.bukkit.Material mat = matchMaterial(materialName);
+        if (mat == null) {
+            sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        Optional<ShopItem> shopItem = shopManager.getItemByMaterial(mat);
+        if (shopItem.isEmpty()) {
+            sender.sendMessage(Component.text("Material not in shop: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        ShopItem item = shopItem.get();
+        BigDecimal priorPrice = marketEngine.getCurrentPrice(item.id());
+
+        Optional<BigDecimal> result = shopManager.resetPriceToBase(item.id(), mat);
+        if (result.isEmpty()) {
+            sender.sendMessage(Component.text(
+                    "Could not find base price for " + item.getDisplayNameOrMaterial()
+                    + " in shops.yml. Use /at admin prices import to set a base price instead.",
+                    NamedTextColor.RED));
+            return;
+        }
+
+        BigDecimal basePrice = result.get();
+        sender.sendMessage(Component.text("✅ Price reset for ", NamedTextColor.GREEN)
+                .append(Component.text(item.getDisplayNameOrMaterial(), NamedTextColor.AQUA))
+                .append(Component.text(": ", NamedTextColor.GREEN))
+                .append(Component.text(configManager.formatCurrency(priorPrice), NamedTextColor.GRAY))
+                .append(Component.text(" → ", NamedTextColor.WHITE))
+                .append(Component.text(configManager.formatCurrency(basePrice), NamedTextColor.GOLD))
+                .append(Component.text(". Price history cleared. Normal price discovery resumes next tick.",
+                        NamedTextColor.GREEN))
+                .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
+    }
+
+    // ─── Bulk prices reset ─────────────────────────────────────────────────────
+
+    /**
+     * Resets ALL item prices to their shops.yml base prices and clears all market history.
+     * Use when the economy is severely mispriced and per-item resets are impractical.
+     */
+    @Command("autotune admin prices reset all")
+    @Permission("autotune.admin")
+    public void pricesResetAll(CommandSender sender) {
+        List<ShopItem> allItems = shopManager.getAllItems();
+        if (allItems.isEmpty()) {
+            sender.sendMessage(Component.text("No items in shop — nothing to reset.", NamedTextColor.RED));
+            return;
+        }
+
+        int reset = 0;
+        int skipped = 0;
+        for (ShopItem item : allItems) {
+            Optional<BigDecimal> result = shopManager.resetPriceToBase(item.id(), item.material());
+            if (result.isPresent()) {
+                reset++;
+            } else {
+                skipped++;
+            }
+        }
+
+        Component summary = Component.text("✅ Full price reset complete", NamedTextColor.GREEN)
+                .append(Component.text(": ", NamedTextColor.GRAY))
+                .append(Component.text(reset + "", NamedTextColor.AQUA))
+                .append(Component.text(" items reset", NamedTextColor.GREEN));
+        if (skipped > 0) {
+            summary = summary
+                    .append(Component.text(", ", NamedTextColor.GRAY))
+                    .append(Component.text(skipped + "", NamedTextColor.YELLOW))
+                    .append(Component.text(" skipped (no base price in shops.yml)", NamedTextColor.YELLOW));
+        }
+        sender.sendMessage(summary);
+
+        Component broadcast = Component.text("⚠️ ", NamedTextColor.YELLOW)
+                .append(Component.text("Economy prices have been reset to defaults by an admin.", NamedTextColor.GRAY))
+                .append(Component.text(" Market price discovery resumes — expect prices to diverge naturally.", NamedTextColor.GRAY))
+                .decoration(TextDecoration.ITALIC, false);
+        plugin.getServer().broadcast(broadcast);
+
+        plugin.getLogger().info("[Auto-Tune] Admin " + sender.getName()
+                + " executed full price reset: " + reset + " items reset, " + skipped + " skipped.");
     }
 
     // ─── Per-item config override subcommands ──────────────────────────────────
@@ -1675,6 +2122,212 @@ public class AdminCommand {
         sender.sendMessage(Component.text("Shared prices fetch started — check server log for results.", NamedTextColor.GREEN));
     }
 
+    // ─── Market Event Commands ────────────────────────────────────────────────
+
+    @Command("autotune admin event list")
+    @Permission("autotune.admin")
+    public void adminEventList(CommandSender sender) {
+        List<MarketEvent> allEvents = marketEventService.listEvents();
+        List<MarketEvent> activeEvents = marketEventService.getActiveEvents();
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Market Events", NamedTextColor.GOLD, TextDecoration.BOLD));
+
+        if (activeEvents.isEmpty()) {
+            sender.sendMessage(Component.text("  No active events.", NamedTextColor.GRAY));
+        } else {
+            sender.sendMessage(Component.text("  Active (" + activeEvents.size() + "):", NamedTextColor.YELLOW));
+            for (MarketEvent event : activeEvents) {
+                String matList = event.materials().isEmpty() ? "all items"
+                        : String.join(", ", event.materials().subList(0, Math.min(3, event.materials().size())))
+                        + (event.materials().size() > 3 ? " +" + (event.materials().size() - 3) + " more" : "");
+                sender.sendMessage(Component.text("    ⦾ " + event.name() + " ", NamedTextColor.WHITE)
+                        .append(Component.text("[" + event.type().name() + "]", NamedTextColor.AQUA))
+                        .append(Component.text(" x" + String.format(Locale.ROOT, "%.1f", event.priceMultiplier())
+                                + " — " + matList, NamedTextColor.GRAY)));
+                Duration remaining = Duration.between(Instant.now(), event.endsAt());
+                sender.sendMessage(Component.text("       ID: " + event.id()
+                        + "  |  Ends: " + formatDuration(remaining) + " remaining", NamedTextColor.DARK_GRAY));
+            }
+        }
+
+        // Show recent history (exclude active)
+        List<MarketEvent> history = allEvents.stream()
+                .filter(e -> e.status() != MarketEvent.Status.ACTIVE && e.status() != MarketEvent.Status.SCHEDULED)
+                .limit(10)
+                .toList();
+
+        if (history.isEmpty()) {
+            sender.sendMessage(Component.text("  No recent history.", NamedTextColor.GRAY));
+        } else {
+            sender.sendMessage(Component.text("  Recent history:", NamedTextColor.YELLOW));
+            for (MarketEvent event : history) {
+                sender.sendMessage(Component.text("    " + statusIcon(event.status()) + " " + event.name() + " ", NamedTextColor.WHITE)
+                        .append(Component.text("[" + event.type().name() + "]", NamedTextColor.AQUA))
+                        .append(Component.text(" x" + String.format(Locale.ROOT, "%.1f", event.priceMultiplier()), NamedTextColor.GRAY))
+                        .append(Component.text("  " + DATE_FORMAT.format(event.startsAt()), NamedTextColor.DARK_GRAY)));
+            }
+        }
+
+        sender.sendMessage(Component.text("\n  Types: DEMAND_SURGE, SUPPLY_GLUT, INFLATION_BOOST, DEFLATION_DROP, GOLD_RUSH, CUSTOM", NamedTextColor.DARK_GRAY));
+        sender.sendMessage(Component.text("  Use /at admin event create to trigger an event.", NamedTextColor.DARK_GRAY));
+        sender.sendMessage(Component.empty());
+    }
+
+    @Command("autotune admin event create")
+    @Permission("autotune.admin")
+    public void adminEventCreate(
+            CommandSender sender,
+            @Argument("name") String name,
+            @Argument("type") String typeStr,
+            @Argument("materials") String materialsStr,
+            @Argument("multiplier") String multiplierStr,
+            @Argument("durationHours") String durationStr
+    ) {
+        // Parse event type
+        MarketEvent.EventType type;
+        try {
+            type = MarketEvent.EventType.valueOf(typeStr.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            sender.sendMessage(Component.text("Unknown event type: '" + typeStr + "'", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Valid types: DEMAND_SURGE, SUPPLY_GLUT, INFLATION_BOOST, DEFLATION_DROP, GOLD_RUSH, CUSTOM", NamedTextColor.GRAY));
+            return;
+        }
+
+        // Parse multiplier
+        double multiplier;
+        try {
+            multiplier = Double.parseDouble(multiplierStr);
+        } catch (NumberFormatException e) {
+            sender.sendMessage(Component.text("Invalid multiplier: '" + multiplierStr + "'", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Example: 2.0 = double price change velocity, 0.5 = half", NamedTextColor.GRAY));
+            return;
+        }
+
+        if (multiplier <= 0 || multiplier > 10) {
+            sender.sendMessage(Component.text("Multiplier must be between 0.01 and 10.0", NamedTextColor.RED));
+            return;
+        }
+
+        // Parse duration
+        int durationHours;
+        try {
+            durationHours = Integer.parseInt(durationStr);
+        } catch (NumberFormatException e) {
+            sender.sendMessage(Component.text("Invalid duration: '" + durationStr + "'", NamedTextColor.RED));
+            return;
+        }
+
+        if (durationHours < 1 || durationHours > 720) {
+            sender.sendMessage(Component.text("Duration must be between 1 and 720 hours (30 days)", NamedTextColor.RED));
+            return;
+        }
+
+        // Parse materials (comma-separated, supports wildcards like DIAMOND_*)
+        List<String> materials = new ArrayList<>();
+        for (String m : materialsStr.split(",")) {
+            String trimmed = m.trim();
+            if (!trimmed.isEmpty()) {
+                materials.add(trimmed.toUpperCase(Locale.ROOT));
+            }
+        }
+        if (materials.isEmpty()) {
+            sender.sendMessage(Component.text("No materials specified. Use a material name, comma-separated list, or '*' for all.", NamedTextColor.RED));
+            return;
+        }
+
+        String createdBy = sender.getName();
+        String startMsg = buildEventStartMessage(type, name, multiplier, materials);
+        String endMsg = buildEventEndMessage(type, name);
+
+        MarketEvent event = marketEventService.triggerEvent(
+                name,
+                type,
+                materials,
+                multiplier,
+                Duration.ofHours(durationHours),
+                startMsg,
+                endMsg,
+                createdBy
+        );
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("\u26a1 Market event triggered!", NamedTextColor.GREEN, TextDecoration.BOLD));
+        sender.sendMessage(Component.text("  Name: " + event.name(), NamedTextColor.WHITE));
+        sender.sendMessage(Component.text("  Type: " + event.type().name(), NamedTextColor.AQUA));
+        sender.sendMessage(Component.text("  Items: " + String.join(", ", materials), NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  Multiplier: x" + String.format(Locale.ROOT, "%.2f", event.priceMultiplier()), NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  Duration: " + durationHours + " hours (" + formatDuration(Duration.ofHours(durationHours)) + ")", NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("  ID: " + event.id(), NamedTextColor.DARK_GRAY));
+        sender.sendMessage(Component.text("\n  Boss bar sent to all online players.", NamedTextColor.DARK_GRAY));
+        sender.sendMessage(Component.text("  Use '/at admin event cancel " + event.id() + "' to end it early.", NamedTextColor.DARK_GRAY));
+        sender.sendMessage(Component.empty());
+    }
+
+    @Command("autotune admin event cancel")
+    @Permission("autotune.admin")
+    public void adminEventCancel(CommandSender sender, @Argument("eventId") String eventIdStr) {
+        UUID eventId;
+        try {
+            eventId = UUID.fromString(eventIdStr.trim());
+        } catch (IllegalArgumentException e) {
+            sender.sendMessage(Component.text("Invalid event ID: '" + eventIdStr + "'", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Use /at admin event list to see event IDs.", NamedTextColor.GRAY));
+            return;
+        }
+
+        boolean cancelled = marketEventService.cancelEvent(eventId);
+        if (cancelled) {
+            sender.sendMessage(Component.text("Event cancelled. Boss bars dismissed, players notified.", NamedTextColor.GREEN));
+        } else {
+            sender.sendMessage(Component.text("Event not found or already ended.", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Use /at admin event list to see active event IDs.", NamedTextColor.GRAY));
+        }
+    }
+
+    @Command("autotune admin digest")
+    @Permission("autotune.admin")
+    public void adminDigest(CommandSender sender) {
+        sender.sendMessage(Component.text("Sending market digest to Discord...", NamedTextColor.YELLOW));
+        marketDigestService.sendDigestNow();
+    }
+
+    @Command("autotune admin digest config")
+    @Permission("autotune.admin")
+    public void adminDigestConfig(CommandSender sender) {
+        AutoTuneConfig.MarketDigestConfig cfg = configManager.getConfig().marketDigest();
+        String webhook = cfg.webhookUrl() != null ? cfg.webhookUrl()
+                : configManager.getConfig().webhook().webhookUrl();
+        String maskedWebhook = webhook != null && webhook.length() > 20
+                ? webhook.substring(0, 8) + "..." + webhook.substring(webhook.length() - 8)
+                : (webhook != null ? webhook : "(not set)");
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Market Digest Configuration", NamedTextColor.GOLD, TextDecoration.BOLD));
+        sender.sendMessage(Component.text("Enabled: ", NamedTextColor.YELLOW)
+                .append(Component.text(cfg.enabled() ? "YES" : "NO", cfg.enabled() ? NamedTextColor.GREEN : NamedTextColor.RED)));
+        sender.sendMessage(Component.text("Schedule: ", NamedTextColor.YELLOW)
+                .append(Component.text(cfg.interval().toUpperCase()
+                        + " at " + cfg.hourOfDay() + ":00 UTC"
+                        + (cfg.interval().equals("weekly") ? " (day " + cfg.dayOfWeek() + ")" : ""),
+                        NamedTextColor.WHITE)));
+        sender.sendMessage(Component.text("Webhook: ", NamedTextColor.YELLOW)
+                .append(Component.text(maskedWebhook, NamedTextColor.WHITE)));
+        sender.sendMessage(Component.text("Sections:", NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("  Top movers: ", NamedTextColor.DARK_GRAY)
+                .append(Component.text(cfg.includeTopMovers() ? "ON" : "OFF",
+                        cfg.includeTopMovers() ? NamedTextColor.GREEN : NamedTextColor.RED)));
+        sender.sendMessage(Component.text("  Health stats: ", NamedTextColor.DARK_GRAY)
+                .append(Component.text(cfg.includeHealthStats() ? "ON" : "OFF",
+                        cfg.includeHealthStats() ? NamedTextColor.GREEN : NamedTextColor.RED)));
+        sender.sendMessage(Component.text("  Active events: ", NamedTextColor.DARK_GRAY)
+                .append(Component.text(cfg.includeActiveEvents() ? "ON" : "OFF",
+                        cfg.includeActiveEvents() ? NamedTextColor.GREEN : NamedTextColor.RED)));
+        sender.sendMessage(Component.text("  Loan stats: ", NamedTextColor.DARK_GRAY)
+                .append(Component.text(cfg.includeLoanStats() ? "ON" : "OFF",
+                        cfg.includeLoanStats() ? NamedTextColor.GREEN : NamedTextColor.RED)));
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────────────────
 
     private String formatDuration(Duration d) {
@@ -1682,6 +2335,38 @@ public class AdminCommand {
         if (d.toMinutes() < 60) return d.toMinutes() + " min";
         if (d.toHours() < 24) return d.toHours() + " h";
         return d.toDays() + " d";
+    }
+
+    private String statusIcon(MarketEvent.Status status) {
+        return switch (status) {
+            case ACTIVE -> "\u26a1";
+            case SCHEDULED -> "\u23f0";
+            case ENDED -> "\u2714";
+            case CANCELLED -> "\u2716";
+        };
+    }
+
+    private String buildEventStartMessage(MarketEvent.EventType type, String name, double mult, List<String> materials) {
+        String items = materials.size() <= 3 ? String.join(", ", materials) : String.join(", ", materials.subList(0, 3)) + " and more";
+        return switch (type) {
+            case DEMAND_SURGE -> "\u26a1 DEMAND SURGE: " + name + " is active! Buy prices boosted for " + items + " for the next hour.";
+            case SUPPLY_GLUT -> "\u2b06 SUPPLY GLUT: " + name + " is active! Sell prices boosted for " + items + ".";
+            case INFLATION_BOOST -> "\u2191 INFLATION BOOST: " + name + " — prices are drifting upward!";
+            case DEFLATION_DROP -> "\u2193 DEFLATION DROP: " + name + " — prices are falling!";
+            case GOLD_RUSH -> "\ud83d\udcb2 GOLD RUSH: " + name + " — specific items more valuable!";
+            case CUSTOM -> "\u2728 MARKET EVENT: " + name + " is active! Multiplier: x" + String.format(Locale.ROOT, "%.1f", mult);
+        };
+    }
+
+    private String buildEventEndMessage(MarketEvent.EventType type, String name) {
+        return switch (type) {
+            case DEMAND_SURGE -> "\u26a1 Demand surge ended: " + name + ". Markets returning to normal.";
+            case SUPPLY_GLUT -> "\u2b06 Supply glut ended: " + name + ". Sell bonuses fading.";
+            case INFLATION_BOOST -> "\u2191 Inflation event ended: " + name + ". Price drift stabilizing.";
+            case DEFLATION_DROP -> "\u2193 Deflation event ended: " + name + ". Price floor stabilizing.";
+            case GOLD_RUSH -> "\ud83d\udcb2 Gold rush ended: " + name + ". Special pricing over.";
+            case CUSTOM -> "\u2728 Market event ended: " + name + ". Economy returning to normal.";
+        };
     }
 
     private String formatNumber(long n) {
@@ -1706,5 +2391,58 @@ public class AdminCommand {
         if (v >= 1_000_000) return String.format("%.1fM", v / 1_000_000);
         if (v >= 1_000) return String.format("%.1fK", v / 1_000);
         return configManager.formatCurrency(amount);
+    }
+
+    // ─── CSV helpers ───────────────────────────────────────────────────────────
+
+    /** Escape a string for CSV: quotes around it if it contains comma/quote/newline. */
+    private String escape(String s) {
+        if (s == null) return "";
+        boolean needsQuotes = s.contains(",") || s.contains("\"") || s.contains("\n");
+        return needsQuotes ? "\"" + s.replace("\"", "\"\"") + "\"" : s;
+    }
+
+    /** Format a nullable BigDecimal as plain string, or empty string if null. */
+    private String nullOrEmpty(BigDecimal val) {
+        return val == null ? "" : val.toPlainString();
+    }
+
+    /** Format a nullable Double as plain string, or empty string if null. */
+    private String nullOrEmpty(Double val) {
+        return val == null ? "" : String.valueOf(val);
+    }
+
+    /** Parse a CSV line, respecting double-quote wrapping and comma/quote escaping. */
+    private String[] parseCsvLine(String line) {
+        List<String> fields = new ArrayList<>();
+        StringBuilder field = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (inQuotes) {
+                if (c == '"') {
+                    if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                        field.append('"');
+                        i++; // skip next quote
+                    } else {
+                        inQuotes = false;
+                    }
+                } else {
+                    field.append(c);
+                }
+            } else {
+                if (c == '"') {
+                    inQuotes = true;
+                } else if (c == ',') {
+                    fields.add(field.toString());
+                    field = new StringBuilder();
+                } else {
+                    field.append(c);
+                }
+            }
+        }
+        fields.add(field.toString());
+        return fields.toArray(new String[0]);
     }
 }

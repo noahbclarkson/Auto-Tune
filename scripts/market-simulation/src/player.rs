@@ -248,6 +248,13 @@ pub struct PlayerAgent {
     /// Sell-spike threshold: sell when sell_price > perceived * (1.0 + this).
     /// 0.0 = disabled. 0.2 = sell when price is 20%+ above perceived.
     pub guild_sell_threshold: f64,
+    /// Minimum tick cooldown between GuildSeller Phase 1 sells per item.
+    /// Prevents sell avalanche when spike condition persists across many ticks.
+    pub guild_sell_cooldown_ticks: HashMap<usize, u64>,
+    /// Phase 2 price-dip threshold: sell when price < perceived * (1 - this).
+    /// Redesigned Phase 2 trigger — detects market oversupply via price depression.
+    /// When 0.0, Phase 2 is disabled (legacy behavior: inventory > 2x target only).
+    pub guild_phase2_dip_threshold: f64,
     /// Max inventory per item for MarketMaker archetype. Limits position size.
     pub mm_max_inventory: i32,
     /// Target inventory level per item for MarketMaker archetype.
@@ -258,6 +265,10 @@ pub struct PlayerAgent {
     /// Per-item rolling price history. Updated after each engine tick.
     /// Used by InsiderTrader to compute moving average for mean-reversion.
     pub insider_price_history: HashMap<usize, VecDeque<f64>>,
+    /// How aggressively InsiderTrader widens its threshold during volatile markets.
+    /// 0.0 = disabled (fixed threshold). Higher values = more adaptation.
+    /// Range: 0.5..2.0 set at construction.
+    pub insider_volatility_sensitivity: f64,
     /// Rolling spread history window size (in ticks) for VolumeTrader.
     /// How many past spread observations to track per item.
     pub volume_spread_window: usize,
@@ -313,6 +324,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -320,6 +332,8 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            guild_phase2_dip_threshold: 0.0,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -358,6 +372,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -365,6 +380,8 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            guild_phase2_dip_threshold: 0.0,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -407,6 +424,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -414,6 +432,8 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            guild_phase2_dip_threshold: 0.0,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -452,6 +472,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -459,6 +480,8 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            guild_phase2_dip_threshold: 0.0,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -497,6 +520,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -504,6 +528,8 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            guild_phase2_dip_threshold: 0.0,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -549,6 +575,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -556,6 +583,8 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            guild_phase2_dip_threshold: 0.0,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -602,6 +631,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             mm_max_inventory: 0,
             mm_target_inventory: 0,
             volume_spread_window: 0,
@@ -609,6 +639,8 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            guild_phase2_dip_threshold: 0.0,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -662,11 +694,14 @@ impl PlayerAgent {
             mm_target_inventory: 0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             volume_spread_window: 0,
             volume_spread_history: HashMap::new(),
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            guild_phase2_dip_threshold: 0.0,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -685,7 +720,7 @@ impl PlayerAgent {
     /// value, providing downward pressure to prevent bubble inflation.
     /// Phase 1: Proactive sell-spike selling — sells when sell_price > perceived*(1+threshold).
     /// Phase 2: Liquidate excess inventory when above target.
-    pub fn new_guild_seller(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
+    pub fn new_guild_seller(index: usize, item_count: usize, base_prices: &[f64], phase2_dip_threshold: Option<f64>) -> Self {
         let mut rng = SeededRng;
         // GuildSellers have moderate capital — they sell guild inventory
         let budget = rng.random(10000.0..50000.0);
@@ -726,11 +761,16 @@ impl PlayerAgent {
             mm_target_inventory: 0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             volume_spread_window: 0,
             volume_spread_history: HashMap::new(),
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            // Phase 2 redesigned: sell when price dips below perceived*(1 - dip_threshold).
+            // This makes GS an active anti-oversupply mechanism, not just excess-liquidator.
+            guild_phase2_dip_threshold: phase2_dip_threshold.unwrap_or_else(|| rng.random(0.10..0.25)),
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -748,10 +788,16 @@ impl PlayerAgent {
     /// Market Maker: posts two-sided limit orders around perceived fair value.
     /// Earns from the bid-ask spread. Trades in both directions, providing
     /// liquidity that counteracts Farmer-dominated sell pressure.
-    pub fn new_market_maker(index: usize, item_count: usize, base_prices: &[f64]) -> Self {
+    pub fn new_market_maker(
+        index: usize,
+        item_count: usize,
+        base_prices: &[f64],
+        mm_capital_min: f64,
+        mm_capital_max: f64,
+    ) -> Self {
         let mut rng = SeededRng;
         // MarketMakers need substantial capital to maintain two-sided positions
-        let budget = rng.random(50000.0..200000.0);
+        let budget = rng.random(mm_capital_min..mm_capital_max);
         let max_inv = rng.random(30..80);
         let target_inv = rng.random(15..40);
 
@@ -783,6 +829,7 @@ impl PlayerAgent {
             guild_sell_threshold: 0.0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             // MarketMaker-specific
             mm_max_inventory: max_inv,
             mm_target_inventory: target_inv,
@@ -791,6 +838,8 @@ impl PlayerAgent {
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            guild_phase2_dip_threshold: 0.0,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, base_prices);
@@ -810,6 +859,9 @@ impl PlayerAgent {
         let threshold = rng.random(0.08..0.20);
         // History window: number of ticks to average. ~20 ticks = ~4 hours of price history.
         let history_window = rng.random(15..35);
+        // Volatility sensitivity: how much to widen threshold during volatile markets.
+        // Higher = more adaptation (tighter threshold in calm markets, wider in volatile ones).
+        let volatility_sensitivity = rng.random(0.5..2.0);
 
         let mut agent = Self {
             id: index,
@@ -842,12 +894,15 @@ impl PlayerAgent {
             // InsiderTrader-specific
             insider_history_window: history_window,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: volatility_sensitivity,
             // VolumeTrader-specific (zeroed for InsiderTrader)
             volume_spread_window: 0,
             volume_spread_history: HashMap::new(),
             volume_price_window: 0,
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            guild_phase2_dip_threshold: 0.0,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, &[]);
@@ -907,12 +962,15 @@ impl PlayerAgent {
             mm_target_inventory: 0,
             insider_history_window: 0,
             insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
             // VolumeTrader-specific
             volume_spread_window: spread_window.max(3),
             volume_spread_history: HashMap::new(),
             volume_price_window: price_window.max(spread_window),
             volume_price_history: HashMap::new(),
             volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            guild_phase2_dip_threshold: 0.0,
             last_defaulted_at: None,
         };
         agent.init_perceived_values(item_count, &[]);
@@ -961,7 +1019,7 @@ impl PlayerAgent {
         } else if roll < 0.9925 {
             Self::new_insider_trader(index, item_count, base_prices)
         } else if roll < 0.9975 {
-            Self::new_guild_seller(index, item_count, base_prices)
+            Self::new_guild_seller(index, item_count, base_prices, None)
         } else {
             Self::new_volume_trader(index, item_count, base_prices, 0.25, 20, 30)
         }
@@ -1052,7 +1110,14 @@ impl PlayerAgent {
                 );
             }
             Archetype::GuildSeller => {
-                self.decide_guildseller(items, &mut decisions, record, &mut logs, slippage_coeff);
+                self.decide_guildseller(
+                    items,
+                    &mut decisions,
+                    record,
+                    &mut logs,
+                    slippage_coeff,
+                    current_tick,
+                );
             }
             Archetype::VolumeTrader => {
                 self.decide_volume_trader(
@@ -1488,8 +1553,10 @@ impl PlayerAgent {
     /// Guild Seller: mirror of GuildBuyer. Sells when prices spike above perceived value,
     /// providing downward pressure to prevent bubble inflation.
     ///
-    /// Phase 1 — Price-spike selling: when sell_price > perceived*(1+threshold),
-    /// sell proactively regardless of inventory. This is the primary anti-bubble mechanism.
+    /// Phase 1 — Price-spike selling: when sell_price > perceived*(1+threshold)
+    /// AND GuildSeller has inventory available. Creates supply when prices bubble,
+    /// acting as an automatic price ceiling and preventing market overheating.
+    /// Per-item cooldown prevents sell avalanche during sustained spike conditions.
     ///
     /// Phase 2 — Excess liquidation: sell surplus when > 2x target inventory.
     /// (mirrors GuildBuyer's surplus sell behavior)
@@ -1500,6 +1567,7 @@ impl PlayerAgent {
         record: bool,
         logs: &mut Vec<DecisionLog>,
         slippage_coeff: f64,
+        current_tick: u64,
     ) {
         let mut rng = SeededRng;
 
@@ -1529,17 +1597,27 @@ impl PlayerAgent {
                 let sell_price = items[i].sell_price();
                 let current = self.inventory.get(&i).copied().unwrap_or(0);
 
-                // Price spike detected: market price is guild_sell_threshold+% above perceived
-                // Sell regardless of inventory level (proactive bubble prevention)
+                // Price spike detected: sell if we have inventory (cooldown prevents avalanche)
                 if sell_price > perceived * spike_multiplier {
+                    // Per-item cooldown: don't re-sell the same item too frequently
+                    let last_spike_sold =
+                        self.guild_sell_cooldown_ticks.get(&i).copied().unwrap_or(0);
+                    if current_tick - last_spike_sold < 5 {
+                        continue;
+                    }
+                    let have = current;
+                    if have <= 0 {
+                        continue;
+                    }
                     // Sell up to available inventory × risk_tolerance (don't dump 100%)
-                    let have = current.max(1);
                     let max_sell = (have as f64 * self.risk_tolerance).ceil() as i32;
                     let amount =
                         rng.random_inclusive(1..=max_sell.min(self.max_trade_amount).max(1));
                     if amount <= 0 {
                         continue;
                     }
+                    // Record this tick so we don't sell the same item again too soon
+                    self.guild_sell_cooldown_ticks.insert(i, current_tick);
                     let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                     let revenue = sell_price / slippage * amount as f64;
                     let balance_before = self.balance;
@@ -1575,61 +1653,89 @@ impl PlayerAgent {
         }
 
         // Phase 2: Liquidate excess inventory when well above target
+        // OR when price dips below perceived*(1-threshold) indicating market oversupply.
+        // The price-dip trigger is the redesigned Phase 2 — active anti-oversupply mechanism.
         for (i, _item) in items.iter().enumerate() {
             let target = self.guild_target_inventory.get(&i).copied().unwrap_or(50);
             let current = self.inventory.get(&i).copied().unwrap_or(0);
+            let perceived = self
+                .perceived_values
+                .get(&i)
+                .copied()
+                .unwrap_or(items[i].price);
             let sell_price = items[i].sell_price();
 
-            if current > target * 2 {
-                // Well above target — liquidate surplus
-                let surplus = current - target;
-                if surplus > 0 {
-                    let amount =
-                        rng.random_inclusive(1..=surplus.min(self.max_trade_amount).max(1));
-                    if amount <= 0 {
-                        continue;
-                    }
-                    let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
-                    let revenue = sell_price / slippage * amount as f64;
-                    let balance_before = self.balance;
-                    let inventory_before = current;
-                    self.balance += revenue;
-                    *self.inventory.entry(i).or_insert(0) -= amount;
-                    self.total_traded += revenue;
-                    self.total_trades += 1;
-                    decisions.push(PlayerDecision {
-                        item_index: i,
-                        is_buy: false,
-                        amount,
-                    });
-                    if record {
-                        logs.push(DecisionLog {
-                            player_id: self.id,
-                            item_index: i,
-                            is_buy: false,
-                            amount,
-                            price_per_unit: sell_price / slippage,
-                            total_cost: revenue,
-                            perceived_value: self
-                                .perceived_values
-                                .get(&i)
-                                .copied()
-                                .unwrap_or(items[i].price),
-                            effective_perceived: self
-                                .perceived_values
-                                .get(&i)
-                                .copied()
-                                .unwrap_or(items[i].price),
-                            buy_threshold: self.buy_threshold,
-                            sell_threshold: self.sell_threshold,
-                            balance_before,
-                            inventory_before,
-                            reasoning: "guild_liquidate_excess".to_string(),
-                        });
-                    }
-                }
+            // Trigger A: Excess inventory liquidation (legacy behavior)
+            let trigger_a = current > target * 2;
+
+            // Trigger B: Price-dip — redesigned Phase 2 active oversupply detection
+            // When price < perceived * (1 - dip_threshold), market is oversupplied.
+            // Sell proportionally to how severe the dip is.
+            let trigger_b = self.guild_phase2_dip_threshold > 0.0
+                && sell_price < perceived * (1.0 - self.guild_phase2_dip_threshold);
+
+            if !trigger_a && !trigger_b {
+                continue;
             }
-            // Below 2x target: hold — guild maintains stock for members
+
+            // Compute amount to sell
+            let amount = if trigger_a {
+                // Legacy: sell surplus above target
+                let surplus = current - target;
+                rng.random_inclusive(1..=surplus.min(self.max_trade_amount).max(1))
+            } else {
+                // Redesigned Phase 2: sell proportional to dip severity
+                // dip_severity = 1.0 when price=0, approaches 0 as price approaches threshold
+                let dip_floor = perceived * (1.0 - self.guild_phase2_dip_threshold);
+                let dip_severity = ((dip_floor - sell_price) / dip_floor).clamp(0.0, 1.0);
+                // Sell: dip_severity * risk_tolerance * current, min 1
+                let base_amount = (dip_severity * self.risk_tolerance * (current as f64)).ceil() as i32;
+                rng.random_inclusive(1..=base_amount.min(self.max_trade_amount).max(1))
+            };
+
+            if amount <= 0 {
+                continue;
+            }
+
+            let sell_amount = amount.min(current.max(1));
+            let slippage = 1.0 + slippage_coeff * (sell_amount as f64).sqrt();
+            let revenue = sell_price / slippage * sell_amount as f64;
+            let balance_before = self.balance;
+            let inventory_before = current;
+            self.balance += revenue;
+            *self.inventory.entry(i).or_insert(0) -= sell_amount;
+            self.total_traded += revenue;
+            self.total_trades += 1;
+            decisions.push(PlayerDecision {
+                item_index: i,
+                is_buy: false,
+                amount: sell_amount,
+            });
+            if record {
+                logs.push(DecisionLog {
+                    player_id: self.id,
+                    item_index: i,
+                    is_buy: false,
+                    amount: sell_amount,
+                    price_per_unit: sell_price / slippage,
+                    total_cost: revenue,
+                    perceived_value: perceived,
+                    effective_perceived: if trigger_b {
+                        perceived * (1.0 - self.guild_phase2_dip_threshold)
+                    } else {
+                        perceived
+                    },
+                    buy_threshold: self.buy_threshold,
+                    sell_threshold: self.sell_threshold,
+                    balance_before,
+                    inventory_before,
+                    reasoning: if trigger_a {
+                        "guild_liquidate_excess".to_string()
+                    } else {
+                        "guild_phase2_oversupply".to_string()
+                    },
+                });
+            }
         }
     }
 
@@ -1839,7 +1945,6 @@ impl PlayerAgent {
         slippage_coeff: f64,
     ) {
         let mut rng = SeededRng;
-        let threshold = self.buy_threshold; // symmetric buy/sell threshold
 
         for (i, item) in items.iter().enumerate() {
             // Update price history: record current price BEFORE making decisions.
@@ -1867,6 +1972,37 @@ impl PlayerAgent {
                 continue;
             }
 
+            // ── Adaptive threshold: widen threshold during volatile markets ──
+            // Compute rolling volatility from the engine's price history (last N prices
+            // matching the insider's history window). Volatility = coefficient of variation.
+            let vol_window = self.insider_history_window.min(item.price_history.len());
+            let vol_data: &[f64] =
+                &item.price_history[item.price_history.len().saturating_sub(vol_window)..];
+            let vol_mean: f64 = vol_data.iter().sum::<f64>() / vol_data.len() as f64;
+            let vol_std = if vol_data.len() > 1 {
+                let variance = vol_data
+                    .iter()
+                    .map(|&p| {
+                        let d = p - vol_mean;
+                        d * d
+                    })
+                    .sum::<f64>()
+                    / vol_data.len() as f64;
+                variance.sqrt()
+            } else {
+                0.0
+            };
+            let vol_normalized = if vol_mean > 0.0 {
+                vol_std / vol_mean
+            } else {
+                0.0
+            };
+            // When vol is high → threshold widens → InsiderTrader is more selective (avoids noise).
+            // When vol is low → threshold tightens → InsiderTrader reacts to smaller deviations.
+            // Sensitivity controls how aggressively the threshold scales with volatility.
+            let effective_threshold =
+                self.buy_threshold * (1.0 + self.insider_volatility_sensitivity * vol_normalized);
+
             let deviation = (current_price - mean) / mean;
             let perceived = mean; // Use rolling mean as the insider's fair value estimate
             let buy_price = item.buy_price();
@@ -1874,10 +2010,10 @@ impl PlayerAgent {
 
             // BUY when price is significantly below mean (undervalued)
             // deviation is negative → e.g., deviation=-0.15 means price is 15% below mean
-            if deviation < -threshold && buy_price <= self.balance {
+            if deviation < -effective_threshold && buy_price <= self.balance {
                 // Size scales with how extreme the deviation is
-                // At -threshold: min position. At -2x threshold: max position.
-                let extremity = (-deviation / threshold).min(2.0);
+                // At -effective_threshold: min position. At -2x effective_threshold: max position.
+                let extremity = (-deviation / effective_threshold).min(2.0);
                 let base_amount =
                     (self.max_trade_amount as f64 * extremity * self.risk_tolerance).ceil();
                 let amount = rng.random_inclusive(1..=base_amount.max(1.0) as i32);
@@ -1915,10 +2051,10 @@ impl PlayerAgent {
                 }
             }
             // SELL when price is significantly above mean (overvalued)
-            else if deviation > threshold {
+            else if deviation > effective_threshold {
                 let have = self.inventory.get(&i).copied().unwrap_or(0);
                 if have > 0 {
-                    let extremity = (deviation / threshold).min(2.0);
+                    let extremity = (deviation / effective_threshold).min(2.0);
                     let base_amount = (have as f64 * extremity * self.risk_tolerance).ceil();
                     let amount = rng
                         .random_inclusive(1..=base_amount.max(1.0) as i32)

@@ -18,6 +18,7 @@ public record PortfolioDto(
         double holdingsValue,
         double totalDebt,
         double netWorth,
+        double totalRealizedPnl,
         int creditScore,
         int transactionCount,
         @NotNull List<HoldingDto> holdings,
@@ -34,7 +35,8 @@ public record PortfolioDto(
             double currentPrice,
             double currentValue,
             double unrealizedPnl,
-            double pnlPct
+            double pnlPct,
+            double realizedPnl        // profit/loss from completed sell transactions
     ) {}
 
     public record ActiveLoanDto(

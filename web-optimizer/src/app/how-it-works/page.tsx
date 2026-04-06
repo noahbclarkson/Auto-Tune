@@ -1,8 +1,22 @@
+import { Metadata } from 'next';
 import { ArrowRight, Calculator } from 'lucide-react';
 import Link from 'next/link';
 import { SpreadCalculator } from '@/components/landing/spread-calculator';
 import { SpreadSimulator } from '@/components/landing/spread-simulator';
 import { SpreadFlowDiagram } from '@/components/landing/spread-flow-diagram';
+
+export const metadata: Metadata = {
+  title: 'How It Works | Auto-Tune',
+  description:
+    'Understand the math behind Auto-Tune\'s supply-and-demand pricing engine. Asymmetric spreads, player scaling, trend dampening, and sector correlation explained.',
+  openGraph: {
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'How Auto-Tune\'s market engine works' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/og-image.png'],
+  },
+};
 
 const steps = [
   {

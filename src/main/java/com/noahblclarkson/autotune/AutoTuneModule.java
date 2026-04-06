@@ -8,19 +8,25 @@ import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.guild.GuildService;
 import com.noahblclarkson.autotune.database.AutosellRepository;
 import com.noahblclarkson.autotune.database.AuctionRepository;
+import com.noahblclarkson.autotune.database.BadgeRepository;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.MarketEventRepository;
 import com.noahblclarkson.autotune.economy.LoanManager;
+import com.noahblclarkson.autotune.service.AdminWebhookService;
 import com.noahblclarkson.autotune.service.EconomicNewsService;
 import com.noahblclarkson.autotune.service.BadgeService;
+import com.noahblclarkson.autotune.service.MarketDigestService;
+import com.noahblclarkson.autotune.service.PriceMilestoneService;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.PriceAlertRepository;
+import com.noahblclarkson.autotune.database.ShopFavoriteRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.manager.DatabaseCleanupManager;
+import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.DefaultPluginAdapter;
 import com.noahblclarkson.autotune.manager.ExchangeRateService;
 import com.noahblclarkson.autotune.manager.MarketEngine;
@@ -146,12 +152,25 @@ public class AutoTuneModule extends AbstractModule {
 
     @Provides
     @Singleton
+    public ShopFavoriteRepository provideShopFavoriteRepository(DatabaseManager databaseManager) {
+        return new ShopFavoriteRepository(databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public BadgeRepository provideBadgeRepository(DatabaseManager databaseManager) {
+        return new BadgeRepository(databaseManager);
+    }
+
+    @Provides
+    @Singleton
     public PriceAlertManager providePriceAlertManager(
             PriceAlertRepository priceAlertRepository,
             MarketEngine marketEngine,
             ShopManager shopManager,
             ConfigManager configManager,
-            BadgeService badgeService
+            BadgeService badgeService,
+            com.noahblclarkson.autotune.database.PendingNotificationRepository pendingNotificationRepository
     ) {
         return new PriceAlertManager(
                 plugin,
@@ -159,7 +178,8 @@ public class AutoTuneModule extends AbstractModule {
                 marketEngine,
                 shopManager,
                 configManager,
-                badgeService
+                badgeService,
+                pendingNotificationRepository
         );
     }
 
@@ -203,10 +223,12 @@ public class AutoTuneModule extends AbstractModule {
             ShopManager shopManager,
             LoanManager loanManager,
             ConfigManager configManager,
-            PluginAdapter pluginAdapter
+            PluginAdapter pluginAdapter,
+            AdminWebhookService adminWebhookService
     ) {
         return new EconomicNewsService(
-                plugin, itemRepository, shopManager, loanManager, configManager, pluginAdapter);
+                plugin, itemRepository, shopManager, loanManager, configManager, pluginAdapter,
+                adminWebhookService);
     }
 
     @Provides
@@ -229,5 +251,34 @@ public class AutoTuneModule extends AbstractModule {
         return new DatabaseCleanupManager(
                 plugin, configManager, transactionRepository, itemRepository,
                 snapshotRepository, auctionRepository, marketEventRepository, databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public MarketDigestService provideMarketDigestService(
+            AutoTune plugin,
+            ConfigManager configManager,
+            MarketEventService marketEventService,
+            EconomyMetricsManager economyMetricsManager,
+            LoanManager loanManager,
+            MarketEngine marketEngine,
+            ItemRepository itemRepository,
+            TransactionRepository transactionRepository,
+            ShopManager shopManager
+    ) {
+        return new MarketDigestService(
+                plugin, configManager, marketEventService, economyMetricsManager,
+                loanManager, marketEngine, itemRepository, transactionRepository, shopManager);
+    }
+
+    @Provides
+    @Singleton
+    public PriceMilestoneService providePriceMilestoneService(
+            AutoTune plugin,
+            MarketEngine marketEngine,
+            ShopManager shopManager,
+            ConfigManager configManager
+    ) {
+        return new PriceMilestoneService(plugin, marketEngine, shopManager, configManager);
     }
 }

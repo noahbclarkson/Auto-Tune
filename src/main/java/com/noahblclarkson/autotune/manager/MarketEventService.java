@@ -214,6 +214,83 @@ public class MarketEventService {
     }
 
     /**
+     * Schedule an event to start at a future time (admin command).
+     * Persists it with SCHEDULED status — will be auto-activated
+     * when onMarketTick() finds the start time has passed.
+     */
+    public MarketEvent scheduleEvent(
+            String name,
+            EventType type,
+            List<String> materials,
+            double multiplier,
+            Duration duration,
+            Instant startsAt,
+            String startMessage,
+            String endMessage,
+            String createdBy
+    ) {
+        Instant endsAt = startsAt.plus(duration);
+        MarketEvent event = new MarketEvent(
+                UUID.randomUUID(),
+                name,
+                type,
+                materials,
+                multiplier,
+                startsAt,
+                endsAt,
+                startMessage,
+                endMessage,
+                createdBy,
+                Status.SCHEDULED,
+                null,
+                0
+        );
+
+        eventRepository.insert(event);
+        log.info("[Auto-Tune] Market event scheduled: " + name + " (" + type + ") starting at " + startsAt + " for " + duration.toMinutes() + " min");
+        return event;
+    }
+
+    /**
+     * Invoke a named template from the default events config.
+     * Starts it immediately.
+     *
+     * @return the triggered event, or empty if template not found
+     */
+    public Optional<MarketEvent> invokeTemplate(String templateName) {
+        for (AutoTuneConfig.MarketEventConfigEntry t : defaultEvents) {
+            if (t.name().equalsIgnoreCase(templateName)) {
+                EventType type;
+                try {
+                    type = EventType.valueOf(t.type().toUpperCase(java.util.Locale.ROOT));
+                } catch (IllegalArgumentException e) {
+                    log.warning("[Auto-Tune] Template '" + templateName + "' has invalid type: " + t.type());
+                    return Optional.empty();
+                }
+
+                return Optional.of(triggerEvent(
+                        t.name(),
+                        type,
+                        t.materials(),
+                        t.multiplier(),
+                        Duration.ofMinutes(t.durationMinutes()),
+                        t.startMessage(),
+                        t.endMessage(),
+                        "template:" + templateName
+                ));
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * List all available event templates from config.
+     */
+    public List<AutoTuneConfig.MarketEventConfigEntry> getTemplates() {
+        return List.copyOf(defaultEvents);
+    }
+
+    /**
      * Cancel an active or scheduled event.
      */
     public boolean cancelEvent(UUID id) {

@@ -10,7 +10,10 @@ use uuid::Uuid;
 
 use crate::{
     auth::{generate_api_key, hash_api_key, AuthenticatedServer},
-    models::{ErrorResponse, HeartbeatRequest, HeartbeatResponse, RegisterServerRequest, RegisterServerResponse, Server},
+    models::{
+        ErrorResponse, HeartbeatRequest, HeartbeatResponse, RegisterServerRequest,
+        RegisterServerResponse, Server,
+    },
     rate_limit::{client_ip, RateLimitResult, RateLimiter},
 };
 
@@ -162,8 +165,9 @@ pub async fn heartbeat(
 
     let path_server_id = path.into_inner();
     if auth.server_id != path_server_id {
-        return HttpResponse::Forbidden()
-            .json(ErrorResponse::new("API key does not match the server ID in the path"));
+        return HttpResponse::Forbidden().json(ErrorResponse::new(
+            "API key does not match the server ID in the path",
+        ));
     }
 
     let player_count = body.player_count;
@@ -184,9 +188,7 @@ pub async fn heartbeat(
 
     match result {
         Ok(row) => {
-            let last_seen: DateTime<Utc> = row
-                .try_get("last_seen")
-                .unwrap_or_else(|_| Utc::now());
+            let last_seen: DateTime<Utc> = row.try_get("last_seen").unwrap_or_else(|_| Utc::now());
             tracing::debug!(server_id = %path_server_id, "heartbeat received");
             HttpResponse::Ok().json(HeartbeatResponse {
                 ok: true,

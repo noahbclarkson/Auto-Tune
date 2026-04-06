@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ArrowRight, Play, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowRight, Play, TrendingUp, TrendingDown, Download, Github } from 'lucide-react';
+import { QuickSimulator } from './quick-simulator';
 
 /* ------------------------------------------------------------------ */
 /* Fake sparkline data — upward-trending with realistic noise          */
@@ -121,8 +122,17 @@ export function Hero() {
 
             <div className="flex flex-wrap gap-3 mb-10">
               <Link
-                href="/simulator"
+                href="https://github.com/noahbclarkson/Auto-Tune/releases"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-emerald-600/20 text-sm"
+              >
+                <Download className="w-4 h-4" />
+                Download Auto-Tune
+              </Link>
+              <Link
+                href="/simulator"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium rounded-lg transition-colors border border-gray-700 text-sm"
               >
                 <Play className="w-4 h-4" />
                 Try the Simulator
@@ -133,6 +143,15 @@ export function Hero() {
               >
                 <ArrowRight className="w-4 h-4" />
                 How It Works
+              </Link>
+              <Link
+                href="https://github.com/noahbclarkson/Auto-Tune"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-gray-500 hover:text-gray-300 font-medium text-sm"
+              >
+                <Github className="w-4 h-4" />
+                GitHub
               </Link>
             </div>
 
@@ -149,6 +168,11 @@ export function Hero() {
                   <p className="text-white font-mono font-semibold">{value}</p>
                 </div>
               ))}
+            </div>
+
+            {/* Inline quick simulator */}
+            <div className="mt-8">
+              <QuickSimulator embedded />
             </div>
           </div>
 

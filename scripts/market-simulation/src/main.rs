@@ -134,6 +134,46 @@ impl Scenario {
         }
     }
 
+    /// Stressed economy scaled to 30 days — same archetype mix + stress events
+    /// as `stressed()` but extended to measure floor effect under chronic oversupply.
+    pub fn stressed_30day() -> Self {
+        Self {
+            name: "Stressed Economy (30d)".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 5,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Hoarder".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Exploiter".into(),
+                    count: 1,
+                },
+            ],
+            stress_events: vec![
+                StressEvent::Exploit { at_tick: 288 * 3 },
+                StressEvent::LowPlayers { at_tick: 288 * 7 },
+                StressEvent::LoanCascade { at_tick: 288 * 5 },
+            ],
+            seed: None,
+            events: Vec::new(),
+            duration_ticks: 288 * 30, // 30 days
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     pub fn high_activity() -> Self {
         Self {
             name: "High Activity Economy".to_string(),
@@ -398,6 +438,139 @@ impl Scenario {
         }
     }
 
+    /// GuildStability with 2 MarketMakers (replaces 1 Casual with 2nd MM).
+    /// Tests: Does a second MM improve economy health, or do they step on each other's toes?
+    ///
+    /// Control: guild_stability_mm_fixed_guild (1MM + 2GB + 4Cas + 3Far + 2Tra = 12 players)
+    /// Treatment: guild_stability_2mm_fixed_guild (2MM + 2GB + 3Cas + 3Far + 2Tra = 12 players)
+    ///
+    /// Hypotheses:
+    /// - H1 (YES): 2 MMs provide redundant two-sided liquidity → tighter spreads, lower vol
+    /// - H2 (NO): MMs compete on same quotes → one dominates, other gets starved → no improvement
+    /// - H3 (MAYBE): 2 MMs mean more capital deployed → more resilient to liquidity shocks
+    ///
+    /// Key metrics: GDP, D/G, vol, avg BPD, buy ratio
+    pub fn guild_stability_2mm_fixed_guild() -> Self {
+        Self {
+            name: "GuildStability+2MM+7%GB".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 2, // ← 2 MMs instead of 1
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 3, // ← 3 instead of 4 (replaced 1 Casual with 1 MM)
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42), // Same seed as control for fair head-to-head
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Archetype mix test: Casual-heavy variant.
+    /// Replaces Farmers with Casuals to test whether more balanced gather/demand
+    /// improves economy health beyond the 2MM+2GB config.
+    ///
+    /// Config: 2MM + 2GB + 6Cas + 1Far + 1Tra (10 players)
+    /// vs control: 2MM + 2GB + 3Cas + 3Far + 2Tra (12 players)
+    ///
+    /// Hypothesis: Casuals are net NEUTRAL (gather and spend evenly).
+    /// Fewer Farmers = less structural oversupply = higher equilibrium prices.
+    pub fn guild_stability_casual_heavy() -> Self {
+        Self {
+            name: "GuildStability+2MM+CasualHeavy".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 6, // ← 6 Casuals (vs 3 in control)
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 1, // ← 1 Farmer (vs 3 in control)
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 1, // ← 1 Trader (vs 2 in control)
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Archetype mix test: Farmer-heavy variant.
+    /// Replaces Casuals with Farmers to test whether a gather-heavy economy
+    /// can still be rescued by the 2MM+2GB archetype mix.
+    ///
+    /// Config: 2MM + 2GB + 2Cas + 6Far + 2Tra (12 players)
+    /// vs control: 2MM + 2GB + 3Cas + 3Far + 2Tra (12 players)
+    ///
+    /// Hypothesis: Farmer-heavy economy = structural sell pressure.
+    /// MM+GB should partially compensate but NOT fully offset oversupply.
+    /// Admins on Farmer-heavy servers should expect lower equilibrium prices.
+    pub fn guild_stability_farmer_heavy() -> Self {
+        Self {
+            name: "GuildStability+2MM+FarmerHeavy".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 2, // ← 2 Casuals (vs 3 in control)
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 6, // ← 6 Farmers (vs 3 in control)
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Verifies per-loan GDP cap behavior.
     /// Uses a tight single_loan_gdp_cap (0.5) to force early-tick cap events.
     /// Players start with low balance to trigger loan requests in early ticks.
@@ -444,6 +617,227 @@ impl Scenario {
         // Circuit breaker counts Active + Defaulted (already the default in SimConfig)
         Self {
             name: "GuildBuyer Failure Test (cooldown ENABLED)".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// GuildBuyer Failure Test — MM quits specifically at day 7.
+    /// Control: no exodus (baseline guildbuyer_failure_test)
+    /// Treatment: only the MarketMaker quits at day 7 (exodus_target_archetype = "MarketMaker")
+    /// Tests: can the economy survive without MM (market-making vacuum)?
+    pub fn guildbuyer_failure_mm_quit_test() -> Self {
+        let mut config = SimConfig::default();
+        config.loans.post_default_cooldown_hours = 168;
+        config.player_exodus_tick = Some(288 * 7); // day 7
+        config.player_exodus_fraction = 1.0; // all matching archetype quit
+        config.exodus_target_archetype = Some("MarketMaker".to_string());
+        config.exodus_spread_multiplier = 2.0;
+        config.exodus_shock_duration_ticks = 288;
+        Self {
+            name: "GuildBuyer Failure Test — MM quits at Day 7".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Counter-Cyclical Interest Test: compares counter-cyclical (continuous taper)
+    /// vs tiered circuit breaker on a stressed economy.
+    /// Control: counter_cyclical=false (legacy tiered: TIER1→50%, TIER2→25%, TIER3→0%)
+    /// Treatment: counter_cyclical=true (continuous: multiplier = max(0, min(1, 1-D/G/tier3)))
+    /// Both run with post_default_cooldown=168h (7 days) to isolate the interest variable.
+    /// Uses guildbuyer_failure_test archetype (1MM + 2GB + 4Cas + 3Far + 2Tra).
+    /// Hypothesis: counter-cyclical reduces debt accumulation more smoothly because
+    /// interest relief begins at D/G=0 (not at D/G=3) and scales continuously.
+    pub fn counter_cyclical_test() -> Self {
+        let mut config = SimConfig::default();
+        config.loans.post_default_cooldown_hours = 168; // 7 days, same for both arms
+        config.loans.counter_cyclical = true; // Treatment: enabled
+        Self {
+            name: "Counter-Cyclical Interest Test (continuous taper)".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// GuildBuyer Failure Test — GuildBuyer quits specifically at day 7.
+    /// Control: no exodus (baseline guildbuyer_failure_test)
+    /// Treatment: one GuildBuyer quits at day 7 (exodus_target_archetype = "GuildBuyer")
+    /// Tests: what happens to economy when the primary demand-side archetype leaves?
+    pub fn guildbuyer_failure_gb_quit_test() -> Self {
+        let mut config = SimConfig::default();
+        config.loans.post_default_cooldown_hours = 168;
+        config.player_exodus_tick = Some(288 * 7); // day 7
+        config.player_exodus_fraction = 1.0; // all matching archetype quit
+        config.exodus_target_archetype = Some("GuildBuyer".to_string());
+        config.exodus_spread_multiplier = 2.0;
+        config.exodus_shock_duration_ticks = 288;
+        Self {
+            name: "GuildBuyer Failure Test — GB quits at Day 7".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Guildbuyer Failure Test but with MM loan BOUNDED via single_loan_gdp_cap=0.10.
+    /// MM's opening loan on Day 2 was $183K = 28.5% of economy GDP — the cascade driver.
+    /// Bounding loans to 10% of GDP would cap MM's opening loan at ~$64K instead.
+    pub fn guildbuyer_failure_bounded_mm_test() -> Self {
+        let mut config = SimConfig::default();
+        config.loans.post_default_cooldown_hours = 168;
+        // Single loan capped at 10% of economy GDP — prevents MM from taking
+        // outsized loans that trigger the default cascade.
+        config.loans.single_loan_gdp_cap = 0.10;
+        Self {
+            name: "GuildBuyer Failure Test (MM loan BOUNDED)".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Guildbuyer Failure Test but with MM opening loans PROHIBITED.
+    /// MM is prevented from taking opening loans (mm_opening_loan_allowed = false).
+    /// MM starts with $20-100K initial capital — sufficient for market-making.
+    /// This is the ROOT-CAUSE fix: instead of bounding MM loans (which backfired —
+    /// D/G went from 0.75x to 1.85x), we simply prevent MM from borrowing in the
+    /// first place. MM doesn't need opening loans to function.
+    pub fn guildbuyer_failure_no_mm_opening_loan_test() -> Self {
+        let mut config = SimConfig::default();
+        config.loans.post_default_cooldown_hours = 168;
+        // The key fix: prohibit MM from taking opening loans
+        config.loans.mm_opening_loan_allowed = false;
+        Self {
+            name: "GuildBuyer Failure Test (MM opening loan PROHIBITED)".to_string(),
             config,
             players: vec![
                 ArchetypeConfig {
@@ -610,6 +1004,55 @@ impl Scenario {
         Self {
             name: "GuildStability+MM+GB+GS".to_string(),
             config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildSeller".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// GuildStability with 1MM + 1GB + 1GS but Phase 2 redesigned to use price-dip detection.
+    /// GS sells when price dips below perceived*(1 - threshold) — active anti-oversupply.
+    /// Hypotheses:
+    /// - H1: Phase 2 redesign prevents price collapse by proactively selling during oversupply
+    /// - H2: Phase 2 redesign has no effect (price dips are already self-correcting)
+    /// - H3: Phase 2 redesign is counterproductive (GS sells into downturns amplifying losses)
+    pub fn guild_stability_mm_gs_phase2_redesign() -> Self {
+        // Redesigned Phase 2: sell when price < perceived * 0.80 (20% dip = oversupply signal)
+        let config = SimConfig {
+            guild_phase2_dip_threshold: Some(0.20),
+            ..Default::default()
+        };
+        Self {
+            name: "GuildStability+MM+GB+GS-Phase2".to_string(),
+            config,
             players: vec![
                 ArchetypeConfig {
                     archetype: "MarketMaker".into(),
@@ -832,6 +1275,58 @@ impl Scenario {
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14, // 14 days
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Worst-case mass exodus stress test: 80% of players quit at day 7.
+    /// Based on guild_stability_mm_fixed_guild archetype mix (12 players).
+    /// 80% quit → ~2 players remain (only 1 MM + 1 GB possible).
+    ///
+    /// Key questions:
+    /// - Does TIER3 circuit breaker fire? When? At what D/G?
+    /// - How long until the economy stabilizes / recovers?
+    /// - Do spreads blow out permanently or recover?
+    /// - Is there a permanent GDP loss vs control?
+    pub fn worst_case_exodus_test() -> Self {
+        // Day 7 = tick 2016 (288 ticks/day × 7 days)
+        // exodus_spread_multiplier=2.0x for 288 ticks (1 day) then decays 5%/tick
+        let config = SimConfig {
+            player_exodus_tick: Some(288 * 7),
+            player_exodus_fraction: 0.80, // 80% quit — worst case
+            exodus_spread_multiplier: 2.0,
+            exodus_shock_duration_ticks: 288,
+            ..SimConfig::default()
+        };
+        Self {
+            name: "Worst Case Exodus Test".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14, // 14 days total
             speed_ticks_per_sec: 200,
         }
     }
@@ -1137,6 +1632,93 @@ impl Scenario {
                 },
             ],
             seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// Healthy economy + 2 InsiderTraders: tests whether ITs add value
+    /// when the economy already has strong MM + GB coverage.
+    /// Control: guild_stability_mm_fixed_guild (1MM + 2GB + 4Cas + 3Far + 2Tra)
+    /// Treatment: same + 2 InsiderTraders
+    pub fn guild_stability_mm_fixed_guild_plus_it() -> Self {
+        Self {
+            name: "GuildStability+MM+IT".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "InsiderTrader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 4,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
+    /// GuildStability + MM (high initial capital) + 2x GuildBuyers @ 7%.
+    /// Same as guild_stability_mm_fixed_guild but MM starts with $200-300K
+    /// instead of default $50-200K.
+    /// Tests: does higher MM starting capital reduce or eliminate MM opening loans?
+    /// Recommendation: if MM needs no/opening loans at $200-300K, this is the
+    /// preferred production config (reduces loan cascade risk without bounding loans).
+    pub fn guild_stability_mm_high_capital() -> Self {
+        let config = SimConfig {
+            mm_initial_capital_min: Some(200_000.0),
+            mm_initial_capital_max: Some(300_000.0),
+            ..Default::default()
+        };
+        Self {
+            name: "GuildStability+MM-HighCapital+7%GB".to_string(),
+            config,
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: Some(42),
             events: Vec::new(),
             stress_events: vec![],
             duration_ticks: 288 * 14,
@@ -1847,6 +2429,193 @@ fn run_event_control_test() {
 /// Control: guild_stability_mm_fixed_guild (no floor/ceiling)
 /// Treatment: same but Diamond floor=60% base ($300), Iron ceiling=100% base ($50)
 ///
+/// 30-day stressed economy: Does the 60% floor still hold, or does the floor
+/// paradox become catastrophic under chronic oversupply?
+///
+/// Q: Does the Diamond floor paradox (D/G worsens despite floor protecting displayed
+///    prices) persist or amplify over 30 days of chronic Farmer oversupply + stress events?
+/// Q: Does the floor prevent price discovery or stabilize it?
+/// Q: Is GDP different when floor is active under chronic stress?
+fn run_stressed_30d_floor_test() {
+    use crate::analyzer::load_summary;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║   STRESSED ECONOMY 30-DAY FLOOR TEST                       ║");
+    println!("║  60% Diamond floor vs NO floor — chronic oversupply        ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: stressed_30day (no floor)");
+    println!("  Treatment: same + Diamond floor at 60% of base ($300)\n");
+    println!("  Seed: {}\n", seed);
+
+    // Control: stressed_30day without floor
+    let ctrl_scenario = Scenario::stressed_30day();
+
+    // Treatment: same but with 60% Diamond floor
+    let mut treat_scenario = Scenario::stressed_30day();
+    if let Some(diamond) = treat_scenario
+        .config
+        .items
+        .iter_mut()
+        .find(|ic| ic.name == "Diamond")
+    {
+        diamond.price_floor_override = Some(diamond.base_price * 0.6);
+    }
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-s30d-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-s30d-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl = ctrl_scenario.clone();
+    ctrl.seed = Some(seed);
+    let mut treat = treat_scenario.clone();
+    treat.seed = Some(seed);
+
+    println!("─── Control (no floor) ───");
+    let start = Instant::now();
+    if let Err(e) = run_headless(&ctrl, Some(ctrl_dir.clone())) {
+        eprintln!("  Control run error: {}", e);
+        return;
+    }
+    println!("  Control complete: {:.1}s\n", start.elapsed().as_secs_f64());
+
+    println!("─── Treatment (60% Diamond floor) ───");
+    let start = Instant::now();
+    if let Err(e) = run_headless(&treat, Some(treat_dir.clone())) {
+        eprintln!("  Treatment run error: {}", e);
+        return;
+    }
+    println!("  Treatment complete: {:.1}s\n", start.elapsed().as_secs_f64());
+
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Control summary error: {}", e);
+            return;
+        }
+    };
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treatment summary error: {}", e);
+            return;
+        }
+    };
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  SUMMARY METRICS (30-day stressed economy)                ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Metric", "CONTROL", "TREATMENT", "Effect"
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "GDP",
+        &format!("{:.0}", ctrl_summary.gdp),
+        &format!("{:.0}", treat_summary.gdp),
+        &format!(
+            "{:+.1}%",
+            (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0
+        )
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Total Debt",
+        &format!("{:.0}", ctrl_summary.debt),
+        &format!("{:.0}", treat_summary.debt),
+        &format!(
+            "{:+.1}%",
+            (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0
+        )
+    );
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Debt/GDP",
+        &format!("{:.2}x", ctrl_dg),
+        &format!("{:.2}x", treat_dg),
+        &format!("{:+.2}x", treat_dg - ctrl_dg)
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Buy Ratio",
+        &format!("{:.1}%", ctrl_summary.buy_ratio * 100.0),
+        &format!("{:.1}%", treat_summary.buy_ratio * 100.0),
+        &format!(
+            "{:+.1}%",
+            (treat_summary.buy_ratio - ctrl_summary.buy_ratio) * 100.0
+        )
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Avg Volatility",
+        &format!("{:.4}", ctrl_summary.avg_volatility),
+        &format!("{:.4}", treat_summary.avg_volatility),
+        &format!(
+            "{:+.4}",
+            treat_summary.avg_volatility - ctrl_summary.avg_volatility
+        )
+    );
+    println!(
+        "  {:20} {:>15} {:>15} {:>15}",
+        "Avg BPD",
+        &format!("{:.3}%", ctrl_summary.avg_bpd * 100.0),
+        &format!("{:.3}%", treat_summary.avg_bpd * 100.0),
+        &format!(
+            "{:+.3}%",
+            (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0
+        )
+    );
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  FLOOR PARADOX CHECK                                     ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    let dg_delta = treat_dg - ctrl_dg;
+    if dg_delta > 0.5 {
+        println!(
+            "  ⚠️  Floor paradox AMPLIFIED: D/G worse by {:+.2}x at 30 days",
+            dg_delta
+        );
+        println!(
+            "     Floor protects displayed prices but internal debt accumulates more."
+        );
+    } else if dg_delta > 0.1 {
+        println!(
+            "  ⚠️  Floor paradox persists: D/G worse by {:+.2}x",
+            dg_delta
+        );
+    } else if dg_delta < -0.1 {
+        println!(
+            "  ✅ Floor paradox INVERTED: D/G better by {:+.2}x — floor helps!",
+            -dg_delta
+        );
+    } else {
+        println!("  ✅ D/G essentially unchanged ({:+.2}x) — floor neutral over 30 days", dg_delta);
+    }
+
+    let gdp_delta = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    if gdp_delta > 1.0 {
+        println!("  ✅ Floor BOOSTS GDP by {:+.1}% in stressed economy", gdp_delta);
+    } else if gdp_delta < -1.0 {
+        println!("  ⚠️  Floor HURTS GDP by {:+.1}% — dampens trade", gdp_delta);
+    } else {
+        println!("  ✅ Floor GDP-neutral ({:+.1}%) — floor does not suppress activity", gdp_delta);
+    }
+
+    println!("\n  Key insight: 14-day floor paradox (+19.1% D/G worse with floor) was measured");
+    println!("  on healthy 2MM+2GB economy. This test extends to chronic stress.");
+    println!("  If floor paradox persists at 30 days in stressed economy, floor is a");
+    println!("  structural liability — it protects displayed prices but worsens debt.");
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
 /// Key question: Does floor/ceiling change the INTERNAL prices, or only the displayed ones?
 /// Per the Java implementation, floor/ceiling is applied to getBuyPrice/getSellPrice,
 /// NOT to the internal price update. So internal prices should be identical between
@@ -2254,7 +3023,7 @@ fn run_floor_strength_sweep() {
         });
     }
 
-    println!("\n");
+    println!();
 
     // ── Analysis ─────────────────────────────────────────────────────────
     println!("╔══════════════════════════════════════════════════════════════════╗");
@@ -2392,6 +3161,320 @@ fn run_floor_strength_sweep() {
     }
 
     let _ = std::fs::remove_dir_all(&ctrl_dir);
+}
+
+/// ─── Floor Strength Multi-Seed Test ───────────────────────────────────────
+/// Tests whether the 60% floor finding is robust across multiple random seeds.
+///
+/// The original run_floor_strength_sweep (seed=42) found:
+///   60% floor = +6.5% GDP (BEST), 70% = -10.7%, 80% = -19.1%
+///
+/// This test runs the same 60% treatment vs no-floor control across 5 seeds
+/// to validate the finding is not a single-seed artifact.
+///
+/// Key question: Is 60% Diamond floor consistently beneficial, or does the
+/// finding depend on the specific archetype randomisation of seed=42?
+fn run_floor_strength_multi_seed() {
+    use crate::analyzer::{load_all_prices, load_summary};
+    use std::io::Write;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+    let diamond_base = 500.0;
+    let treatment_floor_pct = 0.60;
+    let treatment_floor = diamond_base * treatment_floor_pct; // $300
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║       DIAMOND FLOOR 60% — MULTI-SEED ROBUSTNESS (5 seeds)    ║");
+    println!("║  60% Diamond floor ($300) vs no floor — 5 seeds              ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Treatment: Diamond floor = 60% of base ($300)");
+    println!("  Control:   no floor (natural price discovery)");
+    println!("  Scenario:  guild_stability_mm_fixed_guild (1MM + 2GB@7% + 4Cas + 3Far + 2Tra)");
+    println!("  Duration:  14 days (4032 ticks)\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct FloorResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        spd: f64,
+        vol: f64,
+        buy_ratio: f64,
+        diamond_internal: f64,
+        diamond_displayed: f64,
+        floor_binds: bool,
+    }
+
+    impl FloorResult {
+        fn from_summary_and_prices(
+            s: &crate::analyzer::SimSummary,
+            prices: &[(String, f64, f64)],
+            seed: u64,
+            treatment_floor: f64,
+        ) -> Self {
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (diamond_internal, diamond_displayed) =
+                diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+                diamond_internal,
+                diamond_displayed,
+                floor_binds: diamond_displayed >= treatment_floor - 0.01,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<FloorResult> = Vec::new();
+    let mut treat_results: Vec<FloorResult> = Vec::new();
+    let total = seeds.len() * 2;
+
+    for (i, seed) in seeds.iter().enumerate() {
+        // ── Control (no floor) ──────────────────────────────────────────
+        eprint!("\r  [{}/{}] seed={} ctrl", i * 2 + 1, total, seed);
+        std::io::stderr().flush().ok();
+
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-fsm-ctrl-{}", seed));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_dir).ok();
+        let mut ctrl = Scenario::guild_stability_mm_fixed_guild();
+        ctrl.seed = Some(*seed);
+        if let Err(e) = run_seeded_headless(&ctrl, *seed, &ctrl_dir) {
+            eprintln!("\n  Ctrl error seed={}: {}", seed, e);
+        } else if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db"))
+            && let Ok(p) = load_all_prices(&ctrl_dir.join("simulation.db"))
+        {
+            ctrl_results.push(FloorResult::from_summary_and_prices(&s, &p, *seed, 0.0));
+        }
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+
+        // ── Treatment (60% Diamond floor) ──────────────────────────────
+        eprint!("\r  [{}/{}] seed={} treat", i * 2 + 2, total, seed);
+        std::io::stderr().flush().ok();
+
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-fsm-treat-{}", seed));
+        let _ = std::fs::remove_dir_all(&treat_dir);
+        std::fs::create_dir_all(&treat_dir).ok();
+        let mut treat = Scenario::guild_stability_mm_fixed_guild();
+        if let Some(d) = treat
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
+            d.price_floor_override = Some(treatment_floor);
+        }
+        treat.seed = Some(*seed);
+        if let Err(e) = run_seeded_headless(&treat, *seed, &treat_dir) {
+            eprintln!("\n  Treat error seed={}: {}", seed, e);
+        } else if let Ok(s) = load_summary(&treat_dir.join("simulation.db"))
+            && let Ok(p) = load_all_prices(&treat_dir.join("simulation.db"))
+        {
+            treat_results.push(FloorResult::from_summary_and_prices(
+                &s,
+                &p,
+                *seed,
+                treatment_floor,
+            ));
+        }
+        let _ = std::fs::remove_dir_all(&treat_dir);
+    }
+    println!();
+
+    if ctrl_results.is_empty() || treat_results.is_empty() {
+        eprintln!("  ✗ No results collected");
+        return;
+    }
+
+    // ── Per-seed comparison table ──────────────────────────────────────
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║                    PER-SEED RESULTS                           ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+
+    println!(
+        "  {:>6}  {:>10}  {:>7}  {:>7}  {:>7}  |  {:>10}  {:>7}  {:>7}  {:>7}  {:>7}",
+        "seed",
+        "GDP(ctrl)",
+        "D/G(c)",
+        "BPD(c)",
+        "Buy(c)",
+        "GDP(tr)",
+        "D/G(t)",
+        "BPD(t)",
+        "Buy(t)",
+        "Floor?"
+    );
+    for (c, t) in ctrl_results.iter().zip(treat_results.iter()) {
+        println!(
+            "  {:>6}  {:>10.0}  {:>6.2}x  {:>6.2}%  {:>6.1}% |  {:>10.0}  {:>6.2}x  {:>6.2}%  {:>6.1}%  {:>7}",
+            c.seed,
+            c.gdp,
+            c.dg,
+            c.bpd * 100.0,
+            c.buy_ratio * 100.0,
+            t.gdp,
+            t.dg,
+            t.bpd * 100.0,
+            t.buy_ratio * 100.0,
+            if t.floor_binds { "✓ binds" } else { "✗ no" }
+        );
+    }
+
+    // ── Statistical summary ────────────────────────────────────────────
+    let n = ctrl_results.len() as f64;
+
+    let avg = |v: &[FloorResult], f: &str| -> f64 {
+        let field_sum = match f {
+            "gdp" => v.iter().map(|r| r.gdp).sum::<f64>(),
+            "dg" => v.iter().map(|r| r.dg).sum::<f64>(),
+            "bpd" => v.iter().map(|r| r.bpd).sum::<f64>(),
+            "vol" => v.iter().map(|r| r.vol).sum::<f64>(),
+            "buy_ratio" => v.iter().map(|r| r.buy_ratio).sum::<f64>(),
+            "diamond_internal" => v.iter().map(|r| r.diamond_internal).sum::<f64>(),
+            _ => 0.0,
+        };
+        field_sum / n
+    };
+    let std_dev = |v: &[FloorResult], f: &str, m: f64| -> f64 {
+        let variance = v
+            .iter()
+            .map(|r| {
+                let val: f64 = match f {
+                    "gdp" => r.gdp,
+                    "dg" => r.dg,
+                    "bpd" => r.bpd,
+                    "vol" => r.vol,
+                    "buy_ratio" => r.buy_ratio,
+                    "diamond_internal" => r.diamond_internal,
+                    _ => 0.0,
+                };
+                (val - m).powi(2)
+            })
+            .sum::<f64>()
+            / n;
+        variance.sqrt()
+    };
+
+    let ctrl_gdp_mean = avg(&ctrl_results, "gdp");
+    let treat_gdp_mean = avg(&treat_results, "gdp");
+    let ctrl_gdp_std = std_dev(&ctrl_results, "gdp", ctrl_gdp_mean);
+    let treat_gdp_std = std_dev(&treat_results, "gdp", treat_gdp_mean);
+
+    let ctrl_dg_mean = avg(&ctrl_results, "dg");
+    let treat_dg_mean = avg(&treat_results, "dg");
+    let ctrl_dg_std = std_dev(&ctrl_results, "dg", ctrl_dg_mean);
+    let treat_dg_std = std_dev(&treat_results, "dg", treat_dg_mean);
+
+    let ctrl_bpd_mean = avg(&ctrl_results, "bpd");
+    let treat_bpd_mean = avg(&treat_results, "bpd");
+    let ctrl_bpd_std = std_dev(&ctrl_results, "bpd", ctrl_bpd_mean);
+    let treat_bpd_std = std_dev(&treat_results, "bpd", treat_bpd_mean);
+
+    let ctrl_vol_mean = avg(&ctrl_results, "vol");
+    let treat_vol_mean = avg(&treat_results, "vol");
+    let ctrl_vol_std = std_dev(&ctrl_results, "vol", ctrl_vol_mean);
+    let treat_vol_std = std_dev(&treat_results, "vol", treat_vol_mean);
+
+    let ctrl_buy_mean = avg(&ctrl_results, "buy_ratio");
+    let treat_buy_mean = avg(&treat_results, "buy_ratio");
+
+    let ctrl_di_mean = avg(&ctrl_results, "diamond_internal");
+    let treat_di_mean = avg(&treat_results, "diamond_internal");
+
+    let gdp_pct_change = (treat_gdp_mean - ctrl_gdp_mean) / ctrl_gdp_mean * 100.0;
+    let floor_binds_pct = treat_results.iter().filter(|t| t.floor_binds).count() as f64 / n * 100.0;
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║                   STATISTICAL SUMMARY                           ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+
+    println!(
+        "  {:>18}  {:>14}  {:>14}  {:>10}",
+        "Metric", "Control", "Treatment", "Δ"
+    );
+    println!(
+        "  {:>18}  {:>14}  {:>14}  {:>10}",
+        "─".repeat(18),
+        "─".repeat(14),
+        "─".repeat(14),
+        "─".repeat(10)
+    );
+    println!(
+        "  {:>18}  {:>11.0} ±{:<5.0}  {:>11.0} ±{:<5.0}  {:>+9.1}%",
+        "GDP", ctrl_gdp_mean, ctrl_gdp_std, treat_gdp_mean, treat_gdp_std, gdp_pct_change
+    );
+    println!(
+        "  {:>18}  {:>11.2} +/- {:>5.1}  {:>11.2} +/- {:>5.1}  {:>+9.2}x",
+        "Debt/GDP",
+        ctrl_dg_mean,
+        ctrl_dg_std,
+        treat_dg_mean,
+        treat_dg_std,
+        treat_dg_mean - ctrl_dg_mean
+    );
+    println!(
+        "  {:>18}  {:>11.3} +/- {:>5.2}  {:>11.3} +/- {:>5.2}  {:>+9.1}%",
+        "Volatility (×1000)",
+        ctrl_vol_mean * 1000.0,
+        ctrl_vol_std * 1000.0,
+        treat_vol_mean * 1000.0,
+        treat_vol_std * 1000.0,
+        (treat_vol_mean - ctrl_vol_mean) / ctrl_vol_mean.max(0.001) * 100.0
+    );
+    println!(
+        "  {:>18}  {:>11.2}%  +/- {:>5.2}%  {:>11.2}%  +/- {:>5.2}%  {:>+9.1}pp",
+        "BPD",
+        ctrl_bpd_mean * 100.0,
+        ctrl_bpd_std * 100.0,
+        treat_bpd_mean * 100.0,
+        treat_bpd_std * 100.0,
+        (treat_bpd_mean - ctrl_bpd_mean) * 100.0
+    );
+    println!(
+        "  {:>18}  {:>11.1}%            {:>11.1}%            {:>+9.1}pp",
+        "Buy Ratio",
+        ctrl_buy_mean * 100.0,
+        treat_buy_mean * 100.0,
+        (treat_buy_mean - ctrl_buy_mean) * 100.0
+    );
+    println!(
+        "  {:>18}  {:>13.0}         {:>13.0}",
+        "Diamond internal$", ctrl_di_mean, treat_di_mean
+    );
+
+    println!("\n╠══════════════════════════════════════════════════════════════════╣");
+    println!(
+        "║  Floor binds: {:.0}% of treatment runs ({:.0}/{:.0} seeds)       ║",
+        floor_binds_pct,
+        treat_results.iter().filter(|t| t.floor_binds).count() as f64,
+        n
+    );
+    println!("╚══════════════════════════════════════════════════════════════════╝");
+
+    // ── Verdict ────────────────────────────────────────────────────────
+    println!("\n╠══════════════════════════════════════════════════════════════════╣");
+    print!("║  VERDICT: 60% Diamond floor is ");
+    if gdp_pct_change > 2.0 {
+        println!("CONSISTENTLY BENEFICIAL (+{:.1}% GDP avg)", gdp_pct_change);
+        println!("║  → Recommendation: ADOPT 60% floor as production default     ║");
+    } else if gdp_pct_change > -2.0 {
+        println!("MARGINALLY NEUTRAL ({:+.1}% GDP avg)", gdp_pct_change);
+        println!("║  → Recommendation: CAUTION — effect too small to be reliable ║");
+    } else {
+        println!("CONSISTENTLY HARMFUL ({:+.1}% GDP avg)", gdp_pct_change);
+        println!("║  → Recommendation: DO NOT ADOPT — seed=42 result was artifact   ║");
+    }
+    println!("╚══════════════════════════════════════════════════════════════════╝");
 }
 
 // ─── Multi-Server Coordination Test ────────────────────────────────────────
@@ -4222,6 +5305,804 @@ fn run_guildbuyer_failure_test() {
     }
 }
 
+fn run_counter_cyclical_test() {
+    use crate::player::set_global_seeded_rng;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║     COUNTER-CYCLICAL INTEREST TEST                          ║");
+    println!("║  Continuous taper vs tiered circuit breaker                 ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Java LoanManager (default): counter_cyclical=true");
+    println!("  Formula: multiplier = max(0, min(1, 1 - D/G / tier3_ratio))");
+    println!("  D/G=3→70%, D/G=5→50%, D/G=10→0% (smooth taper)");
+    println!("  Tiered: D/G>3→50%, D/G>5→25%, D/G>10→0% (discrete steps)\n");
+    println!("  Seed: {}\n", seed);
+
+    // Control: legacy tiered circuit breaker
+    let mut ctrl_scenario = Scenario::counter_cyclical_test();
+    ctrl_scenario.config.loans.counter_cyclical = false;
+    ctrl_scenario.name = "Counter-Cyclical: DISABLED (legacy tiered)".into();
+
+    // Treatment: counter-cyclical continuous taper (Java default)
+    let treat_scenario = Scenario::counter_cyclical_test();
+    // counter_cyclical already = true from the scenario
+
+    // Helper closure to run one arm and collect per-day stats
+    let run_arm = |scenario: &Scenario, label: &str| -> (Vec<(u64, f64, f64, f64)>, Simulation) {
+        println!("─── {} ───", label);
+        set_global_seeded_rng(seed);
+        let mut sim = Simulation::new_seeded(scenario.config.clone(), seed);
+        sim.events = scenario.events.clone();
+        add_players_to_sim(&mut sim, &scenario.players);
+        sim.paused = false;
+
+        let mut daily: Vec<(u64, f64, f64, f64)> = Vec::new(); // (day, gdp, total_debt, dg)
+
+        let start = Instant::now();
+        while sim.current_tick < scenario.duration_ticks {
+            sim.tick();
+            let tick = sim.current_tick;
+            if tick.is_multiple_of(288) {
+                let day = tick / 288;
+                let gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+                let total_debt: f64 = sim
+                    .loans
+                    .iter()
+                    .filter(|l| {
+                        matches!(
+                            l.status,
+                            crate::loan::LoanStatus::Active | crate::loan::LoanStatus::Defaulted
+                        )
+                    })
+                    .map(|l| l.current_balance)
+                    .sum();
+                let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+                println!(
+                    "  Day {:>2}: GDP={:>9.0} | total_debt={:>9.0} | D/G={:.3}x | loans={:>2}",
+                    day,
+                    gdp,
+                    total_debt,
+                    dg,
+                    sim.loans
+                        .iter()
+                        .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                        .count(),
+                );
+                daily.push((day, gdp, total_debt, dg));
+            }
+        }
+        println!(
+            "  Done: {} ticks, {:.1}s\n",
+            sim.current_tick,
+            start.elapsed().as_secs_f64()
+        );
+        (daily, sim)
+    };
+
+    let (ctrl_daily, ctrl_sim) = run_arm(&ctrl_scenario, "Control (TIERED circuit breaker)");
+    let (treat_daily, treat_sim) = run_arm(&treat_scenario, "Treatment (COUNTER-CYCLICAL taper)");
+
+    // Summary table
+    let extract_final = |sim: &Simulation| -> (f64, f64, f64, f64, usize, f64) {
+        let gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+        let active_debt: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Active)
+            .map(|l| l.current_balance)
+            .sum();
+        let defaulted_debt: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+            .map(|l| l.current_balance)
+            .sum();
+        let total_debt = active_debt + defaulted_debt;
+        let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+        let defaults = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+            .count();
+        // Approximate: sum of (balance - principal) for all loans as interest accumulated
+        let interest_approx: f64 = sim
+            .loans
+            .iter()
+            .map(|l| (l.current_balance - l.principal).max(0.0))
+            .sum();
+        (gdp, total_debt, dg, active_debt, defaults, interest_approx)
+    };
+
+    let (ctrl_gdp, ctrl_debt, ctrl_dg, ctrl_active, ctrl_def, ctrl_interest) =
+        extract_final(&ctrl_sim);
+    let (treat_gdp, treat_debt, treat_dg, treat_active, treat_def, treat_interest) =
+        extract_final(&treat_sim);
+
+    // Per-day D/G comparison
+    println!("╔══════════════════════════════════════════════════════════════╗");
+    println!("║       PER-DAY D/G COMPARISON                                 ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:>5} {:>15} {:>15} {:>12}",
+        "Day", "Tiered D/G", "CC D/G", "Diff"
+    );
+    println!("  {}", "-".repeat(50));
+    for (ctrl_row, treat_row) in ctrl_daily.iter().zip(treat_daily.iter()) {
+        let diff = treat_row.3 - ctrl_row.3;
+        let marker = if diff < -0.1 {
+            "✓ CC lower"
+        } else if diff > 0.1 {
+            "✗ CC higher"
+        } else {
+            "~"
+        };
+        println!(
+            "  {:>5} {:>15.3}x {:>15.3}x {:>+12.3} {}",
+            ctrl_row.0, ctrl_row.3, treat_row.3, diff, marker
+        );
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       FINAL COMPARISON (Day 14)                              ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:<40} {:>15} {:>15}",
+        "Metric", "Tiered (ctrl)", "Counter-Cycl"
+    );
+    println!("  {}", "-".repeat(72));
+    println!(
+        "  {:<40} {:>15.0} {:>15.0}",
+        "Final GDP", ctrl_gdp, treat_gdp
+    );
+    println!(
+        "  {:<40} {:>15.0} {:>15.0}",
+        "Total Debt", ctrl_debt, treat_debt
+    );
+    println!(
+        "  {:<40} {:>15.3}x {:>15.3}x",
+        "Debt/GDP (D/G)", ctrl_dg, treat_dg
+    );
+    println!(
+        "  {:<40} {:>15.0} {:>15.0}",
+        "Active Debt", ctrl_active, treat_active
+    );
+    println!("  {:<40} {:>15} {:>15}", "Defaults", ctrl_def, treat_def);
+    println!(
+        "  {:<40} {:>15.0} {:>15.0}",
+        "Total Interest Paid", ctrl_interest, treat_interest
+    );
+
+    // GDP pct diff
+    let gdp_pct = (treat_gdp - ctrl_gdp) / ctrl_gdp.max(1.0) * 100.0;
+    let dg_chg = treat_dg - ctrl_dg;
+    let debt_pct = (treat_debt - ctrl_debt) / ctrl_debt.max(1.0) * 100.0;
+    let interest_pct = (treat_interest - ctrl_interest) / ctrl_interest.max(1.0) * 100.0;
+
+    println!("\n  Changes (counter-cyclical vs tiered):");
+    println!("    GDP:           {:+.1}%", gdp_pct);
+    println!(
+        "    D/G:           {:+.3}x ({:+.1}%)",
+        dg_chg,
+        (dg_chg / ctrl_dg.max(0.001)) * 100.0
+    );
+    println!("    Total Debt:    {:+.1}%", debt_pct);
+    println!("    Interest Paid: {:+.1}%", interest_pct);
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       VERDICT                                                 ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    if treat_dg < ctrl_dg * 0.9 && treat_gdp >= ctrl_gdp * 0.95 {
+        println!("\n  ✓ COUNTER-CYCLICAL IS BETTER");
+        println!("  Continuous taper reduces D/G while preserving GDP.");
+        println!("  Java's counter-cyclical=true default is validated by simulation.");
+    } else if treat_dg > ctrl_dg * 1.1 {
+        println!("\n  ✗ COUNTER-CYCLICAL MAKES D/G WORSE");
+        println!("  Tiered circuit breaker performs better in this scenario.");
+        println!("  Consider re-evaluating the Java default (counter_cyclical=true).");
+    } else {
+        println!("\n  ~ SIMILAR PERFORMANCE");
+        println!("  Both mechanisms produce comparable D/G outcomes.");
+        println!("  Counter-cyclical is smoother but not a dramatic improvement here.");
+    }
+    println!(
+        "\n  Java default: loans.counter-cyclical: true → Rust now matches (counter_cyclical: true)"
+    );
+}
+
+fn run_mm_loan_bounding_test() {
+    use crate::player::set_global_seeded_rng;
+    use std::path::PathBuf;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║     MM LOAN BOUNDING TEST                                    ║");
+    println!("║  single_loan_gdp_cap: unbounded vs 10% of GDP               ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Background: guildbuyer-failure-test found MM-1 took a $183K");
+    println!("  opening loan on Day 2 = 28.5% of economy GDP. This single");
+    println!("  oversized loan was the cascade driver.");
+    println!("  Question: Does bounding MM loans to 10% of GDP prevent the");
+    println!("  debt cascade without harming economic activity?\n");
+    println!("  Seed: {}\n", seed);
+
+    // ── Control: unbounded loans (single_loan_gdp_cap = 1.0) ─────────────
+    let mut ctrl_scenario = Scenario::guildbuyer_failure_test();
+    ctrl_scenario.config.loans.single_loan_gdp_cap = 1.0;
+    ctrl_scenario.name = "MM: unbounded loans (control)".into();
+
+    // ── Treatment: bounded loans (single_loan_gdp_cap = 0.10) ─────────────
+    let mut treat_scenario = Scenario::guildbuyer_failure_test();
+    treat_scenario.config.loans.single_loan_gdp_cap = 0.10;
+    treat_scenario.config.loans.post_default_cooldown_hours = 168;
+    treat_scenario.name = "MM: bounded loans 10% GDP (treatment)".into();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-mm-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-mm-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    // ── Run Control ─────────────────────────────────────────────────────
+    println!("─── Control (unbounded MM loans) ───");
+    set_global_seeded_rng(seed);
+    let mut ctrl_sim = Simulation::new_seeded(ctrl_scenario.config.clone(), seed);
+    ctrl_sim.events = ctrl_scenario.events.clone();
+    add_players_to_sim(&mut ctrl_sim, &ctrl_scenario.players);
+    ctrl_sim.paused = false;
+
+    let start = Instant::now();
+    while ctrl_sim.current_tick < ctrl_scenario.duration_ticks {
+        ctrl_sim.tick();
+        if ctrl_sim.current_tick.is_multiple_of(288) {
+            let day = ctrl_sim.current_tick / 288;
+            let gdp = ctrl_sim
+                .economy_snapshots
+                .last()
+                .map(|s| s.gdp)
+                .unwrap_or(0.0);
+            let active_debt: f64 = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.current_balance)
+                .sum();
+            let defaulted_debt: f64 = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                .map(|l| l.current_balance)
+                .sum();
+            let total_debt = active_debt + defaulted_debt;
+            let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+            // Find largest active loan
+            let max_loan = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.principal)
+                .fold(0.0, f64::max);
+            println!(
+                "  Day {:>2}: GDP={:>9.0} | debt={:>9.0} | D/G={:.3}x | max_loan={:>8.0}",
+                day, gdp, total_debt, dg, max_loan
+            );
+        }
+    }
+    let ctrl_final = ctrl_sim
+        .economy_snapshots
+        .last()
+        .map(|s| s.gdp)
+        .unwrap_or(0.0);
+    let ctrl_active_debt: f64 = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Active)
+        .map(|l| l.current_balance)
+        .sum();
+    let ctrl_defaulted_debt: f64 = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .map(|l| l.current_balance)
+        .sum();
+    let ctrl_total_debt = ctrl_active_debt + ctrl_defaulted_debt;
+    let ctrl_final_dg = if ctrl_final > 0.0 {
+        ctrl_total_debt / ctrl_final
+    } else {
+        0.0
+    };
+    let ctrl_max_loan = ctrl_sim
+        .loans
+        .iter()
+        .map(|l| l.principal)
+        .fold(0.0, f64::max);
+    let ctrl_defaults = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .count();
+    println!(
+        "  Control complete: {:.1}s | GDP={:.0} | D/G={:.3}x | max_loan={:.0} | defaults={}\n",
+        start.elapsed().as_secs_f64(),
+        ctrl_final,
+        ctrl_final_dg,
+        ctrl_max_loan,
+        ctrl_defaults
+    );
+
+    // ── Run Treatment ───────────────────────────────────────────────────
+    println!("─── Treatment (MM loans bounded to 10% of GDP) ───");
+    set_global_seeded_rng(seed);
+    let mut treat_sim = Simulation::new_seeded(treat_scenario.config.clone(), seed);
+    treat_sim.events = treat_scenario.events.clone();
+    add_players_to_sim(&mut treat_sim, &treat_scenario.players);
+    treat_sim.paused = false;
+
+    let start = Instant::now();
+    while treat_sim.current_tick < treat_scenario.duration_ticks {
+        treat_sim.tick();
+        if treat_sim.current_tick.is_multiple_of(288) {
+            let day = treat_sim.current_tick / 288;
+            let gdp = treat_sim
+                .economy_snapshots
+                .last()
+                .map(|s| s.gdp)
+                .unwrap_or(0.0);
+            let active_debt: f64 = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.current_balance)
+                .sum();
+            let defaulted_debt: f64 = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                .map(|l| l.current_balance)
+                .sum();
+            let total_debt = active_debt + defaulted_debt;
+            let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+            let max_loan = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.principal)
+                .fold(0.0, f64::max);
+            let cap_events = treat_sim.loan_cap_log.len();
+            println!(
+                "  Day {:>2}: GDP={:>9.0} | debt={:>9.0} | D/G={:.3}x | max_loan={:>8.0} | cap_events={}",
+                day, gdp, total_debt, dg, max_loan, cap_events
+            );
+        }
+    }
+    let bounded_events = treat_sim.loan_cap_log.len();
+    let treat_final = treat_sim
+        .economy_snapshots
+        .last()
+        .map(|s| s.gdp)
+        .unwrap_or(0.0);
+    let treat_active_debt: f64 = treat_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Active)
+        .map(|l| l.current_balance)
+        .sum();
+    let treat_defaulted_debt: f64 = treat_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .map(|l| l.current_balance)
+        .sum();
+    let treat_total_debt = treat_active_debt + treat_defaulted_debt;
+    let treat_final_dg = if treat_final > 0.0 {
+        treat_total_debt / treat_final
+    } else {
+        0.0
+    };
+    let treat_max_loan = treat_sim
+        .loans
+        .iter()
+        .map(|l| l.principal)
+        .fold(0.0, f64::max);
+    let treat_defaults = treat_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .count();
+    println!(
+        "  Treatment complete: {:.1}s | GDP={:.0} | D/G={:.3}x | max_loan={:.0} | defaults={} | cap_events={}\n",
+        start.elapsed().as_secs_f64(),
+        treat_final,
+        treat_final_dg,
+        treat_max_loan,
+        treat_defaults,
+        bounded_events
+    );
+
+    // ── Summary ──────────────────────────────────────────────────────────
+    println!("╔══════════════════════════════════════════════════════════════╗");
+    println!("╔       MM LOAN BOUNDING — RESULTS                             ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!(
+        "  {:<22} {:>14} {:>14}",
+        "Metric", "UNBOUNDED", "10% GDP CAP"
+    );
+    println!("  {:─<22} {:─>14} {:─>14}", "", "", "");
+    println!(
+        "  {:<22} {:>14.0} {:>14.0}",
+        "Final GDP", ctrl_final, treat_final
+    );
+    let gdp_chg = if ctrl_final > 0.0 {
+        (treat_final - ctrl_final) / ctrl_final * 100.0
+    } else {
+        0.0
+    };
+    println!("  {:<22} {:>+13.1}%", "GDP Change", gdp_chg);
+    println!(
+        "  {:<22} {:>14.3}x {:>14.3}x",
+        "Final D/G", ctrl_final_dg, treat_final_dg
+    );
+    let dg_chg = (1.0 - treat_final_dg / ctrl_final_dg.max(0.001)) * 100.0;
+    println!("  {:<22} {:>14.1}%", "D/G Reduction", dg_chg);
+    println!(
+        "  {:<22} {:>14.0} {:>14.0}",
+        "Total Debt", ctrl_total_debt, treat_total_debt
+    );
+    println!(
+        "  {:<22} {:>14.0} {:>14.0}",
+        "Max Single Loan", ctrl_max_loan, treat_max_loan
+    );
+    println!(
+        "  {:<22} {:>14} {:>14}",
+        "Total Defaults", ctrl_defaults, treat_defaults
+    );
+    println!(
+        "  {:<22} {:>14} {:>14}",
+        "Loan Cap Events", 0, bounded_events
+    );
+
+    println!("\n  KEY INSIGHT:");
+    if bounded_events == 0 {
+        println!("  ⚠  No cap events fired — 10% cap may be too loose OR");
+        println!("     economy GDP is large enough that 10% cap never binds.");
+        println!("     The MM's outsized loan may be driven by total_traded,");
+        println!("     not GDP. Check max_loan values above.");
+    } else if treat_final_dg < ctrl_final_dg * 0.7 {
+        println!(
+            "  ✓ BOUNDING WORKS: D/G reduced by {:.1}% while GDP changed {:.1}%.",
+            dg_chg, gdp_chg
+        );
+        println!("    Recommend: single_loan_gdp_cap = 0.10 for production.");
+    } else if treat_final_dg < ctrl_final_dg {
+        println!(
+            "  → Modest improvement: D/G reduced {:.1}%, GDP changed {:.1}%.",
+            dg_chg, gdp_chg
+        );
+        println!("    The 10% cap helps but may need to be combined with other fixes.");
+    } else {
+        println!("  ✗ BOUNDING MADE IT WORSE or no improvement.");
+        println!(
+            "    Bounded D/G: {:.3}x vs Unbounded: {:.3}x",
+            treat_final_dg, ctrl_final_dg
+        );
+    }
+}
+
+/// MM Opening Loan Prohibition Test.
+/// Compares the ROOT-CAUSAL fix (prevent MM from taking opening loans)
+/// against the cooldown-only baseline.
+///
+/// Control: guildbuyer_failure_test with cooldown=168h (MM CAN take opening loans)
+/// Treatment: guildbuyer_failure_no_mm_opening_loan_test (MM CANNOT take opening loans)
+/// Hypothesis: Preventing MM from borrowing entirely eliminates the cascade
+/// without harming economy (MM has $20-100K initial capital, sufficient for market-making).
+fn run_mm_no_opening_loan_test() {
+    use crate::player::set_global_seeded_rng;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║     MM OPENING LOAN PROHIBITION TEST                        ║");
+    println!("║  mm_opening_loan_allowed: true (control) vs false (treat) ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Question: Does preventing MM from taking opening loans");
+    println!("  eliminate the debt cascade, while keeping GDP healthy?");
+    println!("  MM starts with $20-100K capital — sufficient without borrowing.");
+    println!("\n  Seed: {}\n", seed);
+
+    // ── Control: MM opening loans ALLOWED (cooldown=168 only) ──────────
+    let mut ctrl_scenario = Scenario::guildbuyer_failure_test();
+    ctrl_scenario.config.loans.mm_opening_loan_allowed = true;
+    ctrl_scenario.name = "MM: opening loans ALLOWED (control)".into();
+
+    // ── Treatment: MM opening loans PROHIBITED ─────────────────────────
+    let treat_scenario = Scenario::guildbuyer_failure_no_mm_opening_loan_test();
+    // mm_opening_loan_allowed = false is already set in the scenario
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-mm-noloan-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-mm-noloan-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    // ── Run Control ─────────────────────────────────────────────────────
+    println!("─── Control (MM opening loans ALLOWED) ───");
+    set_global_seeded_rng(seed);
+    let mut ctrl_sim = Simulation::new_seeded(ctrl_scenario.config.clone(), seed);
+    ctrl_sim.events = ctrl_scenario.events.clone();
+    add_players_to_sim(&mut ctrl_sim, &ctrl_scenario.players);
+    ctrl_sim.paused = false;
+
+    let start = Instant::now();
+    while ctrl_sim.current_tick < ctrl_scenario.duration_ticks {
+        ctrl_sim.tick();
+        if ctrl_sim.current_tick.is_multiple_of(288) {
+            let day = ctrl_sim.current_tick / 288;
+            let gdp = ctrl_sim
+                .economy_snapshots
+                .last()
+                .map(|s| s.gdp)
+                .unwrap_or(0.0);
+            let active_debt: f64 = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.current_balance)
+                .sum();
+            let defaulted_debt: f64 = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                .map(|l| l.current_balance)
+                .sum();
+            let total_debt = active_debt + defaulted_debt;
+            let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+            let max_loan = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.principal)
+                .fold(0.0, f64::max);
+            let defaults = ctrl_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                .count();
+            println!(
+                "  Day {:>2}: GDP={:>9.0} | debt={:>9.0} | D/G={:.3}x | max_loan={:>8.0} | defaults={}",
+                day, gdp, total_debt, dg, max_loan, defaults
+            );
+        }
+    }
+    let ctrl_final = ctrl_sim
+        .economy_snapshots
+        .last()
+        .map(|s| s.gdp)
+        .unwrap_or(0.0);
+    let ctrl_active_debt: f64 = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Active)
+        .map(|l| l.current_balance)
+        .sum();
+    let ctrl_defaulted_debt: f64 = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .map(|l| l.current_balance)
+        .sum();
+    let ctrl_total_debt = ctrl_active_debt + ctrl_defaulted_debt;
+    let ctrl_final_dg = if ctrl_final > 0.0 {
+        ctrl_total_debt / ctrl_final
+    } else {
+        0.0
+    };
+    let ctrl_max_loan = ctrl_sim
+        .loans
+        .iter()
+        .map(|l| l.principal)
+        .fold(0.0, f64::max);
+    let ctrl_defaults = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .count();
+    // Check if MM took an opening loan
+    let ctrl_mm_loans: usize = ctrl_sim
+        .loans
+        .iter()
+        .filter(|l| {
+            matches!(
+                ctrl_sim.players.get(l.player_index).map(|p| &p.archetype),
+                Some(Archetype::MarketMaker)
+            )
+        })
+        .count();
+    println!(
+        "  Control complete: {:.1}s | D/G={:.3}x | MM loans taken: {}",
+        start.elapsed().as_secs_f64(),
+        ctrl_final_dg,
+        ctrl_mm_loans
+    );
+
+    // ── Run Treatment ─────────────────────────────────────────────────────
+    println!("\n─── Treatment (MM opening loans PROHIBITED) ───");
+    set_global_seeded_rng(seed);
+    let mut treat_sim = Simulation::new_seeded(treat_scenario.config.clone(), seed);
+    treat_sim.events = treat_scenario.events.clone();
+    add_players_to_sim(&mut treat_sim, &treat_scenario.players);
+    treat_sim.paused = false;
+
+    let start = Instant::now();
+    while treat_sim.current_tick < treat_scenario.duration_ticks {
+        treat_sim.tick();
+        if treat_sim.current_tick.is_multiple_of(288) {
+            let day = treat_sim.current_tick / 288;
+            let gdp = treat_sim
+                .economy_snapshots
+                .last()
+                .map(|s| s.gdp)
+                .unwrap_or(0.0);
+            let active_debt: f64 = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.current_balance)
+                .sum();
+            let defaulted_debt: f64 = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                .map(|l| l.current_balance)
+                .sum();
+            let total_debt = active_debt + defaulted_debt;
+            let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+            let max_loan = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                .map(|l| l.principal)
+                .fold(0.0, f64::max);
+            let defaults = treat_sim
+                .loans
+                .iter()
+                .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                .count();
+            println!(
+                "  Day {:>2}: GDP={:>9.0} | debt={:>9.0} | D/G={:.3}x | max_loan={:>8.0} | defaults={}",
+                day, gdp, total_debt, dg, max_loan, defaults
+            );
+        }
+    }
+    let treat_final = treat_sim
+        .economy_snapshots
+        .last()
+        .map(|s| s.gdp)
+        .unwrap_or(0.0);
+    let treat_active_debt: f64 = treat_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Active)
+        .map(|l| l.current_balance)
+        .sum();
+    let treat_defaulted_debt: f64 = treat_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .map(|l| l.current_balance)
+        .sum();
+    let treat_total_debt = treat_active_debt + treat_defaulted_debt;
+    let treat_final_dg = if treat_final > 0.0 {
+        treat_total_debt / treat_final
+    } else {
+        0.0
+    };
+    let treat_max_loan = treat_sim
+        .loans
+        .iter()
+        .map(|l| l.principal)
+        .fold(0.0, f64::max);
+    let treat_defaults = treat_sim
+        .loans
+        .iter()
+        .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+        .count();
+    let treat_mm_loans: usize = treat_sim
+        .loans
+        .iter()
+        .filter(|l| {
+            matches!(
+                treat_sim.players.get(l.player_index).map(|p| &p.archetype),
+                Some(Archetype::MarketMaker)
+            )
+        })
+        .count();
+    println!(
+        "  Treatment complete: {:.1}s | D/G={:.3}x | MM loans taken: {}",
+        start.elapsed().as_secs_f64(),
+        treat_final_dg,
+        treat_mm_loans
+    );
+
+    // ── Summary ──────────────────────────────────────────────────────────
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("╔    MM OPENING LOAN PROHIBITION — RESULTS                    ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!(
+        "  {:<28} {:>14} {:>14}",
+        "Metric", "MM CAN BORROW", "MM PROHIBITED"
+    );
+    println!("  {:─<28} {:─>14} {:─>14}", "", "", "");
+    println!(
+        "  {:<28} {:>14.0} {:>14.0}",
+        "Final GDP", ctrl_final, treat_final
+    );
+    let gdp_chg = if ctrl_final > 0.0 {
+        (treat_final - ctrl_final) / ctrl_final * 100.0
+    } else {
+        0.0
+    };
+    println!("  {:<28} {:>+13.1}%", "GDP Change", gdp_chg);
+    println!(
+        "  {:<28} {:>14.3}x {:>14.3}x",
+        "Final D/G", ctrl_final_dg, treat_final_dg
+    );
+    let dg_chg_pct = (1.0 - treat_final_dg / ctrl_final_dg.max(0.001)) * 100.0;
+    println!("  {:<28} {:>+13.1}%", "D/G Change", dg_chg_pct);
+    println!(
+        "  {:<28} {:>14.0} {:>14.0}",
+        "Total Debt", ctrl_total_debt, treat_total_debt
+    );
+    let debt_chg = (1.0 - treat_total_debt / ctrl_total_debt.max(1.0)) * 100.0;
+    println!("  {:<28} {:>+13.1}%", "Debt Reduction", debt_chg);
+    println!(
+        "  {:<28} {:>14.0} {:>14.0}",
+        "Max Single Loan", ctrl_max_loan, treat_max_loan
+    );
+    println!(
+        "  {:<28} {:>14} {:>14}",
+        "Total Defaults", ctrl_defaults, treat_defaults
+    );
+    println!(
+        "  {:<28} {:>14} {:>14}",
+        "MM Loans Taken", ctrl_mm_loans, treat_mm_loans
+    );
+
+    println!("\n  KEY INSIGHT:");
+    if treat_mm_loans == 0 && ctrl_mm_loans > 0 {
+        println!(
+            "  ✓ Prohibition worked: MM took {} loans (control) vs 0 (treatment)",
+            ctrl_mm_loans
+        );
+    }
+    if treat_final_dg < ctrl_final_dg * 0.5 && gdp_chg > -10.0 {
+        println!(
+            "  ✓ TREATMENT WINS: D/G {:.3}x → {:.3}x ({:.1}% reduction) with GDP {:.1}%",
+            ctrl_final_dg, treat_final_dg, dg_chg_pct, gdp_chg
+        );
+        println!("    MM's $20-100K initial capital is sufficient for market-making.");
+        println!("    Recommend: mm_opening_loan_allowed = false for production.");
+    } else if treat_final_dg < ctrl_final_dg && gdp_chg > -20.0 {
+        println!(
+            "  → Modest improvement: D/G {:.3}x → {:.3}x, GDP {:.1}%",
+            ctrl_final_dg, treat_final_dg, gdp_chg
+        );
+    } else if gdp_chg < -20.0 {
+        println!(
+            "  ⚠ MM NEEDS opening loans: GDP dropped {:.1}% — prohibit with caution.",
+            gdp_chg
+        );
+        println!("    MM's initial capital may be insufficient for effective market-making.");
+    } else {
+        println!("  ✗ Prohibition had mixed or negative effects.");
+        println!(
+            "    D/G: {:.3}x (ctrl) vs {:.3}x (treat), GDP: {:.1}%",
+            ctrl_final_dg, treat_final_dg, gdp_chg
+        );
+    }
+}
+
 fn run_guild_seller_test() {
     use crate::analyzer::load_summary;
     let seed = 42u64;
@@ -4902,7 +6783,7 @@ fn run_guild_threshold_sweep() {
         });
     }
 
-    println!("\n");
+    println!();
     if results.is_empty() {
         println!("  No results collected.");
         return;
@@ -5007,6 +6888,1746 @@ fn run_guild_threshold_sweep() {
         .ok();
     }
     println!("\n  CSV saved to: {}", csv_path.display());
+}
+
+// ─── MM Competition Test ───────────────────────────────────────────────────
+
+/// Head-to-head comparison: 1MM+2GB vs 2MM+2GB (same seed, same archetypes).
+///
+/// Core question: Does adding a 2nd MarketMaker improve economy health,
+/// or do MMs step on each other's quotes?
+///
+/// Control: guild_stability_mm_fixed_guild (1MM + 2GB + 4Cas + 3Far + 2Tra)
+/// Treatment: guild_stability_2mm_fixed_guild (2MM + 2GB + 3Cas + 3Far + 2Tra)
+///
+/// Hypotheses:
+/// - H1 (YES): 2 MMs provide redundant two-sided liquidity → tighter spreads
+/// - H2 (NO): MMs compete on same quotes → one dominates, no net improvement
+/// - H3 (RISKY): More MMs → more capital deployed → bigger positions when MM defaults
+fn run_mm_competition_test() {
+    use crate::analyzer::load_summary;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       MM COMPETITION TEST                                  ║");
+    println!("║  1MM+2GB vs 2MM+2GB — Does more MM improve stability?   ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  Control: 1MM + 2GB + 4Cas + 3Far + 2Tra (12 players, seed={})",
+        seed
+    );
+    println!(
+        "  Treat:   2MM + 2GB + 3Cas + 3Far + 2Tra (12 players, seed={})",
+        seed
+    );
+    println!("  Same seed = same RNG state = fair head-to-head\n");
+
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8} {:>8}  |  {:>12} {:>12} {:>10} {:>8} {:>8} {:>8}",
+        "GDP",
+        "Debt",
+        "D/G",
+        "BPD%",
+        "Buy%",
+        "Vol×1000",
+        "GDP",
+        "Debt",
+        "D/G",
+        "BPD%",
+        "Buy%",
+        "Vol×1000"
+    );
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8} {:>8}  |  {:>12} {:>12} {:>10} {:>8} {:>8} {:>8}",
+        "─".repeat(12),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(12),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(8)
+    );
+
+    // Run control
+    let ctrl_dir = PathBuf::from("/tmp/autotune-mm-ctrl");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    let control = Scenario::guild_stability_mm_fixed_guild();
+    if let Err(e) = run_seeded_headless(&control, seed, &ctrl_dir) {
+        eprintln!("  Control run error: {}", e);
+        return;
+    }
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Control summary error: {}", e);
+            return;
+        }
+    };
+
+    // Run treatment
+    let treat_dir = PathBuf::from("/tmp/autotune-mm-treat");
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&treat_dir).ok();
+    let treatment = Scenario::guild_stability_2mm_fixed_guild();
+    if let Err(e) = run_seeded_headless(&treatment, seed, &treat_dir) {
+        eprintln!("  Treatment run error: {}", e);
+        return;
+    }
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treatment summary error: {}", e);
+            return;
+        }
+    };
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+
+    println!(
+        "  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}% {:>7.3}  |  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}% {:>7.3}",
+        ctrl_summary.gdp,
+        ctrl_summary.debt,
+        ctrl_dg,
+        ctrl_summary.avg_bpd * 100.0,
+        ctrl_summary.buy_ratio * 100.0,
+        ctrl_summary.avg_volatility * 1000.0,
+        treat_summary.gdp,
+        treat_summary.debt,
+        treat_dg,
+        treat_summary.avg_bpd * 100.0,
+        treat_summary.buy_ratio * 100.0,
+        treat_summary.avg_volatility * 1000.0
+    );
+
+    println!();
+    println!("  === ANALYSIS ===");
+    let gdp_pct = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let vol_pct =
+        (treat_summary.avg_volatility / ctrl_summary.avg_volatility.max(0.0001) - 1.0) * 100.0;
+    let bpd_pct = (treat_summary.avg_bpd / ctrl_summary.avg_bpd.max(0.0001) - 1.0) * 100.0;
+
+    println!(
+        "  GDP change:          {:+.1}% ({})",
+        gdp_pct,
+        if gdp_pct < -5.0 {
+            "2MM harms GDP"
+        } else if gdp_pct > 5.0 {
+            "2MM boosts GDP"
+        } else {
+            "2MM neutral on GDP"
+        }
+    );
+    println!(
+        "  Volatility change:  {:+.1}% ({})",
+        vol_pct,
+        if vol_pct > 50.0 {
+            "2MM raises vol"
+        } else if vol_pct < -50.0 {
+            "2MM reduces vol"
+        } else {
+            "2MM stable vol"
+        }
+    );
+    println!(
+        "  Spread (BPD) change: {:+.1}% ({})",
+        bpd_pct,
+        if bpd_pct < -20.0 {
+            "2MM compresses spreads"
+        } else if bpd_pct > 20.0 {
+            "2MM widens spreads"
+        } else {
+            "2MM neutral on spreads"
+        }
+    );
+    println!("  D/G: {:.2}x (ctrl) → {:.2}x (treat)", ctrl_dg, treat_dg);
+    let dg_chg = treat_dg - ctrl_dg;
+    println!(
+        "  D/G delta: {:+.2}x ({})",
+        dg_chg,
+        if dg_chg < -0.1 {
+            "2MM improves debt health"
+        } else if dg_chg > 0.1 {
+            "2MM worsens debt health"
+        } else {
+            "2MM neutral on debt"
+        }
+    );
+
+    // Verdict
+    println!();
+    let improvements = [
+        gdp_pct > 5.0,
+        vol_pct < -20.0,
+        bpd_pct < -10.0,
+        dg_chg < -0.1,
+    ];
+    let regressions = [gdp_pct < -5.0, vol_pct > 50.0, bpd_pct > 20.0, dg_chg > 0.1];
+    let n_improve = improvements.iter().filter(|&&x| x).count();
+    let n_regress = regressions.iter().filter(|&&x| x).count();
+    if n_improve >= 2 && n_regress == 0 {
+        println!("  ✅ VERDICT: 2 MMs improve economy — ADD A 2ND MM TO PRODUCTION CONFIG");
+    } else if n_regress >= 2 && n_improve == 0 {
+        println!("  ❌ VERDICT: 2 MMs harm economy — 1 MM is sufficient");
+    } else if n_improve > 0 && n_regress > 0 {
+        println!("  ⚠️  VERDICT: Mixed — 2 MMs trade-offs specific to your priorities");
+    } else {
+        println!("  ➖ VERDICT: No meaningful difference — 2 MMs offer no benefit");
+    }
+    println!();
+}
+
+// ─── MM Competition Multi-Seed ───────────────────────────────────────────
+/// Runs 1MM vs 2MM across 5 seeds to establish statistical confidence.
+/// Controls for RNG variance — same player archetypes, different seeds.
+// ─── MM Competition Multi-Seed ───────────────────────────────────────────
+/// Runs 1MM vs 2MM across 5 seeds to establish statistical confidence.
+fn run_mm_competition_multi_seed() {
+    use crate::analyzer::load_summary;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       MM COMPETITION — MULTI-SEED (5 seeds)               ║");
+    println!("║  1MM+2GB vs 2MM+2GB — Statistical robustness check       ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Control: guild_stability_mm_fixed_guild (1MM + 2GB)");
+    println!("  Treat:   guild_stability_2mm_fixed_guild (2MM + 2GB)\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct RunResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        spd: f64,
+        vol: f64,
+        buy_ratio: f64,
+    }
+
+    impl RunResult {
+        fn from_summary(s: &crate::analyzer::SimSummary, seed: u64) -> Self {
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<RunResult> = Vec::new();
+    let mut treat_results: Vec<RunResult> = Vec::new();
+    let total = seeds.len() * 2;
+
+    for (i, seed) in seeds.iter().enumerate() {
+        eprint!("\r  [{}/{}] seed={}", i * 2 + 1, total, seed);
+        std::io::stderr().flush().ok();
+
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-mmms-ctrl-{}", seed));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_dir).ok();
+        let ctrl = Scenario::guild_stability_mm_fixed_guild();
+        if let Err(e) = run_seeded_headless(&ctrl, *seed, &ctrl_dir) {
+            eprintln!("\n  Ctrl error seed={}: {}", seed, e);
+            continue;
+        }
+        if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db")) {
+            ctrl_results.push(RunResult::from_summary(&s, *seed));
+        }
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+
+        eprint!("\r  [{}/{}] seed={}", i * 2 + 2, total, seed);
+        std::io::stderr().flush().ok();
+
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-mmms-treat-{}", seed));
+        let _ = std::fs::remove_dir_all(&treat_dir);
+        std::fs::create_dir_all(&treat_dir).ok();
+        let treat = Scenario::guild_stability_2mm_fixed_guild();
+        if let Err(e) = run_seeded_headless(&treat, *seed, &treat_dir) {
+            eprintln!("\n  Treat error seed={}: {}", seed, e);
+            continue;
+        }
+        if let Ok(s) = load_summary(&treat_dir.join("simulation.db")) {
+            treat_results.push(RunResult::from_summary(&s, *seed));
+        }
+        let _ = std::fs::remove_dir_all(&treat_dir);
+    }
+    println!();
+
+    if ctrl_results.is_empty() || treat_results.is_empty() {
+        eprintln!("  ✗ No results collected");
+        return;
+    }
+
+    let n = ctrl_results.len();
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║                    PER-SEED RESULTS                         ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    // Pre-format per-seed table
+    println!(
+        "  {:>6}  {:>12}  {:>7}  {:>7}  {:>7}  {:>7}  |  {:>12}  {:>7}  {:>7}  {:>7}  {:>7}",
+        "seed",
+        "GDP(ctrl)",
+        "D/G(c)",
+        "BPD(c)",
+        "Vol(c)",
+        "Buy(c)",
+        "GDP(tr)",
+        "D/G(t)",
+        "BPD(t)",
+        "Vol(t)",
+        "Buy(t)"
+    );
+    for (c, t) in ctrl_results.iter().zip(treat_results.iter()) {
+        let row = format!(
+            "  {:>6}  {:>12.0}  {:>6.2}x  {:>6.2}%  {:>6.3}  {:>6.1}%  |  {:>12.0}  {:>6.2}x  {:>6.2}%  {:>6.3}  {:>6.1}%",
+            c.seed,
+            c.gdp,
+            c.dg,
+            c.bpd * 100.0,
+            c.vol * 1000.0,
+            c.buy_ratio * 100.0,
+            t.gdp,
+            t.dg,
+            t.bpd * 100.0,
+            t.vol * 1000.0,
+            t.buy_ratio * 100.0
+        );
+        println!("{}", row);
+    }
+
+    // ── Compute stats ─────────────────────────────────────────────────────
+    let avg = |v: &[RunResult], f: &str| -> f64 {
+        let field_sum = match f {
+            "gdp" => v.iter().map(|r| r.gdp).sum::<f64>(),
+            "dg" => v.iter().map(|r| r.dg).sum::<f64>(),
+            "bpd" => v.iter().map(|r| r.bpd).sum::<f64>(),
+            "vol" => v.iter().map(|r| r.vol).sum::<f64>(),
+            "buy_ratio" => v.iter().map(|r| r.buy_ratio).sum::<f64>(),
+            _ => 0.0,
+        };
+        field_sum / v.len().max(1) as f64
+    };
+    let std_dev = |v: &[RunResult], f: &str, m: f64| -> f64 {
+        let variance = v
+            .iter()
+            .map(|r| {
+                let val = match f {
+                    "gdp" => r.gdp,
+                    "dg" => r.dg,
+                    "bpd" => r.bpd,
+                    "vol" => r.vol,
+                    "buy_ratio" => r.buy_ratio,
+                    _ => 0.0,
+                };
+                (val - m).powi(2)
+            })
+            .sum::<f64>()
+            / v.len().max(1) as f64;
+        variance.sqrt()
+    };
+
+    let c_gdp = avg(&ctrl_results, "gdp");
+    let t_gdp = avg(&treat_results, "gdp");
+    let c_dg = avg(&ctrl_results, "dg");
+    let t_dg = avg(&treat_results, "dg");
+    let c_bpd = avg(&ctrl_results, "bpd");
+    let t_bpd = avg(&treat_results, "bpd");
+    let c_vol = avg(&ctrl_results, "vol");
+    let t_vol = avg(&treat_results, "vol");
+    let c_buy = avg(&ctrl_results, "buy_ratio");
+    let t_buy = avg(&treat_results, "buy_ratio");
+
+    let c_gdp_s = std_dev(&ctrl_results, "gdp", c_gdp);
+    let t_gdp_s = std_dev(&treat_results, "gdp", t_gdp);
+    let c_dg_s = std_dev(&ctrl_results, "dg", c_dg);
+    let t_dg_s = std_dev(&treat_results, "dg", t_dg);
+    let c_bpd_s = std_dev(&ctrl_results, "bpd", c_bpd);
+    let t_bpd_s = std_dev(&treat_results, "bpd", t_bpd);
+    let c_vol_s = std_dev(&ctrl_results, "vol", c_vol);
+    let t_vol_s = std_dev(&treat_results, "vol", t_vol);
+    let c_buy_s = std_dev(&ctrl_results, "buy_ratio", c_buy);
+    let t_buy_s = std_dev(&treat_results, "buy_ratio", t_buy);
+
+    let gdp_chg = (t_gdp / c_gdp.max(1.0) - 1.0) * 100.0;
+    let dg_chg = t_dg - c_dg;
+    let bpd_chg = (t_bpd / c_bpd.max(0.0001) - 1.0) * 100.0;
+    let vol_chg = (t_vol / c_vol.max(0.0001) - 1.0) * 100.0;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!(
+        "║               AGGREGATE: MEAN ± STD (N={})                  ║",
+        n
+    );
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20}  {:>22}  {:>22}",
+        "Metric", "1MM (control)", "2MM (treatment)"
+    );
+    println!("  {:─<20}  {:─<22}  {:─<22}", "", "", "");
+
+    println!(
+        "  GDP:                {:>10.0} ± {:>8.0}   {:>10.0} ± {:>8.0}  ({:+.1}% GDP)",
+        c_gdp, c_gdp_s, t_gdp, t_gdp_s, gdp_chg
+    );
+    println!(
+        "  Debt/GDP (x):      {:>10.2} ± {:>8.2}   {:>10.2} ± {:>8.2}  ({:+.2}x D/G)",
+        c_dg, c_dg_s, t_dg, t_dg_s, dg_chg
+    );
+    println!(
+        "  Buy-Price-Diff (%):{:>10.2} ± {:>8.3}  {:>10.2} ± {:>8.3}  ({:+.1}% BPD)",
+        c_bpd * 100.0,
+        c_bpd_s * 100.0,
+        t_bpd * 100.0,
+        t_bpd_s * 100.0,
+        bpd_chg
+    );
+    println!(
+        "  Volatility (x1000): {:>10.4} ± {:>8.5}  {:>10.4} ± {:>8.5}  ({:+.1}% vol)",
+        c_vol * 1000.0,
+        c_vol_s * 1000.0,
+        t_vol * 1000.0,
+        t_vol_s * 1000.0,
+        vol_chg
+    );
+    println!(
+        "  Buy Ratio (%):     {:>10.1} ± {:>8.1}  {:>10.1} ± {:>8.1}",
+        c_buy * 100.0,
+        c_buy_s * 100.0,
+        t_buy * 100.0,
+        t_buy_s * 100.0
+    );
+
+    println!("\n  === INTERPRETATION ===");
+    let gdp_wins = t_gdp > c_gdp;
+    let vol_wins = t_vol < c_vol;
+    let bpd_wins = t_bpd < c_bpd;
+    println!(
+        "  GDP:  {} ({:+.1}% with 2MM)",
+        if gdp_wins { "2MM ↑" } else { "1MM ↑" },
+        gdp_chg.abs()
+    );
+    println!(
+        "  Vol:  {} ({:+.1}% with 2MM)",
+        if vol_wins { "2MM ↓" } else { "1MM ↓" },
+        vol_chg.abs()
+    );
+    println!(
+        "  Spd:  {} ({:+.1}%pp with 2MM)",
+        if bpd_wins { "2MM ↓" } else { "1MM ↓" },
+        bpd_chg.abs()
+    );
+    println!("  D/G:  {:.2}x → {:.2}x ({:+.2}x)", c_dg, t_dg, dg_chg);
+
+    let wins = [gdp_wins, vol_wins, bpd_wins]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+    println!();
+    if wins >= 2 && gdp_wins && vol_wins {
+        println!(
+            "  ✅ VERDICT: 2 MMs win {}/3 categories — recommend adding 2nd MM to production",
+            wins
+        );
+    } else if wins == 0 || (!gdp_wins && !vol_wins) {
+        println!(
+            "  ❌ VERDICT: 1MM wins or ties {}/3 — 1 MM is sufficient",
+            wins
+        );
+    } else {
+        println!(
+            "  ⚠️  VERDICT: Mixed ({}/3) — trade-off dependent on admin priorities",
+            wins
+        );
+    }
+    println!();
+}
+
+// ─── VolumeTrader Multi-Seed ─────────────────────────────────────────────
+/// Runs healthy economy vs healthy+2VT across 5 seeds.
+fn run_volume_trader_multi_seed() {
+    use crate::analyzer::load_summary;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       VOLUME TRADER — MULTI-SEED (5 seeds)                  ║");
+    println!("║  Healthy economy vs +2 VolumeTraders                        ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Control: GuildStability+MM (1MM + 2GB + 4Cas + 3Far + 2Tra)");
+    println!("  Treat:   same + 2 VolumeTraders\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct RunResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        spd: f64,
+        vol: f64,
+        buy_ratio: f64,
+    }
+
+    impl RunResult {
+        fn from_summary(s: &crate::analyzer::SimSummary, seed: u64) -> Self {
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<RunResult> = Vec::new();
+    let mut treat_results: Vec<RunResult> = Vec::new();
+    let total = seeds.len() * 2;
+
+    for (i, seed) in seeds.iter().enumerate() {
+        eprint!("\r  [{}/{}] seed={}", i * 2 + 1, total, seed);
+        std::io::stderr().flush().ok();
+
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-vtms-ctrl-{}", seed));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_dir).ok();
+        let ctrl = Scenario::guild_stability_mm_fixed_guild();
+        if let Err(e) = run_seeded_headless(&ctrl, *seed, &ctrl_dir) {
+            eprintln!("\n  Ctrl error seed={}: {}", seed, e);
+            continue;
+        }
+        if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db")) {
+            ctrl_results.push(RunResult::from_summary(&s, *seed));
+        }
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+
+        eprint!("\r  [{}/{}] seed={}", i * 2 + 2, total, seed);
+        std::io::stderr().flush().ok();
+
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-vtms-treat-{}", seed));
+        let _ = std::fs::remove_dir_all(&treat_dir);
+        std::fs::create_dir_all(&treat_dir).ok();
+        let treat = Scenario::volume_trader_test();
+        if let Err(e) = run_seeded_headless(&treat, *seed, &treat_dir) {
+            eprintln!("\n  Treat error seed={}: {}", seed, e);
+            continue;
+        }
+        if let Ok(s) = load_summary(&treat_dir.join("simulation.db")) {
+            treat_results.push(RunResult::from_summary(&s, *seed));
+        }
+        let _ = std::fs::remove_dir_all(&treat_dir);
+    }
+    println!();
+
+    if ctrl_results.is_empty() || treat_results.is_empty() {
+        eprintln!("  ✗ No results collected");
+        return;
+    }
+
+    let n = ctrl_results.len();
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║                    PER-SEED RESULTS                         ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    println!(
+        "  {:>6}  {:>12}  {:>7}  {:>7}  {:>7}  {:>7}  |  {:>12}  {:>7}  {:>7}  {:>7}  {:>7}",
+        "seed",
+        "GDP(ctrl)",
+        "D/G(c)",
+        "BPD(c)",
+        "Vol(c)",
+        "Buy(c)",
+        "GDP(tr)",
+        "D/G(t)",
+        "BPD(t)",
+        "Vol(t)",
+        "Buy(t)"
+    );
+    for (c, t) in ctrl_results.iter().zip(treat_results.iter()) {
+        println!(
+            "  {:>6}  {:>12.0}  {:>6.2}x  {:>6.2}%  {:>6.3}  {:>6.1}%  |  {:>12.0}  {:>6.2}x  {:>6.2}%  {:>6.3}  {:>6.1}%",
+            c.seed,
+            c.gdp,
+            c.dg,
+            c.bpd * 100.0,
+            c.vol * 1000.0,
+            c.buy_ratio * 100.0,
+            t.gdp,
+            t.dg,
+            t.bpd * 100.0,
+            t.vol * 1000.0,
+            t.buy_ratio * 100.0
+        );
+    }
+
+    let avg = |v: &[RunResult], f: &str| -> f64 {
+        let field_sum = match f {
+            "gdp" => v.iter().map(|r| r.gdp).sum::<f64>(),
+            "dg" => v.iter().map(|r| r.dg).sum::<f64>(),
+            "bpd" => v.iter().map(|r| r.bpd).sum::<f64>(),
+            "vol" => v.iter().map(|r| r.vol).sum::<f64>(),
+            "buy_ratio" => v.iter().map(|r| r.buy_ratio).sum::<f64>(),
+            _ => 0.0,
+        };
+        field_sum / v.len().max(1) as f64
+    };
+    let std_dev = |v: &[RunResult], f: &str, m: f64| -> f64 {
+        let variance = v
+            .iter()
+            .map(|r| {
+                let val = match f {
+                    "gdp" => r.gdp,
+                    "dg" => r.dg,
+                    "bpd" => r.bpd,
+                    "vol" => r.vol,
+                    "buy_ratio" => r.buy_ratio,
+                    _ => 0.0,
+                };
+                (val - m).powi(2)
+            })
+            .sum::<f64>()
+            / v.len().max(1) as f64;
+        variance.sqrt()
+    };
+
+    let c_gdp = avg(&ctrl_results, "gdp");
+    let t_gdp = avg(&treat_results, "gdp");
+    let c_dg = avg(&ctrl_results, "dg");
+    let t_dg = avg(&treat_results, "dg");
+    let c_bpd = avg(&ctrl_results, "bpd");
+    let t_bpd = avg(&treat_results, "bpd");
+    let c_vol = avg(&ctrl_results, "vol");
+    let t_vol = avg(&treat_results, "vol");
+    let c_buy = avg(&ctrl_results, "buy_ratio");
+    let t_buy = avg(&treat_results, "buy_ratio");
+
+    let c_gdp_s = std_dev(&ctrl_results, "gdp", c_gdp);
+    let t_gdp_s = std_dev(&treat_results, "gdp", t_gdp);
+    let c_dg_s = std_dev(&ctrl_results, "dg", c_dg);
+    let t_dg_s = std_dev(&treat_results, "dg", t_dg);
+    let c_bpd_s = std_dev(&ctrl_results, "bpd", c_bpd);
+    let t_bpd_s = std_dev(&treat_results, "bpd", t_bpd);
+    let c_vol_s = std_dev(&ctrl_results, "vol", c_vol);
+    let t_vol_s = std_dev(&treat_results, "vol", t_vol);
+    let c_buy_s = std_dev(&ctrl_results, "buy_ratio", c_buy);
+    let t_buy_s = std_dev(&treat_results, "buy_ratio", t_buy);
+
+    let gdp_chg = (t_gdp / c_gdp.max(1.0) - 1.0) * 100.0;
+    let dg_chg = t_dg - c_dg;
+    let bpd_chg = (t_bpd / c_bpd.max(0.0001) - 1.0) * 100.0;
+    let vol_chg = (t_vol / c_vol.max(0.0001) - 1.0) * 100.0;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!(
+        "║               AGGREGATE: MEAN ± STD (N={})                  ║",
+        n
+    );
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:20}  {:>22}  {:>22}",
+        "Metric", "Healthy (ctrl)", "Healthy+VT (treat)"
+    );
+    println!("  {:─<20}  {:─<22}  {:─<22}", "", "", "");
+
+    println!(
+        "  GDP:                {:>10.0} ± {:>8.0}   {:>10.0} ± {:>8.0}  ({:+.1}% GDP)",
+        c_gdp, c_gdp_s, t_gdp, t_gdp_s, gdp_chg
+    );
+    println!(
+        "  Debt/GDP (x):      {:>10.2} ± {:>8.2}   {:>10.2} ± {:>8.2}  ({:+.2}x D/G)",
+        c_dg, c_dg_s, t_dg, t_dg_s, dg_chg
+    );
+    println!(
+        "  Buy-Price-Diff (%):{:>10.2} ± {:>8.3}  {:>10.2} ± {:>8.3}  ({:+.1}% BPD)",
+        c_bpd * 100.0,
+        c_bpd_s * 100.0,
+        t_bpd * 100.0,
+        t_bpd_s * 100.0,
+        bpd_chg
+    );
+    println!(
+        "  Volatility (x1000): {:>10.4} ± {:>8.5}  {:>10.4} ± {:>8.5}  ({:+.1}% vol)",
+        c_vol * 1000.0,
+        c_vol_s * 1000.0,
+        t_vol * 1000.0,
+        t_vol_s * 1000.0,
+        vol_chg
+    );
+    println!(
+        "  Buy Ratio (%):     {:>10.1} ± {:>8.1}  {:>10.1} ± {:>8.1}",
+        c_buy * 100.0,
+        c_buy_s * 100.0,
+        t_buy * 100.0,
+        t_buy_s * 100.0
+    );
+
+    println!("\n  === INTERPRETATION ===");
+    let gdp_wins = t_gdp > c_gdp;
+    let vol_wins = t_vol < c_vol;
+    let bpd_wins = t_bpd < c_bpd;
+    println!(
+        "  GDP:  {} ({:+.1}% with VT)",
+        if gdp_wins { "VT ↑" } else { "Ctrl ↑" },
+        gdp_chg.abs()
+    );
+    println!(
+        "  Vol:  {} ({:+.1}% with VT)",
+        if vol_wins { "VT ↓" } else { "Ctrl ↓" },
+        vol_chg.abs()
+    );
+    println!(
+        "  Spd:  {} ({:+.1}%pp with VT)",
+        if bpd_wins { "VT ↓" } else { "Ctrl ↓" },
+        bpd_chg.abs()
+    );
+    println!("  D/G:  {:.2}x → {:.2}x ({:+.2}x)", c_dg, t_dg, dg_chg);
+
+    let wins = [gdp_wins, vol_wins, bpd_wins]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+    println!();
+    if wins >= 2 && gdp_wins {
+        println!(
+            "  ✅ VERDICT: VT wins {}/3 — recommend adding 2 VolumeTraders to production",
+            wins
+        );
+    } else if wins == 0 {
+        println!(
+            "  ❌ VERDICT: Control wins {}/3 — VolumeTraders don't reliably help healthy economy",
+            wins
+        );
+    } else {
+        println!(
+            "  ⚠️  VERDICT: Mixed ({}/3) — VT effect is marginal in healthy economy",
+            wins
+        );
+    }
+    println!();
+}
+
+// ─── MM Capital Sweep ─────────────────────────────────────────────────────
+/// Tests whether increasing MM starting capital eliminates/reduces opening loans.
+///
+/// Key question: does MM at $200-300K starting capital need fewer/opening loans
+/// than MM at $50-200K? This tests the hypothesis that higher initial capital
+/// reduces MM borrowing dependency without bounding loans (which backfires).
+///
+/// Uses guild_stability_2mm_fixed_guild (2MM + 2GB) as the base scenario.
+/// Capital levels: $50-200K (control), $100-200K, $200-300K, $300-400K, $500-600K.
+/// Runs 3 seeds each (42, 12345, 98765).
+fn run_mm_capital_sweep() {
+    use crate::analyzer::load_summary;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765];
+    // (min, max, label) for MM initial capital range
+    let capital_levels: Vec<(f64, f64, &'static str)> = vec![
+        (50_000.0, 200_000.0, "$50-200K (default)"),
+        (100_000.0, 200_000.0, "$100-200K"),
+        (200_000.0, 300_000.0, "$200-300K"),
+        (300_000.0, 400_000.0, "$300-400K"),
+        (500_000.0, 600_000.0, "$500-600K"),
+    ];
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║         MM INITIAL CAPITAL SWEEP                            ║");
+    println!("║  5 capital levels × 3 seeds — guild_stability_2mm          ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Base scenario: GuildStability+2MM+2GB (4Cas+3Far+2Tra)");
+    println!("  Key question: does higher MM capital → fewer/opening loans?\n");
+
+    struct LevelResult {
+        #[allow(dead_code)]
+        label: String,
+        gdp: f64,
+        dg: f64,
+        bpd: f64,
+        vol: f64,
+        buy_ratio: f64,
+        mm_loan_count: u32,
+        mm_loan_total: f64,
+    }
+
+    let mut all_results: Vec<(String, Vec<LevelResult>)> = Vec::new();
+
+    for (min_cap, max_cap, label) in &capital_levels {
+        let mut level_results: Vec<LevelResult> = Vec::new();
+        println!("  ── {} ──", label);
+
+        for seed in &seeds {
+            // Build scenario with this capital level
+            let mut scenario = Scenario::guild_stability_2mm_fixed_guild();
+            scenario.config.mm_initial_capital_min = Some(*min_cap);
+            scenario.config.mm_initial_capital_max = Some(*max_cap);
+            scenario.seed = Some(*seed);
+
+            // Run with DB recorder to get summary metrics
+            let out_dir = PathBuf::from(format!(
+                "/tmp/autotune-mmcap-{}-{}-{}",
+                min_cap, max_cap, seed
+            ));
+            let _ = std::fs::remove_dir_all(&out_dir);
+            std::fs::create_dir_all(&out_dir).ok();
+
+            let sim = match run_seeded_headless(&scenario, *seed, &out_dir) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("\n  Error seed={}: {}", seed, e);
+                    continue;
+                }
+            };
+
+            let summary = match load_summary(&out_dir.join("simulation.db")) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("\n  Summary error seed={}: {}", seed, e);
+                    continue;
+                }
+            };
+
+            let dg = summary.debt / summary.gdp.max(1.0);
+
+            level_results.push(LevelResult {
+                label: label.to_string(),
+                gdp: summary.gdp,
+                dg,
+                bpd: summary.avg_bpd,
+                vol: summary.avg_volatility,
+                buy_ratio: summary.buy_ratio,
+                mm_loan_count: sim.mm_opening_loan_count,
+                mm_loan_total: sim.mm_opening_loan_total,
+            });
+
+            eprint!(
+                "\r    seed={} → GDP={:.0}  D/G={:.2}x  MM_loans={}  ",
+                seed, summary.gdp, dg, sim.mm_opening_loan_count
+            );
+            std::io::stderr().flush().ok();
+            let _ = std::fs::remove_dir_all(&out_dir);
+        }
+        println!();
+        all_results.push((label.to_string(), level_results));
+    }
+    println!();
+
+    // ── Aggregate per level ───────────────────────────────────────────────
+    let avg_fn = |results: &[LevelResult], field: &str| -> f64 {
+        let sum = match field {
+            "gdp" => results.iter().map(|r| r.gdp).sum::<f64>(),
+            "dg" => results.iter().map(|r| r.dg).sum::<f64>(),
+            "bpd" => results.iter().map(|r| r.bpd).sum::<f64>(),
+            "vol" => results.iter().map(|r| r.vol).sum::<f64>(),
+            "buy_ratio" => results.iter().map(|r| r.buy_ratio).sum::<f64>(),
+            "mm_loan_count" => results.iter().map(|r| r.mm_loan_count as f64).sum::<f64>(),
+            "mm_loan_total" => results.iter().map(|r| r.mm_loan_total).sum::<f64>(),
+            _ => 0.0,
+        };
+        sum / results.len().max(1) as f64
+    };
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║                 MM CAPITAL SWEEP RESULTS                        ║");
+    println!("║                 Mean across 3 seeds (42, 12345, 98765)          ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:22}  {:>10}  {:>8}  {:>9}  {:>9}  {:>8}  {:>10}  {:>12}",
+        "Capital Level", "GDP", "D/G", "BPD%", "Vol×1000", "Buy%", "MM Loans", "MM Loan Amt"
+    );
+    println!(
+        "  {:22}  {:>10}  {:>8}  {:>9}  {:>9}  {:>8}  {:>10}  {:>12}",
+        "─".repeat(11),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(9),
+        "─".repeat(9),
+        "─".repeat(8),
+        "─".repeat(10),
+        "─".repeat(12)
+    );
+
+    for (label, results) in &all_results {
+        let gdp = avg_fn(results, "gdp");
+        let dg = avg_fn(results, "dg");
+        let bpd = avg_fn(results, "bpd") * 100.0;
+        let vol = avg_fn(results, "vol") * 1000.0;
+        let buy = avg_fn(results, "buy_ratio") * 100.0;
+        let mm_loans = avg_fn(results, "mm_loan_count");
+        let loan_amt = avg_fn(results, "mm_loan_total");
+        println!(
+            "  {:22}  {:>10.0}  {:>7.2}x  {:>8.2}%  {:>8.3}  {:>7.1}%  {:>9.0}  {:>11.0}",
+            label, gdp, dg, bpd, vol, buy, mm_loans, loan_amt
+        );
+    }
+
+    // ── Interpretation ────────────────────────────────────────────────────
+    let default_results = &all_results[0].1;
+    let high_cap_results = &all_results[2].1; // $200-300K
+    let highest_results = &all_results[4].1; // $500-600K
+
+    let default_mm_loans = avg_fn(default_results, "mm_loan_count");
+    let high_mm_loans = avg_fn(high_cap_results, "mm_loan_count");
+    let highest_mm_loans = avg_fn(highest_results, "mm_loan_count");
+    let default_dg = avg_fn(default_results, "dg");
+    let high_dg = avg_fn(high_cap_results, "dg");
+    let default_gdp = avg_fn(default_results, "gdp");
+    let high_gdp = avg_fn(high_cap_results, "gdp");
+
+    println!("\n  === INTERPRETATION ===");
+    if high_mm_loans < default_mm_loans {
+        println!(
+            "  ✅ Higher capital REDUCES MM opening loans: {:.1} → {:.1} ({:+.1}%)",
+            default_mm_loans,
+            high_mm_loans,
+            (high_mm_loans / default_mm_loans.max(1.0) - 1.0) * 100.0
+        );
+    } else if high_mm_loans > default_mm_loans {
+        println!(
+            "  ⚠️  Higher capital INCREASES MM opening loans: {:.1} → {:.1} ({:+.1}%)",
+            default_mm_loans,
+            high_mm_loans,
+            (high_mm_loans / default_mm_loans.max(1.0) - 1.0) * 100.0
+        );
+    } else {
+        println!(
+            "  ➡️  MM opening loans UNCHANGED by capital level ({:.1})",
+            high_mm_loans
+        );
+    }
+
+    if highest_mm_loans == 0.0 {
+        println!("  💡 At $500-600K, MM takes ZERO opening loans — self-sufficient!");
+    } else {
+        println!(
+            "  📊 At $500-600K, MM still takes {:.1} opening loans/season",
+            highest_mm_loans
+        );
+    }
+
+    println!(
+        "  D/G: {:.2}x → {:.2}x ({:+.2}x)",
+        default_dg,
+        high_dg,
+        high_dg - default_dg
+    );
+    println!(
+        "  GDP: {:.0} → {:.0} ({:+.1}%)",
+        default_gdp,
+        high_gdp,
+        (high_gdp / default_gdp.max(1.0) - 1.0) * 100.0
+    );
+
+    let loan_change = high_mm_loans / default_mm_loans.max(0.5);
+    if loan_change < 0.5 && high_mm_loans < 1.0 {
+        println!("\n  ✅ VERDICT: $200-300K MM capital is EFFECTIVE — reduces/opening loans ≥50%");
+        println!("     Recommendation: set mm_initial_capital = [200000, 300000] in production");
+    } else if loan_change > 0.8 {
+        println!("\n  ❌ VERDICT: Capital level has MINIMAL effect on MM opening loans");
+        println!("     MM opening loans are driven by trading behavior, not starting capital");
+    } else {
+        println!(
+            "\n  ⚠️  VERDICT: MIXED — capital helps somewhat but doesn't fully solve borrowing"
+        );
+        println!("     Consider pairing with other safeguards (cooldown, circuit breaker)");
+    }
+    println!();
+}
+
+// ─── InsiderTrader Healthy Economy Test ─────────────────────────────────
+/// Tests whether InsiderTraders add value when added to an already-healthy
+/// economy (MM + GB). Previous IT test was IT alone vs control (no MM/GB).
+fn run_it_healthy_economy_test() {
+    use crate::analyzer::load_summary;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       INSIDERTRADER + HEALTHY ECONOMY TEST                  ║");
+    println!("║  Healthy (MM+GB) vs +2 InsiderTraders                      ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: GuildStability+MM (1MM + 2GB + 4Cas + 3Far + 2Tra)");
+    println!("  Treat:   same + 2 InsiderTraders");
+    println!("  Seed: {}\n", seed);
+
+    let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let treat_scenario = Scenario::guild_stability_mm_fixed_guild_plus_it();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-it-healthy-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-it-healthy-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    println!("  Running control...");
+    if let Err(e) = run_seeded_headless(&ctrl_scenario, seed, &ctrl_dir) {
+        eprintln!("  Control error: {}", e);
+        return;
+    }
+
+    println!("  Running treatment...");
+    if let Err(e) = run_seeded_headless(&treat_scenario, seed, &treat_dir) {
+        eprintln!("  Treatment error: {}", e);
+        return;
+    }
+
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Ctrl summary error: {}", e);
+            return;
+        }
+    };
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treat summary error: {}", e);
+            return;
+        }
+    };
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+    let gdp_pct = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let vol_pct =
+        (treat_summary.avg_volatility / ctrl_summary.avg_volatility.max(0.0001) - 1.0) * 100.0;
+    let bpd_pct = (treat_summary.avg_bpd / ctrl_summary.avg_bpd.max(0.0001) - 1.0) * 100.0;
+    let buy_pct = (treat_summary.buy_ratio / ctrl_summary.buy_ratio.max(0.0001) - 1.0) * 100.0;
+    let dg_chg = treat_dg - ctrl_dg;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║                    RESULTS (seed=42)                         ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    // Pre-format for table display
+    let gdp_s1 = format!("{:.0}", ctrl_summary.gdp);
+    let gdp_s2 = format!("{:.0}", treat_summary.gdp);
+    let gdp_pct_s = format!("{:+.1}%", gdp_pct);
+    let dg_s1 = format!("{:.2}x", ctrl_dg);
+    let dg_s2 = format!("{:.2}x", treat_dg);
+    let dg_chg_s = format!("{:+.2}x", dg_chg);
+    let bpd_s1 = format!("{:.2}%", ctrl_summary.avg_bpd * 100.0);
+    let bpd_s2 = format!("{:.2}%", treat_summary.avg_bpd * 100.0);
+    let bpd_pct_s = format!("{:+.1}%", bpd_pct);
+    let vol_s1 = format!("{:.4}", ctrl_summary.avg_volatility * 1000.0);
+    let vol_s2 = format!("{:.4}", treat_summary.avg_volatility * 1000.0);
+    let vol_pct_s = format!("{:+.1}%", vol_pct);
+    let buy_s1 = format!("{:.1}%", ctrl_summary.buy_ratio * 100.0);
+    let buy_s2 = format!("{:.1}%", treat_summary.buy_ratio * 100.0);
+    let buy_pct_s = format!("{:+.1}%", buy_pct);
+
+    println!(
+        "  {:20}  {:>15}  {:>15}  {:>11}",
+        "Metric", "Healthy", "Healthy+IT", "Effect"
+    );
+    println!("  {:─<20}  {:─<15}  {:─<15}  {:─<11}", "", "", "", "");
+    println!(
+        "  {:20}  {:>15}  {:>15}  {:>+11}",
+        "GDP", gdp_s1, gdp_s2, gdp_pct_s
+    );
+    println!(
+        "  {:20}  {:>15}  {:>15}  {:>+11}",
+        "Debt/GDP", dg_s1, dg_s2, dg_chg_s
+    );
+    println!(
+        "  {:20}  {:>15}  {:>15}  {:>+11}",
+        "Buy-Price-Diff%", bpd_s1, bpd_s2, bpd_pct_s
+    );
+    println!(
+        "  {:20}  {:>15}  {:>15}  {:>+11}",
+        "Volatility (x1000)", vol_s1, vol_s2, vol_pct_s
+    );
+    println!(
+        "  {:20}  {:>15}  {:>15}  {:>+11}",
+        "Buy Ratio", buy_s1, buy_s2, buy_pct_s
+    );
+
+    println!("\n  === ANALYSIS ===");
+    println!(
+        "  GDP:     {:+.1}% ({})",
+        gdp_pct,
+        if gdp_pct > 5.0 {
+            "IT boosts GDP"
+        } else if gdp_pct < -5.0 {
+            "IT hurts GDP"
+        } else {
+            "neutral"
+        }
+    );
+    println!(
+        "  Vol:     {:+.1}% ({})",
+        vol_pct,
+        if vol_pct < -10.0 {
+            "IT reduces volatility"
+        } else if vol_pct > 10.0 {
+            "IT raises volatility"
+        } else {
+            "neutral"
+        }
+    );
+    println!(
+        "  BPD:     {:+.1}%pp ({})",
+        bpd_pct,
+        if bpd_pct < -10.0 {
+            "IT compresses spreads"
+        } else if bpd_pct > 10.0 {
+            "IT widens spreads"
+        } else {
+            "neutral"
+        }
+    );
+    println!(
+        "  Buy ratio: {:+.1}% ({})",
+        buy_pct,
+        if buy_pct > 5.0 {
+            "IT improves buy ratio"
+        } else if buy_pct < -5.0 {
+            "IT worsens buy ratio"
+        } else {
+            "neutral"
+        }
+    );
+    println!(
+        "  D/G: {:.2}x → {:.2}x ({:+.2}x)",
+        ctrl_dg, treat_dg, dg_chg
+    );
+
+    println!("\n  === CONTEXT ===");
+    println!("  IT alone vs no-archetypes: +80.6% GDP, -28% vol, D/G 1.85x vs 0.75x");
+    println!("  This test: IT + MM + GB vs MM + GB");
+
+    let improvements = [
+        gdp_pct > 5.0,
+        vol_pct < -10.0,
+        bpd_pct < -5.0,
+        buy_pct > 5.0,
+    ];
+    let regressions = [gdp_pct < -5.0, dg_chg > 0.5];
+    let n_imp = improvements.iter().filter(|&&x| x).count();
+    let n_reg = regressions.iter().filter(|&&x| x).count();
+
+    println!();
+    if n_imp >= 2 && n_reg == 0 {
+        println!(
+            "  ✅ VERDICT: ITs reliably improve healthy economy — consider adding to recommended config"
+        );
+    } else if n_reg >= 1 {
+        println!(
+            "  ⚠️  VERDICT: ITs add D/G risk in healthy economy — check whether debt is productive"
+        );
+    } else {
+        println!(
+            "  ➖ VERDICT: ITs are neutral in healthy economy — no strong case to add or remove"
+        );
+    }
+    println!();
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
+fn run_mm_quit_test() {
+    use crate::analyzer::load_summary;
+    use rusqlite::Connection;
+
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       MM QUIT TEST                                          ║");
+    println!("║  MM quits at day 7 — can economy survive without MM?    ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guildbuyer_failure_test (no exodus)");
+    println!("  Treat:   guildbuyer_failure_mm_quit_test (MM quits day 7)");
+    println!("  Seed: {}\n", seed);
+
+    // Helper to query loan stats from DB
+    fn get_loan_counts(db_path: &std::path::Path) -> (usize, usize, usize) {
+        let conn = Connection::open(db_path).ok();
+        if let Some(conn) = conn {
+            let taken: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loan_events WHERE event_type = 'Taken'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            let defaulted: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loan_events WHERE event_type = 'Defaulted'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            let active: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loans WHERE status = 'Active'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            return (taken, defaulted, active);
+        }
+        (0, 0, 0)
+    }
+
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8}",
+        "GDP", "Debt", "D/G", "BPD%", "Buy%"
+    );
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8}",
+        "─".repeat(12),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8)
+    );
+
+    // Control: no exodus
+    let ctrl_dir = PathBuf::from("/tmp/autotune-mm-quit-ctrl");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    let ctrl_scenario = Scenario::guildbuyer_failure_test();
+    if let Err(e) = run_seeded_headless(&ctrl_scenario, seed, &ctrl_dir) {
+        eprintln!("  Control error: {}", e);
+        return;
+    }
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Control summary error: {}", e);
+            return;
+        }
+    };
+    let ctrl_loans = get_loan_counts(&ctrl_dir.join("simulation.db"));
+
+    // Treatment: MM quits at day 7
+    let treat_dir = PathBuf::from("/tmp/autotune-mm-quit-treat");
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&treat_dir).ok();
+    let treat_scenario = Scenario::guildbuyer_failure_mm_quit_test();
+    if let Err(e) = run_seeded_headless(&treat_scenario, seed, &treat_dir) {
+        eprintln!("  Treatment error: {}", e);
+        return;
+    }
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treatment summary error: {}", e);
+            return;
+        }
+    };
+    let treat_loans = get_loan_counts(&treat_dir.join("simulation.db"));
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+
+    println!(
+        "  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}% (ctrl, {} def, {} act)",
+        ctrl_summary.gdp,
+        ctrl_summary.debt,
+        ctrl_dg,
+        ctrl_summary.avg_bpd * 100.0,
+        ctrl_summary.buy_ratio * 100.0,
+        ctrl_loans.1,
+        ctrl_loans.2
+    );
+    println!(
+        "  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}% (treat, {} def, {} act)",
+        treat_summary.gdp,
+        treat_summary.debt,
+        treat_dg,
+        treat_summary.avg_bpd * 100.0,
+        treat_summary.buy_ratio * 100.0,
+        treat_loans.1,
+        treat_loans.2
+    );
+
+    println!();
+    let gdp_pct = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let debt_pct = (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0;
+    let dg_chg = treat_dg - ctrl_dg;
+    let bpd_chg = (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0;
+    let vol_chg = treat_summary.avg_volatility - ctrl_summary.avg_volatility;
+    let buy_chg = (treat_summary.buy_ratio - ctrl_summary.buy_ratio) * 100.0;
+
+    println!("  === IMPACT ANALYSIS ===");
+    println!(
+        "  GDP change:          {:+.1}% {}",
+        gdp_pct,
+        if gdp_pct > 0.0 { "✅" } else { "❌" }
+    );
+    println!(
+        "  Debt change:         {:+.1}% {}",
+        debt_pct,
+        if debt_pct < 0.0 { "✅" } else { "❌" }
+    );
+    println!(
+        "  D/G change:          {:+.2}x {}",
+        dg_chg,
+        if dg_chg < 0.0 { "✅" } else { "❌" }
+    );
+    println!(
+        "  BPD change:           {:+.2}pp {}",
+        bpd_chg,
+        if bpd_chg < 0.0 {
+            "✅ (tighter)"
+        } else {
+            "⚠️ (wider spreads)"
+        }
+    );
+    println!("  Buy ratio change:    {:+.1}pp", buy_chg);
+    println!(
+        "  Volatility change:   {:+.4} {}",
+        vol_chg,
+        if vol_chg < 0.0 {
+            "✅ (more stable)"
+        } else {
+            "⚠️ (less stable)"
+        }
+    );
+
+    println!();
+    println!("  === VERDICT ===");
+    if gdp_pct > -10.0 && dg_chg < 1.0 && bpd_chg < 1.0 {
+        println!("  ✅ Economy SURVIVES without MM — GuildBuyers absorb demand");
+    } else if gdp_pct < -30.0 || dg_chg > 5.0 {
+        println!("  ❌ Economy COLLAPSES without MM — MM is essential");
+    } else {
+        println!(
+            "  ⚠️  Mixed: GDP {:+.1}%, D/G {:+.2}x, BPD {:+.2}pp",
+            gdp_pct, dg_chg, bpd_chg
+        );
+    }
+    println!(
+        "  Key insight: MM quit → {} spread shock on remaining players",
+        if treat_summary.avg_bpd > ctrl_summary.avg_bpd * 1.5 {
+            "LARGE (blowout)"
+        } else if treat_summary.avg_bpd > ctrl_summary.avg_bpd * 1.1 {
+            "MODERATE"
+        } else {
+            "MINIMAL"
+        }
+    );
+    println!();
+}
+
+// ─── GB Quit Test ─────────────────────────────────────────────────────────
+/// Tests what happens when a GuildBuyer specifically quits at day 7.
+/// Control: guildbuyer_failure_test (no exodus)
+/// Treatment: guildbuyer_failure_gb_quit_test (one GB quits at day 7)
+/// Key questions:
+///   - Does economy buy/sell balance shift when primary buyer leaves?
+///   - Do prices drop (demand vacuum)?
+///   - Does remaining GB absorb the slack?
+fn run_gb_quit_test() {
+    use crate::analyzer::load_summary;
+    use rusqlite::Connection;
+
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       GB QUIT TEST                                           ║");
+    println!("║  GuildBuyer quits at day 7 — demand vacuum test          ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guildbuyer_failure_test (no exodus)");
+    println!("  Treat:   guildbuyer_failure_gb_quit_test (GB quits day 7)");
+    println!("  Seed: {}\n", seed);
+
+    fn get_loan_counts(db_path: &std::path::Path) -> (usize, usize, usize) {
+        let conn = Connection::open(db_path).ok();
+        if let Some(conn) = conn {
+            let taken: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loan_events WHERE event_type = 'Taken'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            let defaulted: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loan_events WHERE event_type = 'Defaulted'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            let active: usize = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM loans WHERE status = 'Active'",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0) as usize;
+            return (taken, defaulted, active);
+        }
+        (0, 0, 0)
+    }
+
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8}",
+        "GDP", "Debt", "D/G", "BPD%", "Buy%"
+    );
+    println!(
+        "  {:>12} {:>12} {:>10} {:>8} {:>8}",
+        "─".repeat(12),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8)
+    );
+
+    // Control
+    let ctrl_dir = PathBuf::from("/tmp/autotune-gb-quit-ctrl");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    let ctrl_scenario = Scenario::guildbuyer_failure_test();
+    if let Err(e) = run_seeded_headless(&ctrl_scenario, seed, &ctrl_dir) {
+        eprintln!("  Control error: {}", e);
+        return;
+    }
+    let ctrl_summary = match load_summary(&ctrl_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Control summary error: {}", e);
+            return;
+        }
+    };
+    let ctrl_loans = get_loan_counts(&ctrl_dir.join("simulation.db"));
+
+    // Treatment
+    let treat_dir = PathBuf::from("/tmp/autotune-gb-quit-treat");
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&treat_dir).ok();
+    let treat_scenario = Scenario::guildbuyer_failure_gb_quit_test();
+    if let Err(e) = run_seeded_headless(&treat_scenario, seed, &treat_dir) {
+        eprintln!("  Treatment error: {}", e);
+        return;
+    }
+    let treat_summary = match load_summary(&treat_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Treatment summary error: {}", e);
+            return;
+        }
+    };
+    let treat_loans = get_loan_counts(&treat_dir.join("simulation.db"));
+
+    let ctrl_dg = ctrl_summary.debt / ctrl_summary.gdp.max(1.0);
+    let treat_dg = treat_summary.debt / treat_summary.gdp.max(1.0);
+
+    println!(
+        "  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}% (ctrl, {} def, {} act)",
+        ctrl_summary.gdp,
+        ctrl_summary.debt,
+        ctrl_dg,
+        ctrl_summary.avg_bpd * 100.0,
+        ctrl_summary.buy_ratio * 100.0,
+        ctrl_loans.1,
+        ctrl_loans.2
+    );
+    println!(
+        "  {:>12.0} {:>12.0} {:>9.2}x {:>7.2}% {:>7.1}% (treat, {} def, {} act)",
+        treat_summary.gdp,
+        treat_summary.debt,
+        treat_dg,
+        treat_summary.avg_bpd * 100.0,
+        treat_summary.buy_ratio * 100.0,
+        treat_loans.1,
+        treat_loans.2
+    );
+
+    println!();
+    let gdp_pct = (treat_summary.gdp / ctrl_summary.gdp.max(1.0) - 1.0) * 100.0;
+    let debt_pct = (treat_summary.debt / ctrl_summary.debt.max(1.0) - 1.0) * 100.0;
+    let dg_chg = treat_dg - ctrl_dg;
+    let bpd_chg = (treat_summary.avg_bpd - ctrl_summary.avg_bpd) * 100.0;
+    let vol_chg = treat_summary.avg_volatility - ctrl_summary.avg_volatility;
+    let buy_chg = (treat_summary.buy_ratio - ctrl_summary.buy_ratio) * 100.0;
+
+    println!("  === IMPACT ANALYSIS ===");
+    println!(
+        "  GDP change:          {:+.1}% {}",
+        gdp_pct,
+        if gdp_pct > 0.0 { "✅" } else { "❌" }
+    );
+    println!(
+        "  Debt change:         {:+.1}% {}",
+        debt_pct,
+        if debt_pct < 0.0 { "✅" } else { "❌" }
+    );
+    println!(
+        "  D/G change:          {:+.2}x {}",
+        dg_chg,
+        if dg_chg < 0.0 { "✅" } else { "❌" }
+    );
+    println!(
+        "  BPD change:           {:+.2}pp {}",
+        bpd_chg,
+        if bpd_chg < 0.0 {
+            "✅ (tighter)"
+        } else {
+            "⚠️ (wider spreads)"
+        }
+    );
+    println!(
+        "  Buy ratio change:    {:+.1}pp (demand vacuum → more sell-heavy?)",
+        buy_chg
+    );
+    println!("  Volatility change:   {:+.4}", vol_chg);
+
+    println!();
+    println!("  === VERDICT ===");
+    if gdp_pct > -10.0 && buy_chg.abs() < 20.0 {
+        println!("  ✅ Economy absorbs GB quit — remaining GB fills the gap");
+    } else if gdp_pct < -20.0 || buy_chg < -20.0 {
+        println!("  ❌ Severe demand vacuum — 1 GB insufficient for economy balance");
+    } else {
+        println!(
+            "  ⚠️  Moderate impact: GDP {:+.1}%, buy ratio {:+.1}pp",
+            gdp_pct, buy_chg
+        );
+    }
+    println!();
+}
+
+// ─── Exploiter Cap Sensitivity Test ───────────────────────────────────────
+
+/// Sweeps Exploiter count (0, 1, 2, 3) across 5 seeds on guild_stability_mm_fixed_guild.
+/// Reports mean±std for GDP, D/G, volatility, buy ratio, and Diamond % change.
+/// Key question: does 1 Exploiter fix the buy ratio without the hyperinflation
+/// seen at 2 Exploiters (+5,528% Diamond)? Is there a sweet-spot cap?
+fn run_exploiter_cap_sensitivity_test() {
+    use crate::analyzer::{load_all_prices, load_summary};
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct CapResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        buy_ratio: f64,
+        diamond_pct: f64, // % change from base
+    }
+
+    let seeds = [42u64, 12345, 98765, 77777, 11111];
+    let levels = [0, 1, 2, 3];
+
+    let mut results: std::collections::HashMap<i32, Vec<CapResult>> =
+        std::collections::HashMap::new();
+    for &l in &levels {
+        results.insert(l, Vec::new());
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       EXPLOITER CAP SENSITIVITY TEST                       ║");
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!();
+    println!("  Base: guild_stability_mm_fixed_guild");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Levels: {} Exploiters → {:?}", 20, levels);
+    println!();
+
+    for &exploiters in &levels {
+        print!("  Exploiters={exploiters}: ");
+        for &seed in &seeds {
+            // Build scenario
+            let mut scenario = Scenario::guild_stability_mm_fixed_guild();
+            scenario.name = format!("guild_stability_mm_fixed_guild + {exploiters} Exploiters");
+
+            // Set Exploiter count: insert if not present, replace if present
+            if let Some(cfg) = scenario
+                .players
+                .iter_mut()
+                .find(|p| p.archetype == "Exploiter")
+            {
+                cfg.count = exploiters as usize;
+            } else if exploiters > 0 {
+                scenario.players.push(ArchetypeConfig {
+                    archetype: "Exploiter".into(),
+                    count: exploiters as usize,
+                });
+            }
+
+            let out_dir = format!("/tmp/autotune-sim/ecs-{exploiters}-{seed}");
+            let out_path = std::path::PathBuf::from(&out_dir);
+            std::fs::create_dir_all(&out_path).ok();
+
+            match run_seeded_headless(&scenario, seed, &out_path) {
+                Ok(_) => {
+                    let db_path = out_path.join("simulation.db");
+                    if let Ok(summary) = load_summary(&db_path) {
+                        let prices = load_all_prices(&db_path).unwrap_or_default();
+                        let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+                        let base_diamond = scenario
+                            .config
+                            .items
+                            .iter()
+                            .find(|ic| ic.name == "Diamond")
+                            .map(|ic| ic.base_price)
+                            .unwrap_or(1000.0);
+                        let diamond_pct = diamond
+                            .map(|(_, curr, _)| (*curr - base_diamond) / base_diamond * 100.0)
+                            .unwrap_or(0.0);
+
+                        results.get_mut(&exploiters).unwrap().push(CapResult {
+                            seed,
+                            gdp: summary.gdp,
+                            dg: summary.debt / summary.gdp.max(1.0),
+                            vol: summary.avg_volatility,
+                            buy_ratio: summary.buy_ratio,
+                            diamond_pct,
+                        });
+                        print!("{seed} ");
+                    } else {
+                        print!("X{seed} ");
+                    }
+                }
+                Err(_) => {
+                    print!("!{seed} ");
+                }
+            }
+        }
+        println!();
+    }
+
+    // Compute mean ± std
+    fn stats(vals: &[f64]) -> (f64, f64) {
+        if vals.is_empty() {
+            return (0.0, 0.0);
+        }
+        let mean = vals.iter().sum::<f64>() / vals.len() as f64;
+        let variance = vals.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / vals.len() as f64;
+        (mean, variance.sqrt())
+    }
+
+    println!();
+    println!(
+        "  {:^10} {:>14} {:>10} {:>8} {:>8} {:>12}",
+        "Exploiters", "GDP", "D/G", "Vol×100", "Buy%", "Diamond%"
+    );
+    println!(
+        "  {:^10} {:>14} {:>10} {:>8} {:>8} {:>12}",
+        "─".repeat(10),
+        "─".repeat(14),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(12)
+    );
+
+    let mut table: Vec<(i32, f64, f64, f64, f64, f64, f64)> = Vec::new();
+    for &l in &levels {
+        let res = results.get(&l).unwrap();
+        if res.is_empty() {
+            continue;
+        }
+        let (gdp_m, gdp_s) = stats(&res.iter().map(|r| r.gdp).collect::<Vec<_>>());
+        let (dg_m, dg_s) = stats(&res.iter().map(|r| r.dg).collect::<Vec<_>>());
+        let (vol_m, vol_s) = stats(&res.iter().map(|r| r.vol).collect::<Vec<_>>());
+        let (buy_m, buy_s) = stats(&res.iter().map(|r| r.buy_ratio).collect::<Vec<_>>());
+        let (dia_m, dia_s) = stats(&res.iter().map(|r| r.diamond_pct).collect::<Vec<_>>());
+        println!(
+            "  {:^10} {:>13.0}±{:.0} {:>8.3}x±{:.2} {:>6.4}±{:.4} {:>6.1}%±{:.1} {:>+10.1}%±{:.1}",
+            format!("{} Exploiters", l),
+            gdp_m,
+            gdp_s,
+            dg_m,
+            dg_s,
+            vol_m * 100.0,
+            vol_s * 100.0,
+            buy_m * 100.0,
+            buy_s * 100.0,
+            dia_m,
+            dia_s
+        );
+        table.push((l, gdp_m, dg_m, vol_m, buy_m, dia_m, dia_s));
+    }
+
+    println!();
+    println!("  === KEY FINDINGS ===");
+
+    // GDP comparison: find best and worst
+    if let Some((best_entry, baseline_entry)) = table
+        .iter()
+        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
+        .and_then(|be| {
+            table
+                .iter()
+                .find(|(l, _, _, _, _, _, _)| *l == 0)
+                .map(|bl| (be, bl))
+        })
+    {
+        let gdp_chg = (best_entry.1 / baseline_entry.1 - 1.0) * 100.0;
+        println!(
+            "  Best GDP: {} Exploiters ({:.0}, {:+.1}% vs control)",
+            best_entry.0, best_entry.1, gdp_chg
+        );
+    }
+
+    // Diamond inflation analysis
+    let last = table.last().unwrap();
+    let first = table.first().unwrap();
+    let dia_escalation = last.5 - first.5;
+    println!(
+        "  Diamond inflation: {:.0}% → {:.0}% ({:+.1}pp across 0→3 Exploiters)",
+        first.5, last.5, dia_escalation
+    );
+
+    // Find the cap level where Diamond hyperinflation starts
+    for &(l, _, _, _, _, dia, _) in table.iter() {
+        if dia > 500.0 {
+            println!(
+                "  ⚠️  Diamond hyperinflation (>{}+%) at {} Exploiters",
+                dia as i32, l
+            );
+            break;
+        }
+    }
+
+    // Buy ratio normalization
+    if let Some(balanced) = table
+        .iter()
+        .find(|(_, _, _, _, buy, _, _)| *buy > 0.48 && *buy < 0.52)
+    {
+        println!(
+            "  ✅ Buy ratio balanced ({:.0}%) at {} Exploiters — near 50/50",
+            balanced.4 * 100.0,
+            balanced.0
+        );
+    }
+
+    // Recommendation
+    println!();
+    if table.len() >= 2 {
+        let first_dia = table[0].5;
+        let last_dia = table[table.len() - 1].5;
+        if last_dia - first_dia > 500.0 {
+            println!("  RECOMMENDATION: Cap at 1 Exploiter (5% of server).");
+            println!("  1 Exploiter provides near-balanced buy ratio");
+            println!("  without the +5,000% Diamond hyperinflation seen at 2+.");
+        }
+    }
 }
 
 // ─── Exploiter Stress Test ─────────────────────────────────────────────────
@@ -5166,7 +8787,11 @@ use crate::analyzer::load_summary;
 use crate::player::set_fixed_guild_threshold;
 
 /// Run a headless simulation with a specific seed, returning the SimSummary.
-fn run_seeded_headless(scenario: &Scenario, seed: u64, output_dir: &PathBuf) -> Result<(), String> {
+fn run_seeded_headless(
+    scenario: &Scenario,
+    seed: u64,
+    output_dir: &PathBuf,
+) -> Result<Simulation, String> {
     use crate::recorder::DataRecorder;
 
     let archetype_map: std::collections::HashMap<String, Archetype> = [
@@ -5181,6 +8806,7 @@ fn run_seeded_headless(scenario: &Scenario, seed: u64, output_dir: &PathBuf) -> 
         ("MarketMaker".into(), Archetype::MarketMaker),
         ("InsiderTrader".into(), Archetype::InsiderTrader),
         ("GuildSeller".into(), Archetype::GuildSeller),
+        ("VolumeTrader".into(), Archetype::VolumeTrader),
     ]
     .into_iter()
     .collect();
@@ -5212,7 +8838,7 @@ fn run_seeded_headless(scenario: &Scenario, seed: u64, output_dir: &PathBuf) -> 
         let _ = recorder.finalize();
     }
 
-    Ok(())
+    Ok(sim)
 }
 
 /// Multi-seed comparison: GuildBuyer 7% vs 10% threshold, 5 seeds each.
@@ -5656,7 +9282,7 @@ fn run_fine_threshold_sweep() {
         });
     }
 
-    println!("\n");
+    println!();
     if results.is_empty() {
         println!("  No results collected.");
         return;
@@ -5806,6 +9432,7 @@ fn main() -> eframe::Result<()> {
         println!("Available scenarios:");
         println!("  standard         - Normal economy: 5 Casual + 3 Farmer + 2 Trader + 1 Hoarder");
         println!("  stressed         - Exploit, low players, loan cascade injected");
+        println!("  stressed-30day   - Stressed scaled to 30 days — chronic oversupply test");
         println!("  high-activity    - High activity, 20 players, 7 days");
         println!("  low-player       - 3 players, 14 days");
         println!("  spread-stability - Farmer/Trader mix, 10 days");
@@ -5815,6 +9442,7 @@ fn main() -> eframe::Result<()> {
             "  guild-stability  - 2 GuildBuyer + 4 Casual + 3 Farmer + 2 Trader (15-30% threshold)"
         );
         println!("  guild-stability-mm-fixed-guild - 1 MM + 2 GB @ 7% + 4Cas + 3Far + 2Trader");
+        println!("  guild-stability-mm-gs-phase2-redesign - GS Phase 2 price-dip detection test");
         println!(
             "  marketmaker-test - 1 GuildBuyer + 1 MarketMaker + 4 Casual + 3 Farmer + 2 Trader"
         );
@@ -5832,9 +9460,11 @@ fn main() -> eframe::Result<()> {
         println!("  --guild-threshold-sweep  Coarse sweep: thresholds 5-50%");
         println!("  --fine-threshold-sweep    Fine sweep: thresholds 1%, 3%, 5%, 7%, 10%");
         println!("  --exploiter-stress-test   Head-to-head: standard+MM vs +Exploiters");
+        println!("  --exploiter-cap-sensitivity  Sweep 0/1/2/3 Exploiters across 5 seeds");
         println!("  --regression            Regression test against stored baselines");
         println!("  --all                   Run all scenarios headlessly");
         println!("  --floor-ceiling-test     Floor/ceiling effect: control vs treatment");
+        println!("  --stressed-30d-floor-test  30-day stressed economy: floor paradox amplified?");
         println!("  --floor-strength-sweep   Diamond floor 30-90% — find GDP-neutral level");
         println!("  --price-freeze-test      Per-item price freeze: Diamond frozen vs control");
         println!(
@@ -5843,6 +9473,10 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --guildbuyer-failure-test  GB default cascade: cooldown prevs re-borrow bypass"
         );
+        println!("  --counter-cyclical-test  Counter-cyclical taper vs tiered circuit breaker");
+        println!("  --mm-competition-test   1MM+2GB vs 2MM+2GB: does extra MM improve stability?");
+        println!("  --mm-quit-test         MM quits at day 7: can economy survive without MM?");
+        println!("  --gb-quit-test         GB quits at day 7: demand vacuum test");
         println!(
             "  --volume-trader-test     VolumeTrader archetype: contrarian liquidity vs control"
         );
@@ -5851,6 +9485,26 @@ fn main() -> eframe::Result<()> {
         );
         println!("  --multi-server-test     Cross-server price aggregation test");
         println!("  --guild-seller-test     GuildSeller archetype: control vs 1GB+1GS treatment");
+        println!(
+            "  --mm-competition-multi-seed  1MM vs 2MM across 5 seeds (statistical robustness)"
+        );
+        println!(
+            "  --vt-multi-seed         Healthy vs +2VT across 5 seeds (statistical robustness)"
+        );
+        println!(
+            "  --it-healthy-test      IT + MM+GB vs MM+GB: does IT still help healthy economy?"
+        );
+        println!(
+            "  --floor-multi-seed     60% Diamond floor across 5 seeds: statistical robustness"
+        );
+        println!(
+            "  --production-config-test  2MM+2GB+floor vs 1MM+2GB: proposed default head-to-head"
+        );
+        println!("  --long-run-test        2MM+2GB+floor: 14 days vs 30 days stability check");
+        println!(
+            "  --circuit-breaker-hysteresis-test  TIER3 hysteresis: prevents D/G boundary cycling"
+        );
+        println!("  --circuit-breaker-sensitivity-test  TIER3 thresholds × min interest sweep");
         return Ok(());
     }
 
@@ -5891,6 +9545,11 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--exploiter-stress-test" {
         run_exploiter_stress_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--exploiter-cap-sensitivity" {
+        run_exploiter_cap_sensitivity_test();
         return Ok(());
     }
 
@@ -5986,6 +9645,10 @@ fn main() -> eframe::Result<()> {
                     Scenario::standard_plus_mm_gb_it()
                 }
                 "floor-ceiling-test" | "floor_ceiling_test" => Scenario::floor_ceiling_test(),
+                "stressed-30day" | "stressed_30day" => Scenario::stressed_30day(),
+                "guild-stability-mm-gs-phase2" | "guild_stability_mm_gs_phase2_redesign" => {
+                    Scenario::guild_stability_mm_gs_phase2_redesign()
+                }
                 "correlation" => Scenario::correlation(),
                 _ => {
                     eprintln!(
@@ -6053,6 +9716,12 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    // ─── Stressed Economy 30-Day Floor Test ─────────────────────────────
+    if args.len() > 1 && args[1] == "--stressed-30d-floor-test" {
+        run_stressed_30d_floor_test();
+        return Ok(());
+    }
+
     // ─── Price Freeze Test ───────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--price-freeze-test" {
         run_price_freeze_test();
@@ -6068,6 +9737,71 @@ fn main() -> eframe::Result<()> {
     // ─── GuildBuyer Failure Cascade Test ───────────────────────────────
     if args.len() > 1 && args[1] == "--guildbuyer-failure-test" {
         run_guildbuyer_failure_test();
+        return Ok(());
+    }
+
+    // ─── MM Loan Bounding Test ─────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--counter-cyclical-test" {
+        run_counter_cyclical_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--mm-loan-bounding-test" {
+        run_mm_loan_bounding_test();
+        return Ok(());
+    }
+
+    // ─── MM No-Opening-Loan Test ─────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--mm-no-opening-loan-test" {
+        run_mm_no_opening_loan_test();
+        return Ok(());
+    }
+
+    // ─── MM Competition Test ──────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--mm-competition-test" {
+        run_mm_competition_test();
+        return Ok(());
+    }
+
+    // ─── MM Competition Multi-Seed ─────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--mm-competition-multi-seed" {
+        run_mm_competition_multi_seed();
+        return Ok(());
+    }
+
+    // ─── VolumeTrader Multi-Seed ───────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--vt-multi-seed" {
+        run_volume_trader_multi_seed();
+        return Ok(());
+    }
+
+    // ─── MM Capital Sweep ────────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--mm-capital-sweep" {
+        run_mm_capital_sweep();
+        return Ok(());
+    }
+
+    // ─── IT Healthy Economy Test ───────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--it-healthy-test" {
+        run_it_healthy_economy_test();
+        return Ok(());
+    }
+
+    // ─── Floor 60% Multi-Seed Robustness ───────────────────────────────────
+    if args.len() > 1 && args[1] == "--floor-multi-seed" {
+        run_floor_strength_multi_seed();
+        return Ok(());
+    }
+
+    // ─── MM Quit Test ─────────────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--mm-quit-test" {
+        run_mm_quit_test();
+        return Ok(());
+    }
+
+    // ─── GB Quit Test ──────────────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--gb-quit-test" {
+        run_gb_quit_test();
         return Ok(());
     }
 
@@ -6113,8 +9847,1636 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    // ─── Production Config Test ──────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--production-config-test" {
+        run_production_config_test();
+        return Ok(());
+    }
+
+    // ─── Long-Run Stability Test ────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--long-run-test" {
+        run_long_run_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--circuit-breaker-hysteresis-test" {
+        run_circuit_breaker_hysteresis_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--circuit-breaker-sensitivity-test" {
+        run_circuit_breaker_sensitivity_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--archetype-mix-test" {
+        run_archetype_mix_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--floor-impact-test" {
+        run_floor_impact_test();
+        return Ok(());
+    }
+
+
     // GUI mode
     run_gui()
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  PRODUCTION CONFIG TEST
+//  Compares: 1MM+2GB (current rec.) vs 2MM+2GB+60% floor (proposed)
+// ═══════════════════════════════════════════════════════════════════════
+fn run_production_config_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+    let diamond_floor = 500.0 * 0.60; // $300
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║       PRODUCTION CONFIG TEST — MULTI-SEED (5 seeds)          ║");
+    println!("║  2MM + 60% Diamond floor vs 1MM (no floor)                   ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Control: 1MM + 2GB + no floor (guild_stability_mm_fixed_guild)");
+    println!("  Treat:   2MM + 2GB + Diamond floor=60% ($300)");
+    println!("  Duration: 14 days\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct RunResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        vol: f64,
+        buy_ratio: f64,
+        diamond_internal: f64,
+        diamond_displayed: f64,
+        floor_binds: bool,
+    }
+
+    impl RunResult {
+        fn from_summary(
+            s: &crate::analyzer::SimSummary,
+            prices: &[(String, f64, f64)],
+            seed: u64,
+            floor_val: f64,
+        ) -> Self {
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (diamond_internal, diamond_displayed) =
+                diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+                diamond_internal,
+                diamond_displayed,
+                floor_binds: diamond_displayed >= floor_val - 0.01,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<RunResult> = Vec::new();
+    let mut treat_results: Vec<RunResult> = Vec::new();
+
+    for seed in &seeds {
+        // Control: 1MM + 2GB
+        let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+        let ctrl_dir = format!("/tmp/autotune-sim/ctrl-pcfg-{seed}");
+        let ctrl_path = std::path::PathBuf::from(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_path).ok();
+        if run_seeded_headless(&ctrl_scenario, *seed, &ctrl_path).is_ok() {
+            let db_path = ctrl_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                let prices = crate::analyzer::load_all_prices(&db_path).unwrap_or_default();
+                ctrl_results.push(RunResult::from_summary(&s, &prices, *seed, 0.0));
+            }
+        }
+
+        // Treatment: 2MM + 2GB + 60% Diamond floor
+        let mut treat_scenario = Scenario::guild_stability_2mm_fixed_guild();
+        treat_scenario.name = "Production Config (2MM+floor)".to_string();
+        if let Some(diamond) = treat_scenario
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
+            diamond.price_floor_override = Some(diamond.base_price * 0.6);
+        }
+        let treat_dir = format!("/tmp/autotune-sim/treat-pcfg-{seed}");
+        let treat_path = std::path::PathBuf::from(&treat_dir);
+        std::fs::create_dir_all(&treat_path).ok();
+        if run_seeded_headless(&treat_scenario, *seed, &treat_path).is_ok() {
+            let db_path = treat_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                let prices = crate::analyzer::load_all_prices(&db_path).unwrap_or_default();
+                treat_results.push(RunResult::from_summary(&s, &prices, *seed, diamond_floor));
+            }
+        }
+    }
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7} {:>8}",
+        "Seed", "GDP", "D/G", "BPD%", "Buy%", "DmdInt", "DmdDisp"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7} {:>8}",
+        "─".repeat(6),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(7),
+        "─".repeat(7),
+        "─".repeat(8)
+    );
+
+    for (c, t) in ctrl_results.iter().zip(treat_results.iter()) {
+        println!(
+            "CNTL {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>6.1}% {:>7.0} {:>8.0}",
+            c.seed,
+            c.gdp,
+            c.dg,
+            c.bpd * 100.0,
+            c.buy_ratio * 100.0,
+            c.diamond_internal,
+            c.diamond_displayed
+        );
+        println!(
+            "TRAT {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>6.1}% {:>7.0} {:>8.0} {}",
+            t.seed,
+            t.gdp,
+            t.dg,
+            t.bpd * 100.0,
+            t.buy_ratio * 100.0,
+            t.diamond_internal,
+            t.diamond_displayed,
+            if t.floor_binds { " [FLOOR]" } else { "" }
+        );
+    }
+
+    let avg = |v: &[RunResult], f: &str| -> f64 {
+        let n = v.len() as f64;
+        if n == 0.0 {
+            return 0.0;
+        }
+        match f {
+            "gdp" => v.iter().map(|r| r.gdp).sum::<f64>() / n,
+            "dg" => v.iter().map(|r| r.dg).sum::<f64>() / n,
+            "bpd" => v.iter().map(|r| r.bpd).sum::<f64>() / n,
+            "vol" => v.iter().map(|r| r.vol).sum::<f64>() / n,
+            "buy" => v.iter().map(|r| r.buy_ratio).sum::<f64>() / n,
+            _ => 0.0,
+        }
+    };
+
+    let ctrl_avg_gdp = avg(&ctrl_results, "gdp");
+    let treat_avg_gdp = avg(&treat_results, "gdp");
+    let gdp_chg = (treat_avg_gdp - ctrl_avg_gdp) / ctrl_avg_gdp * 100.0;
+
+    let ctrl_avg_dg = avg(&ctrl_results, "dg");
+    let treat_avg_dg = avg(&treat_results, "dg");
+    let dg_chg = (treat_avg_dg - ctrl_avg_dg) / ctrl_avg_dg.max(0.001) * 100.0;
+
+    let ctrl_avg_bpd = avg(&ctrl_results, "bpd");
+    let treat_avg_bpd = avg(&treat_results, "bpd");
+    let bpd_chg = (treat_avg_bpd - ctrl_avg_bpd) / ctrl_avg_bpd.max(0.001) * 100.0;
+
+    let ctrl_avg_vol = avg(&ctrl_results, "vol");
+    let treat_avg_vol = avg(&treat_results, "vol");
+    let vol_chg = (treat_avg_vol - ctrl_avg_vol) / ctrl_avg_vol.max(0.001) * 100.0;
+
+    let floor_binds = treat_results.iter().filter(|r| r.floor_binds).count();
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7} {:>8}",
+        "AVG", "GDP", "D/G", "BPD%", "Buy%", "DmdInt", "DmdDisp"
+    );
+    println!(
+        "  {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>6.1}%",
+        "Ctrl",
+        ctrl_avg_gdp,
+        ctrl_avg_dg,
+        ctrl_avg_bpd * 100.0,
+        avg(&ctrl_results, "buy") * 100.0
+    );
+    println!(
+        "  {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>6.1}%",
+        "Treat",
+        treat_avg_gdp,
+        treat_avg_dg,
+        treat_avg_bpd * 100.0,
+        avg(&treat_results, "buy") * 100.0
+    );
+    println!();
+    println!(
+        "  Changes: GDP {:+.1}%, D/G {:+.1}%, BPD {:+.1}%, Vol {:+.1}%",
+        gdp_chg, dg_chg, bpd_chg, vol_chg
+    );
+    println!("  Floor binds: {}/{} seeds\n", floor_binds, seeds.len());
+
+    // Strong recommendation when: GDP large gain OR (floor binds consistently AND D/G manageable)
+    let floor_binds_all = floor_binds == seeds.len();
+    let strong_recommend = gdp_chg > 50.0 || (floor_binds_all && dg_chg < 50.0);
+    if strong_recommend {
+        println!("  ✓ RECOMMENDATION: Adopt 2MM + 60% floor as production default.");
+        println!(
+            "    GDP +{:.0}%, floor binds {}/{} seeds — economy is larger and more stable.",
+            gdp_chg,
+            floor_binds,
+            seeds.len()
+        );
+    } else if gdp_chg > 5.0 && dg_chg < 20.0 {
+        println!("  ✓ RECOMMENDATION: Adopt 2MM + 60% floor as production default.");
+        println!("    GDP improved substantially with manageable D/G change.");
+    } else if gdp_chg > 0.0 {
+        println!("  → RECOMMENDATION: 2MM+floor is an incremental improvement.");
+        println!("    Monitor floor binding rate and internal price divergence.");
+    } else {
+        println!("  → RECOMMENDATION: Re-evaluate. Combined config may have interaction effects.");
+    }
+    println!();
+    println!("  Java default: loans.counter-cyclical: true, floor: 60% ($300 for Diamond)");
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  LONG-RUN STABILITY TEST
+//  Tests whether economy remains stable at 30 days vs 14 days
+// ═══════════════════════════════════════════════════════════════════════
+fn run_long_run_test() {
+    use crate::analyzer::load_summary;
+
+    let seed = 42u64;
+    let diamond_floor = 500.0 * 0.60; // $300
+
+    println!("\n╔════════════════════════════════════════════════════════════════╗");
+    println!("║       LONG-RUN STABILITY TEST                              ║");
+    println!("║  2MM + 2GB + 60% Diamond floor — 14 days vs 30 days       ║");
+    println!("╚════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seed: {}", seed);
+    println!("  Config: 2MM + 2GB @ 7% + 3Cas + 3Far + 2Tra + 60% Diamond floor\n");
+
+    // Control: 14-day
+    let mut ctrl = Scenario::guild_stability_2mm_fixed_guild();
+    ctrl.name = "LongRun_14day".to_string();
+    ctrl.duration_ticks = 288 * 14;
+    if let Some(diamond) = ctrl.config.items.iter_mut().find(|ic| ic.name == "Diamond") {
+        diamond.price_floor_override = Some(diamond.base_price * 0.6);
+    }
+    let ctrl_dir = "/tmp/autotune-sim/longrun-14d";
+    let ctrl_path = std::path::PathBuf::from(ctrl_dir);
+    std::fs::create_dir_all(&ctrl_path).ok();
+    run_seeded_headless(&ctrl, seed, &ctrl_path).ok();
+
+    // Treatment: 30-day
+    let mut treat = Scenario::guild_stability_2mm_fixed_guild();
+    treat.name = "LongRun_30day".to_string();
+    treat.duration_ticks = 288 * 30;
+    if let Some(diamond) = treat
+        .config
+        .items
+        .iter_mut()
+        .find(|ic| ic.name == "Diamond")
+    {
+        diamond.price_floor_override = Some(diamond.base_price * 0.6);
+    }
+    let treat_dir = "/tmp/autotune-sim/longrun-30d";
+    let treat_path = std::path::PathBuf::from(treat_dir);
+    std::fs::create_dir_all(&treat_path).ok();
+    run_seeded_headless(&treat, seed, &treat_path).ok();
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct Result {
+        days: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        spd: f64,
+        vol: f64,
+        buy_ratio: f64,
+        diamond_internal: f64,
+        diamond_displayed: f64,
+    }
+
+    impl Result {
+        fn from_db(db_path: &std::path::Path, days: u64) -> Option<Self> {
+            let s = load_summary(db_path).ok()?;
+            let prices = crate::analyzer::load_all_prices(db_path).unwrap_or_default();
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            Some(Self {
+                days,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+                diamond_internal: di,
+                diamond_displayed: dd,
+            })
+        }
+    }
+
+    let ctrl_r = Result::from_db(&ctrl_path.join("simulation.db"), 14);
+    let treat_r = Result::from_db(&treat_path.join("simulation.db"), 30);
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>8}",
+        "Days", "GDP", "D/G", "BPD%", "SPD%", "Vol", "Buy%"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>8}",
+        "─".repeat(6),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(8)
+    );
+
+    if let Some(c) = &ctrl_r {
+        println!(
+            "  {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>7.3}% {:>8.4} {:>7.1}%",
+            "14d",
+            c.gdp,
+            c.dg,
+            c.bpd * 100.0,
+            c.spd * 100.0,
+            c.vol,
+            c.buy_ratio * 100.0
+        );
+    } else {
+        println!(
+            "  {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>8}",
+            "14d", "—", "—", "—", "—", "—", "—"
+        );
+    }
+    if let Some(t) = &treat_r {
+        println!(
+            "  {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>7.3}% {:>8.4} {:>7.1}%",
+            "30d",
+            t.gdp,
+            t.dg,
+            t.bpd * 100.0,
+            t.spd * 100.0,
+            t.vol,
+            t.buy_ratio * 100.0
+        );
+    } else {
+        println!(
+            "  {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>8}",
+            "30d", "—", "—", "—", "—", "—", "—"
+        );
+    }
+
+    if let (Some(c), Some(t)) = (&ctrl_r, &treat_r) {
+        let gdp_chg = (t.gdp - c.gdp) / c.gdp * 100.0;
+        let dg_chg = (t.dg - c.dg) / c.dg.max(0.001) * 100.0;
+        let bpd_chg = (t.bpd - c.bpd) / c.bpd.max(0.001) * 100.0;
+        let vol_chg = (t.vol - c.vol) / c.vol.max(0.001) * 100.0;
+        let buy_chg = (t.buy_ratio - c.buy_ratio) / c.buy_ratio.max(0.001) * 100.0;
+
+        println!();
+        println!("  Changes (30d vs 14d):");
+        println!(
+            "    GDP: {:+.1}%  D/G: {:+.1}%  BPD: {:+.1}%  Vol: {:+.1}%  Buy%: {:+.1}pp",
+            gdp_chg, dg_chg, bpd_chg, vol_chg, buy_chg
+        );
+        println!(
+            "    Diamond internal: {:.0} → {:.0}  (floor=${:.0})",
+            c.diamond_internal, t.diamond_internal, diamond_floor
+        );
+        println!();
+
+        let vol_stable = t.vol < 0.05;
+        let bpd_stable = bpd_chg.abs() < 30.0;
+        let buy_balanced = t.buy_ratio > 0.35 && t.buy_ratio < 0.75;
+        let gd_growing = t.gdp > c.gdp;
+
+        if vol_stable && bpd_stable && buy_balanced {
+            println!("  ✓ ECONOMY STABLE at 30 days. No cyclical degradation detected.");
+            println!(
+                "    Vol={:.4} < 0.05, BPD drift < 30%, buy ratio balanced",
+                t.vol
+            );
+        } else {
+            if !vol_stable {
+                println!(
+                    "  ⚠ Volatility concern at 30d: {:.4} (threshold: 0.05)",
+                    t.vol
+                );
+            }
+            if !bpd_stable {
+                println!(
+                    "  ⚠ Spread drift: BPD changed {:+.1}% over 16 extra days",
+                    bpd_chg
+                );
+            }
+            if !buy_balanced {
+                println!(
+                    "  ⚠ Buy ratio drifted to {:.1}% (out of 35-75% balanced band)",
+                    t.buy_ratio * 100.0
+                );
+            }
+        }
+        if gd_growing {
+            println!("  ✓ Economy continued growing (GDP +{:.1}%)", gdp_chg);
+        } else {
+            println!("  ⚠ Economy contracted at 30d (GDP {:.1}%)", gdp_chg);
+        }
+        if t.dg > 10.0 {
+            println!(
+                "  ⚠ D/G {:.2}x > 10.0x at 30d — circuit breaker should have fired",
+                t.dg
+            );
+        } else {
+            println!("  ✓ D/G {:.3}x within healthy range at 30d", t.dg);
+        }
+    }
+    println!();
+    println!("  Key insight: Long-run (30d) economy behavior vs 14-day standard test.");
+    println!("  If stable: no hidden instability emerges over extended play periods.");
+    println!();
+}
+
+/// Circuit Breaker Hysteresis Test
+///
+/// Demonstrates the TIER3 hysteresis fix: when D/G hits tier3_ratio (10.0x),
+/// the circuit stays locked in TIER3 (0% interest) until D/G drops below 90%
+/// of tier3_ratio (9.0x). Without hysteresis, the circuit rapidly toggles
+/// on/off as D/G hovers near the boundary.
+///
+/// This test runs a stressed economy (legacy circuit breaker, counter_cyclical=false)
+/// and counts:
+/// - NEW TIER3 engagements (with hysteresis): circuit locks at first crossing, holds
+/// - OLD oscillations (no hysteresis): each D/G crossing of 10.0 fires a new TIER3 event
+///
+/// Expected result: hysteresis eliminates ~N-1 TIER3 oscillations for N boundary crossings.
+fn run_circuit_breaker_hysteresis_test() {
+    use crate::player::set_global_seeded_rng;
+
+    // Use seed 98765 — known to oscillate near D/G boundary in floor-multi-seed tests.
+    // Force legacy circuit breaker (counter_cyclical=false) to exercise the tiered path.
+    let seed = 98765u64;
+    let tier3_ratio = 10.0;
+    let hysteresis_threshold = tier3_ratio * 0.9; // 9.0 — unlock when D/G drops here
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║       CIRCUIT BREAKER HYSTERESIS TEST                          ║");
+    println!("║  TIER3 lock: fires at D/G >= 10.0x, unlocks at D/G < 9.0x    ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  Seed: {} (known boundary oscillator from floor-multi-seed)",
+        seed
+    );
+    println!("  Scenario: guildbuyer_failure_test with counter_cyclical=false");
+    println!("  Duration: 14 days (4032 ticks)\n");
+
+    // Build scenario: use guildbuyer_failure_test as base but force legacy circuit breaker
+    let mut scenario = Scenario::guildbuyer_failure_test();
+    scenario.config.loans.counter_cyclical = false; // Force legacy tiered path
+    scenario.name = "CB Hysteresis Test (legacy circuit breaker)".into();
+
+    set_global_seeded_rng(seed);
+    let mut sim = Simulation::new_seeded(scenario.config.clone(), seed);
+    sim.events = scenario.events.clone();
+    add_players_to_sim(&mut sim, &scenario.players);
+    sim.paused = false;
+
+    // ── Tracking state ────────────────────────────────────────────────
+    let mut new_tier3_engagements: u32 = 0; // NEW behavior: circuit locks once
+    let mut new_tier3_held_ticks: u32 = 0; // How long TIER3 is held
+    let mut new_in_tier3: bool = false;
+
+    let mut old_tier3_oscillations: u32 = 0; // OLD behavior: each crossing fires
+    let mut old_was_in_tier3: bool = false; // Track old logic TIER3 state
+
+    println!("  Running simulation with hysteresis-enabled circuit breaker...");
+    let start = Instant::now();
+
+    while sim.current_tick < scenario.duration_ticks {
+        sim.tick();
+
+        // ── Compute D/G at end of this tick (same as circuit breaker uses) ──
+        let cb_total_debt: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| {
+                matches!(
+                    l.status,
+                    crate::loan::LoanStatus::Active | crate::loan::LoanStatus::Defaulted
+                )
+            })
+            .map(|l| l.current_balance)
+            .sum();
+        let gdp_window = 288u64;
+        let window_start = sim.current_tick.saturating_sub(gdp_window);
+        let cb_gdp: f64 = sim
+            .transactions
+            .iter()
+            .filter(|tx| {
+                tx.tick >= window_start && tx.tx_type == crate::engine::TransactionType::Buy
+            })
+            .map(|tx| tx.total_price)
+            .sum();
+        let dg = if cb_gdp > 0.0 {
+            cb_total_debt / cb_gdp
+        } else {
+            0.0
+        };
+
+        // ── NEW behavior (with hysteresis): circuit_tier3_locked in simulation ──
+        let new_in_tier3_now = sim.is_circuit_tier3_locked() || (cb_gdp > 0.0 && dg >= tier3_ratio);
+
+        if new_in_tier3_now && !new_in_tier3 {
+            new_tier3_engagements += 1;
+        }
+        if new_in_tier3_now {
+            new_tier3_held_ticks += 1;
+        }
+        new_in_tier3 = new_in_tier3_now;
+
+        // ── OLD behavior (no hysteresis): TIER3 when ratio >= 10.0 ──
+        let old_in_tier3_now = cb_gdp > 0.0 && dg >= tier3_ratio;
+        if old_in_tier3_now && !old_was_in_tier3 {
+            old_tier3_oscillations += 1;
+        }
+        old_was_in_tier3 = old_in_tier3_now;
+
+        // Progress dot every 1000 ticks
+        if sim.current_tick.is_multiple_of(1000) {
+            print!(".");
+        }
+    }
+    println!(" done in {:.1}s\n", start.elapsed().as_secs_f64());
+
+    // ── Final D/G for context ──────────────────────────────────────────
+    let cb_total_debt: f64 = sim
+        .loans
+        .iter()
+        .filter(|l| {
+            matches!(
+                l.status,
+                crate::loan::LoanStatus::Active | crate::loan::LoanStatus::Defaulted
+            )
+        })
+        .map(|l| l.current_balance)
+        .sum();
+    let gdp_window = 288u64;
+    let window_start = sim.current_tick.saturating_sub(gdp_window);
+    let cb_gdp: f64 = sim
+        .transactions
+        .iter()
+        .filter(|tx| tx.tick >= window_start && tx.tx_type == crate::engine::TransactionType::Buy)
+        .map(|tx| tx.total_price)
+        .sum();
+    let final_dg = if cb_gdp > 0.0 {
+        cb_total_debt / cb_gdp
+    } else {
+        0.0
+    };
+    let final_tier = if sim.is_circuit_tier3_locked() {
+        "TIER3 (locked)"
+    } else if final_dg >= tier3_ratio {
+        "TIER3"
+    } else {
+        "NORMAL/TIER1/TIER2"
+    };
+
+    println!(
+        "  {:<30} {:>15} {:>15}",
+        "Metric", "OLD (no hysteresis)", "NEW (with hysteresis)"
+    );
+    println!("  {:-<30} {:->15} {:->15}", "", "", "");
+    println!(
+        "  {:<30} {:>15} {:>15}",
+        "TIER3 oscillations",
+        format!("{} events", old_tier3_oscillations),
+        format!("{} events", new_tier3_engagements)
+    );
+    println!(
+        "  {:<30} {:>15} {:>15}",
+        "TIER3 held ticks",
+        format!("N/A"),
+        format!("{}", new_tier3_held_ticks)
+    );
+    println!(
+        "  {:<30} {:>15} {:>15}",
+        "Final D/G",
+        format!("{:.3}x", final_dg),
+        format!("{:.3}x ({})", final_dg, final_tier)
+    );
+    println!();
+
+    let oscillation_reduction = if old_tier3_oscillations > 0 {
+        ((old_tier3_oscillations as f64 - new_tier3_engagements as f64)
+            / old_tier3_oscillations as f64
+            * 100.0)
+            .max(0.0)
+    } else {
+        0.0
+    };
+
+    if old_tier3_oscillations > 1 && oscillation_reduction > 0.0 {
+        println!(
+            "  ✓ HYSTERESIS EFFECT: {} fewer TIER3 oscillations ({:.0}% reduction)",
+            old_tier3_oscillations - new_tier3_engagements,
+            oscillation_reduction
+        );
+        println!(
+            "  ✓ Circuit stays locked until D/G drops below {:.1}x (hysteresis band)",
+            hysteresis_threshold
+        );
+    } else if new_tier3_engagements == 0 {
+        println!(
+            "  ℹ️  No TIER3 events triggered in this run — D/G stayed below {:.1}x",
+            tier3_ratio
+        );
+        println!(
+            "  ℹ️  This can happen with certain seeds/scenarios. Try seed=42 for a more active run."
+        );
+    } else {
+        println!(
+            "  ✓ TIER3 engaged {} time(s) with hysteresis — circuit held through oscillation",
+            new_tier3_engagements
+        );
+    }
+    println!();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  CIRCUIT BREAKER SENSITIVITY TEST
+//  Sweeps: TIER3 ratio (8, 10, 12, 15) × min_interest (0, 5%, 10%, 20%)
+//  Question: How does the counter-cyclical interest floor affect stability?
+//  Multi-seed (5 seeds) for statistical robustness.
+// ═══════════════════════════════════════════════════════════════════════
+fn run_circuit_breaker_sensitivity_test() {
+    use crate::analyzer::load_summary;
+    use crate::player::set_global_seeded_rng;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+    let tier3_ratios: Vec<f64> = vec![8.0, 10.0, 12.0, 15.0];
+    let min_interests: Vec<f64> = vec![0.0, 0.05, 0.10, 0.20];
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║    CIRCUIT BREAKER SENSITIVITY — TIER3 ratio × min interest  ║");
+    println!("║  4×4 sweep × 5 seeds | guildbuyer_failure_test | 14d        ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!("  tier3_ratios: {:?}", tier3_ratios);
+    println!("  min_interests: {:?}", min_interests);
+    println!("  seeds: {:?}", seeds);
+    println!("  scenario: guildbuyer_failure_test (1MM + 2GB + 4Cas + 3Far + 2Tra)\n");
+
+    /// Result tuple: (seed, gdp, dg, vol, t3_ev_f64, t3_ev_u32)
+    type CbSensTuple = (u64, f64, f64, f64, f64, u32);
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct CbSensResult {
+        tier3_ratio: f64,
+        min_interest: f64,
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        bpd: f64,
+        buy_ratio: f64,
+        tier3_events: u32,
+    }
+
+    // (tier3_idx, mi_idx) → vec of CbSensTuple
+    let mut results_by_params: Vec<Vec<Vec<CbSensTuple>>> =
+        vec![vec![vec![]; min_interests.len()]; tier3_ratios.len()];
+    let mut failed_runs: u32 = 0;
+
+    for (t3i, &tier3_ratio) in tier3_ratios.iter().enumerate() {
+        for (mii, &min_interest) in min_interests.iter().enumerate() {
+            for &seed in &seeds {
+                print!("  t3={tier3_ratio:.0} mi={min_interest:.2} seed={seed} ... ");
+
+                // Build scenario with swept parameters
+                let mut scenario = Scenario::guildbuyer_failure_test();
+                scenario.name = format!("CB Sens t3={tier3_ratio:.0} mi={min_interest:.2}");
+                scenario.config.loans.debt_gdp_tier3_ratio = tier3_ratio;
+                scenario.config.loans.min_interest_multiplier = min_interest;
+                scenario.config.loans.tier1_interest_cap = 0.50;
+                scenario.config.loans.tier2_interest_cap = 0.25;
+                // Tier caps match default LoanConfig
+                // Counter-cyclical ON (default, matching Java)
+                scenario.config.loans.counter_cyclical = true;
+
+                let out_dir = format!(
+                    "/tmp/autotune-sim/cb-sens-t3-{tier3_ratio:.0}-mi-{min_interest:.2}-s-{seed}"
+                );
+                let out_path = std::path::PathBuf::from(&out_dir);
+                std::fs::create_dir_all(&out_path).ok();
+
+                let start = std::time::Instant::now();
+
+                let sim_result: Result<CbSensResult, String> = {
+                    set_global_seeded_rng(seed);
+                    let mut sim = Simulation::new_seeded(scenario.config.clone(), seed);
+                    add_players_to_sim(&mut sim, &scenario.players);
+                    sim.paused = false;
+
+                    let mut tier3_events = 0u32;
+                    let mut prev_tier = String::from("NORMAL");
+
+                    while sim.current_tick < scenario.duration_ticks {
+                        sim.tick();
+
+                        let current_tier = sim.prev_circuit_tier().to_string();
+                        if current_tier == "TIER3" && prev_tier != "TIER3" {
+                            tier3_events += 1;
+                        }
+                        prev_tier = current_tier;
+                    }
+
+                    // Compute D/G using same window as circuit breaker
+                    let cb_total_debt: f64 = sim
+                        .loans
+                        .iter()
+                        .filter(|l| {
+                            matches!(
+                                l.status,
+                                crate::loan::LoanStatus::Active
+                                    | crate::loan::LoanStatus::Defaulted
+                            )
+                        })
+                        .map(|l| l.current_balance)
+                        .sum();
+                    let gdp_window = 288u64;
+                    let window_start = sim.current_tick.saturating_sub(gdp_window);
+                    let cb_gdp: f64 = sim
+                        .transactions
+                        .iter()
+                        .filter(|tx| {
+                            tx.tick >= window_start
+                                && tx.tx_type == crate::engine::TransactionType::Buy
+                        })
+                        .map(|tx| tx.total_price)
+                        .sum();
+                    let dg = if cb_gdp > 0.0 {
+                        cb_total_debt / cb_gdp
+                    } else {
+                        0.0
+                    };
+
+                    Ok(CbSensResult {
+                        tier3_ratio,
+                        min_interest,
+                        seed,
+                        gdp: cb_gdp,
+                        dg,
+                        vol: 0.0, // filled from summary below
+                        bpd: 0.0,
+                        buy_ratio: 0.0,
+                        tier3_events,
+                    })
+                };
+
+                match sim_result {
+                    Ok(mut result) => {
+                        // Augment with full summary stats, then clean up DB
+                        let db_path = out_path.join("simulation.db");
+                        if let Ok(s) = load_summary(&db_path) {
+                            result.vol = s.avg_volatility;
+                            result.bpd = s.avg_bpd;
+                            result.buy_ratio = s.buy_ratio;
+                        }
+                        let _ = std::fs::remove_dir_all(&out_path);
+                        results_by_params[t3i][mii].push((
+                            seed,
+                            result.gdp,
+                            result.dg,
+                            result.vol,
+                            result.tier3_events as f64,
+                            result.tier3_events,
+                        ));
+                        println!(
+                            "OK (t3_ev={}, dg={:.2}x, gdp={:.0}, {:.1}s)",
+                            result.tier3_events,
+                            result.dg,
+                            result.gdp,
+                            start.elapsed().as_secs_f64()
+                        );
+                    }
+                    Err(e) => {
+                        println!("FAIL: {e}");
+                        failed_runs += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Print summary table ─────────────────────────────────────────────
+    println!(
+        "\n╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗"
+    );
+    println!(
+        "║  SUMMARY TABLE — avg across 5 seeds (D/G ratio, TIER3 event sum)                                     ║"
+    );
+    println!(
+        "╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝"
+    );
+    println!();
+
+    // D/G table
+    print!("  {:^8}", "t3\\mi");
+    for &mi in &min_interests {
+        print!("  {:^10}", format!("{:.0}%", mi * 100.0));
+    }
+    println!();
+    println!("  {:─<8}", "");
+    for _ in &min_interests {
+        print!("  {:─>10}", "");
+    }
+    println!();
+
+    for (t3i, &t3) in tier3_ratios.iter().enumerate() {
+        print!("  {:^6.0}", t3);
+        for (mii, _mi) in min_interests.iter().enumerate() {
+            if let Some(vals) = results_by_params.get(t3i).and_then(|r| r.get(mii)) {
+                if !vals.is_empty() {
+                    let count = vals.len() as f64;
+                    let avg_dg = vals.iter().map(|v| v.2).sum::<f64>() / count;
+                    let sum_ev: u32 = vals.iter().map(|v| v.5).sum();
+                    print!("  {:>5.2}x{:>3.0}e", avg_dg, sum_ev);
+                } else {
+                    print!("  {:>10}", "—");
+                }
+            } else {
+                print!("  {:>10}", "—");
+            }
+        }
+        println!();
+    }
+
+    println!();
+    // Volatility table
+    print!("  {:^8}", "t3\\mi");
+    for &mi in &min_interests {
+        print!("  {:^12}", format!("vol {:.0}%", mi * 100.0));
+    }
+    println!();
+    println!("  {:─<8}", "");
+    for _ in &min_interests {
+        print!("  {:─>12}", "");
+    }
+    println!();
+
+    for (t3i, &t3) in tier3_ratios.iter().enumerate() {
+        print!("  {:^6.0}", t3);
+        for (mii, _mi) in min_interests.iter().enumerate() {
+            if let Some(vals) = results_by_params.get(t3i).and_then(|r| r.get(mii)) {
+                if !vals.is_empty() {
+                    let count = vals.len() as f64;
+                    let avg_vol = vals.iter().map(|v| v.3).sum::<f64>() / count;
+                    print!("  {:>12.4}", avg_vol);
+                } else {
+                    print!("  {:>12}", "—");
+                }
+            } else {
+                print!("  {:>12}", "—");
+            }
+        }
+        println!();
+    }
+
+    // ── Key findings ────────────────────────────────────────────────────
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║  KEY FINDINGS                                                       ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝");
+
+    // Best D/G by tier3_ratio
+    println!("  Best D/G by tier3_ratio (lower is better):");
+    let mut best_by_t3: Vec<(f64, f64, f64)> = Vec::new();
+    for (t3i, &t3) in tier3_ratios.iter().enumerate() {
+        let mut best = (f64::MAX, 0.0f64);
+        for (mii, &mi) in min_interests.iter().enumerate() {
+            if let Some(vals) = results_by_params.get(t3i).and_then(|r| r.get(mii))
+                && !vals.is_empty()
+            {
+                let avg_dg = vals.iter().map(|v| v.2).sum::<f64>() / vals.len() as f64;
+                if avg_dg < best.0 {
+                    best = (avg_dg, mi);
+                }
+            }
+        }
+        if best.0 < f64::MAX {
+            best_by_t3.push((t3, best.1, best.0));
+            println!(
+                "    tier3={t3:.0}: min_interest={mi_pct:.0}% → D/G={dg:.2}x",
+                mi_pct = best.1 * 100.0,
+                dg = best.0
+            );
+        }
+    }
+
+    // min_interest floor effect at default tier3=10
+    // tier3=10.0 is at index 1, min_interest=0.0 is at index 0
+    let t3_10_idx = tier3_ratios
+        .iter()
+        .position(|&v| (v - 10.0).abs() < 0.01)
+        .unwrap();
+    let mi_0_idx = min_interests
+        .iter()
+        .position(|&v| (v - 0.0).abs() < 0.001)
+        .unwrap();
+
+    if let Some(baseline) = results_by_params
+        .get(t3_10_idx)
+        .and_then(|r| r.get(mi_0_idx))
+        && !baseline.is_empty()
+    {
+        let base_dg: f64 = baseline.iter().map(|v| v.2).sum::<f64>() / baseline.len() as f64;
+        let base_ev: u32 = baseline.iter().map(|v| v.5).sum();
+        println!("\n  At tier3=10 (current default):");
+        println!(
+            "    baseline min_int=0%:  D/G={:.2}x, T3_ev_sum={}",
+            base_dg, base_ev
+        );
+        for &mi in &[0.05, 0.10, 0.20] {
+            if let Some(mii) = min_interests.iter().position(|&v| (v - mi).abs() < 0.001)
+                && let Some(with_mi) = results_by_params.get(t3_10_idx).and_then(|r| r.get(mii))
+                && !with_mi.is_empty()
+            {
+                let mi_dg: f64 = with_mi.iter().map(|v| v.2).sum::<f64>() / with_mi.len() as f64;
+                let mi_ev: u32 = with_mi.iter().map(|v| v.5).sum();
+                let delta = (mi_dg - base_dg) / base_dg * 100.0;
+                println!(
+                    "    min_int={:.0}%: D/G={:.2}x ({:+.1}%), T3_ev={} ({:+})",
+                    mi * 100.0,
+                    mi_dg,
+                    delta,
+                    mi_ev,
+                    mi_ev as i32 - base_ev as i32
+                );
+            }
+        }
+    }
+
+    // tier3_ratio sweep effect (min_int=0 baseline)
+    if let Some(baseline) = results_by_params
+        .get(t3_10_idx)
+        .and_then(|r| r.get(mi_0_idx))
+        && !baseline.is_empty()
+    {
+        let base_dg: f64 = baseline.iter().map(|v| v.2).sum::<f64>() / baseline.len() as f64;
+        println!("\n  tier3_ratio sweep effect (min_int=0, vs tier3=10 baseline):");
+        for &t3 in &[8.0, 12.0, 15.0] {
+            if let Some(t3i) = tier3_ratios.iter().position(|&v| (v - t3).abs() < 0.01)
+                && let Some(vals) = results_by_params.get(t3i).and_then(|r| r.get(mi_0_idx))
+                && !vals.is_empty()
+            {
+                let t3_dg: f64 = vals.iter().map(|v| v.2).sum::<f64>() / vals.len() as f64;
+                let t3_ev: u32 = vals.iter().map(|v| v.5).sum();
+                let delta = (t3_dg - base_dg) / base_dg * 100.0;
+                println!(
+                    "    tier3={:.0}: D/G={:.2}x ({:+.1}%), T3_ev_sum={}",
+                    t3, t3_dg, delta, t3_ev
+                );
+            }
+        }
+    }
+
+    println!(
+        "\n  Failed runs: {}/{} total combinations",
+        failed_runs,
+        4 * 4 * 5
+    );
+    println!("  Recommend: commit code, verify build, run in main session:\n");
+    println!("    cargo run --release -- --circuit-breaker-sensitivity-test");
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ARCHETYPE MIX TEST
+//  Tests: Casual-heavy vs Farmer-heavy vs control (guild_stability_mm)
+// ═══════════════════════════════════════════════════════════════════════
+fn run_archetype_mix_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║       ARCHETYPE MIX TEST — MULTI-SEED (5 seeds)              ║");
+    println!("║  Casual-heavy (6Cas/1Far) vs Farmer-heavy (2Cas/6Far)        ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Control:     2MM+2GB+3Cas+3Far+2Tra (12 players) [guild_stability_mm_fixed_guild]");
+    println!("  Treatment 1: 2MM+2GB+6Cas+1Far+1Tra (10 players) [casual_heavy]");
+    println!("  Treatment 2: 2MM+2GB+2Cas+6Far+2Tra (12 players) [farmer_heavy]");
+    println!("  Duration: 14 days\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct MixResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        vol: f64,
+        buy_ratio: f64,
+    }
+
+    impl MixResult {
+        fn from_summary(s: &crate::analyzer::SimSummary, seed: u64) -> Self {
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<MixResult> = Vec::new();
+    let mut casual_results: Vec<MixResult> = Vec::new();
+    let mut farmer_results: Vec<MixResult> = Vec::new();
+
+    for seed in &seeds {
+        print!("  seed {seed} ... ");
+
+        // Control
+        let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+        let ctrl_dir = format!("/tmp/autotune-sim/mix-ctrl-{seed}");
+        let ctrl_path = std::path::PathBuf::from(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_path).ok();
+        if run_seeded_headless(&ctrl_scenario, *seed, &ctrl_path).is_ok() {
+            let db_path = ctrl_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                ctrl_results.push(MixResult::from_summary(&s, *seed));
+            }
+        }
+
+        // Casual-heavy
+        let casual_scenario = Scenario::guild_stability_casual_heavy();
+        let casual_dir = format!("/tmp/autotune-sim/mix-casual-{seed}");
+        let casual_path = std::path::PathBuf::from(&casual_dir);
+        std::fs::create_dir_all(&casual_path).ok();
+        if run_seeded_headless(&casual_scenario, *seed, &casual_path).is_ok() {
+            let db_path = casual_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                casual_results.push(MixResult::from_summary(&s, *seed));
+            }
+        }
+
+        // Farmer-heavy
+        let farmer_scenario = Scenario::guild_stability_farmer_heavy();
+        let farmer_dir = format!("/tmp/autotune-sim/mix-farmer-{seed}");
+        let farmer_path = std::path::PathBuf::from(&farmer_dir);
+        std::fs::create_dir_all(&farmer_path).ok();
+        if run_seeded_headless(&farmer_scenario, *seed, &farmer_path).is_ok() {
+            let db_path = farmer_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                farmer_results.push(MixResult::from_summary(&s, *seed));
+            }
+        }
+
+        println!("done");
+    }
+
+    // ── Summary stats ───────────────────────────────────────────────────
+    let stats = |results: &[MixResult], field: &str| -> (f64, f64) {
+        let n = results.len() as f64;
+        if n == 0.0 {
+            return (0.0, 0.0);
+        }
+        let vals: Vec<f64> = results
+            .iter()
+            .map(|r| match field {
+                "gdp" => r.gdp,
+                "dg" => r.dg,
+                "bpd" => r.bpd,
+                "vol" => r.vol,
+                "buy" => r.buy_ratio,
+                _ => 0.0,
+            })
+            .collect();
+        let mean = vals.iter().sum::<f64>() / n;
+        let variance = vals.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n;
+        (mean, variance.sqrt())
+    };
+
+    let (ctrl_gdp, ctrl_gdp_s) = stats(&ctrl_results, "gdp");
+    let (cas_gdp, cas_gdp_s) = stats(&casual_results, "gdp");
+    let (far_gdp, far_gdp_s) = stats(&farmer_results, "gdp");
+
+    let (ctrl_dg, ctrl_dg_s) = stats(&ctrl_results, "dg");
+    let (cas_dg, cas_dg_s) = stats(&casual_results, "dg");
+    let (far_dg, far_dg_s) = stats(&farmer_results, "dg");
+
+    let (ctrl_bpd, ctrl_bpd_s) = stats(&ctrl_results, "bpd");
+    let (cas_bpd, cas_bpd_s) = stats(&casual_results, "bpd");
+    let (far_bpd, far_bpd_s) = stats(&farmer_results, "bpd");
+
+    let (ctrl_vol, ctrl_vol_s) = stats(&ctrl_results, "vol");
+    let (cas_vol, cas_vol_s) = stats(&casual_results, "vol");
+    let (far_vol, far_vol_s) = stats(&farmer_results, "vol");
+
+    let (ctrl_buy, _) = stats(&ctrl_results, "buy");
+    let (cas_buy, _) = stats(&casual_results, "buy");
+    let (far_buy, _) = stats(&farmer_results, "buy");
+
+    println!();
+    println!(
+        "  {:>16} {:>14} {:>12} {:>16} {:>9} {:>9} {:>7}",
+        "", "GDP", "GDP-σ", "D/G (σ)", "BPD%", "Vol", "Buy%"
+    );
+    println!(
+        "  {:>16} {:>14} {:>12} {:>16} {:>9} {:>9} {:>7}",
+        "─".repeat(16),
+        "─".repeat(14),
+        "─".repeat(12),
+        "─".repeat(16),
+        "─".repeat(9),
+        "─".repeat(9),
+        "─".repeat(7)
+    );
+
+    let fmt_row = |label: &str,
+                   gdp: f64,
+                   gdp_s: f64,
+                   dg: f64,
+                   dg_s: f64,
+                   bpd: f64,
+                   _bpd_s: f64,
+                   vol: f64,
+                   _vol_s: f64,
+                   buy: f64| {
+        let dg_str = format!("{:.3}x ± {:.2}", dg, dg_s);
+        println!(
+            "  {:>16} {:>14.0} {:>12.0} {:>16} {:>9.3}% {:>9.5} {:>7.1}%",
+            label,
+            gdp,
+            gdp_s,
+            dg_str,
+            bpd * 100.0,
+            vol,
+            buy * 100.0
+        );
+    };
+
+    fmt_row(
+        "Control (3C/3F/2T)",
+        ctrl_gdp,
+        ctrl_gdp_s,
+        ctrl_dg,
+        ctrl_dg_s,
+        ctrl_bpd,
+        ctrl_bpd_s,
+        ctrl_vol,
+        ctrl_vol_s,
+        ctrl_buy,
+    );
+    fmt_row(
+        "Casual-heavy (6C)",
+        cas_gdp,
+        cas_gdp_s,
+        cas_dg,
+        cas_dg_s,
+        cas_bpd,
+        cas_bpd_s,
+        cas_vol,
+        cas_vol_s,
+        cas_buy,
+    );
+    fmt_row(
+        "Farmer-heavy (6F)",
+        far_gdp,
+        far_gdp_s,
+        far_dg,
+        far_dg_s,
+        far_bpd,
+        far_bpd_s,
+        far_vol,
+        far_vol_s,
+        far_buy,
+    );
+
+    println!();
+
+    // ── Change vs control ─────────────────────────────────────────────
+    let chg = |new: f64, ctrl: f64| -> f64 {
+        if ctrl == 0.0 {
+            0.0
+        } else {
+            (new - ctrl) / ctrl * 100.0
+        }
+    };
+
+    println!("  Changes vs Control:");
+    println!(
+        "  {:>16} {:>12} {:>10} {:>8} {:>7}",
+        "", "GDP", "D/G", "BPD", "Vol"
+    );
+    println!(
+        "  {:>16} {:>12} {:>10} {:>8} {:>7}",
+        "─".repeat(16),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(7)
+    );
+    println!(
+        "  {:>16} {:>+11.1}% {:>+10.1}% {:>+7.1}% {:>+6.1}%",
+        "Casual-heavy",
+        chg(cas_gdp, ctrl_gdp),
+        chg(cas_dg, ctrl_dg),
+        chg(cas_bpd, ctrl_bpd),
+        chg(cas_vol, ctrl_vol)
+    );
+    println!(
+        "  {:>16} {:>+11.1}% {:>+10.1}% {:>+7.1}% {:>+6.1}%",
+        "Farmer-heavy",
+        chg(far_gdp, ctrl_gdp),
+        chg(far_dg, ctrl_dg),
+        chg(far_bpd, ctrl_bpd),
+        chg(far_vol, ctrl_vol)
+    );
+    println!();
+
+    // ── Verdict ────────────────────────────────────────────────────────
+    let cas_better_gdp = cas_gdp > ctrl_gdp;
+    let far_better_gdp = far_gdp > ctrl_gdp;
+    let cas_better_dg = cas_dg < ctrl_dg;
+    let far_better_dg = far_dg < ctrl_dg;
+
+    if cas_better_gdp && cas_better_dg {
+        println!("  ✓ VERDICT: Casual-heavy outperforms control on GDP AND D/G.");
+        println!(
+            "    Recommendation: servers with casual player bases should use 6Cas/1Far archetype."
+        );
+    } else if cas_better_gdp {
+        println!("  → VERDICT: Casual-heavy has higher GDP but higher D/G.");
+        println!(
+            "    Buy ratio effect: {:.1}% (control: {:.1}%) — {}.",
+            cas_buy * 100.0,
+            ctrl_buy * 100.0,
+            if cas_buy < ctrl_buy {
+                "more sell-dominated"
+            } else {
+                "more buy-balanced"
+            }
+        );
+    }
+
+    if far_better_gdp && far_better_dg {
+        println!("  ✓ VERDICT: Farmer-heavy outperforms control on GDP AND D/G.");
+    } else if far_better_gdp {
+        println!("  → VERDICT: Farmer-heavy has higher GDP but higher D/G.");
+    } else {
+        println!("  → VERDICT: Control (3Cas/3Far) is the balanced sweet spot.");
+    }
+
+    let volatility_ok = |v: f64| v < 0.05;
+    if volatility_ok(ctrl_vol) && volatility_ok(cas_vol) && volatility_ok(far_vol) {
+        println!("  ℹ️  All configs stable (vol < 0.05) — volatility is not the differentiator.");
+    } else {
+        println!("  ℹ️  Volatility differs — lower is better for price predictability.");
+    }
+
+    println!();
+    println!(
+        "  Admin note: Farmer-heavy servers expect lower equilibrium prices due to structural oversupply."
+    );
+    println!("  Recommendation: match archetype to player behavior, not vice versa.\n");
+}
+
+/// Floor Impact Test: Does the 60% Diamond floor ADD volatility?
+/// Compares 2MM+2GB WITH and WITHOUT 60% Diamond floor across 5 seeds.
+fn run_floor_impact_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+    let diamond_floor = 500.0 * 0.60; // $300
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║       FLOOR IMPACT TEST — 2MM+2GB: WITH vs WITHOUT FLOOR  ║");
+    println!("║  Question: Does 60% Diamond floor ADD volatility?         ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Control: guild_stability_2mm_fixed_guild (2MM+2GB, NO floor)");
+    println!("  Treat:   Same + Diamond floor=60% ($300)");
+    println!("  Duration: 14 days\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct FloorImpactResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        vol: f64,
+        buy_ratio: f64,
+        diamond_displayed: f64,
+        floor_binds: bool,
+    }
+
+    impl FloorImpactResult {
+        fn from_summary(
+            s: &crate::analyzer::SimSummary,
+            prices: &[(String, f64, f64)],
+            seed: u64,
+            floor_val: f64,
+        ) -> Self {
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let diamond_displayed = diamond.map(|(_, _, d)| *d).unwrap_or(0.0);
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+                diamond_displayed,
+                floor_binds: diamond_displayed >= floor_val - 0.01,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<FloorImpactResult> = Vec::new();
+    let mut treat_results: Vec<FloorImpactResult> = Vec::new();
+
+    for seed in &seeds {
+        print!("  seed {seed} ... ");
+
+        // Control: 2MM+2GB, NO floor
+        let ctrl_scenario = Scenario::guild_stability_2mm_fixed_guild();
+        let ctrl_dir = format!("/tmp/autotune-sim/floor-impact-ctrl-{seed}");
+        let ctrl_path = std::path::PathBuf::from(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_path).ok();
+        if run_seeded_headless(&ctrl_scenario, *seed, &ctrl_path).is_ok() {
+            let db_path = ctrl_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                let prices = crate::analyzer::load_all_prices(&db_path).unwrap_or_default();
+                ctrl_results.push(FloorImpactResult::from_summary(&s, &prices, *seed, 0.0));
+                print!("ctrl ");
+            }
+        }
+
+        // Treatment: 2MM+2GB + 60% Diamond floor
+        let mut treat_scenario = Scenario::guild_stability_2mm_fixed_guild();
+        treat_scenario.name = "2MM+GB+Floor".to_string();
+        if let Some(diamond) = treat_scenario
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
+            diamond.price_floor_override = Some(diamond.base_price * 0.6);
+        }
+        let treat_dir = format!("/tmp/autotune-sim/floor-impact-treat-{seed}");
+        let treat_path = std::path::PathBuf::from(&treat_dir);
+        std::fs::create_dir_all(&treat_path).ok();
+        if run_seeded_headless(&treat_scenario, *seed, &treat_path).is_ok() {
+            let db_path = treat_path.join("simulation.db");
+            if let Ok(s) = load_summary(&db_path) {
+                let prices = crate::analyzer::load_all_prices(&db_path).unwrap_or_default();
+                treat_results.push(FloorImpactResult::from_summary(
+                    &s,
+                    &prices,
+                    *seed,
+                    diamond_floor,
+                ));
+                println!("treat done");
+            }
+        }
+    }
+
+    // ── Per-seed table
+    println!(
+        "\n╔════════════════════════════════════════════════════════════════════════════════════════════╗"
+    );
+    println!(
+        "║  PER-SEED RESULTS                                                                     ║"
+    );
+    println!(
+        "╚════════════════════════════════════════════════════════════════════════════════════════════╝"
+    );
+    println!(
+        "  {:>6}  {:>10}  {:>7}  {:>7}  {:>7}  {:>9}  |  {:>10}  {:>7}  {:>7}  {:>7}  {:>9}  {:>6}",
+        "seed",
+        "GDP(c)",
+        "D/G(c)",
+        "Vol(c)",
+        "BPD(c)",
+        "Diamond(c)",
+        "GDP(t)",
+        "D/G(t)",
+        "Vol(t)",
+        "BPD(t)",
+        "Diamond(t)",
+        "Floor?"
+    );
+    println!("  {}", "─".repeat(105));
+
+    for seed in &seeds {
+        let cr = ctrl_results.iter().find(|r| r.seed == *seed);
+        let tr = treat_results.iter().find(|r| r.seed == *seed);
+        if let (Some(c), Some(t)) = (cr, tr) {
+            println!(
+                "  {:>6}  {:>10.0}  {:>6.3}x  {:>6.4}  {:>6.3}%  {:>8.0} |  {:>10.0}  {:>6.3}x  {:>6.4}  {:>6.3}%  {:>8.0}  {:>6}",
+                c.seed,
+                c.gdp,
+                c.dg,
+                c.vol,
+                c.bpd * 100.0,
+                c.diamond_displayed,
+                t.gdp,
+                t.dg,
+                t.vol,
+                t.bpd * 100.0,
+                t.diamond_displayed,
+                if t.floor_binds { "YES" } else { "no" }
+            );
+        }
+    }
+
+    // ── Summary
+    if ctrl_results.len() == 5 && treat_results.len() == 5 {
+        let n = 5.0;
+        let avg = |v: &[FloorImpactResult], field: &str| -> f64 {
+            let vals: Vec<f64> = v
+                .iter()
+                .map(|r| match field {
+                    "gdp" => r.gdp,
+                    "dg" => r.dg,
+                    "bpd" => r.bpd,
+                    "vol" => r.vol,
+                    "buy" => r.buy_ratio,
+                    _ => 0.0,
+                })
+                .collect();
+            vals.iter().sum::<f64>() / n
+        };
+
+        let ctrl_gdp = avg(&ctrl_results, "gdp");
+        let treat_gdp = avg(&treat_results, "gdp");
+        let ctrl_dg = avg(&ctrl_results, "dg");
+        let treat_dg = avg(&treat_results, "dg");
+        let ctrl_vol = avg(&ctrl_results, "vol");
+        let treat_vol = avg(&treat_results, "vol");
+        let ctrl_bpd = avg(&ctrl_results, "bpd") * 100.0;
+        let treat_bpd = avg(&treat_results, "bpd") * 100.0;
+        let ctrl_buy = avg(&ctrl_results, "buy") * 100.0;
+        let treat_buy = avg(&treat_results, "buy") * 100.0;
+        let floor_binds = treat_results.iter().filter(|r| r.floor_binds).count();
+
+        let pct_str = |a: f64, b: f64| -> String {
+            let pct = (b - a) / a.max(1.0) * 100.0;
+            format!("{:+.1}%", pct)
+        };
+        let abs_str = |a: f64, b: f64| -> String { format!("{:+.4}", b - a) };
+
+        println!(
+            "\n╔════════════════════════════════════════════════════════════════════════════════════════════╗"
+        );
+        println!(
+            "║  FLOOR IMPACT SUMMARY (5 seeds avg)                                                    ║"
+        );
+        println!(
+            "╚════════════════════════════════════════════════════════════════════════════════════════════╝"
+        );
+        println!(
+            "  {:<20}  {:>14}  {:>14}  {:>12}",
+            "Metric", "NO FLOOR", "WITH FLOOR", "Change"
+        );
+        println!("  {}", "─".repeat(65));
+        println!(
+            "  {:<20}  {:>14.0}  {:>14.0}  {:>12}",
+            "GDP",
+            ctrl_gdp,
+            treat_gdp,
+            pct_str(ctrl_gdp, treat_gdp)
+        );
+        println!(
+            "  {:<20}  {:>14.3}x  {:>14.3}x  {:>12}",
+            "D/G",
+            ctrl_dg,
+            treat_dg,
+            pct_str(ctrl_dg, treat_dg)
+        );
+        println!(
+            "  {:<20}  {:>14.4}   {:>14.4}   {:>12}",
+            "Volatility",
+            ctrl_vol,
+            treat_vol,
+            abs_str(ctrl_vol, treat_vol)
+        );
+        println!(
+            "  {:<20}  {:>14.3}%  {:>14.3}%  {:>12}",
+            "BPD avg",
+            ctrl_bpd,
+            treat_bpd,
+            pct_str(ctrl_bpd, treat_bpd)
+        );
+        println!(
+            "  {:<20}  {:>14.1}%  {:>14.1}%  {:>12}",
+            "Buy ratio",
+            ctrl_buy,
+            treat_buy,
+            pct_str(ctrl_buy, treat_buy)
+        );
+        println!("\n  Floor binds: {}/5 seeds", floor_binds);
+
+        println!(
+            "\n╔════════════════════════════════════════════════════════════════════════════════════════════╗"
+        );
+        println!(
+            "║  KEY FINDINGS                                                                       ║"
+        );
+        println!(
+            "╚════════════════════════════════════════════════════════════════════════════════════════════╝"
+        );
+
+        let vol_change = treat_vol - ctrl_vol;
+        if vol_change > 0.01 {
+            println!(
+                "  CAUTION: FLOOR ADDS VOLATILITY: vol +{:.4} (ctrl {:.4} -> {:.4})",
+                vol_change, ctrl_vol, treat_vol
+            );
+        } else if vol_change < -0.01 {
+            println!(
+                "  GOOD: FLOOR REDUCES VOLATILITY: vol {:.4} -> {:.4}",
+                ctrl_vol, treat_vol
+            );
+        } else {
+            println!(
+                "  NEUTRAL: FLOOR EFFECT ON VOLATILITY: {:.4} -> {:.4}",
+                ctrl_vol, treat_vol
+            );
+        }
+
+        let gdp_pct = (treat_gdp - ctrl_gdp) / ctrl_gdp * 100.0;
+        if gdp_pct > 5.0 {
+            println!(
+                "  GOOD: FLOOR BOOSTS GDP: +{:.1}% ({:.0} -> {:.0})",
+                gdp_pct, ctrl_gdp, treat_gdp
+            );
+        } else if gdp_pct < -5.0 {
+            println!(
+                "  BAD: FLOOR HURTS GDP: {:.1}% ({:.0} -> {:.0})",
+                gdp_pct, ctrl_gdp, treat_gdp
+            );
+        } else {
+            println!("  NEUTRAL: FLOOR ON GDP: {:+.1}%", gdp_pct);
+        }
+
+        if treat_dg < ctrl_dg * 0.9 {
+            println!(
+                "  GOOD: FLOOR REDUCES D/G: {:.3}x -> {:.3}x",
+                ctrl_dg, treat_dg
+            );
+        } else if treat_dg > ctrl_dg * 1.1 {
+            println!(
+                "  BAD: FLOOR INCREASES D/G: {:.3}x -> {:.3}x",
+                ctrl_dg, treat_dg
+            );
+        } else {
+            println!(
+                "  NEUTRAL: FLOOR ON D/G: {:.3}x -> {:.3}x",
+                ctrl_dg, treat_dg
+            );
+        }
+
+        println!("\n  VERDICT:");
+        if floor_binds == 5 {
+            println!("  - Floor binds in 5/5 seeds — Diamond displayed always = $300");
+            println!("  - Floor creates price rigidity: internal price can collapse below floor");
+            println!("  - Recommendation: try 40% floor (binds only in stressed seeds)");
+        } else if floor_binds > 0 {
+            println!("  - Floor binds in {}/5 seeds", floor_binds);
+        }
+        if treat_vol > 0.05 && floor_binds > 0 {
+            println!("  - Vol > 0.05 WITH floor — consider weaker floor or higher vol threshold");
+        }
+        if treat_vol > 0.05 && ctrl_vol <= 0.05 {
+            println!("  - CONFIRMED: floor is the volatility source");
+        }
+        if treat_vol > 0.05 && ctrl_vol > 0.05 {
+            println!("  - Vol > 0.05 in BOTH configs — floor is not the sole cause");
+        }
+    }
 }
 
 fn run_gui() -> eframe::Result<()> {

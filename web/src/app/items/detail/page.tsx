@@ -7,6 +7,8 @@ import { PriceChart } from '@/components/dashboard/price-chart';
 import { ItemDetailHeader } from '@/components/items/item-detail-header';
 import { ItemStatsRow } from '@/components/items/item-stats-row';
 import { ItemTransactionsTable } from '@/components/items/item-transactions-table';
+import { SimilarItems } from '@/components/items/similar-items';
+import { PriceAttribution } from '@/components/items/price-attribution';
 import { ArrowLeft } from 'lucide-react';
 import { api, type ItemDto, type Stats, type ItemTrendDto } from '@/lib/api';
 
@@ -90,6 +92,8 @@ export default function ItemDetailPage() {
           expanded={true}
           onToggleExpand={() => {}}
         />
+        <PriceAttribution item={item} apiBase={apiBase} />
+        <SimilarItems apiBase={apiBase} currentItem={item} />
         <ItemTransactionsTable apiBase={apiBase} itemId={item.id} />
       </main>
     </div>

@@ -5,6 +5,7 @@ import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { LoansStatsBar } from '@/components/loans/loans-stats-bar';
 import { LoansTable } from '@/components/loans/loans-table';
+import { ApiErrorBanner } from '@/components/ui/api-error-banner';
 import { api, type Stats, type AnonLoanDto, type LoanStatsDto } from '@/lib/api';
 
 export default function LoansPage() {
@@ -12,19 +13,21 @@ export default function LoansPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loans, setLoans] = useState<AnonLoanDto[]>([]);
   const [loanStats, setLoanStats] = useState<LoanStatsDto | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
       const [statsData, loansData, loanStatsData] = await Promise.all([
         api.stats(apiBase),
-        api.loans.list(apiBase).catch(() => []),
+        api.loans.list(apiBase).catch(() => [] as AnonLoanDto[]),
         api.loans.stats(apiBase).catch(() => null),
       ]);
       setStats(statsData);
-      setLoans(loansData as AnonLoanDto[]);
-      setLoanStats(loanStatsData as LoanStatsDto | null);
+      setLoans(loansData);
+      setLoanStats(loanStatsData);
+      setError(null);
     } catch {
-      // silently fail
+      setError('Could not load loan data. Is the server running?');
     }
   }, [apiBase]);
 
@@ -42,6 +45,8 @@ export default function LoansPage() {
         <p className="text-sm text-muted-foreground">
           Loan data is displayed anonymously. No player names or identifiers are shown.
         </p>
+
+        {error && <ApiErrorBanner message={error} onRetry={fetchData} />}
 
         {loanStats && <LoansStatsBar stats={loanStats} />}
         <LoansTable loans={loans} />

@@ -16,6 +16,8 @@ import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.service.EconomicNewsService;
+import com.noahblclarkson.autotune.service.PriceMilestoneService;
+import com.noahblclarkson.autotune.service.MarketDigestService;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ScoreboardManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
@@ -49,6 +51,9 @@ public class AutoTune extends JavaPlugin {
     private TreasuryService treasuryService;
     private MarketEventService marketEventService;
     private EconomicNewsService economicNewsService;
+    private PriceMilestoneService priceMilestoneService;
+    private MarketDigestService marketDigestService;
+    private com.noahblclarkson.autotune.database.TransactionRepository transactionRepository;
     private CommandManager commandManager;
     private TaskScheduler taskScheduler;
     private WebServer webServer;
@@ -118,12 +123,17 @@ public class AutoTune extends JavaPlugin {
         marketEventService.onEnable();
         economicNewsService = injector.getInstance(EconomicNewsService.class);
         economicNewsService.onEnable();
+        priceMilestoneService = injector.getInstance(PriceMilestoneService.class);
+        priceMilestoneService.onEnable();
+        marketDigestService = injector.getInstance(MarketDigestService.class);
+        marketDigestService.start();
         taskScheduler = injector.getInstance(TaskScheduler.class);
+
+        transactionRepository = injector.getInstance(com.noahblclarkson.autotune.database.TransactionRepository.class);
 
         // Seed prices from shared API if configured and economy is still empty
         if (configManager.getConfig().economy().seedFromSharedPrices()) {
-            var txRepo = injector.getInstance(com.noahblclarkson.autotune.database.TransactionRepository.class);
-            if (txRepo.count() == 0) {
+            if (transactionRepository.count() == 0) {
                 var priceReporter = injector.getInstance(com.noahblclarkson.autotune.manager.PriceReporter.class);
                 priceReporter.seedPricesFromApi();
             } else {
@@ -171,8 +181,20 @@ public class AutoTune extends JavaPlugin {
             taskScheduler.stop();
         }
 
+        if (marketDigestService != null) {
+            marketDigestService.stop();
+        }
+
         if (treasuryService != null) {
             treasuryService.shutdown();
+        }
+
+        if (economicNewsService != null) {
+            economicNewsService.shutdown();
+        }
+
+        if (priceMilestoneService != null) {
+            priceMilestoneService.shutdown();
         }
 
         if (scoreboardManager != null) {
@@ -203,7 +225,10 @@ public class AutoTune extends JavaPlugin {
         // Repopulate market caches synchronously so prices/spreads are correct
         // immediately after reload (don't wait up to 5 min for next async tick)
         marketEngine.tick();
+        shopManager.reload();
         priceAlertManager.rebuildCache();
+        economicNewsService.reload();
+        priceMilestoneService.reload();
         if (webServer != null && configManager.getConfig().web().enabled()) {
             webServer.stop();
             webServer.start();
@@ -322,5 +347,10 @@ public class AutoTune extends JavaPlugin {
     @Nullable
     public WebServer getWebServer() {
         return webServer;
+    }
+
+    @NotNull
+    public com.noahblclarkson.autotune.database.TransactionRepository getTransactionRepository() {
+        return transactionRepository;
     }
 }

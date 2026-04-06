@@ -87,6 +87,9 @@ class EconomyManagerTest {
                 AutoTuneConfig.AuctionConfig.defaults(),
                 AutoTuneConfig.MarketEventConfig.defaults(),
                 AutoTuneConfig.EconomicNewsConfig.defaults(),
+                AutoTuneConfig.AdminWebhookConfig.defaults(),
+                AutoTuneConfig.PriceMilestoneConfig.defaults(),
+                AutoTuneConfig.MarketDigestConfig.defaults(),
                 false);
         when(cm.getConfig()).thenReturn(cfg);
         return cm;

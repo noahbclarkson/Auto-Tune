@@ -5,7 +5,7 @@ use crate::engine::{MarketEngine, Transaction, TransactionType};
 use crate::events::MarketEvent;
 use crate::loan::{Loan, LoanStatus, calculate_interest_rate};
 use crate::player::{Archetype, DecisionLog, PlayerAgent, rng_next, set_global_seeded_rng};
-use crate::recorder::{DataRecorder, LoanEventData, TickSnapshot};
+use crate::recorder::{CircuitBreakerEventData, DataRecorder, LoanEventData, TickSnapshot};
 
 const MAX_TRANSACTIONS: usize = 50_000;
 
@@ -52,15 +52,37 @@ pub struct Simulation {
     pub recorder: Option<DataRecorder>,
     /// Active market events that apply price velocity modifiers.
     pub events: Vec<MarketEvent>,
-    /// Tracks whether the loan interest circuit breaker is currently open.
-    /// When true, interest accrual is paused until debt/GDP drops below threshold.
-    interest_circuit_open: bool,
+    /// Tracks the previous circuit breaker tier to detect transitions.
+    /// "NORMAL" | "TIER1" | "TIER2" | "TIER3"
+    prev_circuit_tier: String,
+    /// Hysteresis lock for TIER3 circuit breaker (legacy non-counter-cyclical path).
+    /// Once TIER3 fires (D/G >= tier3_ratio), the circuit stays locked until D/G
+    /// drops below 90% of tier3_ratio (a 10% hysteresis band). This prevents
+    /// rapid open/close cycling when D/G hovers near the boundary.
+    circuit_tier3_locked: bool,
     next_player_id: usize,
     /// Log of all loans that were capped by the per-loan GDP cap.
     pub loan_cap_log: Vec<LoanCapRecord>,
+    /// Total count of opening loans taken by MarketMakers.
+    pub mm_opening_loan_count: u32,
+    /// Total amount of opening loans taken by MarketMakers.
+    pub mm_opening_loan_total: f64,
 }
 
 impl Simulation {
+    /// Returns whether the TIER3 circuit breaker is currently locked (hysteresis engaged).
+    #[allow(dead_code)]
+    pub(crate) fn is_circuit_tier3_locked(&self) -> bool {
+        self.circuit_tier3_locked
+    }
+
+    /// Returns the previous circuit breaker tier name ("NORMAL" | "TIER1" | "TIER2" | "TIER3").
+    /// Updated at the end of each tick's circuit breaker computation.
+    #[allow(dead_code)]
+    pub fn prev_circuit_tier(&self) -> &str {
+        &self.prev_circuit_tier
+    }
+
     pub fn new(config: SimConfig) -> Self {
         let engine = MarketEngine::new(&config);
         Self {
@@ -77,9 +99,12 @@ impl Simulation {
             config_dirty: false,
             recorder: None,
             events: Vec::new(),
-            interest_circuit_open: false,
+            prev_circuit_tier: "NORMAL".to_string(),
+            circuit_tier3_locked: false,
             next_player_id: 0,
             loan_cap_log: Vec::new(),
+            mm_opening_loan_count: 0,
+            mm_opening_loan_total: 0.0,
         }
     }
 
@@ -106,11 +131,17 @@ impl Simulation {
             Archetype::Newbie => PlayerAgent::new_newbie(id, item_count, &base_prices),
             Archetype::AFKFarmer => PlayerAgent::new_afk_farmer(id, item_count, &base_prices),
             Archetype::GuildBuyer => PlayerAgent::new_guild_buyer(id, item_count, &base_prices),
-            Archetype::MarketMaker => PlayerAgent::new_market_maker(id, item_count, &base_prices),
+            Archetype::MarketMaker => {
+                let min_cap = self.config.mm_initial_capital_min.unwrap_or(50_000.0);
+                let max_cap = self.config.mm_initial_capital_max.unwrap_or(200_000.0);
+                PlayerAgent::new_market_maker(id, item_count, &base_prices, min_cap, max_cap)
+            }
             Archetype::InsiderTrader => {
                 PlayerAgent::new_insider_trader(id, item_count, &base_prices)
             }
-            Archetype::GuildSeller => PlayerAgent::new_guild_seller(id, item_count, &base_prices),
+            Archetype::GuildSeller => {
+                PlayerAgent::new_guild_seller(id, item_count, &base_prices, self.config.guild_phase2_dip_threshold)
+            }
             Archetype::VolumeTrader => {
                 // spread_threshold=0.25, spread_window=20, price_window=30
                 PlayerAgent::new_volume_trader(id, item_count, &base_prices, 0.25, 20, 30)
@@ -141,30 +172,55 @@ impl Simulation {
         // Simulates mass player departure at a specific tick (e.g. half the server quits).
         // Players with highest outstanding debt quit first (most realistic).
         // Also triggers a spread shock (liquidity panic) for the configured duration.
+        // If exodus_target_archetype is set, only players of that archetype quit.
         if self.current_tick == self.config.player_exodus_tick.unwrap_or(u64::MAX) {
-            let num_to_remove =
-                (self.players.len() as f64 * self.config.player_exodus_fraction) as usize;
-            if num_to_remove > 0 {
-                // Compute each player's total outstanding debt from active loans
-                let mut player_debts: Vec<(usize, f64)> = (0..self.players.len())
-                    .map(|i| {
-                        let debt = self
-                            .loans
-                            .iter()
-                            .filter(|l| l.player_index == i && l.status != LoanStatus::Defaulted)
-                            .map(|l| l.current_balance)
-                            .sum::<f64>();
-                        (i, debt)
-                    })
-                    .collect();
-                // Sort by debt descending (highest-debt players quit first)
-                player_debts
-                    .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-                let quit_indices: Vec<usize> = player_debts
+            let quit_indices: Vec<usize> = if let Some(ref target_arch) =
+                self.config.exodus_target_archetype
+            {
+                // Target specific archetype: find all players of this type, quit all
+                self.players
                     .iter()
-                    .take(num_to_remove)
-                    .map(|&(i, _)| i)
-                    .collect();
+                    .enumerate()
+                    .filter(|(_, p)| {
+                        format!("{:?}", p.archetype).to_lowercase() == target_arch.to_lowercase()
+                    })
+                    .map(|(i, _)| i)
+                    .collect()
+            } else {
+                // Default: highest-debt-first exodus
+                let num_to_remove =
+                    (self.players.len() as f64 * self.config.player_exodus_fraction) as usize;
+                if num_to_remove == 0 {
+                    Vec::new()
+                } else {
+                    let mut player_debts: Vec<(usize, f64)> = (0..self.players.len())
+                        .map(|i| {
+                            let debt = self
+                                .loans
+                                .iter()
+                                .filter(|l| {
+                                    l.player_index == i && l.status != LoanStatus::Defaulted
+                                })
+                                .map(|l| l.current_balance)
+                                .sum::<f64>();
+                            (i, debt)
+                        })
+                        .collect();
+                    player_debts
+                        .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                    player_debts
+                        .iter()
+                        .take(num_to_remove)
+                        .map(|&(i, _)| i)
+                        .collect()
+                }
+            };
+            if !quit_indices.is_empty() {
+                let archetype_label = self
+                    .config
+                    .exodus_target_archetype
+                    .clone()
+                    .unwrap_or_else(|| "highest-debt".to_string());
                 for &idx in &quit_indices {
                     self.players[idx].online = false;
                 }
@@ -172,9 +228,10 @@ impl Simulation {
                 self.engine.spread_shock = self.config.exodus_spread_multiplier;
                 self.engine.shock_remaining_ticks = self.config.exodus_shock_duration_ticks;
                 println!(
-                    "  [EXODUS] tick {} — {} players quit (highest-debt first): {:?} | spread shock: {:.1}x for {} ticks",
+                    "  [EXODUS] tick {} — {} {} players quit: {:?} | spread shock: {:.1}x for {} ticks",
                     self.current_tick,
-                    num_to_remove,
+                    quit_indices.len(),
+                    archetype_label,
                     quit_indices,
                     self.config.exodus_spread_multiplier,
                     self.config.exodus_shock_duration_ticks
@@ -304,82 +361,115 @@ impl Simulation {
         let recording = self.recorder.is_some();
         let mut events = Vec::new();
 
-        // Tiered circuit breaker: compute interest_multiplier based on debt/GDP ratio.
-        // Tier 1 (>tier1_ratio): cap at tier1_cap (50%) — warning zone
-        // Tier 2 (>tier2_ratio): cap at tier2_cap (25%) — danger zone
-        // Tier 3 (>tier3_ratio): full pause (0%) — emergency zone
+        // Interest multiplier: compute based on debt/GDP ratio.
+        // Uses counter-cyclical continuous taper when counter_cyclical=true (default, matching Java).
+        // Falls back to legacy tiered circuit breaker when counter_cyclical=false.
         let lc = &self.config.loans;
+
+        // Compute debt/GDP ratio once, before the interest multiplier computation,
+        // so it is available for circuit breaker event recording.
+        let cb_total_debt: f64 = self
+            .loans
+            .iter()
+            .filter(|l| matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted))
+            .map(|l| l.current_balance)
+            .sum();
+        let gdp_window = 288u64;
+        let window_start = self.current_tick.saturating_sub(gdp_window);
+        let cb_gdp: f64 = self
+            .transactions
+            .iter()
+            .filter(|tx| tx.tick >= window_start && tx.tx_type == TransactionType::Buy)
+            .map(|tx| tx.total_price)
+            .sum();
+        // Guard: skip circuit breaker if no transactions yet (initialization phase).
+        // At tick 0, gdp=0 → ratio=f64::MAX → TIER3 would fire spuriously.
+        let ratio = if cb_gdp > 0.0 {
+            cb_total_debt / cb_gdp
+        } else {
+            -1.0
+        };
+
         let (interest_multiplier, tier_name) = if lc.debt_gdp_tier3_ratio > 0.0 {
-            let total_debt: f64 = self
-                .loans
-                .iter()
-                .filter(|l| matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted))
-                .map(|l| l.current_balance)
-                .sum();
-            let gdp: f64 = self
-                .transactions
-                .iter()
-                .filter(|tx| tx.tx_type == TransactionType::Buy)
-                .map(|tx| tx.total_price)
-                .sum();
-
-            // Guard: skip circuit breaker if no transactions yet (initialization phase).
-            // At tick 0, gdp=0 → ratio=f64::MAX → TIER3 would fire spuriously.
-            // Once transactions exist, ratio is meaningful and circuit breaker applies.
-            let ratio = if gdp > 0.0 {
-                total_debt / gdp
+            if lc.counter_cyclical {
+                // Counter-cyclical continuous taper (Java default, matching Java LoanManager):
+                // multiplier = max(0, min(1, 1 - ratio / tier3_ratio))
+                // D/G=0 → 100%, D/G=tier3 → 0%
+                let max_ratio = lc.debt_gdp_tier3_ratio;
+                let multiplier = if ratio >= 0.0 {
+                    (1.0 - ratio / max_ratio).clamp(lc.min_interest_multiplier, 1.0)
+                } else {
+                    1.0 // No GDP yet — full interest
+                };
+                let tier = if ratio >= lc.debt_gdp_tier3_ratio {
+                    "TIER3"
+                } else if ratio >= lc.debt_gdp_tier2_ratio {
+                    "TIER2"
+                } else if ratio >= lc.debt_gdp_tier1_ratio {
+                    "TIER1"
+                } else {
+                    "NORMAL"
+                };
+                (multiplier, tier)
             } else {
-                // No GDP yet — circuit breaker inactive until economy is running.
-                -1.0
-            };
+                // Legacy tiered circuit breaker with hysteresis for TIER3:
+                // Once TIER3 fires (D/G >= tier3_ratio), the circuit stays locked (0% interest)
+                // until D/G drops below 90% of tier3_ratio (a 10% hysteresis band).
+                // This prevents rapid open/close cycling when D/G hovers near 10.0x.
+                // Tier 1 (>=tier1_ratio): cap at tier1_cap (50%) — warning zone
+                // Tier 2 (>=tier2_ratio): cap at tier2_cap (25%) — danger zone
+                // Tier 3 (>=tier3_ratio): full pause (0%) — emergency zone
+                // TIER3 unlocks when D/G < 90% of tier3_ratio (hysteresis band).
+                let hysteresis_threshold = lc.debt_gdp_tier3_ratio * 0.9;
 
-            if ratio > lc.debt_gdp_tier3_ratio {
-                (0.0, "TIER3")
-            } else if ratio > lc.debt_gdp_tier2_ratio {
-                (lc.tier2_interest_cap, "TIER2")
-            } else if ratio > lc.debt_gdp_tier1_ratio {
-                (lc.tier1_interest_cap, "TIER1")
-            } else {
-                (1.0, "NORMAL")
+                // Check hysteresis unlock first: if locked and ratio dropped below band, unlock.
+                if self.circuit_tier3_locked && ratio < hysteresis_threshold {
+                    self.circuit_tier3_locked = false;
+                }
+
+                if self.circuit_tier3_locked {
+                    // Circuit locked in TIER3 — hold at 0% interest until hysteresis threshold.
+                    (0.0, "TIER3")
+                } else if ratio >= lc.debt_gdp_tier3_ratio {
+                    // First time crossing TIER3 threshold — engage the lock.
+                    self.circuit_tier3_locked = true;
+                    (0.0, "TIER3")
+                } else if ratio >= lc.debt_gdp_tier2_ratio {
+                    (lc.tier2_interest_cap, "TIER2")
+                } else if ratio >= lc.debt_gdp_tier1_ratio {
+                    (lc.tier1_interest_cap, "TIER1")
+                } else {
+                    (1.0, "NORMAL")
+                }
             }
         } else {
             (1.0, "NORMAL")
         };
 
-        // Log tier transitions
-        let prev_tier = self.interest_circuit_open; // repurposed: true = TIER3, false = normal
-        let currently_in_tier3 = tier_name == "TIER3";
-        if currently_in_tier3 && !prev_tier && recording {
-            let total_debt: f64 = self
-                .loans
-                .iter()
-                .filter(|l| matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted))
-                .map(|l| l.current_balance)
-                .sum();
-            let gdp_window = 288u64;
-            let window_start = self.current_tick.saturating_sub(gdp_window);
-            let gdp: f64 = self
-                .transactions
-                .iter()
-                .filter(|tx| tx.tick >= window_start && tx.tx_type == TransactionType::Buy)
-                .map(|tx| tx.total_price)
-                .sum();
-            let ratio = if gdp > 0.0 {
-                total_debt / gdp
-            } else {
-                f64::MAX
+        // Record circuit breaker tier transitions (all tier changes, not just TIER3).
+        let prev_tier = &self.prev_circuit_tier;
+        if tier_name != *prev_tier {
+            let tier_event = CircuitBreakerEventData {
+                tick: self.current_tick,
+                tier: tier_name.to_string(),
+                debt_gdp_ratio: ratio.max(0.0), // -1.0 means "no GDP yet"; use 0.0 for display
+                interest_multiplier,
             };
-            eprintln!(
-                "[SIMULATION] Loan circuit breaker TIER3 OPEN at tick {} — debt/GDP {:.1}x > {:.1}x. Interest paused.",
-                self.current_tick, ratio, lc.debt_gdp_tier3_ratio
-            );
-        } else if !currently_in_tier3 && prev_tier && recording {
-            eprintln!(
-                "[SIMULATION] Loan circuit breaker CLOSED at tick {}.",
-                self.current_tick
-            );
+            if recording {
+                if let Some(rec) = &mut self.recorder {
+                    rec.record_circuit_breaker_event(&tier_event);
+                }
+                eprintln!(
+                    "[SIMULATION] Circuit breaker {} → {} at tick {} — D/G {:.2}x, multiplier {:.2}",
+                    prev_tier,
+                    tier_name,
+                    self.current_tick,
+                    ratio.max(0.0),
+                    interest_multiplier
+                );
+            }
+            self.prev_circuit_tier = tier_name.to_string();
         }
-        self.interest_circuit_open = currently_in_tier3;
 
         // Always process defaults even when interest is paused/tiered
         for loan in &mut self.loans {
@@ -469,10 +559,17 @@ impl Simulation {
                 false
             };
 
+            // MM opening loan eligibility: either mm_opening_loan_allowed is true,
+            // or the player is NOT a MarketMaker. This prevents MM from taking
+            // catastrophic opening loans that cascade when MM defaults.
+            let is_market_maker = matches!(player.archetype, Archetype::MarketMaker);
+            let mm_can_borrow = self.config.loans.mm_opening_loan_allowed || !is_market_maker;
+
             if !has_active_loan
                 && !in_default_cooldown
                 && player.balance < 50.0
                 && player.credit_score >= self.config.loans.min_credit_score
+                && mm_can_borrow
                 && rng_next() < 0.1
             {
                 let max_loan =
@@ -512,7 +609,9 @@ impl Simulation {
                 };
 
                 // Only create loan if amount is meaningful (> 1.0)
-                if amount < 1.0 {
+                let taken_amount = amount;
+                let taken_is_mm = is_market_maker && !has_active_loan;
+                if taken_amount < 1.0 {
                     continue;
                 }
 
@@ -531,6 +630,11 @@ impl Simulation {
                     });
                 }
                 self.loans.push(loan);
+                // Track MM opening loans after loan is confirmed
+                if taken_is_mm {
+                    self.mm_opening_loan_count += 1;
+                    self.mm_opening_loan_total += taken_amount;
+                }
             }
 
             if has_active_loan {

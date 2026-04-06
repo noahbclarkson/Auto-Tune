@@ -46,11 +46,15 @@ export function Footer() {
               <ExternalLink className="w-3.5 h-3.5" />
               Install Guide
             </Link>
+            <Link href="/changelog" className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-colors">
+              <ExternalLink className="w-3.5 h-3.5" />
+              Changelog
+            </Link>
           </div>
         </div>
 
         <div className="mt-8 pt-6 border-t border-gray-800/40 flex items-center justify-between">
-          <p className="text-xs text-gray-600">© 2025 Auto-Tune. MIT License.</p>
+          <p className="text-xs text-gray-600">© 2026 Auto-Tune. MIT License.</p>
           <p className="text-xs text-gray-600">Paper 1.21.4 · Java 21</p>
         </div>
       </div>

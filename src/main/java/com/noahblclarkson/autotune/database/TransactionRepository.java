@@ -61,6 +61,59 @@ public class TransactionRepository {
                         .list());
     }
 
+    public List<Transaction> findByPlayerSince(UUID playerUuid, Instant since) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                                SELECT id, player_uuid, item_id, transaction_type, amount,
+                                       price_per_unit, total_price, timestamp
+                                FROM at_transactions
+                                WHERE player_uuid = :playerUuid AND timestamp >= :since
+                                ORDER BY timestamp ASC
+                                """)
+                        .bind("playerUuid", playerUuid.toString())
+                        .bind("since", Timestamp.from(since))
+                        .map((rs, ctx) -> Transaction.builder()
+                                .id(rs.getLong("id"))
+                                .playerUuid(UUID.fromString(rs.getString("player_uuid")))
+                                .itemId(rs.getInt("item_id"))
+                                .type(TransactionType.valueOf(rs.getString("transaction_type")))
+                                .amount(rs.getInt("amount"))
+                                .pricePerUnit(rs.getBigDecimal("price_per_unit"))
+                                .totalPrice(rs.getBigDecimal("total_price"))
+                                .timestamp(rs.getTimestamp("timestamp").toInstant())
+                                .build())
+                                .list());
+    }
+
+    public List<Transaction> findByPlayerRange(UUID playerUuid, Instant from, Instant to, int limit) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                                SELECT id, player_uuid, item_id, transaction_type, amount,
+                                       price_per_unit, total_price, timestamp
+                                FROM at_transactions
+                                WHERE player_uuid = :playerUuid
+                                  AND timestamp >= :from
+                                  AND timestamp <= :to
+                                ORDER BY timestamp ASC
+                                LIMIT :limit
+                                """)
+                        .bind("playerUuid", playerUuid.toString())
+                        .bind("from", Timestamp.from(from))
+                        .bind("to", Timestamp.from(to))
+                        .bind("limit", limit)
+                        .map((rs, ctx) -> Transaction.builder()
+                                .id(rs.getLong("id"))
+                                .playerUuid(UUID.fromString(rs.getString("player_uuid")))
+                                .itemId(rs.getInt("item_id"))
+                                .type(TransactionType.valueOf(rs.getString("transaction_type")))
+                                .amount(rs.getInt("amount"))
+                                .pricePerUnit(rs.getBigDecimal("price_per_unit"))
+                                .totalPrice(rs.getBigDecimal("total_price"))
+                                .timestamp(rs.getTimestamp("timestamp").toInstant())
+                                .build())
+                                .list());
+    }
+
     public List<Transaction> findByItem(int itemId, int limit) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""

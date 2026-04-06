@@ -45,6 +45,13 @@ public class LoanManager {
     private final TreasuryService treasuryService;
     private final BadgeService badgeService;
     private volatile boolean interestCircuitOpen = false;
+    /**
+     * Hysteresis lock for TIER3 circuit breaker (legacy non-counter-cyclical path).
+     * Once TIER3 fires (D/G >= tier3Ratio), the circuit stays locked (0% interest)
+     * until D/G drops below 90% of tier3Ratio (a 10% hysteresis band).
+     * This prevents rapid open/close cycling when D/G hovers near the boundary.
+     */
+    private volatile boolean tier3CircuitLocked = false;
 
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
 
@@ -331,22 +338,41 @@ public class LoanManager {
                     // rises, preventing the pre-circuit-breaker debt accumulation spiral.
                     double maxRatio = config.debtGdpTier3Ratio();
                     interestMultiplier = Math.max(0.0, Math.min(1.0, 1.0 - ratio / maxRatio));
-                    if (ratio > config.debtGdpTier3Ratio()) {
+                    if (ratio >= config.debtGdpTier3Ratio()) {
                         currentTier = "TIER3";
-                    } else if (ratio > config.debtGdpTier2Ratio()) {
+                    } else if (ratio >= config.debtGdpTier2Ratio()) {
                         currentTier = "TIER2";
-                    } else if (ratio > config.debtGdpTier1Ratio()) {
+                    } else if (ratio >= config.debtGdpTier1Ratio()) {
                         currentTier = "TIER1";
                     }
                 } else {
-                    // Legacy tiered circuit breaker
-                    if (ratio > config.debtGdpTier3Ratio()) {
+                    // Legacy tiered circuit breaker with hysteresis for TIER3:
+                    // Once TIER3 fires (D/G >= tier3Ratio), the circuit stays locked (0% interest)
+                    // until D/G drops below 90% of tier3Ratio (a 10% hysteresis band).
+                    // This prevents rapid open/close cycling when D/G hovers near 10.0x.
+                    double hysteresisThreshold = config.debtGdpTier3Ratio() * 0.9;
+
+                    // Check hysteresis unlock: if locked and ratio dropped below band, unlock.
+                    if (tier3CircuitLocked && ratio < hysteresisThreshold) {
+                        tier3CircuitLocked = false;
+                        plugin.getLogger().info(String.format(
+                            "[Auto-Tune] TIER3 hysteresis unlock — D/G %.1fx (below %.1fx threshold). Interest may resume.",
+                            ratio, hysteresisThreshold));
+                    }
+
+                    if (tier3CircuitLocked) {
+                        // Circuit locked in TIER3 — hold at 0% interest until hysteresis threshold.
                         interestMultiplier = 0.0;
                         currentTier = "TIER3";
-                    } else if (ratio > config.debtGdpTier2Ratio()) {
+                    } else if (ratio >= config.debtGdpTier3Ratio()) {
+                        // First time crossing TIER3 threshold — engage the lock.
+                        tier3CircuitLocked = true;
+                        interestMultiplier = 0.0;
+                        currentTier = "TIER3";
+                    } else if (ratio >= config.debtGdpTier2Ratio()) {
                         interestMultiplier = config.tier2InterestCap();
                         currentTier = "TIER2";
-                    } else if (ratio > config.debtGdpTier1Ratio()) {
+                    } else if (ratio >= config.debtGdpTier1Ratio()) {
                         interestMultiplier = config.tier1InterestCap();
                         currentTier = "TIER1";
                     }
@@ -601,14 +627,14 @@ public class LoanManager {
         }
 
         double ratio = totalDebt.divide(gdp, MathContext.DECIMAL128).doubleValue();
-        if (ratio > config.debtGdpTier3Ratio()) {
+        if (ratio >= config.debtGdpTier3Ratio()) {
             return new CircuitBreakerStatus("TIER3", ratio, 0.0, interestCircuitOpen, config.counterCyclical());
-        } else if (ratio > config.debtGdpTier2Ratio()) {
+        } else if (ratio >= config.debtGdpTier2Ratio()) {
             double mult = config.counterCyclical()
                     ? Math.max(0.0, Math.min(1.0, 1.0 - ratio / config.debtGdpTier3Ratio()))
                     : config.tier2InterestCap();
             return new CircuitBreakerStatus("TIER2", ratio, mult, false, config.counterCyclical());
-        } else if (ratio > config.debtGdpTier1Ratio()) {
+        } else if (ratio >= config.debtGdpTier1Ratio()) {
             double mult = config.counterCyclical()
                     ? Math.max(0.0, Math.min(1.0, 1.0 - ratio / config.debtGdpTier3Ratio()))
                     : config.tier1InterestCap();

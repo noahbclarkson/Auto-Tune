@@ -11,6 +11,7 @@ import com.noahblclarkson.autotune.config.AutoTuneConfig.MaterialsConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
+import com.noahblclarkson.autotune.database.ShopFavoriteRepository;
 import com.noahblclarkson.autotune.economy.EconomyManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.MarketEngine;
@@ -20,6 +21,7 @@ import com.noahblclarkson.autotune.model.Section;
 import com.noahblclarkson.autotune.model.ShopItem;
 import com.noahblclarkson.autotune.util.ItemSerializer;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
@@ -35,6 +37,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Level;
 
 public class ShopGui {
@@ -52,6 +56,8 @@ public class ShopGui {
     private final ConfigManager configManager;
     private final DatabaseManager databaseManager;
     private final MarketEngine marketEngine;
+    private final com.noahblclarkson.autotune.database.TransactionRepository transactionRepository;
+    private final ShopFavoriteRepository shopFavoriteRepository;
 
     private ChestGui gui;
     private PaginatedPane itemsPane;
@@ -60,6 +66,10 @@ public class ShopGui {
     private int currentPage;
 
     public ShopGui(AutoTune plugin, Player player) {
+        this(plugin, player, new ShopFavoriteRepository(plugin.getDatabaseManager()));
+    }
+
+    public ShopGui(AutoTune plugin, Player player, ShopFavoriteRepository shopFavoriteRepository) {
         this.plugin = plugin;
         this.player = player;
         this.shopManager = plugin.getShopManager();
@@ -67,6 +77,8 @@ public class ShopGui {
         this.configManager = plugin.getConfigManager();
         this.databaseManager = plugin.getDatabaseManager();
         this.marketEngine = plugin.getMarketEngine();
+        this.transactionRepository = plugin.getTransactionRepository();
+        this.shopFavoriteRepository = shopFavoriteRepository;
         this.currentTitle = configManager.getConfig().gui().titles().shop();
     }
 
@@ -93,6 +105,21 @@ public class ShopGui {
 
         TextColor sectionColor = configManager.resolveColor(colors.sectionName());
         TextColor mutedColor = configManager.resolveColor(colors.muted());
+
+        // ★ Favorites button — always first, shows player's starred items
+        int favCount = shopFavoriteRepository.countFavorites(player.getUniqueId());
+        ItemStack favIcon = new ItemStack(favCount > 0 ? Material.NETHER_STAR : Material.LIGHT_GRAY_STAINED_GLASS_PANE);
+        ItemMeta favMeta = favIcon.getItemMeta();
+        favMeta.displayName(Component.text("\u2605 Favorites", sectionColor)
+                .decoration(TextDecoration.ITALIC, false));
+        List<Component> favLore = new ArrayList<>();
+        favLore.add(Component.text(favCount > 0 ? favCount + " starred item" + (favCount != 1 ? "s" : "") : "No favorites yet", mutedColor)
+                .decoration(TextDecoration.ITALIC, false));
+        favLore.add(Component.text("Right-click any item to star", mutedColor)
+                .decoration(TextDecoration.ITALIC, false));
+        favMeta.lore(favLore);
+        favIcon.setItemMeta(favMeta);
+        sectionsPane.addItem(new GuiItem(favIcon, event -> openFavorites()), 0, 1);
 
         int x = 1;
         int y = 1;
@@ -191,6 +218,44 @@ public class ShopGui {
         currentTitle = "Search: " + query;
         currentPage = 0;
         renderItemsView(true);
+    }
+
+    private void openFavorites() {
+        Set<Integer> favoriteIds = shopFavoriteRepository.getFavoriteItemIds(player.getUniqueId());
+        if (favoriteIds.isEmpty()) {
+            player.sendMessage(Component.text("You have no favorited items. Right-click any item in the shop to star it!")
+                    .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+            openSections();
+            return;
+        }
+
+        List<ShopItem> favorites = shopManager.getAllItems().stream()
+                .filter(item -> favoriteIds.contains(item.id()))
+                .toList();
+
+        currentItems = favorites;
+        currentTitle = "\u2605 Your Favorites";
+        currentPage = 0;
+        renderItemsView(true);
+    }
+
+    private void toggleFavorite(ShopItem shopItem) {
+        UUID playerUuid = player.getUniqueId();
+        if (shopFavoriteRepository.isFavorite(playerUuid, shopItem.id())) {
+            shopFavoriteRepository.removeFavorite(playerUuid, shopItem.id());
+            player.sendMessage(Component.text("Removed " + shopItem.getDisplayNameOrMaterial() + " from favorites")
+                    .color(NamedTextColor.YELLOW));
+        } else {
+            shopFavoriteRepository.addFavorite(playerUuid, shopItem.id());
+            player.sendMessage(Component.text("Added " + shopItem.getDisplayNameOrMaterial() + " to favorites \u2605")
+                    .color(NamedTextColor.GREEN));
+        }
+        // Re-render current view to update star indicators
+        if (currentItems.equals(shopManager.getAllItems()) || currentItems.isEmpty()) {
+            openSections();
+        } else {
+            renderItemsView(true);
+        }
     }
 
     private void renderItemsView(boolean showBack) {
@@ -295,14 +360,32 @@ public class ShopGui {
             }
         }
 
+        // Per-player price memory: show last buy/sell for this item
+        appendPlayerPriceMemory(lore, shopItem, mutedColor);
+
+        // Favorite indicator
+        boolean isFav = shopFavoriteRepository.isFavorite(player.getUniqueId(), shopItem.id());
+        if (isFav) {
+            lore.add(Component.text("\u2605 Starred", configManager.resolveColor(colors.positive()))
+                    .decoration(TextDecoration.ITALIC, false));
+        }
+
         lore.add(Component.empty());
         lore.add(Component.text("Click to buy/sell", mutedColor)
+                .decoration(TextDecoration.ITALIC, false));
+        lore.add(Component.text("Right-click to " + (isFav ? "unstar" : "star"), mutedColor)
                 .decoration(TextDecoration.ITALIC, false));
 
         meta.lore(lore);
         display.setItemMeta(meta);
 
-        return new GuiItem(display, event -> openBuySellGui(shopItem));
+        return new GuiItem(display, event -> {
+            if (event.isRightClick()) {
+                toggleFavorite(shopItem);
+            } else {
+                openBuySellGui(shopItem);
+            }
+        });
     }
 
     public void openBuySellGui(ShopItem shopItem) {
@@ -496,6 +579,81 @@ public class ShopGui {
         }
 
         return pane;
+    }
+
+    /**
+     * Appends per-player price memory lines to the item lore.
+     * Shows the player's most recent BUY and SELL price for this item so they
+     * can quickly assess whether now is a good time to trade vs. last time.
+     *
+     * Examples:
+     *   Last bought: $245.90 (now $230.10 −$15.80)
+     *   Last sold:   $238.40 (now $222.80 −$15.60)
+     */
+    private void appendPlayerPriceMemory(
+            List<Component> lore,
+            ShopItem shopItem,
+            TextColor mutedColor
+    ) {
+        try {
+            List<com.noahblclarkson.autotune.model.Transaction> recent =
+                    transactionRepository.findByPlayerAndItem(player.getUniqueId(), shopItem.id(), 20);
+
+            com.noahblclarkson.autotune.model.Transaction lastBuy = null;
+            com.noahblclarkson.autotune.model.Transaction lastSell = null;
+            for (com.noahblclarkson.autotune.model.Transaction tx : recent) {
+                if (lastBuy == null && tx.type() == com.noahblclarkson.autotune.model.Transaction.TransactionType.BUY) {
+                    lastBuy = tx;
+                }
+                if (lastSell == null && tx.type() == com.noahblclarkson.autotune.model.Transaction.TransactionType.SELL) {
+                    lastSell = tx;
+                }
+                if (lastBuy != null && lastSell != null) break;
+            }
+
+            if (lastBuy == null && lastSell == null) return;
+
+            lore.add(Component.empty());
+
+            BigDecimal nowBuy = shopManager.getBuyPrice(shopItem);
+            BigDecimal nowSell = shopManager.getSellPrice(shopItem);
+
+            if (lastBuy != null) {
+                BigDecimal then = lastBuy.pricePerUnit();
+                BigDecimal delta = nowBuy.subtract(then).setScale(2, java.math.RoundingMode.HALF_UP);
+                boolean up = delta.compareTo(BigDecimal.ZERO) >= 0;
+                TextColor deltaColor = up
+                        ? configManager.resolveColor(configManager.getConfig().gui().colors().positive())
+                        : configManager.resolveColor(configManager.getConfig().gui().colors().negative());
+                String deltaStr = (up ? "+" : "") + configManager.formatCurrency(delta);
+                lore.add(Component.text("Last bought: ", mutedColor)
+                        .append(Component.text(configManager.formatCurrency(then),
+                                net.kyori.adventure.text.format.NamedTextColor.WHITE))
+                        .append(Component.text(" (now ", mutedColor))
+                        .append(Component.text(deltaStr, deltaColor))
+                        .append(Component.text(")", mutedColor))
+                        .decoration(TextDecoration.ITALIC, false));
+            }
+
+            if (lastSell != null) {
+                BigDecimal then = lastSell.pricePerUnit();
+                BigDecimal delta = nowSell.subtract(then).setScale(2, java.math.RoundingMode.HALF_UP);
+                boolean up = delta.compareTo(BigDecimal.ZERO) >= 0;
+                TextColor deltaColor = up
+                        ? configManager.resolveColor(configManager.getConfig().gui().colors().positive())
+                        : configManager.resolveColor(configManager.getConfig().gui().colors().negative());
+                String deltaStr = (up ? "+" : "") + configManager.formatCurrency(delta);
+                lore.add(Component.text("Last sold:   ", mutedColor)
+                        .append(Component.text(configManager.formatCurrency(then),
+                                net.kyori.adventure.text.format.NamedTextColor.WHITE))
+                        .append(Component.text(" (now ", mutedColor))
+                        .append(Component.text(deltaStr, deltaColor))
+                        .append(Component.text(")", mutedColor))
+                        .decoration(TextDecoration.ITALIC, false));
+            }
+        } catch (Exception ignored) {
+            // Price memory is informational — never crash the GUI on DB error
+        }
     }
 
     private GuiItem createNavigationItem(Material material, String name, TextColor color,

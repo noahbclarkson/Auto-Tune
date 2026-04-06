@@ -19,6 +19,19 @@ pub struct SimConfig {
     /// Number of ticks the spread shock lasts before decaying (spread decay: 5%/tick).
     /// Default 288 (1 day). Set to 0 to disable shock.
     pub exodus_shock_duration_ticks: u64,
+    /// If set, only players of this archetype quit during exodus.
+    /// Overrides exodus_fraction — all players of this archetype quit.
+    /// Examples: "MarketMaker", "GuildBuyer", "Casual".
+    pub exodus_target_archetype: Option<String>,
+    /// MarketMaker initial capital range. If set, overrides the default $50-200K.
+    /// Recommended: $200-300K so MMs don't need opening loans.
+    pub mm_initial_capital_min: Option<f64>,
+    pub mm_initial_capital_max: Option<f64>,
+    /// GuildSeller Phase 2 dip threshold. When set, GuildSellers use price-dip detection
+    /// in Phase 2: sell when price < perceived * (1 - threshold).
+    /// This enables the redesigned Phase 2 (anti-oversupply mechanism).
+    /// None = use random per-instance value (legacy behavior).
+    pub guild_phase2_dip_threshold: Option<f64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -79,6 +92,29 @@ pub struct LoanConfig {
     /// of a loan default. Prevents immediate re-borrowing after defaulting.
     /// Set to 0 to disable. Default 168 (7 days, matches Java LoanManager).
     pub post_default_cooldown_hours: i32,
+    /// Whether MarketMaker archetype players can take opening loans.
+    /// When false, MM players start with initial capital only and cannot borrow.
+    /// Rationale: MM's critical role in economy stability means their opening loans
+    /// can cascade catastrophically. Bounding MM loans (single_loan_gdp_cap=0.10) backfires —
+    /// it worsens D/G by preventing MM's two-sided liquidity provision.
+    /// Instead, simply prohibit MM from taking opening loans (MM has $20-100K initial capital).
+    /// Default: true (MM can take opening loans, matching historical behavior).
+    pub mm_opening_loan_allowed: bool,
+    /// Counter-cyclical interest: continuous taper instead of discrete tiered circuit breaker.
+    /// When enabled (default, matching Java LoanManager): interestMultiplier = max(MIN, max(0, min(1, 1 - D/G/tier3Ratio))).
+    /// Interest falls smoothly from 100% at D/G=0 to MIN at D/G=tier3Ratio.
+    /// This prevents the pre-circuit-breaker debt accumulation spiral better than tiered caps.
+    /// When disabled: falls back to legacy tiered circuit breaker (TIER1/TIER2/TIER3 caps).
+    /// Default: true (matches Java LoanManager.counterCyclical default).
+    pub counter_cyclical: bool,
+    /// Minimum interest multiplier during counter-cyclical mode.
+    /// When the counter-cyclical multiplier would reach 0 (D/G >= tier3Ratio), this floor
+    /// prevents total interest pause and the associated D/G oscillation trap.
+    /// Set to 0.0 to disable (matches pure counter-cyclical: 0% interest at D/G=tier3Ratio).
+    /// Recommended: 0.005 (0.5%) — allows deleveraging to continue even at D/G >= tier3Ratio.
+    /// This prevents the economy from getting stuck at D/G ~= tier3Ratio boundary.
+    /// Default: 0.0 (matches pure counter-cyclical behavior).
+    pub min_interest_multiplier: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -122,6 +158,10 @@ impl Default for SimConfig {
             player_exodus_fraction: 0.5,
             exodus_spread_multiplier: 2.0,
             exodus_shock_duration_ticks: 288,
+            exodus_target_archetype: None,
+            mm_initial_capital_min: None,
+            mm_initial_capital_max: None,
+            guild_phase2_dip_threshold: None,
         }
     }
 }
@@ -179,11 +219,14 @@ impl Default for LoanConfig {
             default_penalty: 50,
             debt_gdp_tier1_ratio: 3.0,
             debt_gdp_tier2_ratio: 5.0,
-            debt_gdp_tier3_ratio: 10.0,
+            debt_gdp_tier3_ratio: 15.0,
             tier1_interest_cap: 0.5,
             tier2_interest_cap: 0.25,
             single_loan_gdp_cap: 1.0,
             post_default_cooldown_hours: 168, // 7 days, matches Java LoanManager
+            mm_opening_loan_allowed: true,    // MM can take opening loans by default
+            counter_cyclical: true, // continuous taper, matches Java LoanManager (default: true)
+            min_interest_multiplier: 0.0, // pure counter-cyclical: 0% at D/G=tier3Ratio
         }
     }
 }

@@ -1,12 +1,19 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { Download, Server, FileText, Zap, CheckCircle, ExternalLink, BookOpen, AlertTriangle } from 'lucide-react';
+import { Download, Server, FileText, Zap, CheckCircle, ExternalLink, BookOpen, AlertTriangle, Play, Video, Users, TrendingUp, Shield, ChevronDown } from 'lucide-react';
 import { InstallScreenshots } from '@/components/install/screenshot-mockups';
 
 export const metadata: Metadata = {
   title: 'Install Guide | Auto-Tune',
   description:
     'Get Auto-Tune running on your Minecraft Paper server in under 10 minutes. Prerequisites, install steps, basic configuration, and first verification.',
+  openGraph: {
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Auto-Tune Install Guide' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/og-image.png'],
+  },
 };
 
 const PREREQUISITES = [
@@ -162,6 +169,148 @@ export default function InstallPage() {
         </p>
       </div>
 
+      {/* Why Auto-Tune — comparison table */}
+      <section className="mb-14">
+        <div className="mb-6">
+          <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">Why Auto-Tune</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+            Better economies, built-in
+          </h2>
+          <p className="text-gray-400 text-sm leading-relaxed max-w-2xl">
+            Most Minecraft servers run static pricing — the same diamond price on day one as on day 100. Auto-Tune replaces that with a real market that responds to what players actually do.
+          </p>
+        </div>
+
+        {/* Server type targeting */}
+        <div className="grid sm:grid-cols-3 gap-4 mb-8">
+          {[
+            {
+              icon: Users,
+              title: 'Survival SMPs',
+              description: 'The sweet spot. Players gather resources, trade, and compete. Auto-Tune gives every item a living price that reflects scarcity and demand.',
+              badge: 'Most common use',
+              badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+            },
+            {
+              icon: TrendingUp,
+              title: 'Economy Servers',
+              description: 'Where the economy IS the game. Auto-Tune turns price discovery into gameplay — players research, speculate, and profit from mispriced items.',
+              badge: null,
+              badgeColor: '',
+            },
+            {
+              icon: Shield,
+              title: 'PvP / Faction Servers',
+              description: 'Resources have context-sensitive value. Scarcity near spawn, abundance in the wild. Auto-Tune captures that without manual price tables.',
+              badge: null,
+              badgeColor: '',
+            },
+          ].map(({ icon: Icon, title, description, badge, badgeColor }) => (
+            <div key={title} className="rounded-xl border border-gray-800 bg-gray-900/60 p-5 flex flex-col gap-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="w-9 h-9 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center">
+                  <Icon className="w-4 h-4 text-gray-400" />
+                </div>
+                {badge && (
+                  <span className={`text-xs px-2 py-0.5 rounded border font-medium shrink-0 ${badgeColor}`}>
+                    {badge}
+                  </span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white mb-1">{title}</p>
+                <p className="text-xs text-gray-500 leading-relaxed">{description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Comparison table */}
+        <div className="rounded-xl border border-gray-800 bg-gray-900/60 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-800/60 bg-gray-900/40">
+                  <th className="py-3.5 px-5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider w-2/5">Feature</th>
+                  <th className="py-3.5 px-4 text-center text-xs font-semibold text-gray-500 w-1/5">Static Pricing</th>
+                  <th className="py-3.5 px-4 text-center text-xs font-semibold text-emerald-400 w-1/5 bg-emerald-950/10">Auto-Tune</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800/40">
+                {[
+                  {
+                    feature: 'Prices change with scarcity',
+                    static: { text: '✗ Never', negative: true },
+                    autotune: { text: '✓ Every 5 minutes', positive: true },
+                  },
+                  {
+                    feature: 'Buy/sell spread reflects activity',
+                    static: { text: '✗ Fixed spread', negative: true },
+                    autotune: { text: '✓ Dynamic, liquidity-adjusted', positive: true },
+                  },
+                  {
+                    feature: 'New item discovery (e.g. new ore)',
+                    static: { text: '✗ Admin must set price', negative: true },
+                    autotune: { text: '✓ Auto-priced from true prices API', positive: true },
+                  },
+                  {
+                    feature: 'Players can take loans',
+                    static: { text: '✗ Not built in', negative: true },
+                    autotune: { text: '✓ Full loan system + circuit breaker', positive: true },
+                  },
+                  {
+                    feature: 'Players can place buy/sell orders',
+                    static: { text: '✗ Instant only', negative: true },
+                    autotune: { text: '✓ Order book + auction system', positive: true },
+                  },
+                  {
+                    feature: 'Market health dashboard',
+                    static: { text: '✗ None', negative: true },
+                    autotune: { text: '✓ Admin health panel + /at admin health', positive: true },
+                  },
+                  {
+                    feature: 'Web dashboard for players',
+                    static: { text: '✗ Not included', negative: true },
+                    autotune: { text: '✓ Bundled, no extra setup', positive: true },
+                  },
+                  {
+                    feature: 'Taxes / treasury pool',
+                    static: { text: '✗ Not included', negative: true },
+                    autotune: { text: '✓ Built-in treasury + tax config', positive: true },
+                  },
+                  {
+                    feature: 'Cross-server price discovery',
+                    static: { text: '✗ Not possible', negative: true },
+                    autotune: { text: '✓ True Prices API (opt-in)', positive: true },
+                  },
+                  {
+                    feature: 'Players affected by exploits',
+                    static: { text: '✓ Fully affected', negative: true },
+                    autotune: { text: '≈ Bounded by spread + circuit breaker', neutral: true },
+                  },
+                ].map(({ feature, static: sv, autotune: av }) => (
+                  <tr key={feature} className="hover:bg-gray-900/30 transition-colors">
+                    <td className="py-3 px-5 text-gray-300 text-xs">{feature}</td>
+                    <td className={`py-3 px-4 text-center text-xs font-medium ${sv.negative ? 'text-gray-600' : ''}`}>
+                      {sv.text}
+                    </td>
+                    <td className={`py-3 px-4 text-center text-xs font-semibold ${av.positive ? 'text-emerald-400 bg-emerald-950/10' : av.neutral ? 'text-amber-400 bg-amber-950/10' : 'text-red-400'}`}>
+                      {av.text}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t border-gray-800/60 px-5 py-3 bg-gray-900/20">
+            <p className="text-xs text-gray-500">
+              ≈ Cross-server price manipulation is bounded by outlier filtering and server key authentication.{' '}
+              <Link href="/true-prices" className="text-emerald-400 hover:underline">Learn how true prices work →</Link>
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Prerequisites */}
       <div className="mb-12 rounded-xl border border-gray-800 bg-gray-900/60 p-6">
         <h2 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
@@ -188,6 +337,9 @@ export default function InstallPage() {
           </span>
         </div>
       </div>
+
+      {/* Video demo */}
+      <VideoDemoSection />
 
       {/* Install steps */}
       <InstallScreenshots />
@@ -249,6 +401,9 @@ export default function InstallPage() {
                 { cmd: '/autosell', desc: 'Configure which items auto-sell on pickup', who: 'All players' },
                 { cmd: '/loans', desc: 'Take, repay, and manage loans', who: 'All players' },
                 { cmd: '/auction', desc: 'Place and fill auction orders', who: 'All players' },
+                { cmd: '/at event invoke <name>', desc: 'Trigger a seasonal market event by template name', who: 'Admins' },
+                { cmd: '/at event schedule <type> <mats> <mult> <dur>', desc: 'Schedule a market event to start in N minutes', who: 'Admins' },
+                { cmd: '/at event templates', desc: "List event templates defined in config.yml", who: 'Admins' },
                 { cmd: '/treasury', desc: 'View and manage server treasury (tax pool)', who: 'Admins' },
                 { cmd: '/at admin health', desc: 'Economy health dashboard with Health Score', who: 'Admins' },
                 { cmd: '/at admin reload', desc: 'Reload config without restarting server', who: 'Admins' },
@@ -264,6 +419,123 @@ export default function InstallPage() {
           </table>
         </div>
       </div>
+
+      {/* FAQ */}
+      <section className="mb-12">
+        <h2 className="text-xl font-bold text-white mb-6">Frequently Asked Questions</h2>
+        <div className="space-y-3">
+          {[
+            {
+              q: 'Will Auto-Tune break my existing economy?',
+              a: 'No. Auto-Tune runs alongside your existing Vault economy plugin. It doesn\'t modify player balances or existing shop data. The only thing that changes is the price of items — which is exactly the point.',
+            },
+            {
+              q: 'What if Auto-Tune\'s prices go crazy?',
+              a: 'There\'s a circuit breaker. If debt-to-GDP exceeds 10×, loans pause and interest stops accruing. Prices freeze at their last valid point until the economy stabilises. Admins can also set floor and ceiling prices per item.',
+            },
+            {
+              q: 'Does it work with EssentialsX, CMIE, or other economy plugins?',
+              a: 'Yes — as long as the economy plugin implements Vault\'s economy API, Auto-Tune will hook into it. Your players keep their money, their ranks, and their balances.',
+            },
+            {
+              q: 'What happens to prices when the server restarts?',
+              a: 'Prices are stored in SQLite and survive restarts. The market state (trade history, debt, loan positions) is fully persisted. Players joining after a restart see the same prices they would have seen before.',
+            },
+            {
+              q: 'Can I use Auto-Tune without cross-server features?',
+              a: 'Yes — the cross-server submission is entirely opt-in. Without it, your server runs a fully self-contained economy with no external dependencies.',
+            },
+            {
+              q: 'How is Auto-Tune different from ShopGUI+ or other shop plugins?',
+              a: 'ShopGUI+ lets you define fixed prices manually. Auto-Tune sets prices automatically based on player activity — the more an item is bought, the more expensive it gets; the more it\'s sold, the cheaper it gets. You spend less time managing prices and players get a more dynamic, engaging economy.',
+            },
+            {
+              q: 'Can I tune how fast prices move?',
+              a: 'Yes. The key knob is maxPriceChange (default 1.5%). You can make prices more stable (0.5%) or more volatile (3.0%). Volume impact, player scaling, and liquidity factors can also be tuned independently.',
+            },
+          ].map(({ q, a }) => (
+            <details key={q} className="group rounded-xl border border-gray-800 bg-gray-900/40 overflow-hidden">
+              <summary className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer list-none">
+                <span className="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">{q}</span>
+                <ChevronDown className="w-4 h-4 text-gray-500 shrink-0 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="px-5 pb-5">
+                <p className="text-sm text-gray-400 leading-relaxed">{a}</p>
+              </div>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      {/* Hosting guide */}
+      <section className="mb-12">
+        <h2 className="text-xl font-bold text-white mb-6">Where to host your server</h2>
+        <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+          Auto-Tune runs on any Paper 1.21.4+ server with Java 21 and Vault. Here are hosting options
+          that handle Auto-Tune&apos;s requirements well, from free options to production-grade servers.
+       ide
+        </p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {[
+            {
+              tier: 'Free / Cheap',
+              providers: [
+                { name: 'MineOS (self-hosted)', url: 'https://www.mino-s.io/', note: 'Free. Run on your own hardware. Full control.' },
+                { name: 'Aternos', url: 'https://aternos.org/', note: 'Free tier available. Good for testing.' },
+                { name: 'ServerJars', url: 'https://serverjars.com/', note: 'Simple JAR hosting. No panel, SSH only.' },
+              ],
+            },
+            {
+              tier: 'Reliable ($5–15/mo)',
+              providers: [
+                { name: 'ScalaCube', url: 'https://scalacube.com/', note: 'Minecraft-specialised. One-click Paper installs.' },
+                { name: 'BloomVPS', url: 'https://bloomvps.com/', note: 'Budget-friendly KVM VPS. Root access.' },
+                { name: 'Linode / DigitalOcean', url: 'https://www.linode.com/', note: 'General VPS. Install Paper manually. Scales well.' },
+              ],
+            },
+            {
+              tier: 'Production ($15–50/mo)',
+              providers: [
+                { name: 'WitherHosting', url: 'https://witherhosting.com/', note: 'High-performance, Minecraft-optimised. 24/7 uptime.' },
+                { name: 'Shockbyte', url: 'https://shockbyte.com/', note: 'Global data centers. One-click Auto-Tune install coming.' },
+                { name: 'PebbleHost', url: 'https://pebblehost.com/', note: 'Good panel, fast support. Java 21 pre-configured.' },
+              ],
+            },
+            {
+              tier: 'Self-hosted (full control)',
+              providers: [
+                { name: 'Ubuntu 22.04 + Paper', url: 'https://docs.papermc.io/paper/getting-started', note: 'Install Java 21, download Paper JAR, run. ~30 min setup.' },
+                { name: 'Docker + Paper', url: 'https://docker.com/', note: 'Containerised. Reproducible. Good for power users.' },
+              ],
+            },
+          ].map(({ tier, providers }) => (
+            <div key={tier} className="rounded-xl border border-gray-800 bg-gray-900/40 p-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{tier}</p>
+              <div className="space-y-2.5">
+                {providers.map(({ name, url, note }) => (
+                  <div key={name} className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-600 mt-1.5 shrink-0" />
+                    <div>
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-sky-400 hover:text-sky-300 transition-colors"
+                      >
+                        {name}
+                      </a>
+                      <p className="text-xs text-gray-500 mt-0.5">{note}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-400/80">
+          <strong>Java 21 is required.</strong> Most shared hosts now support it by default. If yours doesn&apos;t, open a support ticket — most will install it on request. Auto-Tune will fail to load gracefully and log an error if Java version is insufficient.
+        </div>
+      </section>
 
       {/* Next steps */}
       <div className="flex flex-wrap gap-3">
@@ -288,6 +560,85 @@ export default function InstallPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+function VideoDemoSection() {
+  return (
+    <section className="mb-16">
+      <div className="mb-6">
+        <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">See It Live</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+          Watch Auto-Tune in action
+        </h2>
+        <p className="text-gray-400 text-sm leading-relaxed max-w-xl">
+          See the full player experience — from joining a server to browsing the market, making a trade,
+          and watching prices adjust in real time.
+        </p>
+      </div>
+
+      {/* Video placeholder — replace src with actual video file or YouTube/Vimeo embed */}
+      <div className="relative rounded-2xl overflow-hidden border border-gray-800 bg-gray-900 aspect-video flex items-center justify-center group cursor-pointer">
+        {/* Background pattern */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-950 to-emerald-950/20" />
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)`,
+            backgroundSize: '32px 32px',
+          }}
+        />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center text-center px-8">
+          {/* Play button */}
+          <div className="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-500/60 flex items-center justify-center mb-6 group-hover:scale-105 group-hover:bg-emerald-500/30 transition-all">
+            <Play className="w-8 h-8 text-emerald-400 ml-1" fill="currentColor" />
+          </div>
+          <p className="text-white font-semibold text-lg mb-1">Demo Video — Coming Soon</p>
+          <p className="text-gray-500 text-sm max-w-sm">
+            30-second walkthrough of the full player experience
+          </p>
+        </div>
+
+        {/* Corner decoration */}
+        <div className="absolute top-4 right-4">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-800/80 border border-gray-700 text-xs text-gray-400 font-medium">
+            <Video className="w-3 h-3" />
+            0:30
+          </span>
+        </div>
+      </div>
+
+      {/* What to record instructions */}
+      <div className="mt-4 rounded-xl border border-gray-800 bg-gray-900/40 p-4">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Recording instructions (for maintainers)</p>
+        <div className="grid sm:grid-cols-2 gap-2 text-xs text-gray-400">
+          {[
+            { step: '1', cmd: '/shop', desc: 'Open the in-game market browser' },
+            { step: '2', cmd: 'Buy an item', desc: 'Purchase Diamond or Emerald to show pricing' },
+            { step: '3', cmd: '/sell', desc: 'Open the sell GUI and show pricing spread' },
+            { step: '4', cmd: '/loans', desc: 'Show loan UI — interest rate, repay button' },
+            { step: '5', cmd: ':8989', desc: 'Open the bundled web dashboard in a browser' },
+            { step: '6', cmd: ':8989/economy', desc: 'Show GDP chart, Debt/GDP, volatility' },
+          ].map(({ step, cmd, desc }) => (
+            <div key={cmd} className="flex items-start gap-2.5">
+              <span className="w-5 h-5 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-[10px] font-mono text-gray-500 shrink-0">
+                {step}
+              </span>
+              <div>
+                <code className="text-sky-300 font-mono">{cmd}</code>
+                <span className="text-gray-600 ml-1.5">{desc}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-gray-600 mt-3">
+          Save as <code className="text-gray-500 font-mono">/public/demo.mp4</code> and update the <code className="text-gray-500 font-mono">src</code> attribute in the{' '}
+          <code className="text-gray-500 font-mono">VideoDemoSection</code> above.
+        </p>
+      </div>
+    </section>
   );
 }
 

@@ -3,6 +3,7 @@ package com.noahblclarkson.autotune.service;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
+import org.bukkit.scheduler.BukkitTask;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.ItemRepository;
@@ -59,6 +60,7 @@ public class EconomicNewsService {
     private final LoanManager loanManager;
     private final ConfigManager configManager;
     private final PluginAdapter adapter;
+    private final AdminWebhookService webhookService;
 
     /** Tracks the last announced circuit breaker tier to avoid repeat announcements */
     private final AtomicReference<String> lastCircuitBreakerTier = new AtomicReference<>(null);
@@ -68,6 +70,9 @@ public class EconomicNewsService {
     private final CopyOnWriteArrayList<Instant> recentAnnouncements = new CopyOnWriteArrayList<>();
     /** Round-robin counter for fair item selection across cycles */
     private final AtomicInteger roundRobinCounter = new AtomicInteger(0);
+
+    /** The repeating news broadcast task — null when disabled */
+    private BukkitTask newsTask;
 
     /** Rolling buffer of recent news items for the /news command — max 30 entries */
     private final CopyOnWriteArrayList<RecentNewsItem> recentNewsItems = new CopyOnWriteArrayList<>();
@@ -91,7 +96,8 @@ public class EconomicNewsService {
             ShopManager shopManager,
             LoanManager loanManager,
             ConfigManager configManager,
-            PluginAdapter adapter
+            PluginAdapter adapter,
+            AdminWebhookService webhookService
     ) {
         this.plugin = plugin;
         this.itemRepository = itemRepository;
@@ -99,6 +105,7 @@ public class EconomicNewsService {
         this.loanManager = loanManager;
         this.configManager = configManager;
         this.adapter = adapter;
+        this.webhookService = webhookService;
     }
 
     public void onEnable() {
@@ -121,14 +128,43 @@ public class EconomicNewsService {
             } catch (Exception e) {
                 log.log(Level.WARNING, "Error in initial news check", e);
             }
-            Bukkit.getScheduler().runTaskTimer(plugin, task -> {
-                try {
-                    checkAndBroadcastNews();
-                } catch (Exception e) {
-                    log.log(Level.WARNING, "Error in news feed tick", e);
-                }
-            }, ticksInterval, ticksInterval);
+            newsTask = Bukkit.getScheduler().runTaskTimer(plugin, this::tickNews, ticksInterval, ticksInterval);
         }, 60L);
+    }
+
+    private void tickNews() {
+        try {
+            checkAndBroadcastNews();
+        } catch (Exception e) {
+            log.log(Level.WARNING, "Error in news feed tick", e);
+        }
+    }
+
+    /**
+     * Cancels the news broadcast task. Called on plugin shutdown and reload.
+     */
+    public void shutdown() {
+        if (newsTask != null) {
+            newsTask.cancel();
+            newsTask = null;
+        }
+    }
+
+    /**
+     * Reloads the news service: cancels the existing task and reschedules with the
+     * current config. Called when an admin runs /at admin reload.
+     */
+    public void reload() {
+        shutdown();
+        AutoTuneConfig.EconomicNewsConfig cfg = configManager.getConfig().news();
+        if (!cfg.enabled()) {
+            log.info("[Auto-Tune] Economic news feed is disabled.");
+            return;
+        }
+        scheduleNewsTask(cfg.intervalMinutes());
+        log.info("[Auto-Tune] Economic news feed reloaded (interval: " + cfg.intervalMinutes()
+                + " min, price threshold: " + cfg.priceChangeThresholdPercent()
+                + "%, volume spike: " + cfg.volumeSpikeMultiplier() + "x).");
     }
 
     /**
@@ -141,6 +177,22 @@ public class EconomicNewsService {
 
         List<NewsItem> candidates = new ArrayList<>();
         gatherCandidates(cfg, candidates);
+
+        // Check D/G for webhook high-debt alert
+        AutoTuneConfig.AdminWebhookConfig webhookCfg = configManager.getConfig().webhook();
+        if (webhookCfg.enabled() && webhookCfg.notifyHighDebt()) {
+            double debtGdp = computeCurrentDebtGdpRatio();
+            if (debtGdp > webhookCfg.notifyHighDebtThreshold()) {
+                webhookService.onHighDebt(debtGdp);
+            } else {
+                webhookService.onDebtRecovered();
+            }
+        }
+
+        // Check per-item volume for low-volume webhook alerts
+        if (webhookCfg.enabled() && webhookCfg.notifyLowVolume()) {
+            checkLowVolumeItems(webhookCfg);
+        }
 
         if (candidates.isEmpty()) return;
 
@@ -271,6 +323,29 @@ public class EconomicNewsService {
             String msg = "⚠️ <red>ECONOMY VOLATILITY SPIKE</red> — prices are oscillating wildly! "
                     + "Run <aqua>/at admin health</aqua> to diagnose.";
             out.add(new NewsItem(msg, NamedTextColor.RED, "/at admin health", "Run /at admin health"));
+            // Webhook notification
+            webhookService.onVolatilitySpike(avgVolatility);
+        } else if (avgVolatility < 0.15 && prev >= 0.15) {
+            webhookService.onVolatilityRecovered();
+        }
+    }
+
+    /**
+     * Scans all shop items for low trading volume and fires a webhook alert
+     * for any item whose 24h volume is below the configured threshold.
+     * Per-item cooldown is handled inside AdminWebhookService.onLowVolumeAlert.
+     */
+    private void checkLowVolumeItems(AutoTuneConfig.AdminWebhookConfig webhookCfg) {
+        int threshold = webhookCfg.lowVolumeThreshold();
+        Instant oneDayAgo = Instant.now().minus(Duration.ofDays(1));
+        for (ShopItem item : shopManager.getAllItems()) {
+            List<PriceHistory> history = itemRepository.getPriceHistorySince(
+                    item.id(), oneDayAgo, 1);
+            if (history.isEmpty()) continue;
+            int vol = history.get(0).totalVolume();
+            if (vol < threshold) {
+                webhookService.onLowVolumeAlert(item.id(), item.material().name(), vol);
+            }
         }
     }
 
@@ -287,12 +362,14 @@ public class EconomicNewsService {
                         "/at admin health",
                         "Run /at admin health for details"
                 ));
+                webhookService.onCircuitBreakerChange("NORMAL");
             }
             return;
         }
 
         String prev = lastCircuitBreakerTier.getAndSet(tier);
         if (tier.equals(prev)) return;
+        webhookService.onCircuitBreakerChange(tier);
 
         String msg;
         TextColor col;
@@ -381,6 +458,18 @@ public class EconomicNewsService {
 
     private String stripTags(String msg) {
         return msg.replaceAll("<[^>]+>", "");
+    }
+
+    /**
+     * Computes the current debt/GDP ratio via the circuit breaker status (which already has it).
+     * Returns -1.0 if unavailable.
+     */
+    private double computeCurrentDebtGdpRatio() {
+        try {
+            return loanManager.getCircuitBreakerStatus().debtGdpRatio();
+        } catch (Exception e) {
+            return -1.0;
+        }
     }
 
     /** Internal news item — holds the formatted message and metadata for a news broadcast. */

@@ -13,7 +13,6 @@ mod routes;
 use auth::ApiKeyAuth;
 use rate_limit::{RateLimitConfig, RateLimiter};
 use routes::{
-    auction::configure as configure_auction,
     exchange::get_exchange_rates,
     prices::{get_price_history, get_true_prices, submit_prices},
     servers::{heartbeat, list_servers, register_server},
@@ -59,8 +58,9 @@ async fn main() -> Result<()> {
 
     // CORS allowed origins — configure via CORS_ALLOWED_ORIGINS env var (comma-separated).
     // Defaults to localhost (dev) and autotune.dev (production).
-    let allowed_origins_raw = std::env::var("CORS_ALLOWED_ORIGINS")
-        .unwrap_or_else(|_| "http://localhost:3000,https://autotune.dev,https://www.autotune.dev".to_owned());
+    let allowed_origins_raw = std::env::var("CORS_ALLOWED_ORIGINS").unwrap_or_else(|_| {
+        "http://localhost:3000,https://autotune.dev,https://www.autotune.dev".to_owned()
+    });
     let allowed_origins: Vec<String> = allowed_origins_raw
         .split(',')
         .map(|s| s.trim().to_owned())
@@ -110,9 +110,6 @@ async fn main() -> Result<()> {
                 "/api/servers/exchange-rates",
                 web::get().to(get_exchange_rates),
             )
-            // Auction house — removed 2026-03-26. Was: full in-game GUI in Java plugin.
-            // These routes now return 410 Gone.
-            .configure(configure_auction)
             // Authenticated endpoints
             .service(
                 web::scope("/api/servers/{server_id}")

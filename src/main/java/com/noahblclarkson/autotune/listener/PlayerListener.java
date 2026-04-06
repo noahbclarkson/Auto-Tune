@@ -2,13 +2,18 @@ package com.noahblclarkson.autotune.listener;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.PlayerRepository;
+import com.noahblclarkson.autotune.database.PendingNotificationRepository;
+import com.noahblclarkson.autotune.database.PendingNotificationRepository.PendingNotification;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.AutosellManager;
 import com.noahblclarkson.autotune.manager.ScoreboardManager;
 import com.noahblclarkson.autotune.model.Loan;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.milkbowl.vault.permission.Permission;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -19,6 +24,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -37,17 +43,22 @@ public class PlayerListener implements Listener {
     private final AutosellManager autosellManager;
     private final ScoreboardManager scoreboardManager;
     private final Permission vaultPerms;
+    private final PendingNotificationRepository pendingNotificationRepository;
+    private final AutoTune plugin;
 
     @Inject
     public PlayerListener(
+            AutoTune plugin,
             ConfigManager configManager,
             DatabaseManager databaseManager,
             PlayerRepository playerRepository,
             LoanManager loanManager,
             AutosellManager autosellManager,
             ScoreboardManager scoreboardManager,
-            Permission vaultPerms
+            Permission vaultPerms,
+            PendingNotificationRepository pendingNotificationRepository
     ) {
+        this.plugin = plugin;
         this.configManager = configManager;
         this.databaseManager = databaseManager;
         this.playerRepository = playerRepository;
@@ -55,6 +66,7 @@ public class PlayerListener implements Listener {
         this.autosellManager = autosellManager;
         this.scoreboardManager = scoreboardManager;
         this.vaultPerms = vaultPerms;
+        this.pendingNotificationRepository = pendingNotificationRepository;
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -69,13 +81,17 @@ public class PlayerListener implements Listener {
         databaseManager.supplyAsync(() -> {
             playerRepository.getOrCreate(playerId, playerName);
             updateGuildTag(player);
-            return loanManager.getActiveLoan(playerId);
-        }).thenAccept(activeLoan -> databaseManager.runOnMain(() ->
-                checkLoanWarning(player, activeLoan)))
-                .exceptionally(ex -> {
-                    LOGGER.log(Level.WARNING, "Failed to process player join", ex);
-                    return null;
-                });
+            // Fetch and clear pending notifications before returning loan
+            List<PendingNotification> pending = pendingNotificationRepository.fetchAndClear(playerId);
+            Optional<Loan> activeLoan = loanManager.getActiveLoan(playerId);
+            return new PlayerJoinData(activeLoan, pending);
+        }).thenAccept(data -> databaseManager.runOnMain(() -> {
+            checkLoanWarning(player, data.activeLoan());
+            deliverPendingNotifications(player, data.pending());
+        })).exceptionally(ex -> {
+            LOGGER.log(Level.WARNING, "Failed to process player join", ex);
+            return null;
+        });
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -103,6 +119,31 @@ public class PlayerListener implements Listener {
             LOGGER.log(Level.FINE, "Could not update guild tag for " + player.getName(), ex);
         }
     }
+
+    /**
+     * Delivers pending (queued-while-offline) notifications to a player on login.
+     * Sends them with a slight delay so they appear after the login spam clears.
+     */
+    private void deliverPendingNotifications(Player player, List<PendingNotification> pending) {
+        if (pending.isEmpty()) return;
+
+        // Delay delivery by 3 seconds so the message appears after login messages
+        long delayTicks = 60L;
+        for (int i = 0; i < pending.size(); i++) {
+            final PendingNotification notif = pending.get(i);
+            final long delay = delayTicks + (i * 10L); // stagger by 0.5s each
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                if (!player.isOnline()) return;
+                player.sendMessage(
+                        Component.text("[Auto-Tune] ", NamedTextColor.DARK_AQUA)
+                                .append(Component.text(notif.message(), NamedTextColor.YELLOW))
+                );
+            }, delay);
+        }
+    }
+
+    /** Bundles async join data for delivery on main thread. */
+    private record PlayerJoinData(Optional<Loan> activeLoan, List<PendingNotification> pending) {}
 
     private void checkLoanWarning(Player player, Optional<Loan> activeLoan) {
         if (activeLoan.isEmpty()) {

@@ -2,6 +2,7 @@ package com.noahblclarkson.autotune.config;
 
 import com.noahblclarkson.autotune.model.ItemTier;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +25,9 @@ public record AutoTuneConfig(
         @NotNull AuctionConfig auction,
         @NotNull MarketEventConfig marketEvents,
         @NotNull EconomicNewsConfig news,
+        @NotNull AdminWebhookConfig webhook,
+        @NotNull PriceMilestoneConfig priceMilestones,
+        @NotNull MarketDigestConfig marketDigest,
         boolean marketFrozen
 ) {
 
@@ -605,6 +609,88 @@ public record AutoTuneConfig(
     ) {
         public static EconomicNewsConfig defaults() {
             return new EconomicNewsConfig(true, 5, 5.0, 3.0, 60, 3, 30);
+        }
+    }
+
+    /**
+     * Price milestone notifications — broadcast when items cross round-number price thresholds.
+     *
+     * @param enabled          whether milestone notifications are active
+     * @param intervalMinutes  how often to scan for milestone crossings (1–5 recommended)
+     * @param thresholds       ascending list of round-number prices to watch (e.g. 50, 100, 200…)
+     * @param cooldownMinutes  minimum minutes between announcements for the same item+threshold
+     */
+    public record PriceMilestoneConfig(
+            boolean enabled,
+            int intervalMinutes,
+            @NotNull List<Integer> thresholds,
+            int cooldownMinutes
+    ) {
+        public static PriceMilestoneConfig defaults() {
+            return new PriceMilestoneConfig(true, 1, List.of(50, 100, 200, 300, 500, 1000, 2000), 60);
+        }
+    }
+
+    /**
+     * Admin webhook configuration — POST economy alerts to a Discord (or generic HTTP) webhook.
+     *
+     * @param enabled         whether webhook notifications are active
+     * @param webhookUrl      the Discord webhook URL (or any HTTP endpoint accepting POST JSON)
+     * @param username        optional display name for the webhook message
+     * @param avatarUrl       optional avatar URL for the webhook message
+     * @param notifyTier2     fire on circuit breaker tier-2 activation
+     * @param notifyTier3     fire on circuit breaker tier-3 activation
+     * @param notifyVolatility fire when aggregate economy volatility spikes into UNSTABLE zone
+     * @param notifyHighDebt         fire when D/G ratio exceeds notifyHighDebtThreshold
+     * @param notifyHighDebtThreshold   D/G threshold that triggers a debt alert
+     * @param notifyLowVolume       fire when any item's 24h trade volume drops below lowVolumeThreshold
+     * @param lowVolumeThreshold     minimum trades per item per scan window to avoid a low-volume alert
+     */
+    public record AdminWebhookConfig(
+            boolean enabled,
+            @Nullable String webhookUrl,
+            @Nullable String username,
+            @Nullable String avatarUrl,
+            boolean notifyTier2,
+            boolean notifyTier3,
+            boolean notifyVolatility,
+            boolean notifyHighDebt,
+            double notifyHighDebtThreshold,
+            boolean notifyLowVolume,
+            int lowVolumeThreshold
+    ) {
+        public static AdminWebhookConfig defaults() {
+            return new AdminWebhookConfig(false, null, "Auto-Tune Economy", null,
+                    false, true, true, true, 8.0, false, 2);
+        }
+    }
+
+    /**
+     * Market digest configuration — scheduled periodic economy summary posted to Discord (or generic HTTP).
+     *
+     * @param enabled           whether the digest is active
+     * @param interval          "daily" or "weekly"
+     * @param dayOfWeek         0=Sun..6=Sat (used when interval=weekly)
+     * @param hourOfDay         0-23 UTC hour at which to send the digest
+     * @param includeTopMovers  include top-5 price gainers and losers
+     * @param includeHealthStats include GDP, debt, circuit breaker status
+     * @param includeActiveEvents include currently active market events
+     * @param includeLoanStats  include loan count, total debt, D/G ratio
+     * @param webhookUrl        optional override webhook URL (falls back to admin-webhook.url if null)
+     */
+    public record MarketDigestConfig(
+            boolean enabled,
+            @NotNull String interval,
+            int dayOfWeek,
+            int hourOfDay,
+            boolean includeTopMovers,
+            boolean includeHealthStats,
+            boolean includeActiveEvents,
+            boolean includeLoanStats,
+            @Nullable String webhookUrl
+    ) {
+        public static MarketDigestConfig defaults() {
+            return new MarketDigestConfig(false, "daily", 0, 9, true, true, true, true, null);
         }
     }
 }

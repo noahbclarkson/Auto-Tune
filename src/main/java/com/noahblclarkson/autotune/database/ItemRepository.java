@@ -435,4 +435,42 @@ public class ItemRepository {
                         .mapTo(Long.class)
                         .one());
     }
+
+    /**
+     * Delete all market history for a specific item.
+     * Used by /at admin prices reset to clear stale history after a price reset.
+     */
+    public int deleteMarketHistoryForItem(int itemId) {
+        return jdbi.withHandle(handle ->
+                handle.createUpdate("DELETE FROM at_market_history WHERE item_id = :itemId")
+                        .bind("itemId", itemId)
+                        .execute());
+    }
+
+    /**
+     * Look up the base price of an item from shops.yml by material name.
+     * Returns the stored initial price (the value from shops.yml at first load),
+     * which is what the item's price column was set to when first inserted.
+     * We surface this as a separate query so callers can compare base vs drift.
+     */
+    public BigDecimal getInitialPrice(int itemId) {
+        // The initial price isn't explicitly stored — we return the current DB price
+        // pre-drift by querying the first market_history record if available,
+        // or falling back to the item's current price field.
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                                SELECT price FROM at_market_history
+                                WHERE item_id = :itemId
+                                ORDER BY timestamp ASC
+                                LIMIT 1
+                                """)
+                        .bind("itemId", itemId)
+                        .mapTo(BigDecimal.class)
+                        .findFirst()
+                        .orElseGet(() ->
+                                handle.createQuery("SELECT price FROM at_items WHERE id = :id")
+                                        .bind("id", itemId)
+                                        .mapTo(BigDecimal.class)
+                                        .one()));
+    }
 }

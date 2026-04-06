@@ -613,6 +613,18 @@ public class MarketEngine {
         return Map.copyOf(priceCache);
     }
 
+    /**
+     * Directly reset the live price for one item to the given value and clear
+     * its trend/streak state. Called by ShopManager.resetPriceToBase() so the
+     * MarketEngine immediately reflects the reset without waiting for the next tick.
+     */
+    public void resetPriceCache(int itemId, BigDecimal newPrice) {
+        priceCache.put(itemId, newPrice);
+        trendDirectionCache.remove(itemId);
+        trendStreakCache.remove(itemId);
+        spreadCache.remove(itemId); // will recompute on next tick
+    }
+
     public Map<Integer, SpreadResult> getSpreadCache() {
         return Map.copyOf(spreadCache);
     }

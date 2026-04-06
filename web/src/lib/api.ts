@@ -129,6 +129,12 @@ export interface TransactionFeedDto {
   timestamp: number;
 }
 
+export interface PnLHistoryDto {
+  timestamp: number;
+  dayLabel: string;
+  netPnl: number;
+}
+
 export interface AnonLoanDto {
   index: number;
   principal: number;
@@ -173,6 +179,7 @@ export interface HoldingDto {
   currentValue: number;
   unrealizedPnl: number;
   pnlPct: number;
+  realizedPnl: number;
 }
 
 export interface ActiveLoanDto {
@@ -192,6 +199,7 @@ export interface PortfolioDto {
   holdingsValue: number;
   totalDebt: number;
   netWorth: number;
+  totalRealizedPnl: number;
   creditScore: number;
   transactionCount: number;
   holdings: HoldingDto[];
@@ -229,6 +237,45 @@ export interface AdminHealthDto {
   timestamp: number;
 }
 
+// Config health entry — single tunable parameter
+export interface ConfigEntry {
+  current: number | boolean;
+  default?: number;
+  rangeMin?: number;
+  rangeMax?: number;
+  unit: string;
+  label: string;
+}
+
+export interface AdminConfigDto {
+  spread: {
+    baseSpread: ConfigEntry;
+    volumeImpact: ConfigEntry;
+    playerImpact: ConfigEntry;
+  };
+  loans: {
+    baseInterestRate: ConfigEntry;
+    debtGdpTier3Ratio: ConfigEntry;
+    postDefaultCooldownHours: ConfigEntry;
+    counterCyclical: boolean;
+    singleLoanGdpCap: number;
+  };
+  economy: {
+    tradeWindowDays: ConfigEntry;
+    maxPriceChangePercent: ConfigEntry;
+    minBuyQuantity: ConfigEntry;
+    minSellQuantity: ConfigEntry;
+  };
+  marketDigest: {
+    enabled: boolean;
+    interval: string;
+    includeTopMovers: boolean;
+    includeHealthStats: boolean;
+    includeActiveEvents: boolean;
+    includeLoanStats: boolean;
+  };
+}
+
 export interface AlertDto {
   id: string;
   playerUuid: string;
@@ -243,6 +290,38 @@ export interface AlertDto {
   triggeredAt: number | null;
 }
 
+export interface PlayerBadgeDto {
+  badgeType: string;
+  displayName: string;
+  description: string;
+  material: string;
+  color: string;
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  earnedAt: string; // ISO-8601
+}
+
+export interface PlayerBadgesResponse {
+  playerName: string;
+  earnedCount: number;
+  totalPossible: number;
+  badges: PlayerBadgeDto[];
+}
+
+export interface PriceChangeDto {
+  timestamp: number;
+  currentPrice: number;
+  previousPrice: number;
+  percentChange: number;
+  bpd: number;
+  spd: number;
+  totalVolume: number;
+  volumeVsNormal: number;
+  eventMultiplier: number;
+  attribution: string;
+  attributionKey: 'NORMAL' | 'EVENT' | 'VOLUME' | 'TREND' | 'STABLE';
+  hasActiveEvent: boolean;
+}
+
 export const api = {
   items: {
     list: (base: string) => fetchJson<ItemDto[]>(`${base}/api/items`),
@@ -253,6 +332,8 @@ export const api = {
       fetchJson<TransactionFeedDto[]>(`${base}/api/items/${id}/transactions?limit=${limit}`),
     trend: (base: string, id: number) =>
       fetchJson<ItemTrendDto>(`${base}/api/items/${id}/trend`),
+    attribution: (base: string, id: number, limit = 50) =>
+      fetchJson<PriceChangeDto[]>(`${base}/api/items/${id}/attribution?limit=${limit}`),
   },
   stats: (base: string) => fetchJson<Stats>(`${base}/api/stats`),
   prices: (base: string) => fetchJson<Record<number, number>>(`${base}/api/prices`),
@@ -281,9 +362,24 @@ export const api = {
   portfolio: {
     get: (base: string, playerName: string) =>
       fetchJson<PortfolioDto>(`${base}/api/portfolio/${encodeURIComponent(playerName)}`),
+    transactions: (base: string, playerName: string, limit = 50) =>
+      fetchJson<TransactionFeedDto[]>(
+        `${base}/api/portfolio/${encodeURIComponent(playerName)}/transactions?limit=${limit}`
+      ),
+    pnlHistory: (base: string, playerName: string) =>
+      fetchJson<PnLHistoryDto[]>(
+        `${base}/api/portfolio/${encodeURIComponent(playerName)}/pnl-history`
+      ),
   },
   admin: {
     health: (base: string) => fetchJson<AdminHealthDto>(`${base}/api/admin/health`),
+    config: (base: string) => fetchJson<AdminConfigDto>(`${base}/api/admin/config`),
+  },
+  badges: {
+    player: (base: string, playerName: string) =>
+      fetchJson<PlayerBadgesResponse>(
+        `${base}/api/badges/player/${encodeURIComponent(playerName)}`
+      ),
   },
   alerts: {
     list: (base: string, playerName: string) =>

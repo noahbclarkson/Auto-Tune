@@ -80,6 +80,9 @@ public class ConfigManager {
                 parseAuctionConfig(cfg.getConfigurationSection("auction")),
                 parseMarketEventConfig(cfg.getConfigurationSection("market-events")),
                 parseEconomicNewsConfig(cfg.getConfigurationSection("news")),
+                parseAdminWebhookConfig(cfg.getConfigurationSection("admin-webhook")),
+                parsePriceMilestoneConfig(cfg.getConfigurationSection("price-milestone")),
+                parseMarketDigestConfig(cfg.getConfigurationSection("market-digest")),
                 this.marketFrozen
         );
     }
@@ -231,7 +234,7 @@ public class ConfigManager {
                 section.getInt("default-penalty", 50),
                 section.getDouble("debt-gdp-tier1-ratio", 3.0),
                 section.getDouble("debt-gdp-tier2-ratio", 5.0),
-                section.getDouble("debt-gdp-tier3-ratio", 10.0),
+                section.getDouble("debt-gdp-tier3-ratio", 15.0),
                 section.getDouble("tier1-interest-cap", 0.5),
                 section.getDouble("tier2-interest-cap", 0.25),
                 section.getInt("post-default-cooldown-hours", 168),
@@ -638,6 +641,25 @@ public class ConfigManager {
         );
     }
 
+    private AutoTuneConfig.AdminWebhookConfig parseAdminWebhookConfig(ConfigurationSection section) {
+        if (section == null || !section.getBoolean("enabled", false)) {
+            return AutoTuneConfig.AdminWebhookConfig.defaults();
+        }
+        return new AutoTuneConfig.AdminWebhookConfig(
+                section.getBoolean("enabled", false),
+                section.getString("webhook-url"),
+                section.getString("username", "Auto-Tune Economy"),
+                section.getString("avatar-url"),
+                section.getBoolean("notify-tier2", false),
+                section.getBoolean("notify-tier3", true),
+                section.getBoolean("notify-volatility", true),
+                section.getBoolean("notify-high-debt", true),
+                section.getDouble("notify-high-debt-threshold", 8.0),
+                section.getBoolean("notify-low-volume", false),
+                section.getInt("low-volume-threshold", 2)
+        );
+    }
+
     private EconomicNewsConfig parseEconomicNewsConfig(ConfigurationSection section) {
         if (section == null || !section.getBoolean("enabled", true)) {
             return EconomicNewsConfig.defaults();
@@ -650,6 +672,39 @@ public class ConfigManager {
                 Math.max(5, section.getInt("history-window-minutes", 60)),
                 Math.max(1, section.getInt("max-items-per-cycle", 3)),
                 Math.max(5, section.getInt("item-cooldown-minutes", 30))
+        );
+    }
+
+    private PriceMilestoneConfig parsePriceMilestoneConfig(ConfigurationSection section) {
+        if (section == null || !section.getBoolean("enabled", true)) {
+            return PriceMilestoneConfig.defaults();
+        }
+        List<Integer> thresholds = section.getIntegerList("thresholds");
+        if (thresholds == null || thresholds.isEmpty()) {
+            thresholds = List.of(50, 100, 200, 300, 500, 1000, 2000);
+        }
+        return new PriceMilestoneConfig(
+                section.getBoolean("enabled", true),
+                Math.max(1, section.getInt("interval-minutes", 1)),
+                thresholds.stream().sorted().toList(),
+                Math.max(5, section.getInt("cooldown-minutes", 60))
+        );
+    }
+
+    private MarketDigestConfig parseMarketDigestConfig(ConfigurationSection section) {
+        if (section == null || !section.getBoolean("enabled", false)) {
+            return MarketDigestConfig.defaults();
+        }
+        return new MarketDigestConfig(
+                section.getBoolean("enabled", false),
+                section.getString("interval", "daily"),
+                Math.max(0, Math.min(6, section.getInt("day-of-week", 0))),
+                Math.max(0, Math.min(23, section.getInt("hour-of-day", 9))),
+                section.getBoolean("include-top-movers", true),
+                section.getBoolean("include-health-stats", true),
+                section.getBoolean("include-active-events", true),
+                section.getBoolean("include-loan-stats", true),
+                section.getString("webhook-url")
         );
     }
 }

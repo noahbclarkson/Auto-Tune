@@ -18,9 +18,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -53,6 +55,12 @@ public class EventCommand {
                 .append(Component.text(" — Start an event now", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at event cancel <id>", NamedTextColor.YELLOW)
                 .append(Component.text(" — Cancel an active event", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at event templates", NamedTextColor.YELLOW)
+                .append(Component.text(" — List available event templates", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at event invoke <name>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Trigger a template immediately", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at event schedule <type> <mats> <mult> <dur> <offset>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Schedule event to start in N minutes", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("Types: ", NamedTextColor.GRAY)
                 .append(formatEventTypes()));
         sender.sendMessage(Component.empty());
@@ -248,6 +256,125 @@ public class EventCommand {
         sender.sendMessage(Component.text("ID: ", NamedTextColor.GRAY)
                 .append(Component.text(event.id().toString(), NamedTextColor.DARK_GRAY)));
         sender.sendMessage(Component.empty());
+    }
+
+    // ─── /at event templates ──────────────────────────────────────────────────
+
+    @org.incendo.cloud.annotations.Command("at event templates")
+    @org.incendo.cloud.annotations.Permission("autotune.admin")
+    public void eventTemplates(CommandSender sender) {
+        List<com.noahblclarkson.autotune.config.AutoTuneConfig.MarketEventConfigEntry> templates = eventService.getTemplates();
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Event Templates", NamedTextColor.GOLD, TextDecoration.BOLD)
+                .append(Component.text(" (from config — ", NamedTextColor.GRAY))
+                .append(Component.text(String.valueOf(templates.size()), NamedTextColor.AQUA))
+                .append(Component.text(" available)", NamedTextColor.GRAY)));
+
+        if (templates.isEmpty()) {
+            sender.sendMessage(Component.text("No templates configured. Add events to market-events.events in config.yml.", NamedTextColor.GRAY));
+            sender.sendMessage(Component.text("Use /at event trigger to create events without a template.", NamedTextColor.DARK_GRAY));
+        } else {
+            sender.sendMessage(Component.text("Use /at event invoke <name> to trigger a template immediately.", NamedTextColor.DARK_GRAY));
+            sender.sendMessage(Component.text("Use /at event schedule <...> <offset-mins> to schedule for later.", NamedTextColor.DARK_GRAY));
+            sender.sendMessage(Component.empty());
+            for (com.noahblclarkson.autotune.config.AutoTuneConfig.MarketEventConfigEntry t : templates) {
+                Component row = Component.text("  ", NamedTextColor.DARK_GRAY)
+                        .append(Component.text(t.name(), NamedTextColor.YELLOW))
+                        .append(Component.text(" (" + t.type().toLowerCase(Locale.ROOT) + ") ", NamedTextColor.GRAY))
+                        .append(Component.text(t.multiplier() + "x ", NamedTextColor.AQUA))
+                        .append(Component.text("· " + t.durationMinutes() + " min ", NamedTextColor.DARK_GRAY))
+                        .append(Component.text("[" + String.join(", ", t.materials()) + "]", NamedTextColor.GREEN));
+                sender.sendMessage(row);
+            }
+        }
+        sender.sendMessage(Component.empty());
+    }
+
+    // ─── /at event invoke <template-name> ──────────────────────────────────────
+
+    @org.incendo.cloud.annotations.Command("at event invoke <name>")
+    @org.incendo.cloud.annotations.Permission("autotune.admin")
+    public void eventInvoke(CommandSender sender, @org.incendo.cloud.annotations.Argument("name") String name) {
+        Optional<MarketEvent> result = eventService.invokeTemplate(name.trim());
+        if (result.isPresent()) {
+            MarketEvent event = result.get();
+            sender.sendMessage(Component.text("Template invoked: ", NamedTextColor.GREEN)
+                    .append(Component.text(event.name(), NamedTextColor.GOLD)));
+        } else {
+            sender.sendMessage(Component.text("Template not found: '" + name + "'", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Use /at event templates to see available templates.", NamedTextColor.GRAY));
+        }
+    }
+
+    // ─── /at event schedule ───────────────────────────────────────────────────
+
+    @org.incendo.cloud.annotations.Command("at event schedule <type> <materials> <multiplier> <duration> <start-minutes>")
+    @org.incendo.cloud.annotations.Permission("autotune.admin")
+    public void eventSchedule(
+            CommandSender sender,
+            @org.incendo.cloud.annotations.Argument("type") String typeStr,
+            @org.incendo.cloud.annotations.Argument("materials") String materialsStr,
+            @org.incendo.cloud.annotations.Argument("multiplier") Double multiplier,
+            @org.incendo.cloud.annotations.Argument("duration") Integer duration,
+            @org.incendo.cloud.annotations.Argument("start-minutes") Integer startMinutes
+    ) {
+        // Parse event type
+        EventType type;
+        try {
+            type = EventType.valueOf(typeStr.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            sender.sendMessage(Component.text("Unknown event type: " + typeStr, NamedTextColor.RED)
+                    .append(Component.text(". Valid types: ", NamedTextColor.GRAY))
+                    .append(formatEventTypes()));
+            return;
+        }
+
+        if (multiplier <= 0 || multiplier > 10) {
+            sender.sendMessage(Component.text("Multiplier must be between 0.1 and 10.", NamedTextColor.RED));
+            return;
+        }
+
+        if (duration <= 0 || duration > 10080) {
+            sender.sendMessage(Component.text("Duration must be 1 minute to 7 days (10080 min).", NamedTextColor.RED));
+            return;
+        }
+
+        if (startMinutes <= 0 || startMinutes > 43200) {
+            sender.sendMessage(Component.text("Start offset must be 1 minute to 30 days (43200 min).", NamedTextColor.RED));
+            return;
+        }
+
+        // Parse materials
+        List<String> materials = Arrays.stream(materialsStr.split(","))
+                .map(String::trim)
+                .map(String::toUpperCase)
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.toList());
+
+        if (materials.isEmpty()) {
+            sender.sendMessage(Component.text("At least one material is required.", NamedTextColor.RED));
+            return;
+        }
+
+        Instant startsAt = Instant.now().plus(startMinutes, ChronoUnit.MINUTES);
+        String name = type.name().replace("_", " ") + " Event";
+        String startMsg = buildStartMessage(type, materials, multiplier, duration);
+        String endMsg = buildEndMessage(type);
+        String creatorName = (sender instanceof Player p) ? p.getName() : "console";
+
+        MarketEvent event = eventService.scheduleEvent(
+                name, type, materials, multiplier,
+                Duration.ofMinutes(duration),
+                startsAt, startMsg, endMsg, creatorName
+        );
+
+        sender.sendMessage(Component.text("Event scheduled: ", NamedTextColor.YELLOW)
+                .append(Component.text(event.name(), NamedTextColor.GOLD)));
+        sender.sendMessage(Component.text("Starts at: ", NamedTextColor.GRAY)
+                .append(Component.text(TIME_FMT.format(startsAt) + " UTC", NamedTextColor.WHITE))
+                .append(Component.text(" (" + startMinutes + " min from now)", NamedTextColor.DARK_GRAY)));
+        sender.sendMessage(Component.text("Event ID: ", NamedTextColor.GRAY)
+                .append(Component.text(event.id().toString(), NamedTextColor.YELLOW)));
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────

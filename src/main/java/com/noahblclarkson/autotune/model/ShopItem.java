@@ -73,6 +73,7 @@ public record ShopItem(
                 .baseSpreadOverride(baseSpreadOverride)
                 .priceFloorOverride(priceFloorOverride)
                 .priceCeilingOverride(priceCeilingOverride)
+                .priceFrozen(priceFrozen)
                 .tier(tier)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt);

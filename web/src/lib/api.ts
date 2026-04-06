@@ -238,7 +238,7 @@ export interface AdminHealthDto {
 }
 
 // Config health entry — single tunable parameter
-interface ConfigEntry {
+export interface ConfigEntry {
   current: number | boolean;
   default?: number;
   rangeMin?: number;
@@ -288,6 +288,23 @@ export interface AlertDto {
   triggered: boolean;
   createdAt: number;
   triggeredAt: number | null;
+}
+
+export interface PlayerBadgeDto {
+  badgeType: string;
+  displayName: string;
+  description: string;
+  material: string;
+  color: string;
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  earnedAt: string; // ISO-8601
+}
+
+export interface PlayerBadgesResponse {
+  playerName: string;
+  earnedCount: number;
+  totalPossible: number;
+  badges: PlayerBadgeDto[];
 }
 
 export interface PriceChangeDto {
@@ -357,6 +374,12 @@ export const api = {
   admin: {
     health: (base: string) => fetchJson<AdminHealthDto>(`${base}/api/admin/health`),
     config: (base: string) => fetchJson<AdminConfigDto>(`${base}/api/admin/config`),
+  },
+  badges: {
+    player: (base: string, playerName: string) =>
+      fetchJson<PlayerBadgesResponse>(
+        `${base}/api/badges/player/${encodeURIComponent(playerName)}`
+      ),
   },
   alerts: {
     list: (base: string, playerName: string) =>

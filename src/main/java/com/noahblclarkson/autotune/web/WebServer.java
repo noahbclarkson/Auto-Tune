@@ -8,6 +8,7 @@ import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.AutoTuneConfig.WebConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.database.BadgeRepository;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
@@ -21,6 +22,7 @@ import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
+import com.noahblclarkson.autotune.model.BadgeDto;
 import com.noahblclarkson.autotune.model.MarketEvent;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
 import com.noahblclarkson.autotune.model.Loan;
@@ -74,6 +76,7 @@ public class WebServer {
     private final TransactionRepository transactionRepository;
     private final LoanRepository loanRepository;
     private final PlayerRepository playerRepository;
+    private final BadgeRepository badgeRepository;
     private final ShopFavoriteRepository shopFavoriteRepository;
     private final LoanManager loanManager;
     private final ShopManager shopManager;
@@ -98,6 +101,7 @@ public class WebServer {
             TransactionRepository transactionRepository,
             LoanRepository loanRepository,
             PlayerRepository playerRepository,
+            BadgeRepository badgeRepository,
             ShopFavoriteRepository shopFavoriteRepository,
             LoanManager loanManager,
             ShopManager shopManager,
@@ -115,6 +119,7 @@ public class WebServer {
         this.transactionRepository = transactionRepository;
         this.loanRepository = loanRepository;
         this.playerRepository = playerRepository;
+        this.badgeRepository = badgeRepository;
         this.shopFavoriteRepository = shopFavoriteRepository;
         this.loanManager = loanManager;
         this.shopManager = shopManager;
@@ -612,6 +617,29 @@ public class WebServer {
                     ))
                     .collect(Collectors.toList());
             ctx.json(dtos);
+        });
+
+        // GET /api/badges/player/{playerName} — earned badges with earn dates for a player
+        app.get("/api/badges/player/{playerName}", ctx -> {
+            String playerName = ctx.pathParam("playerName");
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).result("playerName is required");
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).result("Player not found: " + playerName);
+                return;
+            }
+            List<BadgeDto> earned = badgeRepository.getBadges(player.uuid()).stream()
+                    .map(BadgeDto::from)
+                    .collect(Collectors.toList());
+            ctx.json(Map.of(
+                    "playerName", player.username() != null ? player.username() : playerName,
+                    "earnedCount", earned.size(),
+                    "totalPossible", com.noahblclarkson.autotune.model.BadgeType.values().length,
+                    "badges", earned
+            ));
         });
 
         app.get("/api/economy/volume-multiplier", ctx -> {

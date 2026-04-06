@@ -8,6 +8,7 @@ import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.guild.GuildService;
 import com.noahblclarkson.autotune.database.AutosellRepository;
 import com.noahblclarkson.autotune.database.AuctionRepository;
+import com.noahblclarkson.autotune.database.BadgeRepository;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.ItemRepository;
@@ -153,6 +154,12 @@ public class AutoTuneModule extends AbstractModule {
     @Singleton
     public ShopFavoriteRepository provideShopFavoriteRepository(DatabaseManager databaseManager) {
         return new ShopFavoriteRepository(databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public BadgeRepository provideBadgeRepository(DatabaseManager databaseManager) {
+        return new BadgeRepository(databaseManager);
     }
 
     @Provides

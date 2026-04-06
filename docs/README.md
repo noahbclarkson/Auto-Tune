@@ -16,11 +16,11 @@ It covers: installation, your first 30 minutes, how the market engine works, the
 
 ## I want to understand how the engine works
 
-→ **[Architecture Guide](ARCHITECTURE.md)**
+→ Start with **[Economy Concepts](ECONOMY_CONCEPTS.md)** (plain-English explanation of GDP, buy ratio, spread, debt/GDP, volatility, and the loan system — no economics background needed)
 
-Covers: system overview, all three implementations (Java plugin, Rust API server, TypeScript frontends), the market engine price and spread pipelines, the loan system, the database schema, and the data flow between components.
+→ Then **[Architecture Guide](ARCHITECTURE.md)** for the technical system overview
 
-**Reading order:** Architecture → Server Admin Guide → Config Guide
+**Reading order:** Economy Concepts → Architecture → Server Admin Guide → Config Guide
 
 ---
 
@@ -100,8 +100,8 @@ See the Server Admin Guide for the full commands reference table.
 | `SERVER_ADMIN_GUIDE.md` | Installing, configuring, monitoring | Server admins |
 | `CONFIG_GUIDE.md` | Every config parameter, recommended ranges | Server admins |
 | `MIGRATION.md` | Upgrading from old Auto-Tune versions | Server admins |
+| `ECONOMY_CONCEPTS.md` | Plain-English economics: GDP, buy ratio, spreads, debt/GDP, volatility, loans | Admins, developers |
 | `ARCHITECTURE.md` | How the whole system works | Developers |
-| `CONTRIBUTING.md` | Dev setup and code standards | Contributors |
 | `CHANGELOG.md` | What's changed, by date | Everyone |
 | `DASHBOARD_API.md` | Bundled dashboard REST + WebSocket API | Developers |
 | `API.md` | Cross-server Rust API | Developers |

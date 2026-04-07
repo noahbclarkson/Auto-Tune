@@ -88,18 +88,26 @@ public class DatabaseManager {
     }
 
     private void runMigrations() throws SQLException {
-        runMigration("db/V1__Initial_Schema.sql");
         ensureSchemaVersionTable();
 
-        // Single consolidated schema (V1) — no incremental add/remove migrations.
-        // Fresh installs: version starts at 1 from getSchemaVersion() default.
-        // Existing installs: already at version 1 or higher, no re-running needed.
         int currentVersion = getSchemaVersion();
+        int highestVersion = currentVersion;
+
+        // V1: Initial consolidated schema
         if (currentVersion < 1) {
-            setSchemaVersion(1);
+            plugin.getLogger().info("Applying database migration V1 (Initial Schema)...");
+            runMigration("db/V1__Initial_Schema.sql");
+            highestVersion = 1;
         }
 
-        plugin.getLogger().info("Database schema initialized (version " + getSchemaVersion() + ").");
+        // Add future migrations here:
+        // if (currentVersion < 2) { ... }
+
+        if (highestVersion > currentVersion) {
+            setSchemaVersion(highestVersion);
+        }
+
+        plugin.getLogger().info("Database schema initialized (version " + highestVersion + ").");
     }
 
     private void runMigration(String resourcePath) throws SQLException {
@@ -146,7 +154,7 @@ public class DatabaseManager {
 
     private int getSchemaVersion() {
         return jdbi.withHandle(handle ->
-                handle.createQuery("SELECT COALESCE(MAX(version), 1) FROM at_schema_version")
+                handle.createQuery("SELECT COALESCE(MAX(version), 0) FROM at_schema_version")
                         .mapTo(Integer.class)
                         .one());
     }

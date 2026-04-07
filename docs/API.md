@@ -208,6 +208,64 @@ When limited, the server returns `429 Too Many Requests` with a `retry-after` he
 
 ---
 
+## Security Model
+
+The API server is designed to prevent a single bad actor from poisoning the true-price solver. Three layers of defense:
+
+### 1. Manual Server Key Issuance
+
+Servers cannot self-register without a maintainer-issued key. Before a server can submit prices, it must:
+1. Call `POST /api/servers/register` with a server name and email
+2. Wait for maintainer approval (keys are emailed — not instant)
+
+This prevents Sybil attacks where one entity registers hundreds of fake servers to dominate the ratio matrix.
+
+> **Note:** Current implementation is lightly Rate-Limited but not yet fully gated. Full manual-approval flow is on the roadmap.
+
+### 2. Outlier Detection in the Price Solver
+
+The least-squares solver computes a best-fit set of absolute prices from all server ratio matrices. Outlier servers — those submitting ratios wildly different from the consensus — contribute less to the final solution:
+
+- **Confidence scoring:** Each server's submission is scored by how well its ratios fit the global solution. Servers with high residual error (their ratios don't agree with others) receive lower weight.
+- **Minimum servers for consensus:** True prices require at least 2–3 independent servers. A single server's ratios produce undefined absolute prices (you can't solve absolute values from one server's relative measurements).
+
+```
+Server A: DIAMOND/IRON_INGOT = 9.5
+Server B: DIAMOND/IRON_INGOT = 9.8
+Server C: DIAMOND/IRON_INGOT = 28.0  ← Outlier: excluded or downweighted
+
+True price (solved): DIAMOND ≈ 9.6× IRON_INGOT
+```
+
+### 3. Per-Server Reputation Weighting
+
+Servers that have been submitting consistently over time earn higher weight in the solver:
+
+- New servers (first 7 days): 0.5× weight
+- Established servers (7–30 days): 1.0× weight
+- Mature servers (30+ days): 1.5× weight
+
+This means established servers vote with 3× the influence of brand-new ones, discouraging server churn-based manipulation.
+
+### 4. Rate Limiting
+
+Each IP is rate-limited on registration (10 req/min) and price submission (6 req/min). A single IP cannot flood the registry or overwhelm the solver.
+
+### Cross-Server Exchange Rates: Abuse Prevention
+
+Exchange rates (how much a server's economy differs from true prices) are computed at the plugin level — not by the API server. This is intentional:
+- A server's exchange rate is derived from its OWN price submission, not from external data
+- Players cannot influence exchange rates — only admins can
+- The API server never stores player-level transaction data
+
+### What the API Server Does NOT Have
+
+- **No player-level data:** No player IDs, no transaction records, no balances. Only server-level aggregated price ratios.
+- **No economic controls:** Cannot pause trading, freeze prices, or modify loan state — those are plugin-side decisions.
+- **No chat or social features:** Purely a price discovery mechanism.
+
+---
+
 ## WebSocket (future)
 
 Real-time price updates via WebSocket are planned but not yet implemented. The current dashboard polls `GET /api/items` every 30 seconds.

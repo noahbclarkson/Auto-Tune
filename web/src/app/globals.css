@@ -55,7 +55,7 @@
   }
 }
 
-/ /* DiscoveryOverlay — enter animation + auto-dismiss progress bar */
+/* DiscoveryOverlay — enter animation + auto-dismiss progress bar */
 @keyframes overlay-enter {
   from {
     opacity: 0;

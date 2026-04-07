@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, Users, Gavel, Bell, Globe, ShieldCheck, Wifi } from 'lucide-react';
+import { ArrowRight, Users, Gavel, Bell, ShieldCheck, Wifi } from 'lucide-react';
 
 const accentMap = {
   emerald: {
@@ -32,12 +32,6 @@ const accentMap = {
     bar: 'bg-rose-600/20 border-rose-600/30',
     stat: 'text-rose-400',
   },
-  sky2: {
-    tag: 'text-cyan-400 bg-cyan-950/60 border-cyan-800/50',
-    code: 'text-cyan-300',
-    bar: 'bg-cyan-600/20 border-cyan-600/30',
-    stat: 'text-cyan-400',
-  },
 } as const;
 
 type AccentKey = keyof typeof accentMap;
@@ -65,10 +59,10 @@ const features: { tag: string; title: string; description: string; stat: { label
   },
   {
     tag: 'GUILDS',
-    title: 'Guild Economy Dashboard',
+    title: 'Guild Economy Tracking',
     description:
-      'Auto-Tune reads your Vault permission groups and tracks per-guild trading volume, net position, and debt. Works with any Vault-compatible guild plugin — no config needed.',
-    stat: { label: 'Top 10 guilds', value: 'by volume' },
+      'Auto-Tune reads your Vault permission groups and tracks per-guild trading volume, net position, and debt. Players see their guild rank with /guild top.',
+    stat: { label: 'Guild commands', value: '/guild top' },
     code: '/guild · /guild stats · /guild top',
     accent: 'violet',
     icon: Users,
@@ -94,14 +88,14 @@ const features: { tag: string; title: string; description: string; stat: { label
     icon: Bell,
   },
   {
-    tag: 'CROSS-SERVER',
-    title: 'Cross-Server True Prices',
+    tag: 'SETUP',
+    title: 'Server Setup Wizard',
     description:
-      'Servers submit anonymised price ratios to an optional API. A least-squares solver computes globally consistent true prices used as starting baselines for new servers.',
-    stat: { label: '3σ outlier filter', value: 'prevents spoofing' },
-    code: 'POST /api/submit · GET /api/true-prices',
-    accent: 'sky2',
-    icon: Globe,
+      'Not sure where to start? The guided setup wizard helps you choose archetype mix, server size, and loan settings, then exports a ready-to-use config.yml.',
+    stat: { label: '5-step wizard', value: 'zero config needed' },
+    code: '/setup · archetype picker · YAML export',
+    accent: 'emerald',
+    icon: Zap,
   },
 ];
 

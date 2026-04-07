@@ -46,10 +46,23 @@ export function Footer() {
               <ExternalLink className="w-3.5 h-3.5" />
               Install Guide
             </Link>
+            <Link href="/setup" className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-colors">
+              <ExternalLink className="w-3.5 h-3.5" />
+              Setup Wizard
+            </Link>
             <Link href="/changelog" className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-colors">
               <ExternalLink className="w-3.5 h-3.5" />
               Changelog
             </Link>
+            <a
+              href="https://github.com/noahbclarkson/Auto-Tune/blob/rewrite-2/docs/FAQ.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              FAQ
+            </a>
           </div>
         </div>
 

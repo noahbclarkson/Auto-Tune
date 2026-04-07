@@ -80,7 +80,7 @@ The brain. Recalculates prices every `update-interval` ticks (default: 6000 = 5 
 2. **Trade ratio** — `(weightedBuys − weightedSells) / totalWeighted`
 3. **Player scaling** — `tanh(onlineCount × atanh(0.99) / fullEffectPlayers)` — dampens price changes when few players online
 4. **Price change cap** — `tradeRatio × playerScaling × maxPriceChangePercent`
-5. **Sell pressure asymmetry** — `sellPressureMultiplier` (default 1.0) reduces downward moves on sells (not yet exposed in config)
+5. **Sell pressure asymmetry** — `sellPressureMultiplier` (default 0.8) reduces downward moves on sells. Evidence (5-seed, 2026-04-07): 0.8 → GDP +2%, D/G -30% vs 1.0. Exposed in config as `sell-pressure-multiplier`.
 6. **Trend dampening** — reduces continued-direction moves (`trendDampening`, default 0.10)
 7. **Sector correlation** — nudges related items in the same direction (`sectorCorrelation`, default 0.05)
 

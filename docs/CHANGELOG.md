@@ -4,6 +4,14 @@
 
 ---
 
+## [Unreleased] — 2026-04-07
+
+### Changed
+
+- **`config.yml` defaults updated (plugin)** — `sell-pressure-multiplier` default: 1.0 → 0.8 and `trend-dampening` default: 0.05 → 0.10, matching Java ConfigManager defaults. Comments updated with 5-seed evidence: 0.8 → GDP +2%, D/G −30%; 0.10 → GDP +5%, D/G −25%. Both parameters were already correct in Java code (commit 618d287) but the YAML config was still documenting the old values.
+
+---
+
 ## [Unreleased] — 2026-04-06
 
 ### Added

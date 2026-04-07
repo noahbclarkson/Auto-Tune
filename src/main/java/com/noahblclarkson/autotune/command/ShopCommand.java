@@ -5,9 +5,15 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.DatabaseManager;
+import com.noahblclarkson.autotune.database.ItemRepository;
+import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.manager.MarketEngine;
+import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.manager.ShopManager;
+import com.noahblclarkson.autotune.model.MarketEvent;
+import com.noahblclarkson.autotune.model.PriceHistory;
 import com.noahblclarkson.autotune.model.ShopItem;
+import com.noahblclarkson.autotune.model.Transaction;
 import com.noahblclarkson.autotune.ui.MarketHistoryGui;
 import com.noahblclarkson.autotune.ui.ShopGui;
 import com.noahblclarkson.autotune.ui.TrendsGui;
@@ -27,11 +33,16 @@ import org.incendo.cloud.annotations.suggestion.Suggestions;
 import org.incendo.cloud.context.CommandContext;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.logging.Level;
 
 @Singleton
@@ -42,6 +53,9 @@ public class ShopCommand {
     private final DatabaseManager databaseManager;
     private final ShopManager shopManager;
     private final MarketEngine marketEngine;
+    private final TransactionRepository transactionRepository;
+    private final ItemRepository itemRepository;
+    private final MarketEventService marketEventService;
 
     @Inject
     public ShopCommand(
@@ -49,13 +63,19 @@ public class ShopCommand {
             ConfigManager configManager,
             DatabaseManager databaseManager,
             ShopManager shopManager,
-            MarketEngine marketEngine
+            MarketEngine marketEngine,
+            TransactionRepository transactionRepository,
+            ItemRepository itemRepository,
+            MarketEventService marketEventService
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.databaseManager = databaseManager;
         this.shopManager = shopManager;
         this.marketEngine = marketEngine;
+        this.transactionRepository = transactionRepository;
+        this.itemRepository = itemRepository;
+        this.marketEventService = marketEventService;
     }
 
     @Suggestions("shop-materials")
@@ -162,6 +182,179 @@ public class ShopCommand {
         // Open the GUI detail view directly for this item
         new MarketHistoryGui(plugin, player).openDetailView(item.get(),
                 com.noahblclarkson.autotune.ui.MarketHistoryGui.Timeframe.DAY);
+    }
+
+    @Command("shop info <material>")
+    @Permission("autotune.shop")
+    public void showItemInfo(CommandSender sender, @Argument(value = "material", suggestions = "shop-materials") Material material) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(configManager.getMessage("general.player-only"));
+            return;
+        }
+
+        Optional<ShopItem> shopItemOpt = shopManager.getItemByMaterial(material);
+        if (shopItemOpt.isEmpty()) {
+            player.sendMessage(configManager.getMessage("general.invalid-item"));
+            return;
+        }
+        ShopItem shopItem = shopItemOpt.get();
+        int itemId = shopItem.id();
+
+        // Gather data synchronously from cached/stateful sources, async for DB
+        MarketEngine.SpreadResult spread = marketEngine.getSpread(itemId);
+        BigDecimal buyPrice = marketEngine.getBuyPrice(shopItem);
+        BigDecimal sellPrice = marketEngine.getSellPrice(shopItem);
+        BigDecimal bpdPct = spread.bpd().multiply(BigDecimal.valueOf(100));
+        BigDecimal spdPct = spread.spd().multiply(BigDecimal.valueOf(100));
+
+        MarketEngine.PriceTrend.Direction trend = marketEngine.getTrendDirection(itemId);
+        int streak = marketEngine.getTrendStreak(itemId);
+
+        // Active events for this material
+        List<MarketEvent> activeEvents = marketEventService.getEventsForMaterial(material.name());
+
+        // 7-day price history (last 2016 ticks = 7 days at 5min/tick)
+        List<PriceHistory> history7d = itemRepository.getPriceHistorySince(
+                itemId, Instant.now().minus(Duration.ofDays(7)), 500);
+
+        String materialName = material.name().toLowerCase(Locale.ROOT);
+        databaseManager.supplyAsync(() -> transactionRepository.findByItem(itemId, 5))
+                .thenAccept(transactions -> databaseManager.runOnMain(() -> {
+                    // ── Header ──────────────────────────────────────────────────
+                    player.sendMessage(Component.empty());
+                    player.sendMessage(Component.text("⚖ ", NamedTextColor.DARK_GRAY)
+                            .append(Component.text(materialName.toUpperCase(Locale.ROOT), NamedTextColor.GOLD, TextDecoration.BOLD)));
+
+                    // ── Prices ────────────────────────────────────────────────
+                    player.sendMessage(Component.text("  Buy: ", NamedTextColor.GRAY)
+                                    .append(Component.text(configManager.formatCurrency(buyPrice), NamedTextColor.GREEN))
+                                    .append(Component.text("   Sell: ", NamedTextColor.GRAY))
+                                    .append(Component.text(configManager.formatCurrency(sellPrice), NamedTextColor.YELLOW))
+                                    .append(Component.text("   Spread: ", NamedTextColor.GRAY))
+                                    .append(Component.text(bpdPct + "%", NamedTextColor.AQUA)));
+
+                    // ── Trend ─────────────────────────────────────────────────
+                    String trendArrow = switch (trend) {
+                        case UP -> "📈";
+                        case DOWN -> "📉";
+                        case STABLE -> "➖";
+                    };
+                    String trendLabel = switch (trend) {
+                        case UP -> "Rising";
+                        case DOWN -> "Falling";
+                        case STABLE -> "Stable";
+                    };
+                    player.sendMessage(Component.text("  Trend: ", NamedTextColor.GRAY)
+                            .append(Component.text(trendArrow + " " + trendLabel, NamedTextColor.WHITE))
+                            .append(Component.text(" (" + streak + "-tick streak)", NamedTextColor.DARK_GRAY)));
+
+                    // ── Floor / Ceiling ────────────────────────────────────────
+                    BigDecimal floor = shopItem.priceFloorOverride();
+                    BigDecimal ceiling = shopItem.priceCeilingOverride();
+                    if (floor != null || ceiling != null) {
+                        Component floorText = Component.text("  Floor: ", NamedTextColor.GRAY)
+                                .append(Component.text(floor != null ? configManager.formatCurrency(floor) : "none", NamedTextColor.RED));
+                        Component ceilText = Component.text("   Ceiling: ", NamedTextColor.GRAY)
+                                .append(Component.text(ceiling != null ? configManager.formatCurrency(ceiling) : "none", NamedTextColor.RED));
+                        player.sendMessage(floorText.append(ceilText));
+                    }
+
+                    // ── Active Market Events ───────────────────────────────────
+                    if (!activeEvents.isEmpty()) {
+                        player.sendMessage(Component.text("  Active Events:", NamedTextColor.GOLD));
+                        for (MarketEvent event : activeEvents) {
+                            String typeLabel = switch (event.type()) {
+                                case DEMAND_SURGE -> "Demand Surge";
+                                case SUPPLY_GLUT -> "Supply Glut";
+                                case INFLATION_BOOST -> "Inflation Boost";
+                                case DEFLATION_DROP -> "Deflation Drop";
+                                case GOLD_RUSH -> "Gold Rush";
+                                case CUSTOM -> "Custom";
+                            };
+                            String multStr = event.priceMultiplier() >= 1.0
+                                    ? "x" + String.format("%.1f", event.priceMultiplier())
+                                    : "x" + String.format("%.2f", event.priceMultiplier());
+                            player.sendMessage(Component.text("    • ", NamedTextColor.YELLOW)
+                                    .append(Component.text(event.name(), NamedTextColor.WHITE))
+                                    .append(Component.text(" (" + typeLabel + " " + multStr + ")", NamedTextColor.GRAY)));
+                        }
+                    }
+
+                    // ── 7-Day Range ────────────────────────────────────────────
+                    if (!history7d.isEmpty()) {
+                        BigDecimal min7d = history7d.stream().map(PriceHistory::price).min(BigDecimal::compareTo).orElse(buyPrice);
+                        BigDecimal max7d = history7d.stream().map(PriceHistory::price).max(BigDecimal::compareTo).orElse(buyPrice);
+                        BigDecimal avg7d = history7d.stream()
+                                .map(PriceHistory::price)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                                .divide(BigDecimal.valueOf(history7d.size()), 2, java.math.RoundingMode.HALF_UP);
+                        int totalVol = history7d.stream().mapToInt(PriceHistory::totalVolume).sum();
+                        player.sendMessage(Component.text("  7d Range: ", NamedTextColor.GRAY)
+                                .append(Component.text(configManager.formatCurrency(min7d), NamedTextColor.YELLOW))
+                                .append(Component.text(" – ", NamedTextColor.DARK_GRAY))
+                                .append(Component.text(configManager.formatCurrency(max7d), NamedTextColor.GREEN))
+                                .append(Component.text("   Avg: ", NamedTextColor.GRAY))
+                                .append(Component.text(configManager.formatCurrency(avg7d), NamedTextColor.WHITE))
+                                .append(Component.text("   Vol: ", NamedTextColor.GRAY))
+                                .append(Component.text(formatVolume(totalVol), NamedTextColor.AQUA)));
+                    }
+
+                    // ── Recent Trades ─────────────────────────────────────────
+                    if (transactions.isEmpty()) {
+                        player.sendMessage(Component.text("  No recent trades.", NamedTextColor.DARK_GRAY));
+                    } else {
+                        player.sendMessage(Component.text("  Recent Trades:", NamedTextColor.GOLD));
+                        DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault());
+                        for (Transaction tx : transactions) {
+                            String playerName = resolvePlayerName(tx.playerUuid());
+                            NamedTextColor typeColor = tx.type() == Transaction.TransactionType.BUY
+                                    ? NamedTextColor.GREEN : NamedTextColor.YELLOW;
+                            String typeLabel = tx.type() == Transaction.TransactionType.BUY ? "BUY" : "SELL";
+                            String timeStr = timeFmt.format(tx.timestamp());
+                            player.sendMessage(
+                                    Component.text("    " + timeStr + " ", NamedTextColor.DARK_GRAY)
+                                            .append(Component.text(playerName, NamedTextColor.WHITE))
+                                            .append(Component.text(" " + typeLabel + " ", typeColor))
+                                            .append(Component.text(tx.amount() + "x @ ", NamedTextColor.GRAY))
+                                            .append(Component.text(configManager.formatCurrency(tx.pricePerUnit()), NamedTextColor.WHITE))
+                                            .append(Component.text(" = ", NamedTextColor.DARK_GRAY))
+                                            .append(Component.text(configManager.formatCurrency(tx.totalPrice()), NamedTextColor.GREEN))
+                            );
+                        }
+                    }
+
+                    player.sendMessage(Component.empty());
+                }))
+                .exceptionally(ex -> {
+                    plugin.getLogger().log(Level.WARNING, "Failed to load item info for " + material, ex);
+                    return null;
+                });
+    }
+
+    /**
+     * Resolves a player UUID to a display name, falling back to the UUID prefix.
+     */
+    private String resolvePlayerName(UUID uuid) {
+        var player = plugin.getServer().getPlayer(uuid);
+        if (player != null) {
+            return player.getName();
+        }
+        // Fallback: show UUID prefix
+        String uuidStr = uuid.toString();
+        return uuidStr.substring(0, 8);
+    }
+
+    /**
+     * Formats a volume count into a compact human-readable string.
+     */
+    private String formatVolume(int volume) {
+        if (volume >= 1_000_000) {
+            return String.format("%.1fM", volume / 1_000_000.0);
+        } else if (volume >= 1_000) {
+            return String.format("%.1fK", volume / 1_000.0);
+        } else {
+            return String.valueOf(volume);
+        }
     }
 
     @Command("shop reload")

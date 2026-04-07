@@ -10364,6 +10364,21 @@ fn main() -> eframe::Result<()> {
     }
 
     // ─── VWAP Test ────────────────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--trend-dampening-multi" {
+        run_trend_dampening_sweep();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--sell-pressure-multi" {
+        run_sell_pressure_multi_seed();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--sell-pressure-test" {
+        run_sell_pressure_sweep();
+        return Ok(());
+    }
+
     if args.len() > 1 && args[1] == "--vwap-test" {
         run_vwap_test();
         return Ok(());
@@ -12013,4 +12028,125 @@ fn run_gui() -> eframe::Result<()> {
         options,
         Box::new(|_cc| Ok(Box::new(SimApp::new()))),
     )
+}
+fn run_sell_pressure_sweep() {
+    use crate::analyzer::load_summary;
+    let seed = 42u64;
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       SELL PRESSURE SENSITIVITY TEST (seed=42)              ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    let multipliers = [0.5, 0.8, 1.0, 1.2, 1.5];
+    let mut results = Vec::new();
+
+    for &mult in &multipliers {
+        let mut scenario = Scenario::guild_stability_mm_fixed_guild();
+        scenario.config.economy.sell_pressure_multiplier = mult;
+        let dir = PathBuf::from(format!("/tmp/autotune-sp-{}", mult));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).ok();
+        run_seeded_headless(&scenario, seed, &dir).unwrap();
+        let summary = load_summary(&dir.join("simulation.db")).unwrap();
+        results.push((mult, summary));
+    }
+
+    println!("  Mult  |   GDP   |  Debt   | D/G  | Buy% | Vol×100");
+    println!("  --------------------------------------------------");
+    for (mult, s) in &results {
+        println!(
+            "  {:<5.2} | {:7.0} | {:7.0} | {:>4.2}x | {:>4.1}% | {:>5.3}",
+            mult,
+            s.gdp,
+            s.debt,
+            s.debt / s.gdp.max(1.0),
+            s.buy_ratio * 100.0,
+            s.avg_volatility * 100.0
+        );
+    }
+}
+fn run_sell_pressure_multi_seed() {
+    use crate::analyzer::load_summary;
+    let seeds = vec![42, 12345, 98765, 77777, 11111];
+    let multipliers = [0.8, 1.0, 1.2];
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       SELL PRESSURE MULTI-SEED (5 seeds)                    ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    for &mult in &multipliers {
+        let mut total_gdp = 0.0;
+        let mut total_dg = 0.0;
+        let mut total_vol = 0.0;
+        let mut total_bpd = 0.0;
+
+        for &seed in &seeds {
+            let mut scenario = Scenario::guild_stability_mm_fixed_guild();
+            scenario.config.economy.sell_pressure_multiplier = mult;
+            let dir = PathBuf::from(format!("/tmp/autotune-sp-multi-{}-{}", mult, seed));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(&dir).ok();
+            run_seeded_headless(&scenario, seed, &dir).unwrap();
+            let summary = load_summary(&dir.join("simulation.db")).unwrap();
+
+            total_gdp += summary.gdp;
+            total_dg += summary.debt / summary.gdp.max(1.0);
+            total_vol += summary.avg_volatility;
+            total_bpd += summary.avg_bpd;
+        }
+
+        let avg_gdp = total_gdp / seeds.len() as f64;
+        let avg_dg = total_dg / seeds.len() as f64;
+        let avg_vol = total_vol / seeds.len() as f64;
+        let avg_bpd = total_bpd / seeds.len() as f64;
+
+        println!(
+            "  Mult: {:<4.1} | GDP: {:7.0} | D/G: {:>4.2}x | Vol: {:>5.3} | BPD: {:>4.2}%",
+            mult,
+            avg_gdp,
+            avg_dg,
+            avg_vol * 100.0,
+            avg_bpd * 100.0
+        );
+    }
+}
+fn run_trend_dampening_sweep() {
+    use crate::analyzer::load_summary;
+    let seeds = vec![42, 12345, 98765, 77777, 11111];
+    let dampeners = [0.0, 0.05, 0.1, 0.15, 0.2];
+    let mut print_results = Vec::new();
+    for &damp in &dampeners {
+        let mut total_gdp = 0.0;
+        let mut total_dg = 0.0;
+        let mut total_vol = 0.0;
+        let mut total_bpd = 0.0;
+        for &seed in &seeds {
+            let mut scenario = Scenario::guild_stability_mm_fixed_guild();
+            scenario.config.economy.trend_dampening = damp;
+            let dir = PathBuf::from(format!("/tmp/autotune-tp-multi-{}-{}", damp, seed));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(&dir).ok();
+            run_seeded_headless(&scenario, seed, &dir).unwrap();
+            let summary = load_summary(&dir.join("simulation.db")).unwrap();
+            total_gdp += summary.gdp;
+            total_dg += summary.debt / summary.gdp.max(1.0);
+            total_vol += summary.avg_volatility;
+            total_bpd += summary.avg_bpd;
+        }
+        let avg_gdp = total_gdp / seeds.len() as f64;
+        let avg_dg = total_dg / seeds.len() as f64;
+        let avg_vol = total_vol / seeds.len() as f64;
+        let avg_bpd = total_bpd / seeds.len() as f64;
+        print_results.push(format!(
+            "  Damp: {:<4.2} | GDP: {:7.0} | D/G: {:>4.2}x | Vol: {:>5.3} | BPD: {:>4.2}%",
+            damp,
+            avg_gdp,
+            avg_dg,
+            avg_vol * 100.0,
+            avg_bpd * 100.0
+        ));
+    }
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       TREND DAMPENING SENSITIVITY TEST (5 seeds)            ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    for res in print_results {
+        println!("{}", res);
+    }
 }

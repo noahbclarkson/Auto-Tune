@@ -10,6 +10,7 @@ import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.economy.LoanManager;
+import com.noahblclarkson.autotune.economy.EconomyAdvisor;
 import com.noahblclarkson.autotune.manager.DatabaseCleanupManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
 import com.noahblclarkson.autotune.manager.ExchangeRateService;
@@ -87,6 +88,7 @@ public class AdminCommand {
     private final MarketEventService marketEventService;
     private final MarketDigestService marketDigestService;
     private final EconomySnapshotRepository economySnapshotRepository;
+    private final EconomyAdvisor advisor;
 
     @Inject
     public AdminCommand(
@@ -104,7 +106,8 @@ public class AdminCommand {
             MarketEventService marketEventService,
             PriceReporter priceReporter,
             MarketDigestService marketDigestService,
-            EconomySnapshotRepository economySnapshotRepository
+            EconomySnapshotRepository economySnapshotRepository,
+            EconomyAdvisor advisor
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -121,6 +124,14 @@ public class AdminCommand {
         this.priceReporter = priceReporter;
         this.marketDigestService = marketDigestService;
         this.economySnapshotRepository = economySnapshotRepository;
+        this.advisor = advisor;
+    }
+
+    @Command("autotune admin advice")
+    @Permission("autotune.admin")
+    public void adminAdvice(CommandSender sender) {
+        EconomyAdvisor.AdviceResult result = advisor.analyze();
+        sender.sendMessage(advisor.toComponent(result));
     }
 
     @Command("autotune admin")

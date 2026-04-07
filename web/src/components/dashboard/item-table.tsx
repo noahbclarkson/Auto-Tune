@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/ui/pagination';
+import { StarButton } from '@/components/ui/star-button';
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { formatCurrency, formatPercent } from '@/lib/format';
 import type { ItemDto } from '@/lib/api';
@@ -147,6 +148,7 @@ export function ItemTable({
           <table className="w-full text-sm min-w-[640px]">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="px-3 py-2.5 text-center font-medium text-muted-foreground w-8">★</th>
                 <th
                   className="px-3 py-2.5 text-left font-medium text-muted-foreground cursor-pointer select-none"
                   onClick={() => handleSort('displayName')}
@@ -206,6 +208,9 @@ export function ItemTable({
                       selectedItemId === item.id ? 'bg-primary/5' : ''
                     }`}
                   >
+                    <td className="px-2 py-2.5 text-center">
+                      <StarButton itemId={item.id} />
+                    </td>
                     <td className="px-3 py-2.5 font-medium text-foreground">
                       {linkToDetail ? (
                         <a
@@ -273,7 +278,7 @@ export function ItemTable({
               })}
               {paged.length === 0 && (
                 <tr>
-                  <td colSpan={trends ? 8 : 7} className="px-3 py-8 text-center text-muted-foreground">
+                  <td colSpan={trends ? 9 : 8} className="px-3 py-8 text-center text-muted-foreground">
                     No items found
                   </td>
                 </tr>

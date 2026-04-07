@@ -395,4 +395,16 @@ export const api = {
     rearm: (base: string, alertId: string, playerName: string) =>
       patchJson<AlertDto>(`${base}/api/alerts/${alertId}/rearm?playerName=${encodeURIComponent(playerName)}`),
   },
+  shop: {
+    favorites: {
+      list: (base: string, playerName: string) =>
+        fetchJson<{ playerName: string; favorites: ItemDto[]; count: number }>(
+          `${base}/api/shop/favorites/${encodeURIComponent(playerName)}`
+        ),
+      toggle: (base: string, playerName: string, itemId: number) =>
+        patchJson<{ playerName: string; itemId: number; favorited: boolean }>(
+          `${base}/api/shop/favorites/${encodeURIComponent(playerName)}/${itemId}`
+        ),
+    },
+  },
 };

@@ -68,6 +68,7 @@ public class CommandManager {
         registerSafely(parser, injector, LoanCommand.class, "loan");
         registerSafely(parser, injector, TransactionCommand.class, "transactions");
         registerSafely(parser, injector, AdminCommand.class, "admin");
+        registerSafely(parser, injector, AdminRecoveryCommand.class, "recovery");
         registerSafely(parser, injector, AuctionCommand.class, "auction");
         registerSafely(parser, injector, PriceAlertCommand.class, "alert");
         registerSafely(parser, injector, TreasuryCommand.class, "treasury");

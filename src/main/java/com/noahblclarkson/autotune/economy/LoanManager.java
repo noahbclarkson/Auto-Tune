@@ -53,6 +53,10 @@ public class LoanManager {
      */
     private volatile boolean tier3CircuitLocked = false;
 
+    public void setTier3CircuitLocked(boolean locked) {
+        this.tier3CircuitLocked = locked;
+    }
+
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
 
     @Inject

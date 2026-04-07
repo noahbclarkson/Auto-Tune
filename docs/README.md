@@ -76,9 +76,11 @@ Complete reference for the Java plugin's bundled REST + WebSocket API (port 8989
 
 ## I want to integrate with the cross-server API
 
-→ **[API Reference](API.md)**
+→ **[API Reference (prose)](API.md)** | **[API Reference (OpenAPI)](openapi.yaml)**
 
 Reference for the Rust API server (port 8080). Covers server registration, price submission, true-price querying, exchange rates, heartbeat, and rate limits.
+
+An OpenAPI 3.1 spec (`openapi.yaml`) is also available for client generation, testing tools, and Swagger UI.
 
 ---
 

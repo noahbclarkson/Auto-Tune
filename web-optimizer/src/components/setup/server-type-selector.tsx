@@ -17,14 +17,14 @@ const SERVER_TYPES: Array<{ key: ServerType; name: string; description: string; 
     key: 'smp',
     name: 'SMP / Vanilla+',
     description: 'Standard survival. Moderate trading, moderate griefing risk.',
-    icon: 'pickaxe',
+    icon: 'axe',
     badge: 'Recommended',
   },
   {
     key: 'skyblock',
     name: 'Skyblock',
     description: 'Island economies, limited resources, high scarcity.',
-    icon: 'island',
+    icon: 'mountain',
     badge: 'More demand floor',
   },
   {

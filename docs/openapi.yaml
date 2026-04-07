@@ -1,0 +1,350 @@
+openapi: 3.1.0
+info:
+  title: Auto-Tune API Server
+  description: |
+    Cross-server price aggregation and true-price computation service.
+    Servers submit ratio matrices → solver computes "true" universal prices
+    → used as starting prices for new servers.
+  version: 1.0.0
+  contact:
+    name: Auto-Tune
+    url: https://github.com/noahbclarkson/Auto-Tune
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+paths:
+  /api/servers/register:
+    post:
+      summary: Register a new server
+      description: |
+        Register a Minecraft server with the Auto-Tune network.
+        Returns a unique server ID and API key used for all future requests.
+        **Note:** Requires manual maintainer approval before full access is granted.
+      tags: [Servers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterServerRequest"
+      responses:
+        "200":
+          description: Server registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterServerResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+                description: Seconds to wait before retrying
+
+  /api/servers/{serverId}/heartbeat:
+    post:
+      summary: Server heartbeat
+      description: |
+        Send a heartbeat to keep your server alive in the registry.
+        Called between price submissions so servers don't go stale.
+      tags: [Servers]
+      parameters:
+        - name: serverId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-API-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playerCount:
+                  type: integer
+                  description: Current online player count
+      responses:
+        "200":
+          description: Heartbeat recorded
+        "401":
+          description: Invalid API key
+        "404":
+          description: Server not found
+        "429":
+          description: Rate limit exceeded
+
+  /api/servers/{serverId}/prices:
+    post:
+      summary: Submit price ratio matrix
+      description: |
+        Submit your server's local price ratios for true-price computation.
+        The solver aggregates all servers' submissions to compute consensus true prices.
+      tags: [Price Submission]
+      parameters:
+        - name: serverId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-API-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitPricesRequest"
+      responses:
+        "200":
+          description: Price data accepted
+        "400":
+          description: Invalid submission (malformed ratios)
+        "401":
+          description: Invalid API key
+        "404":
+          description: Server not found
+        "429":
+          description: Rate limit exceeded
+
+  /api/true-prices:
+    get:
+      summary: Get consensus true prices
+      description: Returns the latest consensus true prices computed by the least-squares solver.
+      tags: [True Prices]
+      responses:
+        "200":
+          description: True price data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TruePricesResponse"
+
+  /api/exchange-rates:
+    get:
+      summary: Get exchange rates
+      description: |
+        Per-server exchange rate multipliers relative to the true-price baseline.
+        Used by the Java plugin to convert cross-server prices.
+      tags: [Exchange Rates]
+      responses:
+        "200":
+          description: Exchange rate data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeRatesResponse"
+
+  /api/servers:
+    get:
+      summary: List registered servers
+      description: |
+        Returns summary data for all registered servers.
+        Includes health score, online status, and economy age.
+      tags: [Servers]
+      responses:
+        "200":
+          description: List of servers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  servers:
+                    type: array
+                    items:
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        serverType:
+                          type: string
+                          enum:
+                            [smp, skyblock, factions, creative, minigames, other]
+                        playerCount:
+                          type: integer
+                        maxPlayers:
+                          type: integer
+                        healthScore:
+                          type: number
+                          minimum: 0
+                          maximum: 100
+                        isOnline:
+                          type: boolean
+                        economyAgeDays:
+                          type: integer
+                        lastSeen:
+                          type: string
+                          format: date-time
+                  total:
+                    type: integer
+
+  /api/stats:
+    get:
+      summary: Network statistics
+      description: Anonymous aggregate statistics across all contributing servers.
+      tags: [Stats]
+      responses:
+        "200":
+          description: Network statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalServers:
+                    type: integer
+                  activeServers:
+                    type: integer
+                    description: Servers that submitted prices in the last 24 hours
+                  totalItems:
+                    type: integer
+                  avgHealthScore:
+                    type: number
+      "404":
+        description: No servers registered yet
+
+components:
+  schemas:
+    RegisterServerRequest:
+      type: object
+      required:
+        - serverName
+        - serverType
+      properties:
+        serverName:
+          type: string
+          maxLength: 128
+          description: Display name for your server
+        serverType:
+          type: string
+          enum:
+            [smp, skyblock, factions, creative, minigames, other]
+          description: Type of Minecraft server
+        contactEmail:
+          type: string
+          format: email
+          description: Admin email for key delivery (optional)
+    RegisterServerResponse:
+      type: object
+      properties:
+        serverId:
+          type: string
+        apiKey:
+          type: string
+        status:
+          type: string
+          enum:
+            [pending, approved, denied]
+        message:
+          type: string
+          description: Human-readable status message
+    SubmitPricesRequest:
+      type: object
+      required:
+        - prices
+        - timestamp
+      properties:
+        prices:
+          type: array
+          description: |
+            Ratio matrix: each entry represents the average price ratio
+            between two items (i / j) observed on this server.
+          items:
+            type: object
+            properties:
+              itemId:
+                type: string
+              ratio:
+                type: number
+              basePrice:
+                type: number
+                description: Base price from shops.yml
+              confidence:
+                type: number
+                minimum: 0
+                maximum: 1
+                description: Confidence score based on trade volume
+        timestamp:
+          type: string
+          format: date-time
+          description: When these observations were collected
+        playerCount:
+          type: integer
+          description: Online player count at submission time
+        serverVersion:
+          type: string
+          description: Plugin version string (e.g., "1.0.0-rewrite-2")
+    TruePricesResponse:
+      type: object
+      properties:
+        computedAt:
+          type: string
+          format: date-time
+        prices:
+          type: array
+          items:
+            type: object
+            properties:
+              itemId:
+                type: string
+              truePrice:
+                type: number
+                description: Consensus true price in economy units
+              confidence:
+                type: number
+                minimum: 0
+                maximum: 1
+                description: Confidence based on contributing server count and price variance
+              contributingServers:
+                type: integer
+                description: Number of servers contributing to this price
+              quality:
+                type: number
+                description: |
+                  LS fit quality (exp(-5 * RMS residual)).
+                  1.0 = perfect, 0.61 = 0.10 residual, < 0.5 = noisy
+        quality:
+          type: number
+          description: Overall solver quality
+    ExchangeRatesResponse:
+      type: object
+      properties:
+        rates:
+          type: array
+          items:
+            type: object
+            properties:
+              serverId:
+                type: string
+              serverName:
+                type: string
+              rate:
+                type: number
+                description: Multiplier to convert this server's prices to true prices
+              updatedAt:
+                type: string
+                format: date-time
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - ApiKeyAuth: []

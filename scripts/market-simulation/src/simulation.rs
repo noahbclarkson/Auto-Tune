@@ -60,6 +60,10 @@ pub struct Simulation {
     /// drops below 90% of tier3_ratio (a 10% hysteresis band). This prevents
     /// rapid open/close cycling when D/G hovers near the boundary.
     circuit_tier3_locked: bool,
+    /// Admin-triggered economy freeze: forces 0% interest and pauses loan issuance.
+    /// Simulates `/at admin recovery start` — used to test recovery mode effectiveness.
+    /// When active: circuit breaker reports ADMIN_RECOVERY tier, multiplier=0.0, new loans blocked.
+    admin_recovery_mode: bool,
     next_player_id: usize,
     /// Log of all loans that were capped by the per-loan GDP cap.
     pub loan_cap_log: Vec<LoanCapRecord>,
@@ -83,6 +87,18 @@ impl Simulation {
         &self.prev_circuit_tier
     }
 
+    /// Returns whether admin recovery mode is currently active.
+    #[allow(dead_code)]
+    pub fn is_admin_recovery_mode(&self) -> bool {
+        self.admin_recovery_mode
+    }
+
+    /// Enable or disable admin recovery mode (simulates `/at admin recovery start|stop`).
+    /// When active: circuit reports ADMIN_RECOVERY, multiplier forced to 0.0, loans blocked.
+    pub fn set_admin_recovery_mode(&mut self, enabled: bool) {
+        self.admin_recovery_mode = enabled;
+    }
+
     pub fn new(config: SimConfig) -> Self {
         let engine = MarketEngine::new(&config);
         Self {
@@ -101,6 +117,7 @@ impl Simulation {
             events: Vec::new(),
             prev_circuit_tier: "NORMAL".to_string(),
             circuit_tier3_locked: false,
+            admin_recovery_mode: false,
             next_player_id: 0,
             loan_cap_log: Vec::new(),
             mm_opening_loan_count: 0,
@@ -398,7 +415,12 @@ impl Simulation {
             -1.0
         };
 
-        let (interest_multiplier, tier_name) = if lc.debt_gdp_tier3_ratio > 0.0 {
+        let (interest_multiplier, tier_name) = if self.admin_recovery_mode {
+            // Admin-triggered economy freeze (simulates `/at admin recovery start`).
+            // Forces 0% interest and blocks new loan issuance. Used to test recovery
+            // effectiveness in simulation before applying to live servers.
+            (0.0, "ADMIN_RECOVERY")
+        } else if lc.debt_gdp_tier3_ratio > 0.0 {
             if lc.counter_cyclical {
                 // Counter-cyclical continuous taper (Java default, matching Java LoanManager):
                 // multiplier = max(0, min(1, 1 - ratio / tier3_ratio))
@@ -575,6 +597,7 @@ impl Simulation {
 
             if !has_active_loan
                 && !in_default_cooldown
+                && !self.admin_recovery_mode // loans blocked during admin recovery mode
                 && player.balance < 50.0
                 && player.credit_score >= self.config.loans.min_credit_score
                 && mm_can_borrow

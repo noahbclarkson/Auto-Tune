@@ -9983,6 +9983,9 @@ fn main() -> eframe::Result<()> {
             "  --circuit-breaker-hysteresis-test  TIER3 hysteresis: prevents D/G boundary cycling"
         );
         println!("  --circuit-breaker-sensitivity-test  TIER3 thresholds × min interest sweep");
+        println!(
+            "  --admin-recovery-test    Economy freeze / recovery mode vs natural deleveraging"
+        );
         return Ok(());
     }
 
@@ -10033,6 +10036,11 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--fine-threshold-sweep" {
         run_fine_threshold_sweep();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--admin-recovery-test" {
+        run_admin_recovery_mode_test();
         return Ok(());
     }
 
@@ -10608,6 +10616,287 @@ fn run_production_config_test() {
     }
     println!();
     println!("  Java default: loans.counter-cyclical: true, floor: 60% ($300 for Diamond)");
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ADMIN RECOVERY MODE TEST
+//  Tests `/at admin recovery start|stop` — manually locking the circuit breaker
+//  in a stressed economy to freeze interest and block new loans.
+// ═══════════════════════════════════════════════════════════════════════
+fn run_admin_recovery_mode_test() {
+    use crate::loan::LoanStatus;
+    use crate::player::set_global_seeded_rng;
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct DailyRecord {
+        day: u64,
+        gdp: f64,
+        active_debt: f64,
+        defaulted_debt: f64,
+        dg_ratio: f64,
+        tier: String,
+        recovery_active: bool,
+    }
+
+    fn run_arm(
+        scenario: &Scenario,
+        seed: u64,
+        label: &str,
+        recovery_start_day: Option<u64>,
+    ) -> (Vec<DailyRecord>, Simulation, u32, f64) {
+        println!("─── {} ───", label);
+        if let Some(day) = recovery_start_day {
+            println!(
+                "  Recovery mode activated at Day {day} (tick {})",
+                day * 288
+            );
+        }
+
+        set_global_seeded_rng(seed);
+        let mut sim = Simulation::new_seeded(scenario.config.clone(), seed);
+        sim.events = scenario.events.clone();
+        add_players_to_sim(&mut sim, &scenario.players);
+        sim.paused = false;
+
+        let mut daily: Vec<DailyRecord> = Vec::new();
+        let mut interest_collected: f64 = 0.0;
+        let start = Instant::now();
+
+        while sim.current_tick < scenario.duration_ticks {
+            sim.tick();
+            let tick = sim.current_tick;
+
+            // Activate recovery mode at specified day
+            if let Some(start_day) = recovery_start_day
+                && tick == start_day * 288
+                && !sim.is_admin_recovery_mode()
+            {
+                sim.set_admin_recovery_mode(true);
+                println!("  🔒 Admin recovery mode ACTIVATED at tick {tick}.");
+            }
+
+            // Calculate interest collected between ticks (approximate)
+            if sim.loans.iter().any(|l| l.last_interest_tick == tick) {
+                // Interest was charged this tick
+                for loan in &sim.loans {
+                    if loan.status == LoanStatus::Active {
+                        interest_collected += loan.current_balance * loan.interest_rate * 0.00833; // ~1/120th per tick
+                    }
+                }
+            }
+
+            if tick.is_multiple_of(288) {
+                let day = tick / 288;
+                let gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+                let active_debt: f64 = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == LoanStatus::Active)
+                    .map(|l| l.current_balance)
+                    .sum();
+                let defaulted_debt: f64 = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == LoanStatus::Defaulted)
+                    .map(|l| l.current_balance)
+                    .sum();
+                let total = active_debt + defaulted_debt;
+                let dg = if gdp > 0.0 { total / gdp } else { 0.0 };
+                let tier = sim.prev_circuit_tier().to_string();
+                let rec = sim.is_admin_recovery_mode();
+
+                let marker = if rec { " 🔒" } else { "" };
+                println!(
+                    "  Day {:>2}: GDP={:>9.0} | D/G={:.2}x | active={:>2} | defaulted={:>2} | {}{}",
+                    day,
+                    gdp,
+                    dg,
+                    sim.loans
+                        .iter()
+                        .filter(|l| l.status == LoanStatus::Active)
+                        .count(),
+                    sim.loans
+                        .iter()
+                        .filter(|l| l.status == LoanStatus::Defaulted)
+                        .count(),
+                    tier,
+                    marker
+                );
+
+                daily.push(DailyRecord {
+                    day,
+                    gdp,
+                    active_debt,
+                    defaulted_debt,
+                    dg_ratio: dg,
+                    tier,
+                    recovery_active: rec,
+                });
+            }
+        }
+
+        // Count total loans created
+        let total_loans = sim.loans.len() as u32;
+
+        println!(
+            "  Arm complete: {} ticks, {} loans, {:.1}s",
+            sim.current_tick,
+            total_loans,
+            start.elapsed().as_secs_f64()
+        );
+        (daily, sim, total_loans, interest_collected)
+    }
+
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       ADMIN RECOVERY MODE TEST                              ║");
+    println!("║  /at admin recovery start|stop — economy freeze test        ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Question: When a server admin manually triggers recovery mode,\n");
+    println!("  does it actually halt the debt cascade and stabilize D/G?\n");
+    println!("  Arm 1: Natural (no intervention — let circuit breaker work alone)");
+    println!("  Arm 2: Recovery at Day 3 (early intervention — before TIER3)");
+    println!("  Arm 3: Recovery at Day 7 (mid-crisis — when D/G starts climbing)");
+    println!("  Arm 4: Recovery at Day 10 (late intervention — TIER3 already active)\n");
+    println!("  Scenario: guildbuyer_failure_test (1MM+2GB) — 14 days, counter_cyclical=true\n");
+
+    let scenario = {
+        let mut s = Scenario::guildbuyer_failure_test();
+        s.duration_ticks = 288 * 14; // 14 days
+        s
+    };
+
+    let (daily1, sim1, loans1, _) = run_arm(&scenario, seed, "Arm 1: Natural (no recovery)", None);
+    println!();
+    let (daily2, _sim2, loans2, _) =
+        run_arm(&scenario, seed, "Arm 2: Recovery Day 3 (early)", Some(3));
+    println!();
+    let (daily3, _sim3, loans3, _) =
+        run_arm(&scenario, seed, "Arm 3: Recovery Day 7 (mid)", Some(7));
+    println!();
+    let (daily4, _sim4, loans4, _) =
+        run_arm(&scenario, seed, "Arm 4: Recovery Day 10 (late)", Some(10));
+
+    // ── Final Comparison ─────────────────────────────────────────────────
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       FINAL OUTCOME COMPARISON                              ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    fn day14(daily: &[DailyRecord]) -> &DailyRecord {
+        daily
+            .iter()
+            .find(|d| d.day == 14)
+            .unwrap_or_else(|| daily.last().unwrap())
+    }
+
+    let r1 = day14(&daily1);
+    let r2 = day14(&daily2);
+    let r3 = day14(&daily3);
+    let r4 = day14(&daily4);
+
+    println!(
+        "  {:<10} {:>12} {:>10} {:>12} {:>8} {:>7}",
+        "Arm", "Day 14 GDP", "Day 14 D/G", "Defaulted", "Loans", "Recovery"
+    );
+    println!("  {}", "-".repeat(72));
+    println!(
+        "  {:<10} {:>12.0} {:>10.2}x {:>10.0} {:>8}  —",
+        "Natural", r1.gdp, r1.dg_ratio, r1.defaulted_debt, loans1
+    );
+    println!(
+        "  {:<10} {:>12.0} {:>10.2}x {:>10.0} {:>8}  Day 3",
+        "EARLY", r2.gdp, r2.dg_ratio, r2.defaulted_debt, loans2
+    );
+    println!(
+        "  {:<10} {:>12.0} {:>10.2}x {:>10.0} {:>8}  Day 7",
+        "MID", r3.gdp, r3.dg_ratio, r3.defaulted_debt, loans3
+    );
+    println!(
+        "  {:<10} {:>12.0} {:>10.2}x {:>10.0} {:>8}  Day 10",
+        "LATE", r4.gdp, r4.dg_ratio, r4.defaulted_debt, loans4
+    );
+
+    // D/G deltas vs natural
+    println!("\n  D/G Savings vs Natural:");
+    for (name, r) in [("EARLY", r2), ("MID", r3), ("LATE", r4)] {
+        let save = r1.dg_ratio - r.dg_ratio;
+        println!(
+            "  {}: {:+.2}x ({} → {})",
+            name, save, r.dg_ratio, r1.dg_ratio
+        );
+    }
+
+    // GDP deltas vs natural
+    println!("\n  GDP Delta vs Natural:");
+    for (name, r) in [("EARLY", r2), ("MID", r3), ("LATE", r4)] {
+        let delta = if r1.gdp > 0.0 {
+            (r.gdp - r1.gdp) / r1.gdp * 100.0
+        } else {
+            0.0
+        };
+        println!("  {}: {:+.1}%", name, delta);
+    }
+
+    // Active vs defaulted debt ratios
+    println!("\n  Debt Composition (Day 14):");
+    println!(
+        "  {:<10} {:>12} {:>14} {:>14}",
+        "Arm", "Active Debt", "Defaulted", "Total Debt"
+    );
+    println!("  {}", "-".repeat(52));
+    for (name, r) in [("Natural", r1), ("EARLY", r2), ("MID", r3), ("LATE", r4)] {
+        println!(
+            "  {:<10} {:>12.0} {:>14.0} {:>14.0}",
+            name,
+            r.active_debt,
+            r.defaulted_debt,
+            r.active_debt + r.defaulted_debt
+        );
+    }
+
+    // Final verdict
+    println!("\n  ═══════════════════════════════════");
+    let best_dg_arr = [r2.dg_ratio, r3.dg_ratio, r4.dg_ratio];
+    let best_dg = best_dg_arr
+        .iter()
+        .enumerate()
+        .min_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+        .unwrap();
+    let best_name = match best_dg.0 {
+        0 => "EARLY (Day 3)",
+        1 => "MID (Day 7)",
+        2 => "LATE (Day 10)",
+        _ => "unknown",
+    };
+    println!("  Best D/G: {} at {:.2}x", best_name, best_dg.1);
+    let worse = *best_dg.1 > r1.dg_ratio;
+    if worse {
+        println!(
+            "  ⚠️  ALL recovery modes had WORSE D/G than natural — recovery mode is COUNTERPRODUCTIVE."
+        );
+        println!(
+            "  Reason: 0% interest prevents debt servicing incentives. Economy can't deleverage."
+        );
+    } else {
+        println!(
+            "  ✅ Recovery mode REDUCES D/G vs natural ({:.2}x → {:.2}x).",
+            r1.dg_ratio, best_dg.1
+        );
+        if r4.dg_ratio < r1.dg_ratio {
+            println!("  Even LATE intervention (Day 10) is better than no intervention.");
+        }
+        if r2.dg_ratio < r3.dg_ratio && r3.dg_ratio < r4.dg_ratio {
+            println!("  EARLY > MID > LATE: earlier intervention is more effective.");
+        }
+    }
+
+    // Key insight about counter-cyclical interaction
+    if sim1.prev_circuit_tier().contains("TIER3") {
+        println!("\n  Note: Natural arm reached TIER3 via counter-cyclical taper.");
+        println!("  Recovery mode mimics TIER3 but also BLOCKS new loan issuance.");
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════

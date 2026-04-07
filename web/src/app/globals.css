@@ -54,3 +54,25 @@
     min-height: 100vh;
   }
 }
+
+/ /* DiscoveryOverlay — enter animation + auto-dismiss progress bar */
+@keyframes overlay-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes bar-shrink {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+.overlay-enter {
+  animation: overlay-enter 0.3s ease-out;
+}
+.bar-shrink {
+  animation: bar-shrink 8s linear forwards;
+}

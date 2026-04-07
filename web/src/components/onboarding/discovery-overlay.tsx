@@ -12,7 +12,7 @@ const ITEMS_TIPS = [
 const PORTFOLIO_TIPS = [
   'Your portfolio tracks your realized profits and losses from every trade you make.',
   'Watch the Trading Timeline to see your buy/sell pattern over time.',
-  'The P&L chart shows if you\'re a net buyer or net seller — adjust your strategy accordingly!',
+  "The P&L chart shows if you're a net buyer or net seller — adjust your strategy accordingly!",
 ];
 
 const STORAGE_KEYS = {
@@ -59,12 +59,7 @@ export function DiscoveryOverlay({ page }: DiscoveryOverlayProps) {
       className="fixed top-0 right-0 z-50 flex items-start justify-end p-4 pointer-events-none"
       style={{ maxWidth: '100vw' }}
     >
-      <div
-        className="relative max-w-xs w-full bg-gray-900/95 backdrop-blur-sm border border-emerald-500/40 rounded-xl shadow-2xl shadow-emerald-900/20"
-        style={{
-          animation: 'slideInFade 0.3s ease-out',
-        }}
-      >
+      <div className="relative max-w-xs w-full bg-gray-900/95 backdrop-blur-sm border border-emerald-500/40 rounded-xl shadow-2xl shadow-emerald-900/20 overlay-enter">
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div className="flex items-center gap-2">
@@ -87,35 +82,9 @@ export function DiscoveryOverlay({ page }: DiscoveryOverlayProps) {
 
         {/* Progress bar (8s auto-dismiss) */}
         <div className="h-0.5 bg-emerald-500/20 rounded-b-xl overflow-hidden">
-          <div
-            className="h-full bg-emerald-500"
-            style={{
-              animation: 'shrinkBar 8s linear forwards',
-            }}
-          />
+          <div className="h-full bg-emerald-500 bar-shrink" />
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes slideInFade {
-          from {
-            opacity: 0;
-            transform: translateY(-8px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        @keyframes shrinkBar {
-          from {
-            width: 100%;
-          }
-          to {
-            width: 0%;
-          }
-        }
-      `}</style>
     </div>
   );
 }

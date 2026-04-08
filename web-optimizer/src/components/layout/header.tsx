@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp, Grid, FlaskConical, Code2, Map, Download, Sliders, GitCommit, Wand2 } from 'lucide-react';
+import { Github, BarChart2, Home, BookOpen, DollarSign, Server, TrendingUp, Grid, FlaskConical, Code2, Map, Download, Sliders, GitCommit, Wand2, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/landing/theme-toggle';
 
@@ -21,6 +21,7 @@ const NAV = [
   { href: '/roadmap', label: 'Roadmap', icon: Map },
   { href: '/changelog', label: 'Changelog', icon: GitCommit },
   { href: '/api-docs', label: 'API', icon: Code2 },
+  { href: '/health-badge', label: 'Badge', icon: Tag },
 ];
 
 export function Header() {

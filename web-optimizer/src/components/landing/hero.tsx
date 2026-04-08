@@ -115,9 +115,10 @@ export function Hero() {
             </h1>
 
             <p className="text-gray-400 text-lg leading-relaxed mb-8 max-w-lg">
-              A multi-factor pricing engine that adjusts buy/sell spreads in real-time
-              based on player count, trade volume, and supply–demand balance.
-              No more static prices.
+              Prices that move with supply and demand — automatically. Admins get
+              intelligent advice commands, event orchestration, and a circuit breaker
+              that prevents debt collapse. Players get real buy/sell markets, loans,
+              and auction houses. Zero static shop grids.
             </p>
 
             <div className="flex flex-wrap gap-3 mb-10">
@@ -158,10 +159,10 @@ export function Hero() {
             {/* Stats strip */}
             <div className="flex flex-wrap gap-6 text-sm">
               {[
-                { label: 'Market Tick', value: '5 min' },
-                { label: 'Spread Factors', value: '5 layers' },
-                { label: 'Price Floor', value: '$0.01' },
-                { label: 'SQLite / MariaDB', value: 'supported' },
+                { label: 'Commands', value: '/shop · /sell · /loans' },
+                { label: 'Market tick', value: '5 min' },
+                { label: 'Circuit breaker', value: 'TIER3 at 15× D/G' },
+                { label: 'Events', value: 'demand · supply · inflation' },
               ].map(({ label, value }) => (
                 <div key={label}>
                   <p className="text-gray-500 text-xs uppercase tracking-wider mb-0.5">{label}</p>

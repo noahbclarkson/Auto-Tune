@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, Users, Gavel, Bell, ShieldCheck, Wifi } from 'lucide-react';
+import { ArrowRight, Users, Gavel, Bell, ShieldCheck, Wifi, Cpu, Zap } from 'lucide-react';
 
 const accentMap = {
   emerald: {
@@ -96,6 +96,16 @@ const features: { tag: string; title: string; description: string; stat: { label
     code: '/setup · archetype picker · YAML export',
     accent: 'emerald',
     icon: Zap,
+  },
+  {
+    tag: 'AI OPS',
+    title: 'Admin Intelligence',
+    description:
+      'Built-in economic advisor analyzes your economy in real-time and tells you exactly what to do. /at admin advice surfaces debt ratios, volatility, and suggests circuit breakers, market events, or config changes.',
+    stat: { label: 'Advice engine', value: 'rule + sim grounded' },
+    code: '/at admin advice · /at admin history · /at admin recovery',
+    accent: 'sky',
+    icon: Cpu,
   },
 ];
 

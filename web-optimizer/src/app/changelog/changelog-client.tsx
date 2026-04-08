@@ -37,6 +37,14 @@ const CHANGELOG = [
       {
         tag: 'WEB FEATURE',
         tagColor: 'text-cyan-400 bg-cyan-950/60 border-cyan-800/50',
+        title: 'Player Achievements Tab on /portfolio',
+        detail: 'Added a new "Achievements" tab to the web dashboard player portfolio page. Shows the earned badge count vs total possible. Cards display the badge emoji, title, description, and earn date. Automatically unlocks when players complete market activities (First Sale, Loan Shark, Market Maker).',
+        section: 7,
+        commit: 'eb04fa9',
+      },
+      {
+        tag: 'WEB FEATURE',
+        tagColor: 'text-cyan-400 bg-cyan-950/60 border-cyan-800/50',
         title: 'Embeddable Economy Health Badge — /health-badge',
         detail: 'Three badge styles (compact pill, standard banner, detailed card with GDP/D/G/Buy%). Live preview on dark + light backgrounds and all three health states. Generates self-contained HTML snippet with no JS, no external deps. Server admins embed on forums/websites. Nav link added to header.',
         section: 2,

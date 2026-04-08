@@ -1727,6 +1727,52 @@ impl Scenario {
     }
 }
 
+/// InsiderTrader + Stressed Economy: guildbuyer_failure_test + 2 InsiderTraders
+/// Tests: does IT help or hurt when the economy is already stressed?
+/// Healthy-economy IT test showed: +30.1% GDP but D/G 0.75x→3.16x (+2.41x).
+/// Stressed-economy IT question: does IT add value or amplify debt stress?
+pub fn guildbuyer_failure_test_plus_it() -> Scenario {
+    Scenario {
+        name: "GuildbuyerFailure+IT".to_string(),
+        config: {
+            let mut c = SimConfig::default();
+            c.loans.post_default_cooldown_hours = 168;
+            c
+        },
+        players: vec![
+            ArchetypeConfig {
+                archetype: "MarketMaker".into(),
+                count: 1,
+            },
+            ArchetypeConfig {
+                archetype: "GuildBuyer".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "InsiderTrader".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Casual".into(),
+                count: 4,
+            },
+            ArchetypeConfig {
+                archetype: "Farmer".into(),
+                count: 3,
+            },
+            ArchetypeConfig {
+                archetype: "Trader".into(),
+                count: 2,
+            },
+        ],
+        seed: None,
+        events: Vec::new(),
+        stress_events: vec![],
+        duration_ticks: 288 * 14,
+        speed_ticks_per_sec: 200,
+    }
+}
+
 /// Compute Pearson correlation coefficient between two price-change series.
 /// Returns None if series are too short or have zero variance.
 fn pearson_correlation(a: &[f64], b: &[f64]) -> Option<f64> {
@@ -8284,6 +8330,209 @@ fn run_it_healthy_economy_test() {
     let _ = std::fs::remove_dir_all(&treat_dir);
 }
 
+/// InsiderTrader + Stressed Economy — multi-seed validation
+/// Control: guildbuyer_failure_test (1MM+2GB+4Cas+3Far+2Tra)
+/// Treat:   same + 2 InsiderTraders
+/// Question: does IT help or hurt a stressed economy?
+/// Healthy-economy result (2026-04-02): IT +30.1% GDP, D/G 0.75x→3.16x (+2.41x)
+/// Stressed-economy hypothesis: IT may be MORE harmful since stress already strains D/G
+fn run_it_stressed_economy_test() {
+    use crate::analyzer::load_summary;
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║       INSIDERTRADER + STRESSED ECONOMY TEST                     ║");
+    println!("║  guildbuyer_failure_test vs +2 ITs — 5 seeds                    ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guildbuyer_failure_test (1MM+2GB+4Cas+3Far+2Tra)");
+    println!("  Treat:   same + 2 InsiderTraders\n");
+
+    let ctrl_scenario = Scenario::guildbuyer_failure_test();
+    let treat_scenario = guildbuyer_failure_test_plus_it();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-it-stress-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-it-stress-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl_results = Vec::new();
+    let mut treat_results = Vec::new();
+
+    for seed in &seeds {
+        println!("  Seed {}:", seed);
+        {
+            let mut sc = ctrl_scenario.clone();
+            sc.seed = Some(*seed);
+            let dir = ctrl_dir.join(format!("seed_{}", seed));
+            std::fs::create_dir_all(&dir).ok();
+            if let Err(e) = run_seeded_headless(&sc, *seed, &dir) {
+                eprintln!("  Ctrl seed {} error: {}", seed, e);
+                continue;
+            }
+            if let Ok(s) = load_summary(&dir.join("simulation.db")) {
+                let dg = s.debt / s.gdp.max(1.0);
+                println!(
+                    "    Ctrl: GDP={:.0}  D/G={:.2}x  vol={:.4}",
+                    s.gdp, dg, s.avg_volatility
+                );
+                ctrl_results.push((*seed, s));
+            }
+        }
+        {
+            let mut sc = treat_scenario.clone();
+            sc.seed = Some(*seed);
+            let dir = treat_dir.join(format!("seed_{}", seed));
+            std::fs::create_dir_all(&dir).ok();
+            if let Err(e) = run_seeded_headless(&sc, *seed, &dir) {
+                eprintln!("  Treat seed {} error: {}", seed, e);
+                continue;
+            }
+            if let Ok(s) = load_summary(&dir.join("simulation.db")) {
+                let dg = s.debt / s.gdp.max(1.0);
+                println!(
+                    "    Treat: GDP={:.0}  D/G={:.2}x  vol={:.4}",
+                    s.gdp, dg, s.avg_volatility
+                );
+                treat_results.push((*seed, s));
+            }
+        }
+        println!();
+    }
+
+    // ── Aggregate Stats ───────────────────────────────────────────────────
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║                    AGGREGATE RESULTS (5 seeds)                   ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝\n");
+
+    if ctrl_results.is_empty() || treat_results.is_empty() {
+        println!("  No results collected.");
+        return;
+    }
+
+    fn stats(results: &[(u64, crate::analyzer::SimSummary)]) -> (f64, f64, f64, f64, f64, f64) {
+        let n = results.len() as f64;
+        let gdp: Vec<f64> = results.iter().map(|(_, r)| r.gdp).collect();
+        let dg: Vec<f64> = results
+            .iter()
+            .map(|(_, r)| r.debt / r.gdp.max(1.0))
+            .collect();
+        let vol: Vec<f64> = results.iter().map(|(_, r)| r.avg_volatility).collect();
+        let bpd: Vec<f64> = results.iter().map(|(_, r)| r.avg_bpd).collect();
+        let buy: Vec<f64> = results.iter().map(|(_, r)| r.buy_ratio).collect();
+        let mean = |v: &[f64]| v.iter().sum::<f64>() / n;
+        let std = |v: &[f64]| {
+            let m = mean(v);
+            (v.iter().map(|x| (x - m).powi(2)).sum::<f64>() / n).sqrt()
+        };
+        (
+            mean(&gdp),
+            mean(&dg),
+            mean(&vol),
+            mean(&bpd),
+            mean(&buy),
+            std(&dg),
+        )
+    }
+
+    let (ctrl_gdp, ctrl_dg, ctrl_vol, ctrl_bpd, ctrl_buy, ctrl_dg_std) = stats(&ctrl_results);
+    let (treat_gdp, treat_dg, treat_vol, treat_bpd, treat_buy, treat_dg_std) =
+        stats(&treat_results);
+
+    let gdp_pct = (treat_gdp / ctrl_gdp.max(1.0) - 1.0) * 100.0;
+    let dg_chg = treat_dg - ctrl_dg;
+    let vol_pct = (treat_vol / ctrl_vol.max(0.0001) - 1.0) * 100.0;
+    let bpd_pct = (treat_bpd / ctrl_bpd.max(0.0001) - 1.0) * 100.0;
+
+    println!(
+        "  {:22}  {:>12}  {:>12}  {:>10}",
+        "Metric", "Stressed", "Stressed+IT", "Effect"
+    );
+    println!("  {:─<22}  {:─<12}  {:─<12}  {:─<10}", "", "", "", "");
+    println!(
+        "  {:22}  {:>12.0}  {:>12.0}  {:>+10.1}%",
+        "GDP (mean)", ctrl_gdp, treat_gdp, gdp_pct
+    );
+    println!(
+        "  {:22}  {:>11.2}x  {:>11.2}x  {:>+10.2}x",
+        "Debt/GDP (mean)", ctrl_dg, treat_dg, dg_chg
+    );
+    println!(
+        "  {:22}  {:>12.4}  {:>12.4}  {:>+10.1}%",
+        "Volatility (mean)", ctrl_vol, treat_vol, vol_pct
+    );
+    println!(
+        "  {:22}  {:>11.2}%  {:>11.2}%  {:>+10.1}%",
+        "BPD (mean)",
+        ctrl_bpd * 100.0,
+        treat_bpd * 100.0,
+        bpd_pct
+    );
+    println!(
+        "  {:22}  {:>11.1}%  {:>11.1}%  {:>+10.1}pp",
+        "Buy Ratio (mean)",
+        ctrl_buy * 100.0,
+        treat_buy * 100.0,
+        (treat_buy - ctrl_buy) * 100.0
+    );
+    println!(
+        "  {:22}  {:>11.2}x  {:>11.2}x  {:>+10.2}x",
+        "D/G σ (across seeds)",
+        ctrl_dg_std,
+        treat_dg_std,
+        treat_dg_std - ctrl_dg_std
+    );
+
+    println!("\n  === VERDICT ===");
+    if gdp_pct > 10.0 && dg_chg < 0.5 {
+        println!(
+            "  ✅ IT BENEFICIAL: +{:.1}% GDP, D/G {:+.2}x",
+            gdp_pct, dg_chg
+        );
+    } else if gdp_pct > 5.0 && dg_chg > 0.5 && dg_chg < 1.5 {
+        println!(
+            "  ⚠️  IT MIXED: +{:.1}% GDP but D/G {:+.2}x — trade-off",
+            gdp_pct, dg_chg
+        );
+    } else if gdp_pct > 5.0 && dg_chg >= 1.5 {
+        println!(
+            "  ❌ IT HARMFUL: +{:.1}% GDP but D/G {:+.2}x — debt risk outweighs",
+            gdp_pct, dg_chg
+        );
+    } else if gdp_pct < -5.0 {
+        println!("  ❌ IT HARMFUL: GDP {:+.1}%", gdp_pct);
+    } else {
+        println!("  ➖ IT NEUTRAL: GDP {:+.1}%, D/G {:+.2}x", gdp_pct, dg_chg);
+    }
+    println!();
+
+    // Context
+    println!("  === CONTEXT ===");
+    println!("  Healthy-economy IT result: +30.1% GDP, D/G 0.75x→3.16x (+2.41x)");
+    if treat_dg > ctrl_dg * 1.5 {
+        println!(
+            "  Stressed-economy: IT AMPLIFIES debt stress (D/G {:+.2}x more harmful)",
+            dg_chg
+        );
+        println!("  RECOMMENDATION: Do NOT add ITs to stressed-economy configs");
+    } else if dg_chg < 0.0 {
+        println!(
+            "  Stressed-economy: IT REDUCES D/G by {:+.2}x — counter-cyclical benefit",
+            dg_chg
+        );
+        println!("  RECOMMENDATION: ITs are MORE beneficial in stressed economies");
+    } else {
+        println!(
+            "  Stressed-economy: IT effect on D/G is small ({:+.2}x)",
+            dg_chg
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
 fn run_guild_threshold_multi_seed() {
     use crate::analyzer::load_summary;
     use crate::player::set_fixed_guild_threshold;
@@ -10270,6 +10519,12 @@ fn main() -> eframe::Result<()> {
     // ─── IT Healthy Economy Test ───────────────────────────────────────────
     if args.len() > 1 && args[1] == "--it-healthy-test" {
         run_it_healthy_economy_test();
+        return Ok(());
+    }
+
+    // ─── IT Stressed Economy Test ─────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--it-stressed-test" {
+        run_it_stressed_economy_test();
         return Ok(());
     }
 

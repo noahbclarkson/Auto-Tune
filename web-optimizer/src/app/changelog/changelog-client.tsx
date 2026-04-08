@@ -31,8 +31,85 @@ const SECTIONS = [
 
 const CHANGELOG = [
   {
-    date: '2026-04-04',
+    date: '2026-04-08',
     label: 'Today',
+    entries: [
+      {
+        tag: 'WEB FEATURE',
+        tagColor: 'text-cyan-400 bg-cyan-950/60 border-cyan-800/50',
+        title: 'Embeddable Economy Health Badge — /health-badge',
+        detail: 'Three badge styles (compact pill, standard banner, detailed card with GDP/D/G/Buy%). Live preview on dark + light backgrounds and all three health states. Generates self-contained HTML snippet with no JS, no external deps. Server admins embed on forums/websites. Nav link added to header.',
+        section: 2,
+        commit: '876e26c',
+      },
+      {
+        tag: 'WEB FEATURE',
+        tagColor: 'text-cyan-400 bg-cyan-950/60 border-cyan-800/50',
+        title: 'Landing page refresh — hero, feature cards, stats strip',
+        detail: 'Hero subtitle rewritten with concrete admin value props (advice commands, circuit breaker, events). Stats strip updated: Commands + Market tick + Circuit breaker threshold + Events types. New Admin Intelligence feature card (Cpu icon) for /at admin advice, /at admin history, /at admin recovery.',
+        section: 2,
+        commit: '876e26c',
+      },
+      {
+        tag: 'PLAYER FEATURE',
+        tagColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+        title: 'Shop favorites with local star button on item table',
+        detail: 'Players can star/unstar items directly from the item table rows in /shop. Favorites persist in localStorage. Starred items surface to the top. Low-effort, high-engagement retention feature. Built on existing ShopFavoriteRepository.',
+        section: 7,
+        commit: '0ffd2d2',
+      },
+      {
+        tag: 'ADMIN TOOL',
+        tagColor: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
+        title: '/at admin advice command',
+        detail: 'Rules-based expert system. Reads live health metrics (circuit breaker state, buy/sell ratio, volatility, spreads, debt) and produces plain-English diagnosis + actionable YAML config snippets. Companion to the /admin web dashboard. Built on existing EconomyMetricsManager infrastructure.',
+        section: 0,
+        commit: '39cafe0',
+      },
+      {
+        tag: 'PLAYER FEATURE',
+        tagColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+        title: '/shop info command for price transparency',
+        detail: 'Players can see WHY a price moved: last price change direction + magnitude, 7-day trend, recent large trades, active market events, floor/ceiling status. Makes the engine feel transparent and educational. Reuses existing price history, transaction feed, and market event service.',
+        section: 7,
+        commit: '3d2e68d',
+      },
+      {
+        tag: 'DOCS',
+        tagColor: 'text-orange-400 bg-orange-950/60 border-orange-800/50',
+        title: 'Player Quickstart guide + QUICKSTART decision tree',
+        detail: 'New PLAYER_QUICKSTART.md covering /shop, /sell, /compare, /loans, /transactions with 4 money-making strategies. QUICKSTART.md rewritten with visual decision tree (no-loans vs loans path), 5 pre-launch decisions with YAML + CLI commands, and post-launch 8-point checklist.',
+        section: 6,
+        commit: '3cf31b8',
+      },
+      {
+        tag: 'SIMULATION',
+        tagColor: 'text-violet-400 bg-violet-950/60 border-violet-800/50',
+        title: 'IT stressed-economy multi-seed test — ITs are counterproductive in stressed economies',
+        detail: 'ITs (mean-reversion contrarians) are net negative in stressed economies: GDP -12.2% vs +30.1% in healthy economies. Root cause: amplify sell cascades by buying the dip faster than supply can absorb. Do NOT add ITs to stressed-economy configs. Healthy-economy configs can optionally include ITs but must monitor D/G.',
+        section: 0,
+        commit: 'e954f71',
+      },
+      {
+        tag: 'SIMULATION',
+        tagColor: 'text-violet-400 bg-violet-950/60 border-violet-800/50',
+        title: 'Admin Recovery Mode validation — Day 3 intervention cuts D/G 19% at zero GDP cost',
+        detail: 'Early recovery intervention at Day 3 reduces D/G 0.78x → 0.63x (-19%) with no GDP impact. Timing matters: EARLY > MID > LATE. /at admin recovery start is validated as an effective economy stabilization tool.',
+        section: 0,
+        commit: '3877779',
+      },
+      {
+        tag: 'CONFIG',
+        tagColor: 'text-sky-400 bg-sky-950/60 border-sky-800/50',
+        title: 'Production defaults updated: sell_pressure=0.8, trend_dampening=0.10, tier3_ratio=15',
+        detail: 'sell_pressure_multiplier lowered from 1.0 to 0.8 increases GDP +2% and reduces Debt/GDP 30%. trend_dampening raised from 0.05 to 0.10 increases GDP +5% and reduces Debt/GDP 25%. tier3_ratio raised from 10 to 15 eliminates TIER3 noise in healthy economies (0 TIER3 events across 80 simulation runs).',
+        section: 0,
+        commit: 'c22e5c3',
+      },
+    ]},
+  {
+    date: '2026-04-04',
+    label: 'April 4, 2026',
     entries: [
       {
         tag: 'ADMIN TOOL',
@@ -601,7 +678,7 @@ export default function ChangelogClient() {
             { label: 'Total entries', value: CHANGELOG.reduce((a, d) => a + d.entries.length, 0).toString() },
             { label: 'Days covered', value: CHANGELOG.length.toString() },
             { label: 'Commits', value: Array.from(new Set(CHANGELOG.flatMap(d => d.entries).filter(e => e.commit).map(e => e.commit!))).length.toString() },
-            { label: 'Most active', value: CHANGELOG[0].date === '2026-04-04' ? '2026-04-04' : CHANGELOG[1]?.date },
+            { label: 'Most active', value: CHANGELOG[0].date === '2026-04-08' ? '2026-04-08' : CHANGELOG[1]?.date },
           ].map(({ label, value }) => (
             <div key={label} className="rounded-xl border border-gray-800 bg-gray-900/40 px-4 py-3">
               <p className="text-lg font-bold text-white">{value}</p>

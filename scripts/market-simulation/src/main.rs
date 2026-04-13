@@ -11611,6 +11611,24 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    // ─── Combo Corrected Test ──────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--combo-corrected-test" {
+        run_combo_corrected_test();
+        return Ok(());
+    }
+
+    // ─── Healthy Economy Newbie Test ────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--healthy-newbie-test" {
+        run_healthy_newbie_test();
+        return Ok(());
+    }
+
+    // ─── Tuned 2MM+2GB+floor Test ──────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--tuned-2mm-test" {
+        run_tuned_2mm_test();
+        return Ok(());
+    }
+
     // GUI mode
     run_gui()
 }
@@ -13953,6 +13971,491 @@ fn run_newbie_stress_test() {
             println!(
                 "  💡 Newbie-heavy economies produce significantly less GDP (natural — net consumers)"
             );
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  COMBO CORRECTED TEST
+//  Question: Does sp=1.0 + td=0.10 outperform sp=0.80 + td=0.10?
+//  Background: sp was reverted 0.80→1.0 (D/G stability fix). td=0.10 is confirmed.
+//  This tests the COMBO of both corrected parameters together.
+// ═══════════════════════════════════════════════════════════════════════════
+
+fn run_combo_corrected_test() {
+    use crate::analyzer::load_summary;
+    let seeds = vec![42u64, 12345, 98765, 77777, 11111];
+
+    println!("\n╔════════════════════════════════════════════════════════════════════╗");
+    println!("║  COMBO CORRECTED TEST — sp=1.0 + td=0.10 vs sp=0.80 + td=0.10  ║");
+    println!("║  Scenario: guild_stability_mm_fixed_guild × 5 seeds           ║");
+    println!("╚════════════════════════════════════════════════════════════════════╝\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct ComboResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        bpd: f64,
+        buy_ratio: f64,
+    }
+    let mut old_results: Vec<ComboResult> = Vec::new();
+    let mut new_results: Vec<ComboResult> = Vec::new();
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7}  {:>8}",
+        "Seed", "GDP", "D/G", "Vol(CV)", "BPD%", "Buy%"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7}  {:>8}",
+        "──────", "────────────", "──────────", "────────", "───────", "────────"
+    );
+
+    for &seed in &seeds {
+        // Old combo: sp=0.80 (old default) + td=0.10 (confirmed GDP-optimal)
+        let mut old_scenario = Scenario::guild_stability_mm_fixed_guild();
+        old_scenario.name = "Old: sp=0.80+td=0.10".into();
+        old_scenario.config.economy.sell_pressure_multiplier = 0.80;
+        old_scenario.config.economy.trend_dampening = 0.10;
+
+        // New combo: sp=1.0 (corrected) + td=0.10 (confirmed GDP-optimal)
+        let mut new_scenario = Scenario::guild_stability_mm_fixed_guild();
+        new_scenario.name = "New: sp=1.0+td=0.10".into();
+        new_scenario.config.economy.sell_pressure_multiplier = 1.0;
+        new_scenario.config.economy.trend_dampening = 0.10;
+
+        let old_dir = PathBuf::from(format!("/tmp/autotune-combo-old-{seed}"));
+        let new_dir = PathBuf::from(format!("/tmp/autotune-combo-new-{seed}"));
+        let _ = std::fs::remove_dir_all(&old_dir);
+        let _ = std::fs::remove_dir_all(&new_dir);
+
+        run_seeded_headless(&old_scenario, seed, &old_dir).ok();
+        run_seeded_headless(&new_scenario, seed, &new_dir).ok();
+
+        if let Ok(s) = load_summary(&old_dir.join("simulation.db")) {
+            let dg = s.debt / s.gdp.max(1.0);
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [OLD sp=0.80,td=0.10]",
+                seed,
+                s.gdp,
+                dg,
+                s.avg_volatility * 100.0,
+                s.avg_bpd * 100.0,
+                s.buy_ratio * 100.0
+            );
+            old_results.push(ComboResult {
+                seed,
+                gdp: s.gdp,
+                dg,
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio,
+            });
+        }
+        if let Ok(s) = load_summary(&new_dir.join("simulation.db")) {
+            let dg = s.debt / s.gdp.max(1.0);
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [NEW sp=1.0,td=0.10]",
+                seed,
+                s.gdp,
+                dg,
+                s.avg_volatility * 100.0,
+                s.avg_bpd * 100.0,
+                s.buy_ratio * 100.0
+            );
+            new_results.push(ComboResult {
+                seed,
+                gdp: s.gdp,
+                dg,
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio,
+            });
+        }
+
+        let _ = std::fs::remove_dir_all(&old_dir);
+        let _ = std::fs::remove_dir_all(&new_dir);
+    }
+
+    let avg = |r: &[ComboResult]| -> (f64, f64, f64, f64, f64) {
+        let n = r.len() as f64;
+        if n == 0.0 { return (0.0, 0.0, 0.0, 0.0, 0.0); }
+        let (g, d, v, b, buy) = r.iter().fold((0.0, 0.0, 0.0, 0.0, 0.0), |acc, x| {
+            (acc.0 + x.gdp, acc.1 + x.dg, acc.2 + x.vol, acc.3 + x.bpd, acc.4 + x.buy_ratio)
+        });
+        (g / n, d / n, v / n, b / n, buy / n)
+    };
+
+    if !old_results.is_empty() && !new_results.is_empty() {
+        let (old_gdp, old_dg, old_vol, old_bpd, old_buy) = avg(&old_results);
+        let (new_gdp, new_dg, new_vol, new_bpd, new_buy) = avg(&new_results);
+        let gdp_chg = (new_gdp - old_gdp) / old_gdp * 100.0;
+        let dg_chg = (new_dg - old_dg) / old_dg * 100.0;
+        let vol_chg = (new_vol - old_vol) / old_vol.max(0.0001) * 100.0;
+        let bpd_chg = (new_bpd - old_bpd) / old_bpd * 100.0;
+
+        println!(
+            "\n  {:>6} {:>12} {:>10} {:>8} {:>7}  {:>8}",
+            "AVG", "GDP", "D/G", "Vol(CV)", "BPD%", "Buy%"
+        );
+        println!(
+            "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [OLD sp=0.80,td=0.10]",
+            "OLD", old_gdp, old_dg, old_vol * 100.0, old_bpd * 100.0, old_buy * 100.0
+        );
+        println!(
+            "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [NEW sp=1.0,td=0.10]",
+            "NEW", new_gdp, new_dg, new_vol * 100.0, new_bpd * 100.0, new_buy * 100.0
+        );
+        println!(
+            "\n  Changes: GDP {:+.1}%, D/G {:+.1}%, Vol {:+.1}%, BPD {:+.1}%, Buy {:+.1}pp",
+            gdp_chg, dg_chg, vol_chg, bpd_chg, (new_buy - old_buy) * 100.0
+        );
+
+        if gdp_chg > 0.0 && dg_chg < 0.0 {
+            println!("  ✅ BOTH improved: corrected combo wins on GDP AND D/G");
+        } else if gdp_chg < 0.0 && dg_chg < 0.0 {
+            println!("  ⚖️  Tradeoff: {:+.1}% GDP, {:+.1}% D/G (D/G wins, GDP costs)", gdp_chg, dg_chg);
+            println!("  📌 RECOMMENDATION: corrected combo (sp=1.0+td=0.10) is correct for stability.");
+        } else if dg_chg > 0.0 {
+            println!("  ❌ NEW combo is WORSE on D/G — review needed");
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  HEALTHY ECONOMY NEWBIE TEST
+//  Question: Do Newbies outperform Farmers in a HEALTHY 2MM+2GB+floor economy?
+//  Prior finding (stressed): Newbie +33% GDP, -42% D/G vs Farmer.
+//  Does this hold in a healthy economy?
+//  Control: 2MM+2GB+3Cas+3Far+2Tra (guild_stability_2mm_fixed_guild)
+//  Treat:   2MM+2GB+3Cas+3Newbie+2Tra (replace 3Far with 3Newbie)
+// ═══════════════════════════════════════════════════════════════════════════
+
+fn run_healthy_newbie_test() {
+    use crate::analyzer::load_summary;
+    let seeds = vec![42u64, 12345, 98765, 77777, 11111];
+    let diamond_floor = 500.0 * 0.60; // $300
+
+    println!("\n╔════════════════════════════════════════════════════════════════════╗");
+    println!("║  HEALTHY ECONOMY NEWBIE TEST — 2MM+2GB+floor × 5 seeds      ║");
+    println!("║  Control: 3Farmer | Treat: 3Newbie (net consumers)          ║");
+    println!("╚════════════════════════════════════════════════════════════════════╝\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct HealthyNewbieResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        bpd: f64,
+        buy_ratio: f64,
+        diamond_internal: f64,
+        floor_binds: bool,
+    }
+    let mut ctrl_results: Vec<HealthyNewbieResult> = Vec::new();
+    let mut treat_results: Vec<HealthyNewbieResult> = Vec::new();
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7}",
+        "Seed", "GDP", "D/G", "Vol(CV)", "BPD%", "Buy%"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7}",
+        "──────", "────────────", "──────────", "────────", "───────", "───────"
+    );
+
+    for &seed in &seeds {
+        // Control: 2MM+2GB+3Cas+3Far+2Tra
+        let mut ctrl_scenario = Scenario::guild_stability_2mm_fixed_guild();
+        ctrl_scenario.name = "Ctrl: Farmer".into();
+        // Apply Diamond floor
+        if let Some(diamond) = ctrl_scenario
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
+            diamond.price_floor_override = Some(diamond.base_price * 0.6);
+        }
+
+        // Treatment: 2MM+2GB+3Cas+3Newbie+2Tra (replace Farmer with Newbie)
+        let mut treat_scenario = Scenario::guild_stability_2mm_fixed_guild();
+        treat_scenario.name = "Treat: Newbie".into();
+        treat_scenario.players = vec![
+            ArchetypeConfig { archetype: "MarketMaker".into(), count: 2 },
+            ArchetypeConfig { archetype: "GuildBuyer".into(), count: 2 },
+            ArchetypeConfig { archetype: "Casual".into(), count: 3 },
+            ArchetypeConfig { archetype: "Newbie".into(), count: 3 }, // replaces Farmer
+            ArchetypeConfig { archetype: "Trader".into(), count: 2 },
+        ];
+        if let Some(diamond) = treat_scenario
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
+            diamond.price_floor_override = Some(diamond.base_price * 0.6);
+        }
+
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-hn-ctrl-{seed}"));
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-hn-treat-{seed}"));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        let _ = std::fs::remove_dir_all(&treat_dir);
+
+        run_seeded_headless(&ctrl_scenario, seed, &ctrl_dir).ok();
+        run_seeded_headless(&treat_scenario, seed, &treat_dir).ok();
+
+        if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db")) {
+            let dg = s.debt / s.gdp.max(1.0);
+            let prices = crate::analyzer::load_all_prices(&ctrl_dir.join("simulation.db")).unwrap_or_default();
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [Ctrl: Farmer]",
+                seed, s.gdp, dg, s.avg_volatility * 100.0, s.avg_bpd * 100.0, s.buy_ratio * 100.0
+            );
+            ctrl_results.push(HealthyNewbieResult {
+                seed, gdp: s.gdp, dg, vol: s.avg_volatility, bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio, diamond_internal: di,
+                floor_binds: dd >= diamond_floor - 0.01,
+            });
+        }
+        if let Ok(s) = load_summary(&treat_dir.join("simulation.db")) {
+            let dg = s.debt / s.gdp.max(1.0);
+            let prices = crate::analyzer::load_all_prices(&treat_dir.join("simulation.db")).unwrap_or_default();
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [Treat: Newbie]",
+                seed, s.gdp, dg, s.avg_volatility * 100.0, s.avg_bpd * 100.0, s.buy_ratio * 100.0
+            );
+            treat_results.push(HealthyNewbieResult {
+                seed, gdp: s.gdp, dg, vol: s.avg_volatility, bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio, diamond_internal: di,
+                floor_binds: dd >= diamond_floor - 0.01,
+            });
+        }
+
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        let _ = std::fs::remove_dir_all(&treat_dir);
+    }
+
+    let avg = |r: &[HealthyNewbieResult]| -> (f64, f64, f64, f64, f64) {
+        let n = r.len() as f64;
+        if n == 0.0 { return (0.0, 0.0, 0.0, 0.0, 0.0); }
+        let (g, d, v, b, buy) = r.iter().fold((0.0, 0.0, 0.0, 0.0, 0.0), |acc, x| {
+            (acc.0 + x.gdp, acc.1 + x.dg, acc.2 + x.vol, acc.3 + x.bpd, acc.4 + x.buy_ratio)
+        });
+        (g / n, d / n, v / n, b / n, buy / n)
+    };
+
+    if !ctrl_results.is_empty() && !treat_results.is_empty() {
+        let (ctrl_gdp, ctrl_dg, ctrl_vol, ctrl_bpd, ctrl_buy) = avg(&ctrl_results);
+        let (treat_gdp, treat_dg, treat_vol, treat_bpd, treat_buy) = avg(&treat_results);
+        let gdp_chg = (treat_gdp - ctrl_gdp) / ctrl_gdp * 100.0;
+        let dg_chg = (treat_dg - ctrl_dg) / ctrl_dg * 100.0;
+        let vol_chg = (treat_vol - ctrl_vol) / ctrl_vol.max(0.0001) * 100.0;
+
+        let ctrl_floor_binds = ctrl_results.iter().filter(|r| r.floor_binds).count();
+        let treat_floor_binds = treat_results.iter().filter(|r| r.floor_binds).count();
+
+        println!(
+            "\n  {:>6} {:>12} {:>10} {:>8} {:>7}  {:>8}",
+            "AVG", "GDP", "D/G", "Vol(CV)", "BPD%", "Buy%"
+        );
+        println!(
+            "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [Ctrl: Farmer]",
+            "Farmer", ctrl_gdp, ctrl_dg, ctrl_vol * 100.0, ctrl_bpd * 100.0, ctrl_buy * 100.0
+        );
+        println!(
+            "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [Treat: Newbie]",
+            "Newbie", treat_gdp, treat_dg, treat_vol * 100.0, treat_bpd * 100.0, treat_buy * 100.0
+        );
+        println!(
+            "\n  Changes: GDP {:+.1}%, D/G {:+.1}%, Vol {:+.1}%",
+            gdp_chg, dg_chg, vol_chg
+        );
+        println!("  Floor binds: Ctrl {}/5 seeds, Treat {}/5 seeds", ctrl_floor_binds, treat_floor_binds);
+
+        if gdp_chg > 0.0 && dg_chg < 0.0 {
+            println!("  ✅ Newbie BETTER in healthy economy: +GDP, -D/G");
+            println!("  💡 Newbie benefit is UNIVERSAL — healthy AND stressed economies.");
+        } else if gdp_chg > 0.0 && dg_chg > 0.0 {
+            println!("  ⚖️  Newbie +GDP but +D/G in healthy economy (vs stressed: -D/G)");
+            println!("  📌 Newbie effect is CONTEXT-DEPENDENT: beneficial but tradeoffs exist.");
+        } else if gdp_chg < 0.0 && dg_chg < 0.0 {
+            println!("  💡 Newbie is NEUTRAL/negative in healthy economy.");
+            println!("  📌 Healthy economies don't need Newbie buy pressure as much.");
+        } else {
+            println!("  ❓ Unexpected result pattern — inspect data.");
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TUNED 2MM+2GB+floor TEST
+//  Question: Does 2MM+2GB+floor with corrected defaults (sp=1.0, td=0.10)
+//  outperform the old defaults (sp=0.80, td=0.10)?
+//  Prior: sp=0.80 was tested on guild_stability_mm_fixed_guild only.
+//  This tests on the HEALTHY 2MM+2GB+floor economy — does sp=1.0 still win D/G?
+// ═══════════════════════════════════════════════════════════════════════════
+
+fn run_tuned_2mm_test() {
+    use crate::analyzer::load_summary;
+    let seeds = vec![42u64, 12345, 98765, 77777, 11111];
+    let diamond_floor = 500.0 * 0.60; // $300
+
+    println!("\n╔════════════════════════════════════════════════════════════════════╗");
+    println!("║  TUNED 2MM+2GB+floor TEST — sp=1.0 vs sp=0.80 in healthy    ║");
+    println!("║  Scenario: 2MM+2GB+Diamond floor × 5 seeds                  ║");
+    println!("╚════════════════════════════════════════════════════════════════════╝\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct TunedResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        bpd: f64,
+        buy_ratio: f64,
+        diamond_internal: f64,
+        floor_binds: bool,
+    }
+    let mut old_results: Vec<TunedResult> = Vec::new();
+    let mut new_results: Vec<TunedResult> = Vec::new();
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7}",
+        "Seed", "GDP", "D/G", "Vol(CV)", "BPD%", "Buy%"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7}",
+        "──────", "────────────", "──────────", "────────", "───────", "───────"
+    );
+
+    for &seed in &seeds {
+        // Old defaults: sp=0.80, td=0.10
+        let mut old_scenario = Scenario::guild_stability_2mm_fixed_guild();
+        old_scenario.name = "Old: sp=0.80".into();
+        old_scenario.config.economy.sell_pressure_multiplier = 0.80;
+        old_scenario.config.economy.trend_dampening = 0.10;
+        if let Some(diamond) = old_scenario
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
+            diamond.price_floor_override = Some(diamond.base_price * 0.6);
+        }
+
+        // New corrected: sp=1.0, td=0.10
+        let mut new_scenario = Scenario::guild_stability_2mm_fixed_guild();
+        new_scenario.name = "New: sp=1.0".into();
+        new_scenario.config.economy.sell_pressure_multiplier = 1.0;
+        new_scenario.config.economy.trend_dampening = 0.10;
+        if let Some(diamond) = new_scenario
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
+            diamond.price_floor_override = Some(diamond.base_price * 0.6);
+        }
+
+        let old_dir = PathBuf::from(format!("/tmp/autotune-tuned-old-{seed}"));
+        let new_dir = PathBuf::from(format!("/tmp/autotune-tuned-new-{seed}"));
+        let _ = std::fs::remove_dir_all(&old_dir);
+        let _ = std::fs::remove_dir_all(&new_dir);
+
+        run_seeded_headless(&old_scenario, seed, &old_dir).ok();
+        run_seeded_headless(&new_scenario, seed, &new_dir).ok();
+
+        if let Ok(s) = load_summary(&old_dir.join("simulation.db")) {
+            let dg = s.debt / s.gdp.max(1.0);
+            let prices = crate::analyzer::load_all_prices(&old_dir.join("simulation.db")).unwrap_or_default();
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [OLD sp=0.80]",
+                seed, s.gdp, dg, s.avg_volatility * 100.0, s.avg_bpd * 100.0, s.buy_ratio * 100.0
+            );
+            old_results.push(TunedResult {
+                seed, gdp: s.gdp, dg, vol: s.avg_volatility, bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio, diamond_internal: di,
+                floor_binds: dd >= diamond_floor - 0.01,
+            });
+        }
+        if let Ok(s) = load_summary(&new_dir.join("simulation.db")) {
+            let dg = s.debt / s.gdp.max(1.0);
+            let prices = crate::analyzer::load_all_prices(&new_dir.join("simulation.db")).unwrap_or_default();
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [NEW sp=1.0]",
+                seed, s.gdp, dg, s.avg_volatility * 100.0, s.avg_bpd * 100.0, s.buy_ratio * 100.0
+            );
+            new_results.push(TunedResult {
+                seed, gdp: s.gdp, dg, vol: s.avg_volatility, bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio, diamond_internal: di,
+                floor_binds: dd >= diamond_floor - 0.01,
+            });
+        }
+
+        let _ = std::fs::remove_dir_all(&old_dir);
+        let _ = std::fs::remove_dir_all(&new_dir);
+    }
+
+    let avg = |r: &[TunedResult]| -> (f64, f64, f64, f64, f64) {
+        let n = r.len() as f64;
+        if n == 0.0 { return (0.0, 0.0, 0.0, 0.0, 0.0); }
+        let (g, d, v, b, buy) = r.iter().fold((0.0, 0.0, 0.0, 0.0, 0.0), |acc, x| {
+            (acc.0 + x.gdp, acc.1 + x.dg, acc.2 + x.vol, acc.3 + x.bpd, acc.4 + x.buy_ratio)
+        });
+        (g / n, d / n, v / n, b / n, buy / n)
+    };
+
+    if !old_results.is_empty() && !new_results.is_empty() {
+        let (old_gdp, old_dg, old_vol, old_bpd, old_buy) = avg(&old_results);
+        let (new_gdp, new_dg, new_vol, new_bpd, new_buy) = avg(&new_results);
+        let gdp_chg = (new_gdp - old_gdp) / old_gdp * 100.0;
+        let dg_chg = (new_dg - old_dg) / old_dg * 100.0;
+        let vol_chg = (new_vol - old_vol) / old_vol.max(0.0001) * 100.0;
+
+        let old_floor_binds = old_results.iter().filter(|r| r.floor_binds).count();
+        let new_floor_binds = new_results.iter().filter(|r| r.floor_binds).count();
+
+        println!(
+            "\n  {:>6} {:>12} {:>10} {:>8} {:>7}  {:>8}",
+            "AVG", "GDP", "D/G", "Vol(CV)", "BPD%", "Buy%"
+        );
+        println!(
+            "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [OLD sp=0.80,td=0.10]",
+            "OLD(0.80)", old_gdp, old_dg, old_vol * 100.0, old_bpd * 100.0, old_buy * 100.0
+        );
+        println!(
+            "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [NEW sp=1.0,td=0.10]",
+            "NEW(1.0)", new_gdp, new_dg, new_vol * 100.0, new_bpd * 100.0, new_buy * 100.0
+        );
+        println!(
+            "\n  Changes: GDP {:+.1}%, D/G {:+.1}%, Vol {:+.1}%, BPD {:+.1}%",
+            gdp_chg, dg_chg, vol_chg,
+            (new_bpd - old_bpd) / old_bpd * 100.0
+        );
+        println!("  Floor binds: OLD {}/5 seeds, NEW {}/5 seeds", old_floor_binds, new_floor_binds);
+
+        if gdp_chg > 0.0 && dg_chg < 0.0 {
+            println!("  ✅ BOTH improved: sp=1.0 wins on GDP AND D/G in healthy economy");
+        } else if gdp_chg < 0.0 && dg_chg < 0.0 {
+            println!("  ⚖️  sp=1.0: -GDP {:+.1}% but D/G {:+.1}% in healthy 2MM economy", gdp_chg, dg_chg);
+            println!("  📌 sp=1.0 is correct for healthy 2MM economy: D/G stability > marginal GDP");
+        } else if dg_chg > 0.0 {
+            println!("  ❌ sp=1.0 is WORSE on D/G even in healthy economy — review");
+        } else {
+            println!("  ℹ️  Neutral result — both configs similar in healthy economy");
         }
     }
 }

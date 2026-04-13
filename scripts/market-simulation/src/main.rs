@@ -14081,9 +14081,17 @@ fn run_combo_corrected_test() {
 
     let avg = |r: &[ComboResult]| -> (f64, f64, f64, f64, f64) {
         let n = r.len() as f64;
-        if n == 0.0 { return (0.0, 0.0, 0.0, 0.0, 0.0); }
+        if n == 0.0 {
+            return (0.0, 0.0, 0.0, 0.0, 0.0);
+        }
         let (g, d, v, b, buy) = r.iter().fold((0.0, 0.0, 0.0, 0.0, 0.0), |acc, x| {
-            (acc.0 + x.gdp, acc.1 + x.dg, acc.2 + x.vol, acc.3 + x.bpd, acc.4 + x.buy_ratio)
+            (
+                acc.0 + x.gdp,
+                acc.1 + x.dg,
+                acc.2 + x.vol,
+                acc.3 + x.bpd,
+                acc.4 + x.buy_ratio,
+            )
         });
         (g / n, d / n, v / n, b / n, buy / n)
     };
@@ -14102,22 +14110,41 @@ fn run_combo_corrected_test() {
         );
         println!(
             "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [OLD sp=0.80,td=0.10]",
-            "OLD", old_gdp, old_dg, old_vol * 100.0, old_bpd * 100.0, old_buy * 100.0
+            "OLD",
+            old_gdp,
+            old_dg,
+            old_vol * 100.0,
+            old_bpd * 100.0,
+            old_buy * 100.0
         );
         println!(
             "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [NEW sp=1.0,td=0.10]",
-            "NEW", new_gdp, new_dg, new_vol * 100.0, new_bpd * 100.0, new_buy * 100.0
+            "NEW",
+            new_gdp,
+            new_dg,
+            new_vol * 100.0,
+            new_bpd * 100.0,
+            new_buy * 100.0
         );
         println!(
             "\n  Changes: GDP {:+.1}%, D/G {:+.1}%, Vol {:+.1}%, BPD {:+.1}%, Buy {:+.1}pp",
-            gdp_chg, dg_chg, vol_chg, bpd_chg, (new_buy - old_buy) * 100.0
+            gdp_chg,
+            dg_chg,
+            vol_chg,
+            bpd_chg,
+            (new_buy - old_buy) * 100.0
         );
 
         if gdp_chg > 0.0 && dg_chg < 0.0 {
             println!("  ✅ BOTH improved: corrected combo wins on GDP AND D/G");
         } else if gdp_chg < 0.0 && dg_chg < 0.0 {
-            println!("  ⚖️  Tradeoff: {:+.1}% GDP, {:+.1}% D/G (D/G wins, GDP costs)", gdp_chg, dg_chg);
-            println!("  📌 RECOMMENDATION: corrected combo (sp=1.0+td=0.10) is correct for stability.");
+            println!(
+                "  ⚖️  Tradeoff: {:+.1}% GDP, {:+.1}% D/G (D/G wins, GDP costs)",
+                gdp_chg, dg_chg
+            );
+            println!(
+                "  📌 RECOMMENDATION: corrected combo (sp=1.0+td=0.10) is correct for stability."
+            );
         } else if dg_chg > 0.0 {
             println!("  ❌ NEW combo is WORSE on D/G — review needed");
         }
@@ -14185,11 +14212,26 @@ fn run_healthy_newbie_test() {
         let mut treat_scenario = Scenario::guild_stability_2mm_fixed_guild();
         treat_scenario.name = "Treat: Newbie".into();
         treat_scenario.players = vec![
-            ArchetypeConfig { archetype: "MarketMaker".into(), count: 2 },
-            ArchetypeConfig { archetype: "GuildBuyer".into(), count: 2 },
-            ArchetypeConfig { archetype: "Casual".into(), count: 3 },
-            ArchetypeConfig { archetype: "Newbie".into(), count: 3 }, // replaces Farmer
-            ArchetypeConfig { archetype: "Trader".into(), count: 2 },
+            ArchetypeConfig {
+                archetype: "MarketMaker".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "GuildBuyer".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Casual".into(),
+                count: 3,
+            },
+            ArchetypeConfig {
+                archetype: "Newbie".into(),
+                count: 3,
+            }, // replaces Farmer
+            ArchetypeConfig {
+                archetype: "Trader".into(),
+                count: 2,
+            },
         ];
         if let Some(diamond) = treat_scenario
             .config
@@ -14210,31 +14252,53 @@ fn run_healthy_newbie_test() {
 
         if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db")) {
             let dg = s.debt / s.gdp.max(1.0);
-            let prices = crate::analyzer::load_all_prices(&ctrl_dir.join("simulation.db")).unwrap_or_default();
+            let prices = crate::analyzer::load_all_prices(&ctrl_dir.join("simulation.db"))
+                .unwrap_or_default();
             let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
             let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
             println!(
                 "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [Ctrl: Farmer]",
-                seed, s.gdp, dg, s.avg_volatility * 100.0, s.avg_bpd * 100.0, s.buy_ratio * 100.0
+                seed,
+                s.gdp,
+                dg,
+                s.avg_volatility * 100.0,
+                s.avg_bpd * 100.0,
+                s.buy_ratio * 100.0
             );
             ctrl_results.push(HealthyNewbieResult {
-                seed, gdp: s.gdp, dg, vol: s.avg_volatility, bpd: s.avg_bpd,
-                buy_ratio: s.buy_ratio, diamond_internal: di,
+                seed,
+                gdp: s.gdp,
+                dg,
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio,
+                diamond_internal: di,
                 floor_binds: dd >= diamond_floor - 0.01,
             });
         }
         if let Ok(s) = load_summary(&treat_dir.join("simulation.db")) {
             let dg = s.debt / s.gdp.max(1.0);
-            let prices = crate::analyzer::load_all_prices(&treat_dir.join("simulation.db")).unwrap_or_default();
+            let prices = crate::analyzer::load_all_prices(&treat_dir.join("simulation.db"))
+                .unwrap_or_default();
             let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
             let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
             println!(
                 "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [Treat: Newbie]",
-                seed, s.gdp, dg, s.avg_volatility * 100.0, s.avg_bpd * 100.0, s.buy_ratio * 100.0
+                seed,
+                s.gdp,
+                dg,
+                s.avg_volatility * 100.0,
+                s.avg_bpd * 100.0,
+                s.buy_ratio * 100.0
             );
             treat_results.push(HealthyNewbieResult {
-                seed, gdp: s.gdp, dg, vol: s.avg_volatility, bpd: s.avg_bpd,
-                buy_ratio: s.buy_ratio, diamond_internal: di,
+                seed,
+                gdp: s.gdp,
+                dg,
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio,
+                diamond_internal: di,
                 floor_binds: dd >= diamond_floor - 0.01,
             });
         }
@@ -14245,9 +14309,17 @@ fn run_healthy_newbie_test() {
 
     let avg = |r: &[HealthyNewbieResult]| -> (f64, f64, f64, f64, f64) {
         let n = r.len() as f64;
-        if n == 0.0 { return (0.0, 0.0, 0.0, 0.0, 0.0); }
+        if n == 0.0 {
+            return (0.0, 0.0, 0.0, 0.0, 0.0);
+        }
         let (g, d, v, b, buy) = r.iter().fold((0.0, 0.0, 0.0, 0.0, 0.0), |acc, x| {
-            (acc.0 + x.gdp, acc.1 + x.dg, acc.2 + x.vol, acc.3 + x.bpd, acc.4 + x.buy_ratio)
+            (
+                acc.0 + x.gdp,
+                acc.1 + x.dg,
+                acc.2 + x.vol,
+                acc.3 + x.bpd,
+                acc.4 + x.buy_ratio,
+            )
         });
         (g / n, d / n, v / n, b / n, buy / n)
     };
@@ -14268,17 +14340,30 @@ fn run_healthy_newbie_test() {
         );
         println!(
             "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [Ctrl: Farmer]",
-            "Farmer", ctrl_gdp, ctrl_dg, ctrl_vol * 100.0, ctrl_bpd * 100.0, ctrl_buy * 100.0
+            "Farmer",
+            ctrl_gdp,
+            ctrl_dg,
+            ctrl_vol * 100.0,
+            ctrl_bpd * 100.0,
+            ctrl_buy * 100.0
         );
         println!(
             "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [Treat: Newbie]",
-            "Newbie", treat_gdp, treat_dg, treat_vol * 100.0, treat_bpd * 100.0, treat_buy * 100.0
+            "Newbie",
+            treat_gdp,
+            treat_dg,
+            treat_vol * 100.0,
+            treat_bpd * 100.0,
+            treat_buy * 100.0
         );
         println!(
             "\n  Changes: GDP {:+.1}%, D/G {:+.1}%, Vol {:+.1}%",
             gdp_chg, dg_chg, vol_chg
         );
-        println!("  Floor binds: Ctrl {}/5 seeds, Treat {}/5 seeds", ctrl_floor_binds, treat_floor_binds);
+        println!(
+            "  Floor binds: Ctrl {}/5 seeds, Treat {}/5 seeds",
+            ctrl_floor_binds, treat_floor_binds
+        );
 
         if gdp_chg > 0.0 && dg_chg < 0.0 {
             println!("  ✅ Newbie BETTER in healthy economy: +GDP, -D/G");
@@ -14376,31 +14461,53 @@ fn run_tuned_2mm_test() {
 
         if let Ok(s) = load_summary(&old_dir.join("simulation.db")) {
             let dg = s.debt / s.gdp.max(1.0);
-            let prices = crate::analyzer::load_all_prices(&old_dir.join("simulation.db")).unwrap_or_default();
+            let prices = crate::analyzer::load_all_prices(&old_dir.join("simulation.db"))
+                .unwrap_or_default();
             let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
             let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
             println!(
                 "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [OLD sp=0.80]",
-                seed, s.gdp, dg, s.avg_volatility * 100.0, s.avg_bpd * 100.0, s.buy_ratio * 100.0
+                seed,
+                s.gdp,
+                dg,
+                s.avg_volatility * 100.0,
+                s.avg_bpd * 100.0,
+                s.buy_ratio * 100.0
             );
             old_results.push(TunedResult {
-                seed, gdp: s.gdp, dg, vol: s.avg_volatility, bpd: s.avg_bpd,
-                buy_ratio: s.buy_ratio, diamond_internal: di,
+                seed,
+                gdp: s.gdp,
+                dg,
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio,
+                diamond_internal: di,
                 floor_binds: dd >= diamond_floor - 0.01,
             });
         }
         if let Ok(s) = load_summary(&new_dir.join("simulation.db")) {
             let dg = s.debt / s.gdp.max(1.0);
-            let prices = crate::analyzer::load_all_prices(&new_dir.join("simulation.db")).unwrap_or_default();
+            let prices = crate::analyzer::load_all_prices(&new_dir.join("simulation.db"))
+                .unwrap_or_default();
             let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
             let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
             println!(
                 "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [NEW sp=1.0]",
-                seed, s.gdp, dg, s.avg_volatility * 100.0, s.avg_bpd * 100.0, s.buy_ratio * 100.0
+                seed,
+                s.gdp,
+                dg,
+                s.avg_volatility * 100.0,
+                s.avg_bpd * 100.0,
+                s.buy_ratio * 100.0
             );
             new_results.push(TunedResult {
-                seed, gdp: s.gdp, dg, vol: s.avg_volatility, bpd: s.avg_bpd,
-                buy_ratio: s.buy_ratio, diamond_internal: di,
+                seed,
+                gdp: s.gdp,
+                dg,
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio,
+                diamond_internal: di,
                 floor_binds: dd >= diamond_floor - 0.01,
             });
         }
@@ -14411,9 +14518,17 @@ fn run_tuned_2mm_test() {
 
     let avg = |r: &[TunedResult]| -> (f64, f64, f64, f64, f64) {
         let n = r.len() as f64;
-        if n == 0.0 { return (0.0, 0.0, 0.0, 0.0, 0.0); }
+        if n == 0.0 {
+            return (0.0, 0.0, 0.0, 0.0, 0.0);
+        }
         let (g, d, v, b, buy) = r.iter().fold((0.0, 0.0, 0.0, 0.0, 0.0), |acc, x| {
-            (acc.0 + x.gdp, acc.1 + x.dg, acc.2 + x.vol, acc.3 + x.bpd, acc.4 + x.buy_ratio)
+            (
+                acc.0 + x.gdp,
+                acc.1 + x.dg,
+                acc.2 + x.vol,
+                acc.3 + x.bpd,
+                acc.4 + x.buy_ratio,
+            )
         });
         (g / n, d / n, v / n, b / n, buy / n)
     };
@@ -14434,24 +14549,44 @@ fn run_tuned_2mm_test() {
         );
         println!(
             "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [OLD sp=0.80,td=0.10]",
-            "OLD(0.80)", old_gdp, old_dg, old_vol * 100.0, old_bpd * 100.0, old_buy * 100.0
+            "OLD(0.80)",
+            old_gdp,
+            old_dg,
+            old_vol * 100.0,
+            old_bpd * 100.0,
+            old_buy * 100.0
         );
         println!(
             "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [NEW sp=1.0,td=0.10]",
-            "NEW(1.0)", new_gdp, new_dg, new_vol * 100.0, new_bpd * 100.0, new_buy * 100.0
+            "NEW(1.0)",
+            new_gdp,
+            new_dg,
+            new_vol * 100.0,
+            new_bpd * 100.0,
+            new_buy * 100.0
         );
         println!(
             "\n  Changes: GDP {:+.1}%, D/G {:+.1}%, Vol {:+.1}%, BPD {:+.1}%",
-            gdp_chg, dg_chg, vol_chg,
+            gdp_chg,
+            dg_chg,
+            vol_chg,
             (new_bpd - old_bpd) / old_bpd * 100.0
         );
-        println!("  Floor binds: OLD {}/5 seeds, NEW {}/5 seeds", old_floor_binds, new_floor_binds);
+        println!(
+            "  Floor binds: OLD {}/5 seeds, NEW {}/5 seeds",
+            old_floor_binds, new_floor_binds
+        );
 
         if gdp_chg > 0.0 && dg_chg < 0.0 {
             println!("  ✅ BOTH improved: sp=1.0 wins on GDP AND D/G in healthy economy");
         } else if gdp_chg < 0.0 && dg_chg < 0.0 {
-            println!("  ⚖️  sp=1.0: -GDP {:+.1}% but D/G {:+.1}% in healthy 2MM economy", gdp_chg, dg_chg);
-            println!("  📌 sp=1.0 is correct for healthy 2MM economy: D/G stability > marginal GDP");
+            println!(
+                "  ⚖️  sp=1.0: -GDP {:+.1}% but D/G {:+.1}% in healthy 2MM economy",
+                gdp_chg, dg_chg
+            );
+            println!(
+                "  📌 sp=1.0 is correct for healthy 2MM economy: D/G stability > marginal GDP"
+            );
         } else if dg_chg > 0.0 {
             println!("  ❌ sp=1.0 is WORSE on D/G even in healthy economy — review");
         } else {

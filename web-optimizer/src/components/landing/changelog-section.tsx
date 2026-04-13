@@ -3,6 +3,17 @@
 import { GitCommit, Zap, Users, Gavel, Bell, ShieldCheck, Globe } from 'lucide-react';
 
 const UPDATES = [
+  // ── 2026-04-13: Web & Ecosystem — Why Auto-Tune page ───────────────────
+  {
+    date: '2026-04-13',
+    icon: Users,
+    accent: 'text-emerald-400',
+    accentBg: 'bg-emerald-950/60 border-emerald-800/50',
+    tag: 'ECOSYSTEM',
+    title: 'New /why-auto-tune — standalone value proposition page',
+    detail: 'New 7-section narrative page makes the case for Auto-Tune over static shops visceral. Includes demand/supply scenario cards with real price deltas, SVG sparkline charts (6-week Diamond history: flat $250 vs Auto-Tune $230→$341), simulation-backed player earnings table (farmer +114%, arbitrageur −87%), and the economics of supply/demand pricing in games. Fixed broken #get-started anchor in CompareSection CTA.',
+    href: '/why-auto-tune',
+  },
   // ── 2026-04-13: Simulation Lab — Definitive archetype verdicts ──────────
   {
     date: '2026-04-13',

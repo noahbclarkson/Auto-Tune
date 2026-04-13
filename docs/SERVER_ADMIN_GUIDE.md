@@ -490,7 +490,7 @@ Auto-Tune's economy health depends heavily on your **player archetype mix** — 
 | **Farmer** | Heavy seller | Natural supply; can cause underselling |
 | **GuildBuyer** | Proactive buyer at dips | Buy pressure; counteracts farmer oversupply |
 | **MarketMaker** | Two-sided liquidity | Tightens spreads dramatically; stabilizes prices |
-| **InsiderTrader** | Mean-reversion | +30.1% GDP in healthy economies; D/G +2.41x; optional for realism, monitor D/G |
+| **InsiderTrader** | Mean-reversion | Healthy: +30.1% GDP, D/G +2.41x (watch D/G). Stressed: −12.2% GDP, D/G −1.32x (counter-cyclical benefit — only add to HEALTHY economies) |
 | **VolumeTrader** | Spread compressor | Always harmful — −9% to −13% GDP; never recommended |
 
 ### Recommended Archetype Config (2MM + 2GB)

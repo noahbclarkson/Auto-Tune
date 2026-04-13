@@ -8,8 +8,11 @@
 
 ### Added
 
+- **`--afkfarmer-stress-test` CLI (sim)** — AFKFarmer archetype in guildbuyer_failure_test (stressed economy) across 5 seeds. Result: GDP −49.5%, volatility +65.9%, D/G +21.4%. AFKFarmers (5-15% online, dump at near-zero margins when online) are the MOST DESTRUCTIVE archetype tested — more destructive than IT+VT. Mechanism: offline accumulation → sudden dump at near-zero margin → price spike crash → circuit breaker fires constantly. **VERDICT: ❌ AFKFARMERS CATASTROPHIC.**
+- **`--hoarder-heavy-test` CLI (sim)** — Hoarder archetype in guildbuyer_failure_test (stressed economy) across 5 seeds. Result: GDP +1.5% (flat), D/G −6.9% (slight improvement). Hoarders hold inventory → less supply → slightly higher prices → GBs trigger less → less debt. Effect is marginal but consistent. **VERDICT: ⚠️ Hoarders are NEUTRAL.**
 - **`--vt-stressed-test` CLI (sim)** — VolumeTrader in guildbuyer_failure_test (stressed economy) scenario across 5 seeds. Result: GDP −12.7%, D/G +0.48x, vol +5.9%. VT amplifies sell cascades by firing on spread widening in supply-driven stressed economies. Mechanism: stressed economies have chronic Farmer/Hoarder oversupply → wide spreads → VT sells into it → prices drop further. **VERDICT: VT is ALWAYS harmful** — healthy (-9.2%) or stressed (-12.7%).
 - **`--it-vt-healthy-test` CLI (sim)** — IT+VT combo in guild_stability_2mm_fixed_guild (healthy economy) across 5 seeds. Result: GDP −25.6% (IT alone was +30.1%, VT alone was −9.2%). VT's drag DOMINATES and REVERSES all of IT's gains by 3x. Mechanism: ITs create buy pressure → GBs trigger more → multiplicative debt amplification → GDP collapse. **VERDICT: IT+VT is CATASTROPHIC.** Do NOT combine them in any config.
+- **`--it-stressed-test` CLI (sim)** — InsiderTrader in guildbuyer_failure_test (stressed economy) across 5 seeds. Result: GDP −12.2%, D/G −1.32x. IT buying during price dips absorbs Farmer/Hoarder sell pressure counter-cyclically. This is the OPPOSITE pattern from healthy economies (where ITs worsen D/G by +2.41x). ITs should only be added to HEALTHY economies, not stressed ones.
 
 ### Changed
 

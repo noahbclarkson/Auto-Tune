@@ -9,11 +9,20 @@ After multi-seed validation (5 seeds × 5 configs), the archetype effects are no
 | Config | Verdict | GDP Effect | D/G Effect |
 |--------|---------|------------|------------|
 | 2MM+2GB | ✅ Production default | baseline | baseline |
-| +2IT | ⚠️ Optional | **+30.1%** | +2.41× (watch D/G) |
+| +2IT (healthy) | ⚠️ Optional | **+30.1%** | +2.41× (watch D/G) |
+| +2IT (stressed) | ⚠️ Mixed | **−12.2%** | **−1.32×** (counter-cyclical benefit) |
 | +2VT | ❌ Never | **−9.2%** (healthy) / **−12.7%** (stressed) | neutral |
 | +2IT+2VT | ❌ Catastrophic | **−25.6%** (IT gains reversed and tripled by VT) | −0.62× |
+| +2AFKFarmer | ❌ Catastrophic | **−49.5%** GDP, **+65.9%** volatility | +21.4% (destabilizing) |
+| +2Hoarder (replace 2Far) | ⚠️ Neutral | **+1.5%** (flat) | **−6.9%** (slight improvement) |
 
 **Key mechanism:** VT fires on spread widening and price dislocations. In any economy, it amplifies the dominant directional pressure — sell cascades in stressed economies, debt amplification in IT-boosted economies. VT is always harmful in ANY config. IT+VT together is a 55-percentage-point GDP reversal from IT alone.
+
+**IT behaves opposite in stressed vs healthy economies:** In healthy economies, ITs create buy pressure → GBs trigger more → multiplicative debt amplification → GDP rises but D/G worsens. In stressed economies, ITs buy during price dips (counter-cyclical) → they absorb sell pressure from Farmers/Hoarders → debt accumulation slows → D/G improves but GDP falls. This split verdict means ITs should only be added to HEALTHY economies with careful D/G monitoring.
+
+**AFKFarmers are the most dangerous archetype tested:** AFKFarmers (5-15% online, dump at 0-3% margin when online, gather rapidly) cause a −49.5% GDP collapse and +65.9% volatility. Mechanism: offline accumulation → sudden dump → price spike crash → circuit breaker fires constantly. This is more destructive than IT+VT. If servers have AFK farmers, consider reducing `gather_rate` or adding a cooldown on large sells.
+
+**Hoarders are essentially neutral:** Replacing 2 Farmers with 2 Hoarders yields GDP +1.5% (flat) and D/G −6.9% (slight improvement). Hoarders hold inventory → less supply → slightly higher prices → GuildBuyers trigger less → less debt. Effect is marginal but measurable.
 
 **Updated SERVER_ADMIN_GUIDE.md:** VolumeTrader description updated to "Always harmful — −9% to −13% GDP; never recommended." Large server recommendation stripped of VT. GuildSeller confirmed dead-end retained.
 

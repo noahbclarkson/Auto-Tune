@@ -1867,6 +1867,90 @@ pub fn guildbuyer_failure_test_plus_vt() -> Scenario {
     }
 }
 
+pub fn guildbuyer_failure_test_plus_afkfarmer() -> Scenario {
+    Scenario {
+        name: "GuildbuyerFailure+AFKFarmer".to_string(),
+        config: {
+            let mut c = SimConfig::default();
+            c.loans.post_default_cooldown_hours = 168;
+            c
+        },
+        players: vec![
+            ArchetypeConfig {
+                archetype: "MarketMaker".into(),
+                count: 1,
+            },
+            ArchetypeConfig {
+                archetype: "GuildBuyer".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "AFKFarmer".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Casual".into(),
+                count: 4,
+            },
+            ArchetypeConfig {
+                archetype: "Farmer".into(),
+                count: 1,
+            },
+            ArchetypeConfig {
+                archetype: "Trader".into(),
+                count: 2,
+            },
+        ],
+        seed: None,
+        events: Vec::new(),
+        stress_events: vec![],
+        duration_ticks: 288 * 14,
+        speed_ticks_per_sec: 200,
+    }
+}
+
+pub fn guildbuyer_failure_test_hoarder_heavy() -> Scenario {
+    Scenario {
+        name: "GuildbuyerFailure+HoarderHeavy".to_string(),
+        config: {
+            let mut c = SimConfig::default();
+            c.loans.post_default_cooldown_hours = 168;
+            c
+        },
+        players: vec![
+            ArchetypeConfig {
+                archetype: "MarketMaker".into(),
+                count: 1,
+            },
+            ArchetypeConfig {
+                archetype: "GuildBuyer".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Hoarder".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Casual".into(),
+                count: 4,
+            },
+            ArchetypeConfig {
+                archetype: "Farmer".into(),
+                count: 1,
+            },
+            ArchetypeConfig {
+                archetype: "Trader".into(),
+                count: 2,
+            },
+        ],
+        seed: None,
+        events: Vec::new(),
+        stress_events: vec![],
+        duration_ticks: 288 * 14,
+        speed_ticks_per_sec: 200,
+    }
+}
+
 /// Compute Pearson correlation coefficient between two price-change series.
 /// Returns None if series are too short or have zero variance.
 fn pearson_correlation(a: &[f64], b: &[f64]) -> Option<f64> {
@@ -4105,6 +4189,338 @@ fn run_it_added_test() {
 
     let _ = std::fs::remove_dir_all(&ctrl_dir);
     let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
+// ─── AFKFarmer Stress Test ────────────────────────────────────────────────────
+
+/// Tests how the economy handles AFKFarmers: players who accumulate resources
+/// while offline, then dump them at near-zero margins when online.
+/// This represents the classic "AFK farmer" behavior on Minecraft servers.
+fn run_afkfarmer_stress_test() {
+    use crate::analyzer::load_summary;
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║       AFKFARMER STRESS TEST                               ║");
+    println!("║  guildbuyer_failure_test vs +2 AFKFarmers (replaces 2Far) ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guildbuyer_failure_test (1MM+2GB+4Cas+3Far+2Tra)");
+    println!("  Treat:   same but 2 Farmers → 2 AFKFarmers");
+    println!("  AFKFarmer behavior: 5-15% online, dumps near-zero margins when online");
+    println!("  5 seeds × 14 days\n");
+
+    let ctrl_scenario = Scenario::guildbuyer_failure_test();
+    let treat_scenario = guildbuyer_failure_test_plus_afkfarmer();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-afk-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-afk-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl_results = Vec::new();
+    let mut treat_results = Vec::new();
+
+    for seed in &seeds {
+        println!("  Seed {}:", seed);
+        {
+            let mut sc = ctrl_scenario.clone();
+            sc.seed = Some(*seed);
+            let dir = ctrl_dir.join(format!("seed_{}", seed));
+            std::fs::create_dir_all(&dir).ok();
+            if let Err(e) = run_seeded_headless(&sc, *seed, &dir) {
+                eprintln!("    Ctrl seed {} error: {}", seed, e);
+                continue;
+            }
+            if let Ok(s) = load_summary(&dir.join("simulation.db")) {
+                let dg = s.debt / s.gdp.max(1.0);
+                println!(
+                    "    Ctrl: GDP={:.0}  D/G={:.2}x  vol={:.4}  buy={:.1}%",
+                    s.gdp,
+                    dg,
+                    s.avg_volatility,
+                    s.buy_ratio * 100.0
+                );
+                ctrl_results.push((*seed, s));
+            }
+        }
+        {
+            let mut sc = treat_scenario.clone();
+            sc.seed = Some(*seed);
+            let dir = treat_dir.join(format!("seed_{}", seed));
+            std::fs::create_dir_all(&dir).ok();
+            if let Err(e) = run_seeded_headless(&sc, *seed, &dir) {
+                eprintln!("    Treat seed {} error: {}", seed, e);
+                continue;
+            }
+            if let Ok(s) = load_summary(&dir.join("simulation.db")) {
+                let dg = s.debt / s.gdp.max(1.0);
+                println!(
+                    "    Treat: GDP={:.0}  D/G={:.2}x  vol={:.4}  buy={:.1}%",
+                    s.gdp,
+                    dg,
+                    s.avg_volatility,
+                    s.buy_ratio * 100.0
+                );
+                treat_results.push((*seed, s));
+            }
+        }
+        println!();
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║                    AGGREGATE RESULTS (5 seeds)               ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝\n");
+
+    if ctrl_results.is_empty() || treat_results.is_empty() {
+        println!("  No results collected.");
+        return;
+    }
+
+    fn stats(results: &[(u64, crate::analyzer::SimSummary)]) -> (f64, f64, f64, f64, f64) {
+        let n = results.len() as f64;
+        let gdp: Vec<f64> = results.iter().map(|(_, r)| r.gdp).collect();
+        let dg: Vec<f64> = results
+            .iter()
+            .map(|(_, r)| r.debt / r.gdp.max(1.0))
+            .collect();
+        let vol: Vec<f64> = results.iter().map(|(_, r)| r.avg_volatility).collect();
+        let bpd: Vec<f64> = results.iter().map(|(_, r)| r.avg_bpd).collect();
+        let mean = |v: &[f64]| v.iter().sum::<f64>() / n;
+        let std = |v: &[f64]| {
+            let m = mean(v);
+            (v.iter().map(|x| (x - m).powi(2)).sum::<f64>() / n).sqrt()
+        };
+        (mean(&gdp), mean(&dg), mean(&vol), mean(&bpd), std(&dg))
+    }
+
+    let (ctrl_gdp, ctrl_dg, ctrl_vol, ctrl_bpd, ctrl_dg_std) = stats(&ctrl_results);
+    let (treat_gdp, treat_dg, treat_vol, treat_bpd, treat_dg_std) = stats(&treat_results);
+
+    let gdp_pct = (treat_gdp / ctrl_gdp.max(1.0) - 1.0) * 100.0;
+    let dg_pct = (treat_dg / ctrl_dg.max(0.01) - 1.0) * 100.0;
+    let vol_pct = (treat_vol / ctrl_vol.max(0.0001) - 1.0) * 100.0;
+    let bpd_pct = (treat_bpd / ctrl_bpd.max(0.0001) - 1.0) * 100.0;
+
+    println!(
+        "  {:22} {:>14} {:>14} {:>14}",
+        "Metric", "Stressed", "+AFKFarmer", "Effect"
+    );
+    println!(
+        "  {:22} {:>14} {:>14} {:>14}",
+        "─".repeat(22),
+        "─".repeat(14),
+        "─".repeat(14),
+        "─".repeat(14)
+    );
+    println!(
+        "  {:22} {:>14.0} {:>14.0} {:>+13.1}%",
+        "GDP (mean)", ctrl_gdp, treat_gdp, gdp_pct
+    );
+    println!(
+        "  {:22} {:>13.2}x {:>13.2}x {:>+13.1}%",
+        "Debt/GDP (mean)", ctrl_dg, treat_dg, dg_pct
+    );
+    println!(
+        "  {:22} {:>13.4} {:>13.4} {:>+13.1}%",
+        "Volatility (mean)", ctrl_vol, treat_vol, vol_pct
+    );
+    println!(
+        "  {:22} {:>13.2}% {:>13.2}% {:>+13.1}%",
+        "BPD (mean)",
+        ctrl_bpd * 100.0,
+        treat_bpd * 100.0,
+        bpd_pct
+    );
+    println!(
+        "  {:22} {:>13.2}x {:>13.2}x {:>+13.1}%",
+        "D/G σ (seed noise)",
+        ctrl_dg_std,
+        treat_dg_std,
+        (treat_dg_std / ctrl_dg_std.max(0.01) - 1.0) * 100.0
+    );
+
+    println!("\n  === VERDICT ===");
+    if gdp_pct < -10.0 {
+        println!("  ❌ AFKFARMERS HARMFUL: GDP {:+.1}%", gdp_pct);
+    } else if gdp_pct > 5.0 {
+        println!("  ✅ AFKFARMERS BENEFICIAL: GDP {:+.1}%", gdp_pct);
+    } else {
+        println!("  ⚠️  AFKFARMERS NEUTRAL: GDP {:+.1}%", gdp_pct);
+    }
+    if dg_pct < -15.0 {
+        println!(
+            "  💡 D/G improves {:+.1}% — AFKFarmers absorb sell pressure counter-cyclically",
+            dg_pct
+        );
+    }
+}
+
+// ─── Hoarder-Heavy Stress Test ───────────────────────────────────────────────
+
+/// Tests how the economy handles a Hoarder-heavy config:
+/// Hoarders accumulate items and rarely sell, creating chronic undersupply.
+/// This tests price stability under supply shortage conditions.
+fn run_hoarder_heavy_test() {
+    use crate::analyzer::load_summary;
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║       HOARDER-HEAVY STRESS TEST                           ║");
+    println!("║  guildbuyer_failure_test vs +2 Hoarders (replaces 2Far)  ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guildbuyer_failure_test (1MM+2GB+4Cas+3Far+2Tra)");
+    println!("  Treat:   same but 2 Farmers → 2 Hoarders");
+    println!("  Hoarder behavior: holds inventory, sells rarely at high margins");
+    println!("  5 seeds × 14 days\n");
+
+    let ctrl_scenario = Scenario::guildbuyer_failure_test();
+    let treat_scenario = guildbuyer_failure_test_hoarder_heavy();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-hoard-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-hoard-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl_results = Vec::new();
+    let mut treat_results = Vec::new();
+
+    for seed in &seeds {
+        println!("  Seed {}:", seed);
+        {
+            let mut sc = ctrl_scenario.clone();
+            sc.seed = Some(*seed);
+            let dir = ctrl_dir.join(format!("seed_{}", seed));
+            std::fs::create_dir_all(&dir).ok();
+            if let Err(e) = run_seeded_headless(&sc, *seed, &dir) {
+                eprintln!("    Ctrl seed {} error: {}", seed, e);
+                continue;
+            }
+            if let Ok(s) = load_summary(&dir.join("simulation.db")) {
+                let dg = s.debt / s.gdp.max(1.0);
+                println!(
+                    "    Ctrl: GDP={:.0}  D/G={:.2}x  vol={:.4}  buy={:.1}%",
+                    s.gdp,
+                    dg,
+                    s.avg_volatility,
+                    s.buy_ratio * 100.0
+                );
+                ctrl_results.push((*seed, s));
+            }
+        }
+        {
+            let mut sc = treat_scenario.clone();
+            sc.seed = Some(*seed);
+            let dir = treat_dir.join(format!("seed_{}", seed));
+            std::fs::create_dir_all(&dir).ok();
+            if let Err(e) = run_seeded_headless(&sc, *seed, &dir) {
+                eprintln!("    Treat seed {} error: {}", seed, e);
+                continue;
+            }
+            if let Ok(s) = load_summary(&dir.join("simulation.db")) {
+                let dg = s.debt / s.gdp.max(1.0);
+                println!(
+                    "    Treat: GDP={:.0}  D/G={:.2}x  vol={:.4}  buy={:.1}%",
+                    s.gdp,
+                    dg,
+                    s.avg_volatility,
+                    s.buy_ratio * 100.0
+                );
+                treat_results.push((*seed, s));
+            }
+        }
+        println!();
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║                    AGGREGATE RESULTS (5 seeds)               ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝\n");
+
+    if ctrl_results.is_empty() || treat_results.is_empty() {
+        println!("  No results collected.");
+        return;
+    }
+
+    fn stats(results: &[(u64, crate::analyzer::SimSummary)]) -> (f64, f64, f64, f64, f64) {
+        let n = results.len() as f64;
+        let gdp: Vec<f64> = results.iter().map(|(_, r)| r.gdp).collect();
+        let dg: Vec<f64> = results
+            .iter()
+            .map(|(_, r)| r.debt / r.gdp.max(1.0))
+            .collect();
+        let vol: Vec<f64> = results.iter().map(|(_, r)| r.avg_volatility).collect();
+        let bpd: Vec<f64> = results.iter().map(|(_, r)| r.avg_bpd).collect();
+        let mean = |v: &[f64]| v.iter().sum::<f64>() / n;
+        let std = |v: &[f64]| {
+            let m = mean(v);
+            (v.iter().map(|x| (x - m).powi(2)).sum::<f64>() / n).sqrt()
+        };
+        (mean(&gdp), mean(&dg), mean(&vol), mean(&bpd), std(&dg))
+    }
+
+    let (ctrl_gdp, ctrl_dg, ctrl_vol, ctrl_bpd, ctrl_dg_std) = stats(&ctrl_results);
+    let (treat_gdp, treat_dg, treat_vol, treat_bpd, treat_dg_std) = stats(&treat_results);
+
+    let gdp_pct = (treat_gdp / ctrl_gdp.max(1.0) - 1.0) * 100.0;
+    let dg_pct = (treat_dg / ctrl_dg.max(0.01) - 1.0) * 100.0;
+    let vol_pct = (treat_vol / ctrl_vol.max(0.0001) - 1.0) * 100.0;
+    let bpd_pct = (treat_bpd / ctrl_bpd.max(0.0001) - 1.0) * 100.0;
+
+    println!(
+        "  {:22} {:>14} {:>14} {:>14}",
+        "Metric", "Stressed", "+Hoarders", "Effect"
+    );
+    println!(
+        "  {:22} {:>14} {:>14} {:>14}",
+        "─".repeat(22),
+        "─".repeat(14),
+        "─".repeat(14),
+        "─".repeat(14)
+    );
+    println!(
+        "  {:22} {:>14.0} {:>14.0} {:>+13.1}%",
+        "GDP (mean)", ctrl_gdp, treat_gdp, gdp_pct
+    );
+    println!(
+        "  {:22} {:>13.2}x {:>13.2}x {:>+13.1}%",
+        "Debt/GDP (mean)", ctrl_dg, treat_dg, dg_pct
+    );
+    println!(
+        "  {:22} {:>13.4} {:>13.4} {:>+13.1}%",
+        "Volatility (mean)", ctrl_vol, treat_vol, vol_pct
+    );
+    println!(
+        "  {:22} {:>13.2}% {:>13.2}% {:>+13.1}%",
+        "BPD (mean)",
+        ctrl_bpd * 100.0,
+        treat_bpd * 100.0,
+        bpd_pct
+    );
+    println!(
+        "  {:22} {:>13.2}x {:>13.2}x {:>+13.1}%",
+        "D/G σ (seed noise)",
+        ctrl_dg_std,
+        treat_dg_std,
+        (treat_dg_std / ctrl_dg_std.max(0.01) - 1.0) * 100.0
+    );
+
+    println!("\n  === VERDICT ===");
+    if gdp_pct < -10.0 {
+        println!("  ❌ HOARDERS HARMFUL: GDP {:+.1}%", gdp_pct);
+    } else if gdp_pct > 5.0 {
+        println!("  ✅ HOARDERS BENEFICIAL: GDP {:+.1}%", gdp_pct);
+    } else {
+        println!("  ⚠️  HOARDERS NEUTRAL: GDP {:+.1}%", gdp_pct);
+    }
+    if treat_bpd < ctrl_bpd * 0.9 {
+        println!(
+            "  💡 BPD drops {:+.1}% — Hoarders reduce market activity (undersupply)",
+            bpd_pct
+        );
+    }
 }
 
 // ─── Player Exodus Test ───────────────────────────────────────────────────────
@@ -11051,6 +11467,18 @@ fn main() -> eframe::Result<()> {
     // ─── VT Stressed Economy Test ────────────────────────────────────────
     if args.len() > 1 && args[1] == "--vt-stressed-test" {
         run_vt_stressed_economy_test();
+        return Ok(());
+    }
+
+    // ─── AFKFarmer Stress Test ─────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--afkfarmer-stress-test" {
+        run_afkfarmer_stress_test();
+        return Ok(());
+    }
+
+    // ─── Hoarder-Heavy Test ────────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--hoarder-heavy-test" {
+        run_hoarder_heavy_test();
         return Ok(());
     }
 

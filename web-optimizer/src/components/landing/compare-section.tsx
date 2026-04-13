@@ -139,7 +139,7 @@ export function CompareSection() {
             Install Auto-Tune in under 5 minutes — no database setup required.
           </p>
           <a
-            href="#get-started"
+            href="/why-auto-tune"
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-emerald-600/20 text-sm"
           >
             Get Started <ArrowRight className="w-4 h-4" />

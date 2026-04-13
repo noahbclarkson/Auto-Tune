@@ -11,6 +11,7 @@ const NAV = [
   { href: '/setup', label: 'Setup', icon: Wand2 },
   { href: '/install', label: 'Install', icon: Download },
   { href: '/how-it-works', label: 'How It Works', icon: BookOpen },
+  { href: '/why-auto-tune', label: 'Why Auto-Tune', icon: TrendingUp },
   { href: '/simulator', label: 'Simulator', icon: BarChart2 },
   { href: '/config-playground', label: 'Config', icon: Sliders },
   { href: '/sweep-results', label: 'Sweep', icon: Grid },

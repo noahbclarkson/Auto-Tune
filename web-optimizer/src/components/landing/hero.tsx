@@ -146,6 +146,12 @@ export function Hero() {
                 How It Works
               </Link>
               <Link
+                href="/why-auto-tune"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-800 hover:bg-gray-750 text-gray-200 font-medium rounded-lg transition-colors border border-gray-700 text-sm"
+              >
+                Why Auto-Tune →
+              </Link>
+              <Link
                 href="https://github.com/noahbclarkson/Auto-Tune"
                 target="_blank"
                 rel="noopener noreferrer"

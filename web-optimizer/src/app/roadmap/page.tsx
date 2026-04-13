@@ -59,6 +59,7 @@ const CATEGORIES = [
       { status: 'done', text: 'Economy Recovery Advisor (/admin web + in-game)' },
       { status: 'done', text: 'Shop favorites and portfolio tracking' },
       { status: 'done', text: 'Embeddable server health badge' },
+      { status: 'done', text: '"Why Auto-Tune" narrative comparison page (/why-auto-tune) — static shops vs Auto-Tune with scenarios, sparklines, earnings table' },
       { status: 'in-progress', text: 'web-optimizer public dashboard with live cross-server data (code complete, API deployment needed)' },
     ],
   },

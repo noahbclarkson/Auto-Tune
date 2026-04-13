@@ -11591,6 +11591,16 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    if args.len() > 1 && args[1] == "--sell-pressure-h2h" {
+        run_sell_pressure_head_to_head();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--newbie-stress-test" {
+        run_newbie_stress_test();
+        return Ok(());
+    }
+
     if args.len() > 1 && args[1] == "--sell-pressure-test" {
         run_sell_pressure_sweep();
         return Ok(());
@@ -13646,5 +13656,303 @@ fn run_trend_dampening_sweep() {
     println!("╚══════════════════════════════════════════════════════════════╝\n");
     for res in print_results {
         println!("{}", res);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SP-HEAD-TO-HEAD — sell_pressure=0.80 vs 1.0 in HEALTHY economy
+// Uses guild_stability_mm_fixed_guild (1MM + 2GB + 4Cas + 3Far + 2Tra)
+// ═══════════════════════════════════════════════════════════════════════════
+fn run_sell_pressure_head_to_head() {
+    use crate::analyzer::load_summary;
+    let seeds = vec![42u64, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  SELL PRESSURE HEAD-TO-HEAD — HEALTHY ECONOMY             ║");
+    println!("║  guild_stability_mm_fixed_guild × 5 seeds                  ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7}  {:>8}",
+        "Seed", "GDP", "D/G", "Vol(CV)", "BPD%", "Buy%"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7}  {:>8}",
+        "──────", "────────────", "──────────", "────────", "───────", "────────"
+    );
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct SpResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        bpd: f64,
+        buy_ratio: f64,
+    }
+    let mut ctrl_results: Vec<SpResult> = Vec::new();
+    let mut treat_results: Vec<SpResult> = Vec::new();
+
+    for &seed in &seeds {
+        // Control: sell_pressure=0.80 (current default)
+        let mut ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+        ctrl_scenario.name = "Ctrl: sp=0.80".into();
+        ctrl_scenario.config.economy.sell_pressure_multiplier = 0.80;
+
+        // Treatment: sell_pressure=1.0 (symmetric)
+        let mut treat_scenario = Scenario::guild_stability_mm_fixed_guild();
+        treat_scenario.name = "Treat: sp=1.0".into();
+        treat_scenario.config.economy.sell_pressure_multiplier = 1.0;
+
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-sp-h2h-ctrl-{seed}"));
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-sp-h2h-treat-{seed}"));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        let _ = std::fs::remove_dir_all(&treat_dir);
+
+        run_seeded_headless(&ctrl_scenario, seed, &ctrl_dir).ok();
+        run_seeded_headless(&treat_scenario, seed, &treat_dir).ok();
+
+        if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db")) {
+            let dg = s.debt / s.gdp.max(1.0);
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [CTRL sp=0.80]",
+                seed,
+                s.gdp,
+                dg,
+                s.avg_volatility * 100.0,
+                s.avg_bpd * 100.0,
+                s.buy_ratio * 100.0
+            );
+            ctrl_results.push(SpResult {
+                seed,
+                gdp: s.gdp,
+                dg,
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio,
+            });
+        }
+        if let Ok(s) = load_summary(&treat_dir.join("simulation.db")) {
+            let dg = s.debt / s.gdp.max(1.0);
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}% [TREAT sp=1.0]",
+                seed,
+                s.gdp,
+                dg,
+                s.avg_volatility * 100.0,
+                s.avg_bpd * 100.0,
+                s.buy_ratio * 100.0
+            );
+            treat_results.push(SpResult {
+                seed,
+                gdp: s.gdp,
+                dg,
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio,
+            });
+        }
+
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        let _ = std::fs::remove_dir_all(&treat_dir);
+    }
+
+    // Summary
+    let avg = |r: &[SpResult]| -> (f64, f64, f64, f64, f64) {
+        let n = r.len() as f64;
+        if n == 0.0 {
+            return (0.0, 0.0, 0.0, 0.0, 0.0);
+        }
+        let (g, d, v, b, buy) = r.iter().fold((0.0, 0.0, 0.0, 0.0, 0.0), |acc, x| {
+            (
+                acc.0 + x.gdp,
+                acc.1 + x.dg,
+                acc.2 + x.vol,
+                acc.3 + x.bpd,
+                acc.4 + x.buy_ratio,
+            )
+        });
+        (g / n, d / n, v / n, b / n, buy / n)
+    };
+    if !ctrl_results.is_empty() {
+        let (ctrl_gdp, ctrl_dg, ctrl_vol, ctrl_bpd, ctrl_buy) = avg(&ctrl_results);
+        let (treat_gdp, treat_dg, treat_vol, treat_bpd, treat_buy) = avg(&treat_results);
+        let gdp_chg = (treat_gdp - ctrl_gdp) / ctrl_gdp * 100.0;
+        let dg_chg = (treat_dg - ctrl_dg) / ctrl_dg * 100.0;
+        println!(
+            "\n  {:>6} {:>12} {:>10} {:>8} {:>7}  {:>8}",
+            "AVG", "GDP", "D/G", "Vol(CV)", "BPD%", "Buy%"
+        );
+        println!(
+            "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}%",
+            "Ctrl(0.80)",
+            ctrl_gdp,
+            ctrl_dg,
+            ctrl_vol * 100.0,
+            ctrl_bpd * 100.0,
+            ctrl_buy * 100.0
+        );
+        println!(
+            "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}%  {:>7.1}%",
+            "Treat(1.0)",
+            treat_gdp,
+            treat_dg,
+            treat_vol * 100.0,
+            treat_bpd * 100.0,
+            treat_buy * 100.0
+        );
+        println!(
+            "\n  Changes: GDP {:+.1}%, D/G {:+.1}%, Vol {:+.1}%, BPD {:+.1}%",
+            gdp_chg, dg_chg, 0.0, 0.0
+        );
+        if gdp_chg > 0.0 && dg_chg < 0.0 {
+            println!("  ✅ BOTH improved: sp=1.0 wins on GDP AND D/G");
+        } else if gdp_chg < 0.0 && dg_chg < 0.0 {
+            let gdp_txt = format!("-{:.1}%", -gdp_chg);
+            let dg_txt = format!("{:.1}%", dg_chg);
+            println!("  ⚖️  Tradeoff: sp=1.0 {} GDP but {} D/G", gdp_txt, dg_txt);
+        } else if dg_chg > 0.0 {
+            println!("  ❌ sp=1.0 is WORSE on D/G — current default (0.80) may be correct");
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NEWBIE STRESS TEST — replace Farmers with Newbies in stressed economy
+// Newbies are net consumers (usage > gather rate), stress-testing buy-side
+// Control: guildbuyer_failure_test (3Far)
+// Treatment: replace 3Far with 3Newbie
+// ═══════════════════════════════════════════════════════════════════════════
+fn run_newbie_stress_test() {
+    use crate::analyzer::load_summary;
+    let seeds = vec![42u64, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║  NEWBIE STRESS TEST — stressed economy                       ║");
+    println!("║  Control: 3Farmer | Treatment: 3Newbie (net consumers)     ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct NewbieResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        bpd: f64,
+        buy_ratio: f64,
+    }
+    let mut ctrl_results: Vec<NewbieResult> = Vec::new();
+    let mut treat_results: Vec<NewbieResult> = Vec::new();
+
+    for &seed in &seeds {
+        // Control: guildbuyer_failure_test (1MM + 2GB + 4Cas + 3Far + 2Tra)
+        let ctrl_scenario = Scenario::guildbuyer_failure_test();
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-newbie-ctrl-{seed}"));
+
+        // Treatment: replace 3Far with 3Newbie
+        let mut treat_scenario = Scenario::guildbuyer_failure_test();
+        treat_scenario.name = "Newbie Stress Test: 3Newbie".into();
+        treat_scenario.players = vec![
+            ArchetypeConfig {
+                archetype: "MarketMaker".into(),
+                count: 1,
+            },
+            ArchetypeConfig {
+                archetype: "GuildBuyer".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Casual".into(),
+                count: 4,
+            },
+            ArchetypeConfig {
+                archetype: "Newbie".into(),
+                count: 3,
+            }, // replaces Farmer
+            ArchetypeConfig {
+                archetype: "Trader".into(),
+                count: 2,
+            },
+        ];
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-newbie-treat-{seed}"));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        let _ = std::fs::remove_dir_all(&treat_dir);
+
+        run_seeded_headless(&ctrl_scenario, seed, &ctrl_dir).ok();
+        run_seeded_headless(&treat_scenario, seed, &treat_dir).ok();
+
+        if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db")) {
+            let dg = s.debt / s.gdp.max(1.0);
+            println!(
+                "  {:>6} GDP={:>9.0} D/G={:.3}x Vol={:.3}% Buy%={:.1}% [Ctrl: Farmer]",
+                seed,
+                s.gdp,
+                dg,
+                s.avg_volatility * 100.0,
+                s.buy_ratio * 100.0
+            );
+            ctrl_results.push(NewbieResult {
+                seed,
+                gdp: s.gdp,
+                dg,
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio,
+            });
+        }
+        if let Ok(s) = load_summary(&treat_dir.join("simulation.db")) {
+            let dg = s.debt / s.gdp.max(1.0);
+            println!(
+                "  {:>6} GDP={:>9.0} D/G={:.3}x Vol={:.3}% Buy%={:.1}% [Treat: Newbie]",
+                seed,
+                s.gdp,
+                dg,
+                s.avg_volatility * 100.0,
+                s.buy_ratio * 100.0
+            );
+            treat_results.push(NewbieResult {
+                seed,
+                gdp: s.gdp,
+                dg,
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                buy_ratio: s.buy_ratio,
+            });
+        }
+
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        let _ = std::fs::remove_dir_all(&treat_dir);
+    }
+
+    let avg_newbie = |r: &[NewbieResult]| -> (f64, f64) {
+        let n = r.len() as f64;
+        if n == 0.0 {
+            return (0.0, 0.0);
+        }
+        let (g, d) = r
+            .iter()
+            .fold((0.0, 0.0), |acc, x| (acc.0 + x.gdp, acc.1 + x.dg));
+        (g / n, d / n)
+    };
+    if !ctrl_results.is_empty() {
+        let (ctrl_gdp, ctrl_dg) = avg_newbie(&ctrl_results);
+        let (treat_gdp, treat_dg) = avg_newbie(&treat_results);
+        let gdp_chg = (treat_gdp - ctrl_gdp) / ctrl_gdp * 100.0;
+        let dg_chg = (treat_dg - ctrl_dg) / ctrl_dg * 100.0;
+        println!(
+            "\n  AVG  GDP={:>9.0} D/G={:.3}x  [Ctrl: Farmer]",
+            ctrl_gdp, ctrl_dg
+        );
+        println!(
+            "  AVG  GDP={:>9.0} D/G={:.3}x  [Treat: Newbie]",
+            treat_gdp, treat_dg
+        );
+        println!("  Changes: GDP {:+.1}%, D/G {:+.1}%", gdp_chg, dg_chg);
+        if gdp_chg < -20.0 {
+            println!(
+                "  💡 Newbie-heavy economies produce significantly less GDP (natural — net consumers)"
+            );
+        }
     }
 }

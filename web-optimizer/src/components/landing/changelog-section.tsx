@@ -3,6 +3,38 @@
 import { GitCommit, Zap, Users, Gavel, Bell, ShieldCheck, Globe } from 'lucide-react';
 
 const UPDATES = [
+  // ── 2026-04-13: Simulation Lab — Definitive archetype verdicts ──────────
+  {
+    date: '2026-04-13',
+    icon: ShieldCheck,
+    accent: 'text-rose-400',
+    accentBg: 'bg-rose-950/60 border-rose-800/50',
+    tag: 'SIM LAB',
+    title: 'Definitive archetype table — IT+VT combo is catastrophic',
+    detail: 'IT+VT combo in healthy economy: GDP −25.6% (IT alone was +30.1%). VT dominates and reverses all of IT\'s gains. VT in stressed economy: −12.7% GDP (vs −9.2% in healthy). VT is always harmful. IT+VT together is a 55-percentage-point GDP reversal. Archetype table: 2MM+2GB ✅ production, +2IT ⚠️ optional, +2VT ❌ never, +IT+VT ❌ catastrophic.',
+    href: null,
+  },
+  // ── 2026-04-08: Ecosystem work ────────────────────────────────────────────
+  {
+    date: '2026-04-08',
+    icon: ShieldCheck,
+    accent: 'text-emerald-400',
+    accentBg: 'bg-emerald-950/60 border-emerald-800/50',
+    tag: 'ECOSYSTEM',
+    title: 'Embeddable server health badge — one-click Discord embed',
+    detail: 'Server admins can embed a live economy health badge on their forum or website. Three styles (compact/standard/detailed), self-contained HTML snippet generator, zero external dependencies. Drives organic referral traffic.',
+    href: '/health-badge',
+  },
+  {
+    date: '2026-04-08',
+    icon: Users,
+    accent: 'text-sky-400',
+    accentBg: 'bg-sky-950/60 border-sky-800/50',
+    tag: 'ECOSYSTEM',
+    title: 'Landing page refresh + Player Quickstart docs',
+    detail: 'Hero rewritten with concrete admin value props. New /health-badge route, Admin Intelligence feature card (/at admin advice/history/recovery). docs/PLAYER_QUICKSTART.md created — player-facing guide covering /shop, /sell, /compare, /loans, /transactions with 4 money-making strategies.',
+    href: '/changelog',
+  },
   {
     date: '2026-04-04',
     icon: Zap,

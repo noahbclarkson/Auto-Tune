@@ -490,8 +490,8 @@ Auto-Tune's economy health depends heavily on your **player archetype mix** — 
 | **Farmer** | Heavy seller | Natural supply; can cause underselling |
 | **GuildBuyer** | Proactive buyer at dips | Buy pressure; counteracts farmer oversupply |
 | **MarketMaker** | Two-sided liquidity | Tightens spreads dramatically; stabilizes prices |
-| **InsiderTrader** | Mean-reversion | Compresses spreads; adds debt risk |
-| **VolumeTrader** | Spread compressor | Reduces BPD/SPD; adds modest debt |
+| **InsiderTrader** | Mean-reversion | +30.1% GDP in healthy economies; D/G +2.41x; optional for realism, monitor D/G |
+| **VolumeTrader** | Spread compressor | Always harmful — −9% to −13% GDP; never recommended |
 
 ### Recommended Archetype Config (2MM + 2GB)
 
@@ -511,8 +511,8 @@ Simulation testing across 5 seeds confirms: **2 MarketMakers + 2 GuildBuyers @ 7
 
 - **Small server (5–10 players):** 1 MarketMaker + 1 GuildBuyer. More MMs than players causes over-trading.
 - **Medium server (10–20 players):** 2 MarketMaker + 2 GuildBuyer. This is the validated recommended config.
-- **Large server (20–50 players):** 2 MarketMaker + 2 GuildBuyer + 1–2 VolumeTraders. VTs compress spreads but add debt — cap at 2.
-- **Avoid:** 2+ InsiderTraders without MMs (worsens D/G). GuildSellers (confirmed dead-end — sell-heavy bias with no demand benefit).
+- **Large server (20–50 players):** 2 MarketMaker + 2 GuildBuyer. Do NOT add VolumeTraders — they are always harmful in any economy condition (-9% to -13% GDP).
+- **Avoid:** InsiderTrader + VolumeTrader combination — catastrophic (-25.6% GDP, IT's gains are reversed and tripled by VT). GuildSellers (confirmed dead-end — sell-heavy bias with no demand benefit).
 
 ### The Floor Percent
 

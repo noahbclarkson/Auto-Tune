@@ -1,6 +1,25 @@
-# Ecosystem Analysis — 2026-04-07 Evening
+# Ecosystem Analysis — 2026-04-13 (updated)
 
-## State of the Project
+> **2026-04-13 update:** New definitive archetype findings from 5-seed simulation lab.
+
+## Definitive Archetype Recommendations (2026-04-13)
+
+After multi-seed validation (5 seeds × 5 configs), the archetype effects are now settled:
+
+| Config | Verdict | GDP Effect | D/G Effect |
+|--------|---------|------------|------------|
+| 2MM+2GB | ✅ Production default | baseline | baseline |
+| +2IT | ⚠️ Optional | **+30.1%** | +2.41× (watch D/G) |
+| +2VT | ❌ Never | **−9.2%** (healthy) / **−12.7%** (stressed) | neutral |
+| +2IT+2VT | ❌ Catastrophic | **−25.6%** (IT gains reversed and tripled by VT) | −0.62× |
+
+**Key mechanism:** VT fires on spread widening and price dislocations. In any economy, it amplifies the dominant directional pressure — sell cascades in stressed economies, debt amplification in IT-boosted economies. VT is always harmful in ANY config. IT+VT together is a 55-percentage-point GDP reversal from IT alone.
+
+**Updated SERVER_ADMIN_GUIDE.md:** VolumeTrader description updated to "Always harmful — −9% to −13% GDP; never recommended." Large server recommendation stripped of VT. GuildSeller confirmed dead-end retained.
+
+---
+
+## State of the Project (2026-04-07)
 
 Both frontends are feature-complete:
 - `web/` (14 routes): all core features built, CSV export implemented, discovery overlay live

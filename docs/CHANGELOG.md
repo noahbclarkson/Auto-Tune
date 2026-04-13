@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-04-13 — Simulation Lab
+
+### Added
+
+- **`--vt-stressed-test` CLI (sim)** — VolumeTrader in guildbuyer_failure_test (stressed economy) scenario across 5 seeds. Result: GDP −12.7%, D/G +0.48x, vol +5.9%. VT amplifies sell cascades by firing on spread widening in supply-driven stressed economies. Mechanism: stressed economies have chronic Farmer/Hoarder oversupply → wide spreads → VT sells into it → prices drop further. **VERDICT: VT is ALWAYS harmful** — healthy (-9.2%) or stressed (-12.7%).
+- **`--it-vt-healthy-test` CLI (sim)** — IT+VT combo in guild_stability_2mm_fixed_guild (healthy economy) across 5 seeds. Result: GDP −25.6% (IT alone was +30.1%, VT alone was −9.2%). VT's drag DOMINATES and REVERSES all of IT's gains by 3x. Mechanism: ITs create buy pressure → GBs trigger more → multiplicative debt amplification → GDP collapse. **VERDICT: IT+VT is CATASTROPHIC.** Do NOT combine them in any config.
+
+### Changed
+
+- **Definitive archetype recommendation table (sim)** — Updated with 4-row definitive table: 2MM+2GB ✅ production default; +2IT ⚠️ optional (+30.1% GDP, D/G +2.41x, watch D/G); +2VT ❌ never (always −9 to −13% GDP); +2IT+2VT ❌ catastrophic (−25.6% GDP). Table added to docs/ECOSYSTEM_ANALYSIS.md and docs/SERVER_ADMIN_GUIDE.md.
+
+---
+
+## 2026-04-08 — Web & Ecosystem
+
+### Added
+
+- **`/health-badge` route (web-optimizer)** — Three badge styles (compact/standard/detailed), live preview with real health data from the API, self-contained HTML snippet generator for server forums and Discord embeds. Three size options, no external dependencies. Nav header link added.
+- **Landing page refresh (web-optimizer)** — Hero rewritten with concrete admin value props (advice commands, circuit breaker, events). Stats strip updated: Commands, Market tick, Circuit breaker threshold, Events types. New Admin Intelligence feature card covering /at admin advice, /at admin history, /at admin recovery.
+- **`/at admin advice` command (plugin)** — Rules-based expert system reads live health metrics (GDP, D/G, volatility, buy ratio, circuit breaker tier) and produces plain-English diagnosis + recommended YAML config snippets with copy button. Admins get actionable recovery plans without reading raw metrics.
+- **`/shop info <item>` command (plugin)** — Players see why a price moved: last price change direction + magnitude, 7-day trend, recent large trades, active market events affecting this item, floor/ceiling status. Makes the engine transparent and educational.
+- **`docs/PLAYER_QUICKSTART.md`** — Player-facing guide covering /shop, /sell, /compare, /loans, /transactions. Explains prices, spreads, trends, 4 money-making strategies (gathering, flipping, lending, event anticipation), common mistakes. Closes the player-facing docs gap.
+- **`docs/QUICKSTART.md` rewritten** — Added visual decision tree at top (no-loans vs loans path, archetype mix options with warnings). 5 decisions section with YAML + CLI commands. Post-launch 8-point checklist. Healthy economy reference table.
+- **`docs/README.md` updated** — Added "For Players" section, role-based reading order (new admin / experienced admin / developer / player).
+
+### Changed
+
+- **`docs/CHANGELOG.md`** — Complete entries for 2026-04-05 through 2026-04-07 added.
+
+---
+
 ## [Unreleased] — 2026-04-07
 
 ### Changed

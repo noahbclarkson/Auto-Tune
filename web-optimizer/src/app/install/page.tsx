@@ -560,6 +560,12 @@ export default function InstallPage() {
         >
           View true prices
         </Link>
+        <Link
+          href="/docs"
+          className="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-700 hover:border-gray-600 text-gray-300 font-semibold rounded-lg transition-colors text-sm"
+        >
+          Admin docs →
+        </Link>
       </div>
     </div>
   );

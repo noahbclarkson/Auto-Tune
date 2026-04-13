@@ -50,6 +50,10 @@ export function Footer() {
               <ExternalLink className="w-3.5 h-3.5" />
               Setup Wizard
             </Link>
+            <Link href="/docs" className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-colors">
+              <ExternalLink className="w-3.5 h-3.5" />
+              Docs
+            </Link>
             <Link href="/changelog" className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-colors">
               <ExternalLink className="w-3.5 h-3.5" />
               Changelog

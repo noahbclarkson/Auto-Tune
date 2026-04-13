@@ -10,6 +10,7 @@ const NAV = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/setup', label: 'Setup', icon: Wand2 },
   { href: '/install', label: 'Install', icon: Download },
+  { href: '/docs', label: 'Docs', icon: BookOpen },
   { href: '/how-it-works', label: 'How It Works', icon: BookOpen },
   { href: '/why-auto-tune', label: 'Why Auto-Tune', icon: TrendingUp },
   { href: '/simulator', label: 'Simulator', icon: BarChart2 },

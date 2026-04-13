@@ -484,6 +484,53 @@ impl Scenario {
         }
     }
 
+    /// GuildStability + 2MM + 2GB + 2IT + 2VT (healthy economy + both optional archetypes)
+    /// Control: guild_stability_2mm_fixed_guild (2MM + 2GB + 3Cas + 3Far + 2Tra)
+    /// Treat:   same + 2 InsiderTraders + 2 VolumeTraders (12 players total)
+    /// Question: IT helps healthy economies (+30.1% GDP) but VT hurts (-9.2% GDP).
+    ///   Combined: do they cancel out, or does one dominate?
+    pub fn guild_stability_2mm_2gb_plus_it_and_vt() -> Self {
+        Self {
+            name: "GuildStability+2MM+2GB+IT+VT".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "InsiderTrader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "VolumeTrader".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+        }
+    }
+
     /// Archetype mix test: Casual-heavy variant.
     /// Replaces Farmers with Casuals to test whether more balanced gather/demand
     /// improves economy health beyond the 2MM+2GB config.
@@ -1750,6 +1797,53 @@ pub fn guildbuyer_failure_test_plus_it() -> Scenario {
             },
             ArchetypeConfig {
                 archetype: "InsiderTrader".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Casual".into(),
+                count: 4,
+            },
+            ArchetypeConfig {
+                archetype: "Farmer".into(),
+                count: 3,
+            },
+            ArchetypeConfig {
+                archetype: "Trader".into(),
+                count: 2,
+            },
+        ],
+        seed: None,
+        events: Vec::new(),
+        stress_events: vec![],
+        duration_ticks: 288 * 14,
+        speed_ticks_per_sec: 200,
+    }
+}
+
+/// VolumeTrader + Stressed Economy: guildbuyer_failure_test + 2 VolumeTraders
+/// Tests: does VT help or hurt when the economy is already stressed?
+/// VT in healthy economy result: GDP -9.2%, vol +8.7% WORSE, BPD -6.4%
+/// Stressed-economy hypothesis: VT's spread compression might reduce volatility
+///   but VT's buy-high-sell-low behavior could amplify debt cascades.
+pub fn guildbuyer_failure_test_plus_vt() -> Scenario {
+    Scenario {
+        name: "GuildbuyerFailure+VT".to_string(),
+        config: {
+            let mut c = SimConfig::default();
+            c.loans.post_default_cooldown_hours = 168;
+            c
+        },
+        players: vec![
+            ArchetypeConfig {
+                archetype: "MarketMaker".into(),
+                count: 1,
+            },
+            ArchetypeConfig {
+                archetype: "GuildBuyer".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "VolumeTrader".into(),
                 count: 2,
             },
             ArchetypeConfig {
@@ -8330,6 +8424,216 @@ fn run_it_healthy_economy_test() {
     let _ = std::fs::remove_dir_all(&treat_dir);
 }
 
+/// InsiderTrader + VolumeTrader + Healthy Economy — multi-seed factorial
+/// Control: guild_stability_2mm_fixed_guild (2MM + 2GB + 3Cas + 3Far + 2Tra)
+/// Treat:   same + 2IT + 2VT (guild_stability_2mm_2gb_plus_it_and_vt)
+/// Question: IT helps (+30.1% GDP) but VT hurts (-9.2% GDP) in isolation.
+///   Combined on healthy economy: do they cancel out, or does one dominate?
+/// Prior results:
+///   IT alone in healthy: +30.1% GDP, D/G 0.75x→3.16x (+2.41x)
+///   VT alone in healthy: -9.2% GDP, vol +8.7%, BPD -6.4%
+/// Prediction: IT's GDP boost dominates but D/G takes a hit from both.
+fn run_it_vt_healthy_economy_test() {
+    use crate::analyzer::load_summary;
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║       IT + VT COMBINATION TEST — HEALTHY ECONOMY             ║");
+    println!("║  2MM+2GB vs +2IT+2VT — 5 seeds                                ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guild_stability_2mm_fixed_guild (2MM+2GB+3Cas+3Far+2Tra)");
+    println!("  Treat:   same + 2 InsiderTraders + 2 VolumeTraders\n");
+
+    let ctrl_scenario = Scenario::guild_stability_2mm_fixed_guild();
+    let treat_scenario = Scenario::guild_stability_2mm_2gb_plus_it_and_vt();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-itvt-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-itvt-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl_results = Vec::new();
+    let mut treat_results = Vec::new();
+
+    for seed in &seeds {
+        println!("  Seed {}:", seed);
+        {
+            let mut sc = ctrl_scenario.clone();
+            sc.seed = Some(*seed);
+            let dir = ctrl_dir.join(format!("seed_{}", seed));
+            std::fs::create_dir_all(&dir).ok();
+            if let Err(e) = run_seeded_headless(&sc, *seed, &dir) {
+                eprintln!("  Ctrl seed {} error: {}", seed, e);
+                continue;
+            }
+            if let Ok(s) = load_summary(&dir.join("simulation.db")) {
+                let dg = s.debt / s.gdp.max(1.0);
+                println!(
+                    "    Ctrl: GDP={:.0}  D/G={:.2}x  vol={:.4}  buy={:.1}%",
+                    s.gdp,
+                    dg,
+                    s.avg_volatility,
+                    s.buy_ratio * 100.0
+                );
+                ctrl_results.push((*seed, s));
+            }
+        }
+        {
+            let mut sc = treat_scenario.clone();
+            sc.seed = Some(*seed);
+            let dir = treat_dir.join(format!("seed_{}", seed));
+            std::fs::create_dir_all(&dir).ok();
+            if let Err(e) = run_seeded_headless(&sc, *seed, &dir) {
+                eprintln!("  Treat seed {} error: {}", seed, e);
+                continue;
+            }
+            if let Ok(s) = load_summary(&dir.join("simulation.db")) {
+                let dg = s.debt / s.gdp.max(1.0);
+                println!(
+                    "    Treat: GDP={:.0}  D/G={:.2}x  vol={:.4}  buy={:.1}%",
+                    s.gdp,
+                    dg,
+                    s.avg_volatility,
+                    s.buy_ratio * 100.0
+                );
+                treat_results.push((*seed, s));
+            }
+        }
+        println!();
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║                    AGGREGATE RESULTS (5 seeds)                   ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝\n");
+
+    if ctrl_results.is_empty() || treat_results.is_empty() {
+        println!("  No results collected.");
+        return;
+    }
+
+    fn stats(results: &[(u64, crate::analyzer::SimSummary)]) -> (f64, f64, f64, f64, f64, f64) {
+        let n = results.len() as f64;
+        let gdp: Vec<f64> = results.iter().map(|(_, r)| r.gdp).collect();
+        let dg: Vec<f64> = results
+            .iter()
+            .map(|(_, r)| r.debt / r.gdp.max(1.0))
+            .collect();
+        let vol: Vec<f64> = results.iter().map(|(_, r)| r.avg_volatility).collect();
+        let bpd: Vec<f64> = results.iter().map(|(_, r)| r.avg_bpd).collect();
+        let buy: Vec<f64> = results.iter().map(|(_, r)| r.buy_ratio).collect();
+        let mean = |v: &[f64]| v.iter().sum::<f64>() / n;
+        let std = |v: &[f64]| {
+            let m = mean(v);
+            (v.iter().map(|x| (x - m).powi(2)).sum::<f64>() / n).sqrt()
+        };
+        (
+            mean(&gdp),
+            mean(&dg),
+            mean(&vol),
+            mean(&bpd),
+            mean(&buy),
+            std(&dg),
+        )
+    }
+
+    let (ctrl_gdp, ctrl_dg, ctrl_vol, ctrl_bpd, ctrl_buy, ctrl_dg_std) = stats(&ctrl_results);
+    let (treat_gdp, treat_dg, treat_vol, treat_bpd, treat_buy, treat_dg_std) =
+        stats(&treat_results);
+
+    let gdp_pct = (treat_gdp / ctrl_gdp.max(1.0) - 1.0) * 100.0;
+    let dg_chg = treat_dg - ctrl_dg;
+    let vol_pct = (treat_vol / ctrl_vol.max(0.0001) - 1.0) * 100.0;
+    let bpd_pct = (treat_bpd / ctrl_bpd.max(0.0001) - 1.0) * 100.0;
+
+    println!(
+        "  {:22}  {:>12}  {:>18}  {:>10}",
+        "Metric", "2MM+2GB", "2MM+2GB+IT+VT", "Effect"
+    );
+    println!("  {:─<22}  {:─<12}  {:─<18}  {:─<10}", "", "", "", "");
+    println!(
+        "  {:22}  {:>12.0}  {:>18.0}  {:>+10.1}%",
+        "GDP (mean)", ctrl_gdp, treat_gdp, gdp_pct
+    );
+    println!(
+        "  {:22}  {:>11.2}x  {:>17.2}x  {:>+10.2}x",
+        "Debt/GDP (mean)", ctrl_dg, treat_dg, dg_chg
+    );
+    println!(
+        "  {:22}  {:>12.4}  {:>18.4}  {:>+10.1}%",
+        "Volatility (mean)", ctrl_vol, treat_vol, vol_pct
+    );
+    println!(
+        "  {:22}  {:>11.2}%  {:>17.2}%  {:>+10.1}%",
+        "BPD (mean)",
+        ctrl_bpd * 100.0,
+        treat_bpd * 100.0,
+        bpd_pct
+    );
+    println!(
+        "  {:22}  {:>11.1}%  {:>17.1}%  {:>+10.1}pp",
+        "Buy Ratio (mean)",
+        ctrl_buy * 100.0,
+        treat_buy * 100.0,
+        (treat_buy - ctrl_buy) * 100.0
+    );
+    println!(
+        "  {:22}  {:>11.2}x  {:>17.2}x  {:>+10.2}x",
+        "D/G σ (across seeds)",
+        ctrl_dg_std,
+        treat_dg_std,
+        treat_dg_std - ctrl_dg_std
+    );
+
+    println!("\n  === VERDICT ===");
+    // IT alone: +30.1% GDP, VT alone: -9.2% GDP. Net prediction: ~+20% if linear
+    if gdp_pct > 15.0 && dg_chg < 1.0 {
+        println!(
+            "  ✅ IT+VT SYNERGISTIC: GDP {:+.1}%, D/G {:+.2}x — net positive",
+            gdp_pct, dg_chg
+        );
+    } else if gdp_pct > 5.0 && dg_chg < 2.0 {
+        println!(
+            "  ⚠️  IT+VT PARTIAL: GDP {:+.1}% but D/G {:+.2}x — IT wins, VT neutral",
+            gdp_pct, dg_chg
+        );
+    } else if gdp_pct.abs() < 10.0 && dg_chg.abs() < 1.0 {
+        println!(
+            "  ➖ IT+VT CANCELS: GDP {:+.1}%, D/G {:+.2}x — they neutralize each other",
+            gdp_pct, dg_chg
+        );
+    } else {
+        println!(
+            "  ❌ IT+VT HARMFUL or DOMINATED: GDP {:+.1}%, D/G {:+.2}x",
+            gdp_pct, dg_chg
+        );
+    }
+    println!();
+
+    println!("  === CONTEXT ===");
+    println!("  IT alone in healthy: GDP +30.1%, D/G +2.41x");
+    println!("  VT alone in healthy: GDP -9.2%, vol +8.7%, BPD -6.4%");
+    println!(
+        "  Combined: IT (+30.1%) + VT (-9.2%) = predicted {:+.1}%",
+        (1.301 - 0.092) * 100.0 - 100.0
+    );
+    if gdp_pct > 15.0 {
+        println!(
+            "  CONCLUSION: IT's GDP boost DOMINATES VT's drag — add IT+VT to recommended config"
+        );
+    } else if gdp_pct > 5.0 {
+        println!("  CONCLUSION: IT's boost partially offsets VT — IT alone is better than IT+VT");
+    } else if gdp_pct < -5.0 {
+        println!("  CONCLUSION: VT's drag DOMINATES — do NOT add IT+VT combo to any config");
+    } else {
+        println!("  CONCLUSION: They cancel out — no strong case for either addition");
+    }
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
 /// InsiderTrader + Stressed Economy — multi-seed validation
 /// Control: guildbuyer_failure_test (1MM+2GB+4Cas+3Far+2Tra)
 /// Treat:   same + 2 InsiderTraders
@@ -8526,6 +8830,216 @@ fn run_it_stressed_economy_test() {
         println!(
             "  Stressed-economy: IT effect on D/G is small ({:+.2}x)",
             dg_chg
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+}
+
+/// VolumeTrader + Stressed Economy Test — multi-seed validation
+/// Control: guildbuyer_failure_test (1MM+2GB+4Cas+3Far+2Tra)
+/// Treat:   same + 2 VolumeTraders
+/// Question: does VT help or hurt a stressed economy?
+/// VT in healthy economy result: GDP -9.2%, vol +8.7% WORSE, BPD -6.4%
+/// Stressed-economy hypothesis: VT's spread compression could reduce volatility
+///   but VT's buy-high-sell-low behavior could amplify debt cascades.
+fn run_vt_stressed_economy_test() {
+    use crate::analyzer::load_summary;
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║       VOLUMETRADER + STRESSED ECONOMY TEST                    ║");
+    println!("║  guildbuyer_failure_test vs +2 VTs — 5 seeds                  ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: guildbuyer_failure_test (1MM+2GB+4Cas+3Far+2Tra)");
+    println!("  Treat:   same + 2 VolumeTraders\n");
+
+    let ctrl_scenario = Scenario::guildbuyer_failure_test();
+    let treat_scenario = guildbuyer_failure_test_plus_vt();
+
+    let ctrl_dir = PathBuf::from("/tmp/autotune-vt-stress-ctrl");
+    let treat_dir = PathBuf::from("/tmp/autotune-vt-stress-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_dir);
+    let _ = std::fs::remove_dir_all(&treat_dir);
+    std::fs::create_dir_all(&ctrl_dir).ok();
+    std::fs::create_dir_all(&treat_dir).ok();
+
+    let mut ctrl_results = Vec::new();
+    let mut treat_results = Vec::new();
+
+    for seed in &seeds {
+        println!("  Seed {}:", seed);
+        {
+            let mut sc = ctrl_scenario.clone();
+            sc.seed = Some(*seed);
+            let dir = ctrl_dir.join(format!("seed_{}", seed));
+            std::fs::create_dir_all(&dir).ok();
+            if let Err(e) = run_seeded_headless(&sc, *seed, &dir) {
+                eprintln!("  Ctrl seed {} error: {}", seed, e);
+                continue;
+            }
+            if let Ok(s) = load_summary(&dir.join("simulation.db")) {
+                let dg = s.debt / s.gdp.max(1.0);
+                println!(
+                    "    Ctrl: GDP={:.0}  D/G={:.2}x  vol={:.4}  buy={:.1}%",
+                    s.gdp,
+                    dg,
+                    s.avg_volatility,
+                    s.buy_ratio * 100.0
+                );
+                ctrl_results.push((*seed, s));
+            }
+        }
+        {
+            let mut sc = treat_scenario.clone();
+            sc.seed = Some(*seed);
+            let dir = treat_dir.join(format!("seed_{}", seed));
+            std::fs::create_dir_all(&dir).ok();
+            if let Err(e) = run_seeded_headless(&sc, *seed, &dir) {
+                eprintln!("  Treat seed {} error: {}", seed, e);
+                continue;
+            }
+            if let Ok(s) = load_summary(&dir.join("simulation.db")) {
+                let dg = s.debt / s.gdp.max(1.0);
+                println!(
+                    "    Treat: GDP={:.0}  D/G={:.2}x  vol={:.4}  buy={:.1}%",
+                    s.gdp,
+                    dg,
+                    s.avg_volatility,
+                    s.buy_ratio * 100.0
+                );
+                treat_results.push((*seed, s));
+            }
+        }
+        println!();
+    }
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║                    AGGREGATE RESULTS (5 seeds)                   ║");
+    println!("╚══════════════════════════════════════════════════════════════════════╝\n");
+
+    if ctrl_results.is_empty() || treat_results.is_empty() {
+        println!("  No results collected.");
+        return;
+    }
+
+    fn stats(results: &[(u64, crate::analyzer::SimSummary)]) -> (f64, f64, f64, f64, f64, f64) {
+        let n = results.len() as f64;
+        let gdp: Vec<f64> = results.iter().map(|(_, r)| r.gdp).collect();
+        let dg: Vec<f64> = results
+            .iter()
+            .map(|(_, r)| r.debt / r.gdp.max(1.0))
+            .collect();
+        let vol: Vec<f64> = results.iter().map(|(_, r)| r.avg_volatility).collect();
+        let bpd: Vec<f64> = results.iter().map(|(_, r)| r.avg_bpd).collect();
+        let buy: Vec<f64> = results.iter().map(|(_, r)| r.buy_ratio).collect();
+        let mean = |v: &[f64]| v.iter().sum::<f64>() / n;
+        let std = |v: &[f64]| {
+            let m = mean(v);
+            (v.iter().map(|x| (x - m).powi(2)).sum::<f64>() / n).sqrt()
+        };
+        (
+            mean(&gdp),
+            mean(&dg),
+            mean(&vol),
+            mean(&bpd),
+            mean(&buy),
+            std(&dg),
+        )
+    }
+
+    let (ctrl_gdp, ctrl_dg, ctrl_vol, ctrl_bpd, ctrl_buy, ctrl_dg_std) = stats(&ctrl_results);
+    let (treat_gdp, treat_dg, treat_vol, treat_bpd, treat_buy, treat_dg_std) =
+        stats(&treat_results);
+
+    let gdp_pct = (treat_gdp / ctrl_gdp.max(1.0) - 1.0) * 100.0;
+    let dg_chg = treat_dg - ctrl_dg;
+    let vol_pct = (treat_vol / ctrl_vol.max(0.0001) - 1.0) * 100.0;
+    let bpd_pct = (treat_bpd / ctrl_bpd.max(0.0001) - 1.0) * 100.0;
+
+    println!(
+        "  {:22}  {:>12}  {:>12}  {:>10}",
+        "Metric", "Stressed", "Stressed+VT", "Effect"
+    );
+    println!("  {:─<22}  {:─<12}  {:─<12}  {:─<10}", "", "", "", "");
+    println!(
+        "  {:22}  {:>12.0}  {:>12.0}  {:>+10.1}%",
+        "GDP (mean)", ctrl_gdp, treat_gdp, gdp_pct
+    );
+    println!(
+        "  {:22}  {:>11.2}x  {:>11.2}x  {:>+10.2}x",
+        "Debt/GDP (mean)", ctrl_dg, treat_dg, dg_chg
+    );
+    println!(
+        "  {:22}  {:>12.4}  {:>12.4}  {:>+10.1}%",
+        "Volatility (mean)", ctrl_vol, treat_vol, vol_pct
+    );
+    println!(
+        "  {:22}  {:>11.2}%  {:>11.2}%  {:>+10.1}%",
+        "BPD (mean)",
+        ctrl_bpd * 100.0,
+        treat_bpd * 100.0,
+        bpd_pct
+    );
+    println!(
+        "  {:22}  {:>11.1}%  {:>11.1}%  {:>+10.1}pp",
+        "Buy Ratio (mean)",
+        ctrl_buy * 100.0,
+        treat_buy * 100.0,
+        (treat_buy - ctrl_buy) * 100.0
+    );
+    println!(
+        "  {:22}  {:>11.2}x  {:>11.2}x  {:>+10.2}x",
+        "D/G σ (across seeds)",
+        ctrl_dg_std,
+        treat_dg_std,
+        treat_dg_std - ctrl_dg_std
+    );
+
+    println!("\n  === VERDICT ===");
+    if gdp_pct > 5.0 && dg_chg < 0.5 && vol_pct < 0.0 {
+        println!(
+            "  ✅ VT BENEFICIAL: GDP {:+.1}%, vol {:+.1}%, D/G {:+.2}x",
+            gdp_pct, vol_pct, dg_chg
+        );
+    } else if gdp_pct > 2.0 && dg_chg.abs() < 1.0 && vol_pct.abs() < 10.0 {
+        println!(
+            "  ⚠️  VT MARGINAL: GDP {:+.1}%, vol {:+.1}%, D/G {:+.2}x",
+            gdp_pct, vol_pct, dg_chg
+        );
+    } else if gdp_pct < -5.0 || dg_chg > 2.0 {
+        println!(
+            "  ❌ VT HARMFUL in stressed economy: GDP {:+.1}%, D/G {:+.2}x",
+            gdp_pct, dg_chg
+        );
+    } else {
+        println!(
+            "  ➖ VT NEUTRAL in stressed economy: GDP {:+.1}%, D/G {:+.2}x, vol {:+.1}%",
+            gdp_pct, dg_chg, vol_pct
+        );
+    }
+    println!();
+
+    // Context
+    println!("  === CONTEXT ===");
+    println!("  Healthy-economy VT result: GDP -9.2%, vol +8.7%, BPD -6.4%");
+    if vol_pct < 0.0 && dg_chg < 0.5 {
+        println!(
+            "  Stressed-economy: VT REDUCES volatility ({:.1}%) AND keeps D/G stable",
+            vol_pct
+        );
+        println!("  RECOMMENDATION: VTs may be useful in stressed economies (unlike ITs)");
+    } else if dg_chg > 1.0 {
+        println!(
+            "  Stressed-economy: VT WORSENS debt ({:+.2}x) — amplifying stress",
+            dg_chg
+        );
+        println!("  RECOMMENDATION: Do NOT add VTs to stressed-economy configs");
+    } else {
+        println!(
+            "  Stressed-economy: VT effect is similar to healthy-economy ({:.1}% GDP)",
+            gdp_pct
         );
     }
 
@@ -10522,9 +11036,21 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    // ─── IT + VT Healthy Economy Test ──────────────────────────────────────
+    if args.len() > 1 && args[1] == "--it-vt-healthy-test" {
+        run_it_vt_healthy_economy_test();
+        return Ok(());
+    }
+
     // ─── IT Stressed Economy Test ─────────────────────────────────────────
     if args.len() > 1 && args[1] == "--it-stressed-test" {
         run_it_stressed_economy_test();
+        return Ok(());
+    }
+
+    // ─── VT Stressed Economy Test ────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--vt-stressed-test" {
+        run_vt_stressed_economy_test();
         return Ok(());
     }
 

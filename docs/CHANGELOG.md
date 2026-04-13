@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-04-14 — Critical Parameter Correction
+
+### Changed
+
+- **`sell_pressure_multiplier` default REVERTED to 1.0** — Previous change (1.0 → 0.80 on 2026-04-08) was WRONG. Evidence (5-seed, 2026-04-13): sp=0.80 → GDP +5.2% but D/G +39.9% WORSE. The 0.80 setting sacrificed D/G stability for marginal GDP. **Default is now 1.0 (symmetric) in both Java `AutoTuneConfig.java` and Rust `config.rs`.** Admins wanting growth can set 0.80; admins wanting stability should keep 1.0.
+  - `AutoTuneConfig.java`: `EconomyConfig.defaults()` changed `0.8` → `1.0`
+  - `config.rs`: `sell_pressure_multiplier` default changed `0.80` → `1.0`
+  - `docs/ARCHITECTURE.md`: Evidence text corrected
+  - `docs/MIGRATION.md`: Default description corrected
+
+---
+
 ## 2026-04-13 — Simulation Lab
 
 ### Added

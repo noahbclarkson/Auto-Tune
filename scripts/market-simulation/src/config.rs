@@ -178,7 +178,7 @@ impl Default for EconomyConfig {
             max_price_change_percent: 1.5,
             trade_window_days: 7,
             slippage_coeff: 0.01,
-            sell_pressure_multiplier: 0.80,
+            sell_pressure_multiplier: 1.0,
             sector_correlation: 0.05,
             player_rate_limit_multiplier: 3.0,
             trend_dampening: 0.10,

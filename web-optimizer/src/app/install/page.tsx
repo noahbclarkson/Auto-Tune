@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { Download, Server, FileText, Zap, CheckCircle, ExternalLink, BookOpen, AlertTriangle, Play, Video, Users, TrendingUp, Shield, ChevronDown } from 'lucide-react';
+import { Download, Server, FileText, Zap, CheckCircle, ExternalLink, BookOpen, AlertTriangle, Users, TrendingUp, Shield, ChevronDown, Monitor } from 'lucide-react';
 import { InstallScreenshots } from '@/components/install/screenshot-mockups';
 
 export const metadata: Metadata = {
@@ -565,80 +565,166 @@ export default function InstallPage() {
   );
 }
 
+// ─── Player flow mini-demo ──────────────────────────────────────────────────────
+// Three illustrated steps showing the core player loop.
+// Each card has a terminal-style header and a CSS-rendered UI mockup.
+
+function PlayerFlowCard({
+  step,
+  title,
+  subtitle,
+  terminal,
+  mockup,
+}: {
+  step: number;
+  title: string;
+  subtitle: string;
+  terminal: string;
+  mockup: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col rounded-xl border border-gray-800 bg-gray-900 overflow-hidden">
+      {/* Terminal header */}
+      <div className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-800 border-b border-gray-700">
+        <span className="w-3 h-3 rounded-full bg-red-500/70" />
+        <span className="w-3 h-3 rounded-full bg-amber-500/70" />
+        <span className="w-3 h-3 rounded-full bg-green-500/70" />
+        <span className="ml-3 text-xs text-gray-500 font-mono">{terminal}</span>
+      </div>
+      {/* Mockup */}
+      <div className="p-4 flex-1">{mockup}</div>
+      {/* Label */}
+      <div className="px-4 pb-4">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-5 h-5 rounded-full bg-emerald-900 border border-emerald-700 flex items-center justify-center text-[10px] font-mono text-emerald-400">
+            {step}
+          </span>
+          <span className="text-xs text-gray-500 uppercase tracking-wider">{title}</span>
+        </div>
+        <p className="text-xs text-gray-400">{subtitle}</p>
+      </div>
+    </div>
+  );
+}
+
 function VideoDemoSection() {
   return (
     <section className="mb-16">
-      <div className="mb-6">
+      <div className="mb-8">
         <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">See It Live</p>
         <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-          Watch Auto-Tune in action
+          The player experience in 3 steps
         </h2>
         <p className="text-gray-400 text-sm leading-relaxed max-w-xl">
-          See the full player experience — from joining a server to browsing the market, making a trade,
-          and watching prices adjust in real time.
+          From opening the shop to watching prices react — Auto-Tune is designed around
+          the natural loop of browsing, trading, and observing consequences.
         </p>
       </div>
 
-      {/* Video placeholder — replace src with actual video file or YouTube/Vimeo embed */}
-      <div className="relative rounded-2xl overflow-hidden border border-gray-800 bg-gray-900 aspect-video flex items-center justify-center group cursor-pointer">
-        {/* Background pattern */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-950 to-emerald-950/20" />
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)`,
-            backgroundSize: '32px 32px',
-          }}
-        />
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col items-center text-center px-8">
-          {/* Play button */}
-          <div className="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-500/60 flex items-center justify-center mb-6 group-hover:scale-105 group-hover:bg-emerald-500/30 transition-all">
-            <Play className="w-8 h-8 text-emerald-400 ml-1" fill="currentColor" />
-          </div>
-          <p className="text-white font-semibold text-lg mb-1">Demo Video — Coming Soon</p>
-          <p className="text-gray-500 text-sm max-w-sm">
-            30-second walkthrough of the full player experience
-          </p>
-        </div>
-
-        {/* Corner decoration */}
-        <div className="absolute top-4 right-4">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-800/80 border border-gray-700 text-xs text-gray-400 font-medium">
-            <Video className="w-3 h-3" />
-            0:30
-          </span>
-        </div>
-      </div>
-
-      {/* What to record instructions */}
-      <div className="mt-4 rounded-xl border border-gray-800 bg-gray-900/40 p-4">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Recording instructions (for maintainers)</p>
-        <div className="grid sm:grid-cols-2 gap-2 text-xs text-gray-400">
-          {[
-            { step: '1', cmd: '/shop', desc: 'Open the in-game market browser' },
-            { step: '2', cmd: 'Buy an item', desc: 'Purchase Diamond or Emerald to show pricing' },
-            { step: '3', cmd: '/sell', desc: 'Open the sell GUI and show pricing spread' },
-            { step: '4', cmd: '/loans', desc: 'Show loan UI — interest rate, repay button' },
-            { step: '5', cmd: ':8989', desc: 'Open the bundled web dashboard in a browser' },
-            { step: '6', cmd: ':8989/economy', desc: 'Show GDP chart, Debt/GDP, volatility' },
-          ].map(({ step, cmd, desc }) => (
-            <div key={cmd} className="flex items-start gap-2.5">
-              <span className="w-5 h-5 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-[10px] font-mono text-gray-500 shrink-0">
-                {step}
-              </span>
-              <div>
-                <code className="text-sky-300 font-mono">{cmd}</code>
-                <span className="text-gray-600 ml-1.5">{desc}</span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        {/* Step 1 — /shop */}
+        <PlayerFlowCard
+          step={1}
+          title="Browse & Buy"
+          subtitle='Player runs /shop and browses live prices'
+          terminal="Minecraft Chat"
+          mockup={
+            <div className="rounded-lg border border-gray-700 bg-gray-950 p-3 space-y-1.5">
+              {[
+                { item: 'DIAMOND', buy: '$311.20', sell: '$308.90', trend: '+2.4%' },
+                { item: 'EMERALD', buy: '$148.50', sell: '$146.80', trend: '-1.1%' },
+                { item: 'IRON INGOT', buy: '$10.85', sell: '$10.72', trend: '+0.3%' },
+                { item: 'NETHERITE', buy: '$2,180', sell: '$2,155', trend: '+0.8%' },
+              ].map(({ item, buy, sell, trend }) => (
+                <div key={item} className="flex items-center justify-between text-xs">
+                  <span className="font-mono text-gray-300 w-24">{item}</span>
+                  <span className="text-emerald-400 font-mono">B {buy}</span>
+                  <span className="text-amber-400 font-mono">S {sell}</span>
+                  <span className={trend.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}>{trend}</span>
+                </div>
+              ))}
+              <div className="pt-1.5 border-t border-gray-800 text-[10px] text-gray-600 font-mono">
+                7-day average · Updated just now
               </div>
             </div>
-          ))}
+          }
+        />
+
+        {/* Step 2 — Price reacts */}
+        <PlayerFlowCard
+          step={2}
+          title="Prices Update"
+          subtitle='Each trade nudges prices — supply and demand in action'
+          terminal="Market Tick (every 5 min)"
+          mockup={
+            <div className="space-y-2">
+              <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Last trade activity</div>
+              {[
+                { player: 'Notch', item: 'DIAMOND ×64', action: 'BUY', price: '$311', color: 'text-emerald-400' },
+                { player: 'Herobrine', item: 'IRON ×128', action: 'SELL', price: '$10.72', color: 'text-amber-400' },
+                { player: 'Steve', item: 'EMERALD ×16', action: 'BUY', price: '$148', color: 'text-emerald-400' },
+              ].map(({ player, item, action, price, color }) => (
+                <div key={player} className="flex items-center gap-2 text-[11px]">
+                  <span className="text-gray-600 font-mono w-16 shrink-0">{player}</span>
+                  <span className="text-gray-400 font-mono flex-1 truncate">{item}</span>
+                  <span className={`font-bold font-mono ${color}`}>{action}</span>
+                  <span className="text-gray-500 font-mono">{price}</span>
+                </div>
+              ))}
+              <div className="rounded bg-gray-950 border border-gray-800 p-2 mt-2">
+                <div className="text-[10px] text-emerald-400 mb-1">→ DIAMOND buy pressure +3</div>
+                <div className="text-[10px] text-gray-600">DIAMOND price trending up +$7.40</div>
+              </div>
+            </div>
+          }
+        />
+
+        {/* Step 3 — Admin health */}
+        <PlayerFlowCard
+          step={3}
+          title="Admin Dashboard"
+          subtitle='Admins see GDP, debt, volatility, and top movers'
+          terminal="your-server.net:8989/economy"
+          mockup={
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { label: 'GDP', value: '847K', sub: '+$124K today', good: true },
+                  { label: 'D/G Ratio', value: '1.76×', sub: 'Healthy', good: true },
+                  { label: 'Buy %', value: '73%', sub: 'Slightly buy-heavy', good: true },
+                  { label: 'Volatility', value: '0.007', sub: 'Stable', good: true },
+                ].map(({ label, value, sub, good }) => (
+                  <div key={label} className="rounded bg-gray-950 border border-gray-800 p-2 text-center">
+                    <div className={`text-sm font-bold font-mono ${good ? 'text-emerald-400' : 'text-rose-400'}`}>{value}</div>
+                    <div className="text-[9px] text-gray-500">{label}</div>
+                    <div className={`text-[9px] ${good ? 'text-emerald-500/60' : 'text-rose-500/60'}`}>{sub}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded bg-emerald-950/40 border border-emerald-800/40 p-2">
+                <div className="text-[10px] text-emerald-400 font-medium">● Economy Health: HEALTHY</div>
+                <div className="text-[10px] text-gray-500 mt-0.5">Circuit breaker: STANDBY</div>
+              </div>
+            </div>
+          }
+        />
+      </div>
+
+      <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-800 bg-gray-900/40">
+        <div className="flex items-center gap-2 text-emerald-400">
+          <Monitor className="w-5 h-5 shrink-0" />
+          <span className="text-sm font-medium">Full interactive simulator</span>
         </div>
-        <p className="text-xs text-gray-600 mt-3">
-          Save as <code className="text-gray-500 font-mono">/public/demo.mp4</code> and update the <code className="text-gray-500 font-mono">src</code> attribute in the{' '}
-          <code className="text-gray-500 font-mono">VideoDemoSection</code> above.
+        <p className="text-gray-500 text-xs flex-1">
+          Run your own scenarios — test market events, archetype mixes, and parameter changes before deploying.
         </p>
+        <Link
+          href="/simulator"
+          className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-colors"
+        >
+          Open Simulator
+          <ExternalLink className="w-3.5 h-3.5" />
+        </Link>
       </div>
     </section>
   );

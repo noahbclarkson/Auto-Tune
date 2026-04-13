@@ -102,7 +102,7 @@ public record AutoTuneConfig(
                     7,
                     true,
                     0.01,
-                    0.8,
+                    1.0,
                     0.05,
                     3.0,
                     0.10,

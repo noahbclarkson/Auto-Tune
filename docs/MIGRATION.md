@@ -156,7 +156,7 @@ rewrite-2 uses a **new pricing model** compared to the old flat-price system:
 
 **Implications:**
 - Prices will settle away from base prices naturally (typically 40–70% below base in balanced economies)
-- The `sell_pressure_multiplier` (default: 0.85) causes asymmetric downward drift — this is intentional
+- The `sell_pressure_multiplier` (default: 1.0) is symmetric. Setting 0.80 improves GDP ~5% but worsens D/G ~40% — not recommended as a default. Only use 0.80 for growth-oriented servers willing to accept higher loan exposure.
 - `baseSpread` (default: 0.20) controls the buy/sell spread width — raise it for wider spreads
 - See `docs/CONFIG_GUIDE.md` for tuning recommendations by server size
 

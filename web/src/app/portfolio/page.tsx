@@ -247,6 +247,7 @@ export default function PortfolioPage() {
                 {transactions.length > 0 && (
                   <span className="ml-1.5 text-xs text-muted-foreground">({transactions.length})</span>
                 )}
+              </button>
               <button
                 onClick={() => setActiveTab('badges')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
@@ -321,13 +322,13 @@ export default function PortfolioPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Badges tab */}
+            {activeTab === 'badges' && playerName && (
+              <BadgesTab playerName={playerName} apiBase={apiBase} />
+            )}
           </div>
         )}
-
-          {activeTab === 'badges' && (
-            <BadgesTab playerName={playerName} apiBase={apiBase} />
-          )}
-        </div>
       </main>
     </div>
   );

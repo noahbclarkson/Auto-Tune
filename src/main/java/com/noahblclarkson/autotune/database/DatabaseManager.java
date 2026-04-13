@@ -100,8 +100,15 @@ public class DatabaseManager {
             highestVersion = 1;
         }
 
+        // V2: Player onboarding milestone tracking
+        if (currentVersion < 2) {
+            plugin.getLogger().info("Applying database migration V2 (Player Onboarding)...");
+            runMigration("db/V2__Player_Onboarding.sql");
+            highestVersion = 2;
+        }
+
         // Add future migrations here:
-        // if (currentVersion < 2) { ... }
+        // if (currentVersion < 3) { ... }
 
         if (highestVersion > currentVersion) {
             setSchemaVersion(highestVersion);

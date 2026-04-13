@@ -20,6 +20,7 @@ import com.noahblclarkson.autotune.service.EconomicNewsService;
 import com.noahblclarkson.autotune.service.BadgeService;
 import com.noahblclarkson.autotune.service.MarketDigestService;
 import com.noahblclarkson.autotune.service.PriceMilestoneService;
+import com.noahblclarkson.autotune.service.PlayerOnboardingService;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.PriceAlertRepository;
 import com.noahblclarkson.autotune.database.ShopFavoriteRepository;
@@ -280,5 +281,19 @@ public class AutoTuneModule extends AbstractModule {
             ConfigManager configManager
     ) {
         return new PriceMilestoneService(plugin, marketEngine, shopManager, configManager);
+    }
+
+    @Provides
+    @Singleton
+    public PlayerOnboardingService providePlayerOnboardingService(
+            AutoTune plugin,
+            DatabaseManager databaseManager,
+            PlayerRepository playerRepository,
+            com.noahblclarkson.autotune.database.PendingNotificationRepository pendingNotificationRepository,
+            ConfigManager configManager
+    ) {
+        return new PlayerOnboardingService(
+                plugin, databaseManager, playerRepository,
+                pendingNotificationRepository, configManager);
     }
 }

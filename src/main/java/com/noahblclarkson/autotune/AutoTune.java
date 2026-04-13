@@ -17,6 +17,7 @@ import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.service.EconomicNewsService;
 import com.noahblclarkson.autotune.service.PriceMilestoneService;
+import com.noahblclarkson.autotune.service.PlayerOnboardingService;
 import com.noahblclarkson.autotune.service.MarketDigestService;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ScoreboardManager;
@@ -53,6 +54,7 @@ public class AutoTune extends JavaPlugin {
     private EconomicNewsService economicNewsService;
     private PriceMilestoneService priceMilestoneService;
     private MarketDigestService marketDigestService;
+    private PlayerOnboardingService onboardingService;
     private com.noahblclarkson.autotune.database.TransactionRepository transactionRepository;
     private CommandManager commandManager;
     private TaskScheduler taskScheduler;
@@ -125,6 +127,8 @@ public class AutoTune extends JavaPlugin {
         economicNewsService.onEnable();
         priceMilestoneService = injector.getInstance(PriceMilestoneService.class);
         priceMilestoneService.onEnable();
+        onboardingService = injector.getInstance(PlayerOnboardingService.class);
+        onboardingService.start();
         marketDigestService = injector.getInstance(MarketDigestService.class);
         marketDigestService.start();
         taskScheduler = injector.getInstance(TaskScheduler.class);
@@ -195,6 +199,9 @@ public class AutoTune extends JavaPlugin {
 
         if (priceMilestoneService != null) {
             priceMilestoneService.shutdown();
+            if (onboardingService != null) {
+                onboardingService.shutdown();
+            }
         }
 
         if (scoreboardManager != null) {

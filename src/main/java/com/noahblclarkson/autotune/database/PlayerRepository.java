@@ -243,6 +243,55 @@ public class PlayerRepository {
                         .execute());
     }
 
+    /**
+     * Returns all players with their first-seen time and last-sent onboarding milestone.
+     * Used by {@link com.noahblclarkson.autotune.service.PlayerOnboardingService} to
+     * determine which milestone messages a player is eligible to receive.
+     *
+     * @return map of player UUID → (firstSeen, lastOnboardingMilestoneSent)
+     */
+    public java.util.Map<UUID, OnboardingPlayerInfo> findAllForOnboarding() {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                                SELECT uuid, first_seen, last_onboarding_milestone_sent
+                                FROM at_players
+                                """)
+                        .map((rs, ctx) -> new OnboardingPlayerInfo(
+                                UUID.fromString(rs.getString("uuid")),
+                                rs.getTimestamp("first_seen").toInstant(),
+                                rs.getInt("last_onboarding_milestone_sent")
+                        ))
+                        .list()
+                        .stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                OnboardingPlayerInfo::uuid,
+                                info -> info
+                        ))
+        );
+    }
+
+    /**
+     * Updates the highest onboarding milestone that has been sent to a player.
+     * Called after a milestone message is queued, so it is never sent again.
+     *
+     * @param uuid           player's UUID
+     * @param milestoneDay   the day-offset of the milestone that was just sent
+     */
+    public void updateOnboardingMilestone(UUID uuid, int milestoneDay) {
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                                UPDATE at_players
+                                SET last_onboarding_milestone_sent = :milestone
+                                WHERE uuid = :uuid
+                                """)
+                        .bind("uuid", uuid.toString())
+                        .bind("milestone", milestoneDay)
+                        .execute());
+    }
+
+    /** Lightweight record for onboarding scan — avoids constructing full PlayerData. */
+    public record OnboardingPlayerInfo(UUID uuid, Instant firstSeen, int lastOnboardingMilestoneSent) {}
+
     /** Converts a SQL TIMESTAMP to an Instant, returning null if the column was NULL. */
     private static Instant tsToInstant(Timestamp ts) {
         return ts != null ? ts.toInstant() : null;

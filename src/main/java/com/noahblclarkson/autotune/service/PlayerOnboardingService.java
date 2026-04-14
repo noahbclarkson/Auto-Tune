@@ -185,7 +185,7 @@ public class PlayerOnboardingService {
         if (daysSinceFirstSeen < 0) return; // clock drift guard
 
         for (Milestone milestone : activeMilestones()) {
-            if (milestone.dayOffset() <= lastSent) continue; // already sent
+            if (milestone.dayOffset() < lastSent) continue; // already sent
             if (daysSinceFirstSeen < milestone.dayOffset()) break; // not yet due
 
             String message = buildMilestoneMessage(milestone, daysSinceFirstSeen);
@@ -230,12 +230,10 @@ public class PlayerOnboardingService {
      * @param milestoneDay   the day-offset of the milestone that was just sent
      */
     private void markMilestoneSent(UUID uuid, int milestoneDay) {
-        databaseManager.runAsync(() -> {
-            try {
-                playerRepository.updateOnboardingMilestone(uuid, milestoneDay);
-            } catch (Exception e) {
-                log.log(Level.WARNING, "Failed to update onboarding milestone for " + uuid, e);
-            }
-        });
+        databaseManager.runAsync(() -> playerRepository.updateOnboardingMilestone(uuid, milestoneDay))
+                .exceptionally(ex -> {
+                    log.log(Level.WARNING, "Failed to persist onboarding milestone " + milestoneDay + " for " + uuid, ex);
+                    return null;
+                });
     }
 }

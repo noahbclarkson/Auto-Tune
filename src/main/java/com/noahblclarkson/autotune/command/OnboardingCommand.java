@@ -239,8 +239,11 @@ public class OnboardingCommand {
         Player player = Bukkit.getPlayer(name);
         if (player != null) return player.getUniqueId();
 
-        // Offline player — look up by name in PlayerRepository
-        // PlayerRepository doesn't have a findByName method, so try online players only for now
+        // Try offline player cache (players who have played on this server before)
+        org.bukkit.OfflinePlayer offline = Bukkit.getOfflinePlayerIfCached(name);
+        if (offline != null) return offline.getUniqueId();
+
+        // Last resort: scan online players by name (handles case-sensitivity)
         return Bukkit.getOnlinePlayers().stream()
                 .filter(p -> p.getName().equalsIgnoreCase(name))
                 .map(Player::getUniqueId)

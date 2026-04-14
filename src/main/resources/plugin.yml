@@ -34,6 +34,9 @@ commands:
   onboarding:
     description: View onboarding progress
     permission: autotune.onboarding
+  market-report:
+    description: View your weekly market report
+    permission: autotune.market-report
 
 permissions:
   autotune.shop:
@@ -56,6 +59,9 @@ permissions:
     default: true
   autotune.onboarding:
     description: View own onboarding progress
+    default: true
+  autotune.market-report:
+    description: View your weekly market report
     default: true
   autotune.admin:
     description: Administrative commands

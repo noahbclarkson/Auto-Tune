@@ -289,6 +289,28 @@ public class PlayerRepository {
                         .execute());
     }
 
+    /**
+     * Returns the onboarding info for a single player.
+     *
+     * @param uuid player's UUID
+     * @return optional onboarding info (first seen + last milestone sent)
+     */
+    public java.util.Optional<OnboardingPlayerInfo> findOnboardingInfoByUuid(UUID uuid) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                                SELECT uuid, first_seen, last_onboarding_milestone_sent
+                                FROM at_players WHERE uuid = :uuid
+                                """)
+                        .bind("uuid", uuid.toString())
+                        .map((rs, ctx) -> new OnboardingPlayerInfo(
+                                UUID.fromString(rs.getString("uuid")),
+                                rs.getTimestamp("first_seen").toInstant(),
+                                rs.getInt("last_onboarding_milestone_sent")
+                        ))
+                        .findOne()
+        );
+    }
+
     /** Lightweight record for onboarding scan — avoids constructing full PlayerData. */
     public record OnboardingPlayerInfo(UUID uuid, Instant firstSeen, int lastOnboardingMilestoneSent) {}
 

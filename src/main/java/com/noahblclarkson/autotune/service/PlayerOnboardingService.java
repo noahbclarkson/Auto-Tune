@@ -3,6 +3,7 @@ package com.noahblclarkson.autotune.service;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
+import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.PendingNotificationRepository;
@@ -51,7 +52,7 @@ public class PlayerOnboardingService {
      */
     public record Milestone(int dayOffset, String category) {}
 
-    /** All milestones in ascending day-offset order. */
+    /** All milestones in ascending day-offset order (defaults, used when config is absent). */
     public static final List<Milestone> DEFAULT_MILESTONES = List.of(
             new Milestone(0,  "WELCOME"),
             new Milestone(3,  "LOANS_TIP"),
@@ -88,23 +89,44 @@ public class PlayerOnboardingService {
     }
 
     /**
+     * Returns the active milestones from config, sorted by day offset ascending.
+     * Falls back to DEFAULT_MILESTONES if config is absent or disabled.
+     */
+    private List<Milestone> activeMilestones() {
+        AutoTuneConfig.OnboardingConfig cfg = configManager.getConfig().onboarding();
+        if (!cfg.enabled()) {
+            return List.of();
+        }
+        return cfg.milestones().stream()
+                .filter(AutoTuneConfig.OnboardingMilestoneConfig::enabled)
+                .sorted(java.util.Comparator.comparingInt(AutoTuneConfig.OnboardingMilestoneConfig::dayOffset))
+                .map(m -> new Milestone(m.dayOffset(), m.category()))
+                .toList();
+    }
+
+    /**
      * Starts the periodic onboarding check task.
      * Runs once every 6 hours — milestone tracking doesn't need real-time resolution.
      */
     public void start() {
+        if (!configManager.getConfig().onboarding().enabled()) {
+            log.info("[Auto-Tune] Player onboarding service disabled (onboarding.enabled=false).");
+            return;
+        }
+        int intervalHours = configManager.getConfig().onboarding().checkIntervalHours();
         // Schedule first check 30 seconds after startup (let economy settle)
         plugin.getServer().getAsyncScheduler().runDelayed(plugin, task -> {
             runMilestoneCheck();
-            // Then run every 6 hours
+            // Then run at configured interval
             checkTask = plugin.getServer().getAsyncScheduler().runAtFixedRate(
                     plugin,
                     ignored -> runMilestoneCheck(),
-                    6 * 60 * 60 * 1000L,
-                    6 * 60 * 60 * 1000L,
+                    intervalHours * 60L * 60L * 1000L,
+                    intervalHours * 60L * 60L * 1000L,
                     java.util.concurrent.TimeUnit.MILLISECONDS
             );
         }, 30, java.util.concurrent.TimeUnit.SECONDS);
-        log.info("[Auto-Tune] Player onboarding service started.");
+        log.info("[Auto-Tune] Player onboarding service started (check every " + intervalHours + "h).");
     }
 
     /** Cancels the periodic task. Called on shutdown and reload. */
@@ -113,6 +135,15 @@ public class PlayerOnboardingService {
             checkTask.cancel();
             checkTask = null;
         }
+    }
+
+    /**
+     * Restarts the periodic check with the current config.
+     * Call this after a config reload to pick up new check-interval or milestone settings.
+     */
+    public void restart() {
+        shutdown();
+        start();
     }
 
     /**
@@ -149,10 +180,11 @@ public class PlayerOnboardingService {
      * @param now         current timestamp
      */
     void evaluateMilestones(UUID uuid, Instant firstSeen, int lastSent, Instant now) {
+        if (!configManager.getConfig().onboarding().enabled()) return;
         long daysSinceFirstSeen = ChronoUnit.DAYS.between(firstSeen, now);
         if (daysSinceFirstSeen < 0) return; // clock drift guard
 
-        for (Milestone milestone : DEFAULT_MILESTONES) {
+        for (Milestone milestone : activeMilestones()) {
             if (milestone.dayOffset() <= lastSent) continue; // already sent
             if (daysSinceFirstSeen < milestone.dayOffset()) break; // not yet due
 
@@ -174,43 +206,21 @@ public class PlayerOnboardingService {
      * @return the formatted message string, or null if disabled
      */
     private String buildMilestoneMessage(Milestone milestone, long daysOnServer) {
-        return switch (milestone.category()) {
-            case "WELCOME" -> String.format(
-                    "⚒️ <green>Welcome to the economy!</green> You've been here %d day%s. "
-                            + "Use <aqua>/shop</aqua> to browse items, <aqua>/sell</aqua> to make money, "
-                            + "and <aqua>/loan</aqua> if you need capital to grow.",
-                    daysOnServer, daysOnServer == 1 ? "" : "s"
-            );
-            case "LOANS_TIP" -> String.format(
-                    "💰 <gold>Day %d tip:</gold> Need funds to expand? "
-                            + "Try <aqua>/loan guide</aqua> to learn how loans work — "
-                            + "borrowing to invest can pay off in a growing economy!"
-                            + " Credit score affects how much you can borrow.",
-                    daysOnServer
-            );
-            case "COMPARE_TIP" -> String.format(
-                    "📊 <aqua>Day %d insight:</aqua> Some items are priced differently "
-                            + "across the network. Try <aqua>/compare [item]</aqua> to see "
-                            + "if you're getting a fair deal — knowledge is profit!"
-                            + " Active traders check prices before every purchase.",
-                    daysOnServer
-            );
-            case "DIVERSIFY_TIP" -> String.format(
-                    "🌐 <green>Day %d tip:</green> Don't put all your eggs in one basket! "
-                            + "Browse <aqua>/shop</aqua> and look for items with low correlation — "
-                            + "when one drops, others may hold or rise. "
-                            + "Diversification is the easiest edge in any economy.",
-                    daysOnServer
-            );
-            case "LOYALTY" -> String.format(
-                    "🎉 <gradient:#00d4ff:#00ff88>You're amazing!</gradient> "
-                            + "Day %d on the server! Your activity keeps the economy alive. "
-                            + "Thank you for being here — check <aqua>/at admin health</aqua> "
-                            + "to see how the whole economy is doing.",
-                    daysOnServer
-            );
-            default -> null;
-        };
+        // Look up the message template from config
+        AutoTuneConfig.OnboardingConfig cfg = configManager.getConfig().onboarding();
+        return cfg.milestones().stream()
+                .filter(m -> m.category().equals(milestone.category()))
+                .findFirst()
+                .map(m -> {
+                    String template = m.message();
+                    if (template == null || template.isBlank()) return null;
+                    // Replace %d with days, %s with plural suffix
+                    String s = daysOnServer == 1 ? "" : "s";
+                    return template
+                            .replace("%d", String.valueOf(daysOnServer))
+                            .replace("%s", s);
+                })
+                .orElse(null);
     }
 
     /**

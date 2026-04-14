@@ -28,6 +28,7 @@ public record AutoTuneConfig(
         @NotNull AdminWebhookConfig webhook,
         @NotNull PriceMilestoneConfig priceMilestones,
         @NotNull MarketDigestConfig marketDigest,
+        @NotNull OnboardingConfig onboarding,
         boolean marketFrozen
 ) {
 
@@ -630,6 +631,49 @@ public record AutoTuneConfig(
             return new PriceMilestoneConfig(true, 1, List.of(50, 100, 200, 300, 500, 1000, 2000), 60);
         }
     }
+
+    /**
+     * Player onboarding configuration — controls the progressive message series
+     * sent to new players as they hit key milestones in their first 30 days.
+     *
+     * @param enabled           whether the onboarding system is active
+     * @param checkIntervalHours how often to scan for milestone eligibility (default 6)
+     * @param milestones         per-milestone configuration (enabled, day offset, message template)
+     */
+    public record OnboardingConfig(
+            boolean enabled,
+            int checkIntervalHours,
+            @NotNull List<OnboardingMilestoneConfig> milestones
+    ) {
+        public static OnboardingConfig defaults() {
+            return new OnboardingConfig(
+                    true,
+                    6,
+                    List.of(
+                            new OnboardingMilestoneConfig("WELCOME",    0,  true,  "⚒️ <green>Welcome to the economy!</green> You've been here %d day%s. Use <aqua>/shop</aqua> to browse items, <aqua>/sell</aqua> to make money, and <aqua>/loan</aqua> if you need capital to grow."),
+                            new OnboardingMilestoneConfig("LOANS_TIP",   3,  true,  "💰 <gold>Day %d tip:</gold> Need funds to expand? Try <aqua>/loan guide</aqua> to learn how loans work — borrowing to invest can pay off in a growing economy!"),
+                            new OnboardingMilestoneConfig("COMPARE_TIP", 7,  true,  "📊 <aqua>Day %d insight:</aqua> Some items are priced differently across the network. Try <aqua>/compare [item]</aqua> to see if you're getting a fair deal!"),
+                            new OnboardingMilestoneConfig("DIVERSIFY_TIP", 14, true, "🌐 <green>Day %d tip:</green> Don't put all your eggs in one basket! Browse <aqua>/shop</aqua> and look for items with low correlation to diversify your portfolio."),
+                            new OnboardingMilestoneConfig("LOYALTY",    30, true,  "🎉 <gradient:#00d4ff:#00ff88>You're amazing!</gradient> Day %d on the server! Your activity keeps the economy alive. Thank you for being here!")
+                    )
+            );
+        }
+    }
+
+    /**
+     * A single onboarding milestone configuration.
+     *
+     * @param category   unique identifier for this milestone (e.g. WELCOME, LOANS_TIP)
+     * @param dayOffset  days after first join when this message fires
+     * @param enabled     whether this milestone is active
+     * @param message     MiniMessage-formatted template (use %d for days, %s for plural)
+     */
+    public record OnboardingMilestoneConfig(
+            @NotNull String category,
+            int dayOffset,
+            boolean enabled,
+            @NotNull String message
+    ) {}
 
     /**
      * Admin webhook configuration — POST economy alerts to a Discord (or generic HTTP) webhook.

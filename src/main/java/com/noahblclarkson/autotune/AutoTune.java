@@ -236,6 +236,7 @@ public class AutoTune extends JavaPlugin {
         priceAlertManager.rebuildCache();
         economicNewsService.reload();
         priceMilestoneService.reload();
+        onboardingService.restart();
         if (webServer != null && configManager.getConfig().web().enabled()) {
             webServer.stop();
             webServer.start();

@@ -31,6 +31,9 @@ commands:
   event:
     description: Market event management
     permission: autotune.admin.event
+  onboarding:
+    description: View onboarding progress
+    permission: autotune.onboarding
 
 permissions:
   autotune.shop:
@@ -50,6 +53,9 @@ permissions:
     default: true
   autotune.guild:
     description: View guild economy stats
+    default: true
+  autotune.onboarding:
+    description: View own onboarding progress
     default: true
   autotune.admin:
     description: Administrative commands

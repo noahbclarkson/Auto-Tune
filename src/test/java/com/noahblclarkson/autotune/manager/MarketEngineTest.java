@@ -81,6 +81,7 @@ class MarketEngineTest {
                 AutoTuneConfig.AdminWebhookConfig.defaults(),
                 AutoTuneConfig.PriceMilestoneConfig.defaults(),
                 AutoTuneConfig.MarketDigestConfig.defaults(),
+                AutoTuneConfig.OnboardingConfig.defaults(),
                 false
         );
 

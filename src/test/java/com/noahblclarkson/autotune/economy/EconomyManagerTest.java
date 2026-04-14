@@ -90,6 +90,7 @@ class EconomyManagerTest {
                 AutoTuneConfig.AdminWebhookConfig.defaults(),
                 AutoTuneConfig.PriceMilestoneConfig.defaults(),
                 AutoTuneConfig.MarketDigestConfig.defaults(),
+                AutoTuneConfig.OnboardingConfig.defaults(),
                 false);
         when(cm.getConfig()).thenReturn(cfg);
         return cm;

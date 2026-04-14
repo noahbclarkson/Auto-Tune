@@ -83,6 +83,7 @@ public class ConfigManager {
                 parseAdminWebhookConfig(cfg.getConfigurationSection("admin-webhook")),
                 parsePriceMilestoneConfig(cfg.getConfigurationSection("price-milestone")),
                 parseMarketDigestConfig(cfg.getConfigurationSection("market-digest")),
+                parseOnboardingConfig(cfg.getConfigurationSection("onboarding")),
                 this.marketFrozen
         );
     }
@@ -706,5 +707,32 @@ public class ConfigManager {
                 section.getBoolean("include-loan-stats", true),
                 section.getString("webhook-url")
         );
+    }
+
+    private OnboardingConfig parseOnboardingConfig(ConfigurationSection section) {
+        if (section == null || !section.getBoolean("enabled", true)) {
+            return OnboardingConfig.defaults();
+        }
+
+        int checkIntervalHours = Math.max(1, section.getInt("check-interval-hours", 6));
+
+        java.util.List<AutoTuneConfig.OnboardingMilestoneConfig> milestones = new java.util.ArrayList<>();
+        // Default milestones — can be overridden per-category via config
+        java.util.List<AutoTuneConfig.OnboardingMilestoneConfig> defaults = OnboardingConfig.defaults().milestones();
+        ConfigurationSection milestonesSection = section.getConfigurationSection("milestones");
+        if (milestonesSection != null) {
+            for (AutoTuneConfig.OnboardingMilestoneConfig defMilestone : defaults) {
+                String category = defMilestone.category();
+                ConfigurationSection ms = milestonesSection.getConfigurationSection(category);
+                boolean enabled = ms != null ? ms.getBoolean("enabled", defMilestone.enabled()) : defMilestone.enabled();
+                int dayOffset  = ms != null ? ms.getInt("day-offset", defMilestone.dayOffset()) : defMilestone.dayOffset();
+                String message  = ms != null ? ms.getString("message", defMilestone.message()) : defMilestone.message();
+                milestones.add(new AutoTuneConfig.OnboardingMilestoneConfig(category, dayOffset, enabled, message));
+            }
+        } else {
+            milestones = defaults;
+        }
+
+        return new OnboardingConfig(true, checkIntervalHours, milestones);
     }
 }

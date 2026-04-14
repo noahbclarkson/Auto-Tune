@@ -531,6 +531,23 @@ impl Scenario {
         }
     }
 
+    /// GuildStability + 2MM + 2GB + 60% Diamond floor.
+    /// The production-recommended config: same archetype mix as guild_stability_2mm_fixed_guild
+    /// but with Diamond price floor at 60% of base ($300).
+    ///
+    /// Question: Does tier3_ratio still matter in a healthy economy with counter_cyclical=true?
+    /// In stressed economies, tier3=15 eliminates TIER3 noise (0 events vs 11 for tier3=10).
+    /// But in a healthy economy, counter_cyclical already suppresses interest as D/G rises —
+    /// the circuit breaker may never engage regardless of tier3_ratio.
+    pub fn guild_stability_2mm_fixed_guild_plus_floor() -> Self {
+        let mut scenario = Self::guild_stability_2mm_fixed_guild();
+        scenario.name = "GuildStability+2MM+7%GB+Floor".to_string();
+        if let Some(diamond) = scenario.config.items.iter_mut().find(|ic| ic.name == "Diamond") {
+            diamond.price_floor_override = Some(diamond.base_price * 0.6); // $300
+        }
+        scenario
+    }
+
     /// Archetype mix test: Casual-heavy variant.
     /// Replaces Farmers with Casuals to test whether more balanced gather/demand
     /// improves economy health beyond the 2MM+2GB config.
@@ -11161,6 +11178,7 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --circuit-breaker-hysteresis-test  TIER3 hysteresis: prevents D/G boundary cycling"
         );
+        println!("  --healthy-tier3-sweep        2MM+2GB+floor: tier3_ratio × 5 seeds");
         println!("  --circuit-breaker-sensitivity-test  TIER3 thresholds × min interest sweep");
         println!(
             "  --admin-recovery-test    Economy freeze / recovery mode vs natural deleveraging"
@@ -11562,6 +11580,11 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--circuit-breaker-hysteresis-test" {
         run_circuit_breaker_hysteresis_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--healthy-tier3-sweep" {
+        run_healthy_tier3_sweep();
         return Ok(());
     }
 
@@ -12547,6 +12570,235 @@ fn run_circuit_breaker_hysteresis_test() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+//  HEALTHY ECONOMY TIER3 SENSITIVITY TEST
+//  Sweeps: TIER3 ratio (8, 10, 12, 15)
+//  Scenario: 2MM + 2GB + 60% Diamond floor (production recommended config)
+//  Counter-cyclical=true (default).
+//
+//  Question: In a HEALTHY economy, does tier3_ratio still matter?
+//  - Stressed-economy test (guildbuyer_failure_test): tier3=15 → 0 TIER3 events (vs 11 at tier3=10)
+//  - But counter_cyclical=true already suppresses interest as D/G rises
+//  - In a healthy 2MM+2GB+floor economy, D/G may never approach any tier3_ratio
+//  - If so, tier3_ratio is irrelevant in healthy economies — only matters in stressed ones
+// ═══════════════════════════════════════════════════════════════════════
+
+fn run_healthy_tier3_sweep() {
+    use crate::analyzer::load_summary;
+    use crate::player::set_global_seeded_rng;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+    let tier3_ratios: Vec<f64> = vec![8.0, 10.0, 12.0, 15.0];
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");    
+    println!("║    HEALTHY ECONOMY TIER3 SENSITIVITY                         ║");
+    println!("║    2MM + 2GB + 60% Diamond floor — tier3_ratio sweep       ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!("  tier3_ratios: {:?}", tier3_ratios);
+    println!("  seeds: {:?}", seeds);
+    println!("  scenario: guild_stability_2mm_fixed_guild_plus_floor");
+    println!("  counter_cyclical: true (default)\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct HealthyT3Result {
+        tier3_ratio: f64,
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        bpd: f64,
+        spd: f64,
+        buy_ratio: f64,
+        tier3_events: u32,
+        diamond_internal: f64,
+        diamond_displayed: f64,
+        final_dg: f64,
+    }
+
+    impl HealthyT3Result {
+        fn from_db(db_path: &std::path::Path, tier3_ratio: f64, seed: u64) -> Option<Self> {
+            let s = load_summary(db_path).ok()?;
+
+            // Count TIER3 events from circuit_breaker_events table
+            let tier3_events = count_tier3_events(db_path);
+
+            // Get Diamond internal and displayed prices
+            let (diamond_internal, diamond_displayed) = get_diamond_prices(db_path);
+
+            let dg = if s.gdp > 0.0 { s.debt / s.gdp } else { 0.0 };
+            Some(Self {
+                tier3_ratio,
+                seed,
+                gdp: s.gdp,
+                dg,
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                buy_ratio: s.buy_ratio,
+                tier3_events,
+                diamond_internal,
+                diamond_displayed,
+                final_dg: dg,
+            })
+        }
+    }
+
+    let mut results: Vec<HealthyT3Result> = Vec::new();
+
+    for &tier3_ratio in &tier3_ratios {
+        for &seed in &seeds {
+            print!("  t3={tier3_ratio:.0} seed={seed} ... ");
+            std::io::stdout().flush().ok();
+
+            let mut scenario = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+            scenario.name = format!("HealthyT3 t3={tier3_ratio:.0} s={seed}");
+            scenario.config.loans.debt_gdp_tier3_ratio = tier3_ratio;
+
+            let out_dir = format!(
+                "/tmp/autotune-sim/healthy-t3-t3-{:.0}-s-{}",
+                tier3_ratio, seed
+            );
+            let out_path = std::path::PathBuf::from(&out_dir);
+            std::fs::create_dir_all(&out_path).ok();
+
+            set_global_seeded_rng(seed);
+            let _ = run_seeded_headless(&scenario, seed, &out_path);
+
+            let db_path = out_path.join("data.db");
+            if let Some(r) = HealthyT3Result::from_db(&db_path, tier3_ratio, seed) {
+                let gdp_str = format!("{:.0}", r.gdp);
+                let dg_str = format!("{:.2}x", r.dg);
+                let vol_str = r.vol.to_string();
+                println!(
+                    "GDP={} D/G={} vol={} T3_ev={} [OK]",
+                    gdp_str, dg_str, vol_str, r.tier3_events
+                );
+                results.push(r);
+            } else {
+                println!("FAILED to load results");
+            }
+        }
+        println!();
+    }
+
+    // ─── Aggregate by tier3_ratio ────────────────────────────────────────
+    println!("\n╔════════════════════════════════════════════════════════════════╗");
+    println!("║              AGGREGATE RESULTS BY TIER3_RATIO                ║");
+    println!("╚════════════════════════════════════════════════════════════════╝");
+    println!();
+    println!("  {:^6} │ {:^10} {:^10} {:^8} {:^8} {:^8} │ {:^8} {:^8}",
+             "t3", "GDP mean", "D/G mean", "vol μ", "vol σ", "BPD μ", "T3_ev", "D/G rng");
+    println!("  {:─^6}─┼{:─^10} {:─^10} {:─^8} {:─^8} {:─^8}─┼{:─^8} {:─^8}", "", "", "", "", "", "", "", "");
+
+    for &tier3_ratio in &tier3_ratios {
+        let arm: Vec<_> = results.iter().filter(|r| r.tier3_ratio == tier3_ratio).collect();
+        let n = arm.len();
+        if n == 0 { continue; }
+
+        let gdp_mean = arm.iter().map(|r| r.gdp).sum::<f64>() / n as f64;
+        let dg_mean = arm.iter().map(|r| r.dg).sum::<f64>() / n as f64;
+        let vol_mean = arm.iter().map(|r| r.vol).sum::<f64>() / n as f64;
+        let vol_vals: Vec<f64> = arm.iter().map(|r| r.vol).collect();
+        let vol_std = if n > 1 {
+            let mean = vol_mean;
+            let variance = vol_vals.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n as f64;
+            variance.sqrt()
+        } else { 0.0 };
+        let bpd_mean = arm.iter().map(|r| r.bpd).sum::<f64>() / n as f64;
+        let t3_total: u32 = arm.iter().map(|r| r.tier3_events).sum();
+        let dg_min = arm.iter().map(|r| r.dg).reduce(f64::min).unwrap_or(0.0);
+        let dg_max = arm.iter().map(|r| r.dg).reduce(f64::max).unwrap_or(0.0);
+
+        let dg_range = format!("[{:.2},{:.2}]", dg_min, dg_max);
+        let dg_mean_str = format!("{:.3}", dg_mean) + "x";
+        let vol_mean_str = format!("{:.4}", vol_mean);
+        let vol_std_str = format!("{:.4}", vol_std);
+        let bpd_mean_str = format!("{:.4}", bpd_mean);
+        println!(
+            "  {:^6} │ {:>10} {:>11} {:>11} {:>11} {:>11} │ {:>8} {}",
+            tier3_ratio as u64, gdp_mean as u64, dg_mean_str, vol_mean_str, vol_std_str, bpd_mean_str,
+            t3_total, dg_range
+        );
+    }
+
+    // ─── TIER3 events detail ─────────────────────────────────────────────
+    println!();
+    println!("  TIER3 Events by seed and tier3_ratio:");
+    println!("  {:^6} │ {}", "t3", seeds.iter().map(|s| format!("s={}", s)).collect::<Vec<_>>().join(" │ "));
+    println!("  {:─^6}─┼{}", "", seeds.iter().map(|_| "─────").collect::<Vec<_>>().join("─┼─"));
+    for &tier3_ratio in &tier3_ratios {
+        let evs: Vec<String> = seeds.iter().map(|&s| {
+            results.iter()
+                .find(|r| r.tier3_ratio == tier3_ratio && r.seed == s)
+                .map(|r| format!("{}", r.tier3_events))
+                .unwrap_or_else(|| "?".to_string())
+        }).collect();
+        println!("  {:^6.0} │ {}", tier3_ratio, evs.join(" │ "));
+    }
+
+    // ─── Key insight ──────────────────────────────────────────────────────
+    println!();
+    let t3_by_ratio: Vec<(f64, u32)> = tier3_ratios.iter()
+        .map(|&t3| {
+            let total: u32 = results.iter().filter(|r| r.tier3_ratio == t3).map(|r| r.tier3_events).sum();
+            (t3, total)
+        })
+        .collect();
+
+    let total_events: u32 = t3_by_ratio.iter().map(|(_, e)| e).sum();
+    if total_events == 0 {
+        println!("  💡 KEY INSIGHT: 0 TIER3 events across ALL tier3_ratio × seed combinations!");
+        println!("     Counter-cyclical=true keeps D/G below all tested thresholds.");
+        println!("     tier3_ratio is IRRELEVANT in healthy economies with counter_cyclical=true.");
+        println!("     The 80-run stressed-economy finding (tier3=15 best) does NOT apply here.");
+    } else {
+        let best = t3_by_ratio.iter().min_by_key(|(_, e)| e).unwrap();
+        println!("  💡 FINDING: {} total TIER3 events across all runs.", total_events);
+        println!("     Fewest events: tier3={:.0} with {} events.", best.0, best.1);
+        if best.0 == 15.0 {
+            println!("     tier3=15 remains best even in healthy economy.");
+        }
+    }
+
+    println!();
+}
+
+fn count_tier3_events(db_path: &std::path::Path) -> u32 {
+    let conn = match rusqlite::Connection::open(db_path) {
+        Ok(c) => c,
+        Err(_) => return 0,
+    };
+    match conn.query_row(
+        "SELECT COUNT(*) FROM circuit_breaker_events WHERE tier = 'TIER3'",
+        [],
+        |row| row.get::<_, i64>(0),
+    ) {
+        Ok(n) => n as u32,
+        Err(_) => 0,
+    }
+}
+
+fn get_diamond_prices(db_path: &std::path::Path) -> (f64, f64) {
+    let conn = match rusqlite::Connection::open(db_path) {
+        Ok(c) => c,
+        Err(_) => return (0.0, 0.0),
+    };
+    // Internal price = last tick's price from market_data
+    let internal = conn.query_row(
+        "SELECT price FROM market_data WHERE item_name='Diamond' ORDER BY tick DESC LIMIT 1",
+        [],
+        |row| row.get::<_, f64>(0),
+    ).unwrap_or(0.0);
+    // Displayed price = floored internal (if floor binds)
+    let displayed = conn.query_row(
+        "SELECT sell_price FROM latest_prices WHERE item_name='Diamond' LIMIT 1",
+        [],
+        |row| row.get::<_, f64>(0),
+    ).unwrap_or(internal);
+    (internal, displayed)
+}
+
 //  CIRCUIT BREAKER SENSITIVITY TEST
 //  Sweeps: TIER3 ratio (8, 10, 12, 15) × min_interest (0, 5%, 10%, 20%)
 //  Question: How does the counter-cyclical interest floor affect stability?

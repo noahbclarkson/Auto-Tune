@@ -3,6 +3,17 @@
 import { GitCommit, Zap, Users, Gavel, Bell, ShieldCheck, Globe } from 'lucide-react';
 
 const UPDATES = [
+  // ── 2026-04-14: Nav re-org + network effect hero ─────────────────────────
+  {
+    date: '2026-04-14',
+    icon: Globe,
+    accent: 'text-emerald-400',
+    accentBg: 'bg-emerald-950/60 border-emerald-800/50',
+    tag: 'ECOSYSTEM',
+    title: 'Nav re-organization — 4 sections + cross-server hero refresh',
+    detail: '16 nav items grouped into 4 logical sections: Install · Learn · Tools · Community. Desktop: flat row with dividers. Mobile: hamburger + dropdown with section headers. Hero title updated to lead with the cross-server network effect ("Prices that get smarter with every server"). New Network Effect feature card added as card #1, explaining the data flywheel: submit → aggregate → anchor → distribute. Stats strip updated to "Cross-server: true-price network".',
+    href: null,
+  },
   // ── 2026-04-13: Web & Ecosystem — Why Auto-Tune page ───────────────────
   {
     date: '2026-04-13',

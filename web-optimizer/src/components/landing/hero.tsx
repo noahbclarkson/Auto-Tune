@@ -109,16 +109,16 @@ export function Hero() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight tracking-tight mb-5">
-              Adaptive Market<br />
-              Pricing for<br />
-              <span className="text-emerald-400">Minecraft</span>
+              Prices that get smarter<br />
+              with <span className="text-emerald-400">every server</span>
             </h1>
 
             <p className="text-gray-400 text-lg leading-relaxed mb-8 max-w-lg">
-              Prices that move with supply and demand — automatically. Admins get
-              intelligent advice commands, event orchestration, and a circuit breaker
-              that prevents debt collapse. Players get real buy/sell markets, loans,
-              and auction houses. Zero static shop grids.
+              Auto-Tune creates a living economy — prices move with supply and demand.
+              Opt into the network and your server starts with cross-server true prices,
+              becoming more accurate as more servers join. Admins get intelligent advice,
+              circuit breakers, and market events. Players get real buy/sell markets,
+              loans, and auctions. Zero static shop grids.
             </p>
 
             <div className="flex flex-wrap gap-3 mb-10">
@@ -168,7 +168,7 @@ export function Hero() {
                 { label: 'Commands', value: '/shop · /sell · /loans' },
                 { label: 'Market tick', value: '5 min' },
                 { label: 'Circuit breaker', value: 'TIER3 at 15× D/G' },
-                { label: 'Events', value: 'demand · supply · inflation' },
+                { label: 'Cross-server', value: 'true-price network' },
               ].map(({ label, value }) => (
                 <div key={label}>
                   <p className="text-gray-500 text-xs uppercase tracking-wider mb-0.5">{label}</p>

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, Users, Gavel, Bell, ShieldCheck, Wifi, Cpu, Zap } from 'lucide-react';
+import { ArrowRight, Users, Gavel, Bell, ShieldCheck, Wifi, Cpu, Zap, Network } from 'lucide-react';
 
 const accentMap = {
   emerald: {
@@ -37,6 +37,16 @@ const accentMap = {
 type AccentKey = keyof typeof accentMap;
 
 const features: { tag: string; title: string; description: string; stat: { label: string; value: string }; code: string; accent: AccentKey; icon: React.ElementType }[] = [
+  {
+    tag: 'NETWORK',
+    title: 'Cross-Server Price Discovery',
+    description:
+      'Opt into the Auto-Tune network and your new server starts with proven true prices from across the ecosystem. Every server that joins makes the next one smarter — prices become more accurate over time.',
+    stat: { label: 'Network effect', value: '+1 server = smarter price' },
+    code: 'submit · aggregate · anchor · distribute',
+    accent: 'emerald',
+    icon: Network,
+  },
   {
     tag: 'PRICING',
     title: 'Supply & Demand Pricing',

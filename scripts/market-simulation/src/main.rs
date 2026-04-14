@@ -9559,7 +9559,7 @@ fn run_guild_threshold_multi_seed() {
     // Summary table: mean ± std per threshold
     println!(
         "  {:>8} {:>14} {:>10} {:>10} {:>8} {:>8}",
-        "Thresh", "GDP", "D/G", "BPD%", "SPD%", "Vol×100"
+        "Thresh", "GDP", "D/G", "BPD%", "SPD%", "Vol"
     );
     println!(
         "  {:>8} {:>14} {:>10} {:>10} {:>8} {:>8}",
@@ -9601,7 +9601,7 @@ fn run_guild_threshold_multi_seed() {
         let gdp_m = mean(|v| v.gdp);
         let dg_m = mean(|v| v.debt_gdp_ratio);
         let bpd_m = mean(|v| v.avg_bpd);
-        let vol_m = mean(|v| v.avg_volatility) * 100.0;
+        let vol_m = mean(|v| v.avg_volatility);
 
         if gdp_m > best_gdp {
             best_gdp = gdp_m;
@@ -9616,10 +9616,10 @@ fn run_guild_threshold_multi_seed() {
         let gdp_s = std(|v| v.gdp);
         let dg_s = std(|v| v.debt_gdp_ratio);
         let bpd_s = std(|v| v.avg_bpd);
-        let vol_s = std(|v| v.avg_volatility) * 100.0;
+        let vol_s = std(|v| v.avg_volatility);
 
         println!(
-            "  {:>7.1}%  {:>6.0}K±{:<4.0}  {:>5.2}±{:<3.2}  {:>5.2}±{:<3.2}  {:>6.3}  {:>6.2}",
+            "  {:>7.1}%  {:>6.0}K±{:<4.0}  {:>5.2}±{:<3.2}  {:>5.2}±{:<3.2}  {:>6.3}  {:>6.4}",
             threshold as f64,
             gdp_m / 1000.0,
             gdp_s / 1000.0,
@@ -9685,10 +9685,10 @@ fn run_guild_threshold_multi_seed() {
             .iter()
             .filter(|v| v.avg_volatility > 0.05)
             .count();
-        print!("  • {:.0}%: vol={:.2}×100", threshold as f64, vol * 100.0);
+        print!("  • {:.0}%: vol={:.4}", threshold as f64, vol);
         if unstable > 0 {
             print!(
-                " ⚠️  {}/{} seeds UNSTABLE (vol>5.0×100)",
+                " ⚠️  {}/{} seeds UNSTABLE (vol>0.05)",
                 unstable,
                 seeds.len()
             );
@@ -10211,7 +10211,7 @@ fn run_exploiter_cap_sensitivity_test() {
             gdp_s,
             dg_m,
             dg_s,
-            vol_m * 100.0,
+            vol_m,
             vol_s * 100.0,
             buy_m * 100.0,
             buy_s * 100.0,

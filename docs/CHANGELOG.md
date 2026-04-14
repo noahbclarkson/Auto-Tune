@@ -16,6 +16,32 @@
 
 ---
 
+## 2026-04-14 — Web & Ecosystem (Afternoon)
+
+### Changed
+
+- **Social proof section stats corrected (web-optimizer)** — Real GitHub stats now shown: 130+ stars (was "240+"), 3,400+ downloads (was "1,800+"). "Active Servers" label changed to "Network growing" to avoid implying a specific count before API deployment.
+- **Roadmap updated (web-optimizer)** — Added: shareable economy report card (/admin?report=), docs index page (/docs). Server health public dashboard marked done. In-progress items clarified as "awaiting API deployment".
+- **`/servers` page mock data labeled (web-optimizer)** — Demo preview badge added to mock server cards. "Live" counter changed to "3 servers · awaiting live data". Makes it unambiguous that the displayed servers are demo data until API deploys.
+
+---
+
+## 2026-04-14 — Web & Ecosystem (Morning)
+
+### Added
+
+- **`/admin?report=<base64>` shareable economy report card (web)** — Snapshot URL encodes current AdminHealthDto + server name as base64. Admins can share a read-only economy health card via URL. Copy-to-clipboard button. Read-only mode renders a standalone health card with "View Live Dashboard" link.
+
+### Changed
+
+- **Nav re-organization (web-optimizer)** — 16 nav items grouped into 4 logical sections: Install · Learn · Tools · Community. Desktop: flat row with vertical dividers. Mobile/tablet: hamburger → dropdown with section headers. Network icon added for True Prices.
+- **Landing page hero refresh (web-optimizer)** — Title leads with cross-server network effect: "Prices that get smarter with every server". Subtitle explains data flywheel (opt-in → true prices → smarter over time). Stats strip updated: "Cross-server: true-price network".
+- **New Cross-Server Price Discovery feature card (web-optimizer)** — Added as card #1 with Globe icon and emerald accent. Explains the data flywheel: submit → aggregate → anchor → distribute. Stat: "+1 server = smarter price".
+- **OG metadata gaps fixed (web-optimizer)** — `health-badge/layout.tsx`, `setup/layout.tsx`, `changelog/page.tsx` all now have complete openGraph + twitter metadata. Social sharing will render proper previews.
+- **`/install` page video placeholder replaced (web-optimizer)** — Broken VideoDemoSection (dead video + maintainer recording instructions) replaced with 3-step PlayerFlowCard demo showing /shop browse → trade activity → admin health dashboard. CTA links to /simulator.
+
+---
+
 ## 2026-04-13 — Simulation Lab
 
 ### Added

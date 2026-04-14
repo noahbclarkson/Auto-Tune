@@ -40,8 +40,8 @@ const CATEGORIES = [
       { status: 'done', text: 'Server registration and API key auth' },
       { status: 'done', text: 'Exchange rate computation (per-server vs true-price baseline)' },
       { status: 'done', text: 'Cross-server exchange rate plugin integration (ExchangeRateService)' },
+      { status: 'done', text: 'Server health public dashboard with voluntary reporting (/servers page)' },
       { status: 'todo', text: 'Per-server reputation weighting for submissions (longer history = higher weight in LS solver)' },
-      { status: 'todo', text: 'Server health leaderboard with voluntary reporting' },
     ],
   },
   {
@@ -60,6 +60,8 @@ const CATEGORIES = [
       { status: 'done', text: 'Shop favorites and portfolio tracking' },
       { status: 'done', text: 'Embeddable server health badge' },
       { status: 'done', text: '"Why Auto-Tune" narrative comparison page (/why-auto-tune) — static shops vs Auto-Tune with scenarios, sparklines, earnings table' },
+      { status: 'done', text: 'Shareable economy report card (/admin?report=<base64>) — snapshot URL + clipboard copy' },
+      { status: 'done', text: 'Docs index page (/docs) — 13 docs organized by audience with reading times and GitHub links' },
       { status: 'in-progress', text: 'web-optimizer public dashboard with live cross-server data (code complete, API deployment needed)' },
     ],
   },

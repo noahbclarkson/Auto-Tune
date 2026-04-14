@@ -208,8 +208,11 @@ export default async function ServersPage() {
             {/* Mock network showcase */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">The Auto-Tune network</p>
-                <span className="text-xs text-gray-600">Live · {MOCK_SERVERS.length} servers active</span>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">The Auto-Tune network</p>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-medium">Demo preview</span>
+                </div>
+                <span className="text-xs text-gray-600">{MOCK_SERVERS.length} servers · awaiting live data</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {MOCK_SERVERS.map((server, i) => (
@@ -220,7 +223,7 @@ export default async function ServersPage() {
 
             {/* Aggregate network stats (mock) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-              <NetworkStat icon={Globe} label="Active servers" value="3+" />
+              <NetworkStat icon={Globe} label="Active servers" value="—" />
               <NetworkStat icon={TrendingUp} label="Total items" value="957" />
               <NetworkStat icon={Shield} label="Anonymised" value="100%" />
               <NetworkStat icon={Clock} label="Avg submission" value="~30 min" />

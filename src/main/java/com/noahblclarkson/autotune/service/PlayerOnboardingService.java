@@ -133,7 +133,6 @@ public class PlayerOnboardingService {
     public void shutdown() {
         if (checkTask != null) {
             checkTask.cancel();
-            checkTask = null;
         }
     }
 

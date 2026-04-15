@@ -102,7 +102,6 @@ public class PriceMilestoneService {
     public void shutdown() {
         if (scanTask != null) {
             scanTask.cancel();
-            scanTask = null;
         }
     }
 

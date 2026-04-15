@@ -37,6 +37,9 @@ commands:
   market-report:
     description: View your weekly market report
     permission: autotune.market-report
+  compare:
+    description: Compare trading stats between players
+    permission: autotune.compare
 
 permissions:
   autotune.shop:
@@ -62,6 +65,9 @@ permissions:
     default: true
   autotune.market-report:
     description: View your weekly market report
+    default: true
+  autotune.compare:
+    description: Compare trading stats with other players
     default: true
   autotune.admin:
     description: Administrative commands

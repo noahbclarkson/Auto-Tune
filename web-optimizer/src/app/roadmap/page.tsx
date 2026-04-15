@@ -62,7 +62,10 @@ const CATEGORIES = [
       { status: 'done', text: '"Why Auto-Tune" narrative comparison page (/why-auto-tune) — static shops vs Auto-Tune with scenarios, sparklines, earnings table' },
       { status: 'done', text: 'Shareable economy report card (/admin?report=<base64>) — snapshot URL + clipboard copy' },
       { status: 'done', text: 'Docs index page (/docs) — 13 docs organized by audience with reading times and GitHub links' },
+      { status: 'done', text: '/compare — player trading stats comparison command (day/week/month period aggregates)' },
+      { status: 'done', text: '/market-report — weekly player digest + admin economy health command' },
       { status: 'in-progress', text: 'web-optimizer public dashboard with live cross-server data (code complete, API deployment needed)' },
+      { status: 'todo', text: 'Player Market Impact Score — weekly "you moved Diamond by 2.3%" score on portfolio page' },
     ],
   },
   {

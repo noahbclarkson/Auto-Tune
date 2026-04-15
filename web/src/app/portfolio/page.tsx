@@ -20,8 +20,9 @@ import {
 } from 'recharts';
 import { DiscoveryOverlay } from '@/components/onboarding/discovery-overlay';
 import { BadgesTab } from '@/components/portfolio/badges-tab';
+import { MarketImpactTab } from '@/components/portfolio/market-impact-tab';
 
-type Tab = 'holdings' | 'trades' | 'badges';
+type Tab = 'holdings' | 'trades' | 'badges' | 'impact';
 
 export default function PortfolioPage() {
   const { apiBase } = useAppContext();
@@ -258,6 +259,16 @@ export default function PortfolioPage() {
               >
                 Achievements
               </button>
+              <button
+                onClick={() => setActiveTab('impact')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                  activeTab === 'impact'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Market Impact
+              </button>
             </div>
 
             {/* Holdings tab */}
@@ -326,6 +337,11 @@ export default function PortfolioPage() {
             {/* Badges tab */}
             {activeTab === 'badges' && playerName && (
               <BadgesTab playerName={playerName} apiBase={apiBase} />
+            )}
+
+            {/* Market Impact tab */}
+            {activeTab === 'impact' && playerName && (
+              <MarketImpactTab playerName={playerName} apiBase={apiBase} />
             )}
           </div>
         )}

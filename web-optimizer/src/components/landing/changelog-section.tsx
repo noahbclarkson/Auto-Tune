@@ -1,8 +1,52 @@
 'use client';
 
-import { GitCommit, Zap, Users, Gavel, Bell, ShieldCheck, Globe } from 'lucide-react';
+import { GitCommit, Zap, Users, Gavel, Bell, ShieldCheck, Globe, AlertTriangle } from 'lucide-react';
 
 const UPDATES = [
+  // ── 2026-04-15: Critical TIER3 doom loop fix ─────────────────────────────
+  {
+    date: '2026-04-15',
+    icon: AlertTriangle,
+    accent: 'text-rose-400',
+    accentBg: 'bg-rose-950/60 border-rose-800/50',
+    tag: 'FIX',
+    title: 'Critical — TIER3 counter-cyclical doom loop fixed',
+    detail: 'Long-run simulation (60d) of 2MM+2GB+floor exposed a counter-cyclical doom loop: D/G=15 → 0% interest → debt compounds without recovery → D/G climbs to 20×+. Root cause: tier3_ratio=15 was too low for counter-cyclical=true. Fixed: tier3_ratio raised 15→30 in Java + Rust. With tier3=30: D/G=20 → 33% interest (survivable), D/G=30 → 0% (true catastrophe). Healthy economies stay below TIER3 entirely. KEY INSIGHT: 14d/30d tests were masking a real 60d instability.',
+    href: null,
+  },
+  // ── 2026-04-15: /compare player trading stats ──────────────────────────────
+  {
+    date: '2026-04-15',
+    icon: Users,
+    accent: 'text-emerald-400',
+    accentBg: 'bg-emerald-950/60 border-emerald-800/50',
+    tag: 'PLAYER FEATURE',
+    title: '/compare — player trading stats comparison command',
+    detail: 'New /compare command: compare your trading stats vs another player. Shows trades, spent, earned, net position, badges (🏆 for winner), member since, and days on server. Color-coded winner/loser with ▲ indicators. Period-aware (day/week/month aggregates). Permission: autotune.compare (default: all players). Uses new TransactionRepository.findPlayerPeriodStats() SQL with period parameter.',
+    href: null,
+  },
+  // ── 2026-04-15: /market-report command ────────────────────────────────────
+  {
+    date: '2026-04-15',
+    icon: Bell,
+    accent: 'text-sky-400',
+    accentBg: 'bg-sky-950/60 border-sky-800/50',
+    tag: 'PLAYER FEATURE',
+    title: '/market-report — weekly player digest + admin economy health',
+    detail: 'New /market-report command: /market-report (personal weekly: trades, spent, earned, net position, top 3 items), /market-report top (top 5 gainers/losers % + active events), /market-report admin (economy-wide: GDP, D/G, circuit breaker status, active loans, debt, avg interest). Permission: autotune.market-report (default: all players), admin subcommand requires autotune.admin.',
+    href: null,
+  },
+  // ── 2026-04-15: PMD cleanup ────────────────────────────────────────────────
+  {
+    date: '2026-04-15',
+    icon: Zap,
+    accent: 'text-amber-400',
+    accentBg: 'bg-amber-950/60 border-amber-800/50',
+    tag: 'CLEANUP',
+    title: 'PMD static analysis — WebServer + MarketDigestService',
+    detail: 'WebServer.java had ~15 PMD violations (AvoidDuplicateLiterals, AvoidLiteralsInIfCondition). 28 constants extracted: 14 key literals, 7 message literals, 7 threshold constants. MarketDigestService: 10 constants extracted (NOT_AVAILABLE, JSON_COMMA, interval/breaker tier labels). Project violations: 174→155. Java compilation clean.',
+    href: null,
+  },
   // ── 2026-04-14: Nav re-org + network effect hero ─────────────────────────
   {
     date: '2026-04-14',

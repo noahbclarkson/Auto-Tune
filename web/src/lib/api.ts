@@ -206,6 +206,24 @@ export interface PortfolioDto {
   activeLoans: ActiveLoanDto[];
 }
 
+export interface PlayerMarketImpactDto {
+  playerName: string;
+  weeklyImpactPct: number;       // % of weekly market price movement this player drove
+  monthlyImpactPct: number;      // % of monthly market price movement this player drove
+  weeklyRank: number;             // player's rank this week (1 = most impactful)
+  topItems: MarketImpactItemDto[];
+}
+
+export interface MarketImpactItemDto {
+  itemName: string;
+  material: string;
+  playerVolume: number;           // player's units traded this period
+  totalVolume: number;            // total market volume this period
+  playerSharePct: number;         // playerVolume / totalVolume × 100
+  priceChangePct: number;         // item's price change this period
+  playerImpactPct: number;        // player's contribution to price change
+}
+
 export interface AdminHealthDto {
   frozen: boolean;
   gdp: number;
@@ -371,6 +389,10 @@ export const api = {
     pnlHistory: (base: string, playerName: string) =>
       fetchJson<PnLHistoryDto[]>(
         `${base}/api/portfolio/${encodeURIComponent(playerName)}/pnl-history`
+      ),
+    marketImpact: (base: string, playerName: string) =>
+      fetchJson<PlayerMarketImpactDto>(
+        `${base}/api/portfolio/${encodeURIComponent(playerName)}/market-impact`
       ),
   },
   admin: {

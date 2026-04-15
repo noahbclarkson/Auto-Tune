@@ -55,6 +55,22 @@ public class MarketDigestService {
     private static final int TOP_MOVERS_COUNT = 5;
     private static final int SUMMARY_WINDOW_DAYS = 7;
 
+    // JSON/embed constants
+    private static final String NOT_AVAILABLE = "N/A";
+    private static final String JSON_COMMA = "\",";
+
+    // Interval constants
+    private static final String INTERVAL_WEEKLY = "weekly";
+
+    // Circuit breaker tier labels
+    private static final String CB_NORMAL = "Normal";
+    private static final String CB_TIER1 = "Tier 1 — Caution";
+    private static final String CB_TIER2 = "Tier 2 — Danger";
+    private static final String CB_TIER3 = "Tier 3 — Frozen";
+    private static final String DIGEST_WEEKLY = "Weekly";
+    private static final String DIGEST_DAILY = "Daily";
+    private static final String WEBHOOK_USERNAME_DEFAULT = "Auto-Tune Economy";
+
     private final AutoTune plugin;
     private final ConfigManager configManager;
     private final MarketEventService marketEventService;
@@ -220,10 +236,10 @@ public class MarketDigestService {
         }
 
         String username = configManager.getConfig().webhook().username();
-        if (username == null) username = "Auto-Tune Economy";
+        if (username == null) username = WEBHOOK_USERNAME_DEFAULT;
         String avatarUrl = configManager.getConfig().webhook().avatarUrl();
 
-        String interval = "weekly".equals(cfg.interval()) ? "Weekly" : "Daily";
+        String interval = INTERVAL_WEEKLY.equals(cfg.interval()) ? DIGEST_WEEKLY : DIGEST_DAILY;
         String title = interval + " Market Digest";
 
         postToWebhook(webhookUrl, username, avatarUrl, title, description.toString());
@@ -234,10 +250,10 @@ public class MarketDigestService {
 
         LoanManager.CircuitBreakerStatus cb = loanManager.getCircuitBreakerStatus();
         String cbLabel = switch (cb.tier()) {
-            case "NORMAL" -> "Normal";
-            case "TIER1" -> "Tier 1 — Caution";
-            case "TIER2" -> "Tier 2 — Danger";
-            case "TIER3" -> "Tier 3 — Frozen";
+            case "NORMAL" -> CB_NORMAL;
+            case "TIER1" -> CB_TIER1;
+            case "TIER2" -> CB_TIER2;
+            case "TIER3" -> CB_TIER3;
             default -> cb.tier();
         };
 
@@ -246,7 +262,7 @@ public class MarketDigestService {
             gdp = economyMetricsManager.getLatestSnapshot().get().gdp();
         }
         double debtGdpRatio = cb.debtGdpRatio();
-        String debtGdpLabel = debtGdpRatio < 0 ? "N/A" : String.format("%.2fx", debtGdpRatio);
+        String debtGdpLabel = debtGdpRatio < 0 ? NOT_AVAILABLE : String.format("%.2fx", debtGdpRatio);
 
         BigDecimal buyVol = transactionRepository.getGlobalBuyVolume(Instant.now().minus(Duration.ofDays(1)));
         BigDecimal totalVol = transactionRepository.getGlobalVolume(Instant.now().minus(Duration.ofDays(1)));
@@ -254,7 +270,7 @@ public class MarketDigestService {
                 ? buyVol.divide(totalVol, 4, RoundingMode.HALF_UP).doubleValue() * 100.0
                 : 0.0;
 
-        String gdpStr = gdp.compareTo(BigDecimal.ZERO) > 0 ? formatCurrency(gdp) : "N/A";
+        String gdpStr = gdp.compareTo(BigDecimal.ZERO) > 0 ? formatCurrency(gdp) : NOT_AVAILABLE;
 
         StringBuilder sb = new StringBuilder();
         sb.append("**Health**\n");
@@ -277,13 +293,13 @@ public class MarketDigestService {
 
         LoanManager.CircuitBreakerStatus cb = loanManager.getCircuitBreakerStatus();
         double debtGdpRatio = cb.debtGdpRatio();
-        String debtGdpLabel = debtGdpRatio < 0 ? "N/A" : String.format("%.2fx", debtGdpRatio);
+        String debtGdpLabel = debtGdpRatio < 0 ? NOT_AVAILABLE : String.format("%.2fx", debtGdpRatio);
 
         StringBuilder sb = new StringBuilder();
         sb.append("**Loans**\n");
         sb.append("• Active Loans: ").append(activeLoans).append("\n");
         sb.append("• Total Debt: ")
-                .append(totalDebt.compareTo(BigDecimal.ZERO) > 0 ? formatCurrency(totalDebt) : "N/A")
+                .append(totalDebt.compareTo(BigDecimal.ZERO) > 0 ? formatCurrency(totalDebt) : NOT_AVAILABLE)
                 .append("\n");
         sb.append("• Debt/GDP: ").append(debtGdpLabel).append("\n");
         sb.append("• Tier: ").append(cb.tier())
@@ -351,16 +367,16 @@ public class MarketDigestService {
 
     private void postToWebhook(String webhookUrl, String username, String avatarUrl, String title, String description) {
         try {
-            String usernameField = username != null ? "\"username\": \"" + jsonEscape(username) + "\"," : "";
-            String avatarField = avatarUrl != null ? "\"avatar_url\": \"" + jsonEscape(avatarUrl) + "\"," : "";
+            String usernameField = username != null ? "\"username\": \"" + jsonEscape(username) + "\"," + JSON_COMMA : "";
+            String avatarField = avatarUrl != null ? "\"avatar_url\": \"" + jsonEscape(avatarUrl) + "\"," + JSON_COMMA : "";
 
             String payload = "{"
                     + usernameField
                     + avatarField
                     + "\"embeds\": [{"
-                    + "\"title\": \"" + jsonEscape(title) + "\","
-                    + "\"description\": \"" + jsonEscape(description) + "\","
-                    + "\"color\": " + EMBED_COLOR + ","
+                    + "\"title\": \"" + jsonEscape(title) + "\"," + JSON_COMMA
+                    + "\"description\": \"" + jsonEscape(description) + "\"," + JSON_COMMA
+                    + "\"color\": " + EMBED_COLOR + "," + JSON_COMMA
                     + "\"footer\": {\"text\": \"Auto-Tune Market Digest\"},"
                     + "\"timestamp\": \"" + Instant.now().toString() + "\""
                     + "}]}";

@@ -66,6 +66,39 @@ public class WebServer {
     // API response field names
     private static final String KEY_LIMIT = "limit";
     private static final String KEY_TIMESTAMP = "timestamp";
+    private static final String KEY_ERROR = "error";
+    // Threshold constants for market attribution logic
+    private static final double MARKET_EVENT_THRESHOLD = 2.0;
+    private static final double HIGH_VOLUME_THRESHOLD = 2.5;
+    private static final double SIGNIFICANT_MOVE_THRESHOLD = 5.0;
+    private static final double STABLE_PRICE_THRESHOLD = 0.5;
+    private static final double DEBT_GDP_CAUTION = 3.0;
+    private static final double DEBT_GDP_DANGER = 10.0;
+    private static final double DEBT_GDP_MIN = 0.0;
+    private static final double PRICE_CHANGE_ZERO = 0.0;
+    // Repeated message strings
+    private static final String MSG_UNKNOWN = "Unknown";
+    private static final String MSG_ITEM_NOT_FOUND_STANDALONE = "Item not found";
+    private static final String MSG_PLAYER_NAME_REQUIRED = "playerName is required";
+    private static final String MSG_PLAYER_NAME_QUERY_REQUIRED = "playerName query param is required";
+    private static final String MSG_PLAYER_NOT_FOUND = "Player not found: ";
+    private static final String MSG_ITEM_NOT_FOUND = "Item not found: ";
+    private static final String MSG_ALERT_NOT_FOUND_OR_NOT_OWNED = "Alert not found or not owned by player";
+    private static final String KEY_PLAYER_NAME = "playerName";
+    private static final String KEY_ITEM_ID = "itemId";
+    private static final String KEY_ITEM_NAME = "itemName";
+    private static final String KEY_AMOUNT = "amount";
+    private static final String KEY_LABEL = "label";
+    private static final String KEY_PCT_CHANGE = "pctChange";
+    private static final String KEY_CURRENT = "current";
+    private static final String KEY_DEFAULT = "default";
+    private static final String KEY_RANGE_MIN = "rangeMin";
+    private static final String KEY_RANGE_MAX = "rangeMax";
+    private static final String KEY_UNIT = "unit";
+    private static final String KEY_TYPE = "type";
+    private static final String KEY_PRICE = "price";
+    private static final String KEY_MATERIAL = "material";
+    // Repeated message strings
 
     private final AutoTune plugin;
     private final ConfigManager configManager;
@@ -207,7 +240,7 @@ public class WebServer {
                     .map(this::toDto)
                     .ifPresentOrElse(
                             ctx::json,
-                            () -> ctx.status(404).json(Map.of("error", "Item not found"))
+                            () -> ctx.status(404).json(Map.of(KEY_ERROR, MSG_ITEM_NOT_FOUND_STANDALONE))
                     );
         });
 
@@ -282,16 +315,16 @@ public class WebServer {
                 // Attribution logic
                 String attribution;
                 String key;
-                if (hasEvent && Math.abs(pctChange) > 2.0) {
+                if (hasEvent && Math.abs(pctChange) > MARKET_EVENT_THRESHOLD) {
                     attribution = "Due to market event: " + (eventName != null ? eventName : "active event");
                     key = "EVENT";
-                } else if (volRatio > 2.5) {
+                } else if (volRatio > HIGH_VOLUME_THRESHOLD) {
                     attribution = String.format("High volume spike (%.1f× normal)", volRatio);
                     key = "VOLUME";
-                } else if (Math.abs(pctChange) > 5.0) {
+                } else if (Math.abs(pctChange) > SIGNIFICANT_MOVE_THRESHOLD) {
                     attribution = String.format("Significant price movement (%.1f%%)", pctChange);
                     key = "TREND";
-                } else if (Math.abs(pctChange) < 0.5) {
+                } else if (Math.abs(pctChange) < STABLE_PRICE_THRESHOLD) {
                     attribution = "Stable price — minimal change";
                     key = "STABLE";
                 } else {
@@ -372,11 +405,11 @@ public class WebServer {
             Map<String, Object> result = new HashMap<>();
             if (latest.isPresent()) {
                 result.put("averagePriceChange", latest.get().averagePriceChange().doubleValue());
-                result.put("label", economyMetricsManager.getInflationLabel());
+                result.put(KEY_LABEL, economyMetricsManager.getInflationLabel());
                 result.put(KEY_TIMESTAMP, latest.get().timestamp().toEpochMilli());
             } else {
                 result.put("averagePriceChange", 0.0);
-                result.put("label", "N/A");
+                result.put(KEY_LABEL, "N/A");
                 result.put(KEY_TIMESTAMP, System.currentTimeMillis());
             }
             ctx.json(result);
@@ -422,12 +455,12 @@ public class WebServer {
             for (ShopItem item : items) {
                 MarketEngine.PriceTrend trend = marketEngine.getPriceTrend(item.id());
                 Map<String, Object> entry = new HashMap<>();
-                entry.put("itemId", item.id());
-                entry.put("material", item.material().name());
+                entry.put(KEY_ITEM_ID, item.id());
+                entry.put(KEY_MATERIAL, item.material().name());
                 entry.put("displayName", item.getDisplayNameOrMaterial());
                 entry.put("direction", trend.direction().name());
                 entry.put("percentChange", trend.percentChange().doubleValue());
-                entry.put("label", trend.label());
+                entry.put(KEY_LABEL, trend.label());
                 trends.add(entry);
             }
             ctx.json(trends);
@@ -511,28 +544,28 @@ public class WebServer {
 
         // ── Player portfolio ─────────────────────────────────────────────────
         app.get("/api/portfolio/{playerName}", ctx -> {
-            String playerName = ctx.pathParam("playerName");
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).result("playerName is required");
+                ctx.status(400).result(MSG_PLAYER_NAME_REQUIRED);
                 return;
             }
             portfolioService.buildPortfolio(playerName.trim())
                     .ifPresentOrElse(
                             dto -> ctx.json(dto),
-                            () -> ctx.status(404).result("Player not found: " + playerName)
+                            () -> ctx.status(404).result(MSG_PLAYER_NOT_FOUND + playerName)
                     );
         });
 
         app.get("/api/portfolio/{playerName}/transactions", ctx -> {
-            String playerName = ctx.pathParam("playerName");
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
             int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(50);
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).result("playerName is required");
+                ctx.status(400).result(MSG_PLAYER_NAME_REQUIRED);
                 return;
             }
             PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
             if (player == null) {
-                ctx.status(404).result("Player not found: " + playerName);
+                ctx.status(404).result(MSG_PLAYER_NOT_FOUND + playerName);
                 return;
             }
             List<Transaction> transactions = transactionRepository.findByPlayer(
@@ -545,14 +578,14 @@ public class WebServer {
 
 
         app.get("/api/portfolio/{playerName}/transactions.csv", ctx -> {
-            String playerName = ctx.pathParam("playerName");
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).result("playerName is required");
+                ctx.status(400).result(MSG_PLAYER_NAME_REQUIRED);
                 return;
             }
             PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
             if (player == null) {
-                ctx.status(404).result("Player not found: " + playerName);
+                ctx.status(404).result(MSG_PLAYER_NOT_FOUND + playerName);
                 return;
             }
 
@@ -577,7 +610,7 @@ public class WebServer {
             for (Transaction tx : transactions) {
                 String itemName = itemRepository.findById(tx.itemId())
                         .map(ShopItem::getDisplayNameOrMaterial)
-                        .orElse("Unknown");
+                        .orElse(MSG_UNKNOWN);
                 csv.append(tx.timestamp()).append(',')          // ISO-8601
                         .append(tx.type().name()).append(',')
                         .append(itemName).append(',')
@@ -593,9 +626,9 @@ public class WebServer {
         });
 
         app.get("/api/portfolio/{playerName}/pnl-history", ctx -> {
-            String playerName = ctx.pathParam("playerName");
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).result("playerName is required");
+                ctx.status(400).result(MSG_PLAYER_NAME_REQUIRED);
                 return;
             }
             List<PnLHistoryDto> history = portfolioService.getPnlHistory(playerName.trim());
@@ -620,7 +653,7 @@ public class WebServer {
                             double netTrade = a.totalEarned().subtract(a.totalSpent()).doubleValue();
                             return new LeaderboardEntryDto(
                                     rank.getAndIncrement(),
-                                    a.username() != null ? a.username() : "Unknown",
+                                    a.username() != null ? a.username() : MSG_UNKNOWN,
                                     totalTraded,
                                     (double) a.totalBought(),
                                     (double) a.totalSold(),
@@ -635,7 +668,7 @@ public class WebServer {
                 dtos = topTraders.stream()
                         .map(p -> new LeaderboardEntryDto(
                                 rank.getAndIncrement(),
-                                p.username() != null ? p.username() : "Unknown",
+                                p.username() != null ? p.username() : MSG_UNKNOWN,
                                 p.totalTraded().doubleValue(),
                                 p.totalBought().doubleValue(),
                                 p.totalSold().doubleValue(),
@@ -648,21 +681,21 @@ public class WebServer {
 
         // GET /api/badges/player/{playerName} — earned badges with earn dates for a player
         app.get("/api/badges/player/{playerName}", ctx -> {
-            String playerName = ctx.pathParam("playerName");
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).result("playerName is required");
+                ctx.status(400).result(MSG_PLAYER_NAME_REQUIRED);
                 return;
             }
             PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
             if (player == null) {
-                ctx.status(404).result("Player not found: " + playerName);
+                ctx.status(404).result(MSG_PLAYER_NOT_FOUND + playerName);
                 return;
             }
             List<BadgeDto> earned = badgeRepository.getBadges(player.uuid()).stream()
                     .map(BadgeDto::from)
                     .collect(Collectors.toList());
             ctx.json(Map.of(
-                    "playerName", player.username() != null ? player.username() : playerName,
+                    KEY_PLAYER_NAME, player.username() != null ? player.username() : playerName,
                     "earnedCount", earned.size(),
                     "totalPossible", com.noahblclarkson.autotune.model.BadgeType.values().length,
                     "badges", earned
@@ -688,7 +721,7 @@ public class WebServer {
                     .map(e -> Map.<String, Object>of(
                             "id", e.id().toString(),
                             "name", e.name(),
-                            "type", e.type().name(),
+                            KEY_TYPE, e.type().name(),
                             "materials", e.materials(),
                             "multiplier", e.priceMultiplier(),
                             "startsAt", e.startsAt().toEpochMilli(),
@@ -701,7 +734,7 @@ public class WebServer {
                     .map(e -> Map.<String, Object>of(
                             "id", e.id().toString(),
                             "name", e.name(),
-                            "type", e.type().name(),
+                            KEY_TYPE, e.type().name(),
                             "materials", e.materials(),
                             "multiplier", e.priceMultiplier(),
                             "startsAt", e.startsAt().toEpochMilli(),
@@ -741,11 +774,11 @@ public class WebServer {
             // Debt/GDP
             double debtGdpRatio = cb.debtGdpRatio();
             String debtGdpLabel;
-            if (debtGdpRatio < 0) {
+            if (debtGdpRatio < DEBT_GDP_MIN) {
                 debtGdpLabel = "N/A";
-            } else if (debtGdpRatio < 3.0) {
+            } else if (debtGdpRatio < DEBT_GDP_CAUTION) {
                 debtGdpLabel = String.format("%.2fx", debtGdpRatio);
-            } else if (debtGdpRatio < 10.0) {
+            } else if (debtGdpRatio < DEBT_GDP_DANGER) {
                 debtGdpLabel = String.format("%.2fx ⚠", debtGdpRatio);
             } else {
                 debtGdpLabel = String.format("%.2fx ❌", debtGdpRatio);
@@ -791,9 +824,9 @@ public class WebServer {
                         .doubleValue() * 100.0;
                 Map<String, Object> entry = Map.of(
                         "id", item.id(),
-                        "material", item.material().name(),
+                        KEY_MATERIAL, item.material().name(),
                         "displayName", item.getDisplayNameOrMaterial(),
-                        "pctChange", pctChange
+                        KEY_PCT_CHANGE, pctChange
                 );
                 volatilities.add(entry);
                 undersells.add(entry);
@@ -801,11 +834,11 @@ public class WebServer {
             // Aggregate economy volatility (std dev of all items' 24h price changes)
             double avgVolatility = 0.0;
             if (!volatilities.isEmpty()) {
-                double sum = volatilities.stream().mapToDouble(v -> (Double) v.get("pctChange")).sum();
+                double sum = volatilities.stream().mapToDouble(v -> (Double) v.get(KEY_PCT_CHANGE)).sum();
                 double mean = sum / volatilities.size();
                 double variance = volatilities.stream()
                         .mapToDouble(v -> {
-                            double d = ((Double) v.get("pctChange")) / 100.0 - mean;
+                            double d = ((Double) v.get(KEY_PCT_CHANGE)) / 100.0 - mean;
                             return d * d;
                         })
                         .sum() / volatilities.size();
@@ -813,13 +846,13 @@ public class WebServer {
             }
 
             volatilities.sort((a, b) -> {
-                double av = (Double) a.get("pctChange");
-                double bv = (Double) b.get("pctChange");
+                double av = (Double) a.get(KEY_PCT_CHANGE);
+                double bv = (Double) b.get(KEY_PCT_CHANGE);
                 return Double.compare(Math.abs(bv), Math.abs(av)); // most volatile first
             });
             undersells.sort((a, b) -> {
-                double av = (Double) a.get("pctChange");
-                double bv = (Double) b.get("pctChange");
+                double av = (Double) a.get(KEY_PCT_CHANGE);
+                double bv = (Double) b.get(KEY_PCT_CHANGE);
                 return Double.compare(av, bv); // most negative first (undersold)
             });
 
@@ -857,56 +890,56 @@ public class WebServer {
             // Spread section
             response.put("spread", Map.of(
                 "baseSpread", Map.of(
-                    "current", spd.baseSpread(),
-                    "default", 0.20,
-                    "rangeMin", 0.15,
-                    "rangeMax", 0.30,
-                    "unit", "decimal",
-                    "label", "Base Spread"
+                    KEY_CURRENT, spd.baseSpread(),
+                    KEY_DEFAULT, 0.20,
+                    KEY_RANGE_MIN, 0.15,
+                    KEY_RANGE_MAX, 0.30,
+                    KEY_UNIT, "decimal",
+                    KEY_LABEL, "Base Spread"
                 ),
                 "volumeImpact", Map.of(
-                    "current", spd.volumeImpact(),
-                    "default", 0.80,
-                    "rangeMin", 0.50,
-                    "rangeMax", 1.00,
-                    "unit", "decimal",
-                    "label", "Volume Impact"
+                    KEY_CURRENT, spd.volumeImpact(),
+                    KEY_DEFAULT, 0.80,
+                    KEY_RANGE_MIN, 0.50,
+                    KEY_RANGE_MAX, 1.00,
+                    KEY_UNIT, "decimal",
+                    KEY_LABEL, "Volume Impact"
                 ),
                 "playerImpact", Map.of(
-                    "current", spd.playerImpact(),
-                    "default", 0.60,
-                    "rangeMin", 0.50,
-                    "rangeMax", 1.00,
-                    "unit", "decimal",
-                    "label", "Player Impact"
+                    KEY_CURRENT, spd.playerImpact(),
+                    KEY_DEFAULT, 0.60,
+                    KEY_RANGE_MIN, 0.50,
+                    KEY_RANGE_MAX, 1.00,
+                    KEY_UNIT, "decimal",
+                    KEY_LABEL, "Player Impact"
                 )
             ));
 
             // Loan section
             response.put("loans", Map.of(
                 "baseInterestRate", Map.of(
-                    "current", loan.baseInterestRate(),
-                    "default", 0.05,
-                    "rangeMin", 0.03,
-                    "rangeMax", 0.10,
-                    "unit", "percent",
-                    "label", "Base Interest Rate"
+                    KEY_CURRENT, loan.baseInterestRate(),
+                    KEY_DEFAULT, 0.05,
+                    KEY_RANGE_MIN, 0.03,
+                    KEY_RANGE_MAX, 0.10,
+                    KEY_UNIT, "percent",
+                    KEY_LABEL, "Base Interest Rate"
                 ),
                 "debtGdpTier3Ratio", Map.of(
-                    "current", loan.debtGdpTier3Ratio(),
-                    "default", 15.0,
-                    "rangeMin", 12.0,
-                    "rangeMax", 15.0,
-                    "unit", "ratio",
-                    "label", "Circuit Breaker Threshold"
+                    KEY_CURRENT, loan.debtGdpTier3Ratio(),
+                    KEY_DEFAULT, 15.0,
+                    KEY_RANGE_MIN, 12.0,
+                    KEY_RANGE_MAX, 15.0,
+                    KEY_UNIT, "ratio",
+                    KEY_LABEL, "Circuit Breaker Threshold"
                 ),
                 "postDefaultCooldownHours", Map.of(
-                    "current", loan.postDefaultCooldownHours(),
-                    "default", 168,
-                    "rangeMin", 72,
-                    "rangeMax", 336,
-                    "unit", "hours",
-                    "label", "Post-Default Cooldown"
+                    KEY_CURRENT, loan.postDefaultCooldownHours(),
+                    KEY_DEFAULT, 168,
+                    KEY_RANGE_MIN, 72,
+                    KEY_RANGE_MAX, 336,
+                    KEY_UNIT, "hours",
+                    KEY_LABEL, "Post-Default Cooldown"
                 ),
                 "counterCyclical", loan.counterCyclical(),
                 "singleLoanGdpCap", loan.singleLoanGdpCap()
@@ -915,36 +948,36 @@ public class WebServer {
             // Economy section
             response.put("economy", Map.of(
                 "tradeWindowDays", Map.of(
-                    "current", econ.tradeWindowDays(),
-                    "default", 7,
-                    "rangeMin", 5,
-                    "rangeMax", 14,
-                    "unit", "days",
-                    "label", "Trade Window"
+                    KEY_CURRENT, econ.tradeWindowDays(),
+                    KEY_DEFAULT, 7,
+                    KEY_RANGE_MIN, 5,
+                    KEY_RANGE_MAX, 14,
+                    KEY_UNIT, "days",
+                    KEY_LABEL, "Trade Window"
                 ),
                 "maxPriceChangePercent", Map.of(
-                    "current", econ.maxPriceChangePercent(),
-                    "default", 1.5,
-                    "rangeMin", 1.0,
-                    "rangeMax", 2.0,
-                    "unit", "percent",
-                    "label", "Max Price Change"
+                    KEY_CURRENT, econ.maxPriceChangePercent(),
+                    KEY_DEFAULT, 1.5,
+                    KEY_RANGE_MIN, 1.0,
+                    KEY_RANGE_MAX, 2.0,
+                    KEY_UNIT, "percent",
+                    KEY_LABEL, "Max Price Change"
                 ),
                 "minBuyQuantity", Map.of(
-                    "current", econ.minBuyQuantity(),
-                    "default", 1,
-                    "rangeMin", 1,
-                    "rangeMax", 5,
-                    "unit", "items",
-                    "label", "Min Buy Quantity"
+                    KEY_CURRENT, econ.minBuyQuantity(),
+                    KEY_DEFAULT, 1,
+                    KEY_RANGE_MIN, 1,
+                    KEY_RANGE_MAX, 5,
+                    KEY_UNIT, "items",
+                    KEY_LABEL, "Min Buy Quantity"
                 ),
                 "minSellQuantity", Map.of(
-                    "current", econ.minSellQuantity(),
-                    "default", 1,
-                    "rangeMin", 1,
-                    "rangeMax", 5,
-                    "unit", "items",
-                    "label", "Min Sell Quantity"
+                    KEY_CURRENT, econ.minSellQuantity(),
+                    KEY_DEFAULT, 1,
+                    KEY_RANGE_MIN, 1,
+                    KEY_RANGE_MAX, 5,
+                    KEY_UNIT, "items",
+                    KEY_LABEL, "Min Sell Quantity"
                 )
             ));
 
@@ -965,14 +998,14 @@ public class WebServer {
         // ── Price alerts ───────────────────────────────────────────────────
         // GET /api/alerts/{playerName} — list all alerts for a player
         app.get("/api/alerts/{playerName}", ctx -> {
-            String playerName = ctx.pathParam("playerName");
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).json(Map.of("error", "playerName is required"));
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_REQUIRED));
                 return;
             }
             PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
             if (player == null) {
-                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + playerName));
                 return;
             }
             List<PriceAlert> alerts = priceAlertManager.getPlayerAlerts(player.uuid());
@@ -983,32 +1016,32 @@ public class WebServer {
         });
 
         // POST /api/alerts — create a new alert
-        // Body: { "playerName": "...", "itemId": 123, "alertType": "ABOVE|BELOW", "targetPrice": 250.00 }
+        // Body: { KEY_PLAYER_NAME: "...", KEY_ITEM_ID: 123, "alertType": "ABOVE|BELOW", "targetPrice": 250.00 }
         app.post("/api/alerts", ctx -> {
             CreateAlertRequest req;
             try {
                 req = gson.fromJson(ctx.body(), CreateAlertRequest.class);
             } catch (Exception e) {
-                ctx.status(400).json(Map.of("error", "Invalid request body"));
+                ctx.status(400).json(Map.of(KEY_ERROR, "Invalid request body"));
                 return;
             }
             if (req.playerName == null || req.playerName.isBlank()) {
-                ctx.status(400).json(Map.of("error", "playerName is required"));
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_REQUIRED));
                 return;
             }
             if (req.itemId <= 0) {
-                ctx.status(400).json(Map.of("error", "itemId must be a positive integer"));
+                ctx.status(400).json(Map.of(KEY_ERROR, "itemId must be a positive integer"));
                 return;
             }
             if (req.targetPrice == null || req.targetPrice <= 0) {
-                ctx.status(400).json(Map.of("error", "targetPrice must be a positive number"));
+                ctx.status(400).json(Map.of(KEY_ERROR, "targetPrice must be a positive number"));
                 return;
             }
             PriceAlert.AlertType alertType;
             try {
                 alertType = PriceAlert.AlertType.valueOf(req.alertType.toUpperCase(Locale.ROOT));
             } catch (Exception e) {
-                ctx.status(400).json(Map.of("error", "alertType must be ABOVE or BELOW"));
+                ctx.status(400).json(Map.of(KEY_ERROR, "alertType must be ABOVE or BELOW"));
                 return;
             }
             // Resolve player UUID
@@ -1020,20 +1053,20 @@ public class WebServer {
                 // Fall back to Bukkit lookup
                 var offline = server.getOfflinePlayer(req.playerName);
                 if (offline == null || !offline.hasPlayedBefore()) {
-                    ctx.status(404).json(Map.of("error", "Player not found: " + req.playerName));
+                    ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + req.playerName));
                     return;
                 }
                 playerUuid = offline.getUniqueId();
             }
             // Validate item exists
             if (itemRepository.findById(req.itemId).isEmpty()) {
-                ctx.status(404).json(Map.of("error", "Item not found: " + req.itemId));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_ITEM_NOT_FOUND + req.itemId));
                 return;
             }
             var result = priceAlertManager.createAlert(
                     playerUuid, req.itemId, alertType, BigDecimal.valueOf(req.targetPrice));
             if (!result.success()) {
-                ctx.status(400).json(Map.of("error", result.errorMessage()));
+                ctx.status(400).json(Map.of(KEY_ERROR, result.errorMessage()));
                 return;
             }
             ctx.status(201).json(toAlertDto(result.alert()));
@@ -1042,19 +1075,19 @@ public class WebServer {
         // DELETE /api/alerts/{alertId}?playerName=X — remove an alert
         app.delete("/api/alerts/{alertId}", ctx -> {
             String alertId = ctx.pathParam("alertId");
-            String playerName = ctx.queryParam("playerName");
+            String playerName = ctx.queryParam(KEY_PLAYER_NAME);
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).json(Map.of("error", "playerName query param is required"));
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_QUERY_REQUIRED));
                 return;
             }
             PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
             if (player == null) {
-                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + playerName));
                 return;
             }
             boolean removed = priceAlertManager.removeAlert(alertId, player.uuid(), false);
             if (!removed) {
-                ctx.status(404).json(Map.of("error", "Alert not found or not owned by player"));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_ALERT_NOT_FOUND_OR_NOT_OWNED));
                 return;
             }
             ctx.json(Map.of("success", true));
@@ -1063,19 +1096,19 @@ public class WebServer {
         // PATCH /api/alerts/{alertId}/toggle?playerName=X — enable/disable an alert
         app.patch("/api/alerts/{alertId}/toggle", ctx -> {
             String alertId = ctx.pathParam("alertId");
-            String playerName = ctx.queryParam("playerName");
+            String playerName = ctx.queryParam(KEY_PLAYER_NAME);
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).json(Map.of("error", "playerName query param is required"));
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_QUERY_REQUIRED));
                 return;
             }
             PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
             if (player == null) {
-                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + playerName));
                 return;
             }
             boolean toggled = priceAlertManager.toggleAlert(alertId, player.uuid(), false);
             if (!toggled) {
-                ctx.status(404).json(Map.of("error", "Alert not found or not owned by player"));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_ALERT_NOT_FOUND_OR_NOT_OWNED));
                 return;
             }
             // Fetch updated alert
@@ -1085,26 +1118,26 @@ public class WebServer {
                     .findFirst()
                     .ifPresentOrElse(
                             a -> ctx.json(toAlertDto(a)),
-                            () -> ctx.status(404).json(Map.of("error", "Alert not found after toggle"))
+                            () -> ctx.status(404).json(Map.of(KEY_ERROR, "Alert not found after toggle"))
                     );
         });
 
         // PATCH /api/alerts/{alertId}/rearm?playerName=X — rearm a triggered alert
         app.patch("/api/alerts/{alertId}/rearm", ctx -> {
             String alertId = ctx.pathParam("alertId");
-            String playerName = ctx.queryParam("playerName");
+            String playerName = ctx.queryParam(KEY_PLAYER_NAME);
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).json(Map.of("error", "playerName query param is required"));
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_QUERY_REQUIRED));
                 return;
             }
             PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
             if (player == null) {
-                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + playerName));
                 return;
             }
             boolean rearmed = priceAlertManager.rearmAlert(alertId, player.uuid());
             if (!rearmed) {
-                ctx.status(400).json(Map.of("error", "Alert not found, not triggered, or not owned by player"));
+                ctx.status(400).json(Map.of(KEY_ERROR, "Alert not found, not triggered, or not owned by player"));
                 return;
             }
             var alerts = priceAlertManager.getPlayerAlerts(player.uuid());
@@ -1113,7 +1146,7 @@ public class WebServer {
                     .findFirst()
                     .ifPresentOrElse(
                             a -> ctx.json(toAlertDto(a)),
-                            () -> ctx.status(404).json(Map.of("error", "Alert not found after rearm"))
+                            () -> ctx.status(404).json(Map.of(KEY_ERROR, "Alert not found after rearm"))
                     );
         });
 
@@ -1121,14 +1154,14 @@ public class WebServer {
 
         // GET /api/shop/favorites/{playerName} — list player's favorited item IDs
         app.get("/api/shop/favorites/{playerName}", ctx -> {
-            String playerName = ctx.pathParam("playerName");
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).json(Map.of("error", "playerName is required"));
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_REQUIRED));
                 return;
             }
             PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
             if (player == null) {
-                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + playerName));
                 return;
             }
             Set<Integer> favoriteIds = shopFavoriteRepository.getFavoriteItemIds(player.uuid());
@@ -1139,68 +1172,68 @@ public class WebServer {
                         ShopItem si = item.get();
                         return Map.<String, Object>of(
                                 "id", si.id(),
-                                "material", si.material().name(),
+                                KEY_MATERIAL, si.material().name(),
                                 "displayName", si.getDisplayNameOrMaterial(),
                                 "section", si.section() != null ? si.section() : ""
                         );
                     })
                     .toList();
-            ctx.json(Map.of("playerName", playerName, "favorites", favorites, "count", favorites.size()));
+            ctx.json(Map.of(KEY_PLAYER_NAME, playerName, "favorites", favorites, "count", favorites.size()));
         });
 
         // POST /api/shop/favorites/{playerName}/{itemId} — add item to favorites
         app.post("/api/shop/favorites/{playerName}/{itemId}", ctx -> {
-            String playerName = ctx.pathParam("playerName");
-            int itemId = Integer.parseInt(ctx.pathParam("itemId"));
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
+            int itemId = Integer.parseInt(ctx.pathParam(KEY_ITEM_ID));
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).json(Map.of("error", "playerName is required"));
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_REQUIRED));
                 return;
             }
             PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
             if (player == null) {
-                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + playerName));
                 return;
             }
             if (itemRepository.findById(itemId).isEmpty()) {
-                ctx.status(404).json(Map.of("error", "Item not found: " + itemId));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_ITEM_NOT_FOUND + itemId));
                 return;
             }
             shopFavoriteRepository.addFavorite(player.uuid(), itemId);
-            ctx.status(201).json(Map.of("playerName", playerName, "itemId", itemId, "favorited", true));
+            ctx.status(201).json(Map.of(KEY_PLAYER_NAME, playerName, KEY_ITEM_ID, itemId, "favorited", true));
         });
 
         // DELETE /api/shop/favorites/{playerName}/{itemId} — remove item from favorites
         app.delete("/api/shop/favorites/{playerName}/{itemId}", ctx -> {
-            String playerName = ctx.pathParam("playerName");
-            int itemId = Integer.parseInt(ctx.pathParam("itemId"));
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
+            int itemId = Integer.parseInt(ctx.pathParam(KEY_ITEM_ID));
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).json(Map.of("error", "playerName is required"));
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_REQUIRED));
                 return;
             }
             PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
             if (player == null) {
-                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + playerName));
                 return;
             }
             shopFavoriteRepository.removeFavorite(player.uuid(), itemId);
-            ctx.status(200).json(Map.of("playerName", playerName, "itemId", itemId, "favorited", false));
+            ctx.status(200).json(Map.of(KEY_PLAYER_NAME, playerName, KEY_ITEM_ID, itemId, "favorited", false));
         });
 
         // PATCH /api/shop/favorites/{playerName}/{itemId} — toggle favorite
         app.patch("/api/shop/favorites/{playerName}/{itemId}", ctx -> {
-            String playerName = ctx.pathParam("playerName");
-            int itemId = Integer.parseInt(ctx.pathParam("itemId"));
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
+            int itemId = Integer.parseInt(ctx.pathParam(KEY_ITEM_ID));
             if (playerName == null || playerName.isBlank()) {
-                ctx.status(400).json(Map.of("error", "playerName is required"));
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_REQUIRED));
                 return;
             }
             PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
             if (player == null) {
-                ctx.status(404).json(Map.of("error", "Player not found: " + playerName));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + playerName));
                 return;
             }
             if (itemRepository.findById(itemId).isEmpty()) {
-                ctx.status(404).json(Map.of("error", "Item not found: " + itemId));
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_ITEM_NOT_FOUND + itemId));
                 return;
             }
             boolean isFav = shopFavoriteRepository.isFavorite(player.uuid(), itemId);
@@ -1209,12 +1242,12 @@ public class WebServer {
             } else {
                 shopFavoriteRepository.addFavorite(player.uuid(), itemId);
             }
-            ctx.json(Map.of("playerName", playerName, "itemId", itemId, "favorited", !isFav));
+            ctx.json(Map.of(KEY_PLAYER_NAME, playerName, KEY_ITEM_ID, itemId, "favorited", !isFav));
         });
 
         app.exception(Exception.class, (e, ctx) -> {
             plugin.getLogger().log(Level.WARNING, "Web API error: " + e.getMessage());
-            ctx.status(500).json(Map.of("error", "Internal server error"));
+            ctx.status(500).json(Map.of(KEY_ERROR, "Internal server error"));
         });
     }
 
@@ -1224,7 +1257,7 @@ public class WebServer {
                 // Keep connections alive for 10 minutes of inactivity (dashboard polls every 30 s).
                 ctx.session.setIdleTimeout(Duration.ofMinutes(10));
                 wsClients.add(ctx);
-                ctx.send(gson.toJson(Map.of("type", "connected", "message", "Connected to market feed")));
+                ctx.send(gson.toJson(Map.of(KEY_TYPE, "connected", "message", "Connected to market feed")));
             });
 
             ws.onClose(ctx -> wsClients.remove(ctx));
@@ -1242,7 +1275,7 @@ public class WebServer {
         }
 
         Map<String, Object> message = Map.of(
-                "type", "price_update",
+                KEY_TYPE, "price_update",
                 KEY_TIMESTAMP, System.currentTimeMillis(),
                 "prices", prices.entrySet().stream()
                         .collect(Collectors.toMap(
@@ -1266,7 +1299,7 @@ public class WebServer {
     private TransactionFeedDto toTransactionDto(Transaction tx) {
         String itemName = itemRepository.findById(tx.itemId())
                 .map(ShopItem::getDisplayNameOrMaterial)
-                .orElse("Unknown");
+                .orElse(MSG_UNKNOWN);
         return new TransactionFeedDto(
                 tx.id(),
                 tx.itemId(),

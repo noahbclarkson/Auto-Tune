@@ -1,4 +1,6 @@
-# Ecosystem Analysis — 2026-04-13 (updated)
+# Ecosystem Analysis — 2026-04-15 (updated)
+
+> **2026-04-15 update:** sell_pressure=1.0 confirmed correct default; Newbie archetype fully characterized; Events confirmed harmful in healthy economies; Casual-heavy devastating for 2MM+2GB+floor.
 
 > **2026-04-13 update:** New definitive archetype findings from 5-seed simulation lab.
 
@@ -25,6 +27,27 @@ After multi-seed validation (5 seeds × 5 configs), the archetype effects are no
 **Hoarders are essentially neutral:** Replacing 2 Farmers with 2 Hoarders yields GDP +1.5% (flat) and D/G −6.9% (slight improvement). Hoarders hold inventory → less supply → slightly higher prices → GuildBuyers trigger less → less debt. Effect is marginal but measurable.
 
 **Updated SERVER_ADMIN_GUIDE.md:** VolumeTrader description updated to "Always harmful — −9% to −13% GDP; never recommended." Large server recommendation stripped of VT. GuildSeller confirmed dead-end retained.
+
+---
+
+## Key Findings (2026-04-15)
+
+**sell_pressure_multiplier default corrected to 1.0:** Previous default 0.80 sacrificed D/G stability (+40%) for +5% GDP. Confirmed via 5-seed head-to-head: sp=0.80 → D/G 7.86x; sp=1.0 → D/G 4.73x (−40%). GDP trade-off: −5.2%. Correct default is symmetric 1.0. Admins wanting growth can set 0.80; admins wanting stability keep 1.0.
+
+**Newbie archetype fully characterized:** Newbie is the "anti-Farmer" — 2.2× buy rate, minimal selling. Dramatically positive in BOTH healthy and stressed economies:
+| Scenario | GDP | D/G | Volatility |
+|----------|-----|-----|------------|
+| Healthy (2MM+2GB) | **+41.5%** | +34.7% | **−68%** |
+| Stressed (1MM+2GB) | **+33.3%** | **−42.1%** | **−35%** |
+Mechanism: Newbies replace sell pressure with buy pressure. In healthy: demand soars → GDP up. In stressed: absorb sell glut → D/G improves. ALWAYS dramatically reduces volatility. Tradeoff: D/G worsens in healthy (Newbies borrow to fund buying). Best use: high-volatility servers, stressed economies.
+
+**Events HURT healthy economies:** DEMAND_SURGE + SUPPLY_GLUT + INFLATION_BOOST + GOLD_RUSH applied to 2MM+2GB+floor → GDP −2.0%, D/G +0.634x WORSE. Seed 98765 went catastrophic (D/G 7.46x vs 4.87x control). **Do NOT enable frequent/strong events in production 2MM+2GB+floor. Events are only appropriate for stagnant economies.**
+
+**Counter-cyclical=true confirmed correct default:** CC=true vs CC=false × 3 seeds → GDP identical (0.0% diff), D/G marginally better with CC=false (4.817x vs 5.026x). TIER3=0 in both arms. No measurable GDP cost, D/G equivalent. Keep as default.
+
+**Casual-heavy (6Cas+1Far+1Tra) devastates 2MM+2GB+floor:** GDP −39.0%, D/G +1.399x worse, vol −37.5%. The 2MM+2GB+floor config is balanced for 3Cas+3Far+2Tra standard mix. **Casual-heavy servers need a different config (lower guild_buyer_multiplier, higher diamond floor). Archetype mix is a first-order concern.**
+
+**Production recommendation unchanged:** `2MM + 2GB @ 7% + 60% Diamond floor + counter-cyclical=true + tier3_ratio=30 + sell_pressure_multiplier=1.0`. Confirmed across: 14d, 30d, 5-seed statistical, stressed vs healthy, player exodus resilience, events stress test.
 
 ---
 

@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-04-15 — Web & Ecosystem
+
+### Added
+
+- **`/leaderboard` stats summary (web/)** — New 6-cell stat bar above the leaderboard table: Total Volume, Top Buyer, Top Seller, Transactions, Active Traders, #1 Trader. Shows period context and per-trader metrics. Skeleton loading state while data loads. Leaderboard grew from 2.54 kB → 3.6 kB.
+- **Live Activity Feed placeholder (`/servers`, web-optimizer)** — New section between stats and server cards: "Live Activity" with 5 sample entries (server joins, price milestones, market events) and a "Coming soon" badge. Explains the heartbeat-powered activity feed concept while API deploy is pending.
+- **Docs updated with 2026-04-15 simulation findings** — ECOSYSTEM_ANALYSIS.md header updated with latest findings; Newbie archetype added to SERVER_ADMIN_GUIDE.md archetype table; sell_pressure_multiplier: 0.75 → 1.0 correction in example YAML; AFKFarmers and IT+VT avoidance added to avoid list.
+
+### Simulation Lab (2026-04-15 afternoon)
+
+- **`--events-healthy-test`:** Events (DEMAND_SURGE+SUPPLY_GLUT+INFLATION_BOOST+GOLD_RUSH on days 3-12) HURT healthy 2MM+2GB+floor economy — GDP −2.0%, D/G +0.634x worse. Do NOT enable frequent events in production.
+- **`--counter-cyclical-cc-test`:** CC=true vs CC=false neutral — 0.0% GDP diff, TIER3=0 both arms. counter_cyclical=true confirmed as correct default.
+- **`--casual-heavy-healthy-test`:** 6Cas+1Far+1Tra CATASTROPHIC for 2MM+2GB+floor — GDP −39.0%, D/G +1.399x worse. Archetype mix is a first-order concern; casual-heavy servers need different config.
+
+---
+
 ## 2026-04-14 — Critical Parameter Correction
 
 ### Changed

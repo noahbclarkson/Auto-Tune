@@ -152,7 +152,7 @@ If your prices keep settling below base prices (natural seller-heavy economy):
 ```yaml
 economy:
   # Reduce downward pressure from sells:
-  sell-pressure-multiplier: 0.75   # was 1.0 (was pushing prices down harder)
+  sell-pressure-multiplier: 1.0    # symmetric; 0.80 sacrifices D/G stability (+40%) for +5% GDP — admin choice only
 
   # Also: raise base prices in shops.yml above what players should "fairly" pay.
   # The engine will settle toward base, so start higher than your ideal.
@@ -491,6 +491,7 @@ Auto-Tune's economy health depends heavily on your **player archetype mix** — 
 | **GuildBuyer** | Proactive buyer at dips | Buy pressure; counteracts farmer oversupply |
 | **MarketMaker** | Two-sided liquidity | Tightens spreads dramatically; stabilizes prices |
 | **InsiderTrader** | Mean-reversion | Healthy: +30.1% GDP, D/G +2.41x (watch D/G). Stressed: −12.2% GDP, D/G −1.32x (counter-cyclical benefit — only add to HEALTHY economies) |
+| **Newbie** | Net consumer, high buy rate | **Healthy: +41.5% GDP, D/G +34.7% (watch borrowing), volatility −68%. Stressed: +33.3% GDP, D/G −42.1%, volatility −35%. ALWAYS dramatically reduces volatility — best archetype for high-volatility servers. High D/G in healthy economies (they borrow to fund buying).** |
 | **VolumeTrader** | Spread compressor | Always harmful — −9% to −13% GDP; never recommended |
 
 ### Recommended Archetype Config (2MM + 2GB)
@@ -512,7 +513,7 @@ Simulation testing across 5 seeds confirms: **2 MarketMakers + 2 GuildBuyers @ 7
 - **Small server (5–10 players):** 1 MarketMaker + 1 GuildBuyer. More MMs than players causes over-trading.
 - **Medium server (10–20 players):** 2 MarketMaker + 2 GuildBuyer. This is the validated recommended config.
 - **Large server (20–50 players):** 2 MarketMaker + 2 GuildBuyer. Do NOT add VolumeTraders — they are always harmful in any economy condition (-9% to -13% GDP).
-- **Avoid:** InsiderTrader + VolumeTrader combination — catastrophic (-25.6% GDP, IT's gains are reversed and tripled by VT). GuildSellers (confirmed dead-end — sell-heavy bias with no demand benefit).
+- **Avoid:** InsiderTrader + VolumeTrader combination — catastrophic (-25.6% GDP, IT's gains reversed by VT). GuildSellers (confirmed dead-end). AFKFarmers (catastrophic: -49.5% GDP, +66% volatility).
 
 ### The Floor Percent
 

@@ -4,7 +4,7 @@ import { Footer } from '@/components/layout/footer';
 import { ServerCard } from '@/components/servers/server-card';
 import { RegisterServerModal } from '@/components/servers/register-server-modal';
 import { fetchServers } from '@/lib/api-client';
-import { Globe, Clock, TrendingUp, Shield, TrendingDown, CheckCircle, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Globe, Clock, TrendingUp, Shield, TrendingDown, CheckCircle, AlertTriangle, ExternalLink, Zap, Activity } from 'lucide-react';
 
 export const metadata = {
   title: 'Servers | Auto-Tune',
@@ -204,6 +204,38 @@ export default async function ServersPage() {
                 </p>
               </div>
             )}
+
+            {/* Activity Feed — placeholder for live network events */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Live Activity</p>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-medium">Coming soon</span>
+                </div>
+                <span className="text-xs text-gray-600">Network-wide events in real time</span>
+              </div>
+
+              {/* What the feed will show — sample entries */}
+              <div className="space-y-2">
+                {[
+                  { time: '2 min ago',  event: 'server',    text: 'Cobblestone SMP joined the network',         color: 'text-emerald-400', icon: Globe },
+                  { time: '8 min ago',  event: 'milestone', text: 'Diamond crossed $500 on HermitVault',           color: 'text-amber-400',   icon: TrendingUp },
+                  { time: '14 min ago', event: 'event',     text: 'GOLD_RUSH event triggered on EndWars PvP',     color: 'text-sky-400',    icon: Zap },
+                  { time: '22 min ago', event: 'milestone', text: 'EMERALD hit a new all-time low on Cobblestone', color: 'text-rose-400',   icon: TrendingDown },
+                  { time: '31 min ago', event: 'server',    text: 'EndWars PvP submitted latest price ratios',     color: 'text-gray-500',   icon: Activity },
+                ].map(({ time, event, text, color, icon: Icon }, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-gray-800/40 bg-gray-900/20 hover:border-gray-700/50 transition-colors">
+                    <Icon className={`w-3.5 h-3.5 ${color} shrink-0`} />
+                    <span className="text-xs text-gray-400 flex-1">{text}</span>
+                    <span className="text-[10px] text-gray-600 shrink-0">{time}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-xs text-gray-600 mt-3">
+                Activity feeds show server joins, price milestones, and market events across the Auto-Tune network. Powered by the API server heartbeat system.
+              </p>
+            </div>
 
             {/* Mock network showcase */}
             <div className="mb-8">

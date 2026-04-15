@@ -210,15 +210,17 @@ public record AutoTuneConfig(
             /// Counter-cyclical interest: interest rate is smoothly reduced as economy
             /// debt/GDP rises, making it easier for players to service debt before it
             /// becomes critical. Replaces the tiered circuit breaker with a continuous
-            /// linear taper: multiplier = max(0, 1 - debtGdpRatio / tier3Ratio).
-            /// At D/G=3 → 70% interest, D/G=5 → 50%, D/G=10 → 0%.
+            /// linear taper: multiplier = max(minInterestMultiplier, 1 - debtGdpRatio / tier3Ratio).
+            /// At tier3Ratio=30 (default): D/G=3 → 90%, D/G=10 → 67%, D/G=20 → 33%, D/G=30 → 0%.
+            /// TIER3 (D/G ≥ tier3Ratio) only fires in genuine catastrophe — set tier3Ratio high enough
+            /// that it never fires in normal operation. Recommended: 30.0 (3-4× headroom above D/G~7-10x).
             boolean counterCyclical
     ) {
         public static LoanConfig defaults() {
             return new LoanConfig(
                     true, 0.05, true, 2.0, 200,
                     7, 3, 30, 0.002, 24, 1, 24, 1.5, 0.5, 50,
-                    3.0, 5.0, 10.0, 0.5, 0.25,
+                    3.0, 5.0, 30.0, 0.5, 0.25,  // debt-gdp-tier1=3.0, tier2=5.0, tier3=30.0 (raised 2026-04-15)
                     168,    // postDefaultCooldownHours: 7 days
                     1.0,    // singleLoanGdpCap: single loan capped at 1× GDP
                     true    // counterCyclical: enabled by default

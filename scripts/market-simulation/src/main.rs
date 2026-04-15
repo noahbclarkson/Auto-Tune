@@ -542,7 +542,32 @@ impl Scenario {
     pub fn guild_stability_2mm_fixed_guild_plus_floor() -> Self {
         let mut scenario = Self::guild_stability_2mm_fixed_guild();
         scenario.name = "GuildStability+2MM+7%GB+Floor".to_string();
-        if let Some(diamond) = scenario.config.items.iter_mut().find(|ic| ic.name == "Diamond") {
+        if let Some(diamond) = scenario
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
+            diamond.price_floor_override = Some(diamond.base_price * 0.6); // $300
+        }
+        scenario
+    }
+
+    /// Production config: 2MM + 2GB + 2IT + 60% Diamond floor.
+    /// Based on guild_stability_2mm_fixed_guild plus 2 InsiderTraders and floor.
+    pub fn guild_stability_2mm_fixed_guild_plus_it_and_floor() -> Self {
+        let mut scenario = Self::guild_stability_2mm_fixed_guild();
+        scenario.name = "GuildStability+2MM+7%GB+IT+Floor".to_string();
+        scenario.players.push(ArchetypeConfig {
+            archetype: "InsiderTrader".into(),
+            count: 2,
+        });
+        if let Some(diamond) = scenario
+            .config
+            .items
+            .iter_mut()
+            .find(|ic| ic.name == "Diamond")
+        {
             diamond.price_floor_override = Some(diamond.base_price * 0.6); // $300
         }
         scenario
@@ -11179,6 +11204,8 @@ fn main() -> eframe::Result<()> {
             "  --circuit-breaker-hysteresis-test  TIER3 hysteresis: prevents D/G boundary cycling"
         );
         println!("  --healthy-tier3-sweep        2MM+2GB+floor: tier3_ratio × 5 seeds");
+        println!("  --sixty-day-test           2MM+2GB+floor: 60-day long-run stability");
+        println!("  --it-removal-test         2MM+2GB+floor: WITH vs WITHOUT InsiderTraders");
         println!("  --circuit-breaker-sensitivity-test  TIER3 thresholds × min interest sweep");
         println!(
             "  --admin-recovery-test    Economy freeze / recovery mode vs natural deleveraging"
@@ -11585,6 +11612,18 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--healthy-tier3-sweep" {
         run_healthy_tier3_sweep();
+        return Ok(());
+    }
+
+    // ─── 60-Day Production Stability Test ──────────────────────────────
+    if args.len() > 1 && args[1] == "--sixty-day-test" {
+        run_sixty_day_test();
+        return Ok(());
+    }
+
+    // ─── IT Removal Test ───────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--it-removal-test" {
+        run_it_removal_healthy_test();
         return Ok(());
     }
 
@@ -12590,7 +12629,7 @@ fn run_healthy_tier3_sweep() {
     let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
     let tier3_ratios: Vec<f64> = vec![8.0, 10.0, 12.0, 15.0];
 
-    println!("\n╔══════════════════════════════════════════════════════════════════╗");    
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
     println!("║    HEALTHY ECONOMY TIER3 SENSITIVITY                         ║");
     println!("║    2MM + 2GB + 60% Diamond floor — tier3_ratio sweep       ║");
     println!("╚══════════════════════════════════════════════════════════════════╝\n");
@@ -12687,14 +12726,24 @@ fn run_healthy_tier3_sweep() {
     println!("║              AGGREGATE RESULTS BY TIER3_RATIO                ║");
     println!("╚════════════════════════════════════════════════════════════════╝");
     println!();
-    println!("  {:^6} │ {:^10} {:^10} {:^8} {:^8} {:^8} │ {:^8} {:^8}",
-             "t3", "GDP mean", "D/G mean", "vol μ", "vol σ", "BPD μ", "T3_ev", "D/G rng");
-    println!("  {:─^6}─┼{:─^10} {:─^10} {:─^8} {:─^8} {:─^8}─┼{:─^8} {:─^8}", "", "", "", "", "", "", "", "");
+    println!(
+        "  {:^6} │ {:^10} {:^10} {:^8} {:^8} {:^8} │ {:^8} {:^8}",
+        "t3", "GDP mean", "D/G mean", "vol μ", "vol σ", "BPD μ", "T3_ev", "D/G rng"
+    );
+    println!(
+        "  {:─^6}─┼{:─^10} {:─^10} {:─^8} {:─^8} {:─^8}─┼{:─^8} {:─^8}",
+        "", "", "", "", "", "", "", ""
+    );
 
     for &tier3_ratio in &tier3_ratios {
-        let arm: Vec<_> = results.iter().filter(|r| r.tier3_ratio == tier3_ratio).collect();
+        let arm: Vec<_> = results
+            .iter()
+            .filter(|r| r.tier3_ratio == tier3_ratio)
+            .collect();
         let n = arm.len();
-        if n == 0 { continue; }
+        if n == 0 {
+            continue;
+        }
 
         let gdp_mean = arm.iter().map(|r| r.gdp).sum::<f64>() / n as f64;
         let dg_mean = arm.iter().map(|r| r.dg).sum::<f64>() / n as f64;
@@ -12704,7 +12753,9 @@ fn run_healthy_tier3_sweep() {
             let mean = vol_mean;
             let variance = vol_vals.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n as f64;
             variance.sqrt()
-        } else { 0.0 };
+        } else {
+            0.0
+        };
         let bpd_mean = arm.iter().map(|r| r.bpd).sum::<f64>() / n as f64;
         let t3_total: u32 = arm.iter().map(|r| r.tier3_events).sum();
         let dg_min = arm.iter().map(|r| r.dg).reduce(f64::min).unwrap_or(0.0);
@@ -12717,31 +12768,62 @@ fn run_healthy_tier3_sweep() {
         let bpd_mean_str = format!("{:.4}", bpd_mean);
         println!(
             "  {:^6} │ {:>10} {:>11} {:>11} {:>11} {:>11} │ {:>8} {}",
-            tier3_ratio as u64, gdp_mean as u64, dg_mean_str, vol_mean_str, vol_std_str, bpd_mean_str,
-            t3_total, dg_range
+            tier3_ratio as u64,
+            gdp_mean as u64,
+            dg_mean_str,
+            vol_mean_str,
+            vol_std_str,
+            bpd_mean_str,
+            t3_total,
+            dg_range
         );
     }
 
     // ─── TIER3 events detail ─────────────────────────────────────────────
     println!();
     println!("  TIER3 Events by seed and tier3_ratio:");
-    println!("  {:^6} │ {}", "t3", seeds.iter().map(|s| format!("s={}", s)).collect::<Vec<_>>().join(" │ "));
-    println!("  {:─^6}─┼{}", "", seeds.iter().map(|_| "─────").collect::<Vec<_>>().join("─┼─"));
+    println!(
+        "  {:^6} │ {}",
+        "t3",
+        seeds
+            .iter()
+            .map(|s| format!("s={}", s))
+            .collect::<Vec<_>>()
+            .join(" │ ")
+    );
+    println!(
+        "  {:─^6}─┼{}",
+        "",
+        seeds
+            .iter()
+            .map(|_| "─────")
+            .collect::<Vec<_>>()
+            .join("─┼─")
+    );
     for &tier3_ratio in &tier3_ratios {
-        let evs: Vec<String> = seeds.iter().map(|&s| {
-            results.iter()
-                .find(|r| r.tier3_ratio == tier3_ratio && r.seed == s)
-                .map(|r| format!("{}", r.tier3_events))
-                .unwrap_or_else(|| "?".to_string())
-        }).collect();
+        let evs: Vec<String> = seeds
+            .iter()
+            .map(|&s| {
+                results
+                    .iter()
+                    .find(|r| r.tier3_ratio == tier3_ratio && r.seed == s)
+                    .map(|r| format!("{}", r.tier3_events))
+                    .unwrap_or_else(|| "?".to_string())
+            })
+            .collect();
         println!("  {:^6.0} │ {}", tier3_ratio, evs.join(" │ "));
     }
 
     // ─── Key insight ──────────────────────────────────────────────────────
     println!();
-    let t3_by_ratio: Vec<(f64, u32)> = tier3_ratios.iter()
+    let t3_by_ratio: Vec<(f64, u32)> = tier3_ratios
+        .iter()
         .map(|&t3| {
-            let total: u32 = results.iter().filter(|r| r.tier3_ratio == t3).map(|r| r.tier3_events).sum();
+            let total: u32 = results
+                .iter()
+                .filter(|r| r.tier3_ratio == t3)
+                .map(|r| r.tier3_events)
+                .sum();
             (t3, total)
         })
         .collect();
@@ -12754,8 +12836,14 @@ fn run_healthy_tier3_sweep() {
         println!("     The 80-run stressed-economy finding (tier3=15 best) does NOT apply here.");
     } else {
         let best = t3_by_ratio.iter().min_by_key(|(_, e)| e).unwrap();
-        println!("  💡 FINDING: {} total TIER3 events across all runs.", total_events);
-        println!("     Fewest events: tier3={:.0} with {} events.", best.0, best.1);
+        println!(
+            "  💡 FINDING: {} total TIER3 events across all runs.",
+            total_events
+        );
+        println!(
+            "     Fewest events: tier3={:.0} with {} events.",
+            best.0, best.1
+        );
         if best.0 == 15.0 {
             println!("     tier3=15 remains best even in healthy economy.");
         }
@@ -12785,17 +12873,21 @@ fn get_diamond_prices(db_path: &std::path::Path) -> (f64, f64) {
         Err(_) => return (0.0, 0.0),
     };
     // Internal price = last tick's price from market_data
-    let internal = conn.query_row(
-        "SELECT price FROM market_data WHERE item_name='Diamond' ORDER BY tick DESC LIMIT 1",
-        [],
-        |row| row.get::<_, f64>(0),
-    ).unwrap_or(0.0);
+    let internal = conn
+        .query_row(
+            "SELECT price FROM market_data WHERE item_name='Diamond' ORDER BY tick DESC LIMIT 1",
+            [],
+            |row| row.get::<_, f64>(0),
+        )
+        .unwrap_or(0.0);
     // Displayed price = floored internal (if floor binds)
-    let displayed = conn.query_row(
-        "SELECT sell_price FROM latest_prices WHERE item_name='Diamond' LIMIT 1",
-        [],
-        |row| row.get::<_, f64>(0),
-    ).unwrap_or(internal);
+    let displayed = conn
+        .query_row(
+            "SELECT sell_price FROM latest_prices WHERE item_name='Diamond' LIMIT 1",
+            [],
+            |row| row.get::<_, f64>(0),
+        )
+        .unwrap_or(internal);
     (internal, displayed)
 }
 
@@ -14845,4 +14937,409 @@ fn run_tuned_2mm_test() {
             println!("  ℹ️  Neutral result — both configs similar in healthy economy");
         }
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════
+// SESSION: 2026-04-15 — 60-day production stability test
+// ═══════════════════════════════════════════════════════════════════
+
+fn run_sixty_day_test() {
+    use crate::analyzer::{load_all_prices, load_summary};
+
+    let seed = 42u64;
+
+    println!(
+        "
+╔════════════════════════════════════════════════════════════════╗"
+    );
+    println!("║       60-DAY PRODUCTION STABILITY TEST                      ║");
+    println!("║  2MM + 2GB + 60% Diamond floor — extends 14d & 30d findings ║");
+    println!(
+        "╚════════════════════════════════════════════════════════════════╝
+"
+    );
+    println!("  Seed: {}", seed);
+    println!(
+        "  Config: 2MM + 2GB @ 7% + 3Cas + 3Far + 2Tra + 60% Diamond floor
+"
+    );
+
+    let mut sim = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+    sim.name = "LongRun_60day".to_string();
+    sim.duration_ticks = 288 * 60; // 60 days
+
+    let out_dir = "/tmp/autotune-sim/longrun-60d";
+    let out_path = std::path::PathBuf::from(out_dir);
+    std::fs::create_dir_all(&out_path).ok();
+    run_seeded_headless(&sim, seed, &out_path).ok();
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct Result {
+        days: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        spd: f64,
+        vol: f64,
+        buy_ratio: f64,
+        diamond_internal: f64,
+        diamond_displayed: f64,
+    }
+
+    impl Result {
+        fn from_db(db_path: &std::path::Path, days: u64) -> Option<Self> {
+            let s = load_summary(db_path).ok()?;
+            let prices = load_all_prices(db_path).unwrap_or_default();
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            Some(Self {
+                days,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+                diamond_internal: di,
+                diamond_displayed: dd,
+            })
+        }
+    }
+
+    let r = Result::from_db(&out_path.join("simulation.db"), 60);
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>8}",
+        "Days", "GDP", "D/G", "BPD%", "SPD%", "Vol(CV)", "Buy%"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>8}",
+        "─".repeat(6),
+        "─".repeat(12),
+        "─".repeat(10),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(8),
+        "─".repeat(8)
+    );
+
+    if let Some(r) = &r {
+        println!(
+            "  {:>6} {:>12.0} {:>10.3}x {:>7.3}% {:>7.3}% {:>8.4} {:>7.1}%",
+            "60d",
+            r.gdp as i64,
+            r.dg,
+            r.bpd * 100.0,
+            r.spd * 100.0,
+            r.vol,
+            r.buy_ratio * 100.0
+        );
+        println!(
+            "
+  Diamond internal: {:.2}",
+            r.diamond_internal
+        );
+        println!("  Diamond displayed: {:.2}", r.diamond_displayed);
+        if r.diamond_displayed > 0.0 {
+            let floor_binds = r.diamond_internal < r.diamond_displayed * 0.99;
+            println!(
+                "  Floor binding: {}",
+                if floor_binds { "YES" } else { "NO" }
+            );
+        }
+
+        println!(
+            "
+  ╔═══════════════════════════════════════════════════════════════╗"
+        );
+        println!("║  LONG-RUN COMPARISON: 14d → 30d → 60d                      ║");
+        println!("╠═══════════════════════════════════════════════════════════════╣");
+        println!(
+            "║  {:>5}  {:>12}  {:>10}  {:>8}  {:>10}  {:>7}  ║",
+            "Days", "GDP", "D/G", "BPD%", "Vol(CV)", "Buy%"
+        );
+        println!("╠═══════════════════════════════════════════════════════════════╣");
+        println!(
+            "║  {:>5}  {:>12}  {:>10}  {:>8}  {:>10}  {:>7}  ║",
+            "14d", "1,616,248", "8.310x", "0.527%", "0.0610", "70.9%"
+        );
+        println!(
+            "║  {:>5}  {:>12}  {:>10}  {:>8}  {:>10}  {:>7}  ║",
+            "30d", "2,333,082", "7.500x", "0.467%", "0.0436", "73.4%"
+        );
+        println!(
+            "║  {:>5}  {:>12.0}  {:>10.3}x  {:>7.3}%  {:>10.4}  {:>7.1}%  ║",
+            "60d",
+            r.gdp as i64,
+            r.dg,
+            r.bpd * 100.0,
+            r.vol,
+            r.buy_ratio * 100.0
+        );
+        println!("╚═══════════════════════════════════════════════════════════════╝");
+
+        let gdp_growth_30to60 = (r.gdp / 2_333_082.0 - 1.0) * 100.0;
+
+        println!(
+            "
+  TREND ANALYSIS:"
+        );
+        println!(
+            "    GDP growth: 14→30d = +44.4% | 30→60d = {:+.1}% {}",
+            gdp_growth_30to60,
+            if gdp_growth_30to60 > 0.0 {
+                "Continuing to grow"
+            } else {
+                "Stalled or contracting"
+            }
+        );
+        println!(
+            "    D/G trend:  8.310x → 7.500x → {:.3}x {}",
+            r.dg,
+            if r.dg < 7.500 {
+                "DELEVERAGING continuing"
+            } else if r.dg < 8.310 {
+                "D/G plateaued"
+            } else {
+                "D/G worsening"
+            }
+        );
+        println!(
+            "    Vol trend:  0.0610 → 0.0436 → {:.4} {}",
+            r.vol,
+            if r.vol < 0.0436 {
+                "VOLATILITY DECREASING"
+            } else if r.vol < 0.05 {
+                "Vol plateaued but acceptable"
+            } else {
+                "Vol increasing — monitor"
+            }
+        );
+
+        let stable_60d = r.vol < 0.05 && r.dg < 10.0 && r.gdp > 2_333_082.0;
+        println!(
+            "
+  VERDICT: Economy at 60d is {}",
+            if stable_60d {
+                "STABLE — production config validated long-term"
+            } else if r.vol >= 0.05 {
+                "UNSTABLE — volatility above threshold"
+            } else if r.dg >= 10.0 {
+                "HIGH RISK — D/G above circuit breaker"
+            } else {
+                "CHECK — review individual metrics above"
+            }
+        );
+    } else {
+        println!(
+            "  {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>8}",
+            "60d", "FAILED", "—", "—", "—", "—", "—"
+        );
+    }
+}
+
+fn run_it_removal_healthy_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds = [42u64, 12345u64, 98765u64, 77777u64, 11111u64];
+
+    println!(
+        "
+╔════════════════════════════════════════════════════════════════╗"
+    );
+    println!("║       IT REMOVAL TEST — Healthy Economy + Floor (5 seeds)   ║");
+    println!("║  2MM+2GB+floor: WITH ITs vs WITHOUT ITs                    ║");
+    println!(
+        "╚════════════════════════════════════════════════════════════════╝
+"
+    );
+
+    let mut controls = Vec::new(); // WITH ITs
+    let mut treatments = Vec::new(); // WITHOUT ITs
+
+    for &seed in &seeds {
+        let mut ctrl = Scenario::guild_stability_2mm_fixed_guild_plus_it_and_floor();
+        ctrl.name = format!("IT_ctrl_{}", seed);
+        ctrl.duration_ticks = 288 * 14;
+        let dir = format!("/tmp/autotune-sim/it-ctrl-{}", seed);
+        let path = std::path::PathBuf::from(&dir);
+        std::fs::create_dir_all(&path).ok();
+        run_seeded_headless(&ctrl, seed, &path).ok();
+        let s = load_summary(&path.join("simulation.db")).ok();
+        controls.push(s);
+
+        let mut treat = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        treat.name = format!("IT_treat_{}", seed);
+        treat.duration_ticks = 288 * 14;
+        let dir2 = format!("/tmp/autotune-sim/it-treat-{}", seed);
+        let path2 = std::path::PathBuf::from(&dir2);
+        std::fs::create_dir_all(&path2).ok();
+        run_seeded_headless(&treat, seed, &path2).ok();
+        let s2 = load_summary(&path2.join("simulation.db")).ok();
+        treatments.push(s2);
+    }
+
+    fn avg(values: &[Option<crate::analyzer::SimSummary>], field: &str) -> f64 {
+        let mut sum = 0.0;
+        let mut cnt = 0.0;
+        for s in values.iter().flatten() {
+            match field {
+                "gdp" => {
+                    sum += s.gdp;
+                    cnt += 1.0;
+                }
+                "dg" => {
+                    sum += s.debt / s.gdp.max(1.0);
+                    cnt += 1.0;
+                }
+                "vol" => {
+                    sum += s.avg_volatility;
+                    cnt += 1.0;
+                }
+                "bpd" => {
+                    sum += s.avg_bpd;
+                    cnt += 1.0;
+                }
+                "buy" => {
+                    sum += s.buy_ratio;
+                    cnt += 1.0;
+                }
+                _ => {}
+            }
+        }
+        if cnt > 0.0 { sum / cnt } else { 0.0 }
+    }
+
+    println!(
+        "  {:>12} {:>14} {:>14} {:>10} {:>8}",
+        "Metric", "WITH ITs", "WITHOUT ITs", "Change", "Direction"
+    );
+    println!(
+        "  {:>12} {:>14} {:>14} {:>10} {:>8}",
+        "─".repeat(12),
+        "─".repeat(14),
+        "─".repeat(14),
+        "─".repeat(10),
+        "─".repeat(8)
+    );
+
+    let ctrl_gdp = avg(&controls, "gdp");
+    let treat_gdp = avg(&treatments, "gdp");
+    let gdp_chg = (treat_gdp / ctrl_gdp - 1.0) * 100.0;
+    println!(
+        "  {:>12} {:>14.0} {:>14.0} {:>+9.1}%  {}",
+        "GDP",
+        ctrl_gdp,
+        treat_gdp,
+        gdp_chg,
+        if gdp_chg > 5.0 {
+            "ITs boost GDP"
+        } else if gdp_chg < -5.0 {
+            "ITs hurt GDP"
+        } else {
+            "~Neutral"
+        }
+    );
+
+    let ctrl_dg = avg(&controls, "dg");
+    let treat_dg = avg(&treatments, "dg");
+    let dg_chg = (treat_dg / ctrl_dg - 1.0) * 100.0;
+    println!(
+        "  {:>12} {:>14.3}x {:>14.3}x {:>+9.1}%  {}",
+        "D/G",
+        ctrl_dg,
+        treat_dg,
+        dg_chg,
+        if dg_chg > 30.0 {
+            "ITs worsen D/G significantly"
+        } else if dg_chg > 10.0 {
+            "ITs worsen D/G moderately"
+        } else if dg_chg < -10.0 {
+            "ITs improve D/G"
+        } else {
+            "~Neutral"
+        }
+    );
+
+    let ctrl_vol = avg(&controls, "vol");
+    let treat_vol = avg(&treatments, "vol");
+    let vol_chg = (treat_vol / ctrl_vol - 1.0) * 100.0;
+    println!(
+        "  {:>12} {:>14.4} {:>14.4} {:>+9.1}%  {}",
+        "Vol(CV)",
+        ctrl_vol,
+        treat_vol,
+        vol_chg,
+        if vol_chg < -20.0 {
+            "ITs reduce volatility"
+        } else if vol_chg > 20.0 {
+            "ITs increase volatility"
+        } else {
+            "~Neutral"
+        }
+    );
+
+    let ctrl_bpd = avg(&controls, "bpd");
+    let treat_bpd = avg(&treatments, "bpd");
+    let bpd_chg = (treat_bpd / ctrl_bpd - 1.0) * 100.0;
+    println!(
+        "  {:>12} {:>13.3}% {:>13.3}% {:>+9.1}%  {}",
+        "BPD%",
+        ctrl_bpd * 100.0,
+        treat_bpd * 100.0,
+        bpd_chg,
+        if bpd_chg < -5.0 {
+            "ITs tighten spreads"
+        } else if bpd_chg > 5.0 {
+            "ITs widen spreads"
+        } else {
+            "~Neutral"
+        }
+    );
+
+    let ctrl_buy = avg(&controls, "buy");
+    let treat_buy = avg(&treatments, "buy");
+    let buy_chg = (treat_buy / ctrl_buy - 1.0) * 100.0;
+    println!(
+        "  {:>12} {:>13.1}% {:>13.1}% {:>+9.1}%  {}",
+        "Buy%",
+        ctrl_buy * 100.0,
+        treat_buy * 100.0,
+        buy_chg,
+        if buy_chg > 5.0 {
+            "ITs create buy pressure"
+        } else if buy_chg < -5.0 {
+            "ITs create sell pressure"
+        } else {
+            "~Neutral"
+        }
+    );
+
+    println!(
+        "
+  RECOMMENDATION:"
+    );
+    if gdp_chg > 5.0 && dg_chg > 50.0 {
+        println!("    REMOVE ITs from 2MM+2GB+floor — GDP gain does NOT justify D/G cost");
+    } else if gdp_chg > 5.0 && dg_chg < 30.0 {
+        println!("    KEEP ITs in 2MM+2GB+floor — GDP benefit with acceptable D/G tradeoff");
+    } else if gdp_chg > 5.0 {
+        println!("    KEEP ITs — GDP benefit real, D/G cost is manageable");
+    } else if gdp_chg < -5.0 {
+        println!("    REMOVE ITs — ITs hurt GDP in this config");
+    } else {
+        println!("    ITs are essentially neutral — no strong reason to add or remove");
+    }
+    println!(
+        "
+  NOTE: Prior single-seed test (seed=42, no floor) showed +30.1% GDP, D/G +2.41x."
+    );
+    println!("  This 5-seed test includes floor — floor may dampen IT price effects.");
 }

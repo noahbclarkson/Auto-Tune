@@ -235,7 +235,7 @@ public class ConfigManager {
                 section.getInt("default-penalty", 50),
                 section.getDouble("debt-gdp-tier1-ratio", 3.0),
                 section.getDouble("debt-gdp-tier2-ratio", 5.0),
-                section.getDouble("debt-gdp-tier3-ratio", 15.0),
+                section.getDouble("debt-gdp-tier3-ratio", 30.0), // RAISED from 15.0 (2026-04-15): TIER3 lock with counter-cyclical=true causes D/G doom loop at 60d. tier3=30 gives 3-4× headroom above normal D/G~7-10x.
                 section.getDouble("tier1-interest-cap", 0.5),
                 section.getDouble("tier2-interest-cap", 0.25),
                 section.getInt("post-default-cooldown-hours", 168),

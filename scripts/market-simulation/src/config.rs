@@ -225,14 +225,14 @@ impl Default for LoanConfig {
             default_penalty: 50,
             debt_gdp_tier1_ratio: 3.0,
             debt_gdp_tier2_ratio: 5.0,
-            debt_gdp_tier3_ratio: 15.0,
+            debt_gdp_tier3_ratio: 30.0, // RAISED from 15.0 (2026-04-15): counter-cyclical TIER3 lock causes D/G doom loop at 60d. tier3=30 gives 3-4× headroom above normal D/G~7-10x. TIER3 only fires in genuine catastrophe.
             tier1_interest_cap: 0.5,
             tier2_interest_cap: 0.25,
             single_loan_gdp_cap: 1.0,
             post_default_cooldown_hours: 168, // 7 days, matches Java LoanManager
             mm_opening_loan_allowed: true,    // MM can take opening loans by default
             counter_cyclical: true, // continuous taper, matches Java LoanManager (default: true)
-            min_interest_multiplier: 0.0, // pure counter-cyclical: 0% at D/G=tier3Ratio
+            min_interest_multiplier: 0.0, // pure counter-cyclical: 0% at D/G=tier3Ratio (30.0 by default)
         }
     }
 }

@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Star } from 'lucide-react';
-import { api } from '@/lib/api';
 
 const FAVORITES_STORAGE_KEY = 'autotune-web-favorites';
 

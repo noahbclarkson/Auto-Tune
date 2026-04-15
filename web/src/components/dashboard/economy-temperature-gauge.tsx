@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { Thermometer, TrendingUp, TrendingDown, Minus, BarChart2 } from 'lucide-react';
+import { Thermometer, BarChart2 } from 'lucide-react';
 
 interface EconomyTemperatureGaugeProps {
   /** 0–100 composite score */
@@ -43,13 +43,8 @@ function scoreToTemp(score: number): { label: string; color: string; bg: string;
   };
 }
 
-export function EconomyTemperatureGauge({
-  score,
-  label,
-  debtGdpRatio,
-  avgVolatility,
-  buyPct,
-}: EconomyTemperatureGaugeProps) {
+export function EconomyTemperatureGauge(props: EconomyTemperatureGaugeProps) {
+  const { score, debtGdpRatio, avgVolatility, buyPct } = props;
   const temp = scoreToTemp(score);
 
   const gaugeWidth = 100;

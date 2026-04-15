@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { api, type PlayerMarketImpactDto, type MarketImpactItemDto } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatPercent } from '@/lib/format';
-import { TrendingUp, TrendingDown, Minus, BarChart2, Loader2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, BarChart2 } from 'lucide-react';
 
 interface MarketImpactTabProps {
   playerName: string;

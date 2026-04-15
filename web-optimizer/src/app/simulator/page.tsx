@@ -6,6 +6,7 @@ import { ParameterPanel } from '@/components/simulator/parameter-panel';
 import { PricePreview } from '@/components/simulator/price-preview';
 import { SpreadChart } from '@/components/simulator/spread-chart';
 import { StabilityForecast } from '@/components/simulator/stability-forecast';
+import { ConfigImpactPreview } from '@/components/simulator/config-impact-preview';
 import { MarketEventsPanel } from '@/components/simulator/market-events-panel';
 import { ProjectionChart } from '@/components/simulator/projection-chart';
 
@@ -60,6 +61,8 @@ export default function SimulatorPage() {
 
         {/* Right column */}
         <div className="lg:col-span-2 space-y-4">
+          <ConfigImpactPreview />
+
           <StabilityForecast
             buyRatio={buyRatio}
             onlinePlayers={onlinePlayers}

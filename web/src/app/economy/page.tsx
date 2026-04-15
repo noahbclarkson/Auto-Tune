@@ -60,12 +60,6 @@ function computeHealthScore(h: AdminHealthDto): number {
   return Math.round(volScore * 0.4 + d2gScore * 0.3 + balScore * 0.3);
 }
 
-function healthColor(score: number): string {
-  if (score >= 75) return 'text-emerald-500';
-  if (score >= 45) return 'text-amber-500';
-  return 'text-red-500';
-}
-
 export default function EconomyPage() {
   const { apiBase } = useAppContext();
   const [stats, setStats] = useState<Stats | null>(null);

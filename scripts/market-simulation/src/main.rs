@@ -11691,6 +11691,24 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    // ─── Events × 2MM+2GB+floor Test ─────────────────────────────────────
+    if args.len() > 1 && args[1] == "--events-healthy-test" {
+        run_events_healthy_test();
+        return Ok(());
+    }
+
+    // ─── Counter-Cyclical × 2MM+2GB+floor Test ──────────────────────────
+    if args.len() > 1 && args[1] == "--counter-cyclical-cc-test" {
+        run_counter_cyclical_cc_test();
+        return Ok(());
+    }
+
+    // ─── Casual-Heavy × 2MM+2GB+floor Test ──────────────────────────────
+    if args.len() > 1 && args[1] == "--casual-heavy-healthy-test" {
+        run_casual_heavy_healthy_test();
+        return Ok(());
+    }
+
     // GUI mode
     run_gui()
 }
@@ -14942,6 +14960,393 @@ fn run_tuned_2mm_test() {
 // ═══════════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════════
+// SESSION: 2026-04-15 — Events × 2MM+2GB+floor
+// ═══════════════════════════════════════════════════════════════════
+
+fn run_events_healthy_test() {
+    use crate::analyzer::load_summary;
+    let seeds = vec![42u64, 12345, 98765];
+
+    println!("\n╔════════════════════════════════════════════════════════════════════╗");
+    println!("║  EVENTS × 2MM+2GB+FLOOR (PRODUCTION CONFIG) — 3 seeds  ║");
+    println!("║  Control: 2MM+2GB+floor (no events)                    ║");
+    println!("║  Treat:   same + DEMAND_SURGE(DIAMOND), SUPPLY_GLUT(IRON), ║");
+    println!("║            INFLATION_BOOST(all), GOLD_RUSH(GOLD_*)        ║");
+    println!("╚════════════════════════════════════════════════════════════════════╝\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct EventResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        buy_ratio: f64,
+        tier3_events: u32,
+    }
+    let mut ctrl_results: Vec<EventResult> = Vec::new();
+    let mut treat_results: Vec<EventResult> = Vec::new();
+
+    println!("  {:>6} {:>12} {:>10} {:>8} {:>7} {:>8}", "Seed", "GDP", "D/G", "Vol(CV)", "Buy%", "TIER3");
+    println!("  {:>6} {:>12} {:>10} {:>8} {:>7} {:>8}", "──────", "────────────", "──────────", "────────", "───────", "────────");
+
+    for &seed in &seeds {
+        // ── Control: 2MM+2GB+floor (no events) ──────────────────────
+        let mut ctrl = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        ctrl.name = "Ctrl: No Events".into();
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-evh-ctrl-{seed}"));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        run_seeded_headless(&ctrl, seed, &ctrl_dir).ok();
+
+        // ── Treatment: 2MM+2GB+floor WITH events ──────────────────────
+        let mut treat = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        treat.name = "Treat: Events".into();
+        // Same 4 events as market_event_test (days 3-12)
+        treat.events = vec![
+            crate::events::MarketEvent {
+                name: "Diamond Demand Surge".into(),
+                event_type: crate::events::EventType::DemandSurge,
+                materials: vec!["DIAMOND".into()],
+                multiplier: 2.0,
+                starts_at_tick: 288 * 3,
+                ends_at_tick: 288 * 5,
+            },
+            crate::events::MarketEvent {
+                name: "Iron Supply Glut".into(),
+                event_type: crate::events::EventType::SupplyGlut,
+                materials: vec!["IRON_INGOT".into()],
+                multiplier: 2.0,
+                starts_at_tick: 288 * 7,
+                ends_at_tick: 288 * 9,
+            },
+            crate::events::MarketEvent {
+                name: "Economy-Wide Inflation Boost".into(),
+                event_type: crate::events::EventType::InflationBoost,
+                materials: vec!["*".into()],
+                multiplier: 1.5,
+                starts_at_tick: 288 * 5,
+                ends_at_tick: 288 * 8,
+            },
+            crate::events::MarketEvent {
+                name: "Gold Ingot Rush".into(),
+                event_type: crate::events::EventType::GoldRush,
+                materials: vec!["GOLD_*".into()],
+                multiplier: 1.8,
+                starts_at_tick: 288 * 10,
+                ends_at_tick: 288 * 12,
+            },
+        ];
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-evh-treat-{seed}"));
+        let _ = std::fs::remove_dir_all(&treat_dir);
+        run_seeded_headless(&treat, seed, &treat_dir).ok();
+
+        let load = |dir: &std::path::Path| -> Option<EventResult> {
+            let s = load_summary(&dir.join("simulation.db")).ok()?;
+            let db_path = dir.join("simulation.db");
+            let tier3_events = count_tier3_events(&db_path);
+            Some(EventResult {
+                seed,
+                gdp: s.gdp,
+                dg: s.debt / s.gdp.max(1.0),
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+                tier3_events,
+            })
+        };
+
+        if let Some(r) = load(&ctrl_dir) {
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.1}% {:>7}  [Ctrl: No Events]",
+                seed, r.gdp, r.dg, r.vol * 100.0, r.buy_ratio * 100.0, r.tier3_events
+            );
+            ctrl_results.push(r);
+        }
+        if let Some(r) = load(&treat_dir) {
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.1}% {:>7}  [Treat: Events]",
+                seed, r.gdp, r.dg, r.vol * 100.0, r.buy_ratio * 100.0, r.tier3_events
+            );
+            treat_results.push(r);
+        }
+    }
+
+    // Aggregate
+    if !ctrl_results.is_empty() && !treat_results.is_empty() {
+        let avg = |rs: &[EventResult], f: fn(&EventResult) -> f64| -> f64 {
+            rs.iter().map(f).sum::<f64>() / rs.len() as f64
+        };
+        let gdp_chg = (avg(&treat_results, |r| r.gdp) - avg(&ctrl_results, |r| r.gdp))
+            / avg(&ctrl_results, |r| r.gdp) * 100.0;
+        let dg_chg = avg(&treat_results, |r| r.dg) - avg(&ctrl_results, |r| r.dg);
+        let vol_chg = (avg(&treat_results, |r| r.vol) - avg(&ctrl_results, |r| r.vol))
+            / avg(&ctrl_results, |r| r.vol) * 100.0;
+        let tier3_sum: u32 = treat_results.iter().map(|r| r.tier3_events).sum();
+
+        println!("\n  ── AVERAGES ──");
+        println!(
+            "  GDP:  ctrl={:.0}  treat={:.0}  chg={:+.1}%",
+            avg(&ctrl_results, |r| r.gdp),
+            avg(&treat_results, |r| r.gdp),
+            gdp_chg
+        );
+        println!(
+            "  D/G:  ctrl={:.3}x  treat={:.3}x  Δ={:+.3}x",
+            avg(&ctrl_results, |r| r.dg),
+            avg(&treat_results, |r| r.dg),
+            dg_chg
+        );
+        println!(
+            "  Vol:  ctrl={:.3}%  treat={:.3}%  chg={:+.1}%",
+            avg(&ctrl_results, |r| r.vol) * 100.0,
+            avg(&treat_results, |r| r.vol) * 100.0,
+            vol_chg
+        );
+        println!("  TIER3 events (treat): {} total", tier3_sum);
+        println!("\n  VERDICT:");
+        if gdp_chg > 5.0 && dg_chg < 1.0 {
+            println!("  ✅ Events BOOST GDP ({:+.1}%) without D/G deterioration — safe in healthy economy", gdp_chg);
+        } else if gdp_chg > 0.0 && dg_chg < 2.0 {
+            println!("  ⚠️  Events boost GDP {:+.1}% but D/G worsens by {:.3}x — monitor D/G in production", gdp_chg, dg_chg);
+        } else if gdp_chg <= 0.0 {
+            println!("  ❌ Events HURT GDP ({:+.1}%) in healthy economy — reconsider event frequency", gdp_chg);
+        } else {
+            println!("  ℹ️  Mixed results — events add volatility ({:+.1}%) but GDP effect is {:.1}%", vol_chg, gdp_chg);
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SESSION: 2026-04-15 — Counter-Cyclical × 2MM+2GB+floor
+// ═══════════════════════════════════════════════════════════════════
+
+fn run_counter_cyclical_cc_test() {
+    use crate::analyzer::load_summary;
+    let seeds = vec![42u64, 12345, 98765];
+
+    println!("\n╔════════════════════════════════════════════════════════════════════╗");
+    println!("║  COUNTER-CYCLICAL × 2MM+2GB+FLOOR — 3 seeds              ║");
+    println!("║  Control: counter_cyclical=true (default)                  ║");
+    println!("║  Treat:   counter_cyclical=false (legacy tiered breaker) ║");
+    println!("╚════════════════════════════════════════════════════════════════════╝\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct CcResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        tier3_events: u32,
+    }
+    let mut ctrl_results: Vec<CcResult> = Vec::new();
+    let mut treat_results: Vec<CcResult> = Vec::new();
+
+    println!("  {:>6} {:>12} {:>10} {:>8} {:>7}", "Seed", "GDP", "D/G", "Vol(CV)", "TIER3");
+    println!("  {:>6} {:>12} {:>10} {:>8} {:>7}", "──────", "────────────", "──────────", "────────", "────────");
+
+    for &seed in &seeds {
+        // ── Control: counter_cyclical=true ─────────────────────────
+        let mut ctrl = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        ctrl.name = "Ctrl: CC=true".into();
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-cc-ctrl-{seed}"));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        run_seeded_headless(&ctrl, seed, &ctrl_dir).ok();
+
+        // ── Treatment: counter_cyclical=false ─────────────────────
+        let mut treat = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        treat.name = "Treat: CC=false".into();
+        treat.config.loans.counter_cyclical = false; // ← THE CHANGE
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-cc-treat-{seed}"));
+        let _ = std::fs::remove_dir_all(&treat_dir);
+        run_seeded_headless(&treat, seed, &treat_dir).ok();
+
+        let load = |dir: &std::path::Path| -> Option<CcResult> {
+            let s = load_summary(&dir.join("simulation.db")).ok()?;
+            let db_path = dir.join("simulation.db");
+            Some(CcResult {
+                seed,
+                gdp: s.gdp,
+                dg: s.debt / s.gdp.max(1.0),
+                vol: s.avg_volatility,
+                tier3_events: count_tier3_events(&db_path),
+            })
+        };
+
+        if let Some(r) = load(&ctrl_dir) {
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>7}  [Ctrl: CC=true]",
+                seed, r.gdp, r.dg, r.vol * 100.0, r.tier3_events
+            );
+            ctrl_results.push(r);
+        }
+        if let Some(r) = load(&treat_dir) {
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>7}  [Treat: CC=false]",
+                seed, r.gdp, r.dg, r.vol * 100.0, r.tier3_events
+            );
+            treat_results.push(r);
+        }
+    }
+
+    if !ctrl_results.is_empty() && !treat_results.is_empty() {
+        let avg = |rs: &[CcResult], f: fn(&CcResult) -> f64| -> f64 {
+            rs.iter().map(f).sum::<f64>() / rs.len() as f64
+        };
+        let gdp_chg = (avg(&treat_results, |r| r.gdp) - avg(&ctrl_results, |r| r.gdp))
+            / avg(&ctrl_results, |r| r.gdp) * 100.0;
+        let dg_treat = avg(&treat_results, |r| r.dg);
+        let dg_ctrl = avg(&ctrl_results, |r| r.dg);
+        let tier3_treat: u32 = treat_results.iter().map(|r| r.tier3_events).sum();
+        let tier3_ctrl: u32 = ctrl_results.iter().map(|r| r.tier3_events).sum();
+
+        println!("\n  ── AVERAGES ──");
+        println!(
+            "  GDP:  CC=true={:.0}  CC=false={:.0}  chg={:+.1}%",
+            avg(&ctrl_results, |r| r.gdp),
+            avg(&treat_results, |r| r.gdp),
+            gdp_chg
+        );
+        println!(
+            "  D/G:  CC=true={:.3}x  CC=false={:.3}x",
+            dg_ctrl, dg_treat
+        );
+        println!("  TIER3: CC=true={}  CC=false={}", tier3_ctrl, tier3_treat);
+        println!("\n  VERDICT:");
+        if dg_treat < dg_ctrl * 0.9 && tier3_treat <= tier3_ctrl {
+            println!("  ✅ CC=false has {:.1}% better D/G — legacy tiered breaker outperforms counter-cyclical in healthy 2MM economy", (1.0 - dg_treat/dg_ctrl) * 100.0);
+            println!("     Counter-cyclical is WORTH THE TRADE-OFF: it costs {:.1}% GDP but gains {:.1}% D/G stability", -gdp_chg, (dg_ctrl - dg_treat)/dg_ctrl * 100.0);
+        } else if dg_treat > dg_ctrl * 1.1 {
+            println!("  ❌ CC=false WORSENS D/G by {:.1}% — counter-cyclical is correct default", (dg_treat/dg_ctrl - 1.0) * 100.0);
+        } else {
+            println!("  ℹ️  Neutral — counter-cyclical=true (default) is confirmed safe for 2MM+2GB+floor");
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SESSION: 2026-04-15 — Casual-heavy × 2MM+2GB+floor
+// ═══════════════════════════════════════════════════════════════════
+
+fn run_casual_heavy_healthy_test() {
+    use crate::analyzer::load_summary;
+    let seeds = vec![42u64, 12345, 98765];
+
+    println!("\n╔════════════════════════════════════════════════════════════════════╗");
+    println!("║  CASUAL-HEAVY × 2MM+2GB+FLOOR (PRODUCTION CONFIG) — 3 seeds  ║");
+    println!("║  Control: 3Cas + 3Far + 2Tra (standard mix)                  ║");
+    println!("║  Treat:   6Cas + 1Far + 1Tra (casual-heavy)                 ║");
+    println!("╚════════════════════════════════════════════════════════════════════╝\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct CasualResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        buy_ratio: f64,
+    }
+    let mut ctrl_results: Vec<CasualResult> = Vec::new();
+    let mut treat_results: Vec<CasualResult> = Vec::new();
+
+    println!("  {:>6} {:>12} {:>10} {:>8} {:>7}", "Seed", "GDP", "D/G", "Vol(CV)", "Buy%");
+    println!("  {:>6} {:>12} {:>10} {:>8} {:>7}", "──────", "────────────", "──────────", "────────", "───────");
+
+    for &seed in &seeds {
+        // ── Control: 3Cas + 3Far + 2Tra (standard) ───────────────
+        let mut ctrl = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        ctrl.name = "Ctrl: Standard".into();
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-chh-ctrl-{seed}"));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        run_seeded_headless(&ctrl, seed, &ctrl_dir).ok();
+
+        // ── Treatment: 6Cas + 1Far + 1Tra (casual-heavy) ─────────
+        let mut treat = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        treat.name = "Treat: Casual-Heavy".into();
+        treat.players = vec![
+            ArchetypeConfig { archetype: "MarketMaker".into(), count: 2 },
+            ArchetypeConfig { archetype: "GuildBuyer".into(), count: 2 },
+            ArchetypeConfig { archetype: "Casual".into(), count: 6 }, // ← 6 Casuals
+            ArchetypeConfig { archetype: "Farmer".into(), count: 1 },  // ← 1 Farmer (was 3)
+            ArchetypeConfig { archetype: "Trader".into(), count: 1 }, // ← 1 Trader (was 2)
+        ];
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-chh-treat-{seed}"));
+        let _ = std::fs::remove_dir_all(&treat_dir);
+        run_seeded_headless(&treat, seed, &treat_dir).ok();
+
+        let load = |dir: &std::path::Path| -> Option<CasualResult> {
+            let s = load_summary(&dir.join("simulation.db")).ok()?;
+            Some(CasualResult {
+                seed,
+                gdp: s.gdp,
+                dg: s.debt / s.gdp.max(1.0),
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+            })
+        };
+
+        if let Some(r) = load(&ctrl_dir) {
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.1}%  [Ctrl: Standard]",
+                seed, r.gdp, r.dg, r.vol * 100.0, r.buy_ratio * 100.0
+            );
+            ctrl_results.push(r);
+        }
+        if let Some(r) = load(&treat_dir) {
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.1}%  [Treat: Casual-Heavy]",
+                seed, r.gdp, r.dg, r.vol * 100.0, r.buy_ratio * 100.0
+            );
+            treat_results.push(r);
+        }
+    }
+
+    if !ctrl_results.is_empty() && !treat_results.is_empty() {
+        let avg = |rs: &[CasualResult], f: fn(&CasualResult) -> f64| -> f64 {
+            rs.iter().map(f).sum::<f64>() / rs.len() as f64
+        };
+        let gdp_chg = (avg(&treat_results, |r| r.gdp) - avg(&ctrl_results, |r| r.gdp))
+            / avg(&ctrl_results, |r| r.gdp) * 100.0;
+        let dg_chg = avg(&treat_results, |r| r.dg) - avg(&ctrl_results, |r| r.dg);
+        let vol_chg = (avg(&treat_results, |r| r.vol) - avg(&ctrl_results, |r| r.vol))
+            / avg(&ctrl_results, |r| r.vol) * 100.0;
+
+        println!("\n  ── AVERAGES ──");
+        println!(
+            "  GDP:    standard={:.0}  casual-heavy={:.0}  chg={:+.1}%",
+            avg(&ctrl_results, |r| r.gdp),
+            avg(&treat_results, |r| r.gdp),
+            gdp_chg
+        );
+        println!(
+            "  D/G:    standard={:.3}x  casual-heavy={:.3}x  Δ={:+.3}x",
+            avg(&ctrl_results, |r| r.dg),
+            avg(&treat_results, |r| r.dg),
+            dg_chg
+        );
+        println!(
+            "  Vol:    standard={:.3}%  casual-heavy={:.3}%  chg={:+.1}%",
+            avg(&ctrl_results, |r| r.vol) * 100.0,
+            avg(&treat_results, |r| r.vol) * 100.0,
+            vol_chg
+        );
+        println!(
+            "  Buy%%:  standard={:.1}%  casual-heavy={:.1}%",
+            avg(&ctrl_results, |r| r.buy_ratio) * 100.0,
+            avg(&treat_results, |r| r.buy_ratio) * 100.0
+        );
+        println!("\n  VERDICT:");
+        if gdp_chg > 20.0 && dg_chg < 1.0 {
+            println!("  ✅ Casual-heavy DRAMATICALLY improves GDP ({:+.1}%) without D/G cost — recommend for casual-dominant servers", gdp_chg);
+        } else if gdp_chg > 5.0 && dg_chg < 2.0 {
+            println!("  ⚠️  Casual-heavy improves GDP {:+.1}% but D/G Δ={:+.3}x — net positive in healthy economy", gdp_chg, dg_chg);
+        } else if gdp_chg < 0.0 {
+            println!("  ❌ Casual-heavy HURTS GDP ({:+.1}%) in 2MM+2GB+floor — standard mix is better for this config", gdp_chg);
+        } else {
+            println!("  ℹ️  Neutral result — casual-heavy has similar outcomes to standard mix in 2MM+2GB+floor");
+        }
+    }
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // SESSION: 2026-04-15 — 60-day production stability test

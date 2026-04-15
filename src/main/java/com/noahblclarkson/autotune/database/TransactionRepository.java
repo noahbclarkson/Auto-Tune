@@ -457,4 +457,92 @@ public class TransactionRepository {
         BigDecimal totalSpent,
         BigDecimal totalEarned
     ) {}
+
+    /**
+     * Returns per-item volume totals for a player within the given time window.
+     * Used for the market impact calculation.
+     *
+     * @param uuid  player UUID
+     * @param since start of the time window
+     * @return list of item volumes, never null
+     */
+    public List<ItemVolume> findPlayerItemVolumesSince(UUID uuid, Instant since) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                        SELECT item_id,
+                               SUM(amount)            AS total_amount,
+                               SUM(total_price)        AS total_value
+                        FROM   at_transactions
+                        WHERE  player_uuid   = :uuid
+                          AND  timestamp     >= :since
+                        GROUP BY item_id
+                        ORDER BY total_value DESC
+                        """)
+                        .bind("uuid", uuid.toString())
+                        .bind("since", Timestamp.from(since))
+                        .map((rs, ctx) -> new ItemVolume(
+                                rs.getInt("item_id"),
+                                rs.getLong("total_amount"),
+                                rs.getBigDecimal("total_value")
+                        ))
+                        .list());
+    }
+
+    /**
+     * Returns per-item volume totals for the entire market within the given time window.
+     * Used for the market impact calculation.
+     *
+     * @param since start of the time window
+     * @return list of item volumes, never null
+     */
+    public List<ItemVolume> findGlobalItemVolumesSince(Instant since) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                        SELECT item_id,
+                               SUM(amount)     AS total_amount,
+                               SUM(total_price) AS total_value
+                        FROM   at_transactions
+                        WHERE  timestamp >= :since
+                        GROUP BY item_id
+                        """)
+                        .bind("since", Timestamp.from(since))
+                        .map((rs, ctx) -> new ItemVolume(
+                                rs.getInt("item_id"),
+                                rs.getLong("total_amount"),
+                                rs.getBigDecimal("total_value")
+                        ))
+                        .list());
+    }
+
+    /**
+     * Returns all distinct player UUIDs who traded in the given time window,
+     * ordered by their total trading value descending.
+     * Used for the weekly market impact rank.
+     *
+     * @param since start of the time window
+     * @param limit max number of players to return
+     * @return list of player-impact pairs, never null
+     */
+    public List<PlayerImpact> findTopPlayersByImpact(Instant since, int limit) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                        SELECT player_uuid, SUM(total_price) AS total_value
+                        FROM   at_transactions
+                        WHERE  timestamp >= :since
+                        GROUP BY player_uuid
+                        ORDER BY total_value DESC
+                        LIMIT  :limit
+                        """)
+                        .bind("since", Timestamp.from(since))
+                        .bind("limit", limit)
+                        .map((rs, ctx) -> new PlayerImpact(
+                                rs.getString("player_uuid"),
+                                rs.getBigDecimal("total_value")
+                        ))
+                        .list());
+    }
+
+    public record ItemVolume(int itemId, long amount, BigDecimal value) {}
+
+    public record PlayerImpact(String playerUuid, BigDecimal totalValue) {}
 }

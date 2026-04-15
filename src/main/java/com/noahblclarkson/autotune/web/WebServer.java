@@ -34,6 +34,7 @@ import com.noahblclarkson.autotune.model.PriceChangeDto;
 import com.noahblclarkson.autotune.model.PnLHistoryDto;
 import com.noahblclarkson.autotune.model.PortfolioDto;
 import com.noahblclarkson.autotune.model.Transaction;
+import com.noahblclarkson.autotune.service.PlayerImpactService;
 import com.noahblclarkson.autotune.service.PortfolioService;
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
@@ -118,6 +119,7 @@ public class WebServer {
     private final PriceAlertManager priceAlertManager;
     private final Server server;
     private final PortfolioService portfolioService;
+    private final PlayerImpactService playerImpactService;
     private final Gson gson;
 
     private Javalin app;
@@ -162,6 +164,8 @@ public class WebServer {
         this.server = server;
         this.portfolioService = new PortfolioService(
                 playerRepository, itemRepository, loanRepository, transactionRepository, economyManager, server);
+        this.playerImpactService = new PlayerImpactService(
+                playerRepository, itemRepository, transactionRepository, marketEngine);
         this.gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .create();
@@ -633,6 +637,20 @@ public class WebServer {
             }
             List<PnLHistoryDto> history = portfolioService.getPnlHistory(playerName.trim());
             ctx.json(history);
+        });
+
+        // ── Player market impact ─────────────────────────────────────────────
+        app.get("/api/portfolio/{playerName}/market-impact", ctx -> {
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).result(MSG_PLAYER_NAME_REQUIRED);
+                return;
+            }
+            playerImpactService.compute(playerName.trim())
+                    .ifPresentOrElse(
+                            dto -> ctx.json(dto),
+                            () -> ctx.status(404).result(MSG_PLAYER_NOT_FOUND + playerName)
+                    );
         });
 
         app.get("/api/leaderboard", ctx -> {

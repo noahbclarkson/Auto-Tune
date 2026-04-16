@@ -316,6 +316,18 @@ spread:
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
+        {/* Config Playground vs Simulator */}
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-emerald-900/40 bg-emerald-950/20">
+          <Info className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+          <div className="text-sm">
+            <span className="text-emerald-400 font-medium">Config Playground</span>
+            <span className="text-gray-400"> — set spread parameters and see the resulting math. </span>
+            <span className="text-gray-500">Want to run a simulated economy? </span>
+            <a href="/simulator" className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2">Try the Simulator →</a>
+            <span className="text-gray-500"> It runs a full 14-day economy with archetypes, loans, and market events.</span>
+          </div>
+        </div>
+
         {/* Presets */}
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-zinc-300 flex items-center gap-2">

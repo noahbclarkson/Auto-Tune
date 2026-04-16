@@ -126,6 +126,30 @@ const PRESETS: PresetScenario[] = [
     distinctTraders: 25,
     config: { ...DEFAULT_CONFIG, playerImpact: 0.85 },
   },
+  {
+    name: '2MM+2GB Healthy',
+    emoji: '🏦',
+    description: '2 MarketMakers + 2 GuildBuyers — production recommended config',
+    basePrice: 300,
+    buyRatio: 0.72,
+    onlinePlayers: 50,
+    zScore: 0.5,
+    weightedVolume: 2000,
+    distinctTraders: 20,
+    config: { ...DEFAULT_CONFIG, baseSpread: 0.20 },
+  },
+  {
+    name: 'Farmer-Heavy',
+    emoji: '🌾',
+    description: 'Farmers dominate — sell pressure pushes prices down',
+    basePrice: 250,
+    buyRatio: 0.30,
+    onlinePlayers: 30,
+    zScore: -0.8,
+    weightedVolume: 800,
+    distinctTraders: 10,
+    config: { ...DEFAULT_CONFIG, baseSpread: 0.25, volumeImpact: 0.9 },
+  },
 ];
 
 export function ParameterPanel({

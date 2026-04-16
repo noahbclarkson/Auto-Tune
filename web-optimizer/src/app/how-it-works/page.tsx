@@ -110,10 +110,22 @@ export default function HowItWorks() {
         <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
           How Auto-Tune Works
         </h1>
-        <p className="text-gray-400 max-w-xl">
+        <p className="text-gray-400 max-w-xl mb-4">
           The market engine runs six sequential calculations every 5-minute tick. Here is exactly
           what happens, with the formulas used in production.
         </p>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: 'Admins', detail: 'Understand how config changes affect prices' },
+            { label: 'Players', detail: 'Learn why your item is priced the way it is' },
+            { label: 'Developers', detail: 'Verify the TypeScript engine against Java & Rust' },
+          ].map(({ label, detail }) => (
+            <div key={label} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-700 bg-gray-900/60 text-xs">
+              <span className="text-emerald-400 font-medium">{label}</span>
+              <span className="text-gray-500">— {detail}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Quick summary */}

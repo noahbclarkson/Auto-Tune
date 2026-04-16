@@ -33,7 +33,7 @@ export function SocialProof() {
 
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">Trusted by Server Admins</p>
+          <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">Server Admins</p>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
             Used on servers from 5 to 200 players
           </h2>
@@ -68,6 +68,9 @@ export function SocialProof() {
         </div>
 
         {/* Testimonials */}
+        <div className="mb-2 flex items-center justify-center gap-2">
+          <span className="text-xs text-gray-500 italic">Example testimonials — real submissions welcome</span>
+        </div>
         <div className="grid md:grid-cols-3 gap-5">
           {TESTIMONIALS.map(({ quote, author, server }) => (
             <div

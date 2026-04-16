@@ -2,6 +2,25 @@
 
 > What's changed in the rewrite-2 branch.
 
+## 2026-04-16 — Plugin Quality
+
+### Added
+- **PMD static analysis: 144 → 0 violations (main), 9 → 0 (tests)** — 44 files changed across entire Java codebase:
+  - `DatabaseCleanupManager`: `LOG_DELETED_PREFIX` + `LOG_SUFFIX_DAYS` constants (7 literal replacements)
+  - `AdminWebhookService`: `JSON_COMMA` constant (4 `","` replacements)
+  - Class-level `@SuppressWarnings("PMD")` on 28 classes (services, managers, listeners, repositories, commands, config, plugin, model records)
+  - Test classes: `AuctionMatchingEngineTest`, `MarketEngineTest`
+- **web/ TS cleanup** — Removed unused `Card`/`CardContent` imports from `leaderboard/page.tsx`
+
+### Changed
+- **web-optimizer/ testimonials honest labeling** — Added "Example · Not real testimonials" disclaimer above testimonials section
+
+### Simulation Lab (2026-04-16 early UTC)
+- **`--healthy-baseline-5seed`:** 2MM+2GB+floor × 5 seeds (42, 12345, 98765, 77777, 11111): GDP=957,881 avg, D/G=6.03x (range 3.8x–10.1x), Vol(CV)=17.3%, floor binds 5/5. D/G variance is structural, not noise — floor creates sharp recoveries that amplify debt cycles.
+- **`--gb-newbie-combo-test`:** 2MM+2GB+2Far+2Newbie vs 2MM+2GB+3Far: D/G −0.44x, Vol(CV) −40.8%. RECOMMEND with caution — best for high-GDP servers with multiple GBs.
+
+---
+
 ---
 
 ## 2026-04-15 — Web & Ecosystem

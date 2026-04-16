@@ -79,9 +79,9 @@ const features: { tag: string; title: string; description: string; stat: { label
   },
   {
     tag: 'AUCTION',
-    title: 'Auction House',
+    title: 'P2P Auction House',
     description:
-      'Players post sell orders at their price, with a configurable duration. Buyers browse, purchase, and receive items instantly. Expired orders are reclaimed automatically.',
+      'Players post limit orders at their price, browse existing orders, and fill them instantly. Market price guidance helps players set competitive prices. All trades are taxed, filling the treasury automatically.',
     stat: { label: 'Order expiry', value: 'configurable' },
     code: '/auction · /auction post · /auction reclaim',
     accent: 'amber',

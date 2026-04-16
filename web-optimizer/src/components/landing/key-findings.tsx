@@ -22,12 +22,12 @@ const findings = [
   },
   {
     icon: Zap,
-    tag: 'Engine STABLE',
+    tag: 'Vol −40%',
     tagColor: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
-    title: '840 configs — zero instabilities',
-    detail: 'Every parameter combination tested in the 840-config sweep produced stable markets (avg volatility < 0.05). Underselling is structural (player mix), not a bug — address with archetype tuning, not parameter changes.',
-    metric: { label: 'All 840 configs stable', value: 'vol < 0.05', accent: 'text-amber-400' },
-    href: '/sweep-results',
+    title: 'GB+Newbie halves volatility',
+    detail: 'Adding 2 Newbies to a 2MM+2GB economy cut volatility by 40.8% across 5 seeds — the biggest volatility reduction seen in any archetype combination. GDP cost was only −3.8%. Best for servers with multiple GuildBuyers.',
+    metric: { label: '5-seed average', value: '17.3% → 10.3% CV', accent: 'text-amber-400' },
+    href: '/simulation-results',
   },
 ];
 

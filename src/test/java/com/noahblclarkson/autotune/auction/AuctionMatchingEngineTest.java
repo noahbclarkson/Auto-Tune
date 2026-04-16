@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * The engine is pure and deterministic, making it ideal for unit testing.
  * Supplier&lt;Instant&gt; is injected to allow deterministic time sources in tests.
  */
+@SuppressWarnings("PMD")
 class AuctionMatchingEngineTest {
 
     private static final String MATERIAL = "DIAMOND";

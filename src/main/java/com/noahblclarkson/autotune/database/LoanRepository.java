@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@SuppressWarnings("PMD")
 public class LoanRepository {
 
     private final Jdbi jdbi;

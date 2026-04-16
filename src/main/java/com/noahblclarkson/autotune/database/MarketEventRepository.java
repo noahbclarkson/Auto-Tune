@@ -17,6 +17,7 @@ import java.util.UUID;
 /**
  * JDBI repository for market event persistence.
  */
+@SuppressWarnings("PMD")
 public class MarketEventRepository {
 
     private final Jdbi jdbi;

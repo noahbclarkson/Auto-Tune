@@ -46,6 +46,7 @@ import java.util.logging.Logger;
  * Sections include: top price movers, health stats, active events, loan stats.
  */
 @Singleton
+@SuppressWarnings("PMD")
 public class MarketDigestService {
 
     private static final Logger LOGGER = Logger.getLogger(MarketDigestService.class.getName());

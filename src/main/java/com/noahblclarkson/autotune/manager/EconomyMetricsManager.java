@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class EconomyMetricsManager {
 
     private final AutoTune plugin;

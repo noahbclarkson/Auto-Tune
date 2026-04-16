@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { LeaderboardTable } from '@/components/leaderboard/leaderboard-table';
-import { Card, CardContent } from '@/components/ui/card';
+
 import { api } from '@/lib/api';
 import { formatLargeCurrency } from '@/lib/format';
 import type { LeaderboardEntryDto, Stats } from '@/lib/api';

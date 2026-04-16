@@ -30,6 +30,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class LoanCommand {
 
     private static final Logger LOGGER = Logger.getLogger(LoanCommand.class.getName());

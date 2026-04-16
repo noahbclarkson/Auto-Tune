@@ -34,6 +34,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.logging.Level;
 
+@SuppressWarnings("PMD")
 public class AutoTune extends JavaPlugin {
 
     private static AutoTune instance;

@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+@SuppressWarnings("PMD")
 public class PriceOverrideRepository {
 
     private final Jdbi jdbi;

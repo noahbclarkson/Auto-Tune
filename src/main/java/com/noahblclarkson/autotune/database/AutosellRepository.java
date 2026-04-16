@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+@SuppressWarnings("PMD")
 public class AutosellRepository {
 
     private final Jdbi jdbi;

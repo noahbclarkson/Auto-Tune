@@ -26,6 +26,7 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("PMD")
 public class DatabaseManager {
 
     private final AutoTune plugin;

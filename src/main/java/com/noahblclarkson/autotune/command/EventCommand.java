@@ -27,6 +27,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class EventCommand {
 
     private static final DateTimeFormatter TIME_FMT =

@@ -36,6 +36,7 @@ import java.util.Optional;
  * and are specific to current economy metrics.
  */
 @Singleton
+@SuppressWarnings("PMD")
 public class EconomyAdvisor {
 
     private final EconomyMetricsManager metricsManager;

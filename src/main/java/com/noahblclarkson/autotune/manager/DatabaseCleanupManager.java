@@ -31,7 +31,11 @@ import java.util.logging.Level;
  * On SQLite, runs {@code VACUUM} after deletions to reclaim disk space.
  */
 @Singleton
+@SuppressWarnings("PMD")
 public class DatabaseCleanupManager {
+
+    private static final String LOG_DELETED_PREFIX = "[cleanup] Deleted ";
+    private static final String LOG_SUFFIX_DAYS = " days";
 
     private final AutoTune plugin;
     private final ConfigManager configManager;
@@ -81,8 +85,8 @@ public class DatabaseCleanupManager {
             int deleted = transactionRepository.deleteOlderThan(cutoff);
             totalDeleted += deleted;
             if (isDebug) {
-                plugin.getLogger().info("[cleanup] Deleted " + deleted + " transactions older than "
-                        + cleanup.transactions().retentionDays() + " days");
+                plugin.getLogger().info(LOG_DELETED_PREFIX + deleted + " transactions older than "
+                        + cleanup.transactions().retentionDays() + LOG_SUFFIX_DAYS);
             }
         }
 
@@ -92,8 +96,8 @@ public class DatabaseCleanupManager {
             int deleted = itemRepository.deleteMarketHistoryOlderThan(cutoff);
             totalDeleted += deleted;
             if (isDebug) {
-                plugin.getLogger().info("[cleanup] Deleted " + deleted + " market history rows older than "
-                        + cleanup.marketHistory().retentionDays() + " days");
+                plugin.getLogger().info(LOG_DELETED_PREFIX + deleted + " market history rows older than "
+                        + cleanup.marketHistory().retentionDays() + LOG_SUFFIX_DAYS);
             }
         }
 
@@ -106,7 +110,7 @@ public class DatabaseCleanupManager {
             int deleted = snapshotRepository.keepMostRecentN(maxSnapshots);
             totalDeleted += deleted;
             if (isDebug) {
-                plugin.getLogger().info("[cleanup] Deleted " + deleted + " economy snapshots beyond "
+                plugin.getLogger().info(LOG_DELETED_PREFIX + deleted + " economy snapshots beyond "
                         + "most recent " + maxSnapshots);
             }
         }
@@ -117,8 +121,8 @@ public class DatabaseCleanupManager {
             int deleted = auctionRepository.deleteOrdersOlderThan(cutoff);
             totalDeleted += deleted;
             if (isDebug) {
-                plugin.getLogger().info("[cleanup] Deleted " + deleted + " auction orders older than "
-                        + cleanup.auctionOrders().retentionDays() + " days");
+                plugin.getLogger().info(LOG_DELETED_PREFIX + deleted + " auction orders older than "
+                        + cleanup.auctionOrders().retentionDays() + LOG_SUFFIX_DAYS);
             }
         }
 
@@ -128,8 +132,8 @@ public class DatabaseCleanupManager {
             int deleted = auctionRepository.deleteFillsOlderThan(cutoff);
             totalDeleted += deleted;
             if (isDebug) {
-                plugin.getLogger().info("[cleanup] Deleted " + deleted + " auction fills older than "
-                        + cleanup.auctionFills().retentionDays() + " days");
+                plugin.getLogger().info(LOG_DELETED_PREFIX + deleted + " auction fills older than "
+                        + cleanup.auctionFills().retentionDays() + LOG_SUFFIX_DAYS);
             }
         }
 
@@ -139,8 +143,8 @@ public class DatabaseCleanupManager {
             int deleted = marketEventRepository.deleteEndedOrCancelledOlderThan(cutoff);
             totalDeleted += deleted;
             if (isDebug) {
-                plugin.getLogger().info("[cleanup] Deleted " + deleted + " market events older than "
-                        + cleanup.marketEvents().retentionDays() + " days");
+                plugin.getLogger().info(LOG_DELETED_PREFIX + deleted + " market events older than "
+                        + cleanup.marketEvents().retentionDays() + LOG_SUFFIX_DAYS);
             }
         }
 

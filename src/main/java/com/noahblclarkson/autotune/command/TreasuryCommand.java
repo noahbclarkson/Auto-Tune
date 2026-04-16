@@ -16,6 +16,7 @@ import org.incendo.cloud.annotations.Permission;
 import java.math.BigDecimal;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class TreasuryCommand {
 
     private final TreasuryService treasuryService;

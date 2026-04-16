@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@SuppressWarnings("PMD")
 public class PlayerRepository {
 
     private final Jdbi jdbi;

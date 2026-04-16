@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class MarketEngine {
 
     private static final MathContext MATH_CONTEXT = new MathContext(10, RoundingMode.HALF_UP);

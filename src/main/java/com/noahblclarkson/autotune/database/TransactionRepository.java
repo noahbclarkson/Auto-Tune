@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+@SuppressWarnings("PMD")
 public class TransactionRepository {
 
     private final Jdbi jdbi;

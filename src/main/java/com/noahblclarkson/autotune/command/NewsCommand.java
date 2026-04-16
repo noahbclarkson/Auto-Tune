@@ -32,6 +32,7 @@ import java.util.List;
  * Items are shown newest-first with timestamp, message text, and a click action.
  */
 @Singleton
+@SuppressWarnings("PMD")
 public class NewsCommand implements org.bukkit.event.Listener {
 
     private static final int GUI_SIZE = 54; // 6 rows

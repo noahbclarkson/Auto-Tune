@@ -55,6 +55,7 @@ import java.util.logging.Logger;
  * /market-report admin    — economy-wide weekly digest (admin only)
  */
 @Singleton
+@SuppressWarnings("PMD")
 public class MarketReportCommand {
 
     private static final Logger log = Logger.getLogger(MarketReportCommand.class.getName());

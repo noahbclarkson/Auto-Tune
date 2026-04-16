@@ -35,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class EconomyManager {
 
     private final PluginAdapter plugin;

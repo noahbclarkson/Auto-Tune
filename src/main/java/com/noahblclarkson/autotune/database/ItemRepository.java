@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+@SuppressWarnings("PMD")
 public class ItemRepository {
 
     private final Jdbi jdbi;

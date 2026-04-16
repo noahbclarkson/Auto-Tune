@@ -10,6 +10,7 @@ import java.time.Instant;
  * rate &lt; 1.0: server's economy is cheaper than the global average
  * rate = 1.0: server is aligned with global average
  */
+@SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
 public record ExchangeRate(
         /** Unique server identifier. */
         String serverId,

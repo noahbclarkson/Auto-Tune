@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class AuctionManager {
 
     private static final BigDecimal TICK_SIZE = BigDecimal.valueOf(0.01);

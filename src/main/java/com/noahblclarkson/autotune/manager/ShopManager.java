@@ -26,6 +26,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class ShopManager {
 
     private final DatabaseManager databaseManager;

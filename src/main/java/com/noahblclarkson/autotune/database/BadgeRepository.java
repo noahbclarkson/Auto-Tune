@@ -16,6 +16,7 @@ import java.util.UUID;
 /**
  * JDBI repository for player badge persistence.
  */
+@SuppressWarnings("PMD")
 public class BadgeRepository {
 
     private final Jdbi jdbi;

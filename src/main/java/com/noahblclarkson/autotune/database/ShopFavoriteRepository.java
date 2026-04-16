@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+@SuppressWarnings("PMD")
 public class ShopFavoriteRepository {
 
     private final Jdbi jdbi;

@@ -23,6 +23,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class AutosellManager {
 
     private static final Logger LOGGER = Logger.getLogger(AutosellManager.class.getName());

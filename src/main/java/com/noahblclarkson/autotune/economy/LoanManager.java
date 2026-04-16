@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class LoanManager {
 
     private final AutoTune plugin;

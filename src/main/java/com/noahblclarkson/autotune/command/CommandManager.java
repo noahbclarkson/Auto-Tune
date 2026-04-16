@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.Set;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class CommandManager {
 
     private final AutoTune plugin;

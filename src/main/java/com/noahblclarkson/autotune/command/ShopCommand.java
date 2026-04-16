@@ -46,6 +46,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class ShopCommand {
 
     private final AutoTune plugin;

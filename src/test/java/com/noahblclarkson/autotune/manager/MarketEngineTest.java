@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
  * Unit tests for MarketEngine price and spread calculations.
  * Tests the core market math in isolation from the database and server.
  */
+@SuppressWarnings("PMD")
 class MarketEngineTest {
 
     /** Minimal fake adapter — only provides what MarketEngine needs. */

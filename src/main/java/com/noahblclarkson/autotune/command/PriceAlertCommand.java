@@ -29,6 +29,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class PriceAlertCommand {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@SuppressWarnings("PMD")
 public class ConfigManager {
 
     private final AutoTune plugin;

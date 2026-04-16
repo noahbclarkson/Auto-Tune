@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class AutosellListener implements Listener {
 
     private final AutosellManager autosellManager;

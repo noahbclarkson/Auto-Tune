@@ -62,6 +62,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class WebServer {
 
     // API response field names

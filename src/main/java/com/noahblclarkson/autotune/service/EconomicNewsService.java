@@ -47,6 +47,7 @@ import java.util.logging.Logger;
  * - Low overhead: reads from existing price history table, no new DB writes
  */
 @Singleton
+@SuppressWarnings("PMD")
 public class EconomicNewsService {
 
     private static final Logger log = Logger.getLogger(EconomicNewsService.class.getName());

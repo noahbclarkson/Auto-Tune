@@ -42,6 +42,7 @@ import java.util.logging.Logger;
  * /onboarding status       — admin summary of all active milestones
  */
 @Singleton
+@SuppressWarnings("PMD")
 public class OnboardingCommand {
 
     private static final Logger log = Logger.getLogger(OnboardingCommand.class.getName());

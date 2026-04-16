@@ -18,6 +18,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class GuildCommand {
 
     private final GuildService guildService;

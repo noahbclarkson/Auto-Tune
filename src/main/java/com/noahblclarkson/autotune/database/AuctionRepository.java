@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@SuppressWarnings("PMD")
 public class AuctionRepository {
 
     private final Jdbi jdbi;

@@ -31,6 +31,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Singleton
+@SuppressWarnings("PMD")
 public class PlayerListener implements Listener {
 
     private static final Logger LOGGER = Logger.getLogger(PlayerListener.class.getName());

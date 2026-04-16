@@ -9512,7 +9512,7 @@ fn run_guild_threshold_multi_seed() {
     // threshold values as integers (percent × 100: 5 → 0.05)
     let thresholds: Vec<u8> = vec![5, 7, 10, 15, 20];
     let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
-    let base_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let base_scenario = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
 
     let mut results: std::collections::BTreeMap<u8, Vec<GuildSweepResult>> =
         std::collections::BTreeMap::new();
@@ -9527,7 +9527,7 @@ fn run_guild_threshold_multi_seed() {
     println!("║       GUILDBUYER THRESHOLD MULTI-SEED VALIDATION                 ║");
     println!("╚══════════════════════════════════════════════════════════════════════╝");
     println!();
-    println!("  Scenario: guild_stability_mm_fixed_guild (2MM + 2GB + 3Cas + 3Far + 2Tra)");
+    println!("  Scenario: guild_stability_2mm_fixed_guild_plus_floor (2MM + 2GB + 60% Diamond floor)");
     println!(
         "  Duration: 14 days ({} ticks)",
         base_scenario.duration_ticks
@@ -9676,7 +9676,7 @@ fn run_guild_threshold_multi_seed() {
 
     println!();
     println!("  ═══════════════════════════════════════════════════════════════════");
-    println!("  RECOMMENDATION (guild_stability_mm_fixed_guild, 5 seeds):");
+    println!("  RECOMMENDATION (guild_stability_2mm_fixed_guild_plus_floor, 5 seeds):");
     println!();
 
     // Find best by GDP, D/G, and volatility

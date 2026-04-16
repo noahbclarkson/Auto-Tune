@@ -59,6 +59,7 @@ public class MarketDigestService {
     private static final String NOT_AVAILABLE = "N/A";
     private static final String JSON_COMMA = "\",";
     private static final BigDecimal TWO = BigDecimal.valueOf(2);
+    private static final int MIN_HISTORY_SIZE = 2;
 
     // Interval constants
     private static final String INTERVAL_WEEKLY = "weekly";
@@ -164,7 +165,7 @@ public class MarketDigestService {
         LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
         LocalDateTime target;
 
-        if ("weekly".equals(cfg.interval())) {
+        if (INTERVAL_WEEKLY.equals(cfg.interval())) {
             // Find next occurrence of the target day-of-week at the target hour
             DayOfWeek targetDow = DayOfWeek.of(cfg.dayOfWeek() + 1); // 1=Mon..7=Sun
             LocalDateTime nextDow = nowUtc.with(targetDow).withHour(cfg.hourOfDay()).withMinute(0).withSecond(0);
@@ -315,7 +316,7 @@ public class MarketDigestService {
 
         for (ShopItem item : allItems) {
             List<PriceHistory> history = itemRepository.getPriceHistorySince(item.id(), since, 10);
-            if (history.size() < 2) continue;
+            if (history.size() < MIN_HISTORY_SIZE) continue;
             BigDecimal newest = history.get(0).price();
             BigDecimal oldest = history.get(history.size() - 1).price();
             if (oldest.compareTo(BigDecimal.ZERO) <= 0) continue;

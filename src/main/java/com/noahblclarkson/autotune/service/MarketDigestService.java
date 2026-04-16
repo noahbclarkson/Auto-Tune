@@ -58,6 +58,7 @@ public class MarketDigestService {
     // JSON/embed constants
     private static final String NOT_AVAILABLE = "N/A";
     private static final String JSON_COMMA = "\",";
+    private static final BigDecimal TWO = BigDecimal.valueOf(2);
 
     // Interval constants
     private static final String INTERVAL_WEEKLY = "weekly";
@@ -226,7 +227,7 @@ public class MarketDigestService {
         // ── Top Movers ──────────────────────────────────────────────────
         if (cfg.includeTopMovers()) {
             if (description.length() > 0) description.append("\n");
-            description.append(buildTopMoversSection(since));
+            description.append(buildTopMoversSection(since, cfg));
         }
 
         // ── Active Events ───────────────────────────────────────────────
@@ -308,7 +309,7 @@ public class MarketDigestService {
         return sb.toString();
     }
 
-    private String buildTopMoversSection(Instant since) {
+    private String buildTopMoversSection(Instant since, MarketDigestConfig cfg) {
         List<ShopItem> allItems = shopManager.getAllItems();
         List<ItemChange> changes = new ArrayList<>();
 

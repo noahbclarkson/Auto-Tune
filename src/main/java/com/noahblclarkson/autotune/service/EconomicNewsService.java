@@ -53,6 +53,8 @@ public class EconomicNewsService {
     private static final MathContext MC = new MathContext(10, RoundingMode.HALF_UP);
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
     private static final BigDecimal TWO = BigDecimal.valueOf(2);
+    private static final BigDecimal VOLATILE_THRESHOLD = BigDecimal.valueOf(0.15);
+    private static final BigDecimal STABLE_THRESHOLD = BigDecimal.valueOf(0.05);
 
     private final AutoTune plugin;
     private final ItemRepository itemRepository;
@@ -318,14 +320,14 @@ public class EconomicNewsService {
         double prev = previousAvgVolatility.get() != null ? previousAvgVolatility.get() : 0.0;
         previousAvgVolatility.set(avgVolatility);
 
-        // Alert on transition into UNSTABLE zone (from below 0.15 to above 0.15)
-        if (avgVolatility >= 0.15 && prev < 0.15) {
+        // Alert on transition into UNSTABLE zone (from below VOLATILE_THRESHOLD to above it)
+        if (avgVolatility >= VOLATILE_THRESHOLD.doubleValue() && prev < VOLATILE_THRESHOLD.doubleValue()) {
             String msg = "⚠️ <red>ECONOMY VOLATILITY SPIKE</red> — prices are oscillating wildly! "
                     + "Run <aqua>/at admin health</aqua> to diagnose.";
             out.add(new NewsItem(msg, NamedTextColor.RED, "/at admin health", "Run /at admin health"));
             // Webhook notification
             webhookService.onVolatilitySpike(avgVolatility);
-        } else if (avgVolatility < 0.15 && prev >= 0.15) {
+        } else if (avgVolatility < VOLATILE_THRESHOLD.doubleValue() && prev >= VOLATILE_THRESHOLD.doubleValue()) {
             webhookService.onVolatilityRecovered();
         }
     }

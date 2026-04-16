@@ -7,6 +7,8 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.auction.AuctionManager;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.AuctionRepository;
+import com.noahblclarkson.autotune.manager.MarketEngine;
+import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.model.AuctionFill;
 import com.noahblclarkson.autotune.model.AuctionOrder;
 import com.noahblclarkson.autotune.model.AuctionOrder.OrderSide;
@@ -27,6 +29,7 @@ import org.incendo.cloud.annotations.suggestion.Suggestions;
 import org.incendo.cloud.context.CommandContext;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -49,6 +52,8 @@ public class AuctionCommand {
     private final ConfigManager configManager;
     private final Economy economy;
     private final AutoTune plugin;
+    private final MarketEngine marketEngine;
+    private final ShopManager shopManager;
 
     @Inject
     public AuctionCommand(
@@ -56,13 +61,17 @@ public class AuctionCommand {
             AuctionRepository auctionRepo,
             Economy economy,
             ConfigManager configManager,
-            AutoTune plugin
+            AutoTune plugin,
+            MarketEngine marketEngine,
+            ShopManager shopManager
     ) {
         this.auctionManager = auctionManager;
         this.auctionRepo = auctionRepo;
         this.configManager = configManager;
         this.economy = economy;
         this.plugin = plugin;
+        this.marketEngine = marketEngine;
+        this.shopManager = shopManager;
     }
 
     @Command("auction")
@@ -84,6 +93,8 @@ public class AuctionCommand {
                 .append(Component.text(" - Recent auction trades", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/auction reclaim", NamedTextColor.YELLOW)
                 .append(Component.text(" - Reclaim items from expired sell orders", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/auction price <material>", NamedTextColor.YELLOW)
+                .append(Component.text(" - Check market price before posting", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
     }
 
@@ -315,6 +326,126 @@ public class AuctionCommand {
                             + " = " + configManager.formatCurrency(total)
                             + "  (" + DATE_FORMAT.format(fill.filledAt()) + ")",
                     NamedTextColor.YELLOW));
+        }
+        sender.sendMessage(Component.empty());
+    }
+
+    /**
+     * Shows current auction price indicators for a material:
+     * - Market reference price (shop buy/sell)
+     * - Best bid and ask in the auction order book
+     * - Spread
+     * - Recent auction fill prices
+     */
+    @Command("auction price <material>")
+    @Permission("autotune.auction")
+    public void auctionPrice(CommandSender sender,
+                             @Argument(value = "material", suggestions = "materials") String material) {
+        Material mat = parseMaterial(material);
+        if (mat == null) {
+            sender.sendMessage(Component.text("Unknown material: " + material, NamedTextColor.RED));
+            return;
+        }
+
+        // Market reference prices from the shop engine
+        var shopItemOpt = shopManager.getItemByMaterial(mat);
+        BigDecimal marketBuy = shopItemOpt.map(marketEngine::getBuyPrice).orElse(null);
+        BigDecimal marketSell = shopItemOpt.map(marketEngine::getSellPrice).orElse(null);
+
+        // Auction order book
+        List<AuctionOrder> sellOrders = auctionRepo.findActiveByMaterial(mat.name())
+                .stream().filter(o -> o.side() == OrderSide.SELL).toList();
+        List<AuctionOrder> buyOrders = auctionRepo.findActiveByMaterial(mat.name())
+                .stream().filter(o -> o.side() == OrderSide.BUY).toList();
+
+        BigDecimal bestBid = buyOrders.stream()
+                .map(AuctionOrder::price)
+                .max(BigDecimal::compareTo)
+                .orElse(null);
+        BigDecimal bestAsk = sellOrders.stream()
+                .map(AuctionOrder::price)
+                .min(BigDecimal::compareTo)
+                .orElse(null);
+
+        // Spread
+        BigDecimal spreadPct = null;
+        if (bestBid != null && bestAsk != null && bestBid.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal midpoint = bestAsk.add(bestBid)
+                    .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
+            spreadPct = bestAsk.subtract(bestBid)
+                    .divide(midpoint, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
+        }
+
+        // Recent auction fill prices for this material
+        List<AuctionFill> recentFills = auctionRepo.findRecentFillsByMaterial(mat.name(), 20);
+        BigDecimal avgFillPrice = null;
+        if (!recentFills.isEmpty()) {
+            BigDecimal sum = recentFills.stream()
+                    .map(f -> f.price().multiply(BigDecimal.valueOf(f.quantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            int totalQty = recentFills.stream()
+                    .mapToInt(AuctionFill::quantity)
+                    .sum();
+            if (totalQty > 0) {
+                avgFillPrice = sum.divide(BigDecimal.valueOf(totalQty), 2, RoundingMode.HALF_UP);
+            }
+        }
+
+        String materialName = formatMaterial(mat.name());
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Auction Price — " + materialName, NamedTextColor.GOLD, TextDecoration.BOLD));
+        sender.sendMessage(Component.text("──".repeat(20), NamedTextColor.DARK_GRAY));
+
+        if (marketBuy != null && marketSell != null) {
+            sender.sendMessage(Component.text("  Market:  ", NamedTextColor.GRAY)
+                    .append(Component.text("Buy ", NamedTextColor.GREEN))
+                    .append(Component.text(configManager.formatCurrency(marketBuy), NamedTextColor.WHITE))
+                    .append(Component.text("   Sell ", NamedTextColor.YELLOW))
+                    .append(Component.text(configManager.formatCurrency(marketSell), NamedTextColor.WHITE)));
+        }
+
+        if (bestBid != null) {
+            int bidCount = buyOrders.size();
+            sender.sendMessage(Component.text("  Best Bid: ", NamedTextColor.AQUA)
+                    .append(Component.text(configManager.formatCurrency(bestBid), NamedTextColor.WHITE))
+                    .append(Component.text(" (" + bidCount + " bid" + (bidCount != 1 ? "s" : "") + ")", NamedTextColor.DARK_GRAY)));
+        } else {
+            sender.sendMessage(Component.text("  Best Bid: ", NamedTextColor.AQUA)
+                    .append(Component.text("none", NamedTextColor.DARK_GRAY)));
+        }
+
+        if (bestAsk != null) {
+            int askCount = sellOrders.size();
+            sender.sendMessage(Component.text("  Best Ask: ", NamedTextColor.LIGHT_PURPLE)
+                    .append(Component.text(configManager.formatCurrency(bestAsk), NamedTextColor.WHITE))
+                    .append(Component.text(" (" + askCount + " ask" + (askCount != 1 ? "s" : "") + ")", NamedTextColor.DARK_GRAY)));
+        } else {
+            sender.sendMessage(Component.text("  Best Ask: ", NamedTextColor.LIGHT_PURPLE)
+                    .append(Component.text("none", NamedTextColor.DARK_GRAY)));
+        }
+
+        if (spreadPct != null) {
+            sender.sendMessage(Component.text("  Spread:  ", NamedTextColor.GRAY)
+                    .append(Component.text(spreadPct.setScale(1, RoundingMode.HALF_UP) + "%", NamedTextColor.AQUA)));
+        }
+
+        if (avgFillPrice != null) {
+            sender.sendMessage(Component.text("  Avg Fill (" + recentFills.size() + " trades): ", NamedTextColor.GOLD)
+                    .append(Component.text(configManager.formatCurrency(avgFillPrice), NamedTextColor.WHITE)));
+        }
+
+        sender.sendMessage(Component.text("──".repeat(20), NamedTextColor.DARK_GRAY));
+        if (bestAsk != null || bestBid != null) {
+            sender.sendMessage(Component.text("  Tip: Use ", NamedTextColor.DARK_GRAY)
+                    .append(Component.text("/auction sell <price> [qty]", NamedTextColor.YELLOW))
+                    .append(Component.text(" or ", NamedTextColor.DARK_GRAY))
+                    .append(Component.text("/auction buy " + material + " <price> [qty]", NamedTextColor.YELLOW)));
+        } else {
+            sender.sendMessage(Component.text("  No auction orders yet for this item.", NamedTextColor.DARK_GRAY));
+            sender.sendMessage(Component.text("  Be the first to post! ", NamedTextColor.DARK_GRAY)
+                    .append(Component.text("/auction sell <price> [qty]", NamedTextColor.YELLOW)));
         }
         sender.sendMessage(Component.empty());
     }

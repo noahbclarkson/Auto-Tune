@@ -171,6 +171,29 @@ public class AuctionRepository {
                         .list());
     }
 
+    public List<AuctionFill> findRecentFillsByMaterial(String material, int limit) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                        SELECT af.id, af.buy_order_id, af.sell_order_id, af.quantity, af.price, af.filled_at
+                        FROM at_auction_fills af
+                        JOIN at_auction_orders ao ON ao.id = af.sell_order_id
+                        WHERE ao.material = :material
+                        ORDER BY af.filled_at DESC
+                        LIMIT :limit
+                        """)
+                        .bind("material", material)
+                        .bind("limit", limit)
+                        .map((rs, ctx) -> AuctionFill.builder()
+                                .id(UUID.fromString(rs.getString("id")))
+                                .buyOrderId(UUID.fromString(rs.getString("buy_order_id")))
+                                .sellOrderId(UUID.fromString(rs.getString("sell_order_id")))
+                                .quantity(rs.getInt("quantity"))
+                                .price(rs.getBigDecimal("price"))
+                                .filledAt(rs.getTimestamp("filled_at").toInstant())
+                                .build())
+                        .list());
+    }
+
     public void insert(@NotNull AuctionOrder order) {
         jdbi.useHandle(handle ->
                 handle.createUpdate("""

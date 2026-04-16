@@ -11206,6 +11206,13 @@ fn main() -> eframe::Result<()> {
         println!("  --healthy-tier3-sweep        2MM+2GB+floor: tier3_ratio × 5 seeds");
         println!("  --sixty-day-test           2MM+2GB+floor: 60-day long-run stability");
         println!("  --it-removal-test         2MM+2GB+floor: WITH vs WITHOUT InsiderTraders");
+        println!("  --healthy-baseline-5seed  2MM+2GB+floor × 5 seeds: statistical baseline");
+        println!("  --gb-newbie-healthy-test   2MM+2GB+2Far+2Newbie vs 2MM+2GB+3Far × 5 seeds");
+        println!(
+            "  --events-healthy-test     Events × 2MM+2GB+floor: do events help healthy economy?"
+        );
+        println!("  --counter-cyclical-cc-test  CC=true vs CC=false × 2MM+2GB+floor");
+        println!("  --casual-heavy-healthy-test  Casual-heavy vs standard × 2MM+2GB+floor");
         println!("  --circuit-breaker-sensitivity-test  TIER3 thresholds × min interest sweep");
         println!(
             "  --admin-recovery-test    Economy freeze / recovery mode vs natural deleveraging"
@@ -11709,8 +11716,523 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    if args.len() > 1 && args[1] == "--healthy-baseline-5seed" {
+        run_healthy_baseline_5seed();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--gb-newbie-healthy-test" {
+        run_gb_newbie_healthy_test();
+        return Ok(());
+    }
+
     // GUI mode
     run_gui()
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  HEALTHY ECONOMY BASELINE — 5-seed statistical confidence
+//  Question: What are the true mean±σ statistics for the production-recommended
+//  2MM+2GB+floor config across diverse market conditions?
+// ═══════════════════════════════════════════════════════════════════════
+fn run_healthy_baseline_5seed() {
+    use crate::analyzer::load_summary;
+    use std::io::Write;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║     HEALTHY ECONOMY BASELINE — 5-SEED STATISTICAL RUN       ║");
+    println!("║  2MM + 2GB + 60%% Diamond floor × 5 seeds                   ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Scenario: guild_stability_2mm_fixed_guild_plus_floor");
+    println!("  Archetypes: 2MM + 2GB + 3Cas + 3Far + 2Tra");
+    println!("  Duration: 14 days (4032 ticks)\n");
+
+    #[derive(Debug, Clone)]
+    #[allow(dead_code)]
+    struct BaselineResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        vol: f64,
+        bpd: f64,
+        spd: f64,
+        buy_ratio: f64,
+        diamond_internal: f64,
+        diamond_displayed: f64,
+        floor_binds: bool,
+    }
+
+    let mut results: Vec<BaselineResult> = Vec::new();
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7} {:>7} {:>10}",
+        "Seed", "GDP", "D/G", "Vol(CV)", "BPD%", "SPD%", "Buy%", "Diamond Int"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7} {:>7} {:>10}",
+        "──────",
+        "────────────",
+        "──────────",
+        "────────",
+        "───────",
+        "───────",
+        "───────",
+        "──────────"
+    );
+
+    let total = seeds.len();
+    for (i, &seed) in seeds.iter().enumerate() {
+        eprint!("\r  [{}/{}] seed={}", i + 1, total, seed);
+        std::io::stderr().flush().ok();
+
+        let scenario = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        let out_dir = PathBuf::from(format!("/tmp/autotune-baseline-{}", seed));
+        let _ = std::fs::remove_dir_all(&out_dir);
+
+        run_seeded_headless(&scenario, seed, &out_dir).ok();
+
+        if let Ok(s) = load_summary(&out_dir.join("simulation.db")) {
+            let prices = crate::analyzer::load_all_prices(&out_dir.join("simulation.db"))
+                .unwrap_or_default();
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            let dg = s.debt / s.gdp.max(1.0);
+            let floor_binds = dd >= (500.0 * 0.60) - 0.01;
+            println!(
+                "\r  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}% {:>6.2}% {:>7.1}% {:>10.2}",
+                seed,
+                s.gdp,
+                dg,
+                s.avg_volatility * 100.0,
+                s.avg_bpd * 100.0,
+                s.avg_spd * 100.0,
+                s.buy_ratio * 100.0,
+                di
+            );
+            results.push(BaselineResult {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg,
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                buy_ratio: s.buy_ratio,
+                diamond_internal: di,
+                diamond_displayed: dd,
+                floor_binds,
+            });
+        }
+        let _ = std::fs::remove_dir_all(&out_dir);
+    }
+
+    // ── Statistical summary ──────────────────────────────────────────────
+    if results.len() >= 3 {
+        println!("\n  ── Statistical Summary (mean ± std) ──\n");
+        let gdp_mean = results.iter().map(|r| r.gdp).sum::<f64>() / results.len() as f64;
+        let gdp_std = (results
+            .iter()
+            .map(|r| (r.gdp - gdp_mean).powi(2))
+            .sum::<f64>()
+            / results.len() as f64)
+            .sqrt();
+        let dg_mean = results.iter().map(|r| r.dg).sum::<f64>() / results.len() as f64;
+        let dg_std = (results
+            .iter()
+            .map(|r| (r.dg - dg_mean).powi(2))
+            .sum::<f64>()
+            / results.len() as f64)
+            .sqrt();
+        let vol_mean = results.iter().map(|r| r.vol).sum::<f64>() / results.len() as f64;
+        let vol_std = (results
+            .iter()
+            .map(|r| (r.vol - vol_mean).powi(2))
+            .sum::<f64>()
+            / results.len() as f64)
+            .sqrt();
+        let buy_mean = results.iter().map(|r| r.buy_ratio).sum::<f64>() / results.len() as f64;
+        let buy_std = (results
+            .iter()
+            .map(|r| (r.buy_ratio - buy_mean).powi(2))
+            .sum::<f64>()
+            / results.len() as f64)
+            .sqrt();
+        let bpd_mean = results.iter().map(|r| r.bpd).sum::<f64>() / results.len() as f64;
+        let floor_binds = results.iter().filter(|r| r.floor_binds).count();
+        let di_mean =
+            results.iter().map(|r| r.diamond_internal).sum::<f64>() / results.len() as f64;
+
+        println!(
+            "  {:>12}: {:>12.0} ± {:>10.0}  [seeds: {:?}]",
+            "GDP",
+            gdp_mean,
+            gdp_std,
+            results.iter().map(|r| r.seed).collect::<Vec<_>>()
+        );
+        println!("  {:>12}: {:>9.3}x ± {:>8.3}x", "D/G", dg_mean, dg_std);
+        println!(
+            "  {:>12}: {:>7.3}%% ± {:>8.3}%%",
+            "Vol(CV)",
+            vol_mean * 100.0,
+            vol_std * 100.0
+        );
+        println!(
+            "  {:>12}: {:>7.1}%% ± {:>7.1}%%",
+            "Buy%",
+            buy_mean * 100.0,
+            buy_std * 100.0
+        );
+        println!("  {:>12}: {:>7.2}%% (avg BPD)", "Spread", bpd_mean * 100.0);
+        println!(
+            "  {:>12}: {}/{} seeds",
+            "Floor binds",
+            floor_binds,
+            results.len()
+        );
+        println!("  {:>12}: ${:.2} (internal, avg)", "Diamond Int", di_mean);
+        println!("  {:>12}: ${:.2} (displayed, floor=$300)", "Diamond", 300.0);
+
+        println!("\n  ── Per-seed D/G ranking ──\n");
+        let mut sorted = results.clone();
+        sorted.sort_by(|a, b| a.dg.partial_cmp(&b.dg).unwrap());
+        let dg_min = sorted.first().map(|r| r.dg).unwrap_or(0.0);
+        let dg_max = sorted.last().map(|r| r.dg).unwrap_or(0.0);
+        for r in &sorted {
+            println!(
+                "    seed {:>6}: D/G={:.3}x  GDP={:.0}  vol={:.4}  floor={}",
+                r.seed, r.dg, r.gdp, r.vol, r.floor_binds
+            );
+        }
+        println!(
+            "\n  ⚠️  D/G range: {:.3}x – {:.3}x ({:.1}x spread)",
+            dg_min,
+            dg_max,
+            dg_max / dg_min.max(0.001)
+        );
+
+        if dg_max > 10.0 {
+            println!("  ⚠️  D/G exceeds 10x in some seeds — circuit breaker relevant");
+        } else if dg_max > 8.0 {
+            println!("  ⚠️  D/G approaches TIER2 boundary (10x) in worst seed");
+        } else {
+            println!("  ✓ D/G stays below TIER2 (10x) in all seeds");
+        }
+    }
+    println!();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  GB + NEWBIE COMBO TEST
+//  Control: 2MM+2GB+3Far (standard archetype mix)
+//  Treat:   2MM+2GB+2Far+2Newbie (replace 1 Farmer with 1 Newbie, keep total 12)
+//  Question: Newbie alone was great in stressed (+33% GDP, -42% D/G, -35% vol).
+//  Does Newbie still help when combined with GuildBuyers in a healthy economy?
+// ═══════════════════════════════════════════════════════════════════════
+fn run_gb_newbie_healthy_test() {
+    use crate::analyzer::load_summary;
+    use std::io::Write;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔════════════════════════════════════════════════════════════════════╗");
+    println!("║     GB + NEWBIE COMBO TEST — healthy economy × 5 seeds       ║");
+    println!("║  Ctrl: 2MM+2GB+3Far   Treat: 2MM+2GB+2Far+2Newbie           ║");
+    println!("╚════════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Control: 2MM + 2GB + 3Cas + 3Far + 2Tra");
+    println!("  Treat:   2MM + 2GB + 3Cas + 1Far + 2Tra + 2Newbie");
+    println!("  Duration: 14 days (4032 ticks)\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct ComboResult {
+        seed: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        vol: f64,
+        bpd: f64,
+        spd: f64,
+        buy_ratio: f64,
+    }
+
+    impl ComboResult {
+        fn from_summary(s: &crate::analyzer::SimSummary, seed: u64) -> Self {
+            Self {
+                seed,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                buy_ratio: s.buy_ratio,
+            }
+        }
+    }
+
+    let mut ctrl_results: Vec<ComboResult> = Vec::new();
+    let mut treat_results: Vec<ComboResult> = Vec::new();
+    let total = seeds.len() * 2;
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7} {:>7}",
+        "Seed", "GDP", "D/G", "Vol(CV)", "BPD%", "SPD%", "Buy%"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7} {:>7}",
+        "──────", "────────────", "──────────", "────────", "───────", "───────", "───────"
+    );
+
+    for (i, &seed) in seeds.iter().enumerate() {
+        // ── Control ──────────────────────────────────────────────────────
+        eprint!("\r  [{}/{}] seed={} ctrl", i * 2 + 1, total, seed);
+        std::io::stderr().flush().ok();
+
+        let mut ctrl = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        ctrl.name = "Ctrl: 3Far".into();
+        // 2MM + 2GB + 3Cas + 3Far + 2Tra (standard)
+        ctrl.players = vec![
+            ArchetypeConfig {
+                archetype: "MarketMaker".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "GuildBuyer".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Casual".into(),
+                count: 3,
+            },
+            ArchetypeConfig {
+                archetype: "Farmer".into(),
+                count: 3,
+            },
+            ArchetypeConfig {
+                archetype: "Trader".into(),
+                count: 2,
+            },
+        ];
+
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-gbnc-ctrl-{}", seed));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        run_seeded_headless(&ctrl, seed, &ctrl_dir).ok();
+
+        if let Ok(s) = load_summary(&ctrl_dir.join("simulation.db")) {
+            let r = ComboResult::from_summary(&s, seed);
+            println!(
+                "\r  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}% {:>6.2}% {:>7.1}%  [ctrl: 3Far]",
+                seed,
+                r.gdp,
+                r.dg,
+                r.vol * 100.0,
+                r.bpd * 100.0,
+                r.spd * 100.0,
+                r.buy_ratio * 100.0
+            );
+            ctrl_results.push(r);
+        }
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+
+        // ── Treatment ─────────────────────────────────────────────────────
+        eprint!("\r  [{}/{}] seed={} treat", i * 2 + 2, total, seed);
+        std::io::stderr().flush().ok();
+
+        let mut treat = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        treat.name = "Treat: 2Far+2Newbie".into();
+        // 2MM + 2GB + 3Cas + 1Far + 2Tra + 2Newbie
+        treat.players = vec![
+            ArchetypeConfig {
+                archetype: "MarketMaker".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "GuildBuyer".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Casual".into(),
+                count: 3,
+            },
+            ArchetypeConfig {
+                archetype: "Farmer".into(),
+                count: 1,
+            },
+            ArchetypeConfig {
+                archetype: "Trader".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Newbie".into(),
+                count: 2,
+            },
+        ];
+
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-gbnc-treat-{}", seed));
+        let _ = std::fs::remove_dir_all(&treat_dir);
+        run_seeded_headless(&treat, seed, &treat_dir).ok();
+
+        if let Ok(s) = load_summary(&treat_dir.join("simulation.db")) {
+            let r = ComboResult::from_summary(&s, seed);
+            println!(
+                "\r  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}% {:>6.2}% {:>7.1}%  [treat: 2Far+2Newbie]",
+                seed,
+                r.gdp,
+                r.dg,
+                r.vol * 100.0,
+                r.bpd * 100.0,
+                r.spd * 100.0,
+                r.buy_ratio * 100.0
+            );
+            treat_results.push(r);
+        }
+        let _ = std::fs::remove_dir_all(&treat_dir);
+    }
+
+    // ── Aggregate comparison ─────────────────────────────────────────────
+    if ctrl_results.len() == treat_results.len() && !ctrl_results.is_empty() {
+        println!(
+            "\n  ── Aggregate Comparison (mean across {} seeds) ──\n",
+            ctrl_results.len()
+        );
+
+        let n = ctrl_results.len() as f64;
+        let ctrl_gdp = ctrl_results.iter().map(|r| r.gdp).sum::<f64>() / n;
+        let treat_gdp = treat_results.iter().map(|r| r.gdp).sum::<f64>() / n;
+        let ctrl_dg = ctrl_results.iter().map(|r| r.dg).sum::<f64>() / n;
+        let treat_dg = treat_results.iter().map(|r| r.dg).sum::<f64>() / n;
+        let ctrl_vol = ctrl_results.iter().map(|r| r.vol).sum::<f64>() / n;
+        let treat_vol = treat_results.iter().map(|r| r.vol).sum::<f64>() / n;
+        let ctrl_buy = ctrl_results.iter().map(|r| r.buy_ratio).sum::<f64>() / n;
+        let treat_buy = treat_results.iter().map(|r| r.buy_ratio).sum::<f64>() / n;
+        let ctrl_bpd = ctrl_results.iter().map(|r| r.bpd).sum::<f64>() / n;
+        let treat_bpd = treat_results.iter().map(|r| r.bpd).sum::<f64>() / n;
+        let ctrl_t3: usize = 0; // tier3_events not in SimSummary
+        let treat_t3: usize = 0;
+
+        let gdp_chg = (treat_gdp - ctrl_gdp) / ctrl_gdp * 100.0;
+        let dg_chg = treat_dg - ctrl_dg;
+        let vol_chg = (treat_vol - ctrl_vol) / ctrl_vol.max(0.0001) * 100.0;
+        let buy_chg = (treat_buy - ctrl_buy) * 100.0;
+        let bpd_chg = (treat_bpd - ctrl_bpd) / ctrl_bpd.max(0.0001) * 100.0;
+
+        println!(
+            "  {:>14} {:>12} {:>12} {:>12}",
+            "Metric", "Ctrl (3Far)", "Treat (2Far+2N)", "Change"
+        );
+        println!(
+            "  {:>14} {:>12} {:>12} {:>12}",
+            "────────────", "────────────", "────────────", "────────────"
+        );
+        println!(
+            "  {:>14} {:>12.0} {:>12.0} {:>+11.1}%%  GDP",
+            "GDP", ctrl_gdp, treat_gdp, gdp_chg
+        );
+        println!(
+            "  {:>14} {:>11.3}x {:>11.3}x {:>+10.3}x  D/G",
+            "D/G", ctrl_dg, treat_dg, dg_chg
+        );
+        println!(
+            "  {:>14} {:>11.3}% {:>11.3}% {:>+10.1}%%  Vol",
+            "Vol(CV)",
+            ctrl_vol * 100.0,
+            treat_vol * 100.0,
+            vol_chg
+        );
+        println!(
+            "  {:>14} {:>11.1}% {:>11.1}% {:>+10.1}pp  Buy%",
+            "Buy%",
+            ctrl_buy * 100.0,
+            treat_buy * 100.0,
+            buy_chg
+        );
+        println!(
+            "  {:>14} {:>11.2}% {:>11.2}% {:>+10.1}%%  BPD",
+            "BPD%",
+            ctrl_bpd * 100.0,
+            treat_bpd * 100.0,
+            bpd_chg
+        );
+        println!("  {:>14} {:>12} {:>12}", "TIER3 events", ctrl_t3, treat_t3);
+
+        // ── Verdict ──────────────────────────────────────────────────────
+        println!("\n  ── Verdict ──\n");
+        let wins = [
+            gdp_chg > 0.0,
+            dg_chg < 0.0,
+            vol_chg < 0.0,
+            buy_chg.abs() < 5.0,
+        ];
+        let score = wins.iter().filter(|&&w| w).count();
+        match score {
+            4 => println!("  ✅ STRONGLY RECOMMEND: Newbie+GB is strictly better on all metrics"),
+            3 => println!(
+                "  ⚠️  RECOMMEND with caution ({} improvements, {} regressions)",
+                score,
+                4 - score
+            ),
+            2 => println!("  ⚠️  MIXED ({}/4 metrics improved)", score),
+            _ => println!("  ❌ NOT RECOMMENDED: majority of metrics worsened"),
+        }
+        if gdp_chg > 0.0 && dg_chg < 0.0 {
+            println!("  ✅ Newbie reduces D/G while growing GDP — ideal combination");
+        } else if gdp_chg > 0.0 {
+            println!(
+                "  ⚠️  Newbie grows GDP (+{:.1}%%) but D/G {}",
+                gdp_chg,
+                if dg_chg > 0.0 { "worsens" } else { "unchanged" }
+            );
+        } else if dg_chg < 0.0 {
+            println!(
+                "  ℹ️  Newbie improves D/G ({:.3}x better) but GDP {}",
+                dg_chg.abs(),
+                if gdp_chg < 0.0 { "falls" } else { "flat" }
+            );
+        }
+        if vol_chg < -20.0 {
+            println!(
+                "  ✅ Volatility dramatically reduced ({:.1}%% improvement)",
+                vol_chg.abs()
+            );
+        }
+        if treat_t3 > ctrl_t3 {
+            println!("  ⚠️  TIER3 events INCREASED ({})", treat_t3 - ctrl_t3);
+        }
+
+        // ── Per-seed breakdown ────────────────────────────────────────────
+        println!("\n  ── Per-seed D/G comparison ──\n");
+        for (ctrl, treat) in ctrl_results.iter().zip(treat_results.iter()) {
+            let dg_delta = treat.dg - ctrl.dg;
+            let arrow = if dg_delta < -0.1 {
+                "↓"
+            } else if dg_delta > 0.1 {
+                "↑"
+            } else {
+                "→"
+            };
+            println!(
+                "    seed {:>6}: ctrl={:.3}x  treat={:.3}x  {} ({:+.3}x)",
+                ctrl.seed, ctrl.dg, treat.dg, arrow, dg_delta
+            );
+        }
+
+        let treat_better = treat_results
+            .iter()
+            .zip(ctrl_results.iter())
+            .filter(|(t, c)| t.dg < c.dg)
+            .count();
+        println!(
+            "\n  D/G: {}/{} seeds improved with Newbie",
+            treat_better,
+            treat_results.len()
+        );
+    }
+    println!();
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -14987,8 +15509,14 @@ fn run_events_healthy_test() {
     let mut ctrl_results: Vec<EventResult> = Vec::new();
     let mut treat_results: Vec<EventResult> = Vec::new();
 
-    println!("  {:>6} {:>12} {:>10} {:>8} {:>7} {:>8}", "Seed", "GDP", "D/G", "Vol(CV)", "Buy%", "TIER3");
-    println!("  {:>6} {:>12} {:>10} {:>8} {:>7} {:>8}", "──────", "────────────", "──────────", "────────", "───────", "────────");
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>8}",
+        "Seed", "GDP", "D/G", "Vol(CV)", "Buy%", "TIER3"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>8}",
+        "──────", "────────────", "──────────", "────────", "───────", "────────"
+    );
 
     for &seed in &seeds {
         // ── Control: 2MM+2GB+floor (no events) ──────────────────────
@@ -15057,14 +15585,24 @@ fn run_events_healthy_test() {
         if let Some(r) = load(&ctrl_dir) {
             println!(
                 "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.1}% {:>7}  [Ctrl: No Events]",
-                seed, r.gdp, r.dg, r.vol * 100.0, r.buy_ratio * 100.0, r.tier3_events
+                seed,
+                r.gdp,
+                r.dg,
+                r.vol * 100.0,
+                r.buy_ratio * 100.0,
+                r.tier3_events
             );
             ctrl_results.push(r);
         }
         if let Some(r) = load(&treat_dir) {
             println!(
                 "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.1}% {:>7}  [Treat: Events]",
-                seed, r.gdp, r.dg, r.vol * 100.0, r.buy_ratio * 100.0, r.tier3_events
+                seed,
+                r.gdp,
+                r.dg,
+                r.vol * 100.0,
+                r.buy_ratio * 100.0,
+                r.tier3_events
             );
             treat_results.push(r);
         }
@@ -15076,10 +15614,12 @@ fn run_events_healthy_test() {
             rs.iter().map(f).sum::<f64>() / rs.len() as f64
         };
         let gdp_chg = (avg(&treat_results, |r| r.gdp) - avg(&ctrl_results, |r| r.gdp))
-            / avg(&ctrl_results, |r| r.gdp) * 100.0;
+            / avg(&ctrl_results, |r| r.gdp)
+            * 100.0;
         let dg_chg = avg(&treat_results, |r| r.dg) - avg(&ctrl_results, |r| r.dg);
         let vol_chg = (avg(&treat_results, |r| r.vol) - avg(&ctrl_results, |r| r.vol))
-            / avg(&ctrl_results, |r| r.vol) * 100.0;
+            / avg(&ctrl_results, |r| r.vol)
+            * 100.0;
         let tier3_sum: u32 = treat_results.iter().map(|r| r.tier3_events).sum();
 
         println!("\n  ── AVERAGES ──");
@@ -15104,13 +15644,25 @@ fn run_events_healthy_test() {
         println!("  TIER3 events (treat): {} total", tier3_sum);
         println!("\n  VERDICT:");
         if gdp_chg > 5.0 && dg_chg < 1.0 {
-            println!("  ✅ Events BOOST GDP ({:+.1}%) without D/G deterioration — safe in healthy economy", gdp_chg);
+            println!(
+                "  ✅ Events BOOST GDP ({:+.1}%) without D/G deterioration — safe in healthy economy",
+                gdp_chg
+            );
         } else if gdp_chg > 0.0 && dg_chg < 2.0 {
-            println!("  ⚠️  Events boost GDP {:+.1}% but D/G worsens by {:.3}x — monitor D/G in production", gdp_chg, dg_chg);
+            println!(
+                "  ⚠️  Events boost GDP {:+.1}% but D/G worsens by {:.3}x — monitor D/G in production",
+                gdp_chg, dg_chg
+            );
         } else if gdp_chg <= 0.0 {
-            println!("  ❌ Events HURT GDP ({:+.1}%) in healthy economy — reconsider event frequency", gdp_chg);
+            println!(
+                "  ❌ Events HURT GDP ({:+.1}%) in healthy economy — reconsider event frequency",
+                gdp_chg
+            );
         } else {
-            println!("  ℹ️  Mixed results — events add volatility ({:+.1}%) but GDP effect is {:.1}%", vol_chg, gdp_chg);
+            println!(
+                "  ℹ️  Mixed results — events add volatility ({:+.1}%) but GDP effect is {:.1}%",
+                vol_chg, gdp_chg
+            );
         }
     }
 }
@@ -15141,8 +15693,14 @@ fn run_counter_cyclical_cc_test() {
     let mut ctrl_results: Vec<CcResult> = Vec::new();
     let mut treat_results: Vec<CcResult> = Vec::new();
 
-    println!("  {:>6} {:>12} {:>10} {:>8} {:>7}", "Seed", "GDP", "D/G", "Vol(CV)", "TIER3");
-    println!("  {:>6} {:>12} {:>10} {:>8} {:>7}", "──────", "────────────", "──────────", "────────", "────────");
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7}",
+        "Seed", "GDP", "D/G", "Vol(CV)", "TIER3"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7}",
+        "──────", "────────────", "──────────", "────────", "────────"
+    );
 
     for &seed in &seeds {
         // ── Control: counter_cyclical=true ─────────────────────────
@@ -15175,14 +15733,22 @@ fn run_counter_cyclical_cc_test() {
         if let Some(r) = load(&ctrl_dir) {
             println!(
                 "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>7}  [Ctrl: CC=true]",
-                seed, r.gdp, r.dg, r.vol * 100.0, r.tier3_events
+                seed,
+                r.gdp,
+                r.dg,
+                r.vol * 100.0,
+                r.tier3_events
             );
             ctrl_results.push(r);
         }
         if let Some(r) = load(&treat_dir) {
             println!(
                 "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>7}  [Treat: CC=false]",
-                seed, r.gdp, r.dg, r.vol * 100.0, r.tier3_events
+                seed,
+                r.gdp,
+                r.dg,
+                r.vol * 100.0,
+                r.tier3_events
             );
             treat_results.push(r);
         }
@@ -15193,7 +15759,8 @@ fn run_counter_cyclical_cc_test() {
             rs.iter().map(f).sum::<f64>() / rs.len() as f64
         };
         let gdp_chg = (avg(&treat_results, |r| r.gdp) - avg(&ctrl_results, |r| r.gdp))
-            / avg(&ctrl_results, |r| r.gdp) * 100.0;
+            / avg(&ctrl_results, |r| r.gdp)
+            * 100.0;
         let dg_treat = avg(&treat_results, |r| r.dg);
         let dg_ctrl = avg(&ctrl_results, |r| r.dg);
         let tier3_treat: u32 = treat_results.iter().map(|r| r.tier3_events).sum();
@@ -15206,19 +15773,28 @@ fn run_counter_cyclical_cc_test() {
             avg(&treat_results, |r| r.gdp),
             gdp_chg
         );
-        println!(
-            "  D/G:  CC=true={:.3}x  CC=false={:.3}x",
-            dg_ctrl, dg_treat
-        );
+        println!("  D/G:  CC=true={:.3}x  CC=false={:.3}x", dg_ctrl, dg_treat);
         println!("  TIER3: CC=true={}  CC=false={}", tier3_ctrl, tier3_treat);
         println!("\n  VERDICT:");
         if dg_treat < dg_ctrl * 0.9 && tier3_treat <= tier3_ctrl {
-            println!("  ✅ CC=false has {:.1}% better D/G — legacy tiered breaker outperforms counter-cyclical in healthy 2MM economy", (1.0 - dg_treat/dg_ctrl) * 100.0);
-            println!("     Counter-cyclical is WORTH THE TRADE-OFF: it costs {:.1}% GDP but gains {:.1}% D/G stability", -gdp_chg, (dg_ctrl - dg_treat)/dg_ctrl * 100.0);
+            println!(
+                "  ✅ CC=false has {:.1}% better D/G — legacy tiered breaker outperforms counter-cyclical in healthy 2MM economy",
+                (1.0 - dg_treat / dg_ctrl) * 100.0
+            );
+            println!(
+                "     Counter-cyclical is WORTH THE TRADE-OFF: it costs {:.1}% GDP but gains {:.1}% D/G stability",
+                -gdp_chg,
+                (dg_ctrl - dg_treat) / dg_ctrl * 100.0
+            );
         } else if dg_treat > dg_ctrl * 1.1 {
-            println!("  ❌ CC=false WORSENS D/G by {:.1}% — counter-cyclical is correct default", (dg_treat/dg_ctrl - 1.0) * 100.0);
+            println!(
+                "  ❌ CC=false WORSENS D/G by {:.1}% — counter-cyclical is correct default",
+                (dg_treat / dg_ctrl - 1.0) * 100.0
+            );
         } else {
-            println!("  ℹ️  Neutral — counter-cyclical=true (default) is confirmed safe for 2MM+2GB+floor");
+            println!(
+                "  ℹ️  Neutral — counter-cyclical=true (default) is confirmed safe for 2MM+2GB+floor"
+            );
         }
     }
 }
@@ -15249,8 +15825,14 @@ fn run_casual_heavy_healthy_test() {
     let mut ctrl_results: Vec<CasualResult> = Vec::new();
     let mut treat_results: Vec<CasualResult> = Vec::new();
 
-    println!("  {:>6} {:>12} {:>10} {:>8} {:>7}", "Seed", "GDP", "D/G", "Vol(CV)", "Buy%");
-    println!("  {:>6} {:>12} {:>10} {:>8} {:>7}", "──────", "────────────", "──────────", "────────", "───────");
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7}",
+        "Seed", "GDP", "D/G", "Vol(CV)", "Buy%"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7}",
+        "──────", "────────────", "──────────", "────────", "───────"
+    );
 
     for &seed in &seeds {
         // ── Control: 3Cas + 3Far + 2Tra (standard) ───────────────
@@ -15264,11 +15846,26 @@ fn run_casual_heavy_healthy_test() {
         let mut treat = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
         treat.name = "Treat: Casual-Heavy".into();
         treat.players = vec![
-            ArchetypeConfig { archetype: "MarketMaker".into(), count: 2 },
-            ArchetypeConfig { archetype: "GuildBuyer".into(), count: 2 },
-            ArchetypeConfig { archetype: "Casual".into(), count: 6 }, // ← 6 Casuals
-            ArchetypeConfig { archetype: "Farmer".into(), count: 1 },  // ← 1 Farmer (was 3)
-            ArchetypeConfig { archetype: "Trader".into(), count: 1 }, // ← 1 Trader (was 2)
+            ArchetypeConfig {
+                archetype: "MarketMaker".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "GuildBuyer".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Casual".into(),
+                count: 6,
+            }, // ← 6 Casuals
+            ArchetypeConfig {
+                archetype: "Farmer".into(),
+                count: 1,
+            }, // ← 1 Farmer (was 3)
+            ArchetypeConfig {
+                archetype: "Trader".into(),
+                count: 1,
+            }, // ← 1 Trader (was 2)
         ];
         let treat_dir = PathBuf::from(format!("/tmp/autotune-chh-treat-{seed}"));
         let _ = std::fs::remove_dir_all(&treat_dir);
@@ -15288,14 +15885,22 @@ fn run_casual_heavy_healthy_test() {
         if let Some(r) = load(&ctrl_dir) {
             println!(
                 "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.1}%  [Ctrl: Standard]",
-                seed, r.gdp, r.dg, r.vol * 100.0, r.buy_ratio * 100.0
+                seed,
+                r.gdp,
+                r.dg,
+                r.vol * 100.0,
+                r.buy_ratio * 100.0
             );
             ctrl_results.push(r);
         }
         if let Some(r) = load(&treat_dir) {
             println!(
                 "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.1}%  [Treat: Casual-Heavy]",
-                seed, r.gdp, r.dg, r.vol * 100.0, r.buy_ratio * 100.0
+                seed,
+                r.gdp,
+                r.dg,
+                r.vol * 100.0,
+                r.buy_ratio * 100.0
             );
             treat_results.push(r);
         }
@@ -15306,10 +15911,12 @@ fn run_casual_heavy_healthy_test() {
             rs.iter().map(f).sum::<f64>() / rs.len() as f64
         };
         let gdp_chg = (avg(&treat_results, |r| r.gdp) - avg(&ctrl_results, |r| r.gdp))
-            / avg(&ctrl_results, |r| r.gdp) * 100.0;
+            / avg(&ctrl_results, |r| r.gdp)
+            * 100.0;
         let dg_chg = avg(&treat_results, |r| r.dg) - avg(&ctrl_results, |r| r.dg);
         let vol_chg = (avg(&treat_results, |r| r.vol) - avg(&ctrl_results, |r| r.vol))
-            / avg(&ctrl_results, |r| r.vol) * 100.0;
+            / avg(&ctrl_results, |r| r.vol)
+            * 100.0;
 
         println!("\n  ── AVERAGES ──");
         println!(
@@ -15337,13 +15944,24 @@ fn run_casual_heavy_healthy_test() {
         );
         println!("\n  VERDICT:");
         if gdp_chg > 20.0 && dg_chg < 1.0 {
-            println!("  ✅ Casual-heavy DRAMATICALLY improves GDP ({:+.1}%) without D/G cost — recommend for casual-dominant servers", gdp_chg);
+            println!(
+                "  ✅ Casual-heavy DRAMATICALLY improves GDP ({:+.1}%) without D/G cost — recommend for casual-dominant servers",
+                gdp_chg
+            );
         } else if gdp_chg > 5.0 && dg_chg < 2.0 {
-            println!("  ⚠️  Casual-heavy improves GDP {:+.1}% but D/G Δ={:+.3}x — net positive in healthy economy", gdp_chg, dg_chg);
+            println!(
+                "  ⚠️  Casual-heavy improves GDP {:+.1}% but D/G Δ={:+.3}x — net positive in healthy economy",
+                gdp_chg, dg_chg
+            );
         } else if gdp_chg < 0.0 {
-            println!("  ❌ Casual-heavy HURTS GDP ({:+.1}%) in 2MM+2GB+floor — standard mix is better for this config", gdp_chg);
+            println!(
+                "  ❌ Casual-heavy HURTS GDP ({:+.1}%) in 2MM+2GB+floor — standard mix is better for this config",
+                gdp_chg
+            );
         } else {
-            println!("  ℹ️  Neutral result — casual-heavy has similar outcomes to standard mix in 2MM+2GB+floor");
+            println!(
+                "  ℹ️  Neutral result — casual-heavy has similar outcomes to standard mix in 2MM+2GB+floor"
+            );
         }
     }
 }

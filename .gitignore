@@ -67,3 +67,4 @@ run/
 # Rust
 target/
 
+memory/

@@ -246,7 +246,11 @@ export function ItemTable({
                           : 'text-muted-foreground'
                       }`}
                     >
-                      {formatPercent(item.change24h)}
+                      <span className="inline-flex items-center gap-0.5 justify-end">
+                        {item.change24h > 0 && <ArrowUp className="h-3 w-3" />}
+                        {item.change24h < 0 && <ArrowDown className="h-3 w-3" />}
+                        {formatPercent(item.change24h)}
+                      </span>
                     </td>
                     <td className="px-3 py-2.5 text-right text-muted-foreground">{spread}%</td>
                     {trends && (

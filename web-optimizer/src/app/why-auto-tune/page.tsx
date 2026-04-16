@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, TrendingUp, TrendingDown, Users, Zap, Shield, BarChart2, ArrowDownRight, ArrowUpRight, Clock } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Users, Zap, Shield, BarChart2, Clock } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Why Auto-Tune | Auto-Tune',
@@ -20,9 +20,6 @@ const DIAMOND_WEEKS = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6
 
 const STATIC_DIAMOND = [250, 250, 250, 250, 250, 250];
 const AUTOTUNE_DIAMOND = [250, 312, 278, 341, 289, 265];
-
-const CASUAL_SELLERS = [45, 44, 46, 43, 45, 44]; // static
-const TRADERS_EARNED = [45, 58, 71, 89, 102, 118]; // autotune players learning market
 
 function MiniSparkline({ data, color }: { data: number[]; color: string }) {
   const min = Math.min(...data);
@@ -359,13 +356,57 @@ export default function WhyAutoTunePage() {
         <div className="text-center mb-14">
           <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">The Impact</p>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
-            Player earnings over 6 weeks
+            The economy your players actually live in
           </h2>
           <p className="text-gray-400 max-w-xl mx-auto text-sm leading-relaxed">
-            Same server, same players, same activity — but different shop type. These numbers are from Auto-Tune&apos;s market simulation, matching a typical casual-heavy server archetype.
+            Auto-Tune doesn&apos;t just change prices — it changes what players can do. The difference shows in the numbers that matter: GDP growth, volatility, and whether the smart player is enriching themselves or the server.
           </p>
         </div>
 
+        {/* Simulation-grounded metric cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+          {[
+            {
+              label: 'Economy GDP growth',
+              control: '+0%',
+              autotune: '+44%',
+              note: '30-day horizon, 2MM+2GB+floor config',
+              good: true,
+            },
+            {
+              label: 'Volatility (CV)',
+              control: '6.1%',
+              autotune: '4.4%',
+              note: '30-day — lower is more stable',
+              good: true,
+            },
+            {
+              label: 'Debt / GDP ratio',
+              control: '8.31×',
+              autotune: '7.50×',
+              note: '30-day — deleverages over time',
+              good: true,
+            },
+          ].map(({ label, control, autotune, note, good }) => (
+            <div key={label} className="bg-gray-900/60 border border-gray-800 rounded-xl p-5">
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">{label}</p>
+              <div className="flex items-end gap-4 mb-2">
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 mb-0.5">Static shop</p>
+                  <p className="text-xl font-bold font-mono text-gray-400">{control}</p>
+                </div>
+                <div className="text-gray-700">→</div>
+                <div className="flex-1">
+                  <p className="text-xs text-emerald-500 mb-0.5">Auto-Tune</p>
+                  <p className={`text-xl font-bold font-mono ${good ? 'text-emerald-400' : 'text-red-400'}`}>{autotune}</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600">{note}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Player type qualitative table */}
         <div className="bg-gray-900/60 border border-gray-800 rounded-2xl overflow-hidden mb-8">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -374,31 +415,52 @@ export default function WhyAutoTunePage() {
                   <th className="py-3.5 px-5 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Player Type</th>
                   <th className="py-3.5 px-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Static Shop</th>
                   <th className="py-3.5 px-4 text-center text-xs font-medium text-emerald-400 uppercase tracking-wider">Auto-Tune</th>
-                  <th className="py-3.5 px-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Difference</th>
+                  <th className="py-3.5 px-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Why</th>
                 </tr>
               </thead>
               <tbody>
                 {[
-                  { type: 'Casual miner', static: '$270', autotune: '$348', diff: '+$78', diffColor: 'text-emerald-400', arrow: 'up' },
-                  { type: 'Farmer (high volume)', static: '$580', autotune: '$1,240', diff: '+114%', diffColor: 'text-emerald-400', arrow: 'up' },
-                  { type: 'Smart trader', static: '$1,100', autotune: '$1,890', diff: '+72%', diffColor: 'text-emerald-400', arrow: 'up' },
-                  { type: 'Static arbitrageur', static: '$2,400', autotune: '$310', diff: '−87%', diffColor: 'text-red-400', arrow: 'down' },
-                  { type: 'Guild (combined)', static: '$4,100', autotune: '$5,200', diff: '+27%', diffColor: 'text-emerald-400', arrow: 'up' },
-                ].map(({ type, static: s, autotune: a, diff, diffColor, arrow }, i) => (
+                  {
+                    type: 'Farmer (high volume)',
+                    static: 'Earns fixed price, floods market',
+                    autotune: 'Sells into demand spikes, earns more',
+                    reason: 'Price rises when demand outpaces supply — farmers time high-volume sells for peak demand',
+                    color: 'text-emerald-400',
+                  },
+                  {
+                    type: 'Smart trader',
+                    static: 'Exploits static spread for easy profit',
+                    autotune: 'Reads price signals, earns from real moves',
+                    reason: 'Prices carry information — traders who understand supply/demand dynamics outperform those who don\'t',
+                    color: 'text-emerald-400',
+                  },
+                  {
+                    type: 'Static arbitrageur',
+                    static: 'Near-risk-free profit, drains server',
+                    autotune: 'Margin disappears as prices adapt',
+                    reason: 'The core exploit — buy low, sell high to the same shop — stops working when the shop\'s price follows the trade',
+                    color: 'text-red-400',
+                  },
+                  {
+                    type: 'New player',
+                    static: 'Arbitrary price, no market signal',
+                    autotune: 'Price reflects current activity — learns by trading',
+                    reason: 'Selling their first Diamond teaches them something real about supply and demand',
+                    color: 'text-emerald-400',
+                  },
+                  {
+                    type: 'Guild (combined)',
+                    static: 'Bulk buying at fixed prices strains treasury',
+                    autotune: 'Guild-wide buying signals economy — treasury adjusts',
+                    reason: 'Market activity creates price signals that help guilds time large purchases',
+                    color: 'text-emerald-400',
+                  },
+                ].map(({ type, static: s, autotune: a, reason, color }, i) => (
                   <tr key={type} className={`border-b border-gray-800/50 ${i % 2 === 0 ? 'bg-gray-900/30' : ''}`}>
-                    <td className="py-3 px-5 text-gray-300 text-sm">{type}</td>
-                    <td className="py-3 px-4 text-center text-gray-400 text-sm">{s}</td>
-                    <td className="py-3 px-4 text-center text-emerald-400 font-medium text-sm">{a}</td>
-                    <td className={`py-3 px-4 text-center text-sm font-medium ${diffColor}`}>
-                      <span className="inline-flex items-center gap-0.5">
-                        {arrow === 'up' ? (
-                          <ArrowUpRight className="w-3 h-3" />
-                        ) : (
-                          <ArrowDownRight className="w-3 h-3" />
-                        )}
-                        {diff}
-                      </span>
-                    </td>
+                    <td className="py-3 px-5 text-gray-300 text-sm font-medium">{type}</td>
+                    <td className="py-3 px-4 text-center text-gray-500 text-xs">{s}</td>
+                    <td className={`py-3 px-4 text-center text-xs font-medium ${color}`}>{a}</td>
+                    <td className="py-3 px-4 text-center text-gray-600 text-xs hidden sm:table-cell">{reason}</td>
                   </tr>
                 ))}
               </tbody>
@@ -406,7 +468,7 @@ export default function WhyAutoTunePage() {
           </div>
           <div className="px-5 py-3 bg-gray-900/40 border-t border-gray-800/50">
             <p className="text-xs text-gray-500">
-              * Simulation output from Auto-Tune&apos;s market simulation engine. Casual-heavy archetype (6 Casuals, 1 Farmer, 1 Trader), 2MM+2GB config, 6-week run. Static shop baseline = fixed prices at crafting-value equivalent.
+              * Per-player earnings are representative examples. Economy metrics (GDP growth, volatility, D/G) are from Auto-Tune&apos;s market simulation lab: 2MM+2GB+floor config, 30-day horizon, 5-seed average. Standard archetype (3Cas+3Far+2Tra) — the recommended config for most servers.
             </p>
           </div>
         </div>

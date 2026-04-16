@@ -475,7 +475,6 @@ export default function InstallPage() {
         <p className="text-sm text-gray-400 mb-6 leading-relaxed">
           Auto-Tune runs on any Paper 1.21.4+ server with Java 21 and Vault. Here are hosting options
           that handle Auto-Tune&apos;s requirements well, from free options to production-grade servers.
-       ide
         </p>
         <div className="grid sm:grid-cols-2 gap-4">
           {[

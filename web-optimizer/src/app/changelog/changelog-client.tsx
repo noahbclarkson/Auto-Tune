@@ -31,8 +31,70 @@ const SECTIONS = [
 
 const CHANGELOG = [
   {
-    date: '2026-04-08',
+    date: '2026-04-16',
     label: 'Today',
+    entries: [
+      {
+        tag: 'WEB FIX',
+        tagColor: 'text-orange-400 bg-orange-950/60 border-orange-800/50',
+        title: 'Install page — stray text removed from hosting guide',
+        detail: 'Removed spurious "ide" fragment from the hosting guide paragraph on /install. Also removed unused ArrowUpRight/ArrowDownRight lucide imports from why-auto-tune page.',
+        section: 6,
+        commit: null,
+      },
+      {
+        tag: 'WEB UX',
+        tagColor: 'text-cyan-400 bg-cyan-950/60 border-cyan-800/50',
+        title: 'Price trend arrows added to item table 24h column',
+        detail: 'Every item row in /items now shows an inline ↑ or ↓ arrow alongside the 24h change percentage. Makes it scannable at a glance without reading the number. Green/red color coding retained.',
+        section: 3,
+        commit: null,
+      },
+      {
+        tag: 'WEB CONTENT',
+        tagColor: 'text-orange-400 bg-orange-950/60 border-orange-800/50',
+        title: '/why-auto-tune earnings table redesigned — removed casual-heavy archetype claim',
+        detail: 'The player earnings table previously cited \"casual-heavy archetype\" (6Cas+1Far+1Tra) which simulation confirmed devastates the 2MM+2GB+floor economy (-39% GDP). Redesigned: 3 simulation-grounded metric cards (GDP +44%, vol -28%, D/G -9.8% at 30d) replace invented per-player dollar amounts. Per-player table now uses qualitative descriptions with \"Why\" column. Footnote cites correct archetype (3Cas+3Far+2Tra) and simulation source.',
+        section: 3,
+        commit: null,
+      },
+      {
+        tag: 'SIMULATION',
+        tagColor: 'text-violet-400 bg-violet-950/60 border-violet-800/50',
+        title: 'Guild threshold multi-seed (5×5=25 runs) — volatility is threshold-invariant in 1MM economies',
+        detail: 'All fixed thresholds (5-20%) on guild_stability_mm_fixed_guild (1MM+2GB, stressed) produce statistically identical volatility (~0.31). The 1MM economy is structurally unstable regardless of threshold. Fine sweep on same scenario: 5% threshold wins all metrics (GDP 416K, D/G 5.67x, buy% 90.3%, vol=0.0017 stable). Recommend 5% fixed threshold for 2MM+2GB production, pending multi-seed validation.',
+        section: 0,
+        commit: '5a94a23',
+      },
+      {
+        tag: 'SIMULATION',
+        tagColor: 'text-violet-400 bg-violet-950/60 border-violet-800/50',
+        title: 'GB+Newbie combo test (5-seed) — vol -40.8%, D/G -0.44x in stressed economies',
+        detail: '3Farmer → 3Newbie in guildbuyer_failure_test stressed: GDP -3.8% (acceptable), D/G -0.44x, volatility -40.8%. Mechanism: Newbies absorb excess diamond demand that GBs create. In high-D/G runs, Newbies relieve cascading demand pressure. RECOMMEND with caution — best for high-GDP servers with multiple GBs.',
+        section: 0,
+        commit: '09e3f3e',
+      },
+      {
+        tag: 'SIMULATION',
+        tagColor: 'text-violet-400 bg-violet-950/60 border-violet-800/50',
+        title: 'Events × healthy economy — events HURT healthy 2MM+2GB+floor configs',
+        detail: 'DEMAND_SURGE+SUPPLY_GLUT+INFLATION_BOOST+GOLD_RUSH on 2MM+2GB+floor: GDP -2.0%, D/G +0.634x worse. Seed 98765 catastrophic: D/G spiked to 7.46x vs 4.87x control. TIER3: 0 in both arms (circuit breaker handled it). Verdict: events are a liability in healthy economies. Do NOT enable frequent/strong events in production.',
+        section: 0,
+        commit: '39c86c2',
+      },
+      {
+        tag: 'SIMULATION',
+        tagColor: 'text-violet-400 bg-violet-950/60 border-violet-800/50',
+        title: 'Casual-heavy devastates 2MM+2GB+floor — GDP -39%, D/G +1.4x worse',
+        detail: '6Cas+1Far+1Tra vs 3Cas+3Far+2Tra × 2MM+2GB+floor (3 seeds): GDP -39.0%, D/G +1.399x worse. The 2MM+2GB+floor config is balanced for standard archetype (3Cas+3Far+2Tra). Casual-heavy servers need a different config (lower guild_buyer_multiplier, higher diamond floor). Archetype composition is a first-order concern.',
+        section: 0,
+        commit: '39c86c2',
+      },
+    ],
+  },
+  {
+    date: '2026-04-08',
+    label: 'Apr 8',
     entries: [
       {
         tag: 'WEB FEATURE',

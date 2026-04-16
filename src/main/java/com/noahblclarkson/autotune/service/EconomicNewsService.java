@@ -55,6 +55,10 @@ public class EconomicNewsService {
     private static final BigDecimal TWO = BigDecimal.valueOf(2);
     private static final BigDecimal VOLATILE_THRESHOLD = BigDecimal.valueOf(0.15);
     private static final BigDecimal STABLE_THRESHOLD = BigDecimal.valueOf(0.05);
+    private static final int MIN_HISTORY_SIZE = 2;
+    private static final int PERCENT_FMT_100 = 100;
+    private static final int PERCENT_FMT_10 = 10;
+    private static final String TIER_NORMAL = "NORMAL";
 
     private final AutoTune plugin;
     private final ItemRepository itemRepository;
@@ -230,7 +234,7 @@ public class EconomicNewsService {
 
         for (ShopItem item : shopManager.getAllItems()) {
             List<PriceHistory> history = itemRepository.getPriceHistorySince(item.id(), windowStart, historyLimit);
-            if (history.size() < 2) continue;
+            if (history.size() < MIN_HISTORY_SIZE) continue;
 
             PriceHistory latest = history.get(history.size() - 1);
             PriceHistory oldest = history.get(0);
@@ -294,7 +298,7 @@ public class EconomicNewsService {
         List<Double> pctChanges = new ArrayList<>();
         for (ShopItem item : shopManager.getAllItems()) {
             List<PriceHistory> history = itemRepository.getPriceHistorySince(item.id(), windowStart, historyLimit);
-            if (history.size() < 2) continue;
+            if (history.size() < MIN_HISTORY_SIZE) continue;
             BigDecimal newest = history.get(history.size() - 1).price();
             BigDecimal oldest = history.get(0).price();
             if (oldest.compareTo(BigDecimal.ZERO) <= 0) continue;
@@ -304,7 +308,7 @@ public class EconomicNewsService {
             pctChanges.add(pctChange);
         }
 
-        if (pctChanges.size() < 2) return;
+        if (pctChanges.size() < MIN_HISTORY_SIZE) return;
 
         double sum = 0.0;
         for (double p : pctChanges) sum += p;
@@ -355,7 +359,7 @@ public class EconomicNewsService {
         LoanManager.CircuitBreakerStatus status = loanManager.getCircuitBreakerStatus();
         String tier = status.tier();
 
-        if ("NORMAL".equals(tier)) {
+        if (TIER_NORMAL.equals(tier)) {
             String prev = lastCircuitBreakerTier.getAndSet(null);
             if (prev != null) {
                 out.add(new NewsItem(
@@ -364,7 +368,7 @@ public class EconomicNewsService {
                         "/at admin health",
                         "Run /at admin health for details"
                 ));
-                webhookService.onCircuitBreakerChange("NORMAL");
+                webhookService.onCircuitBreakerChange(TIER_NORMAL);
             }
             return;
         }
@@ -443,8 +447,8 @@ public class EconomicNewsService {
     }
 
     private String formatPercent(double value) {
-        if (value >= 100) return String.format("%.0f%%", value);
-        if (value >= 10) return String.format("%.1f%%", value);
+        if (value >= PERCENT_FMT_100) return String.format("%.0f%%", value);
+        if (value >= PERCENT_FMT_10) return String.format("%.1f%%", value);
         return String.format("%.2f%%", value);
     }
 

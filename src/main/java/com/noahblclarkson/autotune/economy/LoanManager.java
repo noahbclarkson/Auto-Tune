@@ -194,6 +194,26 @@ public class LoanManager {
             }
         }
 
+        // Economy-wide total debt cap: reject if total debt would exceed GDP × totalDebtGdpCap
+        if (config.totalDebtGdpCap() > 0) {
+            Optional<EconomySnapshot> latestSnapshot = snapshotRepository.findLatest();
+            if (latestSnapshot.isPresent()) {
+                BigDecimal gdp = latestSnapshot.get().gdp();
+                if (gdp.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal totalDebtLimit = gdp.multiply(BigDecimal.valueOf(config.totalDebtGdpCap()));
+                    BigDecimal totalCurrentDebt = loanRepository.findAllActive().stream()
+                            .map(Loan::currentBalance)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal projectedTotal = totalCurrentDebt.add(amount);
+                    if (projectedTotal.compareTo(totalDebtLimit) > 0) {
+                        return LoanResult.error("Economy-wide debt cap reached: total debt would exceed "
+                                + config.totalDebtGdpCap() + "× GDP (" + configManager.formatCurrency(totalDebtLimit) + "). "
+                                + "Current total: " + configManager.formatCurrency(totalCurrentDebt) + ". Repay existing loans to take new ones.");
+                    }
+                }
+            }
+        }
+
         BigDecimal interestRate = calculateInterestRate(playerData.creditScore(), clampedTerm, config);
         Instant dueDate = Instant.now().plus(Duration.ofDays(clampedTerm));
 

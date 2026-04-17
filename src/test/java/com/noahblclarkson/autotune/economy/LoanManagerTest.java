@@ -72,6 +72,7 @@ class LoanManagerTest {
                 d.tier2InterestCap(),
                 d.postDefaultCooldownHours(),
                 d.singleLoanGdpCap(),
+                d.totalDebtGdpCap(),
                 d.counterCyclical()
         );
     }

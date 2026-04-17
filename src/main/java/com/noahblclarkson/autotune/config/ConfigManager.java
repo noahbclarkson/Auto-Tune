@@ -241,6 +241,7 @@ public class ConfigManager {
                 section.getDouble("tier2-interest-cap", 0.25),
                 section.getInt("post-default-cooldown-hours", 168),
                 section.getDouble("single-loan-gdp-cap", 1.0),
+                section.getDouble("total-debt-gdp-cap", 2.0),
                 section.getBoolean("counter-cyclical", true)
         );
     }

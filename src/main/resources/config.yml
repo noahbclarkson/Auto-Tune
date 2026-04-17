@@ -213,6 +213,13 @@ loans:
   tier1-interest-cap: 0.5
   tier2-interest-cap: 0.25
 
+  # Maximum total debt across ALL active loans as a multiple of economy GDP.
+  # When total economy-wide debt exceeds this cap, new loans are rejected
+  # until existing loans are repaid. Prevents runaway debt accumulation
+  # (e.g., from GuildBuyer cascading during TIER3 lock).
+  # Set to 0 to disable. Default: 2.0 (2× GDP cap).
+  total-debt-gdp-cap: 2.0
+
 gui:
   # Items per page in shop (max 45 = 5 rows x 9 columns)
   items-per-page: 45

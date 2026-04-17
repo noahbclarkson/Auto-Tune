@@ -207,6 +207,13 @@ public record AutoTuneConfig(
             /// Maximum size of a single loan as a multiple of economy GDP.
             /// A value of 1.0 means no single loan can exceed total GDP.
             double singleLoanGdpCap,
+            /// Maximum total debt across ALL active loans as a multiple of economy GDP.
+            /// When total economy-wide debt exceeds this cap, new loans are rejected
+            /// until existing loans are repaid. Prevents runaway debt accumulation
+            /// (e.g., from GuildBuyer cascading during TIER3 lock).
+            /// A value of 2.0 means total debt cannot exceed 2× GDP.
+            /// Set to 0 to disable (not recommended).
+            double totalDebtGdpCap,
             /// Counter-cyclical interest: interest rate is smoothly reduced as economy
             /// debt/GDP rises, making it easier for players to service debt before it
             /// becomes critical. Replaces the tiered circuit breaker with a continuous
@@ -223,6 +230,7 @@ public record AutoTuneConfig(
                     3.0, 5.0, 30.0, 0.5, 0.25,  // debt-gdp-tier1=3.0, tier2=5.0, tier3=30.0 (raised 2026-04-15)
                     168,    // postDefaultCooldownHours: 7 days
                     1.0,    // singleLoanGdpCap: single loan capped at 1× GDP
+                    2.0,    // totalDebtGdpCap: economy-wide debt capped at 2× GDP
                     true    // counterCyclical: enabled by default
             );
         }

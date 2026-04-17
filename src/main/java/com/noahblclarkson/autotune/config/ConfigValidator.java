@@ -221,6 +221,10 @@ public class ConfigValidator {
             v.add(S_LOANS + ".singleLoanGdpCap must be > 0 (currently " + c.singleLoanGdpCap() + "). "
                     + "A value of 1.0 caps single loans at economy GDP. Values < 1 would be trivially small.");
         }
+        if (c.totalDebtGdpCap() < 0) {
+            v.add(S_LOANS + ".totalDebtGdpCap must be >= 0 (currently " + c.totalDebtGdpCap() + "). "
+                    + "Set to 0 to disable the economy-wide debt cap. Positive values set the cap as a multiple of GDP.");
+        }
     }
 
     private static void validateGui(AutoTuneConfig.GuiConfig c, List<String> v) {

@@ -233,47 +233,34 @@ const CONFIG_FINDINGS: Finding[] = [
     ],
   },
   {
-    q: 'What is the correct interest circuit breaker configuration?',
-    verdict: '✅ Production Default',
-    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    q: 'Is the 2MM+2GB+floor config stable at 60+ days?',
+    verdict: '⚠️ Use with Caution',
+    verdictClass: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
     answer: [
-      'tier3_ratio=30 with counter_cyclical=true and min_interest=0% is the confirmed default. '
-        + 'An 80-run sensitivity test (4 tier3 × 4 min_interest × 5 seeds) showed: '
-        + 'tier3=30 eliminates TIER3 circuit events entirely in healthy economies — 0 events '
-        + 'across all 20 combinations.',
-      'With tier3=30, the counter-cyclical multiplier = max(0, 1 − D/G/30). At D/G=10× '
-        + '→ 33% interest (survivable). At D/G=20× → 33% interest. At D/G=30× → 0% (true catastrophe). '
-        + 'This gives 3–4× headroom before the circuit fires.',
-      'Setting min_interest above 0% is counterproductive — it fires the circuit sooner '
-        + 'and actually increases TIER3 event count. Counter-cyclical already handles gradual '
-        + 'debt reduction. The minimum floor defeats its purpose.',
+      'The 30-day test was misleading — the economy appeared to deleverage (D/G 8.3× → 7.5×). '
+        + 'A 60-day test reveals the truth: D/G explodes from 7.5× (30d) to 20.1× (60d). '
+        + 'The 30-day "improvement" was a temporary pause before catastrophic debt accumulation.',
+      'The root cause: at D/G=27, counter-cyclical multiplier = 0.10 (10% interest). '
+        + 'GDP grows ~2.4%/day while debt grows ~2%/day at this rate — D/G slowly accumulates. '
+        + 'At D/G=30, TIER3 fires (multiplier=0%), but the hysteresis-unlock at D/G=27 '
+        + 'lets the circuit oscillate: TIER3 fires → unlocks at 27 → D/G climbs back to 30 → repeat.',
+      'The Diamond floor was a red herring — natural Diamond equilibrium is ~$472, so the '
+        + 'floor at $500 was never binding. A no-floor 60d test showed identical instability.',
+      'The proposed fix (tier3=50 + min_int=0.20) does NOT work: it keeps interest elevated '
+        + 'at ALL D/G levels (20% floor), preventing the natural deleveraging that occurs at '
+        + 'lower multipliers. Test result: D/G 18.1× (ctrl) → 19.1× (fix) — slightly WORSE.',
+      'Investigating: GuildBuyer total debt cap, removing floor (non-binding), or a '
+        + 'long-run deleveraging mechanism. Until fixed, monitor D/G weekly at 60+ day servers.',
     ],
     metrics: [
-      { label: 'tier3=30 events', value: '0', note: 'across all 20 combos tested' },
-      { label: 'D/G at tier3', value: '30×', note: '3× headroom vs typical 10×' },
-      { label: 'min_interest=0%', value: '✅', note: 'higher values are counterproductive' },
+      { label: 'D/G at 14d', value: '8.31×', note: 'healthy' },
+      { label: 'D/G at 30d', value: '7.50×', note: 'deceiving improvement' },
+      { label: 'D/G at 60d', value: '20.1×', note: 'CATASTROPHIC — circuit oscillating' },
+      { label: 'Fix attempt', value: 'NOT FIXED', note: 'tier3=50+min_int=0.20 makes D/G worse' },
     ],
     relatedLinks: [
       { href: '/docs', label: 'Loan circuit breaker docs' },
-    ],
-  },
-  {
-    q: 'Is the counter-cyclical interest model safe long-term?',
-    verdict: '✅ Production Default',
-    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
-    answer: [
-      'Yes. A 30-day test of 2MM+2GB+floor at counter_cyclical=true showed the economy '
-        + 'NOT only survived but improved: GDP grew +44% over 16 additional days, spreads '
-        + 'compressed 10.6%, volatility decreased 19.4%, and D/G improved from 8.3× to 7.5×.',
-      'The economy deleverages naturally under counter-cyclical interest. As D/G rises, '
-        + 'interest rate falls — giving borrowers breathing room to repay without cascading defaults.',
-      'Without counter-cyclical (legacy tiered system), D/G oscillates between 8–20×. '
-        + 'With it, D/G stays bounded. Long-run stability is confirmed.',
-    ],
-    metrics: [
-      { label: 'GDP growth at 30d', value: '+44.4%', note: 'over 16 additional days' },
-      { label: 'D/G improvement at 30d', value: '8.3× → 7.5×', note: 'economy deleverages' },
-      { label: 'Volatility at 30d', value: '−19.4%', note: 'decreasing over time' },
+      { href: '/simulator', label: 'Run your own simulation' },
     ],
   },
   {

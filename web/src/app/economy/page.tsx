@@ -29,6 +29,7 @@ import {
   type DebtData,
   type VolumeMultiplierDto,
   type AdminHealthDto,
+  type WhatMovedEntry,
 } from '@/lib/api';
 import { formatCurrency, formatPercent } from '@/lib/format';
 
@@ -69,10 +70,11 @@ export default function EconomyPage() {
   const [history, setHistory] = useState<EconomySnapshotDto[]>([]);
   const [volumeMultiplier, setVolumeMultiplier] = useState<VolumeMultiplierDto | null>(null);
   const [health, setHealth] = useState<AdminHealthDto | null>(null);
+  const [whatMoved, setWhatMoved] = useState<WhatMovedEntry[]>([]);
 
   const fetchData = useCallback(async () => {
     try {
-      const [statsData, gdpData, inflationData, debtData, historyData, vmData, healthData] =
+      const [statsData, gdpData, inflationData, debtData, historyData, vmData, healthData, whatMovedData] =
         await Promise.all([
           api.stats(apiBase),
           api.economy.gdp(apiBase).catch(() => null),
@@ -81,6 +83,7 @@ export default function EconomyPage() {
           api.economy.history(apiBase, 500).catch(() => []),
           api.economy.volumeMultiplier(apiBase).catch(() => null),
           api.admin.health(apiBase).catch(() => null),
+          api.economy.whatMoved(apiBase).catch(() => [] as WhatMovedEntry[]),
         ]);
       setStats(statsData);
       setGdp(gdpData);
@@ -89,6 +92,7 @@ export default function EconomyPage() {
       setHistory((historyData as EconomySnapshotDto[]).reverse());
       setVolumeMultiplier(vmData as VolumeMultiplierDto | null);
       setHealth(healthData as AdminHealthDto | null);
+      setWhatMoved(whatMovedData);
     } catch {
       // silently fail
     }
@@ -378,6 +382,41 @@ export default function EconomyPage() {
               </Card>
             )}
           </div>
+        )}
+
+        {/* What moved — natural language price explanations */}
+        {whatMoved.length > 0 && (
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-amber-500" />
+                What Moved Today
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {whatMoved.slice(0, 6).map((item) => (
+                  <div
+                    key={item.itemId}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-muted"
+                  >
+                    <span className="text-xl flex-shrink-0">{item.emoji}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm font-medium text-foreground truncate">{item.displayName}</span>
+                        <span className={`text-sm font-bold flex-shrink-0 ${
+                          item.direction === 'up' ? 'text-emerald-500' : 'text-red-500'
+                        }`}>
+                          {item.percentChange > 0 ? '+' : ''}{item.percentChange.toFixed(1)}%
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                        {item.explanation}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Debt-to-GDP ratio bar */}

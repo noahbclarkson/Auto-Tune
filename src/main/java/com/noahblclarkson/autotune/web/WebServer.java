@@ -37,6 +37,7 @@ import com.noahblclarkson.autotune.model.Transaction;
 import com.noahblclarkson.autotune.service.PlayerImpactService;
 import com.noahblclarkson.autotune.service.PlayerStreakService;
 import com.noahblclarkson.autotune.service.PortfolioService;
+import com.noahblclarkson.autotune.service.EconomyWhatMovedService;
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.json.JsonMapper;
@@ -123,6 +124,7 @@ public class WebServer {
     private final PortfolioService portfolioService;
     private final PlayerImpactService playerImpactService;
     private final PlayerStreakService streakService;
+    private final EconomyWhatMovedService whatMovedService;
     private final Gson gson;
 
     private Javalin app;
@@ -147,7 +149,8 @@ public class WebServer {
             MarketEventService marketEventService,
             PriceAlertManager priceAlertManager,
             Server server,
-            PlayerStreakService streakService
+            PlayerStreakService streakService,
+            EconomyWhatMovedService whatMovedService
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -171,6 +174,7 @@ public class WebServer {
         this.playerImpactService = new PlayerImpactService(
                 playerRepository, itemRepository, transactionRepository, marketEngine);
         this.streakService = streakService;
+        this.whatMovedService = whatMovedService;
         this.gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .create();
@@ -473,6 +477,12 @@ public class WebServer {
                 trends.add(entry);
             }
             ctx.json(trends);
+        });
+
+        // GET /api/economy/what-moved — natural language price move explanations
+        app.get("/api/economy/what-moved", ctx -> {
+            List<EconomyWhatMovedService.WhatMovedEntry> entries = whatMovedService.getTopMovers();
+            ctx.json(entries);
         });
 
         app.get("/api/transactions", ctx -> {

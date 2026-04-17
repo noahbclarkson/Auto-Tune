@@ -22,6 +22,7 @@ import com.noahblclarkson.autotune.service.MarketDigestService;
 import com.noahblclarkson.autotune.service.PriceMilestoneService;
 import com.noahblclarkson.autotune.service.PlayerOnboardingService;
 import com.noahblclarkson.autotune.service.PlayerStreakService;
+import com.noahblclarkson.autotune.service.EconomyWhatMovedService;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.PriceAlertRepository;
 import com.noahblclarkson.autotune.database.ShopFavoriteRepository;
@@ -306,5 +307,15 @@ public class AutoTuneModule extends AbstractModule {
             BadgeService badgeService
     ) {
         return new PlayerStreakService(plugin, databaseManager, badgeService);
+    }
+
+    @Provides
+    @Singleton
+    public EconomyWhatMovedService provideEconomyWhatMovedService(
+            TransactionRepository transactionRepository,
+            ItemRepository itemRepository,
+            ShopManager shopManager
+    ) {
+        return new EconomyWhatMovedService(transactionRepository, itemRepository, shopManager);
     }
 }

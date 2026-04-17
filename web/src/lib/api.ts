@@ -110,6 +110,15 @@ export interface TrendDto {
   label: string;
 }
 
+export interface WhatMovedEntry {
+  itemId: number;
+  displayName: string;
+  percentChange: number;
+  direction: string;
+  emoji: string;
+  explanation: string;
+}
+
 export interface ItemTrendDto {
   direction: 'UP' | 'DOWN' | 'STABLE';
   streak: number;
@@ -368,6 +377,7 @@ export const api = {
     history: (base: string, limit = 100) =>
       fetchJson<EconomySnapshotDto[]>(`${base}/api/economy/history?limit=${limit}`),
     trends: (base: string) => fetchJson<TrendDto[]>(`${base}/api/economy/trends`),
+    whatMoved: (base: string) => fetchJson<WhatMovedEntry[]>(`${base}/api/economy/what-moved`),
     volumeMultiplier: (base: string) =>
       fetchJson<VolumeMultiplierDto>(`${base}/api/economy/volume-multiplier`),
   },

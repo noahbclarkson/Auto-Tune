@@ -154,6 +154,28 @@ export default function DocsPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
+      {/* Version disclaimer */}
+      <div className="border-b border-amber-800/30 bg-amber-950/10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-start sm:items-center gap-3">
+          <div className="shrink-0 w-5 h-5 rounded bg-amber-600/20 border border-amber-600/30 flex items-center justify-center mt-0.5 sm:mt-0">
+            <span className="text-amber-400 text-xs font-bold">!</span>
+          </div>
+          <p className="text-xs sm:text-sm text-amber-200/80 leading-relaxed">
+            <span className="font-semibold text-amber-300">These docs track the rewrite-2 branch</span>
+            {' '}&mdash; in-development version targeting Paper 1.21.4. All findings and defaults reflect rewrite-2.{' '}
+            <a
+              href="https://github.com/noahbclarkson/Auto-Tune/tree/master/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 text-amber-300 hover:text-amber-200"
+            >
+              Main branch docs
+            </a>{' '}
+            cover the legacy version.
+          </p>
+        </div>
+      </div>
+
       {/* Hero */}
       <div className="border-b border-gray-800/60 bg-gray-950">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">

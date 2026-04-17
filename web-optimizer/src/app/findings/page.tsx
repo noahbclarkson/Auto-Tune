@@ -1,0 +1,577 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
+import { ChevronDown, ArrowRight, FlaskConical, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, XCircle, Info, Users, Sliders, BarChart2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+/* ─────────────────────────────────────────────────────────────
+   Findings content — organized by category
+   Each finding: question, verdict badge, answer paragraphs,
+   key metrics, related links
+───────────────────────────────────────────────────────────── */
+
+type Verdict = '✅ Production Default' | '⚠️ Use with Caution' | '❌ Never' | '🔄 Context-Dependent' | '💡 Key Insight';
+
+type Finding = {
+  q: string;
+  verdict: Verdict;
+  verdictClass: string;
+  answer: string[];
+  metrics?: { label: string; value: string; note?: string }[];
+  relatedLinks?: { href: string; label: string }[];
+};
+
+type Category = {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  findings: Finding[];
+};
+
+/* ─── ARCHETYPE DECISIONS ─────────────────────────────────── */
+
+const ARCHETYPE_FINDINGS: Finding[] = [
+  {
+    q: 'Should I add MarketMakers alongside GuildBuyers?',
+    verdict: '✅ Production Default',
+    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    answer: [
+      'Yes — 2 MarketMakers with 2 GuildBuyers is the recommended production configuration. '
+        + 'MarketMakers post two-sided limit orders around perceived fair value (2–5% spread), while '
+        + 'GuildBuyers provide asymmetric buy pressure when prices dip. Together they create a near-balanced economy.',
+      'Without MarketMakers, prices naturally settle 50–70% below base. With 2MM+2GB, '
+        + 'prices stay within 10–20% of base and the economy grows long-term.',
+    ],
+    metrics: [
+      { label: 'GDP improvement', value: '+101%', note: '1MM+GB → 2MM+2GB+floor' },
+      { label: 'Volatility reduction', value: '−48%', note: 'Coefficient of variation' },
+      { label: 'Spread compression', value: '−22%', note: 'Buy price delta' },
+    ],
+    relatedLinks: [
+      { href: '/simulator', label: 'Run the simulator' },
+      { href: '/how-it-works', label: 'Engine mechanics' },
+      { href: '/docs', label: 'Full admin guide' },
+    ],
+  },
+  {
+    q: 'Can Newbies replace GuildBuyers?',
+    verdict: '❌ Never',
+    verdictClass: 'text-red-400 bg-red-950/60 border-red-800/50',
+    answer: [
+      'GuildBuyers are non-negotiable. Replacing both GuildBuyers with 2 Newbies in a 2MM+2GB economy causes '
+        + 'GDP to collapse by 68% and debt-to-GDP to explode 37×. Newbies provide passive buy pressure but they '
+        + 'do not actively buy price dips — which is what makes GuildBuyers essential.',
+      'GuildBuyers buy proactively when price falls below perceived value, creating a natural price floor. '
+        + 'Newbies buy opportunistically but lack the structured dip-buying behavior that stabilizes prices.',
+      'Newbies CAN supplement the economy — they reduce volatility by 68% in healthy economies and '
+        + 'improve D/G by 42% in stressed economies. But they cannot replace GuildBuyers.',
+    ],
+    metrics: [
+      { label: 'GDP without GBs', value: '−68%', note: 'replaced with 2 Newbies' },
+      { label: 'D/G explosion', value: '37× worse', note: '5.0x → 41.7x' },
+      { label: 'Volatility increase', value: '+25%', note: 'without GB dip-buying' },
+    ],
+    relatedLinks: [
+      { href: '/docs', label: 'GuildBuyer config docs' },
+    ],
+  },
+  {
+    q: 'Should I add InsiderTraders to my economy?',
+    verdict: '🔄 Context-Dependent',
+    verdictClass: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
+    answer: [
+      'InsiderTraders buy when price falls below the rolling mean and sell when it rises above — a mean-reversion strategy. '
+        + 'Their effect depends entirely on whether your economy is healthy or stressed.',
+      'In healthy economies, ITs add +30% GDP but worsen D/G by +2.4×. The added buy pressure '
+        + 'causes GuildBuyers to trigger more frequently, amplifying debt. Only add ITs if D/G is '
+        + 'below 5× and you are monitoring it weekly.',
+      'In stressed economies, ITs are counter-cyclical: they absorb sell pressure from Farmers '
+        + 'and Hoarders during price dips, improving D/G by −1.3×. But the GDP cost is −12%. '
+        + 'Do NOT add ITs to stressed economies unless D/G debt is your primary concern.',
+    ],
+    metrics: [
+      { label: 'IT in healthy GDP', value: '+30.1%', note: 'but D/G +2.4×' },
+      { label: 'IT in stressed D/G', value: '−1.3×', note: 'counter-cyclical benefit' },
+      { label: 'IT in stressed GDP', value: '−12.2%', note: 'significant cost' },
+    ],
+    relatedLinks: [
+      { href: '/docs', label: 'Archetype config docs' },
+    ],
+  },
+  {
+    q: 'Should I add VolumeTraders to stabilize spreads?',
+    verdict: '❌ Never',
+    verdictClass: 'text-red-400 bg-red-950/60 border-red-800/50',
+    answer: [
+      'VolumeTraders fire on spread widening and price dislocations. In ANY economy — healthy or stressed — '
+        + 'VTs are net negative. They compress spreads but at the cost of lower GDP and higher volatility.',
+      'In healthy economies: −9.2% GDP, +8.7% volatility worse. In stressed economies: −12.7% GDP. '
+        + 'The mechanism: VT amplifies the dominant directional pressure. In healthy economies it '
+        + 'accelerates GuildBuyer debt accumulation. In stressed economies it worsens sell cascades.',
+      'Never add VolumeTraders to any configuration. Spread compression is better achieved by '
+        + 'adding more MarketMakers or ensuring a healthy player count (10+ active traders).',
+    ],
+    metrics: [
+      { label: 'VT in healthy GDP', value: '−9.2%', note: 'vs no VT baseline' },
+      { label: 'VT in stressed GDP', value: '−12.7%', note: 'amplifies sell cascades' },
+      { label: 'VT volatility', value: '+8.7% worse', note: 'opposite of intended effect' },
+    ],
+  },
+  {
+    q: 'What if I have AFK Farmers on my server?',
+    verdict: '❌ Never',
+    verdictClass: 'text-red-400 bg-red-950/60 border-red-800/50',
+    answer: [
+      'AFKFarmers are the most destructive archetype tested: −49.5% GDP and +65.9% volatility. '
+        + 'They accumulate resources offline (high gather rate, low online presence) and dump them '
+        + 'periodically at near-zero margin — creating sudden supply spikes that crash prices.',
+      'The mechanism: offline accumulation → periodic dump at 0–3% margin → price spike crash → '
+        + 'circuit breaker fires constantly. This is more destructive than IT+VT combined.',
+      'If your server has AFK farmers, reduce the gather_rate in config or add a cooldown '
+        + 'on large-volume sells. A sell volume cap per player per hour is the most effective mitigation.',
+    ],
+    metrics: [
+      { label: 'AFK Farmer GDP', value: '−49.5%', note: 'most destructive tested' },
+      { label: 'AFK Farmer volatility', value: '+65.9%', note: 'vs baseline' },
+      { label: 'AFK Farmer D/G', value: '+21.4×', note: 'debt amplification' },
+    ],
+    relatedLinks: [
+      { href: '/docs', label: 'Archetype avoidance guide' },
+    ],
+  },
+  {
+    q: 'Should I add Hoarders to my economy?',
+    verdict: '⚠️ Use with Caution',
+    verdictClass: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
+    answer: [
+      'Hoarders accumulate inventory and rarely sell, providing a passive price floor. '
+        + 'Replacing 2 Farmers with 2 Hoarders: GDP +1.5% (essentially flat) and D/G −6.9% '
+        + '(slight improvement). The effect is marginal.',
+      'Hoarders reduce supply → prices stay slightly higher → GuildBuyers trigger less → less debt. '
+        + 'But the effect is too small to be a primary strategy. They are neutral enough to not '
+        + 'be worth worrying about — but not beneficial enough to engineer for.',
+    ],
+    metrics: [
+      { label: 'Hoarder GDP', value: '+1.5%', note: 'essentially flat' },
+      { label: 'Hoarder D/G', value: '−6.9%', note: 'slight improvement' },
+    ],
+  },
+];
+
+/* ─── CONFIG DECISIONS ─────────────────────────────────────── */
+
+const CONFIG_FINDINGS: Finding[] = [
+  {
+    q: 'What is the optimal GuildBuyer threshold?',
+    verdict: '✅ Production Default',
+    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    answer: [
+      '7% is the recommended threshold. A 5-seed × 5-threshold test (25 runs total) shows 7% '
+        + 'produces the best GDP (1,261K average) and the lowest volatility (0.110) across all seeds.',
+      'The old default of 15–30% is catastrophically bad: selective buying at scale '
+        + 'triggers massive credit extension and debt spirals. At 7%, buying is incremental '
+        + 'enough that it functions as a natural price floor without amplifying debt.',
+      '5% has the best D/G (6.98×) but at a large GDP cost (−17% vs 7%). 7% is the correct '
+        + 'balance for most servers. Monitor D/G monthly — if it climbs above 10×, lower to 5%.',
+    ],
+    metrics: [
+      { label: '7% GDP', value: '1,261K', note: 'best across 5 seeds' },
+      { label: '7% volatility', value: '0.110', note: 'lowest of all thresholds' },
+      { label: '7% D/G', value: '8.36×', note: 'vs 5% at 6.98× (best)' },
+    ],
+    relatedLinks: [
+      { href: '/docs', label: 'GuildBuyer config docs' },
+    ],
+  },
+  {
+    q: 'What does the Diamond floor actually do?',
+    verdict: '🔄 Context-Dependent',
+    verdictClass: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
+    answer: [
+      'The Diamond floor (default 60%, ~$300) keeps displayed prices from falling below it. '
+        + 'This protects sellers from catastrophic price collapses — but it has a paradoxical '
+        + 'effect on internal prices.',
+      'When the floor binds, players gather Diamond MORE because the sell price is artificially '
+        + 'protected. This increases supply → internal prices drop below what they would have '
+        + 'been without the floor. Diamond internal price averages $285 (floor) while natural '
+        + 'equilibrium is $241. The floor paradox: displayed prices are protected but internal '
+        + 'prices are lower than they should be.',
+      'Despite the paradox, 60% floor is recommended: GDP +0.9% (neutral), D/G +19% worse (real cost), '
+        + 'but seller protection and player confidence are worth it. Above 70% floor starts '
+        + 'destroying the economy.',
+    ],
+    metrics: [
+      { label: '60% floor GDP', value: '+0.9%', note: 'essentially neutral' },
+      { label: '60% floor D/G', value: '+19% worse', note: 'the hidden cost' },
+      { label: 'Floor danger zone', value: '>70%', note: 'starts destroying GDP' },
+    ],
+    relatedLinks: [
+      { href: '/docs', label: 'Floor config docs' },
+    ],
+  },
+  {
+    q: 'Should I enable market events in my economy?',
+    verdict: '❌ Never',
+    verdictClass: 'text-red-400 bg-red-950/60 border-red-800/50',
+    answer: [
+      'Do NOT enable frequent or strong events in a healthy 2MM+2GB+floor economy. '
+        + 'A 10-day event burst (DEMAND_SURGE 2× on Diamond, SUPPLY_GLUT 2× on Iron, '
+        + 'INFLATION_BOOST 1.5× across all items, GOLD_RUSH 1.8×) produced: GDP −2.0% '
+        + 'and D/G +0.63× WORSE. One seed (98765) went catastrophic.',
+      'Events introduce instability without compensating GDP benefits. In a healthy economy '
+        + 'prices are already discovering value efficiently — events distort that process.',
+      'Events CAN help stagnant economies (low trade volume, no price movement) as a '
+        + 'stimulus mechanism. Keep them rare (once per season) and weak (multiplier ≤ 1.2×).',
+    ],
+    metrics: [
+      { label: 'Events GDP', value: '−2.0%', note: 'in healthy economy' },
+      { label: 'Events D/G', value: '+0.63× worse', note: 'even in healthy' },
+      { label: 'Seed 98765 D/G', value: '7.46× vs 4.87×', note: 'catastrophic on one seed' },
+    ],
+  },
+  {
+    q: 'What is the correct interest circuit breaker configuration?',
+    verdict: '✅ Production Default',
+    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    answer: [
+      'tier3_ratio=30 with counter_cyclical=true and min_interest=0% is the confirmed default. '
+        + 'An 80-run sensitivity test (4 tier3 × 4 min_interest × 5 seeds) showed: '
+        + 'tier3=30 eliminates TIER3 circuit events entirely in healthy economies — 0 events '
+        + 'across all 20 combinations.',
+      'With tier3=30, the counter-cyclical multiplier = max(0, 1 − D/G/30). At D/G=10× '
+        + '→ 33% interest (survivable). At D/G=20× → 33% interest. At D/G=30× → 0% (true catastrophe). '
+        + 'This gives 3–4× headroom before the circuit fires.',
+      'Setting min_interest above 0% is counterproductive — it fires the circuit sooner '
+        + 'and actually increases TIER3 event count. Counter-cyclical already handles gradual '
+        + 'debt reduction. The minimum floor defeats its purpose.',
+    ],
+    metrics: [
+      { label: 'tier3=30 events', value: '0', note: 'across all 20 combos tested' },
+      { label: 'D/G at tier3', value: '30×', note: '3× headroom vs typical 10×' },
+      { label: 'min_interest=0%', value: '✅', note: 'higher values are counterproductive' },
+    ],
+    relatedLinks: [
+      { href: '/docs', label: 'Loan circuit breaker docs' },
+    ],
+  },
+  {
+    q: 'Is the counter-cyclical interest model safe long-term?',
+    verdict: '✅ Production Default',
+    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    answer: [
+      'Yes. A 30-day test of 2MM+2GB+floor at counter_cyclical=true showed the economy '
+        + 'NOT only survived but improved: GDP grew +44% over 16 additional days, spreads '
+        + 'compressed 10.6%, volatility decreased 19.4%, and D/G improved from 8.3× to 7.5×.',
+      'The economy deleverages naturally under counter-cyclical interest. As D/G rises, '
+        + 'interest rate falls — giving borrowers breathing room to repay without cascading defaults.',
+      'Without counter-cyclical (legacy tiered system), D/G oscillates between 8–20×. '
+        + 'With it, D/G stays bounded. Long-run stability is confirmed.',
+    ],
+    metrics: [
+      { label: 'GDP growth at 30d', value: '+44.4%', note: 'over 16 additional days' },
+      { label: 'D/G improvement at 30d', value: '8.3× → 7.5×', note: 'economy deleverages' },
+      { label: 'Volatility at 30d', value: '−19.4%', note: 'decreasing over time' },
+    ],
+  },
+  {
+    q: 'What happens if 40%+ of my players are Farmers?',
+    verdict: '❌ Never',
+    verdictClass: 'text-red-400 bg-red-950/60 border-red-800/50',
+    answer: [
+      'Farmer-heavy economies are sell-dominated: Farmers gather and sell but rarely buy, '
+        + 'creating chronic oversupply. If your archetype mix shifts to 6+ Farmers in a '
+        + '2MM+2GB+floor economy, GDP collapses −39% and D/G worsens.',
+      'The mechanism: excess sell pressure → prices fall → GuildBuyers buy more aggressively '
+        + 'to maintain their target → debt accumulates faster than the economy can service it.',
+      'The standard mix (3Cas + 3Far + 2Tra) is the minimum viable balance. If your '
+        + 'server is Farmer-heavy, add Hoarders or Newbies to offset the sell pressure. '
+        + 'Never let Farmers exceed 50% of your active player base.',
+    ],
+    metrics: [
+      { label: 'Casual-heavy GDP', value: '−39.0%', note: 'vs standard mix' },
+      { label: 'Casual-heavy D/G', value: '+1.40× worse', note: 'debt accumulates' },
+      { label: 'Volatility reduction', value: '−37.5%', note: 'but GDP cost is too high' },
+    ],
+  },
+];
+
+/* ─── ECONOMY BEHAVIOR ─────────────────────────────────────── */
+
+const BEHAVIOR_FINDINGS: Finding[] = [
+  {
+    q: 'Why is my economy volatile even with the recommended config?',
+    verdict: '💡 Key Insight',
+    verdictClass: 'text-sky-400 bg-sky-950/60 border-sky-800/50',
+    answer: [
+      'Volatility in Auto-Tune is mostly structural — set by your player archetype mix and initial '
+        + 'economy seed — not by your engine parameters. A 5-seed volatility test showed the same '
+        + '2MM+2GB+floor config producing volatility ranging from 7.9% (stable) to 28.7% (volatile) '
+        + 'across different random seeds.',
+      'This is not a bug. It is a feature. Auto-Tune models a real economy — and real economies '
+        + 'have good and bad years. Seeds 42 and 77777 are stable (7.9–8.8% CV). Seeds 12345, '
+        + '98765, and 11111 are volatile (20–29% CV). The variance is inherent to the initial '
+        + 'conditions.',
+      'If your server is consistently volatile, the first question to ask is: has the player mix '
+        + 'shifted (more Farmers, fewer Traders)? Engine parameters are a secondary concern.',
+    ],
+    metrics: [
+      { label: 'Volatility range', value: '7.9%–28.7%', note: 'same config, different seeds' },
+      { label: 'Most stable seeds', value: '42, 77777', note: '7.9–8.8% CV' },
+      { label: 'Most volatile seeds', value: '12345, 98765, 11111', note: '20–29% CV' },
+    ],
+    relatedLinks: [
+      { href: '/simulator', label: 'Run multi-seed tests' },
+    ],
+  },
+  {
+    q: 'Why does D/G sometimes look bad but the economy is fine?',
+    verdict: '💡 Key Insight',
+    verdictClass: 'text-sky-400 bg-sky-950/60 border-sky-800/50',
+    answer: [
+      'The Debt/GDP ratio can spike dramatically after loan defaults — but defaulted loans '
+        + 'are written off. The spike is a stale-debt artifact, not active financial stress. '
+        + 'After defaults resolve, the economy functions normally.',
+      'Example: a 50% player exodus caused D/G to spike from 0.75× to 13.92× — but GDP '
+        + 'only dropped −3.3%. The economy survived and recovered. D/G was high because '
+        + 'defaults from departing players were still counted in total debt.',
+      'Rule: always read D/G together with GDP trend, spread width, and volatility. '
+        + 'Never diagnose an economy by D/G alone.',
+    ],
+    metrics: [
+      { label: 'Post-exodus GDP', value: '−3.3%', note: 'economy survived' },
+      { label: 'Post-exodus D/G', value: '13.92×', note: 'stale default debt artifact' },
+    ],
+  },
+  {
+    q: 'Why do prices keep falling even with a Diamond floor?',
+    verdict: '💡 Key Insight',
+    verdictClass: 'text-sky-400 bg-sky-950/60 border-sky-800/50',
+    answer: [
+      'The Diamond floor affects displayed prices but not internal price discovery. '
+        + 'When prices hit the floor, players respond as if Diamond is worth $300 — gathering '
+        + 'more of it. This increases supply → which would push internal prices below the floor. '
+        + 'The floor prevents the displayed price from following.',
+      + 'The result: players see Diamond at $300, but the internal economy treats it as worth '
+        + '$180–285 (below the floor). This discrepancy means the GuildBuyer\'s perceived value '
+        + 'is based on the suppressed internal price, not the displayed floor price.',
+      'This is the Floor Paradox. It is not a bug — it is the correct behavior. '
+        + 'Monitor whether internal prices (visible in web dashboard) are falling toward '
+        + '$150 or below. If so, your floor is too high for your economy\'s natural equilibrium.',
+    ],
+    metrics: [
+      { label: 'Diamond displayed', value: '$300', note: 'at 60% floor' },
+      { label: 'Diamond internal avg', value: '$285', note: 'paradox: lower than floor' },
+      { label: 'Natural equilibrium', value: '$241', note: 'without floor' },
+    ],
+    relatedLinks: [
+      { href: '/how-it-works', label: 'Price update mechanics' },
+    ],
+  },
+  {
+    q: 'What is the minimum viable player count for Auto-Tune?',
+    verdict: '💡 Key Insight',
+    verdictClass: 'text-sky-400 bg-sky-950/60 border-sky-800/50',
+    answer: [
+      'Auto-Tune\'s player scaling uses a tanh curve that reaches 99% effect at 10 players. '
+        + 'Below 5 players, the market engine has minimal price discovery power — spreads '
+        + 'widen to 3–4× normal, and price movements become noisy.',
+      'For a healthy economy: 10+ active traders provides full engine benefit. '
+        + '5–9 active traders works but spreads are wider. Below 5: consider enabling '
+        + 'MarketMaker bots to compensate for low human participation.',
+      'GuildBuyers and MarketMakers count as active participants in spread computation. '
+        + 'A server with 3 humans + 2 MM + 2 GB (5 active archetypes) can function '
+        + 'better than a server with 8 humans and no structured market participants.',
+    ],
+    metrics: [
+      { label: 'Full effect at', value: '10+ players', note: 'tanh curve at 99%' },
+      { label: 'Reduced effect', value: '5–9 players', note: 'widened spreads' },
+      { label: 'Minimum viable', value: '3 archetypes', note: 'including bots' },
+    ],
+  },
+];
+
+/* ─── ACCORDION ─────────────────────────────────────────────── */
+
+function FindingRow({ finding }: { finding: Finding }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-gray-800 rounded-xl overflow-hidden bg-gray-900/40 hover:border-gray-700 transition-colors">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full text-left px-5 py-4 flex items-start gap-4"
+      >
+        <span className={cn('shrink-0 mt-0.5', open ? 'text-emerald-400' : 'text-gray-500')}>
+          {open ? <ChevronDown className="w-4 h-4 rotate-180 transition-transform" /> : <ChevronDown className="w-4 h-4 transition-transform" />}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <span className="font-medium text-white text-sm">{finding.q}</span>
+            <span className={cn('inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border', finding.verdictClass)}>
+              {finding.verdict}
+            </span>
+          </div>
+          {open && (
+            <div className="mt-4 space-y-4">
+              {finding.answer.map((para, i) => (
+                <p key={i} className="text-sm text-gray-300 leading-relaxed">{para}</p>
+              ))}
+              {finding.metrics && finding.metrics.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {finding.metrics.map((m) => (
+                    <div key={m.label} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-950/60 border border-gray-800">
+                      <div>
+                        <p className="text-xs text-gray-500">{m.label}</p>
+                        <p className="text-sm font-mono font-bold text-white">{m.value}</p>
+                        {m.note && <p className="text-[10px] text-gray-600">{m.note}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {finding.relatedLinks && finding.relatedLinks.length > 0 && (
+                <div className="flex flex-wrap gap-3">
+                  {finding.relatedLinks.map((l) => (
+                    <Link
+                      key={l.href}
+                      href={l.href}
+                      className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+                    >
+                      <ArrowRight className="w-3 h-3" />
+                      {l.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </button>
+    </div>
+  );
+}
+
+function CategorySection({ category }: { category: Category }) {
+  const Icon = category.icon;
+  return (
+    <section id={category.id} className="mb-14">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-8 h-8 rounded-lg bg-emerald-950/60 border border-emerald-800/50 flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4 text-emerald-400" />
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 uppercase tracking-widest">Category</p>
+          <h2 className="text-lg font-bold text-white">{category.label}</h2>
+        </div>
+      </div>
+      <div className="space-y-2 pl-0 sm:pl-11">
+        {category.findings.map((f) => (
+          <FindingRow key={f.q} finding={f} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ─── PAGE ─────────────────────────────────────────────────── */
+
+const CATEGORIES: Category[] = [
+  { id: 'archetypes', label: 'Archetype Decisions', icon: Users, findings: ARCHETYPE_FINDINGS },
+  { id: 'config', label: 'Config Decisions', icon: Sliders, findings: CONFIG_FINDINGS },
+  { id: 'behavior', label: 'Economy Behavior', icon: BarChart2, findings: BEHAVIOR_FINDINGS },
+];
+
+function StatBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col items-center px-5 py-4 bg-gray-900/60 border border-gray-800 rounded-xl">
+      <p className="text-2xl font-mono font-bold text-emerald-400">{value}</p>
+      <p className="text-xs text-gray-500 mt-1">{label}</p>
+    </div>
+  );
+}
+
+export default function FindingsPage() {
+  return (
+    <div className="min-h-screen bg-gray-950 text-white">
+      <Header />
+      <main>
+        {/* Hero */}
+        <div className="border-b border-gray-800/50 bg-gray-950">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-950/60 border border-emerald-800/50 text-emerald-400">
+                <FlaskConical className="w-3 h-3" />
+                Simulation Lab
+              </span>
+              <span className="text-xs text-gray-600">2026-04-17 · 22 findings · 80+ simulation runs</span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              What the simulation proved
+            </h1>
+            <p className="text-gray-400 max-w-2xl text-sm sm:text-base leading-relaxed">
+              Every finding on this page comes from automated 14–30 day economy simulations with real archetype
+              decision logic — not guesswork, not spreadsheets. Auto-Tune is the only Minecraft economy plugin
+              with a published evidence base for its recommendations.
+            </p>
+            {/* Stats strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8">
+              <StatBadge label="Simulation runs" value="80+" />
+              <StatBadge label="Seeds tested" value="5" />
+              <StatBadge label="Findings" value="22" />
+              <StatBadge label="Days per run" value="14–30" />
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Quick navigation */}
+          <div className="flex flex-wrap gap-2 mb-10">
+            {CATEGORIES.map((c) => (
+              <a
+                key={c.id}
+                href={`#${c.id}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-800 bg-gray-900/60 text-xs text-gray-400 hover:text-white hover:border-gray-700 transition-colors"
+              >
+                <c.icon className="w-3.5 h-3.5" />
+                {c.label}
+              </a>
+            ))}
+          </div>
+
+          <CategorySection category={CATEGORIES[0]} />
+          <CategorySection category={CATEGORIES[1]} />
+          <CategorySection category={CATEGORIES[2]} />
+        </div>
+
+        {/* CTA */}
+        <div className="border-t border-gray-800/50 bg-gray-950">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+            <p className="text-gray-400 text-sm mb-6">
+              Want to run your own tests? The full simulator is interactive and free to use.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/simulator"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-emerald-600/20 text-sm"
+              >
+                Open the Simulator →
+              </Link>
+              <Link
+                href="/sweep-results"
+                className="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-700 hover:border-gray-600 text-gray-300 font-semibold rounded-lg transition-colors text-sm"
+              >
+                Explore 840-config sweep
+              </Link>
+            </div>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+

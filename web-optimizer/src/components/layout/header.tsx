@@ -28,6 +28,7 @@ const NAV_SECTIONS: { label: string; items: { href: string; label: string; icon:
       { href: '/docs',           label: 'Docs',          icon: BookOpen },
       { href: '/how-it-works',   label: 'How It Works',  icon: BookOpen },
       { href: '/why-auto-tune',  label: 'Why Auto-Tune',  icon: TrendingUp },
+      { href: '/findings',       label: 'Findings',       icon: FlaskConical },
     ],
   },
   {

@@ -240,17 +240,20 @@ const CONFIG_FINDINGS: Finding[] = [
       'The 30-day test was misleading — the economy appeared to deleverage (D/G 8.3× → 7.5×). '
         + 'A 60-day test reveals the truth: D/G explodes from 7.5× (30d) to 20.1× (60d). '
         + 'The 30-day "improvement" was a temporary pause before catastrophic debt accumulation.',
-      'The root cause: at D/G=27, counter-cyclical multiplier = 0.10 (10% interest). '
+      'The root cause is two-part: (1) At D/G=27, counter-cyclical multiplier = 10% interest. '
         + 'GDP grows ~2.4%/day while debt grows ~2%/day at this rate — D/G slowly accumulates. '
-        + 'At D/G=30, TIER3 fires (multiplier=0%), but the hysteresis-unlock at D/G=27 '
-        + 'lets the circuit oscillate: TIER3 fires → unlocks at 27 → D/G climbs back to 30 → repeat.',
+        + '(2) At D/G=30, TIER3 fires (0% interest), but the 10% hysteresis band (unlocks at 27) '
+        + 'is too narrow — it unlocks before deleveraging completes, and debt immediately '
+        + 'compounds faster than GDP can grow. MM/GB opening loans ACCUMULATE during TIER3 lock, '
+        + 'overwhelming any deleveraging that would otherwise occur.',
       'The Diamond floor was a red herring — natural Diamond equilibrium is ~$472, so the '
         + 'floor at $500 was never binding. A no-floor 60d test showed identical instability.',
       'The proposed fix (tier3=50 + min_int=0.20) does NOT work: it keeps interest elevated '
         + 'at ALL D/G levels (20% floor), preventing the natural deleveraging that occurs at '
         + 'lower multipliers. Test result: D/G 18.1× (ctrl) → 19.1× (fix) — slightly WORSE.',
-      'Investigating: GuildBuyer total debt cap, removing floor (non-binding), or a '
-        + 'long-run deleveraging mechanism. Until fixed, monitor D/G weekly at 60+ day servers.',
+      'Real fixes: (1) wider TIER3 hysteresis band (50% instead of 10% — stay locked until '
+        + 'D/G < 15×), (2) cap GuildBuyer total debt directly, (3) require D/G to drop well '
+        + 'below tier3 before re-enabling interest. Until fixed, monitor D/G weekly on 60+ day servers.',
     ],
     metrics: [
       { label: 'D/G at 14d', value: '8.31×', note: 'healthy' },

@@ -7,6 +7,7 @@ import { Header } from '@/components/layout/header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EconomyRecoveryAdvisor } from '@/components/admin/economy-recovery-advisor';
 import { ConfigHealthCard } from '@/components/admin/config-health-card';
+import { AdminAuditCard } from '@/components/admin/admin-audit-card';
 import { ApiErrorBanner } from '@/components/ui/api-error-banner';
 import { api, type AdminHealthDto, type Stats } from '@/lib/api';
 import { formatLargeCurrency, formatPercent } from '@/lib/format';
@@ -440,6 +441,9 @@ export function AdminContent() {
 
         {/* Config Health Dashboard */}
         <ConfigHealthCard />
+
+        {/* Admin Audit Log */}
+        <AdminAuditCard />
 
         {/* Economy Recovery Advisor */}
         <EconomyRecoveryAdvisor health={health} />

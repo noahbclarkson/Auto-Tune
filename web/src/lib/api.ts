@@ -264,6 +264,24 @@ export interface AdminHealthDto {
   timestamp: number;
 }
 
+export interface AdminAuditEntryDto {
+  id: number;
+  timestamp: string;
+  adminUuid: string | null;
+  adminName: string;
+  actionType: string;
+  target: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  details: string | null;
+  summary: string;
+}
+
+export interface AdminAuditResponseDto {
+  entries: AdminAuditEntryDto[];
+  count: number;
+}
+
 // Config health entry — single tunable parameter
 export interface ConfigEntry {
   current: number | boolean;
@@ -408,6 +426,8 @@ export const api = {
   admin: {
     health: (base: string) => fetchJson<AdminHealthDto>(`${base}/api/admin/health`),
     config: (base: string) => fetchJson<AdminConfigDto>(`${base}/api/admin/config`),
+    audit: (base: string, limit = 20) =>
+      fetchJson<AdminAuditResponseDto>(`${base}/api/admin/audit?limit=${limit}`),
   },
   badges: {
     player: (base: string, playerName: string) =>

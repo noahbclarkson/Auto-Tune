@@ -34,6 +34,7 @@ import com.noahblclarkson.autotune.model.PriceChangeDto;
 import com.noahblclarkson.autotune.model.PnLHistoryDto;
 import com.noahblclarkson.autotune.model.PortfolioDto;
 import com.noahblclarkson.autotune.model.Transaction;
+import com.noahblclarkson.autotune.service.AdminAuditService;
 import com.noahblclarkson.autotune.service.PlayerImpactService;
 import com.noahblclarkson.autotune.service.PlayerStreakService;
 import com.noahblclarkson.autotune.service.PortfolioService;
@@ -125,6 +126,7 @@ public class WebServer {
     private final PlayerImpactService playerImpactService;
     private final PlayerStreakService streakService;
     private final EconomyWhatMovedService whatMovedService;
+    private final AdminAuditService auditService;
     private final Gson gson;
 
     private Javalin app;
@@ -150,7 +152,8 @@ public class WebServer {
             PriceAlertManager priceAlertManager,
             Server server,
             PlayerStreakService streakService,
-            EconomyWhatMovedService whatMovedService
+            EconomyWhatMovedService whatMovedService,
+            AdminAuditService auditService
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -175,6 +178,7 @@ public class WebServer {
                 playerRepository, itemRepository, transactionRepository, marketEngine);
         this.streakService = streakService;
         this.whatMovedService = whatMovedService;
+        this.auditService = auditService;
         this.gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .create();
@@ -909,6 +913,28 @@ public class WebServer {
             response.put("topUndersold", undersells.stream().limit(5).collect(Collectors.toList()));
             response.put("timestamp", System.currentTimeMillis());
             ctx.json(response);
+        });
+
+        // GET /api/admin/audit — recent admin audit log entries
+        app.get("/api/admin/audit", ctx -> {
+            int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(20);
+            int effectiveLimit = Math.min(Math.max(1, limit), 200);
+            var entries = auditService.getRecent(effectiveLimit);
+            List<Map<String, Object>> result = entries.stream().map(entry -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", entry.id());
+                m.put("timestamp", entry.timestamp().toString());
+                m.put("adminUuid", entry.adminUuid() != null ? entry.adminUuid().toString() : null);
+                m.put("adminName", entry.adminName());
+                m.put("actionType", entry.actionType().name());
+                m.put("target", entry.target());
+                m.put("oldValue", entry.oldValue());
+                m.put("newValue", entry.newValue());
+                m.put("details", entry.details());
+                m.put("summary", entry.toSummary());
+                return m;
+            }).collect(Collectors.toList());
+            ctx.json(Map.of("entries", result, "count", result.size()));
         });
 
         // GET /api/admin/config — current config values vs defaults vs recommended ranges

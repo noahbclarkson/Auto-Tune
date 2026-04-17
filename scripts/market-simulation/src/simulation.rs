@@ -427,15 +427,18 @@ impl Simulation {
                 // D/G=0 → 100%, D/G=tier3 → 0%
                 //
                 // HYSTERESIS: Once TIER3 fires (D/G >= tier3_ratio), the circuit stays
-                // locked (0% interest) until D/G drops below 90% of tier3_ratio (10%
-                // hysteresis band). Without hysteresis, D/G hovering near tier3 causes
-                // multiplier to oscillate between 0.0 (TIER3) and ~0.003 (just below tier3),
-                // allowing debt to compound during TIER2 micro-brief windows — a doom loop.
-                // This matches the legacy tiered path behavior (2026-04-04).
-                let hysteresis_threshold = lc.debt_gdp_tier3_ratio * 0.9;
+                // locked (0% interest) until D/G drops below (1 - hysteresis_band) × tier3_ratio.
+                // This prevents the narrow-band oscillation doom loop where D/G hovers near
+                // tier3 and multiplier oscillates between 0.0 and ~0.003, allowing debt to
+                // compound during brief TIER2 windows.
+                //
+                // Example with hysteresis_band=0.5, tier3=30: unlock at D/G < 15.
+                // This gives 50% headroom above normal D/G~7-10x before circuit re-engages.
+                // Configurable via tier3_hysteresis_band (default 0.5 / 50%).
+                let hysteresis_unlock = lc.debt_gdp_tier3_ratio * (1.0 - lc.tier3_hysteresis_band);
 
                 // Check hysteresis unlock first: if locked and ratio dropped below band, unlock.
-                if self.circuit_tier3_locked && ratio < hysteresis_threshold {
+                if self.circuit_tier3_locked && ratio < hysteresis_unlock {
                     self.circuit_tier3_locked = false;
                 }
 
@@ -467,16 +470,12 @@ impl Simulation {
             } else {
                 // Legacy tiered circuit breaker with hysteresis for TIER3:
                 // Once TIER3 fires (D/G >= tier3_ratio), the circuit stays locked (0% interest)
-                // until D/G drops below 90% of tier3_ratio (a 10% hysteresis band).
-                // This prevents rapid open/close cycling when D/G hovers near 10.0x.
-                // Tier 1 (>=tier1_ratio): cap at tier1_cap (50%) — warning zone
-                // Tier 2 (>=tier2_ratio): cap at tier2_cap (25%) — danger zone
-                // Tier 3 (>=tier3_ratio): full pause (0%) — emergency zone
-                // TIER3 unlocks when D/G < 90% of tier3_ratio (hysteresis band).
-                let hysteresis_threshold = lc.debt_gdp_tier3_ratio * 0.9;
+                // until D/G drops below (1 - hysteresis_band) × tier3_ratio (configurable).
+                // Default: 50% band (unlock at 50% of tier3_ratio).
+                let hysteresis_unlock = lc.debt_gdp_tier3_ratio * (1.0 - lc.tier3_hysteresis_band);
 
                 // Check hysteresis unlock first: if locked and ratio dropped below band, unlock.
-                if self.circuit_tier3_locked && ratio < hysteresis_threshold {
+                if self.circuit_tier3_locked && ratio < hysteresis_unlock {
                     self.circuit_tier3_locked = false;
                 }
 

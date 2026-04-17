@@ -11632,6 +11632,12 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    // ─── 60-Day Fix (Hysteresis Band) Test ──────────────────────────
+    if args.len() > 1 && args[1] == "--sixty-day-hysteresis-test" {
+        run_sixty_day_hysteresis_test();
+        return Ok(());
+    }
+
     // ─── 60-Day Fix Confirmation Test ─────────────────────────────────
     if args.len() > 1 && args[1] == "--sixty-day-fix-test" {
         run_sixty_day_fix_test();
@@ -16990,6 +16996,192 @@ fn run_sixty_day_fix_test() {
         );
         println!(
             "    RECOMMENDATION: Investigate alternative fixes (GB debt cap, remove floor)"
+        );
+    }
+}
+
+/// 60-Day Hysteresis Band Fix Test
+/// Tests whether a wider hysteresis band (50% instead of 10%) fixes the 60-day instability.
+/// Root cause: 10% band (unlock at 27 for tier3=30) is too narrow — MM/GB loans open during
+/// TIER3 lock accumulate with 0% interest. When circuit re-enables at 27, debt service is overwhelming.
+/// Fix: 50% band (unlock at 15 for tier3=30) gives genuine deleveraging headroom.
+fn run_sixty_day_hysteresis_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds = [42u64, 12345u64];
+
+    println!(
+        "
+╔════════════════════════════════════════════════════════════════════════╗"
+    );
+    println!("║     60-DAY HYSTERESIS BAND TEST                               ║");
+    println!("║  Control: tier3=30, hysteresis=0.10  vs  Fix: tier3=30, hysteresis=0.50  ║");
+    println!("╚════════════════════════════════════════════════════════════════════════╝
+");
+
+    let mut ctrl_metrics = Vec::new();
+    let mut fix_metrics = Vec::new();
+
+    for &seed in &seeds {
+        println!("  Running seed {}...", seed);
+
+        // ── Control: tier3=30, hysteresis=0.10 (current default) ──────────────────
+        let mut ctrl = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        ctrl.name = format!("Ctrl_hyst_s{}", seed);
+        ctrl.duration_ticks = 288 * 60;
+        // Use default hysteresis (0.5 in new code, but we test control as if it were 0.10)
+        // We need to force control to use the OLD 0.10 hysteresis. Since we changed default to 0.5,
+        // we set it explicitly to 0.10 for control.
+        ctrl.config.loans.tier3_hysteresis_band = 0.10;
+        let ctrl_dir = format!("/tmp/autotune-sim/60d-hyst-ctrl-{}", seed);
+        let ctrl_path = std::path::PathBuf::from(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_path).ok();
+        run_seeded_headless(&ctrl, seed, &ctrl_path).ok();
+
+        // ── Fix: tier3=30, hysteresis=0.50 (wider band) ─────────────────────────
+        let mut fix = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        fix.name = format!("Fix_hyst_s{}", seed);
+        fix.duration_ticks = 288 * 60;
+        fix.config.loans.tier3_hysteresis_band = 0.50;
+        let fix_dir = format!("/tmp/autotune-sim/60d-hyst-{}", seed);
+        let fix_path = std::path::PathBuf::from(&fix_dir);
+        std::fs::create_dir_all(&fix_path).ok();
+        run_seeded_headless(&fix, seed, &fix_path).ok();
+
+        // ── Load results ──────────────────────────────────────────────────────
+        let ctrl_summary = load_summary(&ctrl_path.join("simulation.db"));
+        let fix_summary = load_summary(&fix_path.join("simulation.db"));
+
+        if let (Ok(cs), Ok(fs)) = (ctrl_summary, fix_summary) {
+            let ctrl_dg = cs.debt / cs.gdp.max(1.0);
+            let fix_dg = fs.debt / fs.gdp.max(1.0);
+            ctrl_metrics.push((seed, cs.gdp, ctrl_dg, cs.avg_volatility, cs.buy_ratio, cs.tier3_events));
+            fix_metrics.push((seed, fs.gdp, fix_dg, fs.avg_volatility, fs.buy_ratio, fs.tier3_events));
+
+            let status = if fix_dg < 10.0 && ctrl_dg >= 10.0 {
+                "STABLE"
+            } else if fix_dg < ctrl_dg * 0.5 {
+                "FIXED"
+            } else if fix_dg < ctrl_dg {
+                "improved"
+            } else {
+                "worse"
+            };
+            println!(
+                "    Seed {}:  Ctrl D/G={:.3}x ({:.0}hyst)  Fix D/G={:.3}x ({:.0}hyst)  Delta={:+.3}x  {}",
+                seed,
+                ctrl_dg,
+                10,
+                fix_dg,
+                50,
+                fix_dg - ctrl_dg,
+                status
+            );
+        } else {
+            println!("    Seed {}: FAILED to load results", seed);
+        }
+    }
+
+    // ── Summary comparison ─────────────────────────────────────────────────
+    println!(
+        "
+  ╔════════════════════════════════════════════════════════════════╗"
+    );
+    println!(
+        "  ║  60-DAY HYSTERESIS TEST SUMMARY (2 seeds × 60 days)           ║"
+    );
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+    println!(
+        "  ║  {:>6}  {:>12}  {:>10}  {:>10}  {:>8}  {:>7}  ║",
+        "Seed", "GDP", "D/G_ctrl", "D/G_fix", "Delta", "Verdict"
+    );
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+
+    for ((seed, fgdp, cdg, _, _, _), (_, _, fdg, _, _, _)) in
+        ctrl_metrics.iter().zip(fix_metrics.iter())
+    {
+        let verdict = if *fdg < 10.0 && *cdg >= 10.0 {
+            "STABLE"
+        } else if *fdg < *cdg * 0.5 {
+            "FIXED"
+        } else if *fdg < *cdg {
+            "improved"
+        } else {
+            "worse"
+        };
+        println!(
+            "  ║  {:>6}  {:>12.0}  {:>10.3}x  {:>10.3}x  {:>+8.3}x  {:>7}  ║",
+            seed, fgdp, cdg, fdg, fdg - cdg, verdict
+        );
+    }
+
+    // Compute means
+    let ctrl_dg_mean: f64 = ctrl_metrics.iter().map(|(_, _, d, _, _, _)| d).sum::<f64>() / 2.0;
+    let fix_dg_mean: f64 = fix_metrics.iter().map(|(_, _, d, _, _, _)| d).sum::<f64>() / 2.0;
+    let ctrl_t3: f64 = ctrl_metrics.iter().map(|(_, _, _, _, _, t3)| *t3 as f64).sum::<f64>();
+    let fix_t3: f64 = fix_metrics.iter().map(|(_, _, _, _, _, t3)| *t3 as f64).sum::<f64>();
+
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+    println!(
+        "  ║  {:>6}  {:>12}  {:>10.3}x  {:>10.3}x  {:>+8.3}x  {:>7}  ║",
+        "MEAN", "--", ctrl_dg_mean, fix_dg_mean, fix_dg_mean - ctrl_dg_mean,
+        if fix_dg_mean < ctrl_dg_mean * 0.5 { "FIXED" } else if fix_dg_mean < ctrl_dg_mean { "improved" } else { "not fixed" }
+    );
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+    println!(
+        "  ║  TIER3 events: Ctrl={:.0}  Fix={:.0}                            ║",
+        ctrl_t3 as u32, fix_t3 as u32
+    );
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+    let stable = fix_dg_mean < 10.0;
+    let improved = fix_dg_mean < ctrl_dg_mean;
+
+    println!(
+        "
+  VERDICT:"
+    );
+    if stable && improved {
+        println!(
+            "    FIX CONFIRMED -- hysteresis=0.50 resolves 60d instability"
+        );
+        println!(
+            "    D/G mean: {:.1}x → {:.1}x, below 10x stability threshold",
+            ctrl_dg_mean, fix_dg_mean
+        );
+        println!(
+            "    RECOMMENDATION: Update production config tier3_hysteresis_band=0.50"
+        );
+    } else if improved {
+        println!(
+            "    PARTIAL -- wider hysteresis improves D/G but may not fully resolve"
+        );
+        println!(
+            "    D/G mean: {:.1}x → {:.1}x ({:+.1}x change)",
+            ctrl_dg_mean, fix_dg_mean, fix_dg_mean - ctrl_dg_mean
+        );
+        println!(
+            "    RECOMMENDATION: Run 5-seed confirmation + consider GB debt cap"
+        );
+    } else {
+        println!(
+            "    NOT FIXED -- wider hysteresis does NOT resolve instability"
+        );
+        println!(
+            "    D/G mean: {:.1}x → {:.1}x",
+            ctrl_dg_mean, fix_dg_mean
+        );
+        println!(
+            "    RECOMMENDATION: GB debt cap is the correct fix (not hysteresis)"
         );
     }
 }

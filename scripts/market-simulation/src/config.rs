@@ -120,6 +120,16 @@ pub struct LoanConfig {
     /// This prevents the economy from getting stuck at D/G ~= tier3Ratio boundary.
     /// Default: 0.0 (matches pure counter-cyclical behavior).
     pub min_interest_multiplier: f64,
+    /// TIER3 hysteresis band width: fraction of tier3_ratio.
+    /// Once TIER3 fires, the circuit stays locked until D/G drops below
+    /// (1 - hysteresis_band) × tier3_ratio. Default 0.5 (50%) means circuit unlocks
+    /// when D/G < 50% of tier3_ratio.
+    ///
+    /// Example: tier3=30, hysteresis=0.5 → unlock at D/G < 15. This gives 50% headroom
+    /// above normal D/G~7-10x before circuit re-engages. Prevents the narrow 10% band
+    /// (unlock at 27) from allowing debt accumulation during TIER3 lock.
+    /// Default: 0.5 (50% of tier3_ratio). Set to 0.0 to disable hysteresis (match tier3).
+    pub tier3_hysteresis_band: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -233,6 +243,7 @@ impl Default for LoanConfig {
             mm_opening_loan_allowed: true,    // MM can take opening loans by default
             counter_cyclical: true, // continuous taper, matches Java LoanManager (default: true)
             min_interest_multiplier: 0.0, // pure counter-cyclical: 0% at D/G=tier3Ratio (30.0 by default)
+            tier3_hysteresis_band: 0.5, // 50% band: unlock at D/G < 50% of tier3 (15 when tier3=30)
         }
     }
 }

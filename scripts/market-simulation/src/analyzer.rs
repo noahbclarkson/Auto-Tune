@@ -488,6 +488,7 @@ pub struct SimSummary {
     pub avg_spd: f64,
     pub avg_volatility: f64,
     pub buy_ratio: f64,
+    pub tier3_events: u32,
 }
 
 pub fn load_summary(db_path: &Path) -> Result<SimSummary, String> {
@@ -526,6 +527,14 @@ pub fn load_summary(db_path: &Path) -> Result<SimSummary, String> {
 
     let avg_vol = compute_avg_volatility(&conn);
 
+    let tier3_events: u32 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM circuit_breaker_events WHERE tier='TIER3'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+
     Ok(SimSummary {
         name,
         gdp,
@@ -534,6 +543,7 @@ pub fn load_summary(db_path: &Path) -> Result<SimSummary, String> {
         avg_spd,
         avg_volatility: avg_vol,
         buy_ratio,
+        tier3_events,
     })
 }
 

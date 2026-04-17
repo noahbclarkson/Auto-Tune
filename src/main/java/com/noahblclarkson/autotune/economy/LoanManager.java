@@ -341,14 +341,40 @@ public class LoanManager {
                     // Continuous counter-cyclical taper: interest falls smoothly from 100% at
                     // D/G=0 to 0% at D/G=tier3Ratio. Players get proportional relief as debt
                     // rises, preventing the pre-circuit-breaker debt accumulation spiral.
-                    double maxRatio = config.debtGdpTier3Ratio();
-                    interestMultiplier = Math.max(0.0, Math.min(1.0, 1.0 - ratio / maxRatio));
-                    if (ratio >= config.debtGdpTier3Ratio()) {
+                    //
+                    // HYSTERESIS: Once TIER3 fires (D/G >= tier3Ratio), the circuit stays
+                    // locked (0% interest) until D/G drops below 90% of tier3Ratio (10%
+                    // hysteresis band). Without hysteresis, D/G hovering near tier3 causes
+                    // multiplier to oscillate between 0.0 (TIER3) and ~0.003 (just below tier3),
+                    // allowing debt to compound during brief TIER2 windows — a doom loop.
+                    // This matches the legacy tiered path behavior (tier3CircuitLocked, 2026-04-04).
+                    double hysteresisThreshold = config.debtGdpTier3Ratio() * 0.9;
+
+                    // Check hysteresis unlock: if locked and ratio dropped below band, unlock.
+                    if (tier3CircuitLocked && ratio < hysteresisThreshold) {
+                        tier3CircuitLocked = false;
+                        plugin.getLogger().info(String.format(
+                            "[Auto-Tune] TIER3 hysteresis unlock (counter-cyclical) — D/G %.1fx (below %.1fx threshold). Interest may resume.",
+                            ratio, hysteresisThreshold));
+                    }
+
+                    if (tier3CircuitLocked) {
+                        // Circuit locked in TIER3 — hold at 0% interest until hysteresis threshold.
+                        interestMultiplier = 0.0;
                         currentTier = "TIER3";
-                    } else if (ratio >= config.debtGdpTier2Ratio()) {
-                        currentTier = "TIER2";
-                    } else if (ratio >= config.debtGdpTier1Ratio()) {
-                        currentTier = "TIER1";
+                    } else if (ratio >= config.debtGdpTier3Ratio()) {
+                        // First time crossing TIER3 — engage the lock.
+                        tier3CircuitLocked = true;
+                        interestMultiplier = 0.0;
+                        currentTier = "TIER3";
+                    } else {
+                        double maxRatio = config.debtGdpTier3Ratio();
+                        interestMultiplier = Math.max(0.0, Math.min(1.0, 1.0 - ratio / maxRatio));
+                        if (ratio >= config.debtGdpTier2Ratio()) {
+                            currentTier = "TIER2";
+                        } else if (ratio >= config.debtGdpTier1Ratio()) {
+                            currentTier = "TIER1";
+                        }
                     }
                 } else {
                     // Legacy tiered circuit breaker with hysteresis for TIER3:

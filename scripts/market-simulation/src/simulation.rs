@@ -425,22 +425,45 @@ impl Simulation {
                 // Counter-cyclical continuous taper (Java default, matching Java LoanManager):
                 // multiplier = max(0, min(1, 1 - ratio / tier3_ratio))
                 // D/G=0 → 100%, D/G=tier3 → 0%
-                let max_ratio = lc.debt_gdp_tier3_ratio;
-                let multiplier = if ratio >= 0.0 {
-                    (1.0 - ratio / max_ratio).clamp(lc.min_interest_multiplier, 1.0)
+                //
+                // HYSTERESIS: Once TIER3 fires (D/G >= tier3_ratio), the circuit stays
+                // locked (0% interest) until D/G drops below 90% of tier3_ratio (10%
+                // hysteresis band). Without hysteresis, D/G hovering near tier3 causes
+                // multiplier to oscillate between 0.0 (TIER3) and ~0.003 (just below tier3),
+                // allowing debt to compound during TIER2 micro-brief windows — a doom loop.
+                // This matches the legacy tiered path behavior (2026-04-04).
+                let hysteresis_threshold = lc.debt_gdp_tier3_ratio * 0.9;
+
+                // Check hysteresis unlock first: if locked and ratio dropped below band, unlock.
+                if self.circuit_tier3_locked && ratio < hysteresis_threshold {
+                    self.circuit_tier3_locked = false;
+                }
+
+                if self.circuit_tier3_locked {
+                    // Circuit locked in TIER3 — hold at 0% interest until hysteresis threshold.
+                    (0.0, "TIER3")
+                } else if ratio >= lc.debt_gdp_tier3_ratio {
+                    // First time crossing TIER3 — engage the lock.
+                    self.circuit_tier3_locked = true;
+                    let multiplier = (1.0 - ratio / lc.debt_gdp_tier3_ratio)
+                        .clamp(lc.min_interest_multiplier, 1.0);
+                    (multiplier, "TIER3")
                 } else {
-                    1.0 // No GDP yet — full interest
-                };
-                let tier = if ratio >= lc.debt_gdp_tier3_ratio {
-                    "TIER3"
-                } else if ratio >= lc.debt_gdp_tier2_ratio {
-                    "TIER2"
-                } else if ratio >= lc.debt_gdp_tier1_ratio {
-                    "TIER1"
-                } else {
-                    "NORMAL"
-                };
-                (multiplier, tier)
+                    let max_ratio = lc.debt_gdp_tier3_ratio;
+                    let multiplier = if ratio >= 0.0 {
+                        (1.0 - ratio / max_ratio).clamp(lc.min_interest_multiplier, 1.0)
+                    } else {
+                        1.0 // No GDP yet — full interest
+                    };
+                    let tier = if ratio >= lc.debt_gdp_tier2_ratio {
+                        "TIER2"
+                    } else if ratio >= lc.debt_gdp_tier1_ratio {
+                        "TIER1"
+                    } else {
+                        "NORMAL"
+                    };
+                    (multiplier, tier)
+                }
             } else {
                 // Legacy tiered circuit breaker with hysteresis for TIER3:
                 // Once TIER3 fires (D/G >= tier3_ratio), the circuit stays locked (0% interest)

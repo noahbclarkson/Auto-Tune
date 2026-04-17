@@ -11632,6 +11632,12 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    // ─── 60-Day Fix Confirmation Test ─────────────────────────────────
+    if args.len() > 1 && args[1] == "--sixty-day-fix-test" {
+        run_sixty_day_fix_test();
+        return Ok(());
+    }
+
     // ─── IT Removal Test ───────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--it-removal-test" {
         run_it_removal_healthy_test();
@@ -16790,4 +16796,200 @@ fn run_it_removal_healthy_test() {
   NOTE: Prior single-seed test (seed=42, no floor) showed +30.1% GDP, D/G +2.41x."
     );
     println!("  This 5-seed test includes floor — floor may dampen IT price effects.");
+}
+
+
+// ─── 60-Day Fix Confirmation Test ────────────────────────────────────────
+
+/// CRITICAL FINDING (2026-04-17):
+/// 2MM+2GB+floor is UNSTABLE at 60 days -- D/G explodes from 7.5x (30d) to 20.1x (60d).
+/// Counter-cyclical interest at tier3=30 gives only 10% interest when D/G=27,
+/// insufficient to deleverage debt faster than GDP grows.
+///
+/// Proposed fixes:
+///   1. tier3_ratio=50 -> gives multiplier=0.40 at D/G=30 (vs 0.0 at tier3=30)
+///      TIER3 only fires at genuine catastrophe (D/G >= 50x)
+///   2. min_interest_multiplier=0.20 -> forces continuous deleveraging at all D/G levels
+///      Even when TIER3 circuit fires, economy still pays 20% interest
+///
+/// This test runs both fixes against the control (tier3=30, min_int=0.0) on 2 seeds
+/// to confirm whether the fix resolves the 60-day instability.
+fn run_sixty_day_fix_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds = [42u64, 12345u64];
+
+    println!(
+        "
+╔════════════════════════════════════════════════════════════════════╗"
+    );
+    println!("║     60-DAY FIX CONFIRMATION TEST                             ║");
+    println!("║  Control: tier3=30, min_int=0.0  vs  Fix: tier3=50, min_int=0.20  ║");
+    println!(
+        "╚════════════════════════════════════════════════════════════════════╝
+"
+    );
+
+    let mut ctrl_metrics = Vec::new();
+    let mut fix_metrics = Vec::new();
+
+    for &seed in &seeds {
+        println!("  Running seed {}...", seed);
+
+        // ── Control: tier3=30, min_int=0.0 ──────────────────────────────────
+        let mut ctrl = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        ctrl.name = format!("Ctrl_60d_s{}", seed);
+        ctrl.duration_ticks = 288 * 60;
+        let ctrl_dir = format!("/tmp/autotune-sim/60d-fix-ctrl-{}", seed);
+        let ctrl_path = std::path::PathBuf::from(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_path).ok();
+        run_seeded_headless(&ctrl, seed, &ctrl_path).ok();
+
+        // ── Fix: tier3=50, min_int=0.20 ─────────────────────────────────────
+        let mut fix = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        fix.name = format!("Fix_60d_s{}", seed);
+        fix.duration_ticks = 288 * 60;
+        // Apply the proposed fix: tier3=50 + min_int=0.20
+        fix.config.loans.debt_gdp_tier3_ratio = 50.0;
+        fix.config.loans.min_interest_multiplier = 0.20;
+        let fix_dir = format!("/tmp/autotune-sim/60d-fix-{}", seed);
+        let fix_path = std::path::PathBuf::from(&fix_dir);
+        std::fs::create_dir_all(&fix_path).ok();
+        run_seeded_headless(&fix, seed, &fix_path).ok();
+
+        // ── Load results ──────────────────────────────────────────────────────
+        let ctrl_summary = load_summary(&ctrl_path.join("simulation.db"));
+        let fix_summary = load_summary(&fix_path.join("simulation.db"));
+
+        if let (Ok(cs), Ok(fs)) = (ctrl_summary, fix_summary) {
+            let ctrl_dg = cs.debt / cs.gdp.max(1.0);
+            let fix_dg = fs.debt / fs.gdp.max(1.0);
+            ctrl_metrics.push((seed, cs.gdp, ctrl_dg, cs.avg_volatility, cs.buy_ratio));
+            fix_metrics.push((seed, fs.gdp, fix_dg, fs.avg_volatility, fs.buy_ratio));
+
+            let status = if fix_dg < 10.0 && ctrl_dg >= 10.0 {
+                "STABLE"
+            } else if fix_dg < ctrl_dg * 0.8 {
+                "FIXED"
+            } else if fix_dg < ctrl_dg {
+                "improved"
+            } else {
+                "worse"
+            };
+            println!(
+                "    Seed {}:  Ctrl D/G={:.3}x  Fix D/G={:.3}x  Delta={:+.3}x  {}",
+                seed,
+                ctrl_dg,
+                fix_dg,
+                fix_dg - ctrl_dg,
+                status
+            );
+        } else {
+            println!("    Seed {}: FAILED to load results", seed);
+        }
+    }
+
+    // ── Summary comparison ─────────────────────────────────────────────────
+    println!(
+        "
+  ╔════════════════════════════════════════════════════════════════╗"
+    );
+    println!(
+        "  ║  60-DAY FIX SUMMARY (2 seeds x 60 days)                      ║"
+    );
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+    println!(
+        "  ║  {:>6}  {:>12}  {:>10}  {:>10}  {:>8}  {:>7}  ║",
+        "Seed", "GDP", "D/G_ctrl", "D/G_fix", "Delta", "Verdict"
+    );
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+
+    for ((seed, fgdp, cdg, _, _), (_, _, fdg, _, _)) in
+        ctrl_metrics.iter().zip(fix_metrics.iter())
+    {
+        let verdict = if *fdg < 10.0 && *cdg >= 10.0 {
+            "STABLE"
+        } else if *fdg < *cdg * 0.8 {
+            "FIXED"
+        } else if *fdg < *cdg {
+            "improved"
+        } else {
+            "worse"
+        };
+        println!(
+            "  ║  {:>6}  {:>12.0}  {:>10.3}x  {:>10.3}x  {:>+8.3}x  {:>7}  ║",
+            seed, fgdp, cdg, fdg, fdg - cdg, verdict
+        );
+    }
+
+    // Compute means
+    let ctrl_dg_mean: f64 = ctrl_metrics.iter().map(|(_, _, d, _, _)| d).sum::<f64>() / 2.0;
+    let fix_dg_mean: f64 = fix_metrics.iter().map(|(_, _, d, _, _)| d).sum::<f64>() / 2.0;
+    let ctrl_vol_mean: f64 = ctrl_metrics.iter().map(|(_, _, _, v, _)| v).sum::<f64>() / 2.0;
+    let fix_vol_mean: f64 = fix_metrics.iter().map(|(_, _, _, v, _)| v).sum::<f64>() / 2.0;
+
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+    println!(
+        "  ║  {:>6}  {:>12}  {:>10.3}x  {:>10.3}x  {:>+8.3}x  {:>7}  ║",
+        "MEAN", "--", ctrl_dg_mean, fix_dg_mean, fix_dg_mean - ctrl_dg_mean,
+        if fix_dg_mean < ctrl_dg_mean * 0.5 { "FIXED" } else if fix_dg_mean < ctrl_dg_mean { "improved" } else { "not fixed" }
+    );
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+    println!(
+        "  ║  Vol:  Ctrl={:.4}  Fix={:.4}                              ║",
+        ctrl_vol_mean, fix_vol_mean
+    );
+    println!(
+        "  ╚════════════════════════════════════════════════════════════════╝"
+    );
+
+    let stable = fix_dg_mean < 10.0;
+    let improved = fix_dg_mean < ctrl_dg_mean;
+
+    println!(
+        "
+  VERDICT:"
+    );
+    if stable && improved {
+        println!(
+            "    FIX CONFIRMED -- tier3=50 + min_int=0.20 resolves 60d instability"
+        );
+        println!(
+            "    D/G mean: {:.1}x -> {:.1}x, below 10x stability threshold",
+            ctrl_dg_mean, fix_dg_mean
+        );
+        println!(
+            "    RECOMMENDATION: Update production defaults to tier3_ratio=50, min_interest_multiplier=0.20"
+        );
+    } else if improved {
+        println!(
+            "    PARTIAL -- fix improves D/G but may not fully resolve instability"
+        );
+        println!(
+            "    D/G mean: {:.1}x -> {:.1}x ({:+.1}x change)",
+            ctrl_dg_mean, fix_dg_mean, fix_dg_mean - ctrl_dg_mean
+        );
+        println!(
+            "    RECOMMENDATION: Run 5-seed confirmation before updating defaults"
+        );
+    } else {
+        println!(
+            "    NOT FIXED -- tier3=50 + min_int=0.20 does NOT resolve instability"
+        );
+        println!(
+            "    D/G mean: {:.1}x -> {:.1}x",
+            ctrl_dg_mean, fix_dg_mean
+        );
+        println!(
+            "    RECOMMENDATION: Investigate alternative fixes (GB debt cap, remove floor)"
+        );
+    }
 }

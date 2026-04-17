@@ -9527,7 +9527,9 @@ fn run_guild_threshold_multi_seed() {
     println!("║       GUILDBUYER THRESHOLD MULTI-SEED VALIDATION                 ║");
     println!("╚══════════════════════════════════════════════════════════════════════╝");
     println!();
-    println!("  Scenario: guild_stability_2mm_fixed_guild_plus_floor (2MM + 2GB + 60% Diamond floor)");
+    println!(
+        "  Scenario: guild_stability_2mm_fixed_guild_plus_floor (2MM + 2GB + 60% Diamond floor)"
+    );
     println!(
         "  Duration: 14 days ({} ticks)",
         base_scenario.duration_ticks
@@ -11208,6 +11210,8 @@ fn main() -> eframe::Result<()> {
         println!("  --it-removal-test         2MM+2GB+floor: WITH vs WITHOUT InsiderTraders");
         println!("  --healthy-baseline-5seed  2MM+2GB+floor × 5 seeds: statistical baseline");
         println!("  --gb-newbie-healthy-test   2MM+2GB+2Far+2Newbie vs 2MM+2GB+3Far × 5 seeds");
+        println!("  --newbie-no-gb-test       2MM+2Newbie vs 2MM+2GB: can Newbies replace GBs?");
+        println!("  --threshold-30day-test     5%% vs 7%% GB threshold × 3 seeds × 30 days");
         println!(
             "  --events-healthy-test     Events × 2MM+2GB+floor: do events help healthy economy?"
         );
@@ -11723,6 +11727,18 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--gb-newbie-healthy-test" {
         run_gb_newbie_healthy_test();
+        return Ok(());
+    }
+
+    // ─── Newbie-No-GB Test ────────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--newbie-no-gb-test" {
+        run_newbie_no_gb_test();
+        return Ok(());
+    }
+
+    // ─── Threshold × 30-Day Test ──────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--threshold-30day-test" {
+        run_threshold_30day_test();
         return Ok(());
     }
 
@@ -15964,6 +15980,415 @@ fn run_casual_heavy_healthy_test() {
             );
         }
     }
+}
+// ═══════════════════════════════════════════════════════════════════
+// NEWBIE-NO-GB TEST
+// ═══════════════════════════════════════════════════════════════════
+// Can Newbies REPLACE GuildBuyers?
+// Control: 2MM + 2GB + 3Cas + 3Far + 2Tra + floor  (production default)
+// Treat:   2MM + 2Newbie + 3Cas + 3Far + 2Tra + floor  (replace GB with Newbie)
+//
+// Prior context:
+//   - Newbie+GB in STRESSED: D/G -42.1%, vol -35% (Newbie absorbs sell glut)
+//   - Newbie+GB in HEALTHY: GDP +41.5%, D/G +34.7% (Newbie boosts demand)
+//   - Newbie ALONE in STRESSED: not yet tested
+//   - Newbie ALONE in HEALTHY: not yet tested
+//
+// Key question: Do Newbies need GBs to be effective, or can they drive
+// demand-side stabilization alone (without proactive price-dip buying from GBs)?
+// ═══════════════════════════════════════════════════════════════════
+
+fn run_newbie_no_gb_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds = vec![42u64, 12345, 98765];
+
+    println!(
+        "
+╔════════════════════════════════════════════════════════════════════╗"
+    );
+    println!("║  NEWBIE-NO-GB TEST — Can Newbies Replace GuildBuyers?      ║");
+    println!("║  Control: 2MM + 2GB + 3Cas + 3Far + 2Tra + floor          ║");
+    println!("║  Treat:   2MM + 2Newbie + 3Cas + 3Far + 2Tra + floor       ║");
+    println!(
+        "╚════════════════════════════════════════════════════════════════════╝
+"
+    );
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct NoGbResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        buy_ratio: f64,
+        bpd: f64,
+    }
+    let mut ctrl_results: Vec<NoGbResult> = Vec::new();
+    let mut treat_results: Vec<NoGbResult> = Vec::new();
+
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7}",
+        "Seed", "GDP", "D/G", "Vol(CV)", "BPD%", "Buy%"
+    );
+    println!(
+        "  {:>6} {:>12} {:>10} {:>8} {:>7} {:>7}",
+        "──────", "────────────", "──────────", "────────", "───────", "───────"
+    );
+
+    for &seed in &seeds {
+        // ── Control: 2MM + 2GB + 3Cas + 3Far + 2Tra + floor ───────
+        let mut ctrl = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        ctrl.name = "Ctrl: 2GB".into();
+        let ctrl_dir = PathBuf::from(format!("/tmp/autotune-nngb-ctrl-{}", seed));
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        run_seeded_headless(&ctrl, seed, &ctrl_dir).ok();
+
+        // ── Treatment: 2MM + 2Newbie + 3Cas + 3Far + 2Tra + floor ──
+        let mut treat = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        treat.name = "Treat: 2Newbie".into();
+        treat.players = vec![
+            ArchetypeConfig {
+                archetype: "MarketMaker".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Newbie".into(),
+                count: 2,
+            }, // replaces GuildBuyer
+            ArchetypeConfig {
+                archetype: "Casual".into(),
+                count: 3,
+            },
+            ArchetypeConfig {
+                archetype: "Farmer".into(),
+                count: 3,
+            },
+            ArchetypeConfig {
+                archetype: "Trader".into(),
+                count: 2,
+            },
+        ];
+        let treat_dir = PathBuf::from(format!("/tmp/autotune-nngb-treat-{}", seed));
+        let _ = std::fs::remove_dir_all(&treat_dir);
+        run_seeded_headless(&treat, seed, &treat_dir).ok();
+
+        let load = |dir: &PathBuf| -> Option<NoGbResult> {
+            let s = load_summary(&dir.join("simulation.db")).ok()?;
+            Some(NoGbResult {
+                seed,
+                gdp: s.gdp,
+                dg: s.debt / s.gdp.max(1.0),
+                vol: s.avg_volatility,
+                buy_ratio: s.buy_ratio,
+                bpd: s.avg_bpd,
+            })
+        };
+
+        if let Some(r) = load(&ctrl_dir) {
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}% {:>7.1}%  [Ctrl: GB]",
+                seed,
+                r.gdp,
+                r.dg,
+                r.vol * 100.0,
+                r.bpd * 100.0,
+                r.buy_ratio * 100.0
+            );
+            ctrl_results.push(r);
+        }
+        if let Some(r) = load(&treat_dir) {
+            println!(
+                "  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}% {:>7.1}%  [Treat: NoGB]",
+                seed,
+                r.gdp,
+                r.dg,
+                r.vol * 100.0,
+                r.bpd * 100.0,
+                r.buy_ratio * 100.0
+            );
+            treat_results.push(r);
+        }
+
+        let _ = std::fs::remove_dir_all(&ctrl_dir);
+        let _ = std::fs::remove_dir_all(&treat_dir);
+    }
+
+    if !ctrl_results.is_empty() && !treat_results.is_empty() {
+        let avg = |rs: &[NoGbResult], f: fn(&NoGbResult) -> f64| -> f64 {
+            rs.iter().map(f).sum::<f64>() / rs.len() as f64
+        };
+        let gdp_chg = (avg(&treat_results, |r| r.gdp) - avg(&ctrl_results, |r| r.gdp))
+            / avg(&ctrl_results, |r| r.gdp)
+            * 100.0;
+        let dg_chg = avg(&treat_results, |r| r.dg) - avg(&ctrl_results, |r| r.dg);
+        let vol_chg = (avg(&treat_results, |r| r.vol) - avg(&ctrl_results, |r| r.vol))
+            / avg(&ctrl_results, |r| r.vol)
+            * 100.0;
+        let buy_chg =
+            (avg(&treat_results, |r| r.buy_ratio) - avg(&ctrl_results, |r| r.buy_ratio)) * 100.0;
+
+        println!(
+            "
+  ── AVERAGES ──"
+        );
+        println!(
+            "  GDP:    GB={:.0}  NoGB={:.0}  chg={:+.1}%",
+            avg(&ctrl_results, |r| r.gdp),
+            avg(&treat_results, |r| r.gdp),
+            gdp_chg
+        );
+        println!(
+            "  D/G:    GB={:.3}x  NoGB={:.3}x  Δ={:+.3}x",
+            avg(&ctrl_results, |r| r.dg),
+            avg(&treat_results, |r| r.dg),
+            dg_chg
+        );
+        println!(
+            "  Vol:    GB={:.3}%  NoGB={:.3}%  chg={:+.1}%",
+            avg(&ctrl_results, |r| r.vol) * 100.0,
+            avg(&treat_results, |r| r.vol) * 100.0,
+            vol_chg
+        );
+        println!(
+            "  Buy%%:  GB={:.1}%  NoGB={:.1}%  chg={:+.1}pp",
+            avg(&ctrl_results, |r| r.buy_ratio) * 100.0,
+            avg(&treat_results, |r| r.buy_ratio) * 100.0,
+            buy_chg
+        );
+        println!(
+            "
+  VERDICT:"
+        );
+        if gdp_chg > -10.0 && dg_chg.abs() < 1.0 && vol_chg.abs() < 25.0 {
+            println!(
+                "  ✅ Newbies are VIABLE GB replacements: GDP {:+.1}%, D/G Δ={:+.3}x, vol {:+.1}%",
+                gdp_chg, dg_chg, vol_chg
+            );
+            println!(
+                "     Newbies provide similar stabilization without proactive price-dip buying."
+            );
+        } else if gdp_chg < -20.0 {
+            println!(
+                "  ❌ Newbies CANNOT replace GBs: GDP {:+.1}% — GB proactive price-dip buying",
+                gdp_chg
+            );
+            println!("     is ESSENTIAL for economy health. Newbies only work alongside GBs.");
+        } else if dg_chg > 2.0 {
+            println!(
+                "  ⚠️  Newbies replace GBs at D/G cost: D/G Δ={:+.3}x worse — debt risk elevated",
+                dg_chg
+            );
+        } else {
+            println!(
+                "  ⚠️  Mixed result — GDP {:+.1}%, D/G Δ={:+.3}x, vol {:+.1}%",
+                gdp_chg, dg_chg, vol_chg
+            );
+        }
+    }
+    println!();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// THRESHOLD × 30-DAY TEST
+// ═══════════════════════════════════════════════════════════════════
+// 5% vs 7% GB threshold over 30 days — does 7% advantage persist?
+//
+// 14-day results (guild_stability_2mm_fixed_guild_plus_floor):
+//   5%:  GDP=1177K, D/G=9.10x, vol=0.119
+//   7%:  GDP=1261K, D/G=8.36x, vol=0.110  ← WINNER on GDP+vol
+//  10%:  GDP=1244K, D/G=9.13x, vol=0.141
+//
+// D/G concern at 14d: both 5% and 7% are elevated vs healthy baseline 6.03x±2.22x.
+// At 30d, does D/G deleverage or worsen? Does 5% remain viable?
+// ═══════════════════════════════════════════════════════════════════
+
+fn run_threshold_30day_test() {
+    use crate::analyzer::load_summary;
+    use crate::player::set_fixed_guild_threshold;
+
+    let thresholds = vec![0.05f64, 0.07f64];
+    let seeds = vec![42u64, 12345, 98765];
+
+    println!(
+        "
+╔════════════════════════════════════════════════════════════════════╗"
+    );
+    println!("║  GUILDBUYER THRESHOLD × 30-DAY — Does 7%% advantage persist? ║");
+    println!("║  2MM + 2GB + 60%% Diamond floor × 3 seeds × 30 days         ║");
+    println!(
+        "╚════════════════════════════════════════════════════════════════════╝
+"
+    );
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct ThirtyDayResult {
+        seed: u64,
+        threshold: f64,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        buy_ratio: f64,
+        diamond_internal: f64,
+    }
+    let mut results: Vec<ThirtyDayResult> = Vec::new();
+
+    println!(
+        "  {:>6} {:>8} {:>12} {:>10} {:>8} {:>7} {:>10}",
+        "Seed", "Thresh", "GDP", "D/G", "Vol(CV)", "Buy%", "Diamond Int"
+    );
+    println!(
+        "  {:>6} {:>8} {:>12} {:>10} {:>8} {:>7} {:>10}",
+        "──────", "────────", "────────────", "──────────", "────────", "───────", "──────────"
+    );
+
+    for threshold in &thresholds {
+        for &seed in &seeds {
+            let mut scenario = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+            scenario.name = format!("30d_{:.0}%", threshold * 100.0);
+            scenario.duration_ticks = 288 * 30; // 30 days
+
+            let out_dir = PathBuf::from(format!(
+                "/tmp/autotune-t30d-{:.0}pct-{}",
+                threshold * 100.0,
+                seed
+            ));
+            let _ = std::fs::remove_dir_all(&out_dir);
+            std::fs::create_dir_all(&out_dir).ok();
+
+            set_fixed_guild_threshold(Some(*threshold));
+            run_seeded_headless(&scenario, seed, &out_dir).ok();
+            set_fixed_guild_threshold(None);
+
+            if let Ok(s) = load_summary(&out_dir.join("simulation.db")) {
+                let prices = crate::analyzer::load_all_prices(&out_dir.join("simulation.db"))
+                    .unwrap_or_default();
+                let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+                let di = diamond.map(|(_, i, _)| *i).unwrap_or(0.0);
+                let dg = s.debt / s.gdp.max(1.0);
+                println!(
+                    "  {:>6} {:>7.0}% {:>12.0} {:>9.3}x {:>7.3}% {:>6.1}% {:>10.2}",
+                    seed,
+                    threshold * 100.0,
+                    s.gdp,
+                    dg,
+                    s.avg_volatility * 100.0,
+                    s.buy_ratio * 100.0,
+                    di
+                );
+                results.push(ThirtyDayResult {
+                    seed,
+                    threshold: *threshold,
+                    gdp: s.gdp,
+                    dg,
+                    vol: s.avg_volatility,
+                    buy_ratio: s.buy_ratio,
+                    diamond_internal: di,
+                });
+            }
+
+            let _ = std::fs::remove_dir_all(&out_dir);
+        }
+    }
+
+    if results.len() >= 4 {
+        println!(
+            "
+  ── Per-Threshold Averages (30-day) ──
+"
+        );
+        for threshold in &thresholds {
+            let subset: Vec<_> = results
+                .iter()
+                .filter(|r| r.threshold == *threshold)
+                .collect();
+            if subset.is_empty() {
+                continue;
+            }
+            let gdp_avg = subset.iter().map(|r| r.gdp).sum::<f64>() / subset.len() as f64;
+            let dg_avg = subset.iter().map(|r| r.dg).sum::<f64>() / subset.len() as f64;
+            let vol_avg = subset.iter().map(|r| r.vol).sum::<f64>() / subset.len() as f64;
+            let buy_avg = subset.iter().map(|r| r.buy_ratio).sum::<f64>() / subset.len() as f64;
+            println!(
+                "  {:.0}% threshold: GDP={:.0}  D/G={:.3}x  vol={:.3}%  Buy%={:.1}%",
+                threshold * 100.0,
+                gdp_avg,
+                dg_avg,
+                vol_avg * 100.0,
+                buy_avg * 100.0
+            );
+        }
+
+        let r5: Vec<_> = results.iter().filter(|r| r.threshold == 0.05).collect();
+        let r7: Vec<_> = results.iter().filter(|r| r.threshold == 0.07).collect();
+        let gdp5 = r5.iter().map(|r| r.gdp).sum::<f64>() / r5.len() as f64;
+        let gdp7 = r7.iter().map(|r| r.gdp).sum::<f64>() / r7.len() as f64;
+        let dg5 = r5.iter().map(|r| r.dg).sum::<f64>() / r5.len() as f64;
+        let dg7 = r7.iter().map(|r| r.dg).sum::<f64>() / r7.len() as f64;
+        let vol5 = r5.iter().map(|r| r.vol).sum::<f64>() / r5.len() as f64;
+        let vol7 = r7.iter().map(|r| r.vol).sum::<f64>() / r7.len() as f64;
+
+        let gdp_chg = (gdp7 - gdp5) / gdp5 * 100.0;
+        let dg_diff = dg7 - dg5;
+        let vol_diff = (vol7 - vol5) / vol5 * 100.0;
+
+        println!(
+            "
+  ── 7% vs 5% at 30 days ──"
+        );
+        println!(
+            "  GDP:  5%={:.0}  7%={:.0}  chg={:+.1}%  (14d chg={:.0})",
+            gdp5,
+            gdp7,
+            gdp_chg,
+            (1261f64 - 1177f64) / 1177f64 * 100.0
+        );
+        println!("  D/G:  5%={:.3}x  7%={:.3}x  Δ={:+.3}x", dg5, dg7, dg_diff);
+        println!(
+            "  Vol:  5%={:.3}%  7%={:.3}%  chg={:+.1}%  (14d chg={:.0}%)",
+            vol5 * 100.0,
+            vol7 * 100.0,
+            vol_diff,
+            (0.110f64 - 0.119f64) / 0.119f64 * 100.0
+        );
+
+        println!(
+            "
+  VERDICT:"
+        );
+        if gdp_chg > 5.0 && vol_diff < 0.0 {
+            println!(
+                "  ✅ 7% CONFIRMED as 30-day default: GDP {:+.1}%, vol {:+.1}% lower vs 5%",
+                gdp_chg,
+                vol_diff.abs()
+            );
+            println!("     7% threshold remains correct production default at 30-day horizon.");
+        } else if gdp_chg < 2.0 && dg_diff.abs() < 0.5 {
+            println!(
+                "  ℹ️  5% vs 7% are EQUIVALENT at 30d: GDP diff={:.1}%, D/G Δ={:.3}x",
+                gdp_chg, dg_diff
+            );
+            println!("     Either threshold viable. 7% simpler to explain (1/14 ≈ 7.1%).");
+        } else if dg_diff > 1.0 {
+            let worse = if dg_diff > 0.0 { "7%" } else { "5%" };
+            let better = if dg_diff > 0.0 { "5%" } else { "7%" };
+            println!(
+                "  ⚠️  {} ACCUMULATES more debt at 30d: D/G Δ={:+.3}x vs {}",
+                worse,
+                dg_diff.abs(),
+                better
+            );
+            println!("     7% remains safer production default even if GDP is similar.");
+        } else {
+            println!(
+                "  ⚠️  Mixed 30-day results — GDP chg={:+.1}%, D/G Δ={:+.3}x, vol chg={:+.1}%",
+                gdp_chg, dg_diff, vol_diff
+            );
+        }
+    }
+    println!();
 }
 
 // ═══════════════════════════════════════════════════════════════════

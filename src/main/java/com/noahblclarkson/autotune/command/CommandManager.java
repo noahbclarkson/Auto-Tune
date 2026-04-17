@@ -81,6 +81,7 @@ public class CommandManager {
         registerSafely(parser, injector, MarketReportCommand.class, "market-report");
         registerSafely(parser, injector, CompareCommand.class, "compare");
         registerSafely(parser, injector, StreakCommand.class, "streak");
+        registerSafely(parser, injector, ProfileCommand.class, "profile");
     }
 
     private void removeCapabilityField(LegacyPaperCommandManager<CommandSender> manager,

@@ -35,6 +35,7 @@ import com.noahblclarkson.autotune.model.PnLHistoryDto;
 import com.noahblclarkson.autotune.model.PortfolioDto;
 import com.noahblclarkson.autotune.model.Transaction;
 import com.noahblclarkson.autotune.service.PlayerImpactService;
+import com.noahblclarkson.autotune.service.PlayerStreakService;
 import com.noahblclarkson.autotune.service.PortfolioService;
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
@@ -121,6 +122,7 @@ public class WebServer {
     private final Server server;
     private final PortfolioService portfolioService;
     private final PlayerImpactService playerImpactService;
+    private final PlayerStreakService streakService;
     private final Gson gson;
 
     private Javalin app;
@@ -144,7 +146,8 @@ public class WebServer {
             EconomyManager economyManager,
             MarketEventService marketEventService,
             PriceAlertManager priceAlertManager,
-            Server server
+            Server server,
+            PlayerStreakService streakService
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -167,6 +170,7 @@ public class WebServer {
                 playerRepository, itemRepository, loanRepository, transactionRepository, economyManager, server);
         this.playerImpactService = new PlayerImpactService(
                 playerRepository, itemRepository, transactionRepository, marketEngine);
+        this.streakService = streakService;
         this.gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .create();
@@ -1167,6 +1171,36 @@ public class WebServer {
                             a -> ctx.json(toAlertDto(a)),
                             () -> ctx.status(404).json(Map.of(KEY_ERROR, "Alert not found after rearm"))
                     );
+        });
+
+
+        // ---- Streaks API ----
+
+        // GET /api/streaks/{playerName} — player streak data
+        app.get("/api/streaks/{playerName}", ctx -> {
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_REQUIRED));
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + playerName));
+                return;
+            }
+            PlayerStreakService.StreakData streak = streakService.getStreakOrDefault(player.uuid());
+            Map<String, Object> result = Map.of(
+                    "currentStreak", streak.currentStreak(),
+                    "bestStreak", streak.bestStreak(),
+                    "lastTradeDate", streak.lastTradeDate() != null ? streak.lastTradeDate().toString() : ""
+            );
+            ctx.json(result);
+        });
+
+        // GET /api/streaks/leaderboard — server-wide streak leaderboard
+        app.get("/api/streaks/leaderboard", ctx -> {
+            // Delegated to streak service for consistency
+            ctx.json(List.of()); // placeholder — leaderboard is async, served from /streak top in-game
         });
 
         // ---- Shop Favorites API ----

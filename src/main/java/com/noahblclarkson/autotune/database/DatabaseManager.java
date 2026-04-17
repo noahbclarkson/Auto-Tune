@@ -108,8 +108,15 @@ public class DatabaseManager {
             highestVersion = 2;
         }
 
+        // V3: Player trading streaks
+        if (currentVersion < 3) {
+            plugin.getLogger().info("Applying database migration V3 (Player Streaks)...");
+            runMigration("db/V3__Player_Streaks.sql");
+            highestVersion = 3;
+        }
+
         // Add future migrations here:
-        // if (currentVersion < 3) { ... }
+        // if (currentVersion < 4) { ... }
 
         if (highestVersion > currentVersion) {
             setSchemaVersion(highestVersion);

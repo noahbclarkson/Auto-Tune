@@ -86,6 +86,34 @@ public enum BadgeType {
             "WRITABLE_BOOK",
             NamedTextColor.DARK_BLUE,
             1
+    ),
+    HOT_STREAK_3(
+            "Hot Streak",
+            "Traded for 3 consecutive days",
+            "BLAZE_POWDER",
+            NamedTextColor.GOLD,
+            3
+    ),
+    HOT_STREAK_7(
+            "On Fire",
+            "Traded for 7 consecutive days",
+            "BLAZE_ROD",
+            TextColor.fromHexString("#FF6600"),
+            7
+    ),
+    HOT_STREAK_14(
+            "Unstoppable",
+            "Traded for 14 consecutive days",
+            "MAGMA_BLOCK",
+            TextColor.fromHexString("#FF3300"),
+            14
+    ),
+    HOT_STREAK_30(
+            "Legendary Trader",
+            "Traded for 30 consecutive days",
+            "NETHER_STAR",
+            TextColor.fromHexString("#FF0000"),
+            30
     );
 
     private final String displayName;

@@ -266,6 +266,10 @@ public class BadgeCommand implements Listener {
             case CENTURION -> "⭐";
             case FIRST_BUYER -> "🛒";
             case LOAN_TAKER -> "📄";
+            case HOT_STREAK_3 -> "🔥";
+            case HOT_STREAK_7 -> "💥";
+            case HOT_STREAK_14 -> "🌋";
+            case HOT_STREAK_30 -> "⭐";
         };
     }
 }

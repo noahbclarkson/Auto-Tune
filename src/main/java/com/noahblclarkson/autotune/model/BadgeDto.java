@@ -29,6 +29,10 @@ public record BadgeDto(
             case BIG_SPENDER, MARKET_MAKER -> "rare";
             case HOARDER, DIVERSIFIED, TREND_SPOTTER -> "epic";
             case STABLE_HAND -> "legendary";
+            case HOT_STREAK_3 -> "uncommon";
+            case HOT_STREAK_7 -> "rare";
+            case HOT_STREAK_14 -> "epic";
+            case HOT_STREAK_30 -> "legendary";
         };
     }
 

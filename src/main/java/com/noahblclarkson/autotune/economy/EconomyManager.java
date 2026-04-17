@@ -18,6 +18,7 @@ import com.noahblclarkson.autotune.model.ShopItem;
 import com.noahblclarkson.autotune.model.Transaction;
 import com.noahblclarkson.autotune.model.Transaction.TransactionType;
 import com.noahblclarkson.autotune.service.BadgeService;
+import com.noahblclarkson.autotune.service.PlayerStreakService;
 import com.noahblclarkson.autotune.util.EnchantmentPricing;
 import com.noahblclarkson.autotune.util.ItemSerializer;
 import org.bukkit.inventory.ItemStack;
@@ -49,6 +50,7 @@ public class EconomyManager {
     private final ConfigManager configManager;
     private final TreasuryService treasuryService;
     private final BadgeService badgeService;
+    private final PlayerStreakService playerStreakService;
 
     @Inject
     public EconomyManager(
@@ -62,7 +64,8 @@ public class EconomyManager {
             PriceReporter priceReporter,
             ConfigManager configManager,
             TreasuryService treasuryService,
-            BadgeService badgeService
+            BadgeService badgeService,
+            PlayerStreakService playerStreakService
     ) {
         this.plugin = plugin;
         this.economy = economy;
@@ -75,6 +78,7 @@ public class EconomyManager {
         this.configManager = configManager;
         this.treasuryService = treasuryService;
         this.badgeService = badgeService;
+        this.playerStreakService = playerStreakService;
     }
 
     public double getBalance(@NotNull Player player) {
@@ -152,6 +156,7 @@ public class EconomyManager {
                     .build();
 
             transactionRepository.insert(transaction);
+            playerStreakService.onTransaction(transaction.playerUuid());
             priceReporter.recordTransaction(item, transaction);
             playerRepository.addTransaction(playerId, totalPrice, true);
             marketEngine.recordBuy(item.id(), amount);
@@ -218,6 +223,7 @@ public class EconomyManager {
                     .build();
 
             transactionRepository.insert(transaction);
+            playerStreakService.onTransaction(transaction.playerUuid());
             priceReporter.recordTransaction(item, transaction);
             playerRepository.addTransaction(playerId, netProceeds, false);
             marketEngine.recordSell(item.id(), amount);
@@ -329,6 +335,7 @@ public class EconomyManager {
                         .build();
 
                 transactionRepository.insert(transaction);
+            playerStreakService.onTransaction(transaction.playerUuid());
                 priceReporter.recordTransaction(item, transaction);
                 playerRepository.addTransaction(playerId, finalNetProceeds, false);
                 marketEngine.recordSell(item.id(), amount);
@@ -452,6 +459,7 @@ public class EconomyManager {
                         .build();
 
                 transactionRepository.insert(transaction);
+            playerStreakService.onTransaction(transaction.playerUuid());
                 priceReporter.recordTransaction(cartItem.shopItem(), transaction);
 
                 if (cartItem.isBuying()) {

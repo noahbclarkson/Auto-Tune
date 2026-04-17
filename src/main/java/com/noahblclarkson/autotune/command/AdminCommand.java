@@ -9,6 +9,8 @@ import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
+import com.noahblclarkson.autotune.model.AdminAuditEntry.ActionType;
+import com.noahblclarkson.autotune.service.AdminAuditService;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.economy.EconomyAdvisor;
 import com.noahblclarkson.autotune.manager.DatabaseCleanupManager;
@@ -89,6 +91,7 @@ public class AdminCommand {
     private final MarketDigestService marketDigestService;
     private final EconomySnapshotRepository economySnapshotRepository;
     private final EconomyAdvisor advisor;
+    private final AdminAuditService auditService;
 
     @Inject
     public AdminCommand(
@@ -107,7 +110,8 @@ public class AdminCommand {
             PriceReporter priceReporter,
             MarketDigestService marketDigestService,
             EconomySnapshotRepository economySnapshotRepository,
-            EconomyAdvisor advisor
+            EconomyAdvisor advisor,
+            AdminAuditService auditService
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -125,6 +129,7 @@ public class AdminCommand {
         this.marketDigestService = marketDigestService;
         this.economySnapshotRepository = economySnapshotRepository;
         this.advisor = advisor;
+        this.auditService = auditService;
     }
 
     @Command("autotune admin advice")
@@ -145,6 +150,8 @@ public class AdminCommand {
                 .append(Component.text(" — Full economy diagnostic report", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin audit", NamedTextColor.YELLOW)
                 .append(Component.text(" — System health and consistency check", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin auditlog [limit]", NamedTextColor.YELLOW)
+                .append(Component.text(" — History of admin actions (freezes, overrides, etc.)", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin trend [days]", NamedTextColor.YELLOW)
                 .append(Component.text(" — Economy trajectory over N days (default: 7)", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin history [limit]", NamedTextColor.YELLOW)
@@ -242,6 +249,34 @@ public class AdminCommand {
             sender.sendMessage(Component.text("  No economy snapshot available yet.", NamedTextColor.GRAY));
         }
 
+        sender.sendMessage(Component.empty());
+    }
+
+    @Command("autotune admin auditlog [limit]")
+    @Permission("autotune.admin")
+    public void adminAuditLog(CommandSender sender, @Argument("limit") @Default("20") int limit) {
+        int effectiveLimit = Math.min(Math.max(1, limit), 200);
+        var entries = auditService.getRecent(effectiveLimit);
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Admin Audit Log", NamedTextColor.GOLD, TextDecoration.BOLD)
+                .append(Component.text(" — last " + effectiveLimit + " actions", NamedTextColor.DARK_GRAY)));
+        sender.sendMessage(Component.empty());
+
+        if (entries.isEmpty()) {
+            sender.sendMessage(Component.text("No admin actions recorded yet.", NamedTextColor.GRAY));
+            sender.sendMessage(Component.empty());
+            return;
+        }
+
+        for (var entry : entries) {
+            String timeStr = entry.timestamp().toString().substring(0, 10); // YYYY-MM-DD
+            Component row = Component.text("[" + timeStr + "] ", NamedTextColor.DARK_GRAY)
+                    .append(Component.text(entry.adminName(), NamedTextColor.AQUA))
+                    .append(Component.text(" » ", NamedTextColor.GRAY))
+                    .append(Component.text(entry.toSummary(), NamedTextColor.WHITE));
+            sender.sendMessage(row);
+        }
         sender.sendMessage(Component.empty());
     }
 
@@ -1151,6 +1186,9 @@ public class AdminCommand {
     public void adminReload(CommandSender sender) {
         try {
             plugin.reload();
+            UUID adminUuid = (sender instanceof Player p) ? p.getUniqueId() : null;
+            auditService.log(adminUuid, sender.getName(), ActionType.CONFIG_RELOAD, null, null, null,
+                    "Config and caches reloaded");
             sender.sendMessage(Component.text("Auto-Tune config and caches reloaded.", NamedTextColor.GREEN));
         } catch (Exception e) {
             plugin.getLogger().warning("Reload failed: " + e.getMessage());
@@ -1235,10 +1273,14 @@ public class AdminCommand {
         boolean nowFrozen = !marketEngine.isFrozen();
         marketEngine.setFrozen(nowFrozen);
 
+        UUID adminUuid = (sender instanceof Player p) ? p.getUniqueId() : null;
+        String adminName = sender.getName();
         if (nowFrozen) {
+            auditService.log(adminUuid, adminName, ActionType.MARKET_FREEZE, null, "active", "frozen", null);
             sender.sendMessage(Component.text("Market frozen. Prices will not update until unfrozen.",
                     NamedTextColor.YELLOW));
         } else {
+            auditService.log(adminUuid, adminName, ActionType.MARKET_UNFREEZE, null, "frozen", "active", null);
             sender.sendMessage(Component.text("Market unfrozen. Prices will resume updating.",
                     NamedTextColor.GREEN));
         }
@@ -1288,8 +1330,14 @@ public class AdminCommand {
         }
 
         UUID setBy = (sender instanceof Player p) ? p.getUniqueId() : null;
+        // Capture old value before we overwrite
+        String oldValue = marketEngine.getOverride(item.id())
+                .map(o -> configManager.formatCurrency((BigDecimal) o.price())).orElse(null);
         overrideRepo.setOverride(item.id(), price, expiresAt, setBy);
         marketEngine.refreshOverrideCache();
+
+        auditService.logMaterial(setBy, sender.getName(), ActionType.PRICE_SET,
+                item.getDisplayNameOrMaterial(), oldValue, configManager.formatCurrency(price));
 
         String expiryStr = (hours != null && hours > 0) ? " for " + hours + "h" : " (permanent)";
         sender.sendMessage(Component.text("Override set for " + item.getDisplayNameOrMaterial()
@@ -1319,6 +1367,10 @@ public class AdminCommand {
 
         overrideRepo.removeOverride(shopItem.get().id());
         marketEngine.refreshOverrideCache();
+        UUID adminUuid = (sender instanceof Player p2) ? p2.getUniqueId() : null;
+        auditService.logMaterial(adminUuid, sender.getName(), ActionType.PRICE_REMOVE,
+                mat.name(),
+                existing.map(o -> configManager.formatCurrency((BigDecimal) o.price())).orElse(null), null);
         sender.sendMessage(Component.text("Override removed for " + mat.name() + ".", NamedTextColor.GREEN));
     }
 
@@ -1741,10 +1793,16 @@ public class AdminCommand {
         }
 
         ShopItem item = shopItem.get();
+        String displayName = item.getDisplayNameOrMaterial();
+        UUID adminUuid = (sender instanceof Player p) ? p.getUniqueId() : null;
         if (value < 0) {
             // -1 sentinel = clear floor
+            String oldFloor = item.priceFloorOverride() != null
+                    ? configManager.formatCurrency(item.priceFloorOverride()) : null;
             shopManager.setPriceFloorOverride(item.id(), null);
-            sender.sendMessage(Component.text("Price floor cleared for " + item.getDisplayNameOrMaterial()
+            auditService.logMaterial(adminUuid, sender.getName(), ActionType.ITEM_FLOOR,
+                    displayName, oldFloor, null);
+            sender.sendMessage(Component.text("Price floor cleared for " + displayName
                     + ". Using free market pricing.", NamedTextColor.GREEN));
             return;
         }
@@ -1757,7 +1815,9 @@ public class AdminCommand {
 
         BigDecimal floor = BigDecimal.valueOf(value);
         shopManager.setPriceFloorOverride(item.id(), floor);
-        sender.sendMessage(Component.text("Price floor for " + item.getDisplayNameOrMaterial()
+        auditService.logMaterial(adminUuid, sender.getName(), ActionType.ITEM_FLOOR,
+                displayName, null, configManager.formatCurrency(floor));
+        sender.sendMessage(Component.text("Price floor for " + displayName
                 + " set to " + configManager.formatCurrency(floor)
                 + " — buy/sell prices will not go below this.", NamedTextColor.GREEN));
     }
@@ -1782,10 +1842,16 @@ public class AdminCommand {
         }
 
         ShopItem item = shopItem.get();
+        String displayName = item.getDisplayNameOrMaterial();
+        UUID adminUuid = (sender instanceof Player p) ? p.getUniqueId() : null;
         if (value < 0) {
             // -1 sentinel = clear ceiling
+            String oldCeiling = item.priceCeilingOverride() != null
+                    ? configManager.formatCurrency(item.priceCeilingOverride()) : null;
             shopManager.setPriceCeilingOverride(item.id(), null);
-            sender.sendMessage(Component.text("Price ceiling cleared for " + item.getDisplayNameOrMaterial()
+            auditService.logMaterial(adminUuid, sender.getName(), ActionType.ITEM_CEILING,
+                    displayName, oldCeiling, null);
+            sender.sendMessage(Component.text("Price ceiling cleared for " + displayName
                     + ". Using free market pricing.", NamedTextColor.GREEN));
             return;
         }
@@ -1798,7 +1864,9 @@ public class AdminCommand {
 
         BigDecimal ceiling = BigDecimal.valueOf(value);
         shopManager.setPriceCeilingOverride(item.id(), ceiling);
-        sender.sendMessage(Component.text("Price ceiling for " + item.getDisplayNameOrMaterial()
+        auditService.logMaterial(adminUuid, sender.getName(), ActionType.ITEM_CEILING,
+                displayName, null, configManager.formatCurrency(ceiling));
+        sender.sendMessage(Component.text("Price ceiling for " + displayName
                 + " set to " + configManager.formatCurrency(ceiling)
                 + " — buy/sell prices will not exceed this.", NamedTextColor.GREEN));
     }

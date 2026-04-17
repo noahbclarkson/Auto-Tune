@@ -6,6 +6,7 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.guild.GuildService;
+import com.noahblclarkson.autotune.database.AdminAuditRepository;
 import com.noahblclarkson.autotune.database.AutosellRepository;
 import com.noahblclarkson.autotune.database.AuctionRepository;
 import com.noahblclarkson.autotune.database.BadgeRepository;
@@ -15,6 +16,7 @@ import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.MarketEventRepository;
 import com.noahblclarkson.autotune.economy.LoanManager;
+import com.noahblclarkson.autotune.service.AdminAuditService;
 import com.noahblclarkson.autotune.service.AdminWebhookService;
 import com.noahblclarkson.autotune.service.EconomicNewsService;
 import com.noahblclarkson.autotune.service.BadgeService;
@@ -317,5 +319,17 @@ public class AutoTuneModule extends AbstractModule {
             ShopManager shopManager
     ) {
         return new EconomyWhatMovedService(transactionRepository, itemRepository, shopManager);
+    }
+
+    @Provides
+    @Singleton
+    public AdminAuditRepository provideAdminAuditRepository(DatabaseManager databaseManager) {
+        return new AdminAuditRepository(databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public AdminAuditService provideAdminAuditService(AdminAuditRepository repository) {
+        return new AdminAuditService(repository);
     }
 }

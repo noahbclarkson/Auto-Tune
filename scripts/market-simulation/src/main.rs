@@ -11210,6 +11210,13 @@ fn main() -> eframe::Result<()> {
         println!("  --sixty-day-fix-test      tier3=50+min_int=0.20 vs ctrl × 2 seeds × 60d");
         println!("  --sixty-day-hysteresis-test  hysteresis 50% vs 10% × 2 seeds × 60d");
         println!("  --sixty-day-gb-debt-cap-test  GB debt cap 3×GDP vs uncapped × 2 seeds × 60d");
+        println!("  --sixty-day-tier3-sweep        tier3=30/50/100 × 5 seeds × 60 days");
+        println!(
+            "  --sixty-day-loan-lock-test     block MM/GB loans during TIER3 × 5 seeds × 60 days"
+        );
+        println!(
+            "  --sixty-day-early-intervention-test  tier3=5/10/15 vs ctrl × 5 seeds × 60 days"
+        );
         println!("  --it-removal-test         2MM+2GB+floor: WITH vs WITHOUT InsiderTraders");
         println!("  --healthy-baseline-5seed  2MM+2GB+floor × 5 seeds: statistical baseline");
         println!("  --gb-newbie-healthy-test   2MM+2GB+2Far+2Newbie vs 2MM+2GB+3Far × 5 seeds");
@@ -11662,6 +11669,12 @@ fn main() -> eframe::Result<()> {
     // ─── 60-Day Loan Lock Test ──────────────────────────────────────────
     if args.len() > 1 && args[1] == "--sixty-day-loan-lock-test" {
         run_sixty_day_loan_lock_test();
+        return Ok(());
+    }
+
+    // ─── 60-Day Early Intervention Sweep ───────────────────────────────
+    if args.len() > 1 && args[1] == "--sixty-day-early-intervention-test" {
+        run_sixty_day_early_intervention_test();
         return Ok(());
     }
 
@@ -17771,4 +17784,221 @@ fn get_tier3_locked_ticks(db_path: &std::path::Path) -> u64 {
         |row| row.get::<_, i64>(0),
     )
     .unwrap_or(0) as u64
+}
+
+/// 60-Day Early Intervention Sweep
+///
+/// HYPOTHESIS: The counter-cyclical circuit fires at D/G=37x (tier3=30),
+/// but by then debt has already spiraled. The circuit only PREVENTTS WORSE
+/// (0% interest cap) but cannot DELEVERAGE existing debt.
+///
+/// TEST: What if the circuit fires MUCH EARLIER (tier3=5/10/15) before
+/// the debt spiral forms? Early 0% interest = economy never reaches 30-40x D/G.
+///
+/// The circuit multiplier = max(0, 1 - D/G / tier3_ratio).
+/// At tier3=10, circuit fires at D/G=10x. At tier3=5, circuit fires at D/G=5x.
+fn run_sixty_day_early_intervention_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds = [42u64, 12345u64, 98765u64, 77777u64, 11111u64];
+    // Early tiers: 5, 10, 15 vs control: 30
+    let tier3_ratios = [5.0, 10.0, 15.0, 30.0];
+
+    println!("\n============================================================================");
+    println!("  60-DAY EARLY INTERVENTION TEST");
+    println!("  tier3=5/10/15/30 x 5 seeds x 60 days — circuit fires at D/G=5x/10x/15x/30x");
+    println!("============================================================================\n");
+
+    #[derive(Debug)]
+    struct T3Result {
+        tier3: f64,
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        tier3_events: u32,
+    }
+
+    impl T3Result {
+        fn from_db(db_path: &std::path::Path, tier3: f64, seed: u64) -> Option<Self> {
+            let s = load_summary(db_path).ok()?;
+            let tier3_events = count_tier3_events(db_path);
+            Some(Self {
+                tier3,
+                seed,
+                gdp: s.gdp,
+                dg: if s.gdp > 0.0 { s.debt / s.gdp } else { 0.0 },
+                tier3_events,
+            })
+        }
+    }
+
+    let mut results = Vec::new();
+
+    for &tier3 in &tier3_ratios {
+        for &seed in &seeds {
+            print!("  tier3={:.0} seed={} ... ", tier3, seed);
+            std::io::stdout().flush().ok();
+
+            let mut sim = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+            sim.name = format!("60d_ei_t{:.0}_s{}", tier3, seed);
+            sim.duration_ticks = 288 * 60;
+            sim.config.loans.debt_gdp_tier3_ratio = tier3;
+
+            let out_dir = format!("/tmp/autotune-sim/60d-ei-t{:.0}-s{}", tier3, seed);
+            let out_path = std::path::PathBuf::from(&out_dir);
+            std::fs::create_dir_all(&out_path).ok();
+            run_seeded_headless(&sim, seed, &out_path).ok();
+
+            let r = T3Result::from_db(&out_path.join("simulation.db"), tier3, seed);
+            if let Some(r) = r {
+                println!(
+                    "  GDP={:.0}  D/G={:.3}x  T3_ev={}",
+                    r.gdp, r.dg, r.tier3_events
+                );
+                results.push(r);
+            } else {
+                println!("FAILED");
+            }
+        }
+        println!();
+    }
+
+    println!("\n============================================================================");
+    println!("  60-DAY EARLY INTERVENTION - AGGREGATE RESULTS");
+    println!("============================================================================");
+    println!(
+        "  {:^6} | {:^10}  {:^10}  {:^8}  {:^8} | {:^8}",
+        "tier3", "GDP mean", "D/G mean", "D/G min", "D/G max", "T3_ev"
+    );
+    println!("  {}", "-".repeat(65));
+
+    for &tier3 in &tier3_ratios {
+        let arm: Vec<_> = results.iter().filter(|r| r.tier3 == tier3).collect();
+        let n = arm.len();
+        if n == 0 {
+            continue;
+        }
+        let gdp_mean = arm.iter().map(|r| r.gdp).sum::<f64>() / n as f64;
+        let dg_mean = arm.iter().map(|r| r.dg).sum::<f64>() / n as f64;
+        let dg_min = arm.iter().map(|r| r.dg).reduce(f64::min).unwrap_or(0.0);
+        let dg_max = arm.iter().map(|r| r.dg).reduce(f64::max).unwrap_or(0.0);
+        let t3_total: u32 = arm.iter().map(|r| r.tier3_events).sum();
+        println!(
+            "  {:^6.0} | {:>10.0}  {:>10.3}x  {:>8.3}x  {:>8.3}x | {:^8}",
+            tier3, gdp_mean, dg_mean, dg_min, dg_max, t3_total
+        );
+    }
+
+    println!("\n  Per-seed D/G:");
+    for &seed in &seeds {
+        let row: Vec<String> = tier3_ratios
+            .iter()
+            .map(|&t| {
+                results
+                    .iter()
+                    .find(|r| r.tier3 == t && r.seed == seed)
+                    .map(|r| format!("{:.2}x", r.dg))
+                    .unwrap_or_else(|| "-".to_string())
+            })
+            .collect();
+        println!("  seed={} | {}", seed, row.join(" | "));
+    }
+
+    println!("\n  TIER3 events:");
+    for &seed in &seeds {
+        let row: Vec<String> = tier3_ratios
+            .iter()
+            .map(|&t| {
+                results
+                    .iter()
+                    .find(|r| r.tier3 == t && r.seed == seed)
+                    .map(|r| format!("{}", r.tier3_events))
+                    .unwrap_or_else(|| "-".to_string())
+            })
+            .collect();
+        println!("  seed={} | {}", seed, row.join(" | "));
+    }
+
+    let t3_30 = 30.0;
+    let ctrl_mean = results
+        .iter()
+        .filter(|r| r.tier3 == t3_30)
+        .map(|r| r.dg)
+        .sum::<f64>()
+        / 5.0;
+    let t3_5_mean = results
+        .iter()
+        .filter(|r| r.tier3 == 5.0)
+        .map(|r| r.dg)
+        .sum::<f64>()
+        / 5.0;
+    let t3_10_mean = results
+        .iter()
+        .filter(|r| r.tier3 == 10.0)
+        .map(|r| r.dg)
+        .sum::<f64>()
+        / 5.0;
+    let t3_15_mean = results
+        .iter()
+        .filter(|r| r.tier3 == 15.0)
+        .map(|r| r.dg)
+        .sum::<f64>()
+        / 5.0;
+
+    println!("\n============================================================================");
+    println!("  VERDICT");
+    println!("----------------------------------------------------------------------------");
+    println!("  tier3=30 (ctrl):  D/G={:.3}x", ctrl_mean);
+    println!(
+        "  tier3=15:         D/G={:.3}x  delta={:+.3}x",
+        t3_15_mean,
+        t3_15_mean - ctrl_mean
+    );
+    println!(
+        "  tier3=10:         D/G={:.3}x  delta={:+.3}x",
+        t3_10_mean,
+        t3_10_mean - ctrl_mean
+    );
+    println!(
+        "  tier3=5:          D/G={:.3}x  delta={:+.3}x",
+        t3_5_mean,
+        t3_5_mean - ctrl_mean
+    );
+
+    let best_tier3 = *[t3_5_mean, t3_10_mean, t3_15_mean]
+        .iter()
+        .min_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+    let best_label = if best_tier3 == t3_5_mean {
+        "5"
+    } else if best_tier3 == t3_10_mean {
+        "10"
+    } else {
+        "15"
+    };
+
+    if best_tier3 < ctrl_mean * 0.8 && best_tier3 < 10.0 {
+        println!("----------------------------------------------------------------------------");
+        println!(
+            "  CONFIRMED: tier3={} resolves instability — D/G {:.1}x -> {:.1}x (< 10x stable)",
+            best_label, ctrl_mean, best_tier3
+        );
+        println!(
+            "  RECOMMENDATION: tier3_ratio={} in production config.",
+            best_label
+        );
+    } else if best_tier3 < ctrl_mean {
+        println!("----------------------------------------------------------------------------");
+        println!(
+            "  IMPROVED: tier3={} reduces D/G ({:.1}x -> {:.1}x)",
+            best_label, ctrl_mean, best_tier3
+        );
+        println!("  But instability persists — consider more aggressive intervention.");
+    } else {
+        println!("----------------------------------------------------------------------------");
+        println!("  DOES NOT FIX: earlier circuit does not resolve instability");
+        println!("  Root cause is the debt SPIRAL, not circuit timing.");
+        println!("  The circuit prevents catastrophe but cannot deleverage existing debt.");
+    }
+    println!("============================================================================");
 }

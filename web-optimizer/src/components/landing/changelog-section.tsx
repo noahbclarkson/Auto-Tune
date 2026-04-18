@@ -1,8 +1,19 @@
 'use client';
 
-import { GitCommit, Zap, Users, Gavel, Bell, ShieldCheck, Globe, AlertTriangle } from 'lucide-react';
+import { GitCommit, Zap, Users, Gavel, Bell, ShieldCheck, Globe, AlertTriangle, FlaskConical } from 'lucide-react';
 
 const UPDATES = [
+  // ── 2026-04-18: 60d instability — all 7 fix candidates FAILED ─────────────
+  {
+    date: '2026-04-18',
+    icon: FlaskConical,
+    accent: 'text-rose-400',
+    accentBg: 'bg-rose-950/60 border-rose-800/50',
+    tag: 'SIM LAB',
+    title: '60-day instability — all 7 fix candidates failed, root cause is architectural',
+    detail: '4 new diagnostic tests run (tier3=100 sweep, loan-lock, early-intervention, combo). Combined with 3 prior tests: ALL 7 FAILED. D/G still reaches 20×+ at 60d regardless of circuit configuration. Root cause: debt compounds ~10%/day while GDP grows ~1%/day. The TIER3 circuit locks interest at 0% but cannot reduce existing debt. Architectural fix needed. See /findings for full analysis.',
+    href: '/findings',
+  },
   // ── 2026-04-15: Critical TIER3 doom loop fix ─────────────────────────────
   {
     date: '2026-04-15',

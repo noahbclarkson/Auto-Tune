@@ -11653,6 +11653,18 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    // ─── 60-Day tier3=100 Sweep ────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--sixty-day-tier3-sweep" {
+        run_sixty_day_tier3_sweep();
+        return Ok(());
+    }
+
+    // ─── 60-Day Loan Lock Test ──────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--sixty-day-loan-lock-test" {
+        run_sixty_day_loan_lock_test();
+        return Ok(());
+    }
+
     // ─── IT Removal Test ───────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--it-removal-test" {
         run_it_removal_healthy_test();
@@ -16813,7 +16825,6 @@ fn run_it_removal_healthy_test() {
     println!("  This 5-seed test includes floor — floor may dampen IT price effects.");
 }
 
-
 // ─── 60-Day Fix Confirmation Test ────────────────────────────────────────
 
 /// CRITICAL FINDING (2026-04-17):
@@ -16909,22 +16920,15 @@ fn run_sixty_day_fix_test() {
         "
   ╔════════════════════════════════════════════════════════════════╗"
     );
-    println!(
-        "  ║  60-DAY FIX SUMMARY (2 seeds x 60 days)                      ║"
-    );
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ║  60-DAY FIX SUMMARY (2 seeds x 60 days)                      ║");
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
     println!(
         "  ║  {:>6}  {:>12}  {:>10}  {:>10}  {:>8}  {:>7}  ║",
         "Seed", "GDP", "D/G_ctrl", "D/G_fix", "Delta", "Verdict"
     );
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
 
-    for ((seed, fgdp, cdg, _, _), (_, _, fdg, _, _)) in
-        ctrl_metrics.iter().zip(fix_metrics.iter())
+    for ((seed, fgdp, cdg, _, _), (_, _, fdg, _, _)) in ctrl_metrics.iter().zip(fix_metrics.iter())
     {
         let verdict = if *fdg < 10.0 && *cdg >= 10.0 {
             "STABLE"
@@ -16937,7 +16941,12 @@ fn run_sixty_day_fix_test() {
         };
         println!(
             "  ║  {:>6}  {:>12.0}  {:>10.3}x  {:>10.3}x  {:>+8.3}x  {:>7}  ║",
-            seed, fgdp, cdg, fdg, fdg - cdg, verdict
+            seed,
+            fgdp,
+            cdg,
+            fdg,
+            fdg - cdg,
+            verdict
         );
     }
 
@@ -16947,24 +16956,28 @@ fn run_sixty_day_fix_test() {
     let ctrl_vol_mean: f64 = ctrl_metrics.iter().map(|(_, _, _, v, _)| v).sum::<f64>() / 2.0;
     let fix_vol_mean: f64 = fix_metrics.iter().map(|(_, _, _, v, _)| v).sum::<f64>() / 2.0;
 
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
     println!(
         "  ║  {:>6}  {:>12}  {:>10.3}x  {:>10.3}x  {:>+8.3}x  {:>7}  ║",
-        "MEAN", "--", ctrl_dg_mean, fix_dg_mean, fix_dg_mean - ctrl_dg_mean,
-        if fix_dg_mean < ctrl_dg_mean * 0.5 { "FIXED" } else if fix_dg_mean < ctrl_dg_mean { "improved" } else { "not fixed" }
+        "MEAN",
+        "--",
+        ctrl_dg_mean,
+        fix_dg_mean,
+        fix_dg_mean - ctrl_dg_mean,
+        if fix_dg_mean < ctrl_dg_mean * 0.5 {
+            "FIXED"
+        } else if fix_dg_mean < ctrl_dg_mean {
+            "improved"
+        } else {
+            "not fixed"
+        }
     );
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
     println!(
         "  ║  Vol:  Ctrl={:.4}  Fix={:.4}                              ║",
         ctrl_vol_mean, fix_vol_mean
     );
-    println!(
-        "  ╚════════════════════════════════════════════════════════════════╝"
-    );
+    println!("  ╚════════════════════════════════════════════════════════════════╝");
 
     let stable = fix_dg_mean < 10.0;
     let improved = fix_dg_mean < ctrl_dg_mean;
@@ -16974,9 +16987,7 @@ fn run_sixty_day_fix_test() {
   VERDICT:"
     );
     if stable && improved {
-        println!(
-            "    FIX CONFIRMED -- tier3=50 + min_int=0.20 resolves 60d instability"
-        );
+        println!("    FIX CONFIRMED -- tier3=50 + min_int=0.20 resolves 60d instability");
         println!(
             "    D/G mean: {:.1}x -> {:.1}x, below 10x stability threshold",
             ctrl_dg_mean, fix_dg_mean
@@ -16985,27 +16996,18 @@ fn run_sixty_day_fix_test() {
             "    RECOMMENDATION: Update production defaults to tier3_ratio=50, min_interest_multiplier=0.20"
         );
     } else if improved {
-        println!(
-            "    PARTIAL -- fix improves D/G but may not fully resolve instability"
-        );
+        println!("    PARTIAL -- fix improves D/G but may not fully resolve instability");
         println!(
             "    D/G mean: {:.1}x -> {:.1}x ({:+.1}x change)",
-            ctrl_dg_mean, fix_dg_mean, fix_dg_mean - ctrl_dg_mean
+            ctrl_dg_mean,
+            fix_dg_mean,
+            fix_dg_mean - ctrl_dg_mean
         );
-        println!(
-            "    RECOMMENDATION: Run 5-seed confirmation before updating defaults"
-        );
+        println!("    RECOMMENDATION: Run 5-seed confirmation before updating defaults");
     } else {
-        println!(
-            "    NOT FIXED -- tier3=50 + min_int=0.20 does NOT resolve instability"
-        );
-        println!(
-            "    D/G mean: {:.1}x -> {:.1}x",
-            ctrl_dg_mean, fix_dg_mean
-        );
-        println!(
-            "    RECOMMENDATION: Investigate alternative fixes (GB debt cap, remove floor)"
-        );
+        println!("    NOT FIXED -- tier3=50 + min_int=0.20 does NOT resolve instability");
+        println!("    D/G mean: {:.1}x -> {:.1}x", ctrl_dg_mean, fix_dg_mean);
+        println!("    RECOMMENDATION: Investigate alternative fixes (GB debt cap, remove floor)");
     }
 }
 
@@ -17025,8 +17027,10 @@ fn run_sixty_day_hysteresis_test() {
     );
     println!("║     60-DAY HYSTERESIS BAND TEST                               ║");
     println!("║  Control: tier3=30, hysteresis=0.10  vs  Fix: tier3=30, hysteresis=0.50  ║");
-    println!("╚════════════════════════════════════════════════════════════════════════╝
-");
+    println!(
+        "╚════════════════════════════════════════════════════════════════════════╝
+"
+    );
 
     let mut ctrl_metrics = Vec::new();
     let mut fix_metrics = Vec::new();
@@ -17064,8 +17068,22 @@ fn run_sixty_day_hysteresis_test() {
         if let (Ok(cs), Ok(fs)) = (ctrl_summary, fix_summary) {
             let ctrl_dg = cs.debt / cs.gdp.max(1.0);
             let fix_dg = fs.debt / fs.gdp.max(1.0);
-            ctrl_metrics.push((seed, cs.gdp, ctrl_dg, cs.avg_volatility, cs.buy_ratio, cs.tier3_events));
-            fix_metrics.push((seed, fs.gdp, fix_dg, fs.avg_volatility, fs.buy_ratio, fs.tier3_events));
+            ctrl_metrics.push((
+                seed,
+                cs.gdp,
+                ctrl_dg,
+                cs.avg_volatility,
+                cs.buy_ratio,
+                cs.tier3_events,
+            ));
+            fix_metrics.push((
+                seed,
+                fs.gdp,
+                fix_dg,
+                fs.avg_volatility,
+                fs.buy_ratio,
+                fs.tier3_events,
+            ));
 
             let status = if fix_dg < 10.0 && ctrl_dg >= 10.0 {
                 "STABLE"
@@ -17096,19 +17114,13 @@ fn run_sixty_day_hysteresis_test() {
         "
   ╔════════════════════════════════════════════════════════════════╗"
     );
-    println!(
-        "  ║  60-DAY HYSTERESIS TEST SUMMARY (2 seeds × 60 days)           ║"
-    );
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ║  60-DAY HYSTERESIS TEST SUMMARY (2 seeds × 60 days)           ║");
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
     println!(
         "  ║  {:>6}  {:>12}  {:>10}  {:>10}  {:>8}  {:>7}  ║",
         "Seed", "GDP", "D/G_ctrl", "D/G_fix", "Delta", "Verdict"
     );
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
 
     for ((seed, fgdp, cdg, _, _, _), (_, _, fdg, _, _, _)) in
         ctrl_metrics.iter().zip(fix_metrics.iter())
@@ -17124,34 +17136,49 @@ fn run_sixty_day_hysteresis_test() {
         };
         println!(
             "  ║  {:>6}  {:>12.0}  {:>10.3}x  {:>10.3}x  {:>+8.3}x  {:>7}  ║",
-            seed, fgdp, cdg, fdg, fdg - cdg, verdict
+            seed,
+            fgdp,
+            cdg,
+            fdg,
+            fdg - cdg,
+            verdict
         );
     }
 
     // Compute means
     let ctrl_dg_mean: f64 = ctrl_metrics.iter().map(|(_, _, d, _, _, _)| d).sum::<f64>() / 2.0;
     let fix_dg_mean: f64 = fix_metrics.iter().map(|(_, _, d, _, _, _)| d).sum::<f64>() / 2.0;
-    let ctrl_t3: f64 = ctrl_metrics.iter().map(|(_, _, _, _, _, t3)| *t3 as f64).sum::<f64>();
-    let fix_t3: f64 = fix_metrics.iter().map(|(_, _, _, _, _, t3)| *t3 as f64).sum::<f64>();
+    let ctrl_t3: f64 = ctrl_metrics
+        .iter()
+        .map(|(_, _, _, _, _, t3)| *t3 as f64)
+        .sum::<f64>();
+    let fix_t3: f64 = fix_metrics
+        .iter()
+        .map(|(_, _, _, _, _, t3)| *t3 as f64)
+        .sum::<f64>();
 
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
     println!(
         "  ║  {:>6}  {:>12}  {:>10.3}x  {:>10.3}x  {:>+8.3}x  {:>7}  ║",
-        "MEAN", "--", ctrl_dg_mean, fix_dg_mean, fix_dg_mean - ctrl_dg_mean,
-        if fix_dg_mean < ctrl_dg_mean * 0.5 { "FIXED" } else if fix_dg_mean < ctrl_dg_mean { "improved" } else { "not fixed" }
+        "MEAN",
+        "--",
+        ctrl_dg_mean,
+        fix_dg_mean,
+        fix_dg_mean - ctrl_dg_mean,
+        if fix_dg_mean < ctrl_dg_mean * 0.5 {
+            "FIXED"
+        } else if fix_dg_mean < ctrl_dg_mean {
+            "improved"
+        } else {
+            "not fixed"
+        }
     );
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
     println!(
         "  ║  TIER3 events: Ctrl={:.0}  Fix={:.0}                            ║",
         ctrl_t3 as u32, fix_t3 as u32
     );
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
     let stable = fix_dg_mean < 10.0;
     let improved = fix_dg_mean < ctrl_dg_mean;
 
@@ -17160,38 +17187,25 @@ fn run_sixty_day_hysteresis_test() {
   VERDICT:"
     );
     if stable && improved {
-        println!(
-            "    FIX CONFIRMED -- hysteresis=0.50 resolves 60d instability"
-        );
+        println!("    FIX CONFIRMED -- hysteresis=0.50 resolves 60d instability");
         println!(
             "    D/G mean: {:.1}x → {:.1}x, below 10x stability threshold",
             ctrl_dg_mean, fix_dg_mean
         );
-        println!(
-            "    RECOMMENDATION: Update production config tier3_hysteresis_band=0.50"
-        );
+        println!("    RECOMMENDATION: Update production config tier3_hysteresis_band=0.50");
     } else if improved {
-        println!(
-            "    PARTIAL -- wider hysteresis improves D/G but may not fully resolve"
-        );
+        println!("    PARTIAL -- wider hysteresis improves D/G but may not fully resolve");
         println!(
             "    D/G mean: {:.1}x → {:.1}x ({:+.1}x change)",
-            ctrl_dg_mean, fix_dg_mean, fix_dg_mean - ctrl_dg_mean
+            ctrl_dg_mean,
+            fix_dg_mean,
+            fix_dg_mean - ctrl_dg_mean
         );
-        println!(
-            "    RECOMMENDATION: Run 5-seed confirmation + consider GB debt cap"
-        );
+        println!("    RECOMMENDATION: Run 5-seed confirmation + consider GB debt cap");
     } else {
-        println!(
-            "    NOT FIXED -- wider hysteresis does NOT resolve instability"
-        );
-        println!(
-            "    D/G mean: {:.1}x → {:.1}x",
-            ctrl_dg_mean, fix_dg_mean
-        );
-        println!(
-            "    RECOMMENDATION: GB debt cap is the correct fix (not hysteresis)"
-        );
+        println!("    NOT FIXED -- wider hysteresis does NOT resolve instability");
+        println!("    D/G mean: {:.1}x → {:.1}x", ctrl_dg_mean, fix_dg_mean);
+        println!("    RECOMMENDATION: GB debt cap is the correct fix (not hysteresis)");
     }
 }
 
@@ -17218,8 +17232,7 @@ fn run_sixty_day_gb_debt_cap_test() {
     );
     println!("║     60-DAY GB DEBT CAP TEST                                      ║");
     println!("║  Control: GB debt uncapped  vs  Fix: GB debt cap 3× GDP             ║");
-    println!("╚════════════════════════════════════════════════════════════════════════════╝\n"
-    );
+    println!("╚════════════════════════════════════════════════════════════════════════════╝\n");
 
     let mut ctrl_metrics = Vec::new();
     let mut fix_metrics = Vec::new();
@@ -17252,15 +17265,27 @@ fn run_sixty_day_gb_debt_cap_test() {
         let ctrl_summary = load_summary(&ctrl_path.join("simulation.db"));
         let fix_summary = load_summary(&fix_path.join("simulation.db"));
 
-
         if let (Ok(cs), Ok(fs)) = (ctrl_summary, fix_summary) {
             let ctrl_dg = cs.debt / cs.gdp.max(1.0);
             let fix_dg = fs.debt / fs.gdp.max(1.0);
             let ctrl_t3 = cs.tier3_events;
             let fix_t3 = fs.tier3_events;
-            ctrl_metrics.push((seed, cs.gdp, ctrl_dg, cs.avg_volatility, cs.buy_ratio, ctrl_t3));
-            fix_metrics.push((seed, fs.gdp, fix_dg, fs.avg_volatility, fs.buy_ratio, fix_t3));
-
+            ctrl_metrics.push((
+                seed,
+                cs.gdp,
+                ctrl_dg,
+                cs.avg_volatility,
+                cs.buy_ratio,
+                ctrl_t3,
+            ));
+            fix_metrics.push((
+                seed,
+                fs.gdp,
+                fix_dg,
+                fs.avg_volatility,
+                fs.buy_ratio,
+                fix_t3,
+            ));
 
             let status = if fix_dg < 10.0 && ctrl_dg >= 10.0 {
                 "STABLE"
@@ -17273,7 +17298,13 @@ fn run_sixty_day_gb_debt_cap_test() {
             };
             println!(
                 "    Seed {}:  Ctrl D/G={:.3}x  Fix D/G={:.3}x  Delta={:+.3}x  T3 Ctrl={} Fix={}  {}",
-                seed, ctrl_dg, fix_dg, fix_dg - ctrl_dg, ctrl_t3, fix_t3, status
+                seed,
+                ctrl_dg,
+                fix_dg,
+                fix_dg - ctrl_dg,
+                ctrl_t3,
+                fix_t3,
+                status
             );
         } else {
             println!("    Seed {}: FAILED to load results", seed);
@@ -17285,19 +17316,13 @@ fn run_sixty_day_gb_debt_cap_test() {
         "
   ╔════════════════════════════════════════════════════════════════╗"
     );
-    println!(
-        "  ║  60-DAY GB DEBT CAP SUMMARY (2 seeds × 60 days)               ║"
-    );
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ║  60-DAY GB DEBT CAP SUMMARY (2 seeds × 60 days)               ║");
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
     println!(
         "  ║  {:>6}  {:>12}  {:>10}  {:>10}  {:>8}  {:>7}  ║",
         "Seed", "GDP", "D/G_ctrl", "D/G_fix", "Delta", "Verdict"
     );
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
 
     for ((seed, fgdp, cdg, _, _, _), (_, _, fdg, _, _, _)) in
         ctrl_metrics.iter().zip(fix_metrics.iter())
@@ -17313,34 +17338,48 @@ fn run_sixty_day_gb_debt_cap_test() {
         };
         println!(
             "  ║  {:>6}  {:>12.0}  {:>10.3}x  {:>10.3}x  {:>+8.3}x  {:>7}  ║",
-            seed, fgdp, cdg, fdg, fdg - cdg, verdict
+            seed,
+            fgdp,
+            cdg,
+            fdg,
+            fdg - cdg,
+            verdict
         );
     }
 
     let ctrl_dg_mean: f64 = ctrl_metrics.iter().map(|(_, _, d, _, _, _)| d).sum::<f64>() / 2.0;
     let fix_dg_mean: f64 = fix_metrics.iter().map(|(_, _, d, _, _, _)| d).sum::<f64>() / 2.0;
-    let ctrl_t3_mean: f64 = ctrl_metrics.iter().map(|(_, _, _, _, _, t3)| *t3 as f64).sum::<f64>();
-    let fix_t3_mean: f64 = fix_metrics.iter().map(|(_, _, _, _, _, t3)| *t3 as f64).sum::<f64>();
+    let ctrl_t3_mean: f64 = ctrl_metrics
+        .iter()
+        .map(|(_, _, _, _, _, t3)| *t3 as f64)
+        .sum::<f64>();
+    let fix_t3_mean: f64 = fix_metrics
+        .iter()
+        .map(|(_, _, _, _, _, t3)| *t3 as f64)
+        .sum::<f64>();
 
-
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
     println!(
         "  ║  {:>6}  {:>12}  {:>10.3}x  {:>10.3}x  {:>+8.3}x  {:>7}  ║",
-        "MEAN", "--", ctrl_dg_mean, fix_dg_mean, fix_dg_mean - ctrl_dg_mean,
-        if fix_dg_mean < ctrl_dg_mean * 0.5 { "FIXED" } else if fix_dg_mean < ctrl_dg_mean { "improved" } else { "not fixed" }
+        "MEAN",
+        "--",
+        ctrl_dg_mean,
+        fix_dg_mean,
+        fix_dg_mean - ctrl_dg_mean,
+        if fix_dg_mean < ctrl_dg_mean * 0.5 {
+            "FIXED"
+        } else if fix_dg_mean < ctrl_dg_mean {
+            "improved"
+        } else {
+            "not fixed"
+        }
     );
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
     println!(
         "  ║  TIER3 events: Ctrl={:.0}  Fix={:.0}                            ║",
         ctrl_t3_mean as u32, fix_t3_mean as u32
     );
-    println!(
-        "  ╠════════════════════════════════════════════════════════════════╣"
-    );
+    println!("  ╠════════════════════════════════════════════════════════════════╣");
     let stable = fix_dg_mean < 10.0;
     let improved = fix_dg_mean < ctrl_dg_mean;
 
@@ -17349,37 +17388,387 @@ fn run_sixty_day_gb_debt_cap_test() {
   VERDICT:"
     );
     if stable && improved {
-        println!(
-            "    FIX CONFIRMED -- GB debt cap 3× GDP resolves 60d instability"
-        );
+        println!("    FIX CONFIRMED -- GB debt cap 3× GDP resolves 60d instability");
         println!(
             "    D/G mean: {:.1}x → {:.1}x, below 10x stability threshold",
             ctrl_dg_mean, fix_dg_mean
         );
-        println!(
-            "    RECOMMENDATION: Add guildbuyer_total_debt_cap = 3.0 to production config"
-        );
+        println!("    RECOMMENDATION: Add guildbuyer_total_debt_cap = 3.0 to production config");
     } else if improved {
-        println!(
-            "    PARTIAL -- GB debt cap improves D/G but may not fully resolve"
-        );
+        println!("    PARTIAL -- GB debt cap improves D/G but may not fully resolve");
         println!(
             "    D/G mean: {:.1}x → {:.1}x ({:+.1}x change)",
-            ctrl_dg_mean, fix_dg_mean, fix_dg_mean - ctrl_dg_mean
+            ctrl_dg_mean,
+            fix_dg_mean,
+            fix_dg_mean - ctrl_dg_mean
         );
-        println!(
-            "    RECOMMENDATION: Consider tighter cap (2× GDP) or remove floor"
-        );
+        println!("    RECOMMENDATION: Consider tighter cap (2× GDP) or remove floor");
     } else {
+        println!("    NOT FIXED -- GB debt cap does NOT resolve instability");
+        println!("    D/G mean: {:.1}x → {:.1}x", ctrl_dg_mean, fix_dg_mean);
+        println!("    RECOMMENDATION: Try tighter GB cap (1-2× GDP) or remove Diamond floor");
+    }
+}
+
+fn run_sixty_day_tier3_sweep() {
+    use crate::analyzer::load_summary;
+
+    let seeds = [42u64, 12345u64, 98765u64, 77777u64, 11111u64];
+    let tier3_ratios = [30.0, 50.0, 100.0];
+
+    println!("\n============================================================================");
+    println!("  60-DAY TIER3=100 SWEEP TEST");
+    println!("  tier3=30 (ctrl) / 50 / 100 x 5 seeds x 60 days");
+    println!("============================================================================\n");
+
+    #[derive(Debug)]
+    struct T3Result {
+        tier3: f64,
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        tier3_events: u32,
+    }
+
+    impl T3Result {
+        fn from_db(db_path: &std::path::Path, tier3: f64, seed: u64) -> Option<Self> {
+            let s = load_summary(db_path).ok()?;
+            let tier3_events = count_tier3_events(db_path);
+            Some(Self {
+                tier3,
+                seed,
+                gdp: s.gdp,
+                dg: if s.gdp > 0.0 { s.debt / s.gdp } else { 0.0 },
+                tier3_events,
+            })
+        }
+    }
+
+    let mut results = Vec::new();
+
+    for &tier3 in &tier3_ratios {
+        for &seed in &seeds {
+            print!("  tier3={:.0} seed={} ... ", tier3, seed);
+            std::io::stdout().flush().ok();
+
+            let mut sim = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+            sim.name = format!("60d_t3={:.0}_s={}", tier3, seed);
+            sim.duration_ticks = 288 * 60;
+            sim.config.loans.debt_gdp_tier3_ratio = tier3;
+
+            let out_dir = format!("/tmp/autotune-sim/60d-t3-{:.0}-s-{}", tier3, seed);
+            let out_path = std::path::PathBuf::from(&out_dir);
+            std::fs::create_dir_all(&out_path).ok();
+            run_seeded_headless(&sim, seed, &out_path).ok();
+
+            let r = T3Result::from_db(&out_path.join("simulation.db"), tier3, seed);
+            if let Some(r) = r {
+                println!(
+                    "  GDP={:.0}  D/G={:.3}x  T3_ev={}",
+                    r.gdp, r.dg, r.tier3_events
+                );
+                results.push(r);
+            } else {
+                println!("FAILED");
+            }
+        }
+        println!();
+    }
+
+    println!("\n============================================================================");
+    println!("  60-DAY TIER3 SWEEP - AGGREGATE RESULTS");
+    println!("============================================================================");
+    println!(
+        "  {:^6} | {:^10}  {:^10}  {:^8}  {:^8} | {:^8}",
+        "tier3", "GDP mean", "D/G mean", "D/G min", "D/G max", "T3_ev"
+    );
+    println!("  {}", "-".repeat(65));
+
+    for &tier3 in &tier3_ratios {
+        let arm: Vec<_> = results.iter().filter(|r| r.tier3 == tier3).collect();
+        let n = arm.len();
+        if n == 0 {
+            continue;
+        }
+        let gdp_mean = arm.iter().map(|r| r.gdp).sum::<f64>() / n as f64;
+        let dg_mean = arm.iter().map(|r| r.dg).sum::<f64>() / n as f64;
+        let dg_min = arm.iter().map(|r| r.dg).reduce(f64::min).unwrap_or(0.0);
+        let dg_max = arm.iter().map(|r| r.dg).reduce(f64::max).unwrap_or(0.0);
+        let t3_total: u32 = arm.iter().map(|r| r.tier3_events).sum();
         println!(
-            "    NOT FIXED -- GB debt cap does NOT resolve instability"
-        );
-        println!(
-            "    D/G mean: {:.1}x → {:.1}x",
-            ctrl_dg_mean, fix_dg_mean
-        );
-        println!(
-            "    RECOMMENDATION: Try tighter GB cap (1-2× GDP) or remove Diamond floor"
+            "  {:^6.0} | {:>10.0}  {:>10.3}x  {:>8.3}x  {:>8.3}x | {:^8}",
+            tier3, gdp_mean, dg_mean, dg_min, dg_max, t3_total
         );
     }
+
+    println!("\n  Per-seed D/G:");
+    for &seed in &seeds {
+        let row: Vec<String> = tier3_ratios
+            .iter()
+            .map(|&t| {
+                results
+                    .iter()
+                    .find(|r| r.tier3 == t && r.seed == seed)
+                    .map(|r| format!("{:.2}x", r.dg))
+                    .unwrap_or_else(|| "-".to_string())
+            })
+            .collect();
+        println!("  seed={} | {}", seed, row.join(" | "));
+    }
+
+    println!("\n  TIER3 events:");
+    for &seed in &seeds {
+        let row: Vec<String> = tier3_ratios
+            .iter()
+            .map(|&t| {
+                results
+                    .iter()
+                    .find(|r| r.tier3 == t && r.seed == seed)
+                    .map(|r| format!("{}", r.tier3_events))
+                    .unwrap_or_else(|| "-".to_string())
+            })
+            .collect();
+        println!("  seed={} | {}", seed, row.join(" | "));
+    }
+
+    let t3_30 = tier3_ratios[0];
+    let ctrl_mean = results
+        .iter()
+        .filter(|r| r.tier3 == t3_30)
+        .map(|r| r.dg)
+        .sum::<f64>()
+        / 5.0;
+    let fix_mean_50 = results
+        .iter()
+        .filter(|r| r.tier3 == 50.0)
+        .map(|r| r.dg)
+        .sum::<f64>()
+        / 5.0;
+    let fix_mean_100 = results
+        .iter()
+        .filter(|r| r.tier3 == 100.0)
+        .map(|r| r.dg)
+        .sum::<f64>()
+        / 5.0;
+    let ctrl_t3: u32 = results
+        .iter()
+        .filter(|r| r.tier3 == t3_30)
+        .map(|r| r.tier3_events)
+        .sum();
+    let fix100_t3: u32 = results
+        .iter()
+        .filter(|r| r.tier3 == 100.0)
+        .map(|r| r.tier3_events)
+        .sum();
+
+    println!("\n============================================================================");
+    println!("  VERDICT");
+    println!("----------------------------------------------------------------------------");
+    println!(
+        "  tier3=30 (ctrl):  D/G={:.3}x  T3_ev={}",
+        ctrl_mean, ctrl_t3
+    );
+    println!("  tier3=50:         D/G={:.3}x", fix_mean_50);
+    println!(
+        "  tier3=100:        D/G={:.3}x  T3_ev={}",
+        fix_mean_100, fix100_t3
+    );
+
+    let any_t3_100 = fix100_t3 > 0;
+    if any_t3_100 {
+        println!("----------------------------------------------------------------------------");
+        println!("  WARNING: TIER3 FIRING with tier3=100!");
+        println!("  Instability is FUNDAMENTAL - not threshold-dependent.");
+        println!("  tier3=100 alone does not fix root cause.");
+    } else if fix_mean_100 < ctrl_mean && fix100_t3 == 0 {
+        println!("----------------------------------------------------------------------------");
+        println!(
+            "  CONFIRMED: tier3=100 RESOLVES instability - 0 TIER3 events, D/G {:.1}x -> {:.1}x",
+            ctrl_mean, fix_mean_100
+        );
+        println!("  RECOMMENDATION: tier3_ratio=100 in production config.");
+    } else if fix_mean_100 < ctrl_mean {
+        println!("----------------------------------------------------------------------------");
+        println!(
+            "  IMPROVED: tier3=100 helps D/G ({:.1}x -> {:.1}x) but TIER3 still fires",
+            ctrl_mean, fix_mean_100
+        );
+        println!("  Recommend: tier3=100 + block MM/GB loans during lock");
+    } else {
+        println!("----------------------------------------------------------------------------");
+        println!("  DOES NOT FIX: tier3=100 does not resolve instability");
+        println!("  Root cause is elsewhere - block MM/GB loans during lock may help");
+    }
+    println!("============================================================================");
+}
+
+fn run_sixty_day_loan_lock_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds = [42u64, 12345u64, 98765u64, 77777u64, 11111u64];
+
+    println!("\n============================================================================");
+    println!("  60-DAY LOAN LOCK TEST");
+    println!("  Block MM/GB loans during TIER3 lock x 5 seeds x 60 days");
+    println!("============================================================================\n");
+
+    #[derive(Debug)]
+    struct LockResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        tier3_events: u32,
+        tier3_locked_ticks: u64,
+    }
+
+    impl LockResult {
+        fn from_db(db_path: &std::path::Path, seed: u64, locked_ticks: u64) -> Option<Self> {
+            let s = load_summary(db_path).ok()?;
+            let tier3_events = count_tier3_events(db_path);
+            Some(Self {
+                seed,
+                gdp: s.gdp,
+                dg: if s.gdp > 0.0 { s.debt / s.gdp } else { 0.0 },
+                tier3_events,
+                tier3_locked_ticks: locked_ticks,
+            })
+        }
+    }
+
+    let mut ctrl_results = Vec::new();
+    let mut fix_results = Vec::new();
+
+    for &seed in &seeds {
+        println!("  Seed {} ...", seed);
+        std::io::stdout().flush().ok();
+
+        let mut ctrl = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        ctrl.name = format!("Ctrl_60d_Lock_s{}", seed);
+        ctrl.duration_ticks = 288 * 60;
+        ctrl.config.loans.block_mm_gb_loans_during_tier3 = false;
+        let ctrl_dir = format!("/tmp/autotune-sim/60d-lock-ctrl-{}", seed);
+        let ctrl_path = std::path::PathBuf::from(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_path).ok();
+        run_seeded_headless(&ctrl, seed, &ctrl_path).ok();
+
+        let mut fix = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        fix.name = format!("Fix_60d_Lock_s{}", seed);
+        fix.duration_ticks = 288 * 60;
+        fix.config.loans.block_mm_gb_loans_during_tier3 = true;
+        let fix_dir = format!("/tmp/autotune-sim/60d-lock-fix-{}", seed);
+        let fix_path = std::path::PathBuf::from(&fix_dir);
+        std::fs::create_dir_all(&fix_path).ok();
+        run_seeded_headless(&fix, seed, &fix_path).ok();
+
+        let ctrl_t3_locked = get_tier3_locked_ticks(&ctrl_path.join("simulation.db"));
+        let fix_t3_locked = get_tier3_locked_ticks(&fix_path.join("simulation.db"));
+
+        if let Some(r) = LockResult::from_db(&ctrl_path.join("simulation.db"), seed, ctrl_t3_locked)
+        {
+            ctrl_results.push(r);
+        }
+        if let Some(r) = LockResult::from_db(&fix_path.join("simulation.db"), seed, fix_t3_locked) {
+            fix_results.push(r);
+        }
+    }
+
+    println!("\n============================================================================");
+    println!("  60-DAY LOAN LOCK - PER-SEED RESULTS");
+    println!("----------------------------------------------------------------------------");
+    println!(
+        "  {:^6} | {:^12}  {:^10}  {:^10}  {:^8} | {:^10}  {:^10}",
+        "Seed", "GDP_ctrl", "DG_ctrl", "DG_fix", "delta", "T3_ctrl", "T3_fix"
+    );
+    println!("  {}", "-".repeat(72));
+
+    for (ctrl, fix) in ctrl_results.iter().zip(fix_results.iter()) {
+        let delta = fix.dg - ctrl.dg;
+        println!(
+            "  {:^6} | {:>12.0}  {:>10.3}x  {:>10.3}x  {:>+8.3}x | {:^10}  {:^10}",
+            ctrl.seed, ctrl.gdp, ctrl.dg, fix.dg, delta, ctrl.tier3_events, fix.tier3_events
+        );
+    }
+
+    let ctrl_dg_mean = ctrl_results.iter().map(|r| r.dg).sum::<f64>() / 5.0;
+    let fix_dg_mean = fix_results.iter().map(|r| r.dg).sum::<f64>() / 5.0;
+    let ctrl_t3_mean: f64 = ctrl_results
+        .iter()
+        .map(|r| r.tier3_events as f64)
+        .sum::<f64>()
+        / 5.0;
+    let fix_t3_mean: f64 = fix_results
+        .iter()
+        .map(|r| r.tier3_events as f64)
+        .sum::<f64>()
+        / 5.0;
+    let fix_locked_mean: f64 = fix_results
+        .iter()
+        .map(|r| r.tier3_locked_ticks as f64)
+        .sum::<f64>()
+        / 5.0;
+    let delta = fix_dg_mean - ctrl_dg_mean;
+
+    println!("  {}", "-".repeat(72));
+    println!(
+        "  {:^6} | {:>12}  {:>10.3}x  {:>10.3}x  {:>+8.3}x | {:>10.1}  {:>10.1}",
+        "MEAN", "avg GDP", ctrl_dg_mean, fix_dg_mean, delta, ctrl_t3_mean, fix_t3_mean
+    );
+    let fix_locked_pct = (fix_locked_mean / (288.0 * 60.0) * 100.0).round();
+    println!("----------------------------------------------------------------------------");
+    println!(
+        "  TIER3 locked (fix): avg {:.0} ticks = {:.0}% of 60 days",
+        fix_locked_mean, fix_locked_pct
+    );
+
+    println!("\n============================================================================");
+    println!("  VERDICT");
+    println!("----------------------------------------------------------------------------");
+    println!(
+        "  Ctrl D/G={:.2}x  Fix D/G={:.2}x  delta={:+.2}x",
+        ctrl_dg_mean, fix_dg_mean, delta
+    );
+    println!(
+        "  TIER3 events: Ctrl={:.0}  Fix={:.0}",
+        ctrl_t3_mean, fix_t3_mean
+    );
+    println!("----------------------------------------------------------------------------");
+
+    let stable = fix_dg_mean < 10.0;
+    if stable && delta < -2.0 {
+        println!(
+            "  CONFIRMED: D/G {:.1}x -> {:.1}x, below 10x stability threshold",
+            ctrl_dg_mean, fix_dg_mean
+        );
+        println!("  RECOMMENDATION: block_mm_gb_loans_during_tier3 = true in config.");
+    } else if delta < -1.0 {
+        println!(
+            "  PARTIAL: D/G {:.1}x -> {:.1}x, significant improvement",
+            ctrl_dg_mean, fix_dg_mean
+        );
+        println!("  Consider combining with tier3=100 for added headroom.");
+    } else if delta.abs() < 1.0 {
+        println!("  NEUTRAL: D/G unchanged (delta={:+.1}x)", delta);
+        println!("  TIER3 lock blocking alone is insufficient.");
+        println!("  Consider: tier3=100 only, or loan-lock + tier3=100 combo.");
+    } else {
+        println!(
+            "  FAILS: D/G {:.1}x -> {:.1}x (+{:.1}x) WORSE",
+            ctrl_dg_mean, fix_dg_mean, delta
+        );
+        println!("  Blocking MM/GB loans during TIER3 worsens the situation.");
+    }
+    println!("============================================================================");
+}
+
+fn get_tier3_locked_ticks(db_path: &std::path::Path) -> u64 {
+    let conn = match rusqlite::Connection::open(db_path) {
+        Ok(c) => c,
+        Err(_) => return 0,
+    };
+    conn.query_row(
+        "SELECT COUNT(*) FROM circuit_breaker_events WHERE tier = 'TIER3'",
+        [],
+        |row| row.get::<_, i64>(0),
+    )
+    .unwrap_or(0) as u64
 }

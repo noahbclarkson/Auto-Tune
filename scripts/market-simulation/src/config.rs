@@ -141,6 +141,19 @@ pub struct LoanConfig {
     /// Set to 0.0 to disable. Recommended: 3.0 to 5.0 (3-5× economy GDP).
     /// Default: 3.0.
     pub guildbuyer_total_debt_cap: f64,
+    /// Block new MM/GB loans during TIER3 circuit lock.
+    ///
+    /// When TIER3 fires (D/G >= tier3_ratio), the circuit locks at 0% interest.
+    /// New MM/GB loans issued during lock accumulate at 0%, then cascade catastrophically
+    /// when the circuit re-enables. This flag prevents MM/GB from taking new loans
+    /// while the circuit is locked.
+    ///
+    /// Rationale: MM and GB players are the primary loan requesters. Blocking them
+    /// during lock prevents zero-interest debt accumulation. Casual/Farmer players
+    /// continue to service their loans normally, allowing D/G to deleverage.
+    ///
+    /// Default: false (MM/GB loans allowed during lock — legacy behavior).
+    pub block_mm_gb_loans_during_tier3: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -256,6 +269,7 @@ impl Default for LoanConfig {
             min_interest_multiplier: 0.0, // pure counter-cyclical: 0% at D/G=tier3Ratio (30.0 by default)
             tier3_hysteresis_band: 0.5, // 50% band: unlock at D/G < 50% of tier3 (15 when tier3=30)
             guildbuyer_total_debt_cap: 3.0, // cap GB debt at 3× GDP during TIER3 lock — prevents zero-interest loan accumulation
+            block_mm_gb_loans_during_tier3: false, // MM/GB loans allowed during TIER3 lock by default
         }
     }
 }

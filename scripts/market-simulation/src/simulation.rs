@@ -635,12 +635,19 @@ impl Simulation {
                 .map(|l| l.current_balance)
                 .sum();
 
+            // Block MM/GB loans during TIER3 lock: prevents zero-interest loan accumulation
+            // that cascades when circuit re-enables.
+            let tier3_lock_blocks_loan =
+                self.config.loans.block_mm_gb_loans_during_tier3 && self.circuit_tier3_locked;
+            let mm_gb_blocked = tier3_lock_blocks_loan && (is_market_maker || is_guild_buyer);
+
             if !has_active_loan
                 && !in_default_cooldown
                 && !self.admin_recovery_mode // loans blocked during admin recovery mode
                 && player.balance < 50.0
                 && player.credit_score >= self.config.loans.min_credit_score
                 && mm_can_borrow
+                && !mm_gb_blocked // blocked during TIER3 lock if config flag is set
                 && rng_next() < 0.1
             {
                 let max_loan =
@@ -655,12 +662,13 @@ impl Simulation {
                     .filter(|tx| tx.tx_type == TransactionType::Buy)
                     .map(|tx| tx.total_price)
                     .sum();
-                let amount_after_perloan_cap = if self.config.loans.single_loan_gdp_cap > 0.0 && gdp > 0.0 {
-                    let cap_value = gdp * self.config.loans.single_loan_gdp_cap;
-                    amount_raw.min(cap_value)
-                } else {
-                    amount_raw
-                };
+                let amount_after_perloan_cap =
+                    if self.config.loans.single_loan_gdp_cap > 0.0 && gdp > 0.0 {
+                        let cap_value = gdp * self.config.loans.single_loan_gdp_cap;
+                        amount_raw.min(cap_value)
+                    } else {
+                        amount_raw
+                    };
 
                 // GuildBuyer total debt cap: reject or reduce if total GB debt would exceed cap
                 let amount_after_gb_cap = if is_guild_buyer && gb_debt_cap_enabled && gdp > 0.0 {
@@ -687,7 +695,13 @@ impl Simulation {
                 }
 
                 let rate = calculate_interest_rate(player.credit_score, &self.config);
-                let loan = Loan::new(player_idx, taken_amount, rate, self.current_tick, &self.config);
+                let loan = Loan::new(
+                    player_idx,
+                    taken_amount,
+                    rate,
+                    self.current_tick,
+                    &self.config,
+                );
                 self.players[player_idx].balance += taken_amount;
                 if recording {
                     events.push(LoanEventData {

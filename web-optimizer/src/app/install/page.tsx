@@ -538,6 +538,115 @@ export default function InstallPage() {
         </div>
       </section>
 
+
+      {/* Embeddable live price widget */}
+      <section className="mb-12">
+        <h2 className="text-xl font-bold text-white mb-2">Embed live prices on your forum</h2>
+        <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+          Drop a live price widget onto your Discord embed, forum signature, or website. Shows top movers, health score, and updates every 60 seconds — no extra backend required.
+        </p>
+
+        <div className="grid md:grid-cols-2 gap-6 items-start">
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6">
+            <p className="text-xs text-gray-500 uppercase tracking-wide mb-4">Preview</p>
+            <div className="flex justify-center">
+              <div className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden" style={{ fontFamily: 'system-ui, sans-serif', width: 320 }}>
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-800 bg-emerald-950/20">
+                  <span className="text-gray-300 text-xs font-semibold">Cobblestone SMP</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-emerald-400">84</span>
+                    <span className="text-gray-600 text-xs">/100</span>
+                    <span className="text-xs font-medium text-emerald-400">Healthy</span>
+                  </div>
+                </div>
+                {[
+                  { item: "DIAMOND", buy: "$302", sell: "$298", chg: "+2.1%", up: true },
+                  { item: "EMERALD", buy: "$12.50", sell: "$12.10", chg: "-0.8%", up: false },
+                  { item: "IRON_INGOT", buy: "$1.20", sell: "$1.10", chg: "+0.4%", up: true },
+                  { item: "ANCIENT_DEBRIS", buy: "$1,850", sell: "$1,820", chg: "+5.2%", up: true },
+                  { item: "GOLD_INGOT", buy: "$24", sell: "$22", chg: "-1.2%", up: false },
+                ].map((row) => (
+                  <div key={row.item} className="flex items-center justify-between px-4 py-2 border-b border-gray-800/50 last:border-0">
+                    <span className="text-gray-200 text-xs font-medium">{row.item}</span>
+                    <div className="flex items-center gap-3 ml-3">
+                      <div className="text-right">
+                        <p className="text-gray-300 text-xs font-semibold">{row.buy}</p>
+                        <p className="text-gray-600 text-[10px]">buy</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-gray-300 text-xs font-semibold">{row.sell}</p>
+                        <p className="text-gray-600 text-[10px]">sell</p>
+                      </div>
+                      <div className="w-12 text-right">
+                        <p className={row.up ? "text-emerald-400" : "text-rose-400"} style={{fontSize: '0.75rem', fontWeight: 600}}>{row.chg}</p>
+                        <p className="text-gray-600 text-[10px]">24h</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="px-4 py-2 border-t border-gray-800 flex items-center justify-between">
+                  <span className="text-gray-600 text-[10px]">via Auto-Tune</span>
+                  <span className="text-gray-600 text-[10px]">2 min ago</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6">
+              <h3 className="text-sm font-semibold text-white mb-3">How to embed</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-start gap-3">
+                  <span className="w-5 h-5 rounded-full bg-emerald-900 border border-emerald-700 flex items-center justify-center text-[10px] font-mono text-emerald-400 shrink-0 mt-0.5">1</span>
+                  <div>
+                    <p className="text-gray-300 font-medium text-xs">Configure the web server</p>
+                    <p className="text-gray-500 text-xs mt-0.5">In <code className="text-sky-300 font-mono">config.yml</code>, set <code className="text-sky-300 font-mono">web-server.enabled: true</code> and <code className="text-sky-300 font-mono">web-server.port: 8989</code>. Restart the server.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="w-5 h-5 rounded-full bg-emerald-900 border border-emerald-700 flex items-center justify-center text-[10px] font-mono text-emerald-400 shrink-0 mt-0.5">2</span>
+                  <div>
+                    <p className="text-gray-300 font-medium text-xs">Set a public URL</p>
+                    <p className="text-gray-500 text-xs mt-0.5">The widget needs to reach your server from the internet. Use a port forwarder like <code className="text-sky-300 font-mono">localhost.run</code>, <code className="text-sky-300 font-mono">serveo.net</code>, or a reverse proxy.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="w-5 h-5 rounded-full bg-emerald-900 border border-emerald-700 flex items-center justify-center text-[10px] font-mono text-emerald-400 shrink-0 mt-0.5">3</span>
+                  <div>
+                    <p className="text-gray-300 font-medium text-xs">Copy the embed code</p>
+                    <p className="text-gray-500 text-xs mt-0.5">Paste this snippet wherever you want the widget:</p>
+                    <div className="mt-2 bg-gray-950 border border-gray-800 rounded-lg px-3 py-2.5 text-xs font-mono text-gray-300 overflow-x-auto">
+                      <div className="text-gray-500">&lt;iframe</div>
+                      <div className="pl-4">src=&quot;https://YOUR_SERVER:8989/widget/demo&quot;</div>
+                      <div className="pl-4">width=&quot;360&quot; height=&quot;320&quot;</div>
+                      <div className="pl-4">style=&quot;border:none;border-radius:0.75rem;&quot;</div>
+                      <div className="pl-4">loading=&quot;lazy&quot;</div>
+                      <div>&gt;&lt;/iframe&gt;</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 bg-amber-500/5 border border-amber-500/20 rounded-lg px-4 py-3 text-xs text-amber-400/80">
+              <strong>Self-hosted.</strong> The widget fetches from your server&apos;s <code className="font-mono text-amber-300">/api/admin/health</code> endpoint. Only data you choose to expose leaves your server.
+            </div>
+
+            <div className="mt-3">
+              <Link
+                href="/widget/demo"
+                target="_blank"
+                className="inline-flex items-center gap-2 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+              >
+                <Monitor className="w-3.5 h-3.5" />
+                Try the widget URL format
+                <ExternalLink className="w-3 h-3" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Next steps */}
       <div className="flex flex-wrap gap-3">
         <Link

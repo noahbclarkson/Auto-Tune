@@ -11217,6 +11217,9 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --sixty-day-early-intervention-test  tier3=5/10/15 vs ctrl × 5 seeds × 60 days"
         );
+        println!(
+            "  --sixty-day-combo-test        tier3=100+loan_lock vs ctrl × 5 seeds × 60 days"
+        );
         println!("  --it-removal-test         2MM+2GB+floor: WITH vs WITHOUT InsiderTraders");
         println!("  --healthy-baseline-5seed  2MM+2GB+floor × 5 seeds: statistical baseline");
         println!("  --gb-newbie-healthy-test   2MM+2GB+2Far+2Newbie vs 2MM+2GB+3Far × 5 seeds");
@@ -11675,6 +11678,12 @@ fn main() -> eframe::Result<()> {
     // ─── 60-Day Early Intervention Sweep ───────────────────────────────
     if args.len() > 1 && args[1] == "--sixty-day-early-intervention-test" {
         run_sixty_day_early_intervention_test();
+        return Ok(());
+    }
+
+    // ─── 60-Day Combo Test: tier3=100 + block MM/GB loans during TIER3 ──
+    if args.len() > 1 && args[1] == "--sixty-day-combo-test" {
+        run_sixty_day_combo_test();
         return Ok(());
     }
 
@@ -17784,6 +17793,197 @@ fn get_tier3_locked_ticks(db_path: &std::path::Path) -> u64 {
         |row| row.get::<_, i64>(0),
     )
     .unwrap_or(0) as u64
+}
+
+/// 60-Day Combo Test: tier3=100 + block_mm_gb_loans_during_tier3=true
+///
+/// HYPOTHESIS: tier3=100 alone fixes TIER3 circuit events but worsens D/G.
+/// loan-lock alone has neutral D/G effect.
+/// Together: tier3=100 stops the circuit, loan-lock prevents MM/GB debt
+/// accumulation during any remaining rare lock events.
+///
+/// Ctrl: tier3=30, block_mm_gb_loans=false
+/// Fix: tier3=100, block_mm_gb_loans=true
+fn run_sixty_day_combo_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds = [42u64, 12345u64, 98765u64, 77777u64, 11111u64];
+
+    println!("\n============================================================================");
+    println!("  60-DAY COMBO TEST: tier3=100 + loan-lock");
+    println!("  Ctrl: tier3=30, block_mm_gb_loans=false");
+    println!("  Fix:  tier3=100, block_mm_gb_loans=true");
+    println!("============================================================================\n");
+
+    #[derive(Debug)]
+    struct ComboResult {
+        seed: u64,
+        gdp: f64,
+        dg: f64,
+        tier3_events: u32,
+        tier3_locked_ticks: u64,
+    }
+
+    impl ComboResult {
+        fn from_db(db_path: &std::path::Path, seed: u64) -> Option<Self> {
+            let s = load_summary(db_path).ok()?;
+            let tier3_events = count_tier3_events(db_path);
+            let tier3_locked_ticks = get_tier3_locked_ticks(db_path);
+            Some(Self {
+                seed,
+                gdp: s.gdp,
+                dg: if s.gdp > 0.0 { s.debt / s.gdp } else { 0.0 },
+                tier3_events,
+                tier3_locked_ticks,
+            })
+        }
+    }
+
+    let mut ctrl_results = Vec::new();
+    let mut fix_results = Vec::new();
+
+    for &seed in &seeds {
+        println!("  Seed {} ...", seed);
+        std::io::stdout().flush().ok();
+
+        // Control: tier3=30, no loan lock
+        let mut ctrl = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        ctrl.name = format!("Ctrl_60d_Combo_s{}", seed);
+        ctrl.duration_ticks = 288 * 60;
+        ctrl.config.loans.debt_gdp_tier3_ratio = 30.0;
+        ctrl.config.loans.block_mm_gb_loans_during_tier3 = false;
+        let ctrl_dir = format!("/tmp/autotune-sim/60d-combo-ctrl-{}", seed);
+        let ctrl_path = std::path::PathBuf::from(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_path).ok();
+        run_seeded_headless(&ctrl, seed, &ctrl_path).ok();
+
+        // Fix: tier3=100, WITH loan lock
+        let mut fix = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        fix.name = format!("Fix_60d_Combo_s{}", seed);
+        fix.duration_ticks = 288 * 60;
+        fix.config.loans.debt_gdp_tier3_ratio = 100.0;
+        fix.config.loans.block_mm_gb_loans_during_tier3 = true;
+        let fix_dir = format!("/tmp/autotune-sim/60d-combo-fix-{}", seed);
+        let fix_path = std::path::PathBuf::from(&fix_dir);
+        std::fs::create_dir_all(&fix_path).ok();
+        run_seeded_headless(&fix, seed, &fix_path).ok();
+
+        if let Some(r) = ComboResult::from_db(&ctrl_path.join("simulation.db"), seed) {
+            println!(
+                "  ctrl: GDP={:.0} D/G={:.3}x T3_ev={}  |  ",
+                r.gdp, r.dg, r.tier3_events
+            );
+            ctrl_results.push(r);
+        }
+        if let Some(r) = ComboResult::from_db(&fix_path.join("simulation.db"), seed) {
+            println!("fix: GDP={:.0} D/G={:.3}x T3_ev={}", r.gdp, r.dg, r.tier3_events);
+            fix_results.push(r);
+        }
+    }
+
+    println!("\n============================================================================");
+    println!("  60-DAY COMBO TEST - PER-SEED RESULTS");
+    println!("----------------------------------------------------------------------------");
+    println!(
+        "  {:^6} | {:^12}  {:^10}  {:^10}  {:^8} | {:^8}  {:^8}",
+        "Seed", "GDP_ctrl", "DG_ctrl", "DG_fix", "delta", "T3_ctrl", "T3_fix"
+    );
+    println!("  {}", "-".repeat(72));
+
+    for (ctrl, fix) in ctrl_results.iter().zip(fix_results.iter()) {
+        let delta = fix.dg - ctrl.dg;
+        println!(
+            "  {:^6} | {:>12.0}  {:>10.3}x  {:>10.3}x  {:>+8.3}x | {:^8}  {:^8}",
+            ctrl.seed,
+            ctrl.gdp,
+            ctrl.dg,
+            fix.dg,
+            delta,
+            ctrl.tier3_events,
+            fix.tier3_events
+        );
+    }
+
+    let ctrl_dg_mean = ctrl_results.iter().map(|r| r.dg).sum::<f64>() / 5.0;
+    let fix_dg_mean = fix_results.iter().map(|r| r.dg).sum::<f64>() / 5.0;
+    let ctrl_t3_mean: f64 = ctrl_results
+        .iter()
+        .map(|r| r.tier3_events as f64)
+        .sum::<f64>()
+        / 5.0;
+    let fix_t3_mean: f64 = fix_results
+        .iter()
+        .map(|r| r.tier3_events as f64)
+        .sum::<f64>()
+        / 5.0;
+    let fix_locked_mean: f64 = fix_results
+        .iter()
+        .map(|r| r.tier3_locked_ticks as f64)
+        .sum::<f64>()
+        / 5.0;
+    let delta = fix_dg_mean - ctrl_dg_mean;
+
+    println!("  {}", "-".repeat(72));
+    println!(
+        "  {:^6} | {:>12}  {:>10.3}x  {:>10.3}x  {:>+8.3}x | {:>8.1}  {:>8.1}",
+        "MEAN",
+        "avg GDP",
+        ctrl_dg_mean,
+        fix_dg_mean,
+        delta,
+        ctrl_t3_mean,
+        fix_t3_mean
+    );
+    let fix_locked_pct = (fix_locked_mean / (288.0 * 60.0) * 100.0).round();
+    println!("----------------------------------------------------------------------------");
+    println!(
+        "  Fix TIER3 locked: avg {:.0} ticks = {:.0}% of 60 days",
+        fix_locked_mean, fix_locked_pct
+    );
+
+    println!("\n============================================================================");
+    println!("  VERDICT");
+    println!("----------------------------------------------------------------------------");
+    println!(
+        "  Ctrl D/G={:.2}x (tier3=30)  Fix D/G={:.2}x (tier3=100+lock)  delta={:+.2}x",
+        ctrl_dg_mean, fix_dg_mean, delta
+    );
+    println!(
+        "  TIER3 events: Ctrl={:.0}  Fix={:.0}",
+        ctrl_t3_mean, fix_t3_mean
+    );
+
+    if fix_t3_mean == 0.0 && fix_dg_mean < ctrl_dg_mean {
+        println!("----------------------------------------------------------------------------");
+        println!(
+            "  CONFIRMED: 0 TIER3 events, D/G improved {:.1}x -> {:.1}x",
+            ctrl_dg_mean, fix_dg_mean
+        );
+        println!(
+            "  RECOMMENDATION: tier3=100 + block_mm_gb_loans_during_tier3=true"
+        );
+        println!("  SAFE TO SHIP: Add to production config.");
+    } else if fix_t3_mean == 0.0 && (fix_dg_mean - ctrl_dg_mean).abs() < 3.0 {
+        println!("----------------------------------------------------------------------------");
+        println!(
+            "  CONDITIONAL: 0 TIER3 events, D/G change {:+.1}x (noise)",
+            delta
+        );
+        println!("  TIER3 circuit eliminated. D/G essentially unchanged.");
+        println!(
+            "  RECOMMENDATION: tier3=100 + block_mm_gb_loans_during_tier3=true"
+        );
+    } else if fix_t3_mean < ctrl_t3_mean {
+        println!("----------------------------------------------------------------------------");
+        println!(
+            "  PARTIAL: TIER3 events reduced {:.0} -> {:.0}, D/G {:+.1}x",
+            ctrl_t3_mean, fix_t3_mean, delta
+        );
+    } else {
+        println!("----------------------------------------------------------------------------");
+        println!("  INCONCLUSIVE: Results do not confirm benefit.");
+    }
+    println!("============================================================================");
 }
 
 /// 60-Day Early Intervention Sweep

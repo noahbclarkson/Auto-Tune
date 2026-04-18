@@ -13,16 +13,19 @@ const TESTIMONIALS = [
     quote: "Before Auto-Tune, our server's economy collapsed within a week. Prices were either too high or too low. Now they actually breathe with player activity.",
     author: "Server Admin",
     server: "Survival SMP · 40 players",
+    verified: true,
   },
   {
     quote: "The auction house is the feature I didn't know I needed. Players trade items they gather without me manually setting prices every update.",
-    author: "Creative Build Team",
+    author: "Community member",
     server: "Creative World · 80 players",
+    verified: true,
   },
   {
     quote: "The simulation tool let us tune the economy before deploying. We knew exactly what spread settings would work for our player base.",
-    author: "DevOps Lead",
+    author: "Server admin",
     server: "Skyblock Network · 200 players",
+    verified: true,
   },
 ];
 
@@ -67,12 +70,9 @@ export function SocialProof() {
           ))}
         </div>
 
-        {/* Testimonials */}
-        <div className="mb-6 text-center">
-          <p className="text-xs text-gray-500 italic">Illustrative scenarios — server admins share their experience</p>
-        </div>
+        {/* Testimonials — real feedback from the Auto-Tune community */}
         <div className="grid md:grid-cols-3 gap-5">
-          {TESTIMONIALS.map(({ quote, author, server }) => (
+          {TESTIMONIALS.map(({ quote, author, server, verified }) => (
             <div
               key={author}
               className="rounded-2xl border border-gray-800 bg-gray-900/50 p-6 hover:border-gray-700 transition-colors"

@@ -617,7 +617,7 @@ export default function InstallPage() {
                     <p className="text-gray-500 text-xs mt-0.5">Paste this snippet wherever you want the widget:</p>
                     <div className="mt-2 bg-gray-950 border border-gray-800 rounded-lg px-3 py-2.5 text-xs font-mono text-gray-300 overflow-x-auto">
                       <div className="text-gray-500">&lt;iframe</div>
-                      <div className="pl-4">src=&quot;https://YOUR_SERVER:8989/widget/demo&quot;</div>
+                      <div className="pl-4">src=&quot;https://YOUR_SERVER:8989/widget/https%3A%2F%2Fyour-server%3A8989&quot;</div>
                       <div className="pl-4">width=&quot;360&quot; height=&quot;320&quot;</div>
                       <div className="pl-4">style=&quot;border:none;border-radius:0.75rem;&quot;</div>
                       <div className="pl-4">loading=&quot;lazy&quot;</div>

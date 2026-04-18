@@ -11207,6 +11207,9 @@ fn main() -> eframe::Result<()> {
         );
         println!("  --healthy-tier3-sweep        2MM+2GB+floor: tier3_ratio × 5 seeds");
         println!("  --sixty-day-test           2MM+2GB+floor: 60-day long-run stability");
+        println!("  --sixty-day-fix-test      tier3=50+min_int=0.20 vs ctrl × 2 seeds × 60d");
+        println!("  --sixty-day-hysteresis-test  hysteresis 50% vs 10% × 2 seeds × 60d");
+        println!("  --sixty-day-gb-debt-cap-test  GB debt cap 3×GDP vs uncapped × 2 seeds × 60d");
         println!("  --it-removal-test         2MM+2GB+floor: WITH vs WITHOUT InsiderTraders");
         println!("  --healthy-baseline-5seed  2MM+2GB+floor × 5 seeds: statistical baseline");
         println!("  --gb-newbie-healthy-test   2MM+2GB+2Far+2Newbie vs 2MM+2GB+3Far × 5 seeds");
@@ -11641,6 +11644,12 @@ fn main() -> eframe::Result<()> {
     // ─── 60-Day Fix Confirmation Test ─────────────────────────────────
     if args.len() > 1 && args[1] == "--sixty-day-fix-test" {
         run_sixty_day_fix_test();
+        return Ok(());
+    }
+
+    // ─── 60-Day GB Debt Cap Test ─────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--sixty-day-gb-debt-cap-test" {
+        run_sixty_day_gb_debt_cap_test();
         return Ok(());
     }
 
@@ -17182,6 +17191,195 @@ fn run_sixty_day_hysteresis_test() {
         );
         println!(
             "    RECOMMENDATION: GB debt cap is the correct fix (not hysteresis)"
+        );
+    }
+}
+
+/// 60-Day GB Debt Cap Test
+/// Tests whether capping total GuildBuyer debt at 3× GDP fixes the 60-day instability.
+///
+/// Root cause (confirmed over 3 fix attempts):
+///   GB loans OPEN during TIER3 lock period (0% interest) and ACCUMULATE.
+///   When circuit re-enables, accumulated zero-interest debt services catastrophically.
+///
+/// Fix: guildbuyer_total_debt_cap = 3.0 (3× economy GDP) prevents accumulation
+/// during TIER3 lock. When total GB debt would exceed cap, loans are rejected/reduced.
+///
+/// Control: uncapped GB debt (guildbuyer_total_debt_cap = 0.0)
+/// Treatment: capped GB debt at 3× GDP (guildbuyer_total_debt_cap = 3.0)
+fn run_sixty_day_gb_debt_cap_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds = [42u64, 12345u64];
+
+    println!(
+        "
+╔════════════════════════════════════════════════════════════════════════════╗"
+    );
+    println!("║     60-DAY GB DEBT CAP TEST                                      ║");
+    println!("║  Control: GB debt uncapped  vs  Fix: GB debt cap 3× GDP             ║");
+    println!("╚════════════════════════════════════════════════════════════════════════════╝\n"
+    );
+
+    let mut ctrl_metrics = Vec::new();
+    let mut fix_metrics = Vec::new();
+
+    for &seed in &seeds {
+        println!("  Running seed {}...", seed);
+
+        // ── Control: uncapped GB debt ─────────────────────────────────────────
+        let mut ctrl = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        ctrl.name = format!("Ctrl_60d_GBcap_s{}", seed);
+        ctrl.duration_ticks = 288 * 60;
+        // Uncapped: disable the cap
+        ctrl.config.loans.guildbuyer_total_debt_cap = 0.0;
+        let ctrl_dir = format!("/tmp/autotune-sim/60d-gbcap-ctrl-{}", seed);
+        let ctrl_path = std::path::PathBuf::from(&ctrl_dir);
+        std::fs::create_dir_all(&ctrl_path).ok();
+        run_seeded_headless(&ctrl, seed, &ctrl_path).ok();
+
+        // ── Fix: GB debt capped at 3× GDP ─────────────────────────────────────
+        let mut fix = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        fix.name = format!("Fix_60d_GBcap_s{}", seed);
+        fix.duration_ticks = 288 * 60;
+        fix.config.loans.guildbuyer_total_debt_cap = 3.0; // THE FIX
+        let fix_dir = format!("/tmp/autotune-sim/60d-gbcap-{}", seed);
+        let fix_path = std::path::PathBuf::from(&fix_dir);
+        std::fs::create_dir_all(&fix_path).ok();
+        run_seeded_headless(&fix, seed, &fix_path).ok();
+
+        // ── Load results ──────────────────────────────────────────────────────
+        let ctrl_summary = load_summary(&ctrl_path.join("simulation.db"));
+        let fix_summary = load_summary(&fix_path.join("simulation.db"));
+
+
+        if let (Ok(cs), Ok(fs)) = (ctrl_summary, fix_summary) {
+            let ctrl_dg = cs.debt / cs.gdp.max(1.0);
+            let fix_dg = fs.debt / fs.gdp.max(1.0);
+            let ctrl_t3 = cs.tier3_events;
+            let fix_t3 = fs.tier3_events;
+            ctrl_metrics.push((seed, cs.gdp, ctrl_dg, cs.avg_volatility, cs.buy_ratio, ctrl_t3));
+            fix_metrics.push((seed, fs.gdp, fix_dg, fs.avg_volatility, fs.buy_ratio, fix_t3));
+
+
+            let status = if fix_dg < 10.0 && ctrl_dg >= 10.0 {
+                "STABLE"
+            } else if fix_dg < ctrl_dg * 0.8 {
+                "FIXED"
+            } else if fix_dg < ctrl_dg {
+                "improved"
+            } else {
+                "worse"
+            };
+            println!(
+                "    Seed {}:  Ctrl D/G={:.3}x  Fix D/G={:.3}x  Delta={:+.3}x  T3 Ctrl={} Fix={}  {}",
+                seed, ctrl_dg, fix_dg, fix_dg - ctrl_dg, ctrl_t3, fix_t3, status
+            );
+        } else {
+            println!("    Seed {}: FAILED to load results", seed);
+        }
+    }
+
+    // ── Summary ─────────────────────────────────────────────────────────────
+    println!(
+        "
+  ╔════════════════════════════════════════════════════════════════╗"
+    );
+    println!(
+        "  ║  60-DAY GB DEBT CAP SUMMARY (2 seeds × 60 days)               ║"
+    );
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+    println!(
+        "  ║  {:>6}  {:>12}  {:>10}  {:>10}  {:>8}  {:>7}  ║",
+        "Seed", "GDP", "D/G_ctrl", "D/G_fix", "Delta", "Verdict"
+    );
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+
+    for ((seed, fgdp, cdg, _, _, _), (_, _, fdg, _, _, _)) in
+        ctrl_metrics.iter().zip(fix_metrics.iter())
+    {
+        let verdict = if *fdg < 10.0 && *cdg >= 10.0 {
+            "STABLE"
+        } else if *fdg < *cdg * 0.5 {
+            "FIXED"
+        } else if *fdg < *cdg {
+            "improved"
+        } else {
+            "worse"
+        };
+        println!(
+            "  ║  {:>6}  {:>12.0}  {:>10.3}x  {:>10.3}x  {:>+8.3}x  {:>7}  ║",
+            seed, fgdp, cdg, fdg, fdg - cdg, verdict
+        );
+    }
+
+    let ctrl_dg_mean: f64 = ctrl_metrics.iter().map(|(_, _, d, _, _, _)| d).sum::<f64>() / 2.0;
+    let fix_dg_mean: f64 = fix_metrics.iter().map(|(_, _, d, _, _, _)| d).sum::<f64>() / 2.0;
+    let ctrl_t3_mean: f64 = ctrl_metrics.iter().map(|(_, _, _, _, _, t3)| *t3 as f64).sum::<f64>();
+    let fix_t3_mean: f64 = fix_metrics.iter().map(|(_, _, _, _, _, t3)| *t3 as f64).sum::<f64>();
+
+
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+    println!(
+        "  ║  {:>6}  {:>12}  {:>10.3}x  {:>10.3}x  {:>+8.3}x  {:>7}  ║",
+        "MEAN", "--", ctrl_dg_mean, fix_dg_mean, fix_dg_mean - ctrl_dg_mean,
+        if fix_dg_mean < ctrl_dg_mean * 0.5 { "FIXED" } else if fix_dg_mean < ctrl_dg_mean { "improved" } else { "not fixed" }
+    );
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+    println!(
+        "  ║  TIER3 events: Ctrl={:.0}  Fix={:.0}                            ║",
+        ctrl_t3_mean as u32, fix_t3_mean as u32
+    );
+    println!(
+        "  ╠════════════════════════════════════════════════════════════════╣"
+    );
+    let stable = fix_dg_mean < 10.0;
+    let improved = fix_dg_mean < ctrl_dg_mean;
+
+    println!(
+        "
+  VERDICT:"
+    );
+    if stable && improved {
+        println!(
+            "    FIX CONFIRMED -- GB debt cap 3× GDP resolves 60d instability"
+        );
+        println!(
+            "    D/G mean: {:.1}x → {:.1}x, below 10x stability threshold",
+            ctrl_dg_mean, fix_dg_mean
+        );
+        println!(
+            "    RECOMMENDATION: Add guildbuyer_total_debt_cap = 3.0 to production config"
+        );
+    } else if improved {
+        println!(
+            "    PARTIAL -- GB debt cap improves D/G but may not fully resolve"
+        );
+        println!(
+            "    D/G mean: {:.1}x → {:.1}x ({:+.1}x change)",
+            ctrl_dg_mean, fix_dg_mean, fix_dg_mean - ctrl_dg_mean
+        );
+        println!(
+            "    RECOMMENDATION: Consider tighter cap (2× GDP) or remove floor"
+        );
+    } else {
+        println!(
+            "    NOT FIXED -- GB debt cap does NOT resolve instability"
+        );
+        println!(
+            "    D/G mean: {:.1}x → {:.1}x",
+            ctrl_dg_mean, fix_dg_mean
+        );
+        println!(
+            "    RECOMMENDATION: Try tighter GB cap (1-2× GDP) or remove Diamond floor"
         );
     }
 }

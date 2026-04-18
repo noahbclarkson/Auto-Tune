@@ -130,6 +130,17 @@ pub struct LoanConfig {
     /// (unlock at 27) from allowing debt accumulation during TIER3 lock.
     /// Default: 0.5 (50% of tier3_ratio). Set to 0.0 to disable hysteresis (match tier3).
     pub tier3_hysteresis_band: f64,
+    /// GuildBuyer total debt cap: cumulative debt across all GuildBuyer players
+    /// is capped at economy GDP × this factor. When TIER3 fires, GB loans accumulate
+    /// at 0% interest during the lock period, and these zero-interest loans compound
+    /// catastrophically once the circuit re-enables.
+    ///
+    /// This cap prevents GB loan accumulation during TIER3 lock by rejecting or
+    /// reducing new GB loans when total GB debt would exceed the cap.
+    ///
+    /// Set to 0.0 to disable. Recommended: 3.0 to 5.0 (3-5× economy GDP).
+    /// Default: 3.0.
+    pub guildbuyer_total_debt_cap: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -244,6 +255,7 @@ impl Default for LoanConfig {
             counter_cyclical: true, // continuous taper, matches Java LoanManager (default: true)
             min_interest_multiplier: 0.0, // pure counter-cyclical: 0% at D/G=tier3Ratio (30.0 by default)
             tier3_hysteresis_band: 0.5, // 50% band: unlock at D/G < 50% of tier3 (15 when tier3=30)
+            guildbuyer_total_debt_cap: 3.0, // cap GB debt at 3× GDP during TIER3 lock — prevents zero-interest loan accumulation
         }
     }
 }

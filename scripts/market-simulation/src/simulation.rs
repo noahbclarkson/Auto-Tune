@@ -617,6 +617,24 @@ impl Simulation {
             let is_market_maker = matches!(player.archetype, Archetype::MarketMaker);
             let mm_can_borrow = self.config.loans.mm_opening_loan_allowed || !is_market_maker;
 
+            // GuildBuyer total debt cap: prevents zero-interest loan accumulation during
+            // TIER3 lock. When GB debt would exceed guildbuyer_total_debt_cap × GDP,
+            // reject or reduce the new loan.
+            let is_guild_buyer = matches!(player.archetype, Archetype::GuildBuyer);
+            let gb_debt_cap = self.config.loans.guildbuyer_total_debt_cap;
+            let gb_debt_cap_enabled = gb_debt_cap > 0.0;
+
+            let current_gb_debt: f64 = self
+                .loans
+                .iter()
+                .filter(|l| {
+                    let borrower = &self.players[l.player_index];
+                    matches!(borrower.archetype, Archetype::GuildBuyer)
+                        && matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted)
+                })
+                .map(|l| l.current_balance)
+                .sum();
+
             if !has_active_loan
                 && !in_default_cooldown
                 && !self.admin_recovery_mode // loans blocked during admin recovery mode
@@ -631,55 +649,55 @@ impl Simulation {
 
                 // Per-loan GDP cap: no single loan can exceed economy GDP × single_loan_gdp_cap
                 // (matches Java LoanManager.processLoanRequest: singleLoanGdpCap check)
-                let amount = if self.config.loans.single_loan_gdp_cap > 0.0 {
-                    let gdp: f64 = self
-                        .transactions
-                        .iter()
-                        .filter(|tx| tx.tx_type == TransactionType::Buy)
-                        .map(|tx| tx.total_price)
-                        .sum();
-                    if gdp > 0.0 {
-                        let cap_value = gdp * self.config.loans.single_loan_gdp_cap;
-                        let capped = amount_raw.min(cap_value);
-                        // Record if the cap actually reduced the loan amount
-                        if capped < amount_raw - 0.01 {
-                            self.loan_cap_log.push(LoanCapRecord {
-                                tick: self.current_tick,
-                                player_id: player_idx,
-                                raw_amount: amount_raw,
-                                capped_amount: capped,
-                                gdp,
-                                cap_ratio: self.config.loans.single_loan_gdp_cap,
-                                cap_value,
-                            });
-                        }
-                        capped
-                    } else {
-                        amount_raw
-                    }
+                let gdp: f64 = self
+                    .transactions
+                    .iter()
+                    .filter(|tx| tx.tx_type == TransactionType::Buy)
+                    .map(|tx| tx.total_price)
+                    .sum();
+                let amount_after_perloan_cap = if self.config.loans.single_loan_gdp_cap > 0.0 && gdp > 0.0 {
+                    let cap_value = gdp * self.config.loans.single_loan_gdp_cap;
+                    amount_raw.min(cap_value)
                 } else {
                     amount_raw
                 };
 
+                // GuildBuyer total debt cap: reject or reduce if total GB debt would exceed cap
+                let amount_after_gb_cap = if is_guild_buyer && gb_debt_cap_enabled && gdp > 0.0 {
+                    let cap_limit = gdp * gb_debt_cap;
+                    let new_total = current_gb_debt + amount_after_perloan_cap;
+                    if current_gb_debt >= cap_limit {
+                        // GB debt already at cap — reject loan entirely
+                        0.0
+                    } else if new_total > cap_limit {
+                        // Would exceed cap — cap at the remaining allowance
+                        (cap_limit - current_gb_debt).max(0.0)
+                    } else {
+                        amount_after_perloan_cap
+                    }
+                } else {
+                    amount_after_perloan_cap
+                };
+
                 // Only create loan if amount is meaningful (> 1.0)
-                let taken_amount = amount;
+                let taken_amount = amount_after_gb_cap;
                 let taken_is_mm = is_market_maker && !has_active_loan;
                 if taken_amount < 1.0 {
                     continue;
                 }
 
                 let rate = calculate_interest_rate(player.credit_score, &self.config);
-                let loan = Loan::new(player_idx, amount, rate, self.current_tick, &self.config);
-                self.players[player_idx].balance += amount;
+                let loan = Loan::new(player_idx, taken_amount, rate, self.current_tick, &self.config);
+                self.players[player_idx].balance += taken_amount;
                 if recording {
                     events.push(LoanEventData {
                         tick: self.current_tick,
                         player_id: player_idx,
                         event_type: "Taken",
-                        principal: amount,
-                        balance: amount,
+                        principal: taken_amount,
+                        balance: taken_amount,
                         rate,
-                        amount,
+                        amount: taken_amount,
                     });
                 }
                 self.loans.push(loan);

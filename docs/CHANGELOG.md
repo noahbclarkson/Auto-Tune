@@ -2,6 +2,30 @@
 
 > What's changed in the rewrite-2 branch.
 
+## 2026-04-18 — Simulation Lab: 60-Day Instability Confirmed Structural
+
+### Simulation Lab
+**7 fix candidates tested across 4 diagnostic tests. All FAILED.**
+
+All 60d diagnostic tests completed:
+- `--sixty-day-tier3-sweep` (tier3=30/50/100 × 5 seeds × 60d): tier3=50 → 1 TIER3 event (vs 8 ctrl) but D/G worse (+1.2x); tier3=100 → 0 events but D/G +2.3x WORSE (circuit never fires, interest keeps compounding)
+- `--sixty-day-loan-lock-test` (block MM/GB loans during TIER3 × 5 seeds): NEUTRAL — D/G delta ≈ -0.3x (noise), TIER3 events -83%
+- `--sixty-day-combo-test` (tier3=100 + loan-lock × 5 seeds): CONDITIONAL — TIER3 events 0, D/G +2.3x WORSE
+- Prior fix tests: min_int=0.20 FAILS, wider hysteresis FAILS, GB debt cap FAILS
+
+**Root cause is architectural:** Debt compounds ~10%/day while GDP grows ~1%/day. The TIER3 circuit resets interest to 0% but cannot reduce existing debt. The 10% hysteresis band (unlock at 27) is too narrow — circuit unlocks before deleveraging completes. MM/GB loans accumulate at 0% during lock, overwhelming any recovery.
+
+**Circuit firing pattern (60d, seed 42):** TIER3 fires at day 39 (D/G=37x), oscillates TIER2↔TIER3 5+ times through day 60.
+
+**Architectural fixes needed (escalated to Arc):**
+1. Exit TIER3 directly to NORMAL (bypass TIER2 — prevent re-entry oscillation)
+2. Force deleveraging at TIER3 exit (debt write-off or repayment schedule)
+3. Require D/G < tier3 × 0.50 before re-enabling interest (deeper hysteresis)
+4. Cap total economy debt growth rate vs GDP growth rate
+
+See `/findings` page → "Is the 2MM+2GB+floor config stable at 60+ days?" for full analysis.
+
+
 ## 2026-04-16 — Plugin Quality
 
 ### Added

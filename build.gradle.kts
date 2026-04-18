@@ -166,6 +166,12 @@ tasks {
 
     test {
         useJUnitPlatform()
+        // Required for Mockito + Java 21 to access internal reflection
+        jvmArgs(
+            "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+            "--add-opens", "java.base/java.lang.reflect=ALL-UNNAMED",
+            "--add-opens", "java.base/java.io=ALL-UNNAMED"
+        )
     }
 }
 

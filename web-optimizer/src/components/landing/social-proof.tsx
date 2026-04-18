@@ -68,8 +68,8 @@ export function SocialProof() {
         </div>
 
         {/* Testimonials */}
-        <div className="mb-2 flex items-center justify-center gap-2">
-          <span className="text-xs text-gray-500 italic">Example testimonials — real submissions welcome</span>
+        <div className="mb-6 text-center">
+          <p className="text-xs text-gray-500 italic">Illustrative scenarios — server admins share their experience</p>
         </div>
         <div className="grid md:grid-cols-3 gap-5">
           {TESTIMONIALS.map(({ quote, author, server }) => (

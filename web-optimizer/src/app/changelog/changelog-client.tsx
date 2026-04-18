@@ -31,6 +31,28 @@ const SECTIONS = [
 
 const CHANGELOG = [
   {
+    date: '2026-04-18',
+    label: 'Today',
+    entries: [
+      {
+        tag: 'WEB FEATURE',
+        tagColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+        title: 'Embeddable live price widget — iframe snippet for server forums',
+        detail: 'New /widget/{serverUrl} route + EmbeddableWidget component. Self-contained React component fetches from {apiUrl}/api/admin/health every 60s, shows top 5 volatile items with buy/sell prices and 24h change. Graceful error states for unreachable, 401, 404. Inline styles for true embeddability. Install page has new section with live CSS mockup preview, 3-step instructions, and amber warning about self-hosted requirement.',
+        section: 6,
+        commit: 'aec28d2',
+      },
+      {
+        tag: 'SIMULATION',
+        tagColor: 'text-violet-400 bg-violet-950/60 border-violet-800/50',
+        title: '60-day fix tests — tier3=30/50/100 sweep and block-MM-GB-during-lock test',
+        detail: 'Added --sixty-day-tier3-sweep (tier3=30/50/100 × 5 seeds × 60d) and --sixty-day-loan-lock-test (block MM/GB loans during TIER3 lock × 5 seeds × 60d) to the market simulator. New config flag block_mm_gb_loans_during_tier3 prevents MM/GB loan accumulation during TIER3 circuit lock. Tests ready to run.',
+        section: 0,
+        commit: 'a302343',
+      },
+    ],
+  },
+  {
     date: '2026-04-16',
     label: 'Today',
     entries: [

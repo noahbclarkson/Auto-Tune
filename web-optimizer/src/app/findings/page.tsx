@@ -251,15 +251,19 @@ const CONFIG_FINDINGS: Finding[] = [
       'The proposed fix (tier3=50 + min_int=0.20) does NOT work: it keeps interest elevated '
         + 'at ALL D/G levels (20% floor), preventing the natural deleveraging that occurs at '
         + 'lower multipliers. Test result: D/G 18.1× (ctrl) → 19.1× (fix) — slightly WORSE.',
-      'Real fixes: (1) wider TIER3 hysteresis band (50% instead of 10% — stay locked until '
-        + 'D/G < 15×), (2) cap GuildBuyer total debt directly, (3) require D/G to drop well '
-        + 'below tier3 before re-enabling interest. Until fixed, monitor D/G weekly on 60+ day servers.',
+      'Real fixes tested (all FAILED): (1) wider TIER3 hysteresis band (50% vs 10% — '
+        + 'marginal: D/G 18.1×→18.0×, not a real solution), (2) cap GB total debt at 3× GDP — '
+        + '0.000× improvement (cap is at loan creation, not the TIER3 lock accumulation problem), '
+        + '(3) tier3=50+min_int=0.20 — makes D/G slightly worse. The TIER3 0% interest lock '
+        + 'itself is the architectural problem: ALL loans compound at 0% during lock, '
+        + 'and when the circuit re-enables the accumulated debt service is catastrophic. '
+        + 'Until the counter-cyclical TIER3 lock is redesigned, monitor D/G weekly on 60+ day servers.',
     ],
     metrics: [
       { label: 'D/G at 14d', value: '8.31×', note: 'healthy' },
       { label: 'D/G at 30d', value: '7.50×', note: 'deceiving improvement' },
       { label: 'D/G at 60d', value: '20.1×', note: 'CATASTROPHIC — circuit oscillating' },
-      { label: 'Fix attempt', value: 'NOT FIXED', note: 'tier3=50+min_int=0.20 makes D/G worse' },
+      { label: 'Fix attempt', value: 'ALL FAILED', note: '3 fixes tested — none resolved 60d instability' },
     ],
     relatedLinks: [
       { href: '/docs', label: 'Loan circuit breaker docs' },

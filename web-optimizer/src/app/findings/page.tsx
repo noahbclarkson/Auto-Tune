@@ -536,6 +536,22 @@ export default function FindingsPage() {
             ))}
           </div>
 
+          {/* Critical finding alert */}
+          <a
+            href="#economy-stability"
+            className="group flex items-start gap-4 rounded-xl border border-amber-800/60 bg-amber-950/30 p-5 mb-10 hover:border-amber-700/80 hover:bg-amber-950/50 transition-colors"
+          >
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-200 mb-0.5">
+                Critical: 60-day economy stability — all proposed fixes FAILED
+              </p>
+              <p className="text-xs text-amber-300/80 leading-relaxed">
+                The recommended 2MM+2GB+floor config is stable at 14d and 30d but enters a doom loop at 60+ days (D/G climbs to 20×+). The counter-cyclical circuit is a governor, not a cure. No config workaround exists — an architectural fix is required. Admins of long-running servers should monitor D/G weekly. Read the full finding before deploying on a server you plan to run for more than 30 days.
+              </p>
+            </div>
+          </a>
+
           <CategorySection category={CATEGORIES[0]} />
           <CategorySection category={CATEGORIES[1]} />
           <CategorySection category={CATEGORIES[2]} />

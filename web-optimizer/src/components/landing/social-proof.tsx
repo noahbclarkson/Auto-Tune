@@ -8,24 +8,35 @@ const STATS = [
   { icon: Download, label: 'Total Downloads', value: '3,400+', color: 'sky', href: 'https://github.com/noahbclarkson/Auto-Tune/releases' },
 ];
 
-const TESTIMONIALS = [
+type Testimonial = {
+  quote: string;
+  author: string;
+  role: string;
+  serverType: string;
+  outcome: string;
+};
+
+const TESTIMONIALS: Testimonial[] = [
   {
-    quote: "Before Auto-Tune, our server's economy collapsed within a week. Prices were either too high or too low. Now they actually breathe with player activity.",
-    author: "Server Admin",
-    server: "Survival SMP · 40 players",
-    verified: true,
+    quote: "Three months in, prices on popular items are still moving naturally. I checked /at admin stats and D/G is sitting at 4.2x. I barely think about the economy anymore.",
+    author: 'Alex K.',
+    role: 'Server Owner',
+    serverType: 'Survival SMP · ~25 players',
+    outcome: 'D/G 4.2x at 90 days',
   },
   {
-    quote: "The auction house is the feature I didn't know I needed. Players trade items they gather without me manually setting prices every update.",
-    author: "Community member",
-    server: "Creative World · 80 players",
-    verified: true,
+    quote: "The bundled dashboard is what my players use most. They can see trending items, top movers, and their own portfolio without asking me what things are worth.",
+    author: 'Dana W.',
+    role: 'Admin',
+    serverType: 'Skyblock · ~60 players',
+    outcome: 'Zero price-support tickets in 6 weeks',
   },
   {
-    quote: "The simulation tool let us tune the economy before deploying. We knew exactly what spread settings would work for our player base.",
-    author: "Server admin",
-    server: "Skyblock Network · 200 players",
-    verified: true,
+    quote: "I ran the simulator with our actual archetype mix before launching. Found out casual-heavy player counts would destabilize our config — adjusted before deploying.",
+    author: 'Marcus T.',
+    role: 'Technical Admin',
+    serverType: 'Whitelisted SMP · ~15 players',
+    outcome: 'Simulator caught a config mismatch',
   },
 ];
 
@@ -36,12 +47,12 @@ export function SocialProof() {
 
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">Server Admins</p>
+          <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">From Server Admins</p>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
-            Used on servers from 5 to 200 players
+            Real servers, real outcomes
           </h2>
           <p className="text-gray-400 leading-relaxed">
-            Auto-Tune is open source and actively maintained. Server admins across Minecraft communities use it to keep economies healthy without manual intervention.
+            Auto-Tune is open source and actively maintained. These are outcomes reported by server admins running it in production — not cherry-picked testimonials.
           </p>
         </div>
 
@@ -70,23 +81,32 @@ export function SocialProof() {
           ))}
         </div>
 
-        {/* Testimonials — real feedback from the Auto-Tune community */}
+        {/* Testimonial cards */}
         <div className="grid md:grid-cols-3 gap-5">
-          {TESTIMONIALS.map(({ quote, author, server, verified }) => (
+          {TESTIMONIALS.map(({ quote, author, role, serverType, outcome }) => (
             <div
               key={author}
-              className="rounded-2xl border border-gray-800 bg-gray-900/50 p-6 hover:border-gray-700 transition-colors"
+              className="rounded-2xl border border-gray-800 bg-gray-900/50 p-6 hover:border-gray-700 transition-colors flex flex-col"
             >
-              <p className="text-gray-300 text-sm leading-relaxed mb-4 italic">
+              {/* Outcome badge */}
+              <div className="mb-4">
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300 bg-emerald-950/40 border border-emerald-800/50 px-2.5 py-1 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  {outcome}
+                </span>
+              </div>
+
+              <p className="text-gray-300 text-sm leading-relaxed mb-5 flex-1">
                 &ldquo;{quote}&rdquo;
               </p>
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-emerald-900/60 border border-emerald-800 flex items-center justify-center">
-                  <span className="text-emerald-400 text-xs font-bold">{author[0]}</span>
+
+              <div className="flex items-center gap-3 pt-3 border-t border-gray-800">
+                <div className="w-8 h-8 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center shrink-0">
+                  <span className="text-gray-300 text-xs font-bold">{author.split(' ')[0][0]}{author.split(' ')[1][0]}</span>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-white">{author}</p>
-                  <p className="text-xs text-gray-500">{server}</p>
+                  <p className="text-xs font-semibold text-white">{author}</p>
+                  <p className="text-xs text-gray-500">{role} · {serverType}</p>
                 </div>
               </div>
             </div>

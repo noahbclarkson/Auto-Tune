@@ -11,11 +11,15 @@ import { HealthScoreShowcase } from '@/components/landing/health-score-showcase'
 import { QuickStart } from '@/components/landing/quick-start';
 import { PricingSection } from '@/components/landing/pricing-section';
 import { CrossServerBanner } from '@/components/landing/cross-server-banner';
+import { AdminJourney } from '@/components/landing/admin-journey';
+import { SimResultsBanner } from '@/components/landing/sim-results-banner';
 
 export default function Home() {
   return (
     <div>
       <Hero />
+      <AdminJourney />
+      <SimResultsBanner />
       <CrossServerBanner />
       <FeatureCards />
       <SocialProof />

@@ -926,6 +926,8 @@ public class WebServer {
             response.put("globalVolumeMultiplier", globalMult);
             response.put("inflationLabel", inflationLabel);
             response.put("avgVolatility", avgVolatility);
+            response.put("topVolatileItems", volatilities.stream().limit(5).collect(Collectors.toList()));
+            response.put("topUndersoldItems", undersells.stream().limit(5).collect(Collectors.toList()));
             response.put("topVolatile", volatilities.stream().limit(5).collect(Collectors.toList()));
             response.put("topUndersold", undersells.stream().limit(5).collect(Collectors.toList()));
             response.put("timestamp", System.currentTimeMillis());

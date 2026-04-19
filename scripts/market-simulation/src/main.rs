@@ -11217,9 +11217,7 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --sixty-day-early-intervention-test  tier3=5/10/15 vs ctrl × 5 seeds × 60 days"
         );
-        println!(
-            "  --sixty-day-combo-test        tier3=100+loan_lock vs ctrl × 5 seeds × 60 days"
-        );
+        println!("  --sixty-day-combo-test        tier3=100+loan_lock vs ctrl × 5 seeds × 60 days");
         println!("  --it-removal-test         2MM+2GB+floor: WITH vs WITHOUT InsiderTraders");
         println!("  --healthy-baseline-5seed  2MM+2GB+floor × 5 seeds: statistical baseline");
         println!("  --gb-newbie-healthy-test   2MM+2GB+2Far+2Newbie vs 2MM+2GB+3Far × 5 seeds");
@@ -17876,7 +17874,10 @@ fn run_sixty_day_combo_test() {
             ctrl_results.push(r);
         }
         if let Some(r) = ComboResult::from_db(&fix_path.join("simulation.db"), seed) {
-            println!("fix: GDP={:.0} D/G={:.3}x T3_ev={}", r.gdp, r.dg, r.tier3_events);
+            println!(
+                "fix: GDP={:.0} D/G={:.3}x T3_ev={}",
+                r.gdp, r.dg, r.tier3_events
+            );
             fix_results.push(r);
         }
     }
@@ -17894,13 +17895,7 @@ fn run_sixty_day_combo_test() {
         let delta = fix.dg - ctrl.dg;
         println!(
             "  {:^6} | {:>12.0}  {:>10.3}x  {:>10.3}x  {:>+8.3}x | {:^8}  {:^8}",
-            ctrl.seed,
-            ctrl.gdp,
-            ctrl.dg,
-            fix.dg,
-            delta,
-            ctrl.tier3_events,
-            fix.tier3_events
+            ctrl.seed, ctrl.gdp, ctrl.dg, fix.dg, delta, ctrl.tier3_events, fix.tier3_events
         );
     }
 
@@ -17926,13 +17921,7 @@ fn run_sixty_day_combo_test() {
     println!("  {}", "-".repeat(72));
     println!(
         "  {:^6} | {:>12}  {:>10.3}x  {:>10.3}x  {:>+8.3}x | {:>8.1}  {:>8.1}",
-        "MEAN",
-        "avg GDP",
-        ctrl_dg_mean,
-        fix_dg_mean,
-        delta,
-        ctrl_t3_mean,
-        fix_t3_mean
+        "MEAN", "avg GDP", ctrl_dg_mean, fix_dg_mean, delta, ctrl_t3_mean, fix_t3_mean
     );
     let fix_locked_pct = (fix_locked_mean / (288.0 * 60.0) * 100.0).round();
     println!("----------------------------------------------------------------------------");
@@ -17959,9 +17948,7 @@ fn run_sixty_day_combo_test() {
             "  CONFIRMED: 0 TIER3 events, D/G improved {:.1}x -> {:.1}x",
             ctrl_dg_mean, fix_dg_mean
         );
-        println!(
-            "  RECOMMENDATION: tier3=100 + block_mm_gb_loans_during_tier3=true"
-        );
+        println!("  RECOMMENDATION: tier3=100 + block_mm_gb_loans_during_tier3=true");
         println!("  SAFE TO SHIP: Add to production config.");
     } else if fix_t3_mean == 0.0 && (fix_dg_mean - ctrl_dg_mean).abs() < 3.0 {
         println!("----------------------------------------------------------------------------");
@@ -17970,9 +17957,7 @@ fn run_sixty_day_combo_test() {
             delta
         );
         println!("  TIER3 circuit eliminated. D/G essentially unchanged.");
-        println!(
-            "  RECOMMENDATION: tier3=100 + block_mm_gb_loans_during_tier3=true"
-        );
+        println!("  RECOMMENDATION: tier3=100 + block_mm_gb_loans_during_tier3=true");
     } else if fix_t3_mean < ctrl_t3_mean {
         println!("----------------------------------------------------------------------------");
         println!(

@@ -1,6 +1,8 @@
-# 60-Day Architectural Fix Path
+# 60-Day Architectural Fix Path — CORRECTED
 
-_Simulation-verified analysis of the TIER3 counter-cyclical doom loop at 60 days, and what actually fixes it._
+_Simulation-verified analysis of the TIER3 counter-cyclical doom loop at 60 days._
+
+**⚠️ CORRECTION (2026-04-19):** Prior version of this doc incorrectly stated `tier3_ratio=100` stabilizes D/G. Actual simulation results show D/G **increases** with tier3=100. See corrected analysis below.
 
 ---
 
@@ -16,98 +18,99 @@ _Simulation-verified analysis of the TIER3 counter-cyclical doom loop at 60 days
 | D/G | 8.31x | 7.50x | **20.1x** | ❌ Doom loop |
 | TIER3 events | 0 | 0 | **6+** | ❌ |
 
-**Root cause:** Counter-cyclical formula `multiplier = max(0, 1 - D/G/30)` gives 0% interest when D/G ≥ 30. This is intentional — circuit fires only at "true catastrophe." But D/G routinely crosses 30x in normal long-run accumulation, and when it does: ALL debt compounds at 0% during the lock. When the circuit eventually re-enables at D/G=27, debt service cascades. D/G climbs past 30 again. Cycle repeats.
+**Root cause — architectural:** Debt compounds at ~10%/day across ALL tiers while GDP grows ~1%/day. The counter-cyclical formula `multiplier = max(0, 1 - D/G/30)` gives 0% interest when D/G ≥ 30. When TIER3 fires:
+1. ALL existing debt compounds at 0% during the lock
+2. Circuit re-enables at D/G=27 (0.9 × 30), immediately triggering re-entry
+3. D/G climbs past 30 again. Loop repeats 5+ times.
 
-**The Diamond floor was a red herring.** Natural equilibrium ~$472. Floor at $500 was non-binding. No-floor 60d test showed identical instability.
-
----
-
-## Fix Attempts — What Failed
-
-| Fix | CLI Flag | Result | Why |
-|-----|---------|--------|-----|
-| `tier3=50` + `min_int=0.20` | `--sixty-day-fix-test` | D/G +0.05x WORSE | min_int=0.20 keeps interest elevated at ALL D/G levels — accelerates debt at D/G=27 |
-| Wider hysteresis band (50% vs 10%) | `--sixty-day-hysteresis-test` | D/G -0.06x marginal | Doesn't change the fundamental 0% lock accumulation problem |
-| GB debt cap (3× GDP) | `--sixty-day-gb-debt-cap-test` | D/G +0.000x NO CHANGE | Cap at loan origination; TIER3 fires on TOTAL debt; all loans compound at 0% during lock |
-| `tier3=50` alone | `--sixty-day-tier3-sweep` | D/G ~18x, TIER3 still fires | Instability is NOT threshold-dependent; tier3=50 just delays the inevitable |
+**The Diamond floor was a red herring.** Natural equilibrium ~$472. Floor at $500 was non-binding.
 
 ---
 
-## Fix Attempts — What Actually Works
+## All Fix Candidates — Test Results
 
-### Fix 1: `tier3=100` alone
+**All 7 proposed fixes FAILED to resolve the underlying D/G instability.**
 
-- `debt_gdp_tier3_ratio = 100.0` — circuit fires only when D/G ≥ 100x
-- Normal D/G range (3–20x) gets 0–80% headroom — circuit never fires in normal operation
-- Simulation result: **0 TIER3 events across all 5 seeds**, D/G stabilized
+| Fix | Test | Result |
+|-----|------|--------|
+| tier3=50 + min_int=0.20 | `--sixty-day-fix-test` 2×60d | ❌ D/G +1.05x WORSE |
+| Hysteresis band 50% | `--sixty-day-hysteresis-test` 2×60d | ❌ D/G essentially flat |
+| GB debt cap 3× GDP | `--sixty-day-gb-debt-cap-test` 2×60d | ❌ NOOP — cap non-binding |
+| tier3=50 alone | `--sixty-day-tier3-sweep` 5×60d | ❌ TIER3 still fires |
+| tier3=100 alone | `--sixty-day-tier3-sweep` 5×60d | ❌ D/G **+2.3x WORSE**, 0 T3 events |
+| Loan-lock alone | `--sixty-day-loan-lock-test` 5×60d | ⚠️ NEUTRAL — D/G -0.3x (noise), T3 -83% |
+| tier3=100 + loan-lock combo | `--sixty-day-combo-test` 5×60d | ❌ D/G **+2.3x WORSE**, 0 T3 events |
+| Early intervention (tier3=5) | `--sixty-day-early-intervention-test` 5×60d | ❌ D/G reaches 8–36x regardless |
 
-```
-Ctrl tier3=30:  D/G=18.0x  T3_ev=6+
-Fix tier3=100:  D/G=~18.0x  T3_ev=0        (D/G unchanged, stability ✓)
-```
+### Detailed Results: tier3 Ratio Sweep (5 seeds × 60d)
 
-**Verdict:** ✅ CONFIRMED — `tier3_ratio=100` eliminates circuit events. D/G unchanged but no oscillations.
+| tier3 | Mean D/G | T3_ev total | Verdict |
+|-------|----------|-------------|---------|
+| 30 (ctrl) | **20.18x** | 8 | baseline |
+| 50 | 21.44x | 1 | +6.2% D/G, T3 reduced |
+| 100 | 22.48x | **0** | +11.4% D/G WORSE, T3 eliminated |
 
-### Fix 2: `block_mm_gb_loans_during_tier3=true` (loan lock)
+### Why tier3=100 Makes D/G Worse
 
-- Prevents new MM/GB loans from being originated during TIER3 lock
-- During the lock (0% interest): existing debt compounds at 0%, no new debt accrues
-- Simulation result: marginal/neutral D/G effect alone
+At D/G=22 with tier3=30 (ctrl): `multiplier = 1 - 22/30 = 0` → TIER3 fires → 0% interest → debt accumulation PAUSES
+At D/G=22 with tier3=100: `multiplier = 1 - 22/100 = 0.78` → 78% interest → debt ACCUMULATES
 
-```
-Ctrl no lock:   D/G=18.0x  T3_ev=6+
-Fix with lock:  D/G=17.xx  T3_ev=6+        (essentially neutral alone)
-```
+The TIER3 lock temporarily relieves debt accumulation. Without the circuit firing, interest keeps compounding.
+**Eliminating circuit events is neutral at best and actively harmful to D/G.**
 
-**Verdict:** ⚠️ Marginal alone — useful as a belt-and-suspenders complement, not primary fix.
+### Why tier3=100 + loan-lock Combo Also Fails
 
-### Fix 3: `tier3=100` + loan lock (COMBO)
-
-- Combined: tier3=100 eliminates circuit events, loan lock prevents any accidental debt accumulation if the circuit ever does fire
-- Both simulation tests show this is safe
-
-```
-tier3=100 + block_mm_gb_loans=true:
-  → 0 TIER3 events
-  → D/G stable
-  → No loan accumulation during rare lock events
-```
-
-**Verdict:** ✅ CONFIRMED — RECOMMENDED production config.
+The combo eliminates TIER3 events (0 vs 8) but D/G increases by +2.3x.
+This is because the circuit lock's 0% interest pause is the only mechanism slowing debt accumulation.
+With tier3=100, that pause never occurs → debt accumulates faster.
 
 ---
 
-## Recommended Production Config Change
+## Root Cause — Architectural
+
+The circuit is a **symptom observer, not a debt correction mechanism**.
+
+```
+Debt growth:   ~10%/day (across all tiers)
+GDP growth:    ~1%/day
+Net:           debt outpaces GDP by ~9%/day
+```
+
+The circuit observes high D/G and reduces interest to 0%, but:
+1. Existing debt remains
+2. The 0% pause only helps if the circuit actually fires
+3. Exiting TIER3 into TIER2 (multiplier=0.50) immediately triggers re-entry when D/G drops to ~15x
+
+**Counter-cyclical is a governor, not a cure.** It makes the problem less severe but cannot reverse it.
+
+---
+
+## Candidate Architectural Fixes (NOT YET TESTED)
+
+These require deeper engine changes and are escalated to Arc for prioritization:
+
+1. **Exit TIER3 directly to NORMAL** — bypass TIER2 to prevent the 0.50→re-entry oscillation
+2. **Forced deleveraging at TIER3 exit** — debt write-off or mandatory repayment schedule when circuit unlocks
+3. **Cap total economy debt growth rate** — engine-level cap on debt accumulation vs GDP growth
+4. **Deep hysteresis: require D/G < tier3_ratio × 0.25 before re-enabling** — more conservative unlock threshold
+5. **Simulation as CI gate** — commit `--sixty-day-combo-test` to prevent parameter regressions
+
+---
+
+## Current Production Config — UNCHANGED
+
+The simulation does not support changing defaults. Current recommended config:
 
 ```yaml
-# In AutoTuneConfig.java and config.rs
-
 loans:
-  debt_gdp_tier3_ratio: 100.0    # was: 30.0
-  block_mm_gb_loans_during_tier3: true  # was: false (optional but recommended)
-  counter_cyclical: true          # unchanged
-  min_interest_multiplier: 0.0   # unchanged (pure counter-cyclical)
-  tier3_hysteresis_band: 0.5     # unchanged (50% band)
+  debt_gdp_tier3_ratio: 30.0        # UNCHANGED — other values make D/G worse
+  block_mm_gb_loans_during_tier3: false  # UNCHANGED — neutral effect alone
+  counter_cyclical: true             # unchanged
+  min_interest_multiplier: 0.0      # unchanged
+  tier3_hysteresis_band: 0.5        # unchanged
 ```
 
-**Effect:**
-- TIER3 circuit fires only at D/G ≥ 100x (true catastrophe)
-- Normal D/G 3–20x → circuit multiplier 0–80% headroom
-- No circuit events in normal long-run operation
-- If catastrophic event ever occurs and TIER3 locks: MM/GB loans blocked, no additional debt
-
----
-
-## Remaining Questions
-
-1. **Why does D/G still climb to ~18x at 60d even with tier3=100?** The instability has two layers:
-   - TIER3 circuit events → the doom loop (FIXED by tier3=100)
-   - Natural debt accumulation → separate issue (counter-cyclical keeps interest low as D/G rises, but debt still grows faster than GDP at high D/G)
-   - These are independent. tier3=100 fixes Layer 1. Layer 2 is a fundamental economic parameter problem.
-
-2. **Is D/G ~18x at 60d acceptable?** Needs business input. D/G is a risk metric — high D/G means debt is 18× GDP. For a Minecraft economy, this may or may not be a problem in practice (players don't "feel" debt-to-GDP ratios directly). Simulation shows economy still functions (GDP grows, trades happen, prices stable).
-
-3. **min_interest_multiplier > 0 as an additional lever?** Not tested at 60d with tier3=100. Could be tested separately but not needed for Layer 1 fix.
+**⚠️ Warning for 60+ day servers:** D/G naturally climbs to ~20x. Admins should monitor D/G via `/at admin stats`. The circuit will fire multiple times — this is expected behavior, not a failure. Economy remains functional (GDP grows, trades execute, prices stable).
 
 ---
 
@@ -118,24 +121,22 @@ All 60d tests run via `cargo run --release -- --<flag>` in `scripts/market-simul
 | Test | Flag | Seeds | Duration | Status |
 |------|------|-------|----------|--------|
 | Baseline 60d | `--sixty-day-test` | 2 | 60d | ✅ Done |
-| tier3=50+min_int=0.20 | `--sixty-day-fix-test` | 2 | 60d | ✅ Done — FAILS |
-| Hysteresis sweep | `--sixty-day-hysteresis-test` | 2 | 60d | ✅ Done — marginal |
-| GB debt cap | `--sixty-day-gb-debt-cap-test` | 2 | 60d | ✅ Done — NOOP |
-| tier3=30/50/100 sweep | `--sixty-day-tier3-sweep` | 5 | 60d | ✅ Done — tier3=100=0 T3 |
-| Loan lock alone | `--sixty-day-loan-lock-test` | 5 | 60d | ✅ Done — neutral |
-| tier3=100+loan-lock combo | `--sixty-day-combo-test` | 5 | 60d | ✅ Done — CONFIRMED |
-| Early intervention (tier3=5/10/15) | `--sixty-day-early-intervention-test` | 5 | 60d | ✅ Done — worst option |
+| tier3=50+min_int=0.20 | `--sixty-day-fix-test` | 2 | 60d | ✅ FAILS |
+| Hysteresis sweep | `--sixty-day-hysteresis-test` | 2 | 60d | ✅ marginal |
+| GB debt cap | `--sixty-day-gb-debt-cap-test` | 2 | 60d | ✅ NOOP |
+| tier3=30/50/100 sweep | `--sixty-day-tier3-sweep` | 5 | 60d | ✅ ALL FAIL |
+| Loan lock alone | `--sixty-day-loan-lock-test` | 5 | 60d | ✅ neutral |
+| tier3=100+loan-lock combo | `--sixty-day-combo-test` | 5 | 60d | ✅ FAILS |
+| Early intervention (tier3=5/10/15) | `--sixty-day-early-intervention-test` | 5 | 60d | ✅ worst |
 
 ---
 
-## Java Config Update Required
+## What Changed vs Prior Version
 
-The following changes must be made in `AutoTuneConfig.java` (and equivalent `config.rs` for simulation):
-
-```java
-// loans section
-debt_gdp_tier3_ratio: 100.0    // was 30.0
-block_mm_gb_loans_during_tier3: true  // was false
-```
-
-Also requires `LoanManager.java` to respect `block_mm_gb_loans_during_tier3` flag.
+| Section | Old (WRONG) | New (CORRECT) |
+|---------|-------------|---------------|
+| Fix 1 (tier3=100) | "D/G stable, 0 T3 events ✅ CONFIRMED" | "D/G +2.3x WORSE, 0 T3 events ❌ FAILS" |
+| Fix 3 (combo) | "D/G stable ✅ CONFIRMED — RECOMMENDED" | "D/G +2.3x WORSE, 0 T3 events ❌ FAILS" |
+| Recommended config | `tier3=100, block_mm_gb_loans=true` | NO CHANGE to defaults |
+| Root cause | "Diamond floor red herring" | Same + architectural debt accumulation framing |
+| Architectural fixes | Not listed | 5 candidate fixes listed for Arc |

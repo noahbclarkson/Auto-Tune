@@ -251,19 +251,20 @@ const CONFIG_FINDINGS: Finding[] = [
       'The proposed fix (tier3=50 + min_int=0.20) does NOT work: it keeps interest elevated '
         + 'at ALL D/G levels (20% floor), preventing the natural deleveraging that occurs at '
         + 'lower multipliers. Test result: D/G 18.1× (ctrl) → 19.1× (fix) — slightly WORSE.',
-      'Real fixes tested (all FAILED): (1) wider TIER3 hysteresis band (50% vs 10% — '
-        + 'marginal: D/G 18.1×→18.0×, not a real solution), (2) cap GB total debt at 3× GDP — '
-        + '0.000× improvement (cap is at loan creation, not the TIER3 lock accumulation problem), '
-        + '(3) tier3=50+min_int=0.20 — makes D/G slightly worse. The TIER3 0% interest lock '
-        + 'itself is the architectural problem: ALL loans compound at 0% during lock, '
-        + 'and when the circuit re-enables the accumulated debt service is catastrophic. '
-        + 'Until the counter-cyclical TIER3 lock is redesigned, monitor D/G weekly on 60+ day servers.',
+      'All 7 proposed fixes FAILED at 5-seed x 60d: (1) wider TIER3 hysteresis band (50% vs 10% — '
+        + 'D/G essentially flat, not a solution), (2) cap GB total debt at 3x GDP — 0.000x improvement '
+        + '(cap is at loan creation, not the lock accumulation problem), (3) tier3=50+min_int=0.20 — D/G +1.05x worse, '
+        + '(4) tier3=50 alone — TIER3 still fires, D/G worse, (5) tier3=100 alone — D/G +2.3x WORSE, 0 TIER3 events '
+        + '(eliminating circuit events makes it WORSE because the 0% pause is the only thing slowing debt), '
+        + '(6) loan-lock alone — neutral, (7) tier3=100+loan-lock combo — D/G +2.3x WORSE, 0 TIER3 events. '
+        + 'The counter-cyclical TIER3 lock is a governor, not a cure — it masks symptoms but cannot '
+        + 'stop debt from growing ~10x faster than GDP. Monitor D/G weekly on 60+ day servers.',
     ],
     metrics: [
       { label: 'D/G at 14d', value: '8.31×', note: 'healthy' },
       { label: 'D/G at 30d', value: '7.50×', note: 'deceiving improvement' },
       { label: 'D/G at 60d', value: '20.1×', note: 'CATASTROPHIC — circuit oscillating' },
-      { label: 'Fix attempt', value: 'ALL FAILED', note: '3 fixes tested — none resolved 60d instability' },
+      { label: 'Fix attempt', value: 'ALL FAILED', note: '7 fixes tested — all fail; architectural fix needed' },
     ],
     relatedLinks: [
       { href: '/docs', label: 'Loan circuit breaker docs' },

@@ -859,11 +859,16 @@ public class WebServer {
                 double pctChange = newest.subtract(oldest)
                         .divide(oldest, 4, RoundingMode.HALF_UP)
                         .doubleValue() * 100.0;
-                Map<String, Object> entry = Map.of(
-                        "id", item.id(),
-                        KEY_MATERIAL, item.material().name(),
-                        "displayName", item.getDisplayNameOrMaterial(),
-                        KEY_PCT_CHANGE, pctChange
+                Map<String, Object> entry = Map.ofEntries(
+                        Map.entry("id", item.id()),
+                        Map.entry("item", item.material().name()),
+                        Map.entry(KEY_MATERIAL, item.material().name()),
+                        Map.entry("displayName", item.getDisplayNameOrMaterial()),
+                        Map.entry("avgBuyPrice", marketEngine.getBuyPrice(item).doubleValue()),
+                        Map.entry("avgSellPrice", marketEngine.getSellPrice(item).doubleValue()),
+                        Map.entry(KEY_PCT_CHANGE, pctChange),
+                        Map.entry("change24h", pctChange),
+                        Map.entry("changePercent24h", pctChange)
                 );
                 volatilities.add(entry);
                 undersells.add(entry);
@@ -894,7 +899,19 @@ public class WebServer {
             });
 
             Map<String, Object> response = new HashMap<>();
+            // Compute health score (0-100) from raw metrics — mirrors web/src/app/economy/page.tsx
+            double volScore = avgVolatility < 0.05 ? 40.0 : avgVolatility < 0.10 ? 32.0
+                    : avgVolatility < 0.15 ? 24.0 : avgVolatility < 0.25 ? 12.0 : 4.0;
+            double d2gScore = 0.0;
+            if (debtGdpRatio > 0 && debtGdpRatio < 3.0) d2gScore = 30.0;
+            else if (debtGdpRatio >= 3.0 && debtGdpRatio < 8.0) d2gScore = 20.0;
+            else if (debtGdpRatio >= 8.0 && debtGdpRatio < 15.0) d2gScore = 8.0;
+            else if (debtGdpRatio >= 15.0) d2gScore = 0.0;
+            double balScore = Math.min(30.0, (buyPct / 100.0) * 30.0);
+            int healthScore = (int) Math.round(volScore + d2gScore + balScore);
+
             response.put("frozen", frozen);
+            response.put("healthScore", healthScore);
             response.put("gdp", gdp.doubleValue());
             response.put("totalDebt", totalDebt.doubleValue());
             response.put("activeLoans", activeLoans);

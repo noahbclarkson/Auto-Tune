@@ -911,6 +911,7 @@ public class WebServer {
             int healthScore = (int) Math.round(volScore + d2gScore + balScore);
 
             response.put("frozen", frozen);
+            response.put("serverName", plugin.getServer().getName());
             response.put("healthScore", healthScore);
             response.put("gdp", gdp.doubleValue());
             response.put("totalDebt", totalDebt.doubleValue());

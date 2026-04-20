@@ -23,6 +23,7 @@ import com.noahblclarkson.autotune.service.BadgeService;
 import com.noahblclarkson.autotune.service.MarketDigestService;
 import com.noahblclarkson.autotune.service.PriceMilestoneService;
 import com.noahblclarkson.autotune.service.PlayerOnboardingService;
+import com.noahblclarkson.autotune.service.PlayerImpactService;
 import com.noahblclarkson.autotune.service.PlayerStreakService;
 import com.noahblclarkson.autotune.service.EconomyWhatMovedService;
 import com.noahblclarkson.autotune.database.PlayerRepository;
@@ -299,6 +300,17 @@ public class AutoTuneModule extends AbstractModule {
         return new PlayerOnboardingService(
                 plugin, databaseManager, playerRepository,
                 pendingNotificationRepository, configManager);
+    }
+
+    @Provides
+    @Singleton
+    public PlayerImpactService providePlayerImpactService(
+            PlayerRepository playerRepository,
+            ItemRepository itemRepository,
+            TransactionRepository transactionRepository,
+            MarketEngine marketEngine
+    ) {
+        return new PlayerImpactService(playerRepository, itemRepository, transactionRepository, marketEngine);
     }
 
     @Provides

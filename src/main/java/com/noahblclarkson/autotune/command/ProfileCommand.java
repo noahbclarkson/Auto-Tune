@@ -7,6 +7,7 @@ import com.noahblclarkson.autotune.database.BadgeRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.model.PlayerBadge;
 import com.noahblclarkson.autotune.model.PlayerData;
+import com.noahblclarkson.autotune.service.PlayerImpactService;
 import com.noahblclarkson.autotune.service.PlayerStreakService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -51,14 +52,17 @@ public class ProfileCommand {
     private final PlayerRepository playerRepository;
     private final BadgeRepository badgeRepository;
     private final PlayerStreakService streakService;
+    private final PlayerImpactService impactService;
 
     @Inject
     public ProfileCommand(AutoTune plugin, PlayerRepository playerRepository,
-                          BadgeRepository badgeRepository, PlayerStreakService streakService) {
+                          BadgeRepository badgeRepository, PlayerStreakService streakService,
+                          PlayerImpactService impactService) {
         this.plugin = plugin;
         this.playerRepository = playerRepository;
         this.badgeRepository = badgeRepository;
         this.streakService = streakService;
+        this.impactService = impactService;
     }
 
     @Command("profile")
@@ -112,7 +116,8 @@ public class ProfileCommand {
             PlayerData data = playerRepository.findByUuid(uuid).orElse(null);
             List<PlayerBadge> badges = badgeRepository.getBadges(uuid);
             PlayerStreakService.StreakData streak = streakService.getStreakOrDefault(uuid);
-            return new ProfileData(data, badges, streak, name);
+            PlayerImpactService.PlayerImpactDto impact = impactService.compute(name).orElse(null);
+            return new ProfileData(data, badges, streak, name, impact);
         }).orTimeout(5, TimeUnit.SECONDS)
                 .thenAcceptAsync(profile -> {
                     Bukkit.getScheduler().runTask(plugin, () -> renderProfile(sender, profile));
@@ -215,6 +220,42 @@ public class ProfileCommand {
                     .color(NamedTextColor.GOLD));
         }
 
+        // Market impact
+        PlayerImpactService.PlayerImpactDto impact = profile.impact;
+        if (impact != null) {
+            sender.sendMessage(Component.text(""));
+            sender.sendMessage(Component.text("  📊 Market Impact")
+                    .color(ACCENT).decorate(TextDecoration.BOLD));
+            if (impact.weeklyRank() > 0) {
+                sender.sendMessage(Component.text("  Weekly Rank: ")
+                        .color(NamedTextColor.GRAY)
+                        .append(Component.text("#" + impact.weeklyRank())
+                                .color(NamedTextColor.GOLD)));
+            }
+            if (impact.weeklyImpactPct() != 0.0) {
+                String impactStr = formatPercent(impact.weeklyImpactPct());
+                NamedTextColor impactColor = impact.weeklyImpactPct() > 0
+                        ? NamedTextColor.GREEN : NamedTextColor.RED;
+                sender.sendMessage(Component.text("  Weekly Impact: ")
+                        .color(NamedTextColor.GRAY)
+                        .append(Component.text(impactStr).color(impactColor)));
+            }
+            if (!impact.topItems().isEmpty()) {
+                sender.sendMessage(Component.text("  Top items by impact: ")
+                        .color(NamedTextColor.GRAY));
+                int count = 0;
+                for (PlayerImpactService.MarketImpactItemDto item : impact.topItems()) {
+                    if (count++ >= 3) break;
+                    String pct = formatPercent(item.playerImpactPct());
+                    NamedTextColor itemColor = item.playerImpactPct() > 0
+                            ? NamedTextColor.GREEN : NamedTextColor.RED;
+                    sender.sendMessage(Component.text("    • ").color(NamedTextColor.DARK_GRAY)
+                            .append(Component.text(item.itemName()).color(NamedTextColor.WHITE))
+                            .append(Component.text(" (" + pct + ")").color(itemColor)));
+                }
+            }
+        }
+
         // Footer
         sender.sendMessage(Component.text(""));
         sender.sendMessage(Component.text("  💡 Use ")
@@ -241,6 +282,16 @@ public class ProfileCommand {
         return NamedTextColor.RED;
     }
 
+    private String formatPercent(double pct) {
+        if (Math.abs(pct) >= 100) {
+            return String.format("%.0f%%", pct);
+        } else if (Math.abs(pct) >= 10) {
+            return String.format("%.1f%%", pct);
+        } else {
+            return String.format("%.2f%%", pct);
+        }
+    }
+
     private String formatMoney(BigDecimal amount) {
         BigDecimal abs = amount.abs();
         if (abs.compareTo(BigDecimal.valueOf(1_000_000)) >= 0) {
@@ -253,6 +304,7 @@ public class ProfileCommand {
     }
 
     private record ProfileData(PlayerData data, List<PlayerBadge> badges,
-                               PlayerStreakService.StreakData streak, String name) {
+                               PlayerStreakService.StreakData streak, String name,
+                               PlayerImpactService.PlayerImpactDto impact) {
     }
 }

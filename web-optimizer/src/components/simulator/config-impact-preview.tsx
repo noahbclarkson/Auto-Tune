@@ -93,13 +93,13 @@ const IMPACT_CARDS: ImpactCard[] = [
   {
     id: 'guildbuyer-threshold',
     emoji: '🎯',
-    title: 'GuildBuyer Threshold: 7% (not 15%)',
-    finding: '7% = stable. 15-30% = D/G 5-20×, vol explosions',
+    title: 'GuildBuyer Threshold: 5% (not 15%)',
+    finding: '5% = stable. 15-30% = D/G 5-20×, vol explosions',
     verdict: 'recommended',
     verdictLabel: 'Critical setting',
     detail:
-      'GuildBuyer triggers when item price falls >threshold below perceived value. Default random range (15-30%) is catastrophic — MMs buy enormous amounts on credit before a tiny dip threshold fires. At 7% threshold: D/G stays below 2×, vol <0.007 (stable). At 15%+ threshold: D/G 5-20× with multi-seed runs. Use 7% or add a Diamond price floor.',
-    configHint: 'guildbuyer.threshold-percent: 7 (not 15, 20, or random)',
+      'GuildBuyer triggers when item price falls >threshold below perceived value. Default random range (15-30%) is catastrophic — MMs buy enormous amounts on credit before a tiny dip threshold fires. At 5% threshold: D/G stays healthy, vol <0.007 (stable). At 15%+ threshold: D/G 5-20× with multi-seed runs. 30-day data confirms 7% advantage disappears while D/G is +2.89× worse. Use 5% or add a Diamond price floor.',
+    configHint: 'guildbuyer.threshold-percent: 5 (not 15, 20, or random)',
   },
 ];
 

@@ -7,7 +7,7 @@ export const wizardArchetypes = {
       name: 'SMP / Vanilla+',
       description: 'Standard survival. Moderate trading, moderate griefing risk.',
       icon: 'axe',
-      archetype: { MarketMaker: 2, GuildBuyer: 2, GuildBuyerThreshold: 7 },
+      archetype: { MarketMaker: 2, GuildBuyer: 2, GuildBuyerThreshold: 5 },
       spread: 0.20,
       loans: null,
       stability: {
@@ -23,11 +23,11 @@ export const wizardArchetypes = {
       description: 'Island economies, limited resources, high scarcity.',
       icon: 'mountain',
       loans: {
-        tier3Ratio: 15,
+        tier3Ratio: 30,
         creditScoreMultiplier: 1.0,
         postDefaultCooldownHours: 168,
       },
-      archetype: { MarketMaker: 1, GuildBuyer: 3, GuildBuyerThreshold: 7 },
+      archetype: { MarketMaker: 1, GuildBuyer: 3, GuildBuyerThreshold: 5 },
       spread: 0.20,
       stability: {
         buyRatio: '55-60%',
@@ -41,13 +41,13 @@ export const wizardArchetypes = {
       name: 'Faction / PvP',
       description: 'High turnover, high exploit risk. Aggressive circuit breaker.',
       icon: 'swords',
-      archetype: { MarketMaker: 1, GuildBuyer: 1, GuildBuyerThreshold: 5 },
-      spread: 0.25,
       loans: {
-        tier3Ratio: 8,
+        tier3Ratio: 30,
         creditScoreMultiplier: 1.5,
         postDefaultCooldownHours: 336,
       },
+      archetype: { MarketMaker: 1, GuildBuyer: 1, GuildBuyerThreshold: 5 },
+      spread: 0.25,
       stability: {
         buyRatio: '45-50%',
         volatility: 'High (0.15+)',
@@ -61,11 +61,11 @@ export const wizardArchetypes = {
       description: 'Trading-focused, minimal PvP. Tight spreads reward active traders.',
       icon: 'cart',
       loans: {
-        tier3Ratio: 15,
+        tier3Ratio: 30,
         creditScoreMultiplier: 1.0,
         postDefaultCooldownHours: 168,
       },
-      archetype: { MarketMaker: 3, GuildBuyer: 1, GuildBuyerThreshold: 7 },
+      archetype: { MarketMaker: 3, GuildBuyer: 1, GuildBuyerThreshold: 5 },
       spread: 0.15,
       stability: {
         buyRatio: '50-55%',
@@ -82,7 +82,7 @@ export const wizardArchetypes = {
       archetype: null,
       spread: 0.20,
       loans: {
-        tier3Ratio: 15,
+        tier3Ratio: 30,
         creditScoreMultiplier: 1.0,
         postDefaultCooldownHours: 168,
       },
@@ -166,7 +166,7 @@ export const wizardArchetypes = {
       counterCyclical: true,
       postDefaultCooldownHours: 168,
       creditScoreMultiplier: 1.0,
-      tier3Ratio: 15,
+      tier3Ratio: 30,
     },
     treasury: {
       taxRate: 0.01,

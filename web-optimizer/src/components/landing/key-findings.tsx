@@ -15,9 +15,9 @@ const findings = [
     icon: ShieldCheck,
     tag: 'D/G 1.76×',
     tagColor: 'text-sky-400 bg-sky-950/60 border-sky-800/50',
-    title: '7% GuildBuyer threshold is the safe default',
-    detail: 'The old default of 15–30% causes catastrophic debt spirals (D/G 5–20×) because selective buying triggers massive credit. At 7%, buying is incremental — creating a natural price floor. D/G holds at 1.76× across 5 simulation seeds.',
-    metric: { label: 'Recommended threshold', value: '7% (not 15–30%)', accent: 'text-sky-400' },
+    title: '5% GuildBuyer threshold is the safe default',
+    detail: 'The old default of 15–30% causes catastrophic debt spirals (D/G 5–20×) because selective buying triggers massive credit. At 5%, buying is incremental — creating a natural price floor. 30-day data confirms 7% advantage disappears by 30d while D/G is +2.89× worse. D/G holds at 1.76× across 5 simulation seeds at 14d.',
+    metric: { label: 'Recommended threshold', value: '5% (not 15–30%)', accent: 'text-sky-400' },
     href: '/simulation-results',
   },
   {

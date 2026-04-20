@@ -3,7 +3,7 @@ import { BarChart3, TrendingUp, Shield, Activity, ArrowRight, Check } from 'luci
 /**
  * What a healthy Auto-Tune economy looks like — shown on the public landing page.
  * Values are drawn from the recommended production config:
- * 1× MarketMaker + 2× GuildBuyer @ 7% threshold + standard player mix.
+ * 1× MarketMaker + 2× GuildBuyer @ 5% threshold + standard player mix.
  * Simulated 14-day runs across 5 seeds.
  */
 const HEALTHY_METRICS = [

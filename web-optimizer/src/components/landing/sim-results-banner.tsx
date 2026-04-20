@@ -67,7 +67,7 @@ export function SimResultsBanner() {
             The recommended config — verified across 5 seeds × 14–60 days
           </p>
           <p className="text-xs text-gray-400">
-            2 MarketMakers + 2 GuildBuyers @ 7% threshold + 60% Diamond floor + counter-cyclical interest.
+            2 MarketMakers + 2 GuildBuyers @ 5% threshold + 60% Diamond floor + counter-cyclical interest.
             Results from automated simulation, not guesswork.
           </p>
         </div>

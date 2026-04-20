@@ -72,7 +72,7 @@ Show a simulation-derived card (pre-computed from sim runs, not live):
 Source these from the 840-config parameter sweep data keyed by archetype × spread × goals.
 
 Also show:
-- **Recommended Archetype Config:** e.g., "2 MarketMakers + 2 GuildBuyers @ 7% threshold"
+- **Recommended Archetype Config:** e.g., "2 MarketMakers + 2 GuildBuyers @ 5% threshold"
 - **Key parameters to tune after 1 week:** e.g., "baseSpread if spreads feel too wide"
 
 ---
@@ -97,10 +97,10 @@ economy:
 player-archetypes:
   MarketMaker:
     count: 2
-    threshold: 7          # % below target price to start buying
+    threshold: 5          # % below target price to start buying
   GuildBuyer:
     count: 2
-    threshold: 7
+    threshold: 5
 ```
 
 Below the YAML:

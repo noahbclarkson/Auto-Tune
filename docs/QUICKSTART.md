@@ -21,7 +21,7 @@ Q1: Do you want player loans enabled?
           │
           ├─ 2+ MarketMakers + 2+ GuildBuyers
           │   → Recommended. GDP +101%, vol -48%, spreads -22% vs 1MM+1GB
-          │   → Set loans: 7% threshold, counter-cyclical: true, tier3-ratio: 15
+          │   → Set loans: 5% threshold, counter-cyclical: true, tier3-ratio: 30
           │   → Set price floor: 60% on Diamond-type items
           │   → ✅ You're ready
           │

@@ -18,6 +18,45 @@
 
 ---
 
+## `storage.*` — External Database (MariaDB/MySQL)
+
+Auto-Tune defaults to SQLite (`autotune.db` in the plugin data folder). For servers with many players or long runtimes, MariaDB or MySQL is recommended for better performance and backupability.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `storage.type` | `SQLITE` | `SQLITE` or `MYSQL` |
+| `storage.host` | `localhost` | Database server hostname |
+| `storage.port` | `3306` | Database server port |
+| `storage.database` | `autotune` | Database name |
+| `storage.username` | `root` | Database username |
+| `storage.password` | `""` | Database password |
+| `storage.pool.maximum-size` | `10` | Max connections in pool |
+| `storage.pool.minimum-idle` | `2` | Always-open idle connections |
+| `storage.pool.connection-timeout` | `30000` | ms before connect timeout |
+| `storage.pool.idle-timeout` | `600000` | ms before idle connection removed |
+| `storage.pool.max-lifetime` | `1800000` | ms before connection recycled |
+
+**Example MySQL config:**
+```yaml
+storage:
+  type: MYSQL
+  host: 192.168.1.100
+  port: 3306
+  database: autotune
+  username: autotune_user
+  password: "s3cur3p@ssw0rd!"
+  pool:
+    maximum-size: 10
+    minimum-idle: 2
+    connection-timeout: 30000
+    idle-timeout: 600000
+    max-lifetime: 1800000
+```
+
+> **MariaDB is recommended** over MySQL for compatibility with Auto-Tune's JDBI SQL dialect. MySQL 8+ works but some queries use MariaDB-specific `ON CONFLICT` syntax. If using MySQL, test thoroughly before production.
+
+---
+
 ## `spread.*` — Spread Behavior
 
 | Key | Default | Description |

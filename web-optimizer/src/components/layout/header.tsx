@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   Github, BarChart2, Home, BookOpen, DollarSign, Server,
   TrendingUp, Grid, FlaskConical, Code2, Map, Download,
-  Sliders, GitCommit, Wand2, Tag, Wifi, ChevronDown,
+  Sliders, GitCommit, Wand2, Tag, Wifi, ChevronDown, FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/landing/theme-toggle';
@@ -37,6 +37,7 @@ const NAV_SECTIONS: { label: string; items: { href: string; label: string; icon:
     items: [
       { href: '/simulator',           label: 'Simulator',        icon: BarChart2 },
       { href: '/config-playground',   label: 'Config',           icon: Sliders },
+      { href: '/config-preview',       label: 'Config Preview',  icon: FileText },
       { href: '/sweep-results',       label: 'Sweep',            icon: Grid },
       { href: '/simulation-results',  label: 'Sim Results',      icon: FlaskConical },
       { href: '/health-badge',        label: 'Badge',            icon: Tag },

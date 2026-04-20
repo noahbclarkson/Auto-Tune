@@ -119,22 +119,6 @@ The scaling formula uses a `tanh` curve: `tanh(onlineCount * atanh(0.99) / fullE
 
 ---
 
-## `guildbuyer.*` — GuildBuyer Archetype
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `guildbuyer.enabled` | `true` | Enable GuildBuyer player archetype |
-| `guildbuyer.guild-price-dip-threshold` | `0.07` | Buy when price falls within this fraction of perceived value (7% = recommended) |
-
-**guild-price-dip-threshold**: The single most important GuildBuyer parameter. Simulation found:
-- **7%** (default): Uniquely safe — D/G < 0.1× consistently across all seeds
-- **5%**: Net positive but D/G varies wildly (0.03× to 27× across seeds — catastrophic on some)
-- **≥10%**: Selectivity causes massive single purchases on credit → debt spiral (D/G 5-20×)
-
-Recommendation: leave at 7%. Lower values require careful monitoring.
-
----
-
 ## `enchantment.*` — Enchantment Pricing
 
 | Key | Default | Description |

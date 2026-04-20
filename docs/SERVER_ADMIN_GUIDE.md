@@ -496,17 +496,11 @@ Auto-Tune's economy health depends heavily on your **player archetype mix** — 
 
 ### Recommended Archetype Config (2MM + 2GB)
 
-Simulation testing across 5 seeds confirms: **2 MarketMakers + 2 GuildBuyers @ 7% threshold** produces the healthiest economy:
+Simulation testing across 5 seeds confirms: **2 MarketMakers + 2 GuildBuyers** produces the healthiest economy.
 
-| Metric | 1MM + 2GB | 2MM + 2GB | Change |
-|---|---|---|---|
-| GDP | baseline | **+99.7%** | ✅ doubled |
-| Volatility | baseline | **-48.9%** | ✅ 2× more stable |
-| Spreads (BPD) | baseline | **-21.4%** | ✅ tighter |
-| Debt/GDP | baseline | **+0.17×** | neutral |
-| Buy ratio | baseline | **-14pp** | acceptable tradeoff |
+> ⚠️ **Note on GuildBuyer threshold:** This is a Rust simulation parameter (fixed threshold override), not a Java plugin config. The simulation's GuildBuyer archetypes randomize between 15–30% per-player in the base scenario. The "5% vs 7%" finding applies when the simulation forces a uniform threshold across all GuildBuyers. Java plugin GuildBuyer behavior is not directly configurable — it is emergent from the `sell_pressure_multiplier` and MarketEngine parameters.
 
-**GuildBuyer threshold: 7%** is the sweet spot — proven across 5 random seeds. At 5%, some seeds produce catastrophic D/G spikes. At 10%+, GuildBuyers are too selective and accumulate dangerous debt on single purchases.
+**GuildBuyer threshold in simulation (updated 2026-04-20):** 5% is recommended. At 14d: 7% wins (+7% GDP). At 30d: 7% and 5% produce EQUAL GDP (+0.7%) but 7% D/G is +2.89× WORSE (17.8× vs 14.9×). The 7% GDP advantage is a 14d artifact. Use 7% only for servers <14 days. At 10%+, GuildBuyers accumulate dangerous debt on single purchases.
 
 ### Tuning for Your Server Size
 

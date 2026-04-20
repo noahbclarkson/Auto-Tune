@@ -169,18 +169,20 @@ const CONFIG_FINDINGS: Finding[] = [
     verdict: '✅ Production Default',
     verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
     answer: [
-      '7% is the recommended threshold. A 5-seed × 5-threshold test (25 runs total) shows 7% '
-        + 'produces the best GDP (1,261K average) and the lowest volatility (0.110) across all seeds.',
-      'The old default of 15–30% is catastrophically bad: selective buying at scale '
-        + 'triggers massive credit extension and debt spirals. At 7%, buying is incremental '
-        + 'enough that it functions as a natural price floor without amplifying debt.',
-      '5% has the best D/G (6.98×) but at a large GDP cost (−17% vs 7%). 7% is the correct '
-        + 'balance for most servers. Monitor D/G monthly — if it climbs above 10×, lower to 5%.',
+      '5% is the recommended threshold — updated 2026-04-20 based on 30-day simulation data. '
+        + 'A 5-seed × 5-threshold test (25 runs at 14d) shows 7% wins on GDP (+7%) with lowest volatility. '
+        + 'But at 30 days: 7% GDP advantage DISAPPEARS (+0.7% vs 5%) while D/G is +2.89× WORSE (17.8× vs 14.9×). '
+        + 'The 7% GDP advantage is a 14d artifact — it does not persist.',
+      'For servers under 14 days, 7% remains defensible for the GDP boost. For servers running 30d+, '
+        + '5% is strictly better on D/G with essentially no GDP cost. The old default of 15–30% is '
+        + 'catastrophically bad. Monitor D/G monthly — if it climbs above 10×, lower to 5%.',
     ],
     metrics: [
-      { label: '7% GDP', value: '1,261K', note: 'best across 5 seeds' },
-      { label: '7% volatility', value: '0.110', note: 'lowest of all thresholds' },
-      { label: '7% D/G', value: '8.36×', note: 'vs 5% at 6.98× (best)' },
+      { label: '7% GDP (14d)', value: '1,261K', note: 'best across 5 seeds' },
+      { label: '7% vol (14d)', value: '0.110', note: 'lowest of all thresholds' },
+      { label: '7% vs 5% D/G (30d)', value: '17.8× vs 14.9×', note: '7% is +2.89× WORSE at 30d' },
+      { label: '7% vs 5% GDP (30d)', value: '+0.7%', note: '7% advantage GONE at 30d' },
+      { label: 'Production default', value: '5%', note: 'updated from 7% — use 7% only for <14d servers' },
     ],
     relatedLinks: [
       { href: '/docs', label: 'GuildBuyer config docs' },

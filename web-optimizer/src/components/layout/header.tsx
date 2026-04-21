@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   Github, BarChart2, Home, BookOpen, DollarSign, Server,
   TrendingUp, Grid, FlaskConical, Code2, Map, Download,
-  Sliders, GitCommit, Wand2, Tag, Wifi, ChevronDown, FileText,
+  Sliders, GitCommit, Wand2, Tag, Wifi, ChevronDown, FileText, Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/landing/theme-toggle';
@@ -25,6 +25,7 @@ const NAV_SECTIONS: { label: string; items: { href: string; label: string; icon:
   {
     label: 'Learn',
     items: [
+      { href: '/admin',          label: 'Admin',         icon: Settings },
       { href: '/docs',           label: 'Docs',          icon: BookOpen },
       { href: '/how-it-works',   label: 'How It Works',  icon: BookOpen },
       { href: '/economy',        label: 'Economy',         icon: DollarSign },

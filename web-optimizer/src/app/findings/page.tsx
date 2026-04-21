@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
-import { ChevronDown, ArrowRight, FlaskConical, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, XCircle, Info, Users, Sliders, BarChart2 } from 'lucide-react';
+import { ChevronDown, ArrowRight, FlaskConical, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, XCircle, Info, Users, Sliders, BarChart2, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /* ─────────────────────────────────────────────────────────────
@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
    key metrics, related links
 ───────────────────────────────────────────────────────────── */
 
-type Verdict = '✅ Production Default' | '⚠️ Use with Caution' | '❌ Never' | '🔄 Context-Dependent' | '💡 Key Insight';
+type Verdict = '✅ Production Default' | '⚠️ Use with Caution' | '❌ Never' | '🔄 Context-Dependent' | '💡 Key Insight' | '🔄 Contained' | '✅ Contained by circuit' | '✅ Protected' | '✅ Yes';
 
 type Finding = {
   q: string;
@@ -30,6 +30,110 @@ type Category = {
   icon: React.ElementType;
   findings: Finding[];
 };
+
+/* ─── EXPLOIT RESISTANCE ─────────────────────────────────── */
+
+const EXPLOIT_RESISTANCE_FINDINGS: Finding[] = [
+  {
+    q: 'Can a single player manipulate prices to exploit the economy?',
+    verdict: '🔄 Contained',
+    verdictClass: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
+    answer: [
+      'Single-player price manipulation is structurally discouraged but not impossible. '
+        + 'The market engine applies player-scaled price influence (tanh curve at 99% effect with 10+ traders) '
+        + '— one player cannot move prices alone unless the server has very few active participants.',
+      'The more realistic exploit scenario is the "Whale" archetype: a player who accumulates '
+        + 'massive inventory over 3–5 days, then dumps it at 50% of perceived value. This creates '
+        + 'temporary sell-pressure cascades that the circuit breaker must absorb.',
+      'Whale stress test (5 seeds × 14 days, whale = 3-day accumulation → 50% dump → 1.5-day dormant): '
+        + 'D/G worsens +37% on average. But the circuit breaker activates in 3/5 seeds — containing '
+        + 'the worst cases. In 2/5 seeds, D/G stays flat or improves. The circuit is a governor, '
+        + 'not a cure — but it prevents total collapse.',
+    ],
+    metrics: [
+      { label: 'Whale D/G impact', value: '+37%', note: 'average across 5 seeds' },
+      { label: 'Circuit activates', value: '3/5 seeds', note: 'contains catastrophic cases' },
+      { label: 'GDP inflation', value: '+167%', note: 'transaction volume amplification (not real GDP)' },
+      { label: 'Recovery', value: 'dormant 1.5d', note: 'whale waits before next cycle' },
+    ],
+    relatedLinks: [
+      { href: '/simulator', label: 'Run whale stress test' },
+      { href: '/docs', label: 'Circuit breaker docs' },
+    ],
+  },
+  {
+    q: 'What happens if many players exploit the same item at once?',
+    verdict: '✅ Contained by circuit',
+    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    answer: [
+      'Simultaneous multi-player exploitation is the design scenario for the loan circuit breaker. '
+        + 'If an exploit becomes known (e.g., a dupe glitch that gives players free items), the economy '
+        + 'could see massive sell pressure on one item. The circuit breaker responds: '
+        + 'sell pressure → price cascades down → GuildBuyers buy aggressively on credit → debt spikes. '
+        + 'When D/G crosses tier3_ratio (30×), TIER3 fires and interest pauses at 0%. '
+        + 'The hysteresis lock keeps the circuit closed until D/G drops below 27× (90% of tier3). '
+        + 'The economy oscillates in the 15–22× D/G band until the exploit is patched.',
+      'The circuit cannot prevent price manipulation, but it prevents the debt spiral that would '
+        + 'otherwise make the economy unusable for weeks. Admins should monitor /at admin stats and '
+        + 'patch exploits quickly — the circuit is a governor, not an excuse to leave exploits unpatched.',
+    ],
+    metrics: [
+      { label: 'TIER3 fires at', value: 'D/G > 30×', note: 'tier3_ratio = 30 default' },
+      { label: 'Interest pause', value: '0%', note: 'when TIER3 active' },
+      { label: 'Hysteresis unlock', value: 'D/G < 27×', note: '10% band prevents oscillation' },
+      { label: 'D/G containment', value: '< 30×', note: 'circuit prevents unbounded escalation' },
+    ],
+    relatedLinks: [
+      { href: '/docs', label: 'Admin monitoring guide' },
+      { href: '/admin', label: 'Admin command reference' },
+    ],
+  },
+  {
+    q: 'Can players borrow more than the economy can handle?',
+    verdict: '✅ Protected',
+    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    answer: [
+      'Yes — the loan system has multiple layers of protection: single loan GDP cap (max 1× GDP per loan), '
+        + 'post-default cooldown (168h / 7 days prevents cascade re-borrowing after default), '
+        + 'credit scoring (new players start at 500, max loan = credit_score × 0.001 × GDP), '
+        + 'and counter-cyclical interest (at D/G = 30×, interest is 0% — circuit breaker pauses all interest).',
+      'Post-default cooldown alone reduces Debt/GDP by 65% in cascade test scenarios — it is the single '
+        + 'most impactful loan safety mechanism in the system.',
+    ],
+    metrics: [
+      { label: 'Post-default cooldown', value: '168h', note: '7-day lockout after default' },
+      { label: 'D/G reduction', value: '−65%', note: 'from cooldown alone in cascade test' },
+      { label: 'Single loan cap', value: '1× GDP', note: 'maximum loan size' },
+      { label: 'TIER3 interest', value: '0%', note: 'circuit fires at D/G > 30×' },
+    ],
+    relatedLinks: [
+      { href: '/docs', label: 'Loan system docs' },
+    ],
+  },
+  {
+    q: 'Are there admin controls to freeze or override item prices?',
+    verdict: '✅ Yes',
+    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    answer: [
+      'Yes — admins can freeze or override prices on a per-item basis:',
+      '`/at admin item floor <item> <value>` — sets a minimum displayed price. The internal engine '
+        + 'continues price discovery, but displayed buy/sell prices never fall below this floor.',
+      '`/at admin item ceiling <item> <value>` — sets a maximum displayed price. Same pattern as floor.',
+      '`/at admin item freeze <item>` — pauses price discovery entirely for one item. Spreads still '
+        + 'compute normally so players can still trade. Useful for: new item discovery, testing, '
+        + 'or items where price manipulation is a known issue.',
+      '⚠️ Warning: frozen items develop spread blowout (3–4× wider spreads) because price discovery '
+        + 'is paused. The spread compensates for incorrect pricing. Use freeze sparingly.',
+    ],
+    metrics: [
+      { label: 'Per-item controls', value: 'floor / ceiling / freeze', note: 'all per-item, all instant' },
+      { label: 'Spread blowout', value: '3–4× wider', note: 'when frozen (price cant correct)' },
+    ],
+    relatedLinks: [
+      { href: '/admin', label: 'Admin command reference' },
+    ],
+  },
+];
 
 /* ─── ARCHETYPE DECISIONS ─────────────────────────────────── */
 
@@ -482,6 +586,7 @@ const CATEGORIES: Category[] = [
   { id: 'archetypes', label: 'Archetype Decisions', icon: Users, findings: ARCHETYPE_FINDINGS },
   { id: 'config', label: 'Config Decisions', icon: Sliders, findings: CONFIG_FINDINGS },
   { id: 'behavior', label: 'Economy Behavior', icon: BarChart2, findings: BEHAVIOR_FINDINGS },
+  { id: 'exploit', label: 'Exploit Resistance', icon: Shield, findings: EXPLOIT_RESISTANCE_FINDINGS },
 ];
 
 function StatBadge({ label, value }: { label: string; value: string }) {
@@ -506,22 +611,22 @@ export default function FindingsPage() {
                 <FlaskConical className="w-3 h-3" />
                 Simulation Lab
               </span>
-              <span className="text-xs text-gray-600">2026-04-17 · 22 findings · 80+ simulation runs</span>
+              <span className="text-xs text-gray-600">2026-04-21 · 26 findings · 90+ simulation runs</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">
               What the simulation proved
             </h1>
             <p className="text-gray-400 max-w-2xl text-sm sm:text-base leading-relaxed">
-              Every finding on this page comes from automated 14–30 day economy simulations with real archetype
+              Every finding on this page comes from automated 14–90 day economy simulations with real archetype
               decision logic — not guesswork, not spreadsheets. Auto-Tune is the only Minecraft economy plugin
               with a published evidence base for its recommendations.
             </p>
             {/* Stats strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8">
-              <StatBadge label="Simulation runs" value="80+" />
+              <StatBadge label="Simulation runs" value="90+" />
               <StatBadge label="Seeds tested" value="5" />
-              <StatBadge label="Findings" value="22" />
-              <StatBadge label="Days per run" value="14–30" />
+              <StatBadge label="Findings" value="26" />
+              <StatBadge label="Days per run" value="14–90" />
             </div>
           </div>
         </div>
@@ -561,6 +666,7 @@ export default function FindingsPage() {
           <CategorySection category={CATEGORIES[0]} />
           <CategorySection category={CATEGORIES[1]} />
           <CategorySection category={CATEGORIES[2]} />
+          <CategorySection category={CATEGORIES[3]} />
         </div>
 
         {/* CTA */}

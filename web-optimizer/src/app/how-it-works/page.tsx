@@ -192,6 +192,43 @@ export default function HowItWorks() {
         </div>
       </div>
 
+      {/* ─── Comparison Table ───────────────────────────────────────────────── */}
+      <div className="mt-10 rounded-xl border border-gray-800 bg-gray-900/60 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-800">
+          <h2 className="text-base font-semibold text-white">Auto-Tune vs Static Shops</h2>
+          <p className="text-xs text-gray-500 mt-1">Why supply-and-demand pricing beats fixed-price shops</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-gray-800">
+                <th className="text-left px-5 py-3 text-gray-500 font-medium">Feature</th>
+                <th className="text-center px-4 py-3 text-gray-500 font-medium">Static Shop</th>
+                <th className="text-center px-4 py-3 text-emerald-400 font-medium">Auto-Tune</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {[
+                ['Price adaptation', 'Never', 'Every 5 minutes'],
+                ['Exploit resistance', 'None (arbitrage trivial)', 'High (margin disappears)'],
+                ['New player signal', 'None', 'Price reflects market activity'],
+                ['Admin income', 'Tax commands required', 'Built-in spread margin'],
+                ['Server wealth protection', 'None', 'Natural price floors/ceilings'],
+                ['Player engagement', 'None (prices known in 1hr)', 'Ongoing market watching'],
+                ['Guild market events', 'No effect', 'Price surge signals'],
+                ['Farmer oversupply', 'No effect', 'Price drops, signals diversify'],
+              ].map(([feature, staticVal, autotuneVal]) => (
+                <tr key={feature} className="hover:bg-gray-800/30 transition-colors">
+                  <td className="px-5 py-3 text-gray-300 font-medium">{feature}</td>
+                  <td className="text-center px-4 py-3 text-gray-500">{staticVal}</td>
+                  <td className="text-center px-4 py-3 text-emerald-400">{autotuneVal}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Full pipeline summary */}
       <div className="mt-10 rounded-xl border border-gray-800 bg-gray-900/40 p-5">
         <h2 className="text-base font-semibold text-white mb-3">Pipeline Order</h2>

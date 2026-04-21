@@ -22,9 +22,9 @@ function ConfigMockup() {
         </div>
         <div className="pl-4">
           <div><span className="text-emerald-400">base-spread</span>: <span className="text-amber-400">0.20</span>  <span className="text-gray-600"># 20% total spread</span></div>
-          <div><span className="text-emerald-400">sell-pressure-multiplier</span>: <span className="text-amber-400">0.80</span></div>
+          <div><span className="text-emerald-400">sell-pressure-multiplier</span>: <span className="text-amber-400">1.0</span>  <span className="text-gray-600"># symmetric (recommended)</span></div>
           <div><span className="text-emerald-400">max-price-change</span>: <span className="text-amber-400">1.5</span></div>
-          <div><span className="text-gray-600"># Starting prices for items...</span></div>
+          <div className="text-gray-600"># Starting prices for items...</div>
         </div>
         <div className="text-gray-300">&#125;</div>
         <div className="mt-2 text-gray-300">
@@ -32,8 +32,10 @@ function ConfigMockup() {
         </div>
         <div className="pl-4">
           <div><span className="text-emerald-400">enabled</span>: <span className="text-amber-400">true</span></div>
-          <div><span className="text-emerald-400">max-debt-ratio</span>: <span className="text-amber-400">10.0</span>  <span className="text-gray-600"># Circuit breaker</span></div>
           <div><span className="text-emerald-400">counter-cyclical</span>: <span className="text-amber-400">true</span></div>
+          <div><span className="text-emerald-400">debt-gdp-tier3-ratio</span>: <span className="text-amber-400">30.0</span>  <span className="text-gray-600"># pause at 30x GDP</span></div>
+          <div><span className="text-emerald-400">debt-gdp-tier2-ratio</span>: <span className="text-amber-400">5.0</span>  <span className="text-gray-600"># cap interest at 5x GDP</span></div>
+          <div><span className="text-emerald-400">debt-gdp-tier1-ratio</span>: <span className="text-amber-400">3.0</span>  <span className="text-gray-600"># mild cap at 3x GDP</span></div>
         </div>
         <div className="text-gray-300">&#125;</div>
         <div className="mt-2 text-gray-300">

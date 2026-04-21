@@ -57,6 +57,10 @@ const STEPS = [
         <div className="bg-gray-950 border border-gray-800 rounded-lg px-4 py-2.5 text-sm text-gray-400 font-mono">
           ~/.mc/server/plugins/Auto-Tune.jar
         </div>
+        <div className="mt-3 rounded-lg border border-sky-800/60 bg-sky-950/20 px-4 py-3">
+          <p className="text-xs text-sky-400 font-medium mb-1.5">Quickstart (SSH)</p>
+          <pre className="text-xs font-mono text-gray-300 whitespace-pre-wrap">mkdir -p plugins && curl -L $(curl -s https://api.github.com/repos/noahbclarkson/Auto-Tune/releases/latest | grep browser_download_url | grep '.jar' | cut -d '"' -f4) -o plugins/Auto-Tune.jar && restart_cmd</pre>
+        </div>
       </>
     ),
   },
@@ -92,8 +96,10 @@ const STEPS = [
           <div className="pl-4">max-buy-price: <span className="text-amber-400">1000000</span></div>
           <div className="mt-2"><span className="text-sky-400">loans:</span></div>
           <div className="pl-4">enabled: <span className="text-amber-400">true</span></div>
-          <div className="pl-4">max-interest-rate: <span className="text-amber-400">0.10</span>  <span className="text-gray-600"># 10% per day</span></div>
-          <div className="pl-4">debt-gdp-circuit-breaker: <span className="text-amber-400">10.0</span>  <span className="text-gray-600"># Pause loans at 10× GDP</span></div>
+          <div className="pl-4">counter-cyclical: <span className="text-amber-400">true</span>  <span className="text-gray-600"># interest falls as debt rises</span></div>
+          <div className="pl-4">debt-gdp-tier3-ratio: <span className="text-amber-400">30.0</span>  <span className="text-gray-600"># pause interest at 30× GDP</span></div>
+          <div className="pl-4">debt-gdp-tier2-ratio: <span className="text-amber-400">5.0</span>  <span className="text-gray-600"># cap interest at 5× GDP</span></div>
+          <div className="pl-4">debt-gdp-tier1-ratio: <span className="text-amber-400">3.0</span>  <span className="text-gray-600"># mild cap at 3× GDP</span></div>
           <div className="mt-2"><span className="text-sky-400">autosell:</span></div>
           <div className="pl-4">enabled: <span className="text-amber-400">true</span></div>
           <div className="pl-4">sell-all-on-login: <span className="text-amber-400">false</span></div>

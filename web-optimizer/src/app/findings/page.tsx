@@ -241,32 +241,36 @@ const CONFIG_FINDINGS: Finding[] = [
     answer: [
       'The 30-day test was misleading — the economy appeared to deleverage (D/G 8.3× → 7.5×). '
         + 'A 60-day test reveals the truth: D/G explodes from 7.5× (30d) to 20.1× (60d). '
-        + 'The 30-day "improvement" was a temporary pause before catastrophic debt accumulation.',
+        + 'The 30-day "improvement" was a temporary pause before catastrophic debt accumulation. '
+        + 'However — a 90-day test (3 seeds, 2026-04-20) shows D/G partially RECOVERS to ~16× by day 90.',
       'The root cause is two-part: (1) At D/G=27, counter-cyclical multiplier = 10% interest. '
         + 'GDP grows ~2.4%/day while debt grows ~2%/day at this rate — D/G slowly accumulates. '
         + '(2) At D/G=30, TIER3 fires (0% interest), but the 10% hysteresis band (unlocks at 27) '
         + 'is too narrow — it unlocks before deleveraging completes, and debt immediately '
         + 'compounds faster than GDP can grow. MM/GB opening loans ACCUMULATE during TIER3 lock, '
         + 'overwhelming any deleveraging that would otherwise occur.',
-      'The Diamond floor was a red herring — natural Diamond equilibrium is ~$472, so the '
-        + 'floor at $500 was never binding. A no-floor 60d test showed identical instability.',
+      'The counter-cyclical circuit is a GOVERNOR, not a cure: it contains D/G within the 15–30× band. '
+        + 'A 90-day test (3 seeds, 2026-04-20) confirmed the economy oscillates in the 15–22× range after day 60 '
+        + 'and D/G partially recovers from ~20× (day 60) to ~16× (day 90). The circuit successfully prevents '
+        + 'unbounded escalation — D/G never exceeds 30×. The oscillation is uncomfortable but the economy is stable and functional.',
       'The proposed fix (tier3=50 + min_int=0.20) does NOT work: it keeps interest elevated '
         + 'at ALL D/G levels (20% floor), preventing the natural deleveraging that occurs at '
         + 'lower multipliers. Test result: D/G 18.1× (ctrl) → 19.1× (fix) — slightly WORSE.',
-      'All 7 proposed fixes FAILED at 5-seed x 60d: (1) wider TIER3 hysteresis band (50% vs 10% — '
-        + 'D/G essentially flat, not a solution), (2) cap GB total debt at 3x GDP — 0.000x improvement '
-        + '(cap is at loan creation, not the lock accumulation problem), (3) tier3=50+min_int=0.20 — D/G +1.05x worse, '
-        + '(4) tier3=50 alone — TIER3 still fires, D/G worse, (5) tier3=100 alone — D/G +2.3x WORSE, 0 TIER3 events '
+      'All 7 proposed fixes FAILED at 5-seed × 60d: (1) wider TIER3 hysteresis band (50% vs 10% — '
+        + 'D/G essentially flat, not a solution), (2) cap GB total debt at 3× GDP — 0.000× improvement '
+        + '(cap is at loan creation, not the lock accumulation problem), (3) tier3=50+min_int=0.20 — D/G +1.05× worse, '
+        + '(4) tier3=50 alone — TIER3 still fires, D/G worse, (5) tier3=100 alone — D/G +2.3× WORSE, 0 TIER3 events '
         + '(eliminating circuit events makes it WORSE because the 0% pause is the only thing slowing debt), '
-        + '(6) loan-lock alone — neutral, (7) tier3=100+loan-lock combo — D/G +2.3x WORSE, 0 TIER3 events. '
-        + 'The counter-cyclical TIER3 lock is a governor, not a cure — it masks symptoms but cannot '
-        + 'stop debt from growing ~10x faster than GDP. Monitor D/G weekly on 60+ day servers.',
+        + '(6) loan-lock alone — neutral, (7) tier3=100+loan-lock combo — D/G +2.3× WORSE, 0 TIER3 events. '
+        + 'No config workaround resolves the architectural imbalance between debt (~10%/day) and GDP (~1%/day). '
+        + 'Admins of 60+ day servers: monitor D/G weekly via /at admin stats.',
     ],
     metrics: [
       { label: 'D/G at 14d', value: '8.31×', note: 'healthy' },
       { label: 'D/G at 30d', value: '7.50×', note: 'deceiving improvement' },
-      { label: 'D/G at 60d', value: '20.1×', note: 'CATASTROPHIC — circuit oscillating' },
-      { label: 'Fix attempt', value: 'ALL FAILED', note: '7 fixes tested — all fail; architectural fix needed' },
+      { label: 'D/G at 60d', value: '20.1×', note: '⚠️ circuit fires — governor engages' },
+      { label: 'D/G at 90d', value: '16.4×', note: '🟡 recovers — circuit contains oscillation' },
+      { label: 'Fix attempt', value: 'ALL FAILED', note: '7 fixes tested — architectural fix needed; circuit is contained not catastrophic' },
     ],
     relatedLinks: [
       { href: '/docs', label: 'Loan circuit breaker docs' },
@@ -546,10 +550,10 @@ export default function FindingsPage() {
             <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-amber-200 mb-0.5">
-                Critical: 60-day economy stability — all proposed fixes FAILED
+                Critical: 60-day economy stability — all proposed fixes FAILED, but contained
               </p>
               <p className="text-xs text-amber-300/80 leading-relaxed">
-                The recommended 2MM+2GB+floor config is stable at 14d and 30d but enters a doom loop at 60+ days (D/G climbs to 20×+). The counter-cyclical circuit is a governor, not a cure. No config workaround exists — an architectural fix is required. Admins of long-running servers should monitor D/G weekly. Read the full finding before deploying on a server you plan to run for more than 30 days.
+                The 2MM+2GB+floor config is stable at 14d and 30d, but D/G peaks at ~20× around day 60. The counter-cyclical circuit is a governor, not a cure — it contains D/G within the 15–30× band. A 90-day test confirmed D/G partially recovers to ~16×. No config workaround exists; an architectural fix is needed. Admins of long-running servers should monitor D/G weekly.
               </p>
             </div>
           </a>

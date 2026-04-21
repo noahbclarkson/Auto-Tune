@@ -140,7 +140,19 @@ loans:
   tier3_hysteresis_band: 0.5        # unchanged
 ```
 
-**⚠️ Warning for 60+ day servers (Updated 2026-04-20):** D/G peaks at ~20x around day 60, then partially recovers to ~16-18x by day 90 as the circuit contains the oscillation. The doom loop is **contained, not cured** — the economy is uncomfortable but stable and functional. Circuit breaker fires around day 39 (6+ events) and thereafter as D/G oscillates in the 15-22x range. Admins should monitor D/G via `/at admin stats`. The 90-day data confirms tier3_ratio=30 is the correct production default — it produces a contained oscillation rather than a total collapse.
+**⚠️ CRITICAL UPDATE (2026-04-21): DOOM LOOP DOES NOT STABILIZE AT 180 DAYS**
+
+180-day simulation (`--one-eighty-day-test`):
+- Seed 42: D/G 16.4x (day 90) → **42.0x (day 180)** — catastrophic escalation
+- Seed 12345: D/G 9.8x (day 90) → **26.4x (day 180)** — escalation
+
+Both seeds show identical pattern: D/G drops at day 90-120 (recovery illusion), then **catastrophic relapse** at day 150-180. TIER2↔TIER3 oscillation fires 4-8 times post-day-90.
+
+**The circuit breaker is a governor but NOT a cure.** Debt compounds ~10%/day, GDP grows ~1%/day. TIER2 (50% interest) still allows debt growth faster than GDP. TIER3→TIER2 exit immediately re-triggers TIER3.
+
+**Administrative action required:** Monitor D/G weekly. Consider `/at admin recovery` if D/G exceeds 25x. This affects servers at day 120+.
+
+**Architectural fix is mandatory for long-run stability.** See section below.
 
 ---
 
@@ -152,6 +164,7 @@ All 60d tests run via `cargo run --release -- --<flag>` in `scripts/market-simul
 |------|------|-------|----------|--------|
 | Baseline 60d | `--sixty-day-test` | 2 | 60d | ✅ Done |
 | **90-day production stability** | **`--ninety-day-test`** | **3** | **90d** | **✅ 5% wins** |
+| **180-day trajectory** | **`--one-eighty-day-test`** | **2** | **180d** | **✅ ESCALATES** |
 | tier3=50+min_int=0.20 | `--sixty-day-fix-test` | 2 | 60d | ✅ FAILS |
 | Hysteresis sweep | `--sixty-day-hysteresis-test` | 2 | 60d | ✅ marginal |
 | GB debt cap | `--sixty-day-gb-debt-cap-test` | 2 | 60d | ✅ NOOP |
@@ -164,10 +177,12 @@ All 60d tests run via `cargo run --release -- --<flag>` in `scripts/market-simul
 
 ## What Changed vs Prior Version
 
-| Section | Old (WRONG) | New (CORRECT) |
-|---------|-------------|---------------|
-| Fix 1 (tier3=100) | "D/G stable, 0 T3 events ✅ CONFIRMED" | "D/G +2.3x WORSE, 0 T3 events ❌ FAILS" |
-| Fix 3 (combo) | "D/G stable ✅ CONFIRMED — RECOMMENDED" | "D/G +2.3x WORSE, 0 T3 events ❌ FAILS" |
-| Recommended config | `tier3=100, block_mm_gb_loans=true` | NO CHANGE to defaults |
-| Root cause | "Diamond floor red herring" | Same + architectural debt accumulation framing |
-| Architectural fixes | Not listed | 5 candidate fixes listed for Arc |
+| Date | Key Change |
+|------|------------|
+| 2026-04-19 | Corrected tier3=100 analysis — actually makes D/G worse |
+| 2026-04-21 | Added 180-day escalation finding — economy is NOT stable past day 120 |
+
+**Prior (2026-04-20):** Problem was "contained" at 90 days.
+**Current (2026-04-21):** Problem is NOT contained — economy escalates to 26-42x D/G by day 180.
+
+Escalated to Arc 2026-04-21 with candidate architectural fixes.

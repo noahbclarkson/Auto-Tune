@@ -171,6 +171,7 @@ impl Simulation {
                 // spread_threshold=0.25, spread_window=20, price_window=30
                 PlayerAgent::new_volume_trader(id, item_count, &base_prices, 0.25, 20, 30)
             }
+            Archetype::Whale => PlayerAgent::new_whale(id, item_count, &base_prices),
         };
         self.players.push(player);
     }

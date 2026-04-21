@@ -1245,6 +1245,7 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                         Archetype::InsiderTrader => egui::Color32::from_rgb(255, 183, 197),
                         Archetype::GuildSeller => egui::Color32::from_rgb(255, 165, 77),
                         Archetype::VolumeTrader => egui::Color32::from_rgb(0, 184, 148),
+                        Archetype::Whale => egui::Color32::from_rgb(200, 50, 150),
                     };
                     ui.colored_label(archetype_color, player.archetype.label());
                 });
@@ -1742,6 +1743,23 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                         ui.label("Signal: wide spread + low price = buy (volume drought).");
                         ui.label("Signal: tight spread + high price = sell (volume surge).");
                         ui.label("5-tick cooldown between decisions per item.");
+                    }
+                    Archetype::Whale => {
+                        let cfg = player.whale_config.as_ref().map(|c| c.clone()).unwrap_or_default();
+                        ui.label(format!(
+                            "Whale: accumulates {} ticks then dumps at {:.0}% of perceived.",
+                            cfg.accumulate_ticks,
+                            cfg.dump_price_factor * 100.0
+                        ));
+                        ui.label(format!(
+                            "Dormant for {} ticks after dump.",
+                            cfg.dormant_ticks
+                        ));
+                        ui.label(format!(
+                            "Ticks since dump: {}, is_dumping: {}",
+                            player.whale_ticks_since_dump,
+                            player.whale_is_dumping
+                        ));
                     }
                 }
 

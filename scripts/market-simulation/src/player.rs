@@ -168,6 +168,11 @@ pub enum Archetype {
     /// are tight AND prices are above average (volume surge = sell signal).
     /// Counteracts volume extremes that distort prices in both directions.
     VolumeTrader,
+    /// Whale — wealthy erratic player. Accumulates massive inventory, then
+    /// dumps at steep discounts. Represents exploited/dupe scenarios where a
+    /// player acquires enormous wealth and disrupts normal price discovery.
+    /// Tests whether MM/GB absorption capacity can handle sudden supply shocks.
+    Whale,
 }
 
 impl Archetype {
@@ -185,6 +190,7 @@ impl Archetype {
             Self::InsiderTrader => "InsiderTrader",
             Self::GuildSeller => "GuildSeller",
             Self::VolumeTrader => "VolumeTrader",
+            Self::Whale => "Whale",
         }
     }
 }
@@ -216,6 +222,34 @@ pub struct DecisionLog {
 pub struct DecisionResult {
     pub decisions: Vec<PlayerDecision>,
     pub logs: Vec<DecisionLog>,
+}
+
+/// Configuration for the Whale archetype.
+/// A Whale accumulates massive inventory, then dumps at steep discounts.
+#[derive(Clone, Debug)]
+pub struct WhaleConfig {
+    /// Ticks to accumulate before first dump (default: 864 = 3 days).
+    pub accumulate_ticks: u64,
+    /// Ticks to stay dormant after a dump (default: 432 = 1.5 days).
+    pub dormant_ticks: u64,
+    /// How much inventory to accumulate per item (default: 5000).
+    pub _accumulate_qty: i32,
+    /// Dump sell price as fraction of perceived value (default: 0.50).
+    pub dump_price_factor: f64,
+    /// True = buy heavily during accumulation phase.
+    pub aggressive_buy: bool,
+}
+
+impl Default for WhaleConfig {
+    fn default() -> Self {
+        Self {
+            accumulate_ticks: 864, // 3 days
+            dormant_ticks: 432,   // 1.5 days
+            _accumulate_qty: 5000,
+            dump_price_factor: 0.50,
+            aggressive_buy: true,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -293,6 +327,14 @@ pub struct PlayerAgent {
     /// Tick when player last defaulted a loan. Used for post-default cooldown.
     /// None = has never defaulted (or cooldown has expired).
     pub last_defaulted_at: Option<u64>,
+    /// Whale archetype state. None for non-Whale players.
+    pub whale_config: Option<WhaleConfig>,
+    /// Internal whale state: ticks since last dump (accumulates then dumps).
+    pub whale_ticks_since_dump: u64,
+    /// Internal whale state: ticks whale has been dormant.
+    pub whale_dormant_ticks: u64,
+    /// Internal whale state: whether whale is currently dumping inventory.
+    pub whale_is_dumping: bool,
 }
 
 impl PlayerAgent {
@@ -339,6 +381,10 @@ impl PlayerAgent {
             guild_phase2_dip_threshold: 0.0,
             use_vwap_targets: false,
             last_defaulted_at: None,
+            whale_config: None,
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -388,6 +434,10 @@ impl PlayerAgent {
             guild_phase2_dip_threshold: 0.0,
             use_vwap_targets: false,
             last_defaulted_at: None,
+            whale_config: None,
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -441,6 +491,10 @@ impl PlayerAgent {
             guild_phase2_dip_threshold: 0.0,
             use_vwap_targets: false,
             last_defaulted_at: None,
+            whale_config: None,
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -490,6 +544,10 @@ impl PlayerAgent {
             guild_phase2_dip_threshold: 0.0,
             use_vwap_targets: false,
             last_defaulted_at: None,
+            whale_config: None,
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -539,6 +597,10 @@ impl PlayerAgent {
             guild_phase2_dip_threshold: 0.0,
             use_vwap_targets: false,
             last_defaulted_at: None,
+            whale_config: None,
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent
@@ -595,6 +657,10 @@ impl PlayerAgent {
             guild_phase2_dip_threshold: 0.0,
             use_vwap_targets: false,
             last_defaulted_at: None,
+            whale_config: None,
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
         };
         agent.init_perceived_values(item_count, base_prices);
         // Newbies prefer cheap basic items
@@ -652,6 +718,10 @@ impl PlayerAgent {
             guild_phase2_dip_threshold: 0.0,
             use_vwap_targets: false,
             last_defaulted_at: None,
+            whale_config: None,
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
         };
         agent.init_perceived_values(item_count, base_prices);
         // AFK farmers prefer cheap gathered items (building blocks, ores, drops)
@@ -719,6 +789,10 @@ impl PlayerAgent {
             guild_phase2_dip_threshold: 0.0,
             use_vwap_targets,
             last_defaulted_at: None,
+            whale_config: None,
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -795,6 +869,10 @@ impl PlayerAgent {
                 .unwrap_or_else(|| rng.random(0.10..0.25)),
             use_vwap_targets: false,
             last_defaulted_at: None,
+            whale_config: None,
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -865,6 +943,10 @@ impl PlayerAgent {
             guild_phase2_dip_threshold: 0.0,
             use_vwap_targets: false,
             last_defaulted_at: None,
+            whale_config: None,
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -929,6 +1011,10 @@ impl PlayerAgent {
             guild_phase2_dip_threshold: 0.0,
             use_vwap_targets: false,
             last_defaulted_at: None,
+            whale_config: None,
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
         };
         agent.init_perceived_values(item_count, &[]);
         agent.init_preferences(item_count);
@@ -998,6 +1084,70 @@ impl PlayerAgent {
             guild_phase2_dip_threshold: 0.0,
             use_vwap_targets: false,
             last_defaulted_at: None,
+            // Whale fields (unused for non-Whale)
+            whale_config: None,
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
+        };
+        agent.init_perceived_values(item_count, &[]);
+        agent.init_preferences(item_count);
+        agent
+    }
+
+    /// Create a Whale — wealthy erratic player who accumulates then dumps inventory.
+    /// A single whale can destabilize an otherwise healthy economy.
+    pub fn new_whale(index: usize, item_count: usize, _base_prices: &[f64]) -> Self {
+        let mut rng = SeededRng;
+        // Whale starts with massive capital — 20x normal player budget
+        let budget = rng.random(1_000_000.0..2_000_000.0);
+        let whale_cfg = WhaleConfig::default();
+
+        let mut agent = Self {
+            id: index,
+            name: format!("Whale-{index}"),
+            archetype: Archetype::Whale,
+            balance: budget,
+            // Whale is active most of the time
+            online_probability: rng.random(0.85..0.98),
+            activity_rate: rng.random(0.8..1.0),
+            buy_threshold: rng.random(0.3..0.6),
+            sell_threshold: rng.random(0.3..0.6),
+            max_trade_amount: rng.random(1000..5000), // Large trades
+            risk_tolerance: rng.random(0.8..1.0),
+            inventory_saturation: rng.random(0.8..1.0), // Wants to hold lots
+            gather_rate: rng.random(0.0..0.01),          // Doesn't gather naturally
+            usage_rate: rng.random(0.0..0.01),           // Doesn't consume
+            perceived_values: HashMap::new(),
+            preferences: HashMap::new(),
+            inventory: HashMap::new(),
+            credit_score: 850,
+            total_traded: 0.0,
+            online: false,
+            total_trades: 0,
+            guild_target_inventory: HashMap::new(),
+            guild_base_inventory: HashMap::new(),
+            guild_price_dip_threshold: 0.0,
+            guild_sell_threshold: 0.0,
+            mm_max_inventory: 0,
+            mm_target_inventory: 0,
+            insider_history_window: 0,
+            insider_price_history: HashMap::new(),
+            insider_volatility_sensitivity: 0.0,
+            volume_spread_window: 0,
+            volume_spread_history: HashMap::new(),
+            volume_price_window: 0,
+            volume_price_history: HashMap::new(),
+            volume_cooldown_ticks: HashMap::new(),
+            guild_sell_cooldown_ticks: HashMap::new(),
+            guild_phase2_dip_threshold: 0.0,
+            use_vwap_targets: false,
+            last_defaulted_at: None,
+            // Whale-specific
+            whale_config: Some(whale_cfg),
+            whale_ticks_since_dump: 0,
+            whale_dormant_ticks: 0,
+            whale_is_dumping: false,
         };
         agent.init_perceived_values(item_count, &[]);
         agent.init_preferences(item_count);
@@ -1154,6 +1304,9 @@ impl PlayerAgent {
                     slippage_coeff,
                     current_tick,
                 );
+            }
+            Archetype::Whale => {
+                self.decide_whale(items, &mut decisions, record, &mut logs, slippage_coeff, current_tick);
             }
             _ => {
                 self.decide_value_based(items, &mut decisions, record, &mut logs, slippage_coeff);
@@ -2301,6 +2454,141 @@ impl PlayerAgent {
                 }
             }
             // NEUTRAL: no significant spread/price deviation — do nothing
+        }
+    }
+
+    /// Decide logic for Whale archetype.
+    /// Whales alternate between ACCUMULATE and DORMANT phases.
+    /// During ACCUMULATE: buys heavily to build inventory.
+    /// At tick threshold: DUMPS entire inventory at steep discount (whale_is_dumping = true).
+    /// After dump: enters DORMANT phase (whale_dormant_ticks counter), during which
+    ///   it buys nothing. After dormant period, returns to ACCUMULATE.
+    fn decide_whale(
+        &mut self,
+        items: &[ItemState],
+        decisions: &mut Vec<PlayerDecision>,
+        _record: bool,
+        logs: &mut Vec<DecisionLog>,
+        slippage_coeff: f64,
+        _current_tick: u64,
+    ) {
+        let mut rng = SeededRng;
+        let cfg = match &self.whale_config {
+            Some(c) => c.clone(),
+            None => return, // Not a whale — shouldn't happen
+        };
+
+        // If currently dumping, complete the dump and then enter dormant
+        if self.whale_is_dumping {
+            // Dump: sell everything at dump_price_factor of perceived value
+            for (i, item) in items.iter().enumerate() {
+                let qty = self.inventory.get(&i).copied().unwrap_or(0);
+                if qty <= 0 { continue; }
+                let perceived = self.perceived_values.get(&i).copied().unwrap_or(item.price);
+                let dump_price = perceived * cfg.dump_price_factor;
+                let sell_price = item.sell_price().min(dump_price);
+                let total_value = sell_price * qty as f64;
+
+                decisions.push(PlayerDecision {
+                    item_index: i,
+                    is_buy: false,
+                    amount: qty,
+                });
+                logs.push(DecisionLog {
+                    player_id: self.id,
+                    item_index: i,
+                    is_buy: false,
+                    amount: qty,
+                    price_per_unit: sell_price,
+                    total_cost: total_value,
+                    perceived_value: perceived,
+                    effective_perceived: perceived,
+                    buy_threshold: self.buy_threshold,
+                    sell_threshold: self.sell_threshold,
+                    balance_before: self.balance,
+                    inventory_before: qty,
+                    reasoning: format!(
+                        "WHALE_DUMP qty={} at {:.1}% of perceived=${:.2}",
+                        qty, cfg.dump_price_factor * 100.0, dump_price
+                    ),
+                });
+                self.balance += total_value;
+                *self.inventory.entry(i).or_insert(0) -= qty;
+                self.total_traded += total_value;
+                self.total_trades += 1;
+            }
+            self.whale_is_dumping = false;
+            self.whale_dormant_ticks = cfg.dormant_ticks;
+            self.whale_ticks_since_dump = 0;
+            return;
+        }
+
+        // If dormant, decrement counter and wait
+        if self.whale_dormant_ticks > 0 {
+            self.whale_dormant_ticks -= 1;
+            self.whale_ticks_since_dump += 1;
+            return; // Whale does nothing while dormant
+        }
+
+        // Normal (accumulate) phase
+        self.whale_ticks_since_dump += 1;
+
+        // Check if it's time to dump
+        if self.whale_ticks_since_dump >= cfg.accumulate_ticks {
+            self.whale_is_dumping = true;
+            // Recurse once to handle the dump immediately this tick
+            self.decide_whale(items, decisions, _record, logs, slippage_coeff, _current_tick);
+            return;
+        }
+
+        // Whale buys aggressively during accumulate phase
+        // Focus on high-value items (Diamond, Netherite, Gold Apple)
+        if cfg.aggressive_buy {
+            for (i, item) in items.iter().enumerate() {
+                let perceived = self.perceived_values.get(&i).copied().unwrap_or(item.price);
+                let buy_price = item.buy_price();
+                // Only buy if we can afford it and it's reasonably priced
+                if buy_price > perceived * 1.5 { continue; } // Don't overpay
+                if self.balance < buy_price { continue; }
+
+                // Buy 10-50% of max_trade_amount per tick (whale is big but not instant)
+                let amount = rng.random_inclusive(
+                    (self.max_trade_amount as f64 * 0.10).ceil() as i32..=(self.max_trade_amount as f64 * 0.50).ceil() as i32
+                ).max(1);
+                let cost = buy_price * amount as f64;
+                let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
+                let total_cost = cost * slippage;
+
+                if total_cost > self.balance { continue; }
+
+                decisions.push(PlayerDecision {
+                    item_index: i,
+                    is_buy: true,
+                    amount,
+                });
+                logs.push(DecisionLog {
+                    player_id: self.id,
+                    item_index: i,
+                    is_buy: true,
+                    amount,
+                    price_per_unit: buy_price * slippage,
+                    total_cost,
+                    perceived_value: perceived,
+                    effective_perceived: perceived,
+                    buy_threshold: self.buy_threshold,
+                    sell_threshold: self.sell_threshold,
+                    balance_before: self.balance,
+                    inventory_before: self.inventory.get(&i).copied().unwrap_or(0),
+                    reasoning: format!(
+                        "WHALE_ACCUMULATE buy {} at ${:.2} vs perceived=${:.2}",
+                        amount, buy_price, perceived
+                    ),
+                });
+                self.balance -= total_cost;
+                *self.inventory.entry(i).or_insert(0) += amount;
+                self.total_traded += total_cost;
+                self.total_trades += 1;
+            }
         }
     }
 }

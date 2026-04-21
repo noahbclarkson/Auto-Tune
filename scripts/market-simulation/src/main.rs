@@ -1770,6 +1770,47 @@ impl Scenario {
         }
     }
 
+    /// GuildStability + MM + GB + 1 Whale.
+    /// Tests: can a single wealthy erratic player destabilize a healthy economy?
+    /// Whale accumulates for 3 days then dumps massive inventory at 50% perceived value.
+    pub fn whale_stress() -> Self {
+        Self {
+            name: "GuildStability+MM+GB+Whale".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "MarketMaker".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "GuildBuyer".into(),
+                    count: 2,
+                },
+                ArchetypeConfig {
+                    archetype: "Whale".into(),
+                    count: 1,
+                },
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 2,
+                },
+            ],
+            stress_events: vec![],
+            events: vec![],
+            duration_ticks: 288 * 14,
+            speed_ticks_per_sec: 200,
+            seed: None,
+        }
+    }
+
     /// GuildStability + MM (high initial capital) + 2x GuildBuyers @ 7%.
     /// Same as guild_stability_mm_fixed_guild but MM starts with $200-300K
     /// instead of default $50-200K.
@@ -4233,6 +4274,145 @@ fn run_it_added_test() {
     let _ = std::fs::remove_dir_all(&treat_dir);
 }
 
+// ─── Whale Stress Test ────────────────────────────────────────────────────────
+
+/// Tests whether a single wealthy erratic player (Whale) can destabilize
+/// an otherwise healthy 2MM+2GB economy.
+///
+/// Whale behavior: accumulates massive inventory over 3 days, then dumps
+/// everything at 50% perceived value. Represents exploited/dupe scenarios.
+///
+/// Key question: can the MM/GB system absorb a whale inventory dump without
+/// triggering TIER3 circuit breaker or causing persistent price depression?
+fn run_whale_stress_test() {
+    use crate::analyzer::load_summary;
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       WHALE STRESS TEST                                    ║");
+    println!("║  Can a wealthy erratic player destabilize a healthy economy?║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!("  Control: GuildStability+MM+GB (2MM+2GB+3Cas+3Far+2Tra)");
+    println!("  Treatment: same + 1 Whale (accumulates 3 days → dumps at 50%)");
+    println!("  Seeds: {:?}\n", seeds);
+
+    let ctrl_scenario = Scenario::guild_stability_mm_fixed_guild();
+    let treat_scenario = Scenario::whale_stress();
+
+    let ctrl_summary_dir = PathBuf::from("/tmp/autotune-whale-ctrl");
+    let treat_summary_dir = PathBuf::from("/tmp/autotune-whale-treat");
+    let _ = std::fs::remove_dir_all(&ctrl_summary_dir);
+    let _ = std::fs::remove_dir_all(&treat_summary_dir);
+    std::fs::create_dir_all(&ctrl_summary_dir).ok();
+    std::fs::create_dir_all(&treat_summary_dir).ok();
+
+    let mut ctrl_s = ctrl_scenario.clone();
+    ctrl_s.seed = Some(seeds[0]);
+    let mut treat_s = treat_scenario.clone();
+    treat_s.seed = Some(seeds[0]);
+
+    println!("─── Control (no Whale) ───");
+    if let Err(e) = run_headless(&ctrl_s, Some(ctrl_summary_dir.clone())) {
+        eprintln!("  Control error: {}", e);
+        return;
+    }
+
+    println!("\n─── Treatment (+Whale) ───");
+    if let Err(e) = run_headless(&treat_s, Some(treat_summary_dir.clone())) {
+        eprintln!("  Treatment error: {}", e);
+        return;
+    }
+
+    let ctrl_sum = match load_summary(&ctrl_summary_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => { eprintln!("  Summary error: {}", e); return; }
+    };
+    let treat_sum = match load_summary(&treat_summary_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => { eprintln!("  Summary error: {}", e); return; }
+    };
+
+    let ctrl_dg = ctrl_sum.debt / ctrl_sum.gdp.max(1.0);
+    let treat_dg = treat_sum.debt / treat_sum.gdp.max(1.0);
+    let ctrl_gdp = ctrl_sum.gdp;
+    let treat_gdp = treat_sum.gdp;
+    let ctrl_buy = ctrl_sum.buy_ratio;
+    let treat_buy = treat_sum.buy_ratio;
+    let ctrl_vol = ctrl_sum.avg_volatility;
+    let treat_vol = treat_sum.avg_volatility;
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       RESULTS (seed={})                              ║", seeds[0]);
+    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!("  {:20} {:>12} {:>12} {:>10}", "Metric", "Control", "Treatment", "Delta");
+    println!("  {:─<20} {:─<12} {:─<12} {:─<10}", "", "", "", "");
+    let dg_delta = treat_dg / ctrl_dg;
+    let gdp_delta = (treat_gdp - ctrl_gdp) / ctrl_gdp * 100.0;
+    let buy_delta = (treat_buy - ctrl_buy) * 100.0;
+    let vol_delta = (treat_vol - ctrl_vol) * 100.0;
+    println!("  {:20} {:>12.3}x {:>12.3}x {:>+10.3}x", "Debt/GDP", ctrl_dg, treat_dg, dg_delta);
+    println!("  {:20} {:>12.0} {:>12.0} {:>+10.1}%", "Final GDP", ctrl_gdp, treat_gdp, gdp_delta);
+    println!("  {:20} {:>12.1}% {:>12.1}% {:>+10.1}pp", "Buy Ratio", ctrl_buy*100.0, treat_buy*100.0, buy_delta);
+    println!("  {:20} {:>12.4}  {:>12.4}  {:>+10.4}", "Avg Volatility", ctrl_vol, treat_vol, vol_delta);
+
+    let dg_verdict = if dg_delta > 1.5 { "❌ WORSE" } else if dg_delta > 1.1 { "⚠️  SLIGHTLY WORSE" } else if dg_delta < 0.9 { "✅ BETTER" } else { "✅ NEUTRAL" };
+    let gdp_verdict = if gdp_delta < -10.0 { "❌ WORSE" } else if gdp_delta < -2.0 { "⚠️  SLIGHTLY WORSE" } else { "✅ OK" };
+    let vol_verdict = if vol_delta > 0.01 { "❌ MORE VOLATILE" } else if vol_delta < -0.01 { "✅ MORE STABLE" } else { "✅ NEUTRAL" };
+
+    println!("\n  Verdict:");
+    println!("  D/G:     {} (ratio {:.3}x)", dg_verdict, dg_delta);
+    println!("  GDP:     {} ({:+.1}%)", gdp_verdict, gdp_delta);
+    println!("  Vol:     {}", vol_verdict);
+
+    if dg_delta > 1.5 || gdp_delta < -10.0 {
+        println!("\n  ⚠️  WHALE DESTABILIZES the economy — MM/GB absorption is INSUFFICIENT.");
+        println!("  Recommendation: monitor for whale-like behavior, add spread caps or");
+        println!("  inventory sell limits on high-value items.");
+    } else {
+        println!("\n  ✅ Economy ABSORBS the whale dump — MM/GB system is RESILIENT.");
+        println!("  The whale's inventory is absorbed by GuildBuyer price-dip buying.");
+    }
+
+    // Multi-seed summary
+    println!("\n─── Multi-seed Summary ───");
+    let mut dg_ctrls = vec![];
+    let mut dg_treats = vec![];
+    let mut gdp_ctrls = vec![];
+    let mut gdp_treats = vec![];
+
+    for &seed in &seeds[1..] {
+        let mut cs = ctrl_scenario.clone();
+        cs.seed = Some(seed);
+        let cd = PathBuf::from(format!("/tmp/autotune-whale-ctrl-{}", seed));
+        std::fs::create_dir_all(&cd).ok();
+        if run_headless(&cs, Some(cd.clone())).is_ok()
+            && let Ok(s) = load_summary(&cd.join("simulation.db")) {
+                dg_ctrls.push(s.debt / s.gdp.max(1.0));
+                gdp_ctrls.push(s.gdp);
+            }
+        let mut ts = treat_scenario.clone();
+        ts.seed = Some(seed);
+        let td = PathBuf::from(format!("/tmp/autotune-whale-treat-{}", seed));
+        std::fs::create_dir_all(&td).ok();
+        if run_headless(&ts, Some(td.clone())).is_ok()
+            && let Ok(s) = load_summary(&td.join("simulation.db")) {
+                dg_treats.push(s.debt / s.gdp.max(1.0));
+                gdp_treats.push(s.gdp);
+            }
+    }
+
+    if !dg_ctrls.is_empty() {
+        let avg_ctrl_dg = dg_ctrls.iter().sum::<f64>() / dg_ctrls.len() as f64;
+        let avg_treat_dg = dg_treats.iter().sum::<f64>() / dg_treats.len() as f64;
+        let avg_ctrl_gdp = gdp_ctrls.iter().sum::<f64>() / gdp_ctrls.len() as f64;
+        let avg_treat_gdp = gdp_treats.iter().sum::<f64>() / gdp_treats.len() as f64;
+        let multi_dg_delta = avg_treat_dg / avg_ctrl_dg;
+        let multi_gdp_delta = (avg_treat_gdp - avg_ctrl_gdp) / avg_ctrl_gdp * 100.0;
+        println!("  {:20} {:>12.3}x {:>12.3}x {:>+10.3}x", "Avg D/G (all seeds)", avg_ctrl_dg, avg_treat_dg, multi_dg_delta);
+        println!("  {:20} {:>12.0} {:>12.0} {:>+10.1}%", "Avg GDP (all seeds)", avg_ctrl_gdp, avg_treat_gdp, multi_gdp_delta);
+    }
+}
+
 // ─── AFKFarmer Stress Test ────────────────────────────────────────────────────
 
 /// Tests how the economy handles AFKFarmers: players who accumulate resources
@@ -5169,6 +5349,7 @@ fn add_players_to_sim(sim: &mut Simulation, players: &[ArchetypeConfig]) {
     archetype_map.insert("InsiderTrader".into(), Archetype::InsiderTrader);
     archetype_map.insert("GuildSeller".into(), Archetype::GuildSeller);
     archetype_map.insert("VolumeTrader".into(), Archetype::VolumeTrader);
+    archetype_map.insert("Whale".into(), Archetype::Whale);
 
     for player_cfg in players {
         let archetype = archetype_map
@@ -7144,6 +7325,7 @@ fn run_headless(scenario: &Scenario, output_dir: Option<PathBuf>) -> Result<(), 
     archetype_map.insert("InsiderTrader".into(), Archetype::InsiderTrader);
     archetype_map.insert("GuildSeller".into(), Archetype::GuildSeller);
     archetype_map.insert("VolumeTrader".into(), Archetype::VolumeTrader);
+    archetype_map.insert("Whale".into(), Archetype::Whale);
 
     for player_cfg in &scenario.players {
         let archetype = archetype_map
@@ -10508,6 +10690,7 @@ fn run_seeded_headless(
         ("InsiderTrader".into(), Archetype::InsiderTrader),
         ("GuildSeller".into(), Archetype::GuildSeller),
         ("VolumeTrader".into(), Archetype::VolumeTrader),
+        ("Whale".into(), Archetype::Whale),
     ]
     .into_iter()
     .collect();
@@ -11192,6 +11375,7 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --vt-multi-seed         Healthy vs +2VT across 5 seeds (statistical robustness)"
         );
+        println!("  --whale-stress-test     1 Whale: can errant rich player destabilize healthy economy?");
         println!(
             "  --it-healthy-test      IT + MM+GB vs MM+GB: does IT still help healthy economy?"
         );
@@ -11543,6 +11727,12 @@ fn main() -> eframe::Result<()> {
     // ─── AFKFarmer Stress Test ─────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--afkfarmer-stress-test" {
         run_afkfarmer_stress_test();
+        return Ok(());
+    }
+
+    // ─── Whale Stress Test ─────────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--whale-stress-test" {
+        run_whale_stress_test();
         return Ok(());
     }
 

@@ -3,6 +3,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { fetchExchangeRates, fetchTruePrices, hasConfiguredApiUrl } from "@/lib/api-client";
 import { TruePricesLive } from "@/components/prices/true-prices-live";
+import { SimulatedTruePrices } from "@/components/prices/simulated-true-prices";
 
 export const metadata = {
   title: "True Prices | Auto-Tune",
@@ -63,15 +64,9 @@ export default async function TruePricesPage() {
             )}
           </>
         ) : (
-          <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-6 mb-8">
-            <p className="text-gray-200 font-medium mb-2">Connect your server to see live data</p>
-            <p className="text-gray-400 text-sm">
-              {!hasConfiguredApiUrl
-                ? "Set NEXT_PUBLIC_API_URL to point at your api-server."
-                : "The API is offline or has no submitted prices yet. You can still use the local calculator below."}
-            </p>
-            {liveError && <p className="text-amber-300 text-xs mt-3">{liveError}</p>}
-          </div>
+          <>
+            <SimulatedTruePrices />
+          </>
         )}
 
         <PriceCalculator />

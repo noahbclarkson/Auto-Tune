@@ -11393,6 +11393,7 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --ninety-day-test          2MM+2GB+floor: 90-day long-run stability × 3 seeds × 2 thresholds"
         );
+        println!("  --one-eighty-day-test     2MM+2GB+floor: 180-day trajectory × 2 seeds × 5% threshold");
         println!("  --sixty-day-test           2MM+2GB+floor: 60-day long-run stability");
         println!("  --sixty-day-fix-test      tier3=50+min_int=0.20 vs ctrl × 2 seeds × 60d");
         println!("  --sixty-day-hysteresis-test  hysteresis 50% vs 10% × 2 seeds × 60d");
@@ -11833,6 +11834,11 @@ fn main() -> eframe::Result<()> {
     // ─── 60-Day Production Stability Test ──────────────────────────────
     if args.len() > 1 && args[1] == "--ninety-day-test" {
         run_ninety_day_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--one-eighty-day-test" {
+        run_one_eighty_day_test();
         return Ok(());
     }
 
@@ -17438,6 +17444,205 @@ fn run_ninety_day_test() {
     } else {
         println!("\n  ⚠  Insufficient results to compute summary.");
     }
+    println!();
+}
+
+/// ─── 180-Day Production Trajectory Test ───────────────────────────────────
+///
+/// Critical unanswered question: Does the 2MM+2GB+floor economy stabilize
+/// past day 90, or does it keep oscillating indefinitely?
+///
+/// Known checkpoints:
+///   Day  14: D/G ~8.3x  (healthy)
+///   Day  30: D/G ~7.5x  (healthy)
+///   Day  60: D/G ~20.1x (TIER3 fires, oscillates)
+///   Day  90: D/G ~16.4x (partial recovery — circuit governor effect)
+///
+/// This test runs 180 days × seed=42,5% threshold to fill the 90-180d gap
+/// and determine if D/G stabilizes, keeps oscillating, or escalates.
+fn run_one_eighty_day_test() {
+    use crate::player::set_fixed_guild_threshold;
+
+    let seeds = vec![42u64, 12345u64];
+    let threshold = 0.05;
+    let days = 180;
+    let ticks_per_day = 288;
+    let total_ticks = ticks_per_day * days;
+
+    println!(
+        "
+╔══════════════════════════════════════════════════════════════════════════╗"
+    );
+    println!(
+        "║          180-DAY PRODUCTION TRAJECTORY TEST                       ║"
+    );
+    println!(
+        "║  2MM + 2GB + 60% Diamond floor × 2 seeds × 5% threshold         ║"
+    );
+    println!(
+        "║  Question: Does D/G stabilize past day 90 or oscillate forever?   ║"
+    );
+    println!(
+        "╚══════════════════════════════════════════════════════════════════════════╝
+"
+    );
+    println!("  Config: 2MM + 2GB + 3Cas + 3Far + 2Tra + 60% Diamond floor");
+    println!("  Duration: {} days ({} ticks)", days, total_ticks);
+    println!("  Threshold: {}% | Seeds: {:?}\n", (threshold * 100.0) as i32, seeds);
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct TrajectoryPoint {
+        day: u32,
+        tick: u64,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        tier3_engagements: u32,
+    }
+
+    // Checkpoints at which we sample the economy
+    let checkpoints = vec![14, 30, 60, 90, 120, 150, 180];
+
+    for &seed in &seeds {
+        println!("\n  ▶ Running seed {} ({} days)...", seed, days);
+
+        let mut scenario = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        scenario.name = format!("180d_5pct_seed{}", seed);
+        scenario.duration_ticks = total_ticks;
+
+        let out_dir = format!("/tmp/autotune-180d-5pct-{}", seed);
+        let out_path = std::path::PathBuf::from(&out_dir);
+        let _ = std::fs::remove_dir_all(&out_path);
+        std::fs::create_dir_all(&out_path).ok();
+
+        set_fixed_guild_threshold(Some(threshold));
+        let result = run_seeded_headless(&scenario, seed, &out_path);
+        set_fixed_guild_threshold(None);
+
+        if result.is_err() {
+            println!("    ✗ Simulation failed: {:?}", result.err());
+            continue;
+        }
+
+        let db_path = out_path.join("simulation.db");
+        if !db_path.exists() {
+            println!("    ✗ DB not found at {:?}", db_path);
+            continue;
+        }
+
+        // Load trajectory from economy_snapshots at each checkpoint tick
+        let mut trajectory: Vec<TrajectoryPoint> = Vec::new();
+
+        for &day in &checkpoints {
+            let target_tick = day as u64 * ticks_per_day;
+
+            // Count TIER3 engagements up to this tick from circuit_breaker_events
+            let tier3_query = format!(
+                "SELECT COUNT(*) FROM circuit_breaker_events WHERE tick <= {} AND tier = 'TIER3';",
+                target_tick
+            );
+
+            // Get GDP and debt at this tick from economy_snapshots (closest tick at or before target)
+            let snap_query = format!(
+                "SELECT gdp, total_debt FROM economy_snapshots WHERE tick <= {} ORDER BY tick DESC LIMIT 1;",
+                target_tick
+            );
+
+            let mut tier3_count_at: u32 = 0;
+            let mut gdp = 0.0f64;
+            let mut debt = 0.0f64;
+
+            if let Ok(conn) = rusqlite::Connection::open(&db_path) {
+                let _ = conn.query_row(&tier3_query, [], |row| {
+                    tier3_count_at = row.get(0)?;
+                    Ok(())
+                });
+                let _ = conn.query_row(&snap_query, [], |row| {
+                    gdp = row.get(0)?;
+                    debt = row.get(1)?;
+                    Ok(())
+                });
+            }
+
+            let dg = if gdp > 0.0 { debt / gdp } else { 0.0 };
+            trajectory.push(TrajectoryPoint {
+                day,
+                tick: target_tick,
+                gdp,
+                debt,
+                dg,
+                tier3_engagements: tier3_count_at,
+            });
+        }
+
+        // Print trajectory table
+        println!("\n  ╔════════════════════════════════════════════════════════════════╗");
+        println!("  ║  SEED {} — 180-Day D/G Trajectory (2MM+2GB+floor, 5%)      ║", seed);
+        println!("  ╠════════════════════════════════════════════════════════════════╣");
+        println!(
+            "  ║  {:>4}  {:>12}  {:>12}  {:>8}  {:>10}  {:>8}  ║",
+            "Day", "GDP", "Debt", "D/G", "TIER3", "Risk"
+        );
+        println!("  ╠════════════════════════════════════════════════════════════════╣");
+
+        // Reference points from prior tests (90d test, seed=42, 5% threshold)
+        let ref_dg: std::collections::HashMap<u32, f64> =
+            [(14, 8.310_f64), (30, 7.500_f64), (60, 20.100_f64), (90, 16.400_f64)]
+                .into_iter()
+                .collect();
+
+        for pt in &trajectory {
+            let risk = if pt.dg >= 30.0 {
+                "🔴 CRITICAL"
+            } else if pt.dg >= 20.0 {
+                "🟠 HIGH"
+            } else if pt.dg >= 10.0 {
+                "🟡 MODERATE"
+            } else if pt.dg >= 5.0 {
+                "🟢 HEALTHY"
+            } else {
+                "✅ LOW"
+            };
+            let ref_note = if let Some(&ref_dg) = ref_dg.get(&pt.day) {
+                if pt.day <= 90 {
+                    format!(" (ref {:.1}x)", ref_dg)
+                } else {
+                    String::new()
+                }
+            } else {
+                String::new()
+            };
+            println!(
+                "  ║  {:>4}  {:>12.0}  {:>12.0}  {:>8.3}x  {:>10}  {:>8}  ║{}",
+                pt.day, pt.gdp, pt.debt, pt.dg, pt.tier3_engagements, risk, ref_note
+            );
+        }
+        println!("  ╚════════════════════════════════════════════════════════════════╝");
+
+        // Trend analysis
+        if trajectory.len() >= 3 {
+            let early = trajectory.first().map(|p| p.dg).unwrap_or(0.0);
+            let mid = trajectory.get(3).map(|p| p.dg).unwrap_or(0.0); // day 90
+            let late = trajectory.last().map(|p| p.dg).unwrap_or(0.0);
+
+            println!("\n  Trend Analysis:");
+            if late < mid {
+                println!("  📉 D/G RECOVERING: {:.3}x → {:.3}x (day 90→180)", mid, late);
+            } else if late < early {
+                println!("  📈 D/G GROWING but below peak: {:.3}x → {:.3}x → {:.3}x", early, mid, late);
+            } else {
+                println!("  ⚠️  D/G ESCALATING: {:.3}x → {:.3}x → {:.3}x", early, mid, late);
+            }
+        }
+
+        let _ = std::fs::remove_dir_all(&out_path);
+    }
+
+    println!("\n  KEY INSIGHT:");
+    println!("  If D/G stabilizes <15x by day 180: economy is self-correcting (circuit is sufficient)");
+    println!("  If D/G oscillates 15-25x: economy is contained but needs monitoring");
+    println!("  If D/G escalates >30x: circuit breaker insufficient — architectural fix needed");
     println!();
 }
 

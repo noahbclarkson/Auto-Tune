@@ -1745,6 +1745,7 @@ fn draw_player_inspector(ctx: &egui::Context, sim: &Simulation, gui: &mut GuiSta
                         ui.label("5-tick cooldown between decisions per item.");
                     }
                     Archetype::Whale => {
+                        #[allow(clippy::useless_asref)]
                         let cfg = player.whale_config.as_ref().map(|c| c.clone()).unwrap_or_default();
                         ui.label(format!(
                             "Whale: accumulates {} ticks then dumps at {:.0}% of perceived.",

@@ -313,6 +313,27 @@ export default function AdminPage() {
       ],
     },
     {
+      id: 'leaderboard',
+      label: 'Economy Leaderboard',
+      icon: BarChart2,
+      color: 'text-amber-400',
+      bgColor: 'bg-amber-500/10',
+      borderColor: 'border-amber-500/20',
+      description: 'Top traders by volume and top loan holders by debt.',
+      commands: [
+        {
+          cmd: '/at admin top trades [day|week|month] [limit]',
+          desc: 'Top traders by trading volume for a period. Default: week, limit 10.',
+          permission: 'autotune.admin',
+        },
+        {
+          cmd: '/at admin top loans [limit]',
+          desc: 'Top active loan holders ranked by outstanding balance. Shows loan count and % of total debt.',
+          permission: 'autotune.admin',
+        },
+      ],
+    },
+    {
       id: 'config',
       label: 'Configuration',
       icon: Settings,

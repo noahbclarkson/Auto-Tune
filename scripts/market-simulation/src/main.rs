@@ -4325,11 +4325,17 @@ fn run_whale_stress_test() {
 
     let ctrl_sum = match load_summary(&ctrl_summary_dir.join("simulation.db")) {
         Ok(s) => s,
-        Err(e) => { eprintln!("  Summary error: {}", e); return; }
+        Err(e) => {
+            eprintln!("  Summary error: {}", e);
+            return;
+        }
     };
     let treat_sum = match load_summary(&treat_summary_dir.join("simulation.db")) {
         Ok(s) => s,
-        Err(e) => { eprintln!("  Summary error: {}", e); return; }
+        Err(e) => {
+            eprintln!("  Summary error: {}", e);
+            return;
+        }
     };
 
     let ctrl_dg = ctrl_sum.debt / ctrl_sum.gdp.max(1.0);
@@ -4342,22 +4348,63 @@ fn run_whale_stress_test() {
     let treat_vol = treat_sum.avg_volatility;
 
     println!("\n╔══════════════════════════════════════════════════════════════╗");
-    println!("║       RESULTS (seed={})                              ║", seeds[0]);
+    println!(
+        "║       RESULTS (seed={})                              ║",
+        seeds[0]
+    );
     println!("╚══════════════════════════════════════════════════════════════╝");
-    println!("  {:20} {:>12} {:>12} {:>10}", "Metric", "Control", "Treatment", "Delta");
+    println!(
+        "  {:20} {:>12} {:>12} {:>10}",
+        "Metric", "Control", "Treatment", "Delta"
+    );
     println!("  {:─<20} {:─<12} {:─<12} {:─<10}", "", "", "", "");
     let dg_delta = treat_dg / ctrl_dg;
     let gdp_delta = (treat_gdp - ctrl_gdp) / ctrl_gdp * 100.0;
     let buy_delta = (treat_buy - ctrl_buy) * 100.0;
     let vol_delta = (treat_vol - ctrl_vol) * 100.0;
-    println!("  {:20} {:>12.3}x {:>12.3}x {:>+10.3}x", "Debt/GDP", ctrl_dg, treat_dg, dg_delta);
-    println!("  {:20} {:>12.0} {:>12.0} {:>+10.1}%", "Final GDP", ctrl_gdp, treat_gdp, gdp_delta);
-    println!("  {:20} {:>12.1}% {:>12.1}% {:>+10.1}pp", "Buy Ratio", ctrl_buy*100.0, treat_buy*100.0, buy_delta);
-    println!("  {:20} {:>12.4}  {:>12.4}  {:>+10.4}", "Avg Volatility", ctrl_vol, treat_vol, vol_delta);
+    println!(
+        "  {:20} {:>12.3}x {:>12.3}x {:>+10.3}x",
+        "Debt/GDP", ctrl_dg, treat_dg, dg_delta
+    );
+    println!(
+        "  {:20} {:>12.0} {:>12.0} {:>+10.1}%",
+        "Final GDP", ctrl_gdp, treat_gdp, gdp_delta
+    );
+    println!(
+        "  {:20} {:>12.1}% {:>12.1}% {:>+10.1}pp",
+        "Buy Ratio",
+        ctrl_buy * 100.0,
+        treat_buy * 100.0,
+        buy_delta
+    );
+    println!(
+        "  {:20} {:>12.4}  {:>12.4}  {:>+10.4}",
+        "Avg Volatility", ctrl_vol, treat_vol, vol_delta
+    );
 
-    let dg_verdict = if dg_delta > 1.5 { "❌ WORSE" } else if dg_delta > 1.1 { "⚠️  SLIGHTLY WORSE" } else if dg_delta < 0.9 { "✅ BETTER" } else { "✅ NEUTRAL" };
-    let gdp_verdict = if gdp_delta < -10.0 { "❌ WORSE" } else if gdp_delta < -2.0 { "⚠️  SLIGHTLY WORSE" } else { "✅ OK" };
-    let vol_verdict = if vol_delta > 0.01 { "❌ MORE VOLATILE" } else if vol_delta < -0.01 { "✅ MORE STABLE" } else { "✅ NEUTRAL" };
+    let dg_verdict = if dg_delta > 1.5 {
+        "❌ WORSE"
+    } else if dg_delta > 1.1 {
+        "⚠️  SLIGHTLY WORSE"
+    } else if dg_delta < 0.9 {
+        "✅ BETTER"
+    } else {
+        "✅ NEUTRAL"
+    };
+    let gdp_verdict = if gdp_delta < -10.0 {
+        "❌ WORSE"
+    } else if gdp_delta < -2.0 {
+        "⚠️  SLIGHTLY WORSE"
+    } else {
+        "✅ OK"
+    };
+    let vol_verdict = if vol_delta > 0.01 {
+        "❌ MORE VOLATILE"
+    } else if vol_delta < -0.01 {
+        "✅ MORE STABLE"
+    } else {
+        "✅ NEUTRAL"
+    };
 
     println!("\n  Verdict:");
     println!("  D/G:     {} (ratio {:.3}x)", dg_verdict, dg_delta);
@@ -4386,19 +4433,21 @@ fn run_whale_stress_test() {
         let cd = PathBuf::from(format!("/tmp/autotune-whale-ctrl-{}", seed));
         std::fs::create_dir_all(&cd).ok();
         if run_headless(&cs, Some(cd.clone())).is_ok()
-            && let Ok(s) = load_summary(&cd.join("simulation.db")) {
-                dg_ctrls.push(s.debt / s.gdp.max(1.0));
-                gdp_ctrls.push(s.gdp);
-            }
+            && let Ok(s) = load_summary(&cd.join("simulation.db"))
+        {
+            dg_ctrls.push(s.debt / s.gdp.max(1.0));
+            gdp_ctrls.push(s.gdp);
+        }
         let mut ts = treat_scenario.clone();
         ts.seed = Some(seed);
         let td = PathBuf::from(format!("/tmp/autotune-whale-treat-{}", seed));
         std::fs::create_dir_all(&td).ok();
         if run_headless(&ts, Some(td.clone())).is_ok()
-            && let Ok(s) = load_summary(&td.join("simulation.db")) {
-                dg_treats.push(s.debt / s.gdp.max(1.0));
-                gdp_treats.push(s.gdp);
-            }
+            && let Ok(s) = load_summary(&td.join("simulation.db"))
+        {
+            dg_treats.push(s.debt / s.gdp.max(1.0));
+            gdp_treats.push(s.gdp);
+        }
     }
 
     if !dg_ctrls.is_empty() {
@@ -4408,8 +4457,14 @@ fn run_whale_stress_test() {
         let avg_treat_gdp = gdp_treats.iter().sum::<f64>() / gdp_treats.len() as f64;
         let multi_dg_delta = avg_treat_dg / avg_ctrl_dg;
         let multi_gdp_delta = (avg_treat_gdp - avg_ctrl_gdp) / avg_ctrl_gdp * 100.0;
-        println!("  {:20} {:>12.3}x {:>12.3}x {:>+10.3}x", "Avg D/G (all seeds)", avg_ctrl_dg, avg_treat_dg, multi_dg_delta);
-        println!("  {:20} {:>12.0} {:>12.0} {:>+10.1}%", "Avg GDP (all seeds)", avg_ctrl_gdp, avg_treat_gdp, multi_gdp_delta);
+        println!(
+            "  {:20} {:>12.3}x {:>12.3}x {:>+10.3}x",
+            "Avg D/G (all seeds)", avg_ctrl_dg, avg_treat_dg, multi_dg_delta
+        );
+        println!(
+            "  {:20} {:>12.0} {:>12.0} {:>+10.1}%",
+            "Avg GDP (all seeds)", avg_ctrl_gdp, avg_treat_gdp, multi_gdp_delta
+        );
     }
 }
 
@@ -11375,7 +11430,9 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --vt-multi-seed         Healthy vs +2VT across 5 seeds (statistical robustness)"
         );
-        println!("  --whale-stress-test     1 Whale: can errant rich player destabilize healthy economy?");
+        println!(
+            "  --whale-stress-test     1 Whale: can errant rich player destabilize healthy economy?"
+        );
         println!(
             "  --it-healthy-test      IT + MM+GB vs MM+GB: does IT still help healthy economy?"
         );
@@ -11393,7 +11450,9 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --ninety-day-test          2MM+2GB+floor: 90-day long-run stability × 3 seeds × 2 thresholds"
         );
-        println!("  --one-eighty-day-test     2MM+2GB+floor: 180-day trajectory × 2 seeds × 5% threshold");
+        println!(
+            "  --one-eighty-day-test     2MM+2GB+floor: 180-day trajectory × 2 seeds × 5% threshold"
+        );
         println!("  --sixty-day-test           2MM+2GB+floor: 60-day long-run stability");
         println!("  --sixty-day-fix-test      tier3=50+min_int=0.20 vs ctrl × 2 seeds × 60d");
         println!("  --sixty-day-hysteresis-test  hysteresis 50% vs 10% × 2 seeds × 60d");
@@ -17473,22 +17532,20 @@ fn run_one_eighty_day_test() {
         "
 ╔══════════════════════════════════════════════════════════════════════════╗"
     );
-    println!(
-        "║          180-DAY PRODUCTION TRAJECTORY TEST                       ║"
-    );
-    println!(
-        "║  2MM + 2GB + 60% Diamond floor × 2 seeds × 5% threshold         ║"
-    );
-    println!(
-        "║  Question: Does D/G stabilize past day 90 or oscillate forever?   ║"
-    );
+    println!("║          180-DAY PRODUCTION TRAJECTORY TEST                       ║");
+    println!("║  2MM + 2GB + 60% Diamond floor × 2 seeds × 5% threshold         ║");
+    println!("║  Question: Does D/G stabilize past day 90 or oscillate forever?   ║");
     println!(
         "╚══════════════════════════════════════════════════════════════════════════╝
 "
     );
     println!("  Config: 2MM + 2GB + 3Cas + 3Far + 2Tra + 60% Diamond floor");
     println!("  Duration: {} days ({} ticks)", days, total_ticks);
-    println!("  Threshold: {}% | Seeds: {:?}\n", (threshold * 100.0) as i32, seeds);
+    println!(
+        "  Threshold: {}% | Seeds: {:?}\n",
+        (threshold * 100.0) as i32,
+        seeds
+    );
 
     #[derive(Debug)]
     #[allow(dead_code)]
@@ -17578,7 +17635,10 @@ fn run_one_eighty_day_test() {
 
         // Print trajectory table
         println!("\n  ╔════════════════════════════════════════════════════════════════╗");
-        println!("  ║  SEED {} — 180-Day D/G Trajectory (2MM+2GB+floor, 5%)      ║", seed);
+        println!(
+            "  ║  SEED {} — 180-Day D/G Trajectory (2MM+2GB+floor, 5%)      ║",
+            seed
+        );
         println!("  ╠════════════════════════════════════════════════════════════════╣");
         println!(
             "  ║  {:>4}  {:>12}  {:>12}  {:>8}  {:>10}  {:>8}  ║",
@@ -17587,10 +17647,14 @@ fn run_one_eighty_day_test() {
         println!("  ╠════════════════════════════════════════════════════════════════╣");
 
         // Reference points from prior tests (90d test, seed=42, 5% threshold)
-        let ref_dg: std::collections::HashMap<u32, f64> =
-            [(14, 8.310_f64), (30, 7.500_f64), (60, 20.100_f64), (90, 16.400_f64)]
-                .into_iter()
-                .collect();
+        let ref_dg: std::collections::HashMap<u32, f64> = [
+            (14, 8.310_f64),
+            (30, 7.500_f64),
+            (60, 20.100_f64),
+            (90, 16.400_f64),
+        ]
+        .into_iter()
+        .collect();
 
         for pt in &trajectory {
             let risk = if pt.dg >= 30.0 {
@@ -17628,11 +17692,20 @@ fn run_one_eighty_day_test() {
 
             println!("\n  Trend Analysis:");
             if late < mid {
-                println!("  📉 D/G RECOVERING: {:.3}x → {:.3}x (day 90→180)", mid, late);
+                println!(
+                    "  📉 D/G RECOVERING: {:.3}x → {:.3}x (day 90→180)",
+                    mid, late
+                );
             } else if late < early {
-                println!("  📈 D/G GROWING but below peak: {:.3}x → {:.3}x → {:.3}x", early, mid, late);
+                println!(
+                    "  📈 D/G GROWING but below peak: {:.3}x → {:.3}x → {:.3}x",
+                    early, mid, late
+                );
             } else {
-                println!("  ⚠️  D/G ESCALATING: {:.3}x → {:.3}x → {:.3}x", early, mid, late);
+                println!(
+                    "  ⚠️  D/G ESCALATING: {:.3}x → {:.3}x → {:.3}x",
+                    early, mid, late
+                );
             }
         }
 
@@ -17640,7 +17713,9 @@ fn run_one_eighty_day_test() {
     }
 
     println!("\n  KEY INSIGHT:");
-    println!("  If D/G stabilizes <15x by day 180: economy is self-correcting (circuit is sufficient)");
+    println!(
+        "  If D/G stabilizes <15x by day 180: economy is self-correcting (circuit is sufficient)"
+    );
     println!("  If D/G oscillates 15-25x: economy is contained but needs monitoring");
     println!("  If D/G escalates >30x: circuit breaker insufficient — architectural fix needed");
     println!();

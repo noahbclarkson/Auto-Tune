@@ -244,7 +244,7 @@ impl Default for WhaleConfig {
     fn default() -> Self {
         Self {
             accumulate_ticks: 864, // 3 days
-            dormant_ticks: 432,   // 1.5 days
+            dormant_ticks: 432,    // 1.5 days
             _accumulate_qty: 5000,
             dump_price_factor: 0.50,
             aggressive_buy: true,
@@ -1116,8 +1116,8 @@ impl PlayerAgent {
             max_trade_amount: rng.random(1000..5000), // Large trades
             risk_tolerance: rng.random(0.8..1.0),
             inventory_saturation: rng.random(0.8..1.0), // Wants to hold lots
-            gather_rate: rng.random(0.0..0.01),          // Doesn't gather naturally
-            usage_rate: rng.random(0.0..0.01),           // Doesn't consume
+            gather_rate: rng.random(0.0..0.01),         // Doesn't gather naturally
+            usage_rate: rng.random(0.0..0.01),          // Doesn't consume
             perceived_values: HashMap::new(),
             preferences: HashMap::new(),
             inventory: HashMap::new(),
@@ -1306,7 +1306,14 @@ impl PlayerAgent {
                 );
             }
             Archetype::Whale => {
-                self.decide_whale(items, &mut decisions, record, &mut logs, slippage_coeff, current_tick);
+                self.decide_whale(
+                    items,
+                    &mut decisions,
+                    record,
+                    &mut logs,
+                    slippage_coeff,
+                    current_tick,
+                );
             }
             _ => {
                 self.decide_value_based(items, &mut decisions, record, &mut logs, slippage_coeff);
@@ -2483,7 +2490,9 @@ impl PlayerAgent {
             // Dump: sell everything at dump_price_factor of perceived value
             for (i, item) in items.iter().enumerate() {
                 let qty = self.inventory.get(&i).copied().unwrap_or(0);
-                if qty <= 0 { continue; }
+                if qty <= 0 {
+                    continue;
+                }
                 let perceived = self.perceived_values.get(&i).copied().unwrap_or(item.price);
                 let dump_price = perceived * cfg.dump_price_factor;
                 let sell_price = item.sell_price().min(dump_price);
@@ -2509,7 +2518,9 @@ impl PlayerAgent {
                     inventory_before: qty,
                     reasoning: format!(
                         "WHALE_DUMP qty={} at {:.1}% of perceived=${:.2}",
-                        qty, cfg.dump_price_factor * 100.0, dump_price
+                        qty,
+                        cfg.dump_price_factor * 100.0,
+                        dump_price
                     ),
                 });
                 self.balance += total_value;
@@ -2537,7 +2548,14 @@ impl PlayerAgent {
         if self.whale_ticks_since_dump >= cfg.accumulate_ticks {
             self.whale_is_dumping = true;
             // Recurse once to handle the dump immediately this tick
-            self.decide_whale(items, decisions, _record, logs, slippage_coeff, _current_tick);
+            self.decide_whale(
+                items,
+                decisions,
+                _record,
+                logs,
+                slippage_coeff,
+                _current_tick,
+            );
             return;
         }
 
@@ -2548,18 +2566,27 @@ impl PlayerAgent {
                 let perceived = self.perceived_values.get(&i).copied().unwrap_or(item.price);
                 let buy_price = item.buy_price();
                 // Only buy if we can afford it and it's reasonably priced
-                if buy_price > perceived * 1.5 { continue; } // Don't overpay
-                if self.balance < buy_price { continue; }
+                if buy_price > perceived * 1.5 {
+                    continue;
+                } // Don't overpay
+                if self.balance < buy_price {
+                    continue;
+                }
 
                 // Buy 10-50% of max_trade_amount per tick (whale is big but not instant)
-                let amount = rng.random_inclusive(
-                    (self.max_trade_amount as f64 * 0.10).ceil() as i32..=(self.max_trade_amount as f64 * 0.50).ceil() as i32
-                ).max(1);
+                let amount = rng
+                    .random_inclusive(
+                        (self.max_trade_amount as f64 * 0.10).ceil() as i32
+                            ..=(self.max_trade_amount as f64 * 0.50).ceil() as i32,
+                    )
+                    .max(1);
                 let cost = buy_price * amount as f64;
                 let slippage = 1.0 + slippage_coeff * (amount as f64).sqrt();
                 let total_cost = cost * slippage;
 
-                if total_cost > self.balance { continue; }
+                if total_cost > self.balance {
+                    continue;
+                }
 
                 decisions.push(PlayerDecision {
                     item_index: i,

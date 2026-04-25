@@ -363,12 +363,14 @@ public class LoanManager {
                     // rises, preventing the pre-circuit-breaker debt accumulation spiral.
                     //
                     // HYSTERESIS: Once TIER3 fires (D/G >= tier3Ratio), the circuit stays
-                    // locked (0% interest) until D/G drops below 90% of tier3Ratio (10%
-                    // hysteresis band). Without hysteresis, D/G hovering near tier3 causes
-                    // multiplier to oscillate between 0.0 (TIER3) and ~0.003 (just below tier3),
-                    // allowing debt to compound during brief TIER2 windows — a doom loop.
-                    // This matches the legacy tiered path behavior (tier3CircuitLocked, 2026-04-04).
-                    double hysteresisThreshold = config.debtGdpTier3Ratio() * 0.9;
+                    // locked (0% interest) until D/G drops below the hysteresis threshold.
+                    // Without hysteresis, D/G hovering near tier3 causes multiplier to
+                    // oscillate between 0.0 (TIER3) and ~0.003 (just below tier3), allowing
+                    // debt to compound during brief TIER2 windows — a doom loop.
+                    // Configurable via tier3HysteresisBand: 0.1 (10% band = unlock at 90%
+                    // of tier3) for backward compat, 0.5 (50% band = unlock at 50% of tier3)
+                    // is recommended for deeper hysteresis.
+                    double hysteresisThreshold = config.debtGdpTier3Ratio() * (1.0 - config.tier3HysteresisBand());
 
                     // Check hysteresis unlock: if locked and ratio dropped below band, unlock.
                     if (tier3CircuitLocked && ratio < hysteresisThreshold) {
@@ -389,7 +391,12 @@ public class LoanManager {
                         currentTier = "TIER3";
                     } else {
                         double maxRatio = config.debtGdpTier3Ratio();
-                        interestMultiplier = Math.max(0.0, Math.min(1.0, 1.0 - ratio / maxRatio));
+                        // Counter-cyclical taper: multiplier = max(minInterestMultiplier, 1 - ratio/maxRatio)
+                        // minInterestMultiplier (default 0.0) prevents total 0% interest at D/G=tier3,
+                        // which causes D/G to oscillate at the boundary. A small floor (0.005) allows
+                        // deleveraging to continue even during TIER3 lock.
+                        interestMultiplier = Math.max(config.minInterestMultiplier(),
+                                Math.min(1.0, 1.0 - ratio / maxRatio));
                         if (ratio >= config.debtGdpTier2Ratio()) {
                             currentTier = "TIER2";
                         } else if (ratio >= config.debtGdpTier1Ratio()) {
@@ -399,9 +406,8 @@ public class LoanManager {
                 } else {
                     // Legacy tiered circuit breaker with hysteresis for TIER3:
                     // Once TIER3 fires (D/G >= tier3Ratio), the circuit stays locked (0% interest)
-                    // until D/G drops below 90% of tier3Ratio (a 10% hysteresis band).
-                    // This prevents rapid open/close cycling when D/G hovers near 10.0x.
-                    double hysteresisThreshold = config.debtGdpTier3Ratio() * 0.9;
+                    // until D/G drops below the hysteresis threshold (configurable via tier3HysteresisBand).
+                    double hysteresisThreshold = config.debtGdpTier3Ratio() * (1.0 - config.tier3HysteresisBand());
 
                     // Check hysteresis unlock: if locked and ratio dropped below band, unlock.
                     if (tier3CircuitLocked && ratio < hysteresisThreshold) {

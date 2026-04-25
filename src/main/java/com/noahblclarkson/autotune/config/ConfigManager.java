@@ -236,9 +236,13 @@ public class ConfigManager {
                 section.getInt("default-penalty", 50),
                 section.getDouble("debt-gdp-tier1-ratio", 3.0),
                 section.getDouble("debt-gdp-tier2-ratio", 5.0),
-                section.getDouble("debt-gdp-tier3-ratio", 30.0), // RAISED from 15.0 (2026-04-15): TIER3 lock with counter-cyclical=true causes D/G doom loop at 60d. tier3=30 gives 3-4× headroom above normal D/G~7-10x.
+                section.getDouble("debt-gdp-tier3-ratio", 30.0), // RAISED from 15.0 (2026-04-15)
                 section.getDouble("tier1-interest-cap", 0.5),
                 section.getDouble("tier2-interest-cap", 0.25),
+                section.getDouble("tier3-hysteresis-band", 0.1), // 10% band for backward compat
+                section.getDouble("min-interest-multiplier", 0.0), // pure counter-cyclical by default
+                section.getDouble("guildbuyer-total-debt-cap", 3.0), // 3× GDP per GuildBuyer
+                section.getBoolean("block-mm-gb-loans-during-tier3", false),
                 section.getInt("post-default-cooldown-hours", 168),
                 section.getDouble("single-loan-gdp-cap", 1.0),
                 section.getDouble("total-debt-gdp-cap", 2.0),

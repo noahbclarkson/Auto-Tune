@@ -70,6 +70,10 @@ class LoanManagerTest {
                 d.debtGdpTier3Ratio(),
                 d.tier1InterestCap(),
                 d.tier2InterestCap(),
+                d.tier3HysteresisBand(),   // added 2026-04-25: Java/Rust config parity
+                d.minInterestMultiplier(), // added 2026-04-25: Java/Rust config parity
+                d.guildbuyerTotalDebtCap(), // added 2026-04-25: Java/Rust config parity
+                d.blockMmGbLoansDuringTier3(), // added 2026-04-25: Java/Rust config parity
                 d.postDefaultCooldownHours(),
                 d.singleLoanGdpCap(),
                 d.totalDebtGdpCap(),

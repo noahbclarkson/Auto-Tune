@@ -202,36 +202,66 @@ public record AutoTuneConfig(
             double debtGdpTier3Ratio,
             double tier1InterestCap,
             double tier2InterestCap,
+            /// TIER3 hysteresis band width as a fraction of tier3Ratio.
+            /// Once TIER3 fires (D/G >= tier3Ratio), the circuit stays locked until
+            /// D/G drops below (1 - hysteresisBand) × tier3Ratio.
+            ///
+            /// Example: tier3Ratio=30, hysteresisBand=0.5 (50%) → unlock at D/G < 15.
+            /// This gives 50% headroom above normal D/G~7-10x before circuit re-engages.
+            /// The old hardcoded 0.9 factor (10% band) was insufficient — circuit unlocks
+            /// too early, allowing debt accumulation during TIER3 lock.
+            /// Default: 0.1 (10% band for backward compatibility). Recommended: 0.5.
+            double tier3HysteresisBand,
+            /// Minimum interest multiplier during counter-cyclical mode.
+            /// When the counter-cyclical multiplier would reach 0 (D/G >= tier3Ratio),
+            /// this floor prevents total interest pause and the associated D/G oscillation trap.
+            /// Set to 0.0 to disable (pure counter-cyclical: 0% interest at D/G=tier3Ratio).
+            /// Recommended: 0.005 (0.5%) — allows deleveraging to continue even at D/G >= tier3Ratio.
+            /// This prevents the economy from getting stuck at the D/G ~= tier3Ratio boundary.
+            /// Default: 0.0 (matches historical pure counter-cyclical behavior).
+            double minInterestMultiplier,
+            /// Maximum total debt for any single GuildBuyer player as a multiple of economy GDP.
+            /// When a GuildBuyer's total outstanding debt exceeds this cap, new loans are
+            /// rejected for that player until existing loans are repaid.
+            /// Prevents GuildBuyer cascading during TIER3 lock — when interest is 0%,
+            /// GBs can accumulate massive zero-interest loans that overwhelm the circuit.
+            /// Set to 0 to disable. Default: 3.0 (3× GDP per GuildBuyer).
+            double guildbuyerTotalDebtCap,
+            /// Whether MarketMaker and GuildBuyer players can take opening loans during TIER3 lock.
+            /// When true and the economy is in TIER3 (D/G >= tier3Ratio), MM/GB players
+            /// cannot open new loans. Their existing loans remain active but accumulate no new debt.
+            /// Prevents MM/GB loan accumulation from extending the TIER3 lock period.
+            /// Default: false (MM/GB loans allowed during TIER3 lock for backward compatibility).
+            boolean blockMmGbLoansDuringTier3,
             /// Hours a player must wait after a defaulted loan before they can take a new loan.
             int postDefaultCooldownHours,
             /// Maximum size of a single loan as a multiple of economy GDP.
-            /// A value of 1.0 means no single loan can exceed total GDP.
             double singleLoanGdpCap,
             /// Maximum total debt across ALL active loans as a multiple of economy GDP.
             /// When total economy-wide debt exceeds this cap, new loans are rejected
             /// until existing loans are repaid. Prevents runaway debt accumulation
             /// (e.g., from GuildBuyer cascading during TIER3 lock).
-            /// A value of 2.0 means total debt cannot exceed 2× GDP.
-            /// Set to 0 to disable (not recommended).
             double totalDebtGdpCap,
             /// Counter-cyclical interest: interest rate is smoothly reduced as economy
             /// debt/GDP rises, making it easier for players to service debt before it
             /// becomes critical. Replaces the tiered circuit breaker with a continuous
             /// linear taper: multiplier = max(minInterestMultiplier, 1 - debtGdpRatio / tier3Ratio).
             /// At tier3Ratio=30 (default): D/G=3 → 90%, D/G=10 → 67%, D/G=20 → 33%, D/G=30 → 0%.
-            /// TIER3 (D/G ≥ tier3Ratio) only fires in genuine catastrophe — set tier3Ratio high enough
-            /// that it never fires in normal operation. Recommended: 30.0 (3-4× headroom above D/G~7-10x).
             boolean counterCyclical
     ) {
         public static LoanConfig defaults() {
             return new LoanConfig(
                     true, 0.05, true, 2.0, 200,
                     7, 3, 30, 0.002, 24, 1, 24, 1.5, 0.5, 50,
-                    3.0, 5.0, 30.0, 0.5, 0.25,  // debt-gdp-tier1=3.0, tier2=5.0, tier3=30.0 (raised 2026-04-15)
-                    168,    // postDefaultCooldownHours: 7 days
-                    1.0,    // singleLoanGdpCap: single loan capped at 1× GDP
-                    2.0,    // totalDebtGdpCap: economy-wide debt capped at 2× GDP
-                    true    // counterCyclical: enabled by default
+                    3.0, 5.0, 30.0, 0.5, 0.25,  // debt-gdp-tier1=3.0, tier2=5.0, tier3=30.0
+                    0.1,   // tier3HysteresisBand: 10% band for backward compat (unlock at 90% of tier3)
+                    0.0,   // minInterestMultiplier: pure counter-cyclical (0% at D/G=tier3)
+                    3.0,   // guildbuyerTotalDebtCap: 3× GDP per GuildBuyer
+                    false, // blockMmGbLoansDuringTier3: allowed by default
+                    168,   // postDefaultCooldownHours: 7 days
+                    1.0,   // singleLoanGdpCap: single loan capped at 1× GDP
+                    2.0,   // totalDebtGdpCap: economy-wide debt capped at 2× GDP
+                    true   // counterCyclical: enabled by default
             );
         }
     }

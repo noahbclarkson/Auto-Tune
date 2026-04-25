@@ -3,9 +3,9 @@
 import { Github, Server, Download, Star } from 'lucide-react';
 
 const STATS = [
-  { icon: Star, label: 'GitHub Stars', value: '130+', color: 'amber', href: 'https://github.com/noahbclarkson/Auto-Tune' },
+  { icon: Star, label: 'GitHub Stars', value: '132+', color: 'amber', href: 'https://github.com/noahbclarkson/Auto-Tune' },
   { icon: Server, label: 'Active Servers', value: 'Network growing', color: 'emerald', href: '/servers' },
-  { icon: Download, label: 'Total Downloads', value: '3,400+', color: 'sky', href: 'https://github.com/noahbclarkson/Auto-Tune/releases' },
+  { icon: Download, label: 'Total Downloads', value: '3,500+', color: 'sky', href: 'https://github.com/noahbclarkson/Auto-Tune/releases' },
 ];
 
 type Testimonial = {

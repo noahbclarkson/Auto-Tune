@@ -328,3 +328,95 @@ The simulation-recommended approach: **counter-cyclical + post-default cooldown 
 Auto-Tune's market engine is stable across the full parameter range (840-config sweep confirmed). Start conservative and tune based on observed behavior, not preemptively.
 
 > **Archetype mix matters more than parameters.** The 2MM + 2GB@5% archetype configuration (2 MarketMakers + 2 GuildBuyers) doubles GDP and halves volatility. See [SERVER_ADMIN_GUIDE.md](./SERVER_ADMIN_GUIDE.md) for the full player economy design guide.
+
+---
+
+## Advanced Loan Parameters (2026-04-25)
+
+These parameters fine-tune the loan circuit breaker behavior for long-running servers.
+
+### `tier3-hysteresis-band`
+
+**Default: `0.1`** | **Recommended: `0.5`**
+
+When TIER3 fires (D/G ≥ `debt-gdp-circuit-breaker-ratio`), the circuit stays locked at 0% interest until D/G drops below `tier3 × (1 − band)`.
+
+| Band setting | tier3=30 unlocks at | Effect |
+|---|---|---|
+| `0.1` (default) | D/G < 27.0× | 10% band — circuit re-triggers quickly |
+| `0.3` | D/G < 21.0× | 30% band — moderate hysteresis |
+| `0.5` (recommended) | D/G < 15.0× | 50% band — deep hysteresis, circuit stays locked longer |
+
+**Why it matters:** The 60d doom loop (D/G 8→20→16) is caused in part by the circuit unlocking too early. At 0.1 band, the circuit unlocks at D/G=27 and immediately re-triggers TIER3 within days as debt continues accumulating. A 50% band keeps the circuit locked until D/G < 15× — giving the economy time to actually deleverage.
+
+**Simulation evidence:** 50% hysteresis band tested (2 seeds × 60d): D/G delta = -0.063x (neutral/noise). The fix alone is insufficient — pair with `block-mm-gb-loans-during-tier3: true` for meaningful effect.
+
+**When to use:** Long-running servers (>60 days) experiencing persistent TIER3 oscillation. Set to `0.5` and monitor D/G weekly.
+
+### `min-interest-multiplier`
+
+**Default: `0.0`** | **Recommended: `0.005`**
+
+Floor for counter-cyclical interest multiplier. At `0.0`, interest can reach 0% at D/G=tier3 (pure counter-cyclical). At `0.005`, a 0.5% minimum interest applies even during crisis.
+
+| Setting | At D/G=30, tier3=30 |
+|---|---|
+| `0.0` (default) | 0% interest — debt stops growing but also doesn't shrink |
+| `0.005` | 0.5% interest — small but non-zero — keeps deleveraging pressure active |
+
+**Why it matters:** At pure 0% interest, players with large debts have zero incentive to repay. The economy gets stuck near the circuit threshold. A tiny minimum (0.5%) creates gentle repayment pressure without being punitive.
+
+**When to use:** Servers experiencing persistent D/G oscillation near the circuit threshold. Set to `0.005` (not higher — you don't want to raise interest during a crisis).
+
+### `guildbuyer-total-debt-cap`
+
+**Default: `3.0`** | **No change recommended**
+
+Maximum total debt any single GuildBuyer player can hold, as a multiple of economy GDP. Prevents one GB from accumulating overwhelming debt during TIER3 lock.
+
+| Cap | With GDP=$4M | Effect |
+|---|---|---|
+| `3.0` (default) | $12M max per GB | Non-binding at 60d (GB loans ~$100K) |
+| `1.0` | $4M max per GB | Would constrain GB during stress |
+| `0.5` | $2M max per GB | May limit legitimate GB activity |
+
+**Simulation evidence:** 3× cap tested (2 seeds × 60d): D/G delta = +0.000x — non-binding at 60d horizon. The cap only becomes relevant if a single GB accumulates >$1M debt, which requires very large economies. Not recommended as a primary D/G control.
+
+**When to use:** Large economies with multiple active GuildBuyers. Keep at `3.0` unless you have specific concerns.
+
+### `block-mm-gb-loans-during-tier3`
+
+**Default: `false`**
+
+When `true`, MarketMaker and GuildBuyer players cannot open new loans while TIER3 circuit is active. Their existing loans remain active but accumulate no interest.
+
+| Setting | Effect |
+|---|---|
+| `false` (default) | MM/GB can accumulate interest-free loans during TIER3 lock — extends lock period |
+| `true` | MM/GB loans blocked during TIER3 — prevents zero-interest debt accumulation |
+
+**Why it matters:** When the circuit fires and sets interest to 0%, MM/GB players can borrow freely with no cost. Their loans accumulate and, when the circuit unlocks, the debt explosion immediately re-triggers TIER3. Blocking MM/GB loans during TIER3 prevents this accumulation.
+
+**When to use:** Servers with persistent TIER3 oscillation. Set to `true` and pair with `tier3-hysteresis-band: 0.5` for maximum circuit stability.
+
+### Recommended Combined Config for Long-Running Servers
+
+```yaml
+loans:
+  # Circuit breaker — deep hysteresis for 90d+ stability
+  debt-gdp-tier3-ratio: 30.0        # TIER3 fires when D/G >= 30×
+  tier3-hysteresis-band: 0.5        # unlock only when D/G < 15× (50% band)
+  block-mm-gb-loans-during-tier3: true  # prevent MM/GB zero-interest loan accumulation
+  
+  # Counter-cyclical fine-tuning
+  counter-cyclical: true
+  min-interest-multiplier: 0.005    # 0.5% minimum even at D/G >= 30×
+
+  # Safety caps
+  guildbuyer-total-debt-cap: 3.0    # 3× GDP per GuildBuyer
+  single-loan-gdp-cap: 1.0         # 1× GDP per loan
+  total-debt-gdp-cap: 2.0          # 2× GDP economy-wide
+  post-default-cooldown-hours: 168  # 7-day lock after default
+```
+
+**NOTE:** These are containment measures, not cures. 180d simulation shows D/G eventually escalates regardless of config. Monitor D/G weekly. Consider `/at admin recovery` if D/G exceeds 25×.

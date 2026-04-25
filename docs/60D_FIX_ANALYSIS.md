@@ -140,6 +140,24 @@ loans:
   tier3_hysteresis_band: 0.5        # unchanged
 ```
 
+**Java/Rust parity achieved (2026-04-25):** All 4 loan parameters now exist in Java:
+- `tier3HysteresisBand` (default 0.1, recommended 0.5) — in `LoanManager.processInterest()` hysteresis calculation ✅
+- `minInterestMultiplier` (default 0.0) — in counter-cyclical path `Math.max()` floor ✅
+- `guildbuyerTotalDebtCap` (default 3.0) — **parsed but NOT yet enforced in loan-opening logic** ⚠️
+- `blockMmGbLoansDuringTier3` (default false) — **parsed but NOT yet enforced in loan-opening logic** ⚠️
+
+⚠️ **Enforcement gap:** `guildbuyerTotalDebtCap` and `blockMmGbLoansDuringTier3` exist as config fields in `LoanConfig` and are parsed by `ConfigManager`, but `LoanManager.requestLoanInternal()` does not yet check them. The Rust simulation tests used these fields to show neutral/no-op effects; Java currently accepts them but ignores them at loan request time. Adding enforcement would require a follow-up session.
+
+**Recommended production config (for servers day 90+):**
+```yaml
+loans:
+  tier3-hysteresis-band: 0.5        # 50% band = unlock at D/G < 15 (with tier3=30)
+  min-interest-multiplier: 0.0      # pure counter-cyclical
+  block-mm-gb-loans-during-tier3: true  # block MM/GB loans during TIER3 lock
+  guildbuyer-total-debt-cap: 3.0     # per-GB debt cap
+```
+This combo (tier3=100 + loan-lock) FAILED in Rust simulation at 60d — D/G +2.3× worse than control. However, with proper `tier3HysteresisBand=0.5` (50% band) the combo fix may perform differently since the Rust tests used the default 10% band. Java now has the config fields to test this properly.
+
 **⚠️ CRITICAL UPDATE (2026-04-21): DOOM LOOP DOES NOT STABILIZE AT 180 DAYS**
 
 180-day simulation (`--one-eighty-day-test`):

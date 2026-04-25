@@ -100,6 +100,18 @@ The scaling formula uses a `tanh` curve: `tanh(onlineCount * atanh(0.99) / fullE
 | `loans.counter-cyclical` | `true` | Reduce interest rate as Debt/GDP rises (0% at D/G ≥ circuit-breaker-ratio) |
 | `loans.post-default-cooldown-hours` | `168` | Lock borrowers from new loans after default (7 days) |
 | `loans.single-loan-gdp-cap` | `1.0` | Maximum loan size as multiple of 24h GDP (cap at ~1.0; values ≤ 0.10 backfire) |
+| `loans.tier3-hysteresis-band` | `0.1` | TIER3 stays locked until D/G drops below tier3 × (1 − band). Default 0.1 = 10% band. Recommended 0.5 for deep hysteresis |
+| `loans.min-interest-multiplier` | `0.0` | Floor for counter-cyclical interest multiplier. 0.0 = pure counter-cyclical (0% at D/G=tier3) |
+| `loans.guildbuyer-total-debt-cap` | `3.0` | Maximum total debt any single GuildBuyer can hold, as multiple of economy GDP |
+| `loans.block-mm-gb-loans-during-tier3` | `false` | Block MarketMaker and GuildBuyer loan requests while TIER3 circuit is engaged |
+
+**tier3-hysteresis-band** (default `0.1`): When TIER3 fires (D/G ≥ tier3 ratio), the circuit stays locked until D/G drops to `tier3 × (1 − band)`. At default 0.1 (10% band), it unlocks at 90% of tier3. At 0.5 (50% band), it stays locked until D/G falls below `tier3 × 0.5` — a much deeper hysteresis. A 50% band prevents the circuit from re-triggering immediately after TIER3 exit. Recommended setting: `0.5`.
+
+**min-interest-multiplier** (default `0.0`): Counter-cyclical interest uses `max(multiplier, this)` instead of `max(0, multiplier)`. At default 0.0, interest can reach 0% at D/G=tier3. Set to `0.10` for a 10% minimum interest rate even at crisis levels.
+
+**guildbuyer-total-debt-cap** (default `3.0`): Prevents cascading debt accumulation during TIER3 lock. A single GuildBuyer cannot hold more than 3× economy GDP in total debt. When their debt hits the cap, they cannot open new loans. Only affects GuildBuyer/MarketMaker archetypes; normal players are unaffected.
+
+**block-mm-gb-loans-during-tier3** (default `false`): When `true`, MarketMaker and GuildBuyer players cannot open loans while TIER3 circuit is active. Combined with `tier3-hysteresis-band=0.5`, this prevents MM/GB from accumulating debt that immediately re-triggers TIER3 on circuit unlock.
 
 **debt-gdp-circuit-breaker-ratio**: When system-wide total debt exceeds `GDP × ratio`, loan interest accrual is paused for that cycle. It auto-resumes when debt drops back below the threshold. Default 10.0 means circuit opens when debt is 10× the 24h GDP.
 

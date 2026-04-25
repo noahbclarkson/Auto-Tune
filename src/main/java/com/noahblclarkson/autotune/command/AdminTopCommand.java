@@ -183,20 +183,23 @@ public class AdminTopCommand {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
+    private static final double MILLION = 1_000_000.0;
+    private static final double THOUSAND = 1_000.0;
+
     private String resolveName(UUID uuid) {
         Optional<PlayerData> player = playerRepository.findByUuid(uuid);
         return player.map(PlayerData::username).orElse("???" + uuid.toString().substring(0, 6));
     }
 
     private String formatVol(long n) {
-        if (n >= 1_000_000) return String.format("%.1fM", n / 1_000_000.0);
-        if (n >= 1_000) return String.format("%.1fK", n / 1_000.0);
+        if (n >= MILLION) return String.format("%.1fM", n / MILLION);
+        if (n >= THOUSAND) return String.format("%.1fK", n / THOUSAND);
         return String.valueOf(n);
     }
 
     private String formatMoney(double n) {
-        if (Math.abs(n) >= 1_000_000) return String.format("$%.1fM", n / 1_000_000);
-        if (Math.abs(n) >= 1_000) return String.format("$%.1fK", n / 1_000);
+        if (Math.abs(n) >= MILLION) return String.format("$%.1fM", n / MILLION);
+        if (Math.abs(n) >= THOUSAND) return String.format("$%.1fK", n / THOUSAND);
         return String.format("$%.0f", n);
     }
 }

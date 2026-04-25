@@ -27,12 +27,11 @@ Auctions are an in-game experience, not a cross-server concern. Moving them to t
 - Leverages the plugin's existing transaction and inventory systems
 - No cross-server coordination needed
 
-## API Server Status
+## API Server Cleanup (2026-04-25)
 
-The Rust API server's auction routes (`/api/auction/...`) return `410 Gone` with a message pointing to `/auction` in-game.
+The auction house migration and documentation have been cleaned up:
+- `migrations/0004_auction_house.sql` — **removed** (never applied by any live server, dead code)
+- `src/routes/auction.rs` — already absent from codebase (auction routes were removed at migration time)
+- `docs/auction-house.md` — this file, retained for historical reference
 
-The following stale files remain in the API server for reference only:
-- `src/routes/auction.rs` — returns 410 Gone
-- `migrations/0004_auction_house.sql` — deprecated schema, not used
-
-These will be removed in a future cleanup.
+The API server now handles only price submission and true-price discovery. No auction functionality remains.

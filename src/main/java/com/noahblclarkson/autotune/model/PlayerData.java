@@ -12,6 +12,7 @@ public record PlayerData(
         @NotNull UUID uuid,
         @Nullable String username,
         @Nullable String guildTag,
+        @NotNull PlayerType playerType,
         int creditScore,
         @NotNull BigDecimal totalTraded,
         @NotNull BigDecimal totalBought,
@@ -21,6 +22,12 @@ public record PlayerData(
         @NotNull Instant lastSeen,
         @Nullable Instant lastDefaultedAt
 ) {
+
+    public enum PlayerType {
+        OTHER,
+        MARKET_MAKER,
+        GUILD_BUYER
+    }
 
     public static final int DEFAULT_CREDIT_SCORE = 500;
     public static final int MIN_CREDIT_SCORE = 0;
@@ -32,6 +39,7 @@ public record PlayerData(
                 uuid,
                 username,
                 null,
+                PlayerType.OTHER,
                 DEFAULT_CREDIT_SCORE,
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
@@ -52,6 +60,7 @@ public record PlayerData(
                 .uuid(uuid)
                 .username(username)
                 .guildTag(guildTag)
+                .playerType(playerType)
                 .creditScore(creditScore)
                 .totalTraded(totalTraded)
                 .totalBought(totalBought)
@@ -65,6 +74,10 @@ public record PlayerData(
     public PlayerData withCreditScore(int newScore) {
         int clampedScore = Math.max(MIN_CREDIT_SCORE, Math.min(MAX_CREDIT_SCORE, newScore));
         return toBuilder().creditScore(clampedScore).build();
+    }
+
+    public PlayerData withPlayerType(@NotNull PlayerType newType) {
+        return toBuilder().playerType(newType).build();
     }
 
     public PlayerData addTransaction(BigDecimal amount, boolean isBuy) {
@@ -86,6 +99,7 @@ public record PlayerData(
         private UUID uuid;
         private String username;
         private String guildTag;
+        private PlayerType playerType = PlayerType.OTHER;
         private int creditScore = DEFAULT_CREDIT_SCORE;
         private BigDecimal totalTraded = BigDecimal.ZERO;
         private BigDecimal totalBought = BigDecimal.ZERO;
@@ -107,6 +121,11 @@ public record PlayerData(
 
         public Builder guildTag(String guildTag) {
             this.guildTag = guildTag;
+            return this;
+        }
+
+        public Builder playerType(@NotNull PlayerType playerType) {
+            this.playerType = playerType;
             return this;
         }
 
@@ -152,8 +171,8 @@ public record PlayerData(
 
         public PlayerData build() {
             return new PlayerData(
-                    uuid, username, guildTag, creditScore, totalTraded, totalBought,
-                    totalSold, transactionCount, firstSeen, lastSeen, lastDefaultedAt
+                    uuid, username, guildTag, playerType, creditScore, totalTraded,
+                    totalBought, totalSold, transactionCount, firstSeen, lastSeen, lastDefaultedAt
             );
         }
     }

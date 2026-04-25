@@ -145,7 +145,7 @@ class LoanManagerTest {
         @DisplayName("returns base rate when modifier is disabled")
         void baseRateNoModifier() {
             LoanConfig cfg = loanCfg(false, 0.05, false, null, null, null, null, 0.0, null, null);
-            PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
+            PlayerData pd = new PlayerData(playerUuid, playerName, null, PlayerData.PlayerType.OTHER, 700,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
                     Instant.now(), Instant.now(), null);
             LoanManager lm = newLoanManager(cfg, pd);
@@ -156,7 +156,7 @@ class LoanManagerTest {
         @DisplayName("increases rate for poor credit score")
         void poorCreditScore() {
             LoanConfig cfg = loanCfg(true, 0.10, true, null, 500, null, null, 0.0, null, null);
-            PlayerData pd = new PlayerData(playerUuid, playerName, null, 300,
+            PlayerData pd = new PlayerData(playerUuid, playerName, null, PlayerData.PlayerType.OTHER, 300,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
                     Instant.now(), Instant.now(), null);
             LoanManager lm = newLoanManager(cfg, pd);
@@ -167,7 +167,7 @@ class LoanManagerTest {
         @DisplayName("decreases rate for excellent credit score")
         void excellentCreditScore() {
             LoanConfig cfg = loanCfg(true, 0.10, true, null, 500, null, null, 0.0, null, null);
-            PlayerData pd = new PlayerData(playerUuid, playerName, null, 900,
+            PlayerData pd = new PlayerData(playerUuid, playerName, null, PlayerData.PlayerType.OTHER, 900,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
                     Instant.now(), Instant.now(), null);
             LoanManager lm = newLoanManager(cfg, pd);
@@ -178,7 +178,7 @@ class LoanManagerTest {
         @DisplayName("adds term premium for loans beyond minimum term")
         void termPremium() {
             LoanConfig cfg = loanCfg(true, 0.05, false, null, null, 30, 365, 0.01, null, null);
-            PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
+            PlayerData pd = new PlayerData(playerUuid, playerName, null, PlayerData.PlayerType.OTHER, 700,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
                     Instant.now(), Instant.now(), null);
             LoanManager lm = newLoanManager(cfg, pd);
@@ -219,7 +219,7 @@ class LoanManagerTest {
         private LoanManager newLoanManager(LoanConfig cfg, Loan existingLoan) {
             PlayerRepository pr = mock(PlayerRepository.class);
             LoanRepository lr = mock(LoanRepository.class);
-            PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
+            PlayerData pd = new PlayerData(playerUuid, playerName, null, PlayerData.PlayerType.OTHER, 700,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
                     Instant.now(), Instant.now(), null);
             when(pr.getOrCreate(playerUuid, playerName)).thenReturn(pd);
@@ -272,7 +272,7 @@ class LoanManagerTest {
         @DisplayName("rejects when credit score is below minimum")
         void insufficientCredit() {
             PlayerRepository pr = mock(PlayerRepository.class);
-            PlayerData lowCredit = new PlayerData(playerUuid, playerName, null, 400,
+            PlayerData lowCredit = new PlayerData(playerUuid, playerName, null, PlayerData.PlayerType.OTHER, 400,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
                     Instant.now(), Instant.now(), null);
             when(pr.getOrCreate(playerUuid, playerName)).thenReturn(lowCredit);
@@ -328,7 +328,7 @@ class LoanManagerTest {
         @Test
         @DisplayName("calculates max from totalTraded × maxLoanMultiplier")
         void fromTradingHistory() {
-            PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
+            PlayerData pd = new PlayerData(playerUuid, playerName, null, PlayerData.PlayerType.OTHER, 700,
                     BigDecimal.valueOf(1000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
                     Instant.now(), Instant.now(), null);
             LoanConfig cfg = loanCfg(true, null, null, 3.0, null, null, null, null, null, null);
@@ -342,7 +342,7 @@ class LoanManagerTest {
         @Test
         @DisplayName("enforces floor of 100 when calculation is below floor")
         void floorPreventsSmallLoan() {
-            PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
+            PlayerData pd = new PlayerData(playerUuid, playerName, null, PlayerData.PlayerType.OTHER, 700,
                     BigDecimal.valueOf(100), BigDecimal.ZERO, BigDecimal.ZERO, 0,
                     Instant.now(), Instant.now(), null);
             LoanConfig cfg = loanCfg(true, null, null, 0.5, null, null, null, null, null, null);
@@ -366,7 +366,7 @@ class LoanManagerTest {
         @DisplayName("returns balance divided by periods when rate is zero")
         void zeroRate() {
             LoanConfig cfg = loanCfg(true, null, null, null, null, null, null, null, 24, null);
-            PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
+            PlayerData pd = new PlayerData(playerUuid, playerName, null, PlayerData.PlayerType.OTHER, 700,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
                     Instant.now(), Instant.now(), null);
             LoanManager lm = makeLoanManager(cfg, new FakeEconomy(),
@@ -387,7 +387,7 @@ class LoanManagerTest {
         @DisplayName("returns positive payment for positive rate and balance")
         void positiveRate() {
             LoanConfig cfg = loanCfg(true, null, null, null, null, null, null, null, 24, null);
-            PlayerData pd = new PlayerData(playerUuid, playerName, null, 700,
+            PlayerData pd = new PlayerData(playerUuid, playerName, null, PlayerData.PlayerType.OTHER, 700,
                     BigDecimal.valueOf(5000), BigDecimal.ZERO, BigDecimal.ZERO, 0,
                     Instant.now(), Instant.now(), null);
             LoanManager lm = makeLoanManager(cfg, new FakeEconomy(),

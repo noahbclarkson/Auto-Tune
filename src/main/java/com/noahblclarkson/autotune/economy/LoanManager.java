@@ -214,6 +214,42 @@ public class LoanManager {
             }
         }
 
+
+        // block_mm_gb_loans_during_tier3: prevent MM/GB from opening new loans while circuit is in
+        // TIER3 (locked at 0% interest). This prevents archetype players from accumulating
+        // interest-free debt during the circuit lock, which would amplify the doom loop on release.
+        if (config.blockMmGbLoansDuringTier3()
+                && tier3CircuitLocked
+                && (playerData.playerType() == PlayerData.PlayerType.MARKET_MAKER
+                    || playerData.playerType() == PlayerData.PlayerType.GUILD_BUYER)) {
+            return LoanResult.error("Loan blocked: MarketMakers and GuildBuyers cannot open new loans "
+                    + "while the economy circuit breaker is active (TIER3).");
+        }
+
+        // guildbuyer_total_debt_cap: per-GuildBuyer debt limit. Prevents a single GB from
+        // accumulating disproportionate debt relative to economy size.
+        if (playerData.playerType() == PlayerData.PlayerType.GUILD_BUYER
+                && config.guildbuyerTotalDebtCap() > 0) {
+            Optional<EconomySnapshot> latestSnapshot = snapshotRepository.findLatest();
+            if (latestSnapshot.isPresent()) {
+                BigDecimal gdp = latestSnapshot.get().gdp();
+                if (gdp.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal gbDebtLimit = gdp.multiply(BigDecimal.valueOf(config.guildbuyerTotalDebtCap()));
+                    // Sum all active loans for this GB player
+                    BigDecimal gbCurrentDebt = loanRepository.findAllActive().stream()
+                            .filter(loan -> loan.playerUuid().equals(playerId))
+                            .map(Loan::currentBalance)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal gbProjectedTotal = gbCurrentDebt.add(amount);
+                    if (gbProjectedTotal.compareTo(gbDebtLimit) > 0) {
+                        return LoanResult.error("GuildBuyer debt cap reached: your total debt would exceed "
+                                + config.guildbuyerTotalDebtCap() + "× economy GDP (" + configManager.formatCurrency(gbDebtLimit) + "). "
+                                + "Your current debt: " + configManager.formatCurrency(gbCurrentDebt) + ". Repay existing loans.");
+                    }
+                }
+            }
+        }
+
         BigDecimal interestRate = calculateInterestRate(playerData.creditScore(), clampedTerm, config);
         Instant dueDate = Instant.now().plus(Duration.ofDays(clampedTerm));
 

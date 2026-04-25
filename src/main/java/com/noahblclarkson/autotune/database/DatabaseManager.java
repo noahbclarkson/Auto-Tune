@@ -115,6 +115,13 @@ public class DatabaseManager {
             highestVersion = 3;
         }
 
+        // V5: Player type column for archetype-aware loan enforcement
+        if (currentVersion < 5) {
+            plugin.getLogger().info("Applying database migration V5 (Player Types)...");
+            runMigration("db/V5__Player_Types.sql");
+            highestVersion = 5;
+        }
+
         // Add future migrations here:
         // if (currentVersion < 4) { ... }
 

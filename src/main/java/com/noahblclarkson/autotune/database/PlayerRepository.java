@@ -1,6 +1,7 @@
 package com.noahblclarkson.autotune.database;
 
 import com.noahblclarkson.autotune.model.PlayerData;
+import com.noahblclarkson.autotune.model.PlayerData.PlayerType;
 import org.jdbi.v3.core.Jdbi;
 import org.jetbrains.annotations.NotNull;
 
@@ -8,8 +9,10 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("PMD")
 public class PlayerRepository {
@@ -20,10 +23,20 @@ public class PlayerRepository {
         this.jdbi = databaseManager.getJdbi();
     }
 
+    private static PlayerData.@NotNull PlayerType playerTypeFromString(String val) {
+        if ("MARKET_MAKER".equals(val)) {
+            return PlayerType.MARKET_MAKER;
+        } else if ("GUILD_BUYER".equals(val)) {
+            return PlayerType.GUILD_BUYER;
+        }
+        return PlayerType.OTHER;
+    }
+
     public Optional<PlayerData> findByName(String name) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""
                                 SELECT uuid, username, COALESCE(guild_tag, '') as guild_tag,
+                                       COALESCE(player_type, 'OTHER') as player_type,
                                        credit_score, total_traded, total_bought,
                                        total_sold, transaction_count, first_seen, last_seen,
                                        last_defaulted_at
@@ -34,6 +47,7 @@ public class PlayerRepository {
                                 .uuid(UUID.fromString(rs.getString("uuid")))
                                 .username(rs.getString("username"))
                                 .guildTag(rs.getString("guild_tag"))
+                                .playerType(playerTypeFromString(rs.getString("player_type")))
                                 .creditScore(rs.getInt("credit_score"))
                                 .totalTraded(rs.getBigDecimal("total_traded"))
                                 .totalBought(rs.getBigDecimal("total_bought"))
@@ -50,6 +64,7 @@ public class PlayerRepository {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""
                                 SELECT uuid, username, COALESCE(guild_tag, '') as guild_tag,
+                                       COALESCE(player_type, 'OTHER') as player_type,
                                        credit_score, total_traded, total_bought,
                                        total_sold, transaction_count, first_seen, last_seen,
                                        last_defaulted_at
@@ -60,6 +75,7 @@ public class PlayerRepository {
                                 .uuid(UUID.fromString(rs.getString("uuid")))
                                 .username(rs.getString("username"))
                                 .guildTag(rs.getString("guild_tag"))
+                                .playerType(playerTypeFromString(rs.getString("player_type")))
                                 .creditScore(rs.getInt("credit_score"))
                                 .totalTraded(rs.getBigDecimal("total_traded"))
                                 .totalBought(rs.getBigDecimal("total_bought"))
@@ -83,16 +99,18 @@ public class PlayerRepository {
     public void insert(@NotNull PlayerData player) {
         jdbi.useHandle(handle ->
                 handle.createUpdate("""
-                                INSERT INTO at_players (uuid, username, guild_tag, credit_score, total_traded,
-                                                        total_bought, total_sold, transaction_count,
+                                INSERT INTO at_players (uuid, username, guild_tag, player_type,
+                                                        credit_score, total_traded, total_bought,
+                                                        total_sold, transaction_count,
                                                         first_seen, last_seen, last_defaulted_at)
-                                VALUES (:uuid, :username, :guildTag, :creditScore, :totalTraded,
-                                        :totalBought, :totalSold, :transactionCount,
+                                VALUES (:uuid, :username, :guildTag, :playerType, :creditScore,
+                                        :totalTraded, :totalBought, :totalSold, :transactionCount,
                                         :firstSeen, :lastSeen, :lastDefaultedAt)
                                 """)
                         .bind("uuid", player.uuid().toString())
                         .bind("username", player.username())
                         .bind("guildTag", player.guildTag())
+                        .bind("playerType", player.playerType().name())
                         .bind("creditScore", player.creditScore())
                         .bind("totalTraded", player.totalTraded())
                         .bind("totalBought", player.totalBought())
@@ -110,6 +128,7 @@ public class PlayerRepository {
                                 UPDATE at_players SET
                                     username = :username,
                                     guild_tag = :guildTag,
+                                    player_type = :playerType,
                                     credit_score = :creditScore,
                                     total_traded = :totalTraded,
                                     total_bought = :totalBought,
@@ -121,6 +140,7 @@ public class PlayerRepository {
                         .bind("uuid", player.uuid().toString())
                         .bind("username", player.username())
                         .bind("guildTag", player.guildTag())
+                        .bind("playerType", player.playerType().name())
                         .bind("creditScore", player.creditScore())
                         .bind("totalTraded", player.totalTraded())
                         .bind("totalBought", player.totalBought())
@@ -142,10 +162,23 @@ public class PlayerRepository {
                         .execute());
     }
 
+    public void updatePlayerType(UUID uuid, PlayerType playerType) {
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                                UPDATE at_players SET player_type = :playerType, last_seen = :lastSeen
+                                WHERE uuid = :uuid
+                                """)
+                        .bind("uuid", uuid.toString())
+                        .bind("playerType", playerType.name())
+                        .bind("lastSeen", Timestamp.from(Instant.now()))
+                        .execute());
+    }
+
     public List<PlayerData> findByGuildTag(String guildTag) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""
                                 SELECT uuid, username, COALESCE(guild_tag, '') as guild_tag,
+                                       COALESCE(player_type, 'OTHER') as player_type,
                                        credit_score, total_traded, total_bought,
                                        total_sold, transaction_count, first_seen, last_seen,
                                        last_defaulted_at
@@ -156,6 +189,7 @@ public class PlayerRepository {
                                 .uuid(UUID.fromString(rs.getString("uuid")))
                                 .username(rs.getString("username"))
                                 .guildTag(rs.getString("guild_tag"))
+                                .playerType(playerTypeFromString(rs.getString("player_type")))
                                 .creditScore(rs.getInt("credit_score"))
                                 .totalTraded(rs.getBigDecimal("total_traded"))
                                 .totalBought(rs.getBigDecimal("total_bought"))
@@ -203,7 +237,9 @@ public class PlayerRepository {
     public List<PlayerData> findTopTraders(int limit) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""
-                                SELECT uuid, username, credit_score, total_traded, total_bought,
+                                SELECT uuid, username, COALESCE(guild_tag, '') as guild_tag,
+                                       COALESCE(player_type, 'OTHER') as player_type,
+                                       credit_score, total_traded, total_bought,
                                        total_sold, transaction_count, first_seen, last_seen,
                                        last_defaulted_at
                                 FROM at_players ORDER BY total_traded DESC LIMIT :limit
@@ -212,6 +248,8 @@ public class PlayerRepository {
                         .map((rs, ctx) -> PlayerData.builder()
                                 .uuid(UUID.fromString(rs.getString("uuid")))
                                 .username(rs.getString("username"))
+                                .guildTag(rs.getString("guild_tag"))
+                                .playerType(playerTypeFromString(rs.getString("player_type")))
                                 .creditScore(rs.getInt("credit_score"))
                                 .totalTraded(rs.getBigDecimal("total_traded"))
                                 .totalBought(rs.getBigDecimal("total_bought"))
@@ -244,6 +282,34 @@ public class PlayerRepository {
                         .execute());
     }
 
+    public List<PlayerData> findByPlayerType(PlayerType playerType) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                                SELECT uuid, username, COALESCE(guild_tag, '') as guild_tag,
+                                       COALESCE(player_type, 'OTHER') as player_type,
+                                       credit_score, total_traded, total_bought,
+                                       total_sold, transaction_count, first_seen, last_seen,
+                                       last_defaulted_at
+                                FROM at_players WHERE player_type = :playerType
+                                """)
+                        .bind("playerType", playerType.name())
+                        .map((rs, ctx) -> PlayerData.builder()
+                                .uuid(UUID.fromString(rs.getString("uuid")))
+                                .username(rs.getString("username"))
+                                .guildTag(rs.getString("guild_tag"))
+                                .playerType(playerTypeFromString(rs.getString("player_type")))
+                                .creditScore(rs.getInt("credit_score"))
+                                .totalTraded(rs.getBigDecimal("total_traded"))
+                                .totalBought(rs.getBigDecimal("total_bought"))
+                                .totalSold(rs.getBigDecimal("total_sold"))
+                                .transactionCount(rs.getInt("transaction_count"))
+                                .firstSeen(rs.getTimestamp("first_seen").toInstant())
+                                .lastSeen(rs.getTimestamp("last_seen").toInstant())
+                                .lastDefaultedAt(tsToInstant(rs.getTimestamp("last_defaulted_at")))
+                                .build())
+                        .list());
+    }
+
     /**
      * Returns all players with their first-seen time and last-sent onboarding milestone.
      * Used by {@link com.noahblclarkson.autotune.service.PlayerOnboardingService} to
@@ -251,7 +317,7 @@ public class PlayerRepository {
      *
      * @return map of player UUID → (firstSeen, lastOnboardingMilestoneSent)
      */
-    public java.util.Map<UUID, OnboardingPlayerInfo> findAllForOnboarding() {
+    public Map<UUID, OnboardingPlayerInfo> findAllForOnboarding() {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""
                                 SELECT uuid, first_seen, last_onboarding_milestone_sent
@@ -264,7 +330,7 @@ public class PlayerRepository {
                         ))
                         .list()
                         .stream()
-                        .collect(java.util.stream.Collectors.toMap(
+                        .collect(Collectors.toMap(
                                 OnboardingPlayerInfo::uuid,
                                 info -> info
                         ))
@@ -296,7 +362,7 @@ public class PlayerRepository {
      * @param uuid player's UUID
      * @return optional onboarding info (first seen + last milestone sent)
      */
-    public java.util.Optional<OnboardingPlayerInfo> findOnboardingInfoByUuid(UUID uuid) {
+    public Optional<OnboardingPlayerInfo> findOnboardingInfoByUuid(UUID uuid) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""
                                 SELECT uuid, first_seen, last_onboarding_milestone_sent

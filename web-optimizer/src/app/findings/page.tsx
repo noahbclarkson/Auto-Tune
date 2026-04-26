@@ -357,9 +357,11 @@ const CONFIG_FINDINGS: Finding[] = [
         + 'A 90-day test (3 seeds, 2026-04-20) confirmed the economy oscillates in the 15–22× range after day 60 '
         + 'and D/G partially recovers from ~20× (day 60) to ~16× (day 90). The circuit successfully prevents '
         + 'unbounded escalation — D/G never exceeds 30×. The oscillation is uncomfortable but the economy is stable and functional.',
-      'The proposed fix (tier3=50 + min_int=0.20) does NOT work: it keeps interest elevated '
-        + 'at ALL D/G levels (20% floor), preventing the natural deleveraging that occurs at '
-        + 'lower multipliers. Test result: D/G 18.1× (ctrl) → 19.1× (fix) — slightly WORSE.',
+      '⚠️ 180-DAY ESCALATION (2026-04-21): The 90-day "recovery" is temporary. '
+        + 'Both tested seeds show CATASTROPHIC RELAPSE at day 150–180: D/G escalates from 16× (day 90) to 42× (seed 42) and from 9.8× (day 90) to 26× (seed 12345). '
+        + 'TIER2↔TIER3 oscillation fires 4–8 more times after day 90. The circuit cannot stop long-run debt accumulation — '
+        + 'debt compounds ~10%/day while GDP grows ~1%/day. Admins of servers running past day 120 should monitor D/G weekly. '
+        + 'If D/G exceeds 25×, consider triggering `/at admin recovery` — earlier activation is exponentially more effective.',
       'All 7 proposed fixes FAILED at 5-seed × 60d: (1) wider TIER3 hysteresis band (50% vs 10% — '
         + 'D/G essentially flat, not a solution), (2) cap GB total debt at 3× GDP — 0.000× improvement '
         + '(cap is at loan creation, not the lock accumulation problem), (3) tier3=50+min_int=0.20 — D/G +1.05× worse, '
@@ -367,13 +369,14 @@ const CONFIG_FINDINGS: Finding[] = [
         + '(eliminating circuit events makes it WORSE because the 0% pause is the only thing slowing debt), '
         + '(6) loan-lock alone — neutral, (7) tier3=100+loan-lock combo — D/G +2.3× WORSE, 0 TIER3 events. '
         + 'No config workaround resolves the architectural imbalance between debt (~10%/day) and GDP (~1%/day). '
-        + 'Admins of 60+ day servers: monitor D/G weekly via /at admin stats.',
+        + 'An architectural fix (e.g., forced deleveraging on TIER3 exit, or bypassing TIER2 on recovery) is needed for long-run stability.',
     ],
     metrics: [
       { label: 'D/G at 14d', value: '8.31×', note: 'healthy' },
       { label: 'D/G at 30d', value: '7.50×', note: 'deceiving improvement' },
       { label: 'D/G at 60d', value: '20.1×', note: '⚠️ circuit fires — governor engages' },
       { label: 'D/G at 90d', value: '16.4×', note: '🟡 recovers — circuit contains oscillation' },
+      { label: 'D/G at 180d', value: '42×', note: '🚨 CATASTROPHIC RELAPSE (seed 42); 26× (seed 12345)' },
       { label: 'Fix attempt', value: 'ALL FAILED', note: '7 fixes tested — architectural fix needed; circuit is contained not catastrophic' },
     ],
     relatedLinks: [

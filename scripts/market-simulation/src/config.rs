@@ -154,6 +154,31 @@ pub struct LoanConfig {
     ///
     /// Default: false (MM/GB loans allowed during lock — legacy behavior).
     pub block_mm_gb_loans_during_tier3: bool,
+    /// TIER3 exit multiplier cap: limits the counter-cyclical multiplier after TIER3 unlock.
+    ///
+    /// When the TIER3 circuit unlocks (D/G dropped below hysteresis threshold), the
+    /// counter-cyclical formula immediately jumps to 53% interest at D/G=14 (tier3=30).
+    /// This is too high — debt grows faster than GDP can deleverage, causing immediate
+    /// re-trigger within days. This cap prevents that cascade by keeping interest
+    /// artificially suppressed during the graduated exit window.
+    ///
+    /// Example: tier3=30, D/G=14 post-unlock. Raw multiplier = 0.53 (53% daily).
+    /// With cap=0.10: multiplier clamped to 0.10. Debt grows 10%/day vs 1% GDP growth
+    /// → D/G stabilizes and gradually deleverages. After `tier3_exit_delay_ticks`
+    /// (default 4 days), cap expires and normal multiplier resumes.
+    ///
+    /// Set to 1.0 to disable (returns to raw counter-cyclical formula).
+    /// Recommended: 0.10 to 0.20 for production economies.
+    /// Default: 0.10 (10% max interest during graduated TIER3 exit).
+    pub tier3_exit_multiplier_cap: f64,
+    /// Duration (in ticks) of the graduated TIER3 exit cap.
+    ///
+    /// After TIER3 circuit unlocks, the `tier3_exit_multiplier_cap` applies for this many
+    /// ticks before the normal counter-cyclical multiplier resumes.
+    ///
+    /// Default: 1152 ticks (4 days at 288 ticks/day). This gives 4 days of suppressed
+    /// interest to allow the economy to deleverage before normal rates resume.
+    pub tier3_exit_delay_ticks: u32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -270,6 +295,8 @@ impl Default for LoanConfig {
             tier3_hysteresis_band: 0.5, // 50% band: unlock at D/G < 50% of tier3 (15 when tier3=30)
             guildbuyer_total_debt_cap: 3.0, // cap GB debt at 3× GDP during TIER3 lock — prevents zero-interest loan accumulation
             block_mm_gb_loans_during_tier3: false, // MM/GB loans allowed during TIER3 lock by default
+            tier3_exit_multiplier_cap: 0.10, // 10% cap during graduated TIER3 exit — prevents multiplier jump cascade
+            tier3_exit_delay_ticks: 1152, // 4 days at 288 ticks/day — gives economy time to deleverage
         }
     }
 }

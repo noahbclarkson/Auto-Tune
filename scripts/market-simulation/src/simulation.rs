@@ -71,6 +71,12 @@ pub struct Simulation {
     pub mm_opening_loan_count: u32,
     /// Total amount of opening loans taken by MarketMakers.
     pub mm_opening_loan_total: f64,
+    /// Remaining ticks for the graduated TIER3 exit cap.
+    /// After TIER3 circuit unlocks, the multiplier cap (tier3_exit_multiplier_cap)
+    /// applies for this many ticks before normal counter-cyclical rates resume.
+    /// This prevents the immediate multiplier jump (0% → 53% at D/G=14) that
+    /// causes TIER3 re-trigger within days.
+    tier3_exit_delay_remaining: u32,
 }
 
 impl Simulation {
@@ -78,6 +84,20 @@ impl Simulation {
     #[allow(dead_code)]
     pub(crate) fn is_circuit_tier3_locked(&self) -> bool {
         self.circuit_tier3_locked
+    }
+
+    /// Returns whether the graduated TIER3 exit delay is currently active.
+    /// During this window, the interest multiplier is capped at tier3_exit_multiplier_cap
+    /// to prevent the multiplier jump cascade that causes TIER3 re-trigger.
+    #[allow(dead_code)]
+    pub(crate) fn is_in_tier3_exit_delay(&self) -> bool {
+        self.tier3_exit_delay_remaining > 0
+    }
+
+    /// Returns the number of ticks remaining in the graduated TIER3 exit delay.
+    #[allow(dead_code)]
+    pub(crate) fn tier3_exit_delay_remaining(&self) -> u32 {
+        self.tier3_exit_delay_remaining
     }
 
     /// Returns the previous circuit breaker tier name ("NORMAL" | "TIER1" | "TIER2" | "TIER3").
@@ -122,6 +142,7 @@ impl Simulation {
             loan_cap_log: Vec::new(),
             mm_opening_loan_count: 0,
             mm_opening_loan_total: 0.0,
+            tier3_exit_delay_remaining: 0,
         }
     }
 
@@ -439,8 +460,13 @@ impl Simulation {
                 let hysteresis_unlock = lc.debt_gdp_tier3_ratio * (1.0 - lc.tier3_hysteresis_band);
 
                 // Check hysteresis unlock first: if locked and ratio dropped below band, unlock.
-                if self.circuit_tier3_locked && ratio < hysteresis_unlock {
+                let was_locked = self.circuit_tier3_locked;
+                if was_locked && ratio < hysteresis_unlock {
                     self.circuit_tier3_locked = false;
+                    // Starting graduated TIER3 exit: begin countdown until normal multiplier resumes.
+                    // This prevents the multiplier jump (0% → 53% at D/G=14) that causes
+                    // immediate TIER3 re-trigger within days.
+                    self.tier3_exit_delay_remaining = lc.tier3_exit_delay_ticks;
                 }
 
                 if self.circuit_tier3_locked {
@@ -449,6 +475,8 @@ impl Simulation {
                 } else if ratio >= lc.debt_gdp_tier3_ratio {
                     // First time crossing TIER3 — engage the lock.
                     self.circuit_tier3_locked = true;
+                    // Cancel any in-progress graduated exit.
+                    self.tier3_exit_delay_remaining = 0;
                     let multiplier = (1.0 - ratio / lc.debt_gdp_tier3_ratio)
                         .clamp(lc.min_interest_multiplier, 1.0);
                     (multiplier, "TIER3")
@@ -458,6 +486,14 @@ impl Simulation {
                         (1.0 - ratio / max_ratio).clamp(lc.min_interest_multiplier, 1.0)
                     } else {
                         1.0 // No GDP yet — full interest
+                    };
+                    // Apply graduated TIER3 exit cap: limits multiplier during the recovery window
+                    // after TIER3 circuit unlocks. Prevents multiplier jump cascade (see above).
+                    let multiplier = if self.tier3_exit_delay_remaining > 0 {
+                        self.tier3_exit_delay_remaining -= 1;
+                        multiplier.min(lc.tier3_exit_multiplier_cap)
+                    } else {
+                        multiplier
                     };
                     let tier = if ratio >= lc.debt_gdp_tier2_ratio {
                         "TIER2"

@@ -11465,6 +11465,9 @@ fn main() -> eframe::Result<()> {
             "  --sixty-day-early-intervention-test  tier3=5/10/15 vs ctrl × 5 seeds × 60 days"
         );
         println!("  --sixty-day-combo-test        tier3=100+loan_lock vs ctrl × 5 seeds × 60 days");
+        println!(
+            "  --graduated-exit-test     Graduated TIER3 exit cap (cap=0.10, delay=1152) × 90d × 2 seeds"
+        );
         println!("  --it-removal-test         2MM+2GB+floor: WITH vs WITHOUT InsiderTraders");
         println!("  --healthy-baseline-5seed  2MM+2GB+floor × 5 seeds: statistical baseline");
         println!("  --gb-newbie-healthy-test   2MM+2GB+2Far+2Newbie vs 2MM+2GB+3Far × 5 seeds");
@@ -11945,6 +11948,16 @@ fn main() -> eframe::Result<()> {
     // ─── 60-Day Combo Test: tier3=100 + block MM/GB loans during TIER3 ──
     if args.len() > 1 && args[1] == "--sixty-day-combo-test" {
         run_sixty_day_combo_test();
+        return Ok(());
+    }
+
+    // ─── Graduated TIER3 Exit Cap Test ─────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--graduated-exit-test" {
+
+        // Quick 1-seed test: 3 arms at 60 days
+        run_quick_graduated_test();
+
+        run_graduated_exit_test();
         return Ok(());
     }
 
@@ -19060,4 +19073,214 @@ fn run_sixty_day_early_intervention_test() {
         println!("  The circuit prevents catastrophe but cannot deleverage existing debt.");
     }
     println!("============================================================================");
+}
+
+// ─── Graduated TIER3 Exit Cap Test ──────────────────────────────────────────
+//
+// Problem: When TIER3 circuit unlocks (D/G drops below hysteresis threshold),
+// the counter-cyclical multiplier jumps from 0% to 53% at D/G=14 (tier3=30).
+// This is too high — debt grows faster than GDP, causing TIER3 re-trigger
+// within days. The 180-day test shows this cascade: D/G drops at day 90,
+// then CATASTROPHICALLY ESCALATES at day 120-180.
+//
+// Fix: After TIER3 circuit unlocks, apply a graduated multiplier cap for N ticks
+// before the normal counter-cyclical formula resumes. This gives the economy
+// time to deleverage under suppressed interest, rather than immediately
+// re-accumulating under 53% daily interest.
+//
+// Hypothesis: cap=0.10, delay=1152 ticks (4 days) prevents TIER3 re-trigger
+// and keeps D/G contained below 30x at 180 days.
+fn run_quick_graduated_test() {
+    use crate::analyzer::load_summary;
+    let seeds = [42u64];
+
+    println!("\n=== QUICK GRADUATED TEST (60d, seed=42) ===\n");
+
+    let arms = [
+        ("Ctrl", 1.0, 1152u32),
+        ("FixA", 0.10, 1152u32),
+        ("FixB", 0.03, 2304u32),
+    ];
+
+    let mut results: Vec<(String, f64, f64, u32)> = Vec::new();
+
+    for &(name, cap, delay) in &arms {
+        let mut scenario = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        scenario.name = format!("Q_{}_{}", name, cap);
+        scenario.duration_ticks = 288 * 60;
+        scenario.config.loans.tier3_exit_multiplier_cap = cap;
+        scenario.config.loans.tier3_exit_delay_ticks = delay;
+        let dir = format!("/tmp/autotune-sim/quick-{}-{}", name.to_lowercase(), cap);
+        let path = std::path::PathBuf::from(&dir);
+        std::fs::create_dir_all(&path).ok();
+        run_seeded_headless(&scenario, seeds[0], &path).ok();
+
+        if let Ok(summary) = load_summary(&path.join("simulation.db")) {
+            let dg = summary.debt / summary.gdp.max(1.0);
+            results.push((name.to_string(), summary.gdp, dg, summary.tier3_events));
+            println!("  {}: GDP={:.0}  D/G={:.3}x  T3={}", name, summary.gdp, dg, summary.tier3_events);
+        } else {
+            println!("  {}: FAILED", name);
+        }
+    }
+
+    let ctrl_dg = results.iter().find(|r| r.0 == "Ctrl").map(|r| r.2).unwrap_or(1.0);
+    println!("\n  vs Ctrl:");
+    for (name, _, dg, t3) in &results {
+        if name != "Ctrl" {
+            let imp = (*dg / ctrl_dg - 1.0) * 100.0;
+            println!("    {}: {:+.1}%  (T3={})", name, imp, t3);
+        }
+    }
+}
+
+fn run_graduated_exit_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds = [42u64, 12345u64];
+
+    println!(
+        "
+╔════════════════════════════════════════════════════════════════════════╗"
+    );
+    println!("║     GRADUATED TIER3 EXIT CAP TEST                            ║");
+    println!("║  Ctrl: cap=1.0 (disabled, raw counter-cyclical)         ║");
+    println!("║  Fix A:  cap=0.10, delay=1152 ticks (4 days)           ║");
+    println!("║  Fix B:  cap=0.03, delay=2304 ticks (8 days)           ║");
+    println!("║  Fix C:  cap=0.10 + block_mm_gb_loans_during_tier3    ║");
+    println!("╚════════════════════════════════════════════════════════════════════════╝\n");
+
+    let mut all_metrics: Vec<(String, u64, f64, f64, f64, u32)> = Vec::new();
+
+    for &seed in &seeds {
+        println!("  Running seed {}...", seed);
+
+        let arms = [
+            ("Ctrl", 1.0, 1152u32, false),
+            ("FixA", 0.10, 1152u32, false),
+            ("FixB", 0.03, 2304u32, false),
+            ("FixC", 0.10, 1152u32, true),
+        ];
+
+        for (name, cap, delay, block_mm_gb) in arms {
+            let mut scenario = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+            scenario.name = format!("Grad_{}_{}_s{}", name, cap, seed);
+            scenario.duration_ticks = 288 * 90;
+            scenario.config.loans.tier3_exit_multiplier_cap = cap;
+            scenario.config.loans.tier3_exit_delay_ticks = delay;
+            scenario.config.loans.block_mm_gb_loans_during_tier3 = block_mm_gb;
+            let dir = format!(
+                "/tmp/autotune-sim/grad-{}-{}-{}",
+                name.to_lowercase(),
+                cap,
+                seed
+            );
+            let path = std::path::PathBuf::from(&dir);
+            std::fs::create_dir_all(&path).ok();
+            run_seeded_headless(&scenario, seed, &path).ok();
+
+            if let Ok(summary) = load_summary(&path.join("simulation.db")) {
+                let dg = summary.debt / summary.gdp.max(1.0);
+                all_metrics.push((
+                    format!("{}:{}", name, seed),
+                    seed,
+                    summary.gdp,
+                    dg,
+                    summary.avg_volatility,
+                    summary.tier3_events,
+                ));
+                println!(
+                    "      {}: GDP={:.0}  D/G={:.3}x  T3={}",
+                    name, summary.gdp, dg, summary.tier3_events
+                );
+            } else {
+                println!("      {}: FAILED", name);
+            }
+        }
+    }
+
+    // Per-seed comparison
+    println!(
+        "
+╔════════════════════════════════════════════════════════════════════════╗"
+    );
+    println!("║  GRADUATED EXIT CAP — 90-DAY RESULTS                                  ║");
+    println!("╠════════════════════════════════════════════════════════════════════════╣");
+    println!(
+        "║  {:^12}  {:>10}  {:>10}  {:>10}  {:>8}  ║",
+        "Arm", "GDP", "D/G", "vs_Ctrl%", "T3"
+    );
+    println!("╠════════════════════════════════════════════════════════════════════════╣");
+
+    let mut ctrl_dgs: Vec<f64> = Vec::new();
+    for &(ref arm, _, _gdp, dg, _vol, _t3) in &all_metrics {
+        if arm.starts_with("Ctrl") {
+            ctrl_dgs.push(dg);
+        }
+    }
+    let ctrl_avg = if ctrl_dgs.is_empty() {
+        1.0
+    } else {
+        ctrl_dgs.iter().sum::<f64>() / ctrl_dgs.len() as f64
+    };
+
+    for &(ref arm, _, gdp, dg, _vol, t3) in &all_metrics {
+        let vs_ctrl = if arm.starts_with("Ctrl") {
+            0.0f64
+        } else {
+            (dg / ctrl_avg - 1.0) * 100.0
+        };
+        println!(
+            "║  {:^12}  {:>10.0}  {:>10.3}x  {:>+9.1}%  {:>8}  ║",
+            arm, gdp, dg, vs_ctrl, t3
+        );
+    }
+    println!("╚════════════════════════════════════════════════════════════════════════╝");
+
+    let fix_a_avg = all_metrics
+        .iter()
+        .filter(|m| m.0.starts_with("FixA"))
+        .map(|m| m.3)
+        .sum::<f64>()
+        / 2.0;
+    let fix_b_avg = all_metrics
+        .iter()
+        .filter(|m| m.0.starts_with("FixB"))
+        .map(|m| m.3)
+        .sum::<f64>()
+        / 2.0;
+    let fix_c_avg = all_metrics
+        .iter()
+        .filter(|m| m.0.starts_with("FixC"))
+        .map(|m| m.3)
+        .sum::<f64>()
+        / 2.0;
+    let fix_a_imp = (fix_a_avg / ctrl_avg - 1.0) * 100.0;
+    let fix_b_imp = (fix_b_avg / ctrl_avg - 1.0) * 100.0;
+    let fix_c_imp = (fix_c_avg / ctrl_avg - 1.0) * 100.0;
+
+    println!(
+        "
+  Summary (ctrl avg D/G={:.3}x):",
+        ctrl_avg
+    );
+    println!(
+        "    FixA (cap=0.10, delay=4d):  D/G={:.3}x  ({:+.1}%)  — marginal",
+        fix_a_avg, fix_a_imp
+    );
+    println!(
+        "    FixB (cap=0.03, delay=8d): D/G={:.3}x  ({:+.1}%)  — deeper cap",
+        fix_b_avg, fix_b_imp
+    );
+    println!(
+        "    FixC (cap=0.10 + block):   D/G={:.3}x  ({:+.1}%)  — block MM/GB loans",
+        fix_c_avg, fix_c_imp
+    );
+
+    if fix_b_imp < -10.0 || fix_c_imp < -10.0 {
+        println!("\n  ✓ FixB or FixC shows promise — run 180-day test to confirm.");
+    } else {
+        println!("\n  ✗ All variants insufficient at 90 days — architectural fix needed.");
+        println!("  /at admin recovery is the only reliable deleveraging tool.");
+    }
 }

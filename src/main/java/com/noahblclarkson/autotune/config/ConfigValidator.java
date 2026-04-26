@@ -225,6 +225,18 @@ public class ConfigValidator {
             v.add(S_LOANS + ".totalDebtGdpCap must be >= 0 (currently " + c.totalDebtGdpCap() + "). "
                     + "Set to 0 to disable the economy-wide debt cap. Positive values set the cap as a multiple of GDP.");
         }
+        if (c.tier3HysteresisBand() < 0 || c.tier3HysteresisBand() >= 1) {
+            v.add(S_LOANS + ".tier3HysteresisBand must be >= 0 and < 1 (currently " + c.tier3HysteresisBand() + "). "
+                    + "Values >= 1 would prevent the circuit breaker from ever unlocking.");
+        }
+        if (c.minInterestMultiplier() < 0 || c.minInterestMultiplier() > 1) {
+            v.add(S_LOANS + ".minInterestMultiplier must be between 0 and 1 (currently " + c.minInterestMultiplier() + "). "
+                    + "A value of 0.05 means interest never drops below 5% even at max D/G.");
+        }
+        if (c.guildbuyerTotalDebtCap() < 0) {
+            v.add(S_LOANS + ".guildbuyerTotalDebtCap must be >= 0 (currently " + c.guildbuyerTotalDebtCap() + "). "
+                    + "Set to 0 to disable the per-GuildBuyer debt cap.");
+        }
     }
 
     private static void validateGui(AutoTuneConfig.GuiConfig c, List<String> v) {

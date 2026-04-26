@@ -200,16 +200,18 @@ loans:
   default-penalty: 50
 
   # Tiered debt/GDP circuit breaker — graduated interest caps prevent debt
-  # snowball before it reaches catastrophic levels (>10x where full pause fires).
+  # snowball before it reaches catastrophic levels.
   # Tier 1 (>3x): interest capped at 50% of normal
   # Tier 2 (>5x): interest capped at 25% of normal
-  # Tier 3 (>15x): interest fully paused (last-resort circuit breaker)
-  # Evidence (2026-04-05): tier3_ratio=10 caused TIER3 oscillations near the
-  # 10x boundary. tier3_ratio=15 eliminates TIER3 noise in healthy economies
-  # while counter-cyclical=true handles gradual deleveraging smoothly.
+  # Tier 3 (>30x): interest fully paused (last-resort circuit breaker)
+  #
+  # ⚠️ Evidence (2026-04-15): tier3_ratio=15 caused TIER3 oscillations at 60d
+  # (D/G hit 20x, circuit fired constantly). tier3_ratio=30.0 is correct —
+  # TIER3 only fires in genuine catastrophe (>30x), not in normal oscillation.
+  # Never set below 20 — simulations show tier3 < 20 causes doom loop.
   debt-gdp-tier1-ratio: 3.0
   debt-gdp-tier2-ratio: 5.0
-  debt-gdp-tier3-ratio: 15.0
+  debt-gdp-tier3-ratio: 30.0
   tier1-interest-cap: 0.5
   tier2-interest-cap: 0.25
 
@@ -219,6 +221,35 @@ loans:
   # (e.g., from GuildBuyer cascading during TIER3 lock).
   # Set to 0 to disable. Default: 2.0 (2× GDP cap).
   total-debt-gdp-cap: 2.0
+
+  # --- Advanced Loan Parameters ---
+  # Added 2026-04-25: Java/Rust parity for simulation-verified loan behavior.
+
+  # Hysteresis band for TIER3 circuit breaker unlock.
+  # When D/G crosses tier3_ratio (e.g., 30), circuit LOCKS at 0% interest.
+  # It stays locked until D/G drops below tier3_ratio × (1 - hysteresis_band).
+  # Default 0.1 = 10% band → unlock at D/G < 27x (30 × 0.90).
+  # Recommended for long-running servers: 0.5 (unlock at D/G < 15x).
+  # Too wide (>0.7) may prevent interest re-enabling after TIER3 exit.
+  tier3-hysteresis-band: 0.1
+
+  # Minimum interest multiplier. Counter-cyclical taper never goes below this.
+  # Setting to 0.05 means interest stays at minimum 5% even at max D/G.
+  # Default 0.0 = pure counter-cyclical (0% at D/G=tier3).
+  # Non-zero values maintain some interest pressure to slow debt accumulation.
+  min-interest-multiplier: 0.0
+
+  # Per-GuildBuyer debt cap as multiple of economy GDP.
+  # Prevents a single active GB from accumulating outsized debt during TIER3 lock.
+  # E.g., 3.0 × $4M GDP = $12M cap per GB. Reject new loans if GB's active
+  # loans would exceed this amount. Set to 0 to disable. Default: 3.0.
+  guildbuyer-total-debt-cap: 3.0
+
+  # Block MarketMaker and GuildBuyer players from taking NEW loans while TIER3
+  # circuit is locked. Prevents archetype players from accumulating interest-free
+  # debt during catastrophic debt spiral. Existing loans remain unchanged.
+  # Default: false (allows all players to take loans during TIER3).
+  block-mm-gb-loans-during-tier3: false
 
 gui:
   # Items per page in shop (max 45 = 5 rows x 9 columns)

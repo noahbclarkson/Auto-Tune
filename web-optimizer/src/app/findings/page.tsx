@@ -370,6 +370,11 @@ const CONFIG_FINDINGS: Finding[] = [
         + '(6) loan-lock alone — neutral, (7) tier3=100+loan-lock combo — D/G +2.3× WORSE, 0 TIER3 events. '
         + 'No config workaround resolves the architectural imbalance between debt (~10%/day) and GDP (~1%/day). '
         + 'An architectural fix (e.g., forced deleveraging on TIER3 exit, or bypassing TIER2 on recovery) is needed for long-run stability.',
+      '✅ WHAT ADMINS CAN DO NOW: (1) Monitor D/G weekly via `/at admin stats`. '
+        + '(2) If D/G exceeds 25×, trigger `/at admin recovery` — earlier activation is exponentially more effective. '
+        + '(3) After recovery, keep tier3=30 (default) and monitor whether D/G stays below 15×. '
+        + '(4) If D/G stays elevated, consider `/at admin recovery` again or reduce `market-event-frequency` to prevent further debt accumulation. '
+        + '(5) For long-running servers (90d+), a scheduled quarterly `/at admin recovery` as preventive maintenance is recommended.',
     ],
     metrics: [
       { label: 'D/G at 14d', value: '8.31×', note: 'healthy' },

@@ -57,12 +57,10 @@ economy:
   slippage-coeff: 0.01
 
   # Sell pressure multiplier: reduces downward price pressure when players sell
-  # Values < 1.0 soften sell-driven drops; 0.8 reduces GuildBuyer over-leverage on dips
-  # Evidence (2026-04-07, 5-seed): 0.8 → GDP +2%, D/G -30% vs 1.0
-  # Recommended: 0.8 for production. Do NOT set below 0.5 (destabilizes price discovery).
-  sell-pressure-multiplier: 0.8
-
-  # Sector correlation: items in the same section influence each other
+  # Values < 1.0 soften sell-driven drops; 1.0 is symmetric (buy/sell equally affect price)
+  # Evidence (2026-04-13, 5-seed): sp=0.8 → GDP +5% but D/G +39.9% WORSE than sp=1.0
+  # Recommended: 1.0 for production (D/G stability > marginal GDP). Do NOT set below 0.5.
+  sell-pressure-multiplier: 1.0
   # Higher values = stronger cross-item price coupling within a section
   sector-correlation: 0.05
 

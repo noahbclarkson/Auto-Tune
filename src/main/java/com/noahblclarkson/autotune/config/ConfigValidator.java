@@ -31,7 +31,12 @@ public class ConfigValidator {
     private static final String S_WEB = "web";
     private static final String S_AUCTION = "auction";
     private static final String S_MARKET_EVENTS = "marketEvents";
+    private static final String S_NEWS = "news";
     private static final String S_EXCHANGE_RATE = "exchangeRate";
+    private static final String S_ADMIN_WEBHOOK = "admin-webhook";
+    private static final String S_PRICE_MILESTONE = "price-milestone";
+    private static final String S_MARKET_DIGEST = "market-digest";
+    private static final String S_ONBOARDING = "onboarding";
 
     /**
      * Validates all config values. Returns a list of violations, or an empty
@@ -58,6 +63,10 @@ public class ConfigValidator {
         validateMarketEvents(config.marketEvents(), violations);
         validateEconomicNews(config.news(), violations);
         validateExchangeRate(config.exchangeRate(), violations);
+        validateAdminWebhook(config.webhook(), violations);
+        validatePriceMilestone(config.priceMilestones(), violations);
+        validateMarketDigest(config.marketDigest(), violations);
+        validateOnboarding(config.onboarding(), violations);
 
         return violations;
     }
@@ -418,6 +427,70 @@ public class ConfigValidator {
         if (c.fetchIntervalMinutes() <= 0) {
             v.add(S_EXCHANGE_RATE + ".fetchIntervalMinutes must be > 0 (currently " + c.fetchIntervalMinutes() + "). "
                     + "Zero or negative would prevent exchange rate updates.");
+        }
+    }
+
+    private static void validateAdminWebhook(AutoTuneConfig.AdminWebhookConfig c, List<String> v) {
+        if (c.notifyHighDebtThreshold() < 0) {
+            v.add(S_ADMIN_WEBHOOK + ".notify-high-debt-threshold must be >= 0 (currently " + c.notifyHighDebtThreshold() + ").");
+        }
+        if (c.lowVolumeThreshold() < 0) {
+            v.add(S_ADMIN_WEBHOOK + ".low-volume-threshold must be >= 0 (currently " + c.lowVolumeThreshold() + ").");
+        }
+    }
+
+    private static void validatePriceMilestone(AutoTuneConfig.PriceMilestoneConfig c, List<String> v) {
+        if (c.intervalMinutes() <= 0) {
+            v.add(S_PRICE_MILESTONE + ".interval-minutes must be > 0 (currently " + c.intervalMinutes() + ").");
+        }
+        if (c.cooldownMinutes() <= 0) {
+            v.add(S_PRICE_MILESTONE + ".cooldown-minutes must be > 0 (currently " + c.cooldownMinutes() + ").");
+        }
+        if (c.thresholds() == null || c.thresholds().isEmpty()) {
+            v.add(S_PRICE_MILESTONE + ".thresholds must contain at least one value (currently "
+                    + (c.thresholds() == null ? "null" : "empty") + ").");
+        } else {
+            for (int i = 0; i < c.thresholds().size(); i++) {
+                if (c.thresholds().get(i) < 0) {
+                    v.add(S_PRICE_MILESTONE + ".thresholds[" + i + "] must be >= 0 (found " + c.thresholds().get(i) + ").");
+                }
+                if (i > 0 && c.thresholds().get(i) <= c.thresholds().get(i - 1)) {
+                    v.add(S_PRICE_MILESTONE + ".thresholds must be strictly ascending (found "
+                            + c.thresholds().get(i) + " at index " + i + " <= " + c.thresholds().get(i - 1) + " at index " + (i - 1) + ").");
+                }
+            }
+        }
+    }
+
+    private static void validateMarketDigest(AutoTuneConfig.MarketDigestConfig c, List<String> v) {
+        if (!"daily".equals(c.interval()) && !"weekly".equals(c.interval())) {
+            v.add(S_MARKET_DIGEST + ".interval must be 'daily' or 'weekly' (currently '" + c.interval() + "').");
+        }
+        if (c.dayOfWeek() < 0 || c.dayOfWeek() > 6) {
+            v.add(S_MARKET_DIGEST + ".day-of-week must be 0-6 (Sunday=0, currently " + c.dayOfWeek() + ").");
+        }
+        if (c.hourOfDay() < 0 || c.hourOfDay() > 23) {
+            v.add(S_MARKET_DIGEST + ".hour-of-day must be 0-23 (currently " + c.hourOfDay() + ").");
+        }
+    }
+
+    private static void validateOnboarding(AutoTuneConfig.OnboardingConfig c, List<String> v) {
+        if (c.checkIntervalHours() <= 0) {
+            v.add(S_ONBOARDING + ".check-interval-hours must be > 0 (currently " + c.checkIntervalHours() + ").");
+        }
+        if (c.milestones() == null || c.milestones().isEmpty()) {
+            v.add(S_ONBOARDING + ".milestones must contain at least one entry (currently "
+                    + (c.milestones() == null ? "null" : "empty") + ").");
+        } else {
+            for (int i = 0; i < c.milestones().size(); i++) {
+                AutoTuneConfig.OnboardingMilestoneConfig m = c.milestones().get(i);
+                if (m.dayOffset() < 0) {
+                    v.add(S_ONBOARDING + ".milestones[" + i + "].day-offset must be >= 0 (found " + m.dayOffset() + ").");
+                }
+                if (m.message() == null || m.message().isBlank()) {
+                    v.add(S_ONBOARDING + ".milestones[" + i + "].message must not be blank (category: " + m.category() + ").");
+                }
+            }
         }
     }
 

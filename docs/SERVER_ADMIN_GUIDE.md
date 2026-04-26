@@ -259,9 +259,9 @@ Same fix as above but check SPD (sell price deviation) instead of BPD. Also chec
 
 ### "Economy collapsed after a player took huge loans"
 
-The **loan circuit breaker** should have prevented this (it pauses interest when debt > GDP × 10). Check:
+The **loan circuit breaker** should have prevented this (it pauses interest when debt > GDP × `debt-gdp-tier3-ratio`). Check:
 - Is `loans.enabled: true`?
-- Is `loans.debt-gdp-circuit-breaker-ratio` at a reasonable level (default: 10.0)?
+- Is `loans.debt-gdp-tier3-ratio` at a reasonable level (default: 30.0)?
 - Did the player default and lose credit score? Default penalty is `defaultPenalty: 50`.
 
 ### "Database is getting huge"

@@ -1,6 +1,11 @@
-# Ecosystem Analysis — 2026-04-15 (updated)
+# Ecosystem Analysis — 2026-04-26 (updated)
+
+> **2026-04-26 update:** 8/8 TIER3 fix candidates FAILED — architectural fix needed. Circuit is a governor, not a cure. AdminRecovery must be used proactively (day 3–7, not day 10+). Whale archetype worsens D/G +37% but circuit contains it. Newbie confirmed irreplaceable by GuildBuyer.
+
+> **2026-04-21 update:** 180-day test confirms economy does NOT stabilize past day 120. D/G escalates 16×→42× (seed 42). TIER3→NORMAL bypass is the only viable architectural fix.
 
 > **2026-04-15 update:** sell_pressure=1.0 confirmed correct default; Newbie archetype fully characterized; Events confirmed harmful in healthy economies; Casual-heavy devastating for 2MM+2GB+floor.
+
 
 > **2026-04-13 update:** New definitive archetype findings from 5-seed simulation lab.
 

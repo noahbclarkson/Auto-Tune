@@ -2,6 +2,27 @@
 
 > What's changed in the rewrite-2 branch.
 
+## 2026-04-26 — Simulation Lab: 8/8 Fix Candidates Failed, Architectural Fix Required
+
+### Simulation Lab
+**8/8 TIER3 fix candidates now confirmed FAILED.** All tested across 60–90 day horizons. Circuit is a governor, not a cure.
+
+All fixes confirmed FAILED:
+- tier3=50 + min_int=0.20 → D/G +1.05x WORSE
+- Hysteresis 50% → D/G neutral (-0.06x, noise)
+- GB debt cap 3× → D/G neutral (non-binding at 60d)
+- tier3=100 alone → D/G +2.3x WORSE (0 TIER3 events but interest compounds)
+- Loan-lock during TIER3 → D/G neutral (-0.29x, noise)
+- Graduated exit cap → D/G -3.8% (marginal, FixC +45.1% WORSE)
+- Deep hysteresis 80% → D/G -3.8% (marginal)
+
+**Root cause (updated):** Counter-cyclical formula `multiplier = max(0, 1 - D/G/30)` produces a 50% multiplier at D/G=14.9. This is too aggressive — debt compounds faster than GDP deleverages. TIER3 exits into TIER2 (50%) immediately, re-triggering TIER3 within days.
+
+**Administrative actions required:**
+- Monitor D/G weekly
+- Use `/at admin recovery` proactively at day 3–7 (not day 10+) — effectiveness drops sharply after day 10
+- If D/G exceeds 25×, act immediately
+
 ## 2026-04-18 — Simulation Lab: 60-Day Instability Confirmed Structural
 
 ### Simulation Lab

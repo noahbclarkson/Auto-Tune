@@ -62,23 +62,26 @@ If D/G is climbing rapidly:
 
 ### The circuit breaker keeps firing (TIER 3)
 
-TIER 3 means debt-to-GDP exceeded 15×. Interest is paused. Here's why and what to do:
+TIER 3 means debt-to-GDP exceeded 30×. Interest is paused. Here's why and what to do:
 
 **Why it fired:**
-- A player took on too much debt and defaulted
+- Multiple players or guilds accumulated debt faster than the economy could grow
 - Or a mass player exodus left debts unpaid
 
-**What happens:** Interest is paused until D/G drops below 13.5× (10% hysteresis). New loans can still be taken but interest won't compound on existing debt.
+**What happens:** Interest is paused until D/G drops below 15× (50% hysteresis band with default settings). New loans can still be taken but interest won't compound on existing debt.
 
 **Recovery:**
+- `/at admin recovery start` — run this early (day 3–7) for best results. By day 10+ the circuit has contained the problem and recovery has diminishing effect.
 - Let the economy grow naturally — GDP increases, D/G decreases
-- Or temporarily increase `loans.min-interest` (not recommended long-term — see [Config Guide](CONFIG_GUIDE.md))
-- The 60% price floor helps prevent cascading defaults in stressed economies
+- The 60% price floor helps prevent cascading defaults
+
+**Long-run warning (180+ days):** Even with the circuit breaker, the economy does not fully stabilize past day 120. D/G can escalate from ~16× at day 90 to 40×+ by day 180. See [docs/60D_FIX_ANALYSIS.md](60D_FIX_ANALYSIS.md) for the full analysis.
 
 **Prevention for next time:**
 - Keep `loans.counter-cyclical: true` (default)
-- Consider a 60% price floor on key items (Diamond, Gold)
+- Use the 60% price floor on key items (Diamond, Gold)
 - Monitor D/G with `/at admin health` weekly
+- If D/G exceeds 25×, act proactively with `/at admin recovery`
 
 ### I want to disable the loan system entirely
 

@@ -282,7 +282,7 @@ AutoTuneConfig
 - `sell-pressure-multiplier` — reduces downward pressure on sell transactions (1.0 = symmetric, recommended; 0.80 = growth-oriented, worsens D/G ~40%)
 - `trade-window-days` — longer = smoother prices, slower reaction; shorter = faster adaptation, more volatile
 - `max-price-change-percent` — per-tick price change cap (higher = faster adaptation, more volatility)
-- `debt-gdp-circuit-breaker-ratio` — essential safeguard (10.0 default)
+- `debt-gdp-tier3-ratio` — TIER3 trigger threshold (30.0 default — circuit fires at D/G ≥ 30×)
 
 See `docs/CONFIG_GUIDE.md` for full reference.
 

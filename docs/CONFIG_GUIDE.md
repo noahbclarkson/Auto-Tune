@@ -91,7 +91,7 @@ The scaling formula uses a `tanh` curve: `tanh(onlineCount * atanh(0.99) / fullE
 | `loans.base-interest-rate` | `0.05` | Annual-ish interest rate (5% per compound) |
 | `loans.compound-interval-hours` | `24` | Hours between interest compounds |
 | `loans.max-loan-multiplier` | `2.0` | Max loan size as multiple of player's total traded value |
-| `loans.debt-gdp-circuit-breaker-ratio` | `10.0` | Pauses interest when total debt exceeds GDP × this |
+| `loans.debt-gdp-tier3-ratio` | `30.0` | TIER3 circuit fires when D/G exceeds this value |
 | `loans.credit-score.enabled` | `true` | Use credit score to adjust interest rates |
 | `loans.credit-score.default` | `500` | Starting credit score for new players |
 | `loans.overdue.default-points` | `50` | Credit score penalty on loan default |
@@ -113,7 +113,7 @@ The scaling formula uses a `tanh` curve: `tanh(onlineCount * atanh(0.99) / fullE
 
 **block-mm-gb-loans-during-tier3** (default `false`): When `true`, MarketMaker and GuildBuyer players cannot open loans while TIER3 circuit is active. Combined with `tier3-hysteresis-band=0.5`, this prevents MM/GB from accumulating debt that immediately re-triggers TIER3 on circuit unlock.
 
-**debt-gdp-circuit-breaker-ratio**: When system-wide total debt exceeds `GDP × ratio`, loan interest accrual is paused for that cycle. It auto-resumes when debt drops back below the threshold. Default 10.0 means circuit opens when debt is 10× the 24h GDP.
+**debt-gdp-tier3-ratio** (default `30.0`): TIER3 circuit fires when system-wide Debt/GDP exceeds this ratio. Interest is fully paused while the circuit is locked. It unlocks when D/G drops below `tier3-ratio × (1 - tier3-hysteresis-band)`. At default 30.0 with 50% hysteresis band, circuit unlocks at D/G < 15×.
 
 **counter-cyclical** (default `true`): Interest rate is linearly reduced as Debt/GDP rises. At D/G=0 → 100% rate; at D/G = circuit-breaker-ratio → 0% rate. Formula: `multiplier = max(0, min(1.0, 1.0 - D/G / circuitBreakerRatio))`. This dampens debt accumulation before the circuit breaker fires.
 
@@ -306,7 +306,7 @@ player-scaling:
 
 ```yaml
 loans:
-  debt-gdp-circuit-breaker-ratio: 5.0  # tighter circuit (fires at 5× GDP vs default 10×)
+  debt-gdp-tier3-ratio: 30.0  # TIER3 fires at 30× D/G (D/G < 15× to unlock with 50% band)
   compound-interval-hours: 48           # slower compounding (every 2 days vs 1)
   counter-cyclical: true                # reduces interest as D/G rises (default: true)
   post-default-cooldown-hours: 168      # 7-day lock after default (default: 168)
@@ -339,7 +339,7 @@ These parameters fine-tune the loan circuit breaker behavior for long-running se
 
 **Default: `0.1`** | **Recommended: `0.5`**
 
-When TIER3 fires (D/G ≥ `debt-gdp-circuit-breaker-ratio`), the circuit stays locked at 0% interest until D/G drops below `tier3 × (1 − band)`.
+When TIER3 fires (D/G ≥ `debt-gdp-tier3-ratio`), the circuit stays locked at 0% interest until D/G drops below `tier3 × (1 − tier3-hysteresis-band)`.
 
 | Band setting | tier3=30 unlocks at | Effect |
 |---|---|---|

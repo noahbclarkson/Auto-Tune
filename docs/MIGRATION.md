@@ -36,7 +36,7 @@ The `config.yml` structure has been replaced with a nested `AutoTuneConfig` reco
 **Key changes:**
 - Spread parameters moved into a `spread {}` block
 - Player scaling has its own `player-scaling {}` block
-- Loan circuit breaker added: `loans.debt-gdp-circuit-breaker-ratio` (default: 10.0)
+- Loan circuit breaker added: `loans.debt-gdp-tier3-ratio` (default: 30.0 — later raised from initial 10.0)
 - New `autosell {}` block with `sound-effects`, `minimum-price-threshold`
 - New `treasury {}` block for dynamic tax collection
 - `web {}` block added for the built-in Javalin dashboard (port, auth)
@@ -254,7 +254,7 @@ After upgrade:
 | `spread.base` | `spread.base-spread` | Default: 0.20 (20%) |
 | `spread.volume-impact` | `spread.volume-impact` | Default: 0.8 |
 | `loan.interest-rate` | `loans.base-interest-rate` | Default: 0.05 (5%) |
-| N/A | `loans.debt-gdp-circuit-breaker-ratio` | Default: 10.0 (new!) |
+| N/A | `loans.debt-gdp-tier3-ratio` | Default: 30.0 (new!) |
 | N/A | `autosell.sound-effects` | New block |
 | N/A | `treasury.*` | New dynamic tax system |
 | N/A | `price-reporter.*` | New price reporting config |

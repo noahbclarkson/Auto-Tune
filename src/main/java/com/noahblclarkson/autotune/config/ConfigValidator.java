@@ -246,6 +246,17 @@ public class ConfigValidator {
             v.add(S_LOANS + ".guildbuyerTotalDebtCap must be >= 0 (currently " + c.guildbuyerTotalDebtCap() + "). "
                     + "Set to 0 to disable the per-GuildBuyer debt cap.");
         }
+        // ── Dangerous config warnings (soft errors — admins may have good reasons) ──
+        if (c.debtGdpTier3Ratio() < 20.0) {
+            v.add(S_LOANS + ".debtGdpTier3Ratio is " + c.debtGdpTier3Ratio() + " (below 20). "
+                    + "Simulation evidence shows tier3 < 20 causes severe D/G instability at 60+ days. "
+                    + "Recommended minimum: 30.0.");
+        }
+        if (c.postDefaultCooldownHours() > 0 && c.postDefaultCooldownHours() < 72) {
+            v.add(S_LOANS + ".postDefaultCooldownHours is " + c.postDefaultCooldownHours() + "h (below 72h). "
+                    + "Short cooldowns allow cascade re-borrowing after defaults. "
+                    + "Recommended minimum: 168h (7 days) to prevent exploit cycles.");
+        }
     }
 
     private static void validateGui(AutoTuneConfig.GuiConfig c, List<String> v) {

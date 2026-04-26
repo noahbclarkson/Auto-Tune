@@ -229,6 +229,15 @@ public class AutoTune extends JavaPlugin {
 
     public void reload() throws Exception {
         configManager.load();
+        // Warn on dangerous config values — don't block reload, just alert the admin
+        var violations = ConfigValidator.validate(configManager.getConfig());
+        if (!violations.isEmpty()) {
+            getLogger().warning("[Auto-Tune] Config warnings detected after reload:");
+            for (var v : violations) {
+                getLogger().warning("  - " + v);
+            }
+            getLogger().warning("[Auto-Tune] Run /at reload again after fixing config, or restart the server.");
+        }
         marketEngine.reload();
         // Repopulate market caches synchronously so prices/spreads are correct
         // immediately after reload (don't wait up to 5 min for next async tick)

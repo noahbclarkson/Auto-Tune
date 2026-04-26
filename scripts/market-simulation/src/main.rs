@@ -11904,6 +11904,12 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    // ─── TIER3 Deep Hysteresis + Extended Cap Test ──────────────────────
+    if args.len() > 1 && args[1] == "--tier3-deep-hysteresis-test" {
+        run_tier3_deep_hysteresis_test();
+        return Ok(());
+    }
+
     if args.len() > 1 && args[1] == "--sixty-day-test" {
         run_sixty_day_test();
         return Ok(());
@@ -16721,8 +16727,155 @@ fn run_threshold_30day_test() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// SESSION: 2026-04-15 — 60-day production stability test
+// SESSION: 2026-04-26 — TIER3 Deep Hysteresis + Extended Cap Test
+//
+// Problem: After TIER3 circuit unlocks at D/G < 15 (hysteresis band 50%),
+// the counter-cyclical multiplier jumps to ~50% (at D/G=14). This is ~10×
+// too aggressive — debt grows at 10%/day while GDP grows at 1%/day.
+// D/G oscillates in the 14-20x band and TIER3 re-fires within days.
+//
+// Fix candidates:
+// 1. Deeper hysteresis (0.70-0.80 band) → unlock at D/G < 9 or < 6
+//    → circuit stays locked through the dangerous 14-20x range
+// 2. Extended graduated cap (30 days at 0.01) → D/G has time to
+//    deleverage from 20→~10x before multiplier restoration
 // ═══════════════════════════════════════════════════════════════════
+
+fn run_tier3_deep_hysteresis_test() {
+    use crate::analyzer::load_summary;
+
+    let seeds = [42u64, 12345u64, 98765u64];
+
+    println!(
+        "\n╔══════════════════════════════════════════════════════════════════════════╗"
+    );
+    println!("║     TIER3 DEEP HYSTERESIS + EXTENDED CAP TEST                      ║");
+    println!("║  Problem: multiplier=50% at D/G=14 → TIER3 re-triggers in days       ║");
+    println!("║  Fix A: hysteresis=0.70 (unlock at D/G < 9)                       ║");
+    println!("║  Fix B: hysteresis=0.80 (unlock at D/G < 6)                       ║");
+    println!("║  Fix C: hysteresis=0.80 + cap=0.01 for 30 days (8640 ticks)       ║");
+    println!("╚══════════════════════════════════════════════════════════════════════════╝\n");
+
+    println!("  Config: 2MM + 2GB + floor @ 5% threshold, 60 days\n");
+
+    // Arms: (name, hysteresis_band, tier3_exit_multiplier_cap, tier3_exit_delay_ticks)
+    let arms = [
+        ("Ctrl",      0.50, 1.0,    1152u32),  // current default: 50% band, cap disabled
+        ("FixA_70",   0.70, 1.0,    1152u32),  // deeper band: unlock at D/G < 9
+        ("FixB_80",   0.80, 1.0,    1152u32),  // even deeper: unlock at D/G < 6
+        ("FixC_80c30", 0.80, 0.01,  8640u32),  // deep band + 30-day cap at 1%
+    ];
+
+    #[derive(Debug)]
+    struct Metrics {
+        _seed: u64,
+        arm: String,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        t3_events: u32,
+    }
+
+    let mut all: Vec<Metrics> = Vec::new();
+
+    for &seed in &seeds {
+        println!("  ── Seed {} ──", seed);
+
+        for &(name, hyst, cap, delay) in &arms {
+            let mut scenario = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+            scenario.name = format!("DeepHyst_{}_s{}", name, seed);
+            scenario.duration_ticks = 288 * 60;
+            scenario.config.loans.tier3_hysteresis_band = hyst;
+            scenario.config.loans.tier3_exit_multiplier_cap = cap;
+            scenario.config.loans.tier3_exit_delay_ticks = delay;
+
+            let dir = format!("/tmp/autotune-sim/deephyst-{}-{}-{}", name.to_lowercase(), seed, (hyst * 100.0) as i32);
+            let path = std::path::PathBuf::from(&dir);
+            std::fs::create_dir_all(&path).ok();
+            run_seeded_headless(&scenario, seed, &path).ok();
+
+            if let Ok(s) = load_summary(&path.join("simulation.db")) {
+                let dg = s.debt / s.gdp.max(1.0);
+                all.push(Metrics { _seed: seed, arm: name.to_string(), gdp: s.gdp, dg, vol: s.avg_volatility, t3_events: s.tier3_events });
+                println!(
+                    "    {:12}: GDP={:>10.0}  D/G={:>6.3}x  Vol={:.4}  T3={:>3}",
+                    name, s.gdp, dg, s.avg_volatility, s.tier3_events
+                );
+            } else {
+                println!("    {:12}: FAILED", name);
+            }
+            let _ = std::fs::remove_dir_all(&path);
+        }
+        println!();
+    }
+
+    // ── Per-arm summary ─────────────────────────────────────────────────
+    println!(
+        "\n╔════════════════════════════════════════════════════════════════════════╗"
+    );
+    println!("║  DEEP HYSTERESIS — 60-DAY SUMMARY (3 seeds × 60d)                     ║");
+    println!("╠════════════════════════════════════════════════════════════════════════╣");
+    println!(
+        "║  {:12}  {:>10}  {:>10}  {:>10}  {:>8}  {:>7}  ║",
+        "Arm", "GDP avg", "D/G avg", "vs_Ctrl%", "Vol avg", "T3 avg"
+    );
+    println!("╠════════════════════════════════════════════════════════════════════════╣");
+
+    let ctrl_dg_avg = all.iter().filter(|m| m.arm == "Ctrl").map(|m| m.dg).sum::<f64>() / 3.0;
+
+    for &(name, _, _, _) in &arms {
+        let subset: Vec<_> = all.iter().filter(|m| m.arm == name).collect();
+        if subset.is_empty() { continue; }
+        let gdp_avg = subset.iter().map(|m| m.gdp).sum::<f64>() / subset.len() as f64;
+        let dg_avg  = subset.iter().map(|m| m.dg).sum::<f64>() / subset.len() as f64;
+        let vol_avg = subset.iter().map(|m| m.vol).sum::<f64>() / subset.len() as f64;
+        let t3_avg  = subset.iter().map(|m| m.t3_events as f64).sum::<f64>() / subset.len() as f64;
+        let vs_ctrl = if name == "Ctrl" { 0.0 } else { (dg_avg / ctrl_dg_avg - 1.0) * 100.0 };
+        let verdict = if name == "Ctrl" {
+            "baseline"
+        } else if dg_avg < 10.0 {
+            "✓ STABLE"
+        } else if vs_ctrl < -20.0 {
+            "better"
+        } else if vs_ctrl < 0.0 {
+            "slightly better"
+        } else {
+            "worse"
+        };
+        println!(
+            "║  {:12}  {:>10.0}  {:>9.3}x  {:>+9.1}%  {:>8.4}  {:>6.1}  ║  {}",
+            name, gdp_avg, dg_avg, vs_ctrl, vol_avg, t3_avg, verdict
+        );
+    }
+    println!("╚════════════════════════════════════════════════════════════════════════╝");
+
+    // ── Key insight ──────────────────────────────────────────────────────
+    let fixc: Vec<_> = all.iter().filter(|m| m.arm == "FixC_80c30").collect();
+    let fixb: Vec<_> = all.iter().filter(|m| m.arm == "FixB_80").collect();
+
+    if !fixc.is_empty() && !fixb.is_empty() {
+        let fixc_avg = fixc.iter().map(|m| m.dg).sum::<f64>() / fixc.len() as f64;
+        let fixb_avg = fixb.iter().map(|m| m.dg).sum::<f64>() / fixb.len() as f64;
+
+        println!("\n  KEY INSIGHT:");
+        if fixc_avg < fixb_avg * 0.8 {
+            println!("  FixC (hyst=0.80 + 30d cap) outperforms FixB (hyst=0.80 only)");
+            println!("  → Extended cap is the critical factor, not just hysteresis depth.");
+        }
+        if fixc_avg < 15.0 {
+            println!("  FixC D/G < 15 at 60 days → TIER3 circuit contained!");
+            println!("  → Run 90-day test to confirm stability.");
+        } else if fixb_avg < ctrl_dg_avg * 0.8 {
+            println!("  FixB (hyst=0.80) keeps D/G below ctrl → deep hysteresis helps.");
+            println!("  → Run 90-day test.");
+        } else {
+            println!("  Neither FixB nor FixC shows sufficient improvement.");
+            println!("  → Architecture change needed: debt write-down or TIER3→NORMAL bypass.");
+        }
+    }
+
+    println!();
+}
 
 fn run_sixty_day_test() {
     use crate::analyzer::{load_all_prices, load_summary};

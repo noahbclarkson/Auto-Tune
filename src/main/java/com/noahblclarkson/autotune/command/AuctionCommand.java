@@ -36,10 +36,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
+@SuppressWarnings("PMD")
 @Singleton
 public class AuctionCommand {
 
@@ -105,7 +108,7 @@ public class AuctionCommand {
 
     @Command("auction browse <material>")
     public void auctionBrowse(Player player,
-                              @Argument("material") String material) {
+                              @Argument(value = "material", suggestions = "auction-materials") String material) {
         Material mat = parseMaterial(material);
         if (mat == null) {
             player.sendMessage(Component.text("Unknown material: " + material, NamedTextColor.RED));
@@ -178,7 +181,7 @@ public class AuctionCommand {
 
     @Command("auction buy <material> <price> <quantity>")
     public void auctionBuy(Player player,
-                           @Argument("material") String material,
+                           @Argument(value = "material", suggestions = "auction-materials") String material,
                            @Argument("price") BigDecimal price,
                            @Argument("quantity") int quantity) {
         if (quantity <= 0) {
@@ -330,6 +333,62 @@ public class AuctionCommand {
         sender.sendMessage(Component.empty());
     }
 
+    @Command("auction list")
+    @Permission("autotune.auction")
+    public void auctionList(CommandSender sender) {
+        List<AuctionOrder> orders = auctionManager.getAllActiveOrders();
+
+        if (orders.isEmpty()) {
+            sender.sendMessage(Component.text("No active auction orders.", NamedTextColor.GRAY));
+            return;
+        }
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Active Auction Orders (" + orders.size() + ")", NamedTextColor.GOLD, TextDecoration.BOLD));
+        sender.sendMessage(Component.text("Type /auction browse <material> to see order book", NamedTextColor.DARK_GRAY));
+        sender.sendMessage(Component.text("──".repeat(20), NamedTextColor.DARK_GRAY));
+
+        // Group by material
+        Map<String, List<AuctionOrder>> byMaterial = orders.stream()
+                .collect(Collectors.groupingBy(AuctionOrder::material));
+
+        int shown = 0;
+        for (Map.Entry<String, List<AuctionOrder>> entry : byMaterial.entrySet()) {
+            if (shown >= 20) break;
+            String mat = entry.getKey();
+            List<AuctionOrder> matOrders = entry.getValue();
+
+            BigDecimal bestBid = matOrders.stream()
+                    .filter(o -> o.side() == OrderSide.BUY)
+                    .map(AuctionOrder::price)
+                    .max(BigDecimal::compareTo)
+                    .orElse(null);
+            BigDecimal bestAsk = matOrders.stream()
+                    .filter(o -> o.side() == OrderSide.SELL)
+                    .map(AuctionOrder::price)
+                    .min(BigDecimal::compareTo)
+                    .orElse(null);
+
+            Component line = Component.text(formatMaterial(mat), NamedTextColor.WHITE)
+                    .append(Component.text(" (" + matOrders.size() + " orders)", NamedTextColor.GRAY));
+            if (bestBid != null) {
+                line = line.append(Component.text(" BID " + configManager.formatCurrency(bestBid), NamedTextColor.AQUA));
+            }
+            if (bestAsk != null) {
+                line = line.append(Component.text(" ASK " + configManager.formatCurrency(bestAsk), NamedTextColor.LIGHT_PURPLE));
+            }
+            line = line.append(Component.text(" [/auction browse " + mat + "]", NamedTextColor.YELLOW));
+            sender.sendMessage(line);
+            shown++;
+        }
+
+        int remaining = byMaterial.size() - shown;
+        if (remaining > 0) {
+            sender.sendMessage(Component.text("... and " + remaining + " more materials", NamedTextColor.DARK_GRAY));
+        }
+        sender.sendMessage(Component.empty());
+    }
+
     /**
      * Shows current auction price indicators for a material:
      * - Market reference price (shop buy/sell)
@@ -450,14 +509,13 @@ public class AuctionCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Suggestions("materials")
-    public List<String> suggestMaterials(CommandContext<CommandSender> ctx) {
-        return List.of(
-                "DIAMOND", "DIAMOND_SWORD", "DIAMOND_PICKAXE", "DIAMOND_HELMET",
-                "GOLD_INGOT", "IRON_INGOT", "COAL", "EMERALD", "LAPIS_LAZULI",
-                "NETHERITE_SWORD", "ENCHANTED_GOLDEN_APPLE", "NETHER_STAR",
-                "SHULKER_BOX", "ELYTRA", "TRIDENT"
-        );
+    @Suggestions("auction-materials")
+    public List<String> suggestAuctionMaterials(CommandContext<CommandSender> ctx) {
+        return shopManager.getAllItems().stream()
+                .map(item -> item.material().name())
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
     }
 
     private Material parseMaterial(String name) {

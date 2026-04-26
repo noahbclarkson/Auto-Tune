@@ -357,6 +357,10 @@ public class AuctionManager {
         return auctionRepo.findById(orderId);
     }
 
+    public List<AuctionOrder> getAllActiveOrders() {
+        return auctionRepo.findAllActive();
+    }
+
     /**
      * Process an auction fill: credit seller (after auction tax), deliver items to buyer,
      * then record to DB.

@@ -72,6 +72,23 @@ public class AuctionRepository {
                         .list());
     }
 
+    public List<AuctionOrder> findAllActive() {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                        SELECT id, player_uuid, material, item_data, price,
+                               original_quantity, remaining_quantity, side, status,
+                               created_at, filled_at, expires_at
+                        FROM at_auction_orders
+                        WHERE status IN ('OPEN', 'PARTIALLY_FILLED')
+                          AND remaining_quantity > 0
+                          AND expires_at > CURRENT_TIMESTAMP
+                        ORDER BY created_at DESC
+                        LIMIT 200
+                        """)
+                        .map((rs, ctx) -> mapOrder(rs))
+                        .list());
+    }
+
     public List<AuctionOrder> findByPlayerHistory(UUID playerUuid, int limit) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""

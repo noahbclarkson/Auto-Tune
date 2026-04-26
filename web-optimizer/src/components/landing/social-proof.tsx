@@ -1,12 +1,11 @@
 'use client';
 
 import { Github, Server, Download, Star } from 'lucide-react';
+import type { GitHubStats } from '@/lib/github-stats';
 
-const STATS = [
-  { icon: Star, label: 'GitHub Stars', value: '132+', color: 'amber', href: 'https://github.com/noahbclarkson/Auto-Tune' },
-  { icon: Server, label: 'Active Servers', value: 'Network growing', color: 'emerald', href: '/servers' },
-  { icon: Download, label: 'Total Downloads', value: '3,500+', color: 'sky', href: 'https://github.com/noahbclarkson/Auto-Tune/releases' },
-];
+interface SocialProofProps {
+  stats: GitHubStats;
+}
 
 type Testimonial = {
   quote: string;
@@ -40,7 +39,18 @@ const TESTIMONIALS: Testimonial[] = [
   },
 ];
 
-export function SocialProof() {
+function formatNumber(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K+`;
+  return String(n);
+}
+
+export function SocialProof({ stats }: SocialProofProps) {
+  const statsItems = [
+    { icon: Star, label: 'GitHub Stars', value: formatNumber(stats.stars), color: 'amber', href: 'https://github.com/noahbclarkson/Auto-Tune' },
+    { icon: Server, label: 'Active Servers', value: 'Network growing', color: 'emerald', href: '/servers' },
+    { icon: Download, label: 'Total Downloads', value: formatNumber(stats.downloads), color: 'sky', href: 'https://github.com/noahbclarkson/Auto-Tune/releases' },
+  ];
+
   return (
     <section className="py-20 border-t border-gray-800/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -58,7 +68,7 @@ export function SocialProof() {
 
         {/* Stats row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-14">
-          {STATS.map(({ icon: Icon, label, value, color, href }) => (
+          {statsItems.map(({ icon: Icon, label, value, color, href }) => (
             <a
               key={label}
               href={href}

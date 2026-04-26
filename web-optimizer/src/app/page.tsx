@@ -13,8 +13,11 @@ import { PricingSection } from '@/components/landing/pricing-section';
 import { CrossServerBanner } from '@/components/landing/cross-server-banner';
 import { AdminJourney } from '@/components/landing/admin-journey';
 import { SimResultsBanner } from '@/components/landing/sim-results-banner';
+import { fetchGitHubStats } from '@/lib/github-stats';
 
-export default function Home() {
+export default async function Home() {
+  const stats = await fetchGitHubStats();
+
   return (
     <div>
       <Hero />
@@ -22,7 +25,7 @@ export default function Home() {
       <SimResultsBanner />
       <CrossServerBanner />
       <FeatureCards />
-      <SocialProof />
+      <SocialProof stats={stats} />
       <ChangelogSection />
       <CompareSection />
       <DynamicEconomy />
@@ -44,7 +47,7 @@ export default function Home() {
           <LiveDemo />
           <div className="text-center mt-8">
             <p className="text-sm text-gray-500 mb-4">
-              This is what Auto-Tune looks like in action. Want to test your own scenarios?
+              This is what Auto-Tune looks like in action. Want to test your scenarios?
             </p>
             <div className="flex items-center justify-center gap-3">
               <a

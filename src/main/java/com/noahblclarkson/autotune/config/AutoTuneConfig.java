@@ -254,7 +254,7 @@ public record AutoTuneConfig(
                     true, 0.05, true, 2.0, 200,
                     7, 3, 30, 0.002, 24, 1, 24, 1.5, 0.5, 50,
                     3.0, 5.0, 30.0, 0.5, 0.25,  // debt-gdp-tier1=3.0, tier2=5.0, tier3=30.0
-                    0.1,   // tier3HysteresisBand: 10% band for backward compat (unlock at 90% of tier3)
+                    0.5,   // tier3HysteresisBand: 50% band — unlock at D/G < 15 with tier3=30 (Rust parity)
                     0.0,   // minInterestMultiplier: pure counter-cyclical (0% at D/G=tier3)
                     3.0,   // guildbuyerTotalDebtCap: 3× GDP per GuildBuyer
                     false, // blockMmGbLoansDuringTier3: allowed by default

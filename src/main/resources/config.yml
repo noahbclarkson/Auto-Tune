@@ -228,10 +228,8 @@ loans:
   # Hysteresis band for TIER3 circuit breaker unlock.
   # When D/G crosses tier3_ratio (e.g., 30), circuit LOCKS at 0% interest.
   # It stays locked until D/G drops below tier3_ratio × (1 - hysteresis_band).
-  # Default 0.1 = 10% band → unlock at D/G < 27x (30 × 0.90).
-  # Recommended for long-running servers: 0.5 (unlock at D/G < 15x).
-  # Too wide (>0.7) may prevent interest re-enabling after TIER3 exit.
-  tier3-hysteresis-band: 0.1
+  # Default 0.5 = 50% band → unlock at D/G < 15x (with tier3_ratio=30).
+  tier3-hysteresis-band: 0.5
 
   # Minimum interest multiplier. Counter-cyclical taper never goes below this.
   # Setting to 0.05 means interest stays at minimum 5% even at max D/G.

@@ -21,7 +21,7 @@ Q1: Do you want player loans enabled?
           │
           ├─ 2+ MarketMakers + 2+ GuildBuyers
           │   → Recommended. GDP +101%, vol -48%, spreads -22% vs 1MM+1GB
-          │   → Set loans: 5% threshold, counter-cyclical: true, tier3-ratio: 30
+          │   → Set loans: 5% threshold, counter-cyclical: true, tier3_ratio: 30
           │   → Set price floor: 60% on Diamond-type items
           │   → ✅ You're ready
           │
@@ -73,7 +73,7 @@ loans:
   interest:
     base-rate: 0.07          # 7% annual (default)
     counter-cyclical: true   # reduces interest as D/G rises
-  tier3-ratio: 15.0         # circuit breaker fires at 15× D/G (not 10×)
+  tier3_ratio: 30.0         # circuit breaker fires at 30× D/G (D/G < 15× to unlock with 50% hysteresis band)
   post-default-cooldown-hours: 168  # 7 days
 ```
 

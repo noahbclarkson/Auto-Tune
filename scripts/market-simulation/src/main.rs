@@ -11468,6 +11468,7 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --graduated-exit-test     Graduated TIER3 exit cap (cap=0.10, delay=1152) × 90d × 2 seeds"
         );
+        println!("  --exit-cap-sweep         Exit cap grid: 1%/3%/5% × 5d/10d/20d × 90d × 3 seeds");
         println!("  --it-removal-test         2MM+2GB+floor: WITH vs WITHOUT InsiderTraders");
         println!("  --healthy-baseline-5seed  2MM+2GB+floor × 5 seeds: statistical baseline");
         println!("  --gb-newbie-healthy-test   2MM+2GB+2Far+2Newbie vs 2MM+2GB+3Far × 5 seeds");
@@ -11959,11 +11960,16 @@ fn main() -> eframe::Result<()> {
 
     // ─── Graduated TIER3 Exit Cap Test ─────────────────────────────────────────
     if args.len() > 1 && args[1] == "--graduated-exit-test" {
-
         // Quick 1-seed test: 3 arms at 60 days
         run_quick_graduated_test();
 
         run_graduated_exit_test();
+        return Ok(());
+    }
+
+    // ─── Exit Cap Parameter Sweep ─────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--exit-cap-sweep" {
+        run_exit_cap_sweep();
         return Ok(());
     }
 
@@ -16746,9 +16752,7 @@ fn run_tier3_deep_hysteresis_test() {
 
     let seeds = [42u64, 12345u64, 98765u64];
 
-    println!(
-        "\n╔══════════════════════════════════════════════════════════════════════════╗"
-    );
+    println!("\n╔══════════════════════════════════════════════════════════════════════════╗");
     println!("║     TIER3 DEEP HYSTERESIS + EXTENDED CAP TEST                      ║");
     println!("║  Problem: multiplier=50% at D/G=14 → TIER3 re-triggers in days       ║");
     println!("║  Fix A: hysteresis=0.70 (unlock at D/G < 9)                       ║");
@@ -16760,10 +16764,10 @@ fn run_tier3_deep_hysteresis_test() {
 
     // Arms: (name, hysteresis_band, tier3_exit_multiplier_cap, tier3_exit_delay_ticks)
     let arms = [
-        ("Ctrl",      0.50, 1.0,    1152u32),  // current default: 50% band, cap disabled
-        ("FixA_70",   0.70, 1.0,    1152u32),  // deeper band: unlock at D/G < 9
-        ("FixB_80",   0.80, 1.0,    1152u32),  // even deeper: unlock at D/G < 6
-        ("FixC_80c30", 0.80, 0.01,  8640u32),  // deep band + 30-day cap at 1%
+        ("Ctrl", 0.50, 1.0, 1152u32), // current default: 50% band, cap disabled
+        ("FixA_70", 0.70, 1.0, 1152u32), // deeper band: unlock at D/G < 9
+        ("FixB_80", 0.80, 1.0, 1152u32), // even deeper: unlock at D/G < 6
+        ("FixC_80c30", 0.80, 0.01, 8640u32), // deep band + 30-day cap at 1%
     ];
 
     #[derive(Debug)]
@@ -16789,14 +16793,26 @@ fn run_tier3_deep_hysteresis_test() {
             scenario.config.loans.tier3_exit_multiplier_cap = cap;
             scenario.config.loans.tier3_exit_delay_ticks = delay;
 
-            let dir = format!("/tmp/autotune-sim/deephyst-{}-{}-{}", name.to_lowercase(), seed, (hyst * 100.0) as i32);
+            let dir = format!(
+                "/tmp/autotune-sim/deephyst-{}-{}-{}",
+                name.to_lowercase(),
+                seed,
+                (hyst * 100.0) as i32
+            );
             let path = std::path::PathBuf::from(&dir);
             std::fs::create_dir_all(&path).ok();
             run_seeded_headless(&scenario, seed, &path).ok();
 
             if let Ok(s) = load_summary(&path.join("simulation.db")) {
                 let dg = s.debt / s.gdp.max(1.0);
-                all.push(Metrics { _seed: seed, arm: name.to_string(), gdp: s.gdp, dg, vol: s.avg_volatility, t3_events: s.tier3_events });
+                all.push(Metrics {
+                    _seed: seed,
+                    arm: name.to_string(),
+                    gdp: s.gdp,
+                    dg,
+                    vol: s.avg_volatility,
+                    t3_events: s.tier3_events,
+                });
                 println!(
                     "    {:12}: GDP={:>10.0}  D/G={:>6.3}x  Vol={:.4}  T3={:>3}",
                     name, s.gdp, dg, s.avg_volatility, s.tier3_events
@@ -16810,9 +16826,7 @@ fn run_tier3_deep_hysteresis_test() {
     }
 
     // ── Per-arm summary ─────────────────────────────────────────────────
-    println!(
-        "\n╔════════════════════════════════════════════════════════════════════════╗"
-    );
+    println!("\n╔════════════════════════════════════════════════════════════════════════╗");
     println!("║  DEEP HYSTERESIS — 60-DAY SUMMARY (3 seeds × 60d)                     ║");
     println!("╠════════════════════════════════════════════════════════════════════════╣");
     println!(
@@ -16821,16 +16835,27 @@ fn run_tier3_deep_hysteresis_test() {
     );
     println!("╠════════════════════════════════════════════════════════════════════════╣");
 
-    let ctrl_dg_avg = all.iter().filter(|m| m.arm == "Ctrl").map(|m| m.dg).sum::<f64>() / 3.0;
+    let ctrl_dg_avg = all
+        .iter()
+        .filter(|m| m.arm == "Ctrl")
+        .map(|m| m.dg)
+        .sum::<f64>()
+        / 3.0;
 
     for &(name, _, _, _) in &arms {
         let subset: Vec<_> = all.iter().filter(|m| m.arm == name).collect();
-        if subset.is_empty() { continue; }
+        if subset.is_empty() {
+            continue;
+        }
         let gdp_avg = subset.iter().map(|m| m.gdp).sum::<f64>() / subset.len() as f64;
-        let dg_avg  = subset.iter().map(|m| m.dg).sum::<f64>() / subset.len() as f64;
+        let dg_avg = subset.iter().map(|m| m.dg).sum::<f64>() / subset.len() as f64;
         let vol_avg = subset.iter().map(|m| m.vol).sum::<f64>() / subset.len() as f64;
-        let t3_avg  = subset.iter().map(|m| m.t3_events as f64).sum::<f64>() / subset.len() as f64;
-        let vs_ctrl = if name == "Ctrl" { 0.0 } else { (dg_avg / ctrl_dg_avg - 1.0) * 100.0 };
+        let t3_avg = subset.iter().map(|m| m.t3_events as f64).sum::<f64>() / subset.len() as f64;
+        let vs_ctrl = if name == "Ctrl" {
+            0.0
+        } else {
+            (dg_avg / ctrl_dg_avg - 1.0) * 100.0
+        };
         let verdict = if name == "Ctrl" {
             "baseline"
         } else if dg_avg < 10.0 {
@@ -19271,13 +19296,20 @@ fn run_quick_graduated_test() {
         if let Ok(summary) = load_summary(&path.join("simulation.db")) {
             let dg = summary.debt / summary.gdp.max(1.0);
             results.push((name.to_string(), summary.gdp, dg, summary.tier3_events));
-            println!("  {}: GDP={:.0}  D/G={:.3}x  T3={}", name, summary.gdp, dg, summary.tier3_events);
+            println!(
+                "  {}: GDP={:.0}  D/G={:.3}x  T3={}",
+                name, summary.gdp, dg, summary.tier3_events
+            );
         } else {
             println!("  {}: FAILED", name);
         }
     }
 
-    let ctrl_dg = results.iter().find(|r| r.0 == "Ctrl").map(|r| r.2).unwrap_or(1.0);
+    let ctrl_dg = results
+        .iter()
+        .find(|r| r.0 == "Ctrl")
+        .map(|r| r.2)
+        .unwrap_or(1.0);
     println!("\n  vs Ctrl:");
     for (name, _, dg, t3) in &results {
         if name != "Ctrl" {
@@ -19436,4 +19468,152 @@ fn run_graduated_exit_test() {
         println!("\n  ✗ All variants insufficient at 90 days — architectural fix needed.");
         println!("  /at admin recovery is the only reliable deleveraging tool.");
     }
+}
+
+// ── GRADUATED EXIT CAP PARAMETER SWEEP ──────────────────────────────────────
+// cap (1%, 3%, 5%) × delay (5d, 10d, 20d) × 90d × 3 seeds
+// Hypothesis: tighter cap + longer delay breaks the multiplier jump cascade
+// that lets D/G re-trigger TIER3 within days of circuit unlock.
+fn run_exit_cap_sweep() {
+    use crate::analyzer::load_summary;
+
+    let seeds = [42u64, 12345u64, 98765u64];
+
+    let default_caps = [0.01_f64, 0.03, 0.05];
+    let caps = std::env::var("AT_EXIT_CAPS")
+        .ok()
+        .map(|raw| {
+            raw.split(',')
+                .filter_map(|s| s.trim().parse::<f64>().ok())
+                .map(|pct| pct / 100.0)
+                .collect::<Vec<_>>()
+        })
+        .filter(|caps| !caps.is_empty())
+        .unwrap_or_else(|| default_caps.to_vec());
+    let default_delays = [1440_u32, 2880, 5760]; // 5d, 10d, 20d at 288 ticks/day
+    let delays = std::env::var("AT_EXIT_DELAY_DAYS")
+        .ok()
+        .map(|raw| {
+            raw.split(',')
+                .filter_map(|s| s.trim().parse::<u32>().ok())
+                .map(|days| days * 288)
+                .collect::<Vec<_>>()
+        })
+        .filter(|delays| !delays.is_empty())
+        .unwrap_or_else(|| default_delays.to_vec());
+
+    println!("╔═══════════════════════════════════════════════════════════════╗");
+    println!("║     GRADUATED EXIT CAP — PARAMETER SWEEP                      ║");
+    println!("║  caps: 1%, 3%, 5%  ×  delays: 5d, 10d, 20d  ×  90d × 3 seeds  ║");
+    println!("╚═══════════════════════════════════════════════════════════════╝");
+    println!();
+    println!(
+        "{:>6}  {:>8}  {:>10}  {:>10}  {:>10}  {:>6}",
+        "Cap", "Delay", "GDP", "D/G", "vs_Ctrl%", "T3"
+    );
+    println!(
+        "{:->6}  {:->8}  {:->10}  {:->10}  {:->10}  {:->6}",
+        "──────", "────────", "──────────", "──────────", "──────────", "──────"
+    );
+
+    // Control: no cap (cap=1.0 = disabled)
+    let mut ctrl_dg_sum = 0.0;
+    let mut ctrl_count = 0usize;
+
+    for &seed in &seeds {
+        let mut scenario = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+        scenario.name = format!("ExitCap_ctrl_s{}", seed);
+        scenario.duration_ticks = 288 * 90;
+        scenario.config.loans.tier3_exit_multiplier_cap = 1.0; // disabled
+        scenario.config.loans.tier3_exit_delay_ticks = 0;
+        let dir = format!("/tmp/autotune-sim/ec-ctrl-{}", seed);
+        let path = std::path::PathBuf::from(&dir);
+        let _ = std::fs::remove_dir_all(&path);
+        std::fs::create_dir_all(&path).ok();
+        run_seeded_headless(&scenario, seed, &path).ok();
+        if let Ok(summary) = load_summary(&path.join("simulation.db")) {
+            let dg = summary.debt / summary.gdp.max(1.0);
+            ctrl_dg_sum += dg;
+            ctrl_count += 1;
+            println!(
+                "  {:>6}  {:>8}  {:>10.0}  {:>10.3}x  {:>10}  {:>6}",
+                "Ctrl", "—", summary.gdp, dg, "0.0%", summary.tier3_events
+            );
+        }
+        let _ = std::fs::remove_dir_all(&path);
+    }
+
+    let ctrl_dg = if ctrl_count > 0 {
+        ctrl_dg_sum / ctrl_count as f64
+    } else {
+        1.0
+    };
+    println!();
+    println!("  ══ TREATMENT ARMS ══");
+    println!();
+
+    for &cap in &caps {
+        for &delay in &delays {
+            let mut arm_dg_sum = 0.0;
+            let mut arm_count = 0usize;
+            let delay_days = delay / 288;
+
+            for &seed in &seeds {
+                let mut scenario = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+                scenario.name = format!("EC_{}pct_{}d_s{}", (cap * 100.0) as i32, delay_days, seed);
+                scenario.duration_ticks = 288 * 90;
+                scenario.config.loans.tier3_exit_multiplier_cap = cap;
+                scenario.config.loans.tier3_exit_delay_ticks = delay;
+                let dir = format!(
+                    "/tmp/autotune-sim/ec-{}-{}d-{}",
+                    (cap * 100.0) as i32,
+                    delay_days,
+                    seed
+                );
+                let path = std::path::PathBuf::from(&dir);
+                let _ = std::fs::remove_dir_all(&path);
+                std::fs::create_dir_all(&path).ok();
+                run_seeded_headless(&scenario, seed, &path).ok();
+                if let Ok(summary) = load_summary(&path.join("simulation.db")) {
+                    let dg = summary.debt / summary.gdp.max(1.0);
+                    arm_dg_sum += dg;
+                    arm_count += 1;
+                    println!(
+                        "  {:>6}  {:>8}d  {:>10.0}  {:>10.3}x  {:>+9.1}%  {:>6}",
+                        format!("{}%", (cap * 100.0) as i32),
+                        delay_days,
+                        summary.gdp,
+                        dg,
+                        (dg / ctrl_dg - 1.0) * 100.0,
+                        summary.tier3_events
+                    );
+                }
+                let _ = std::fs::remove_dir_all(&path);
+            }
+
+            let arm_avg = if arm_count > 0 {
+                arm_dg_sum / arm_count as f64
+            } else {
+                1.0
+            };
+            let vs_ctrl = (arm_avg / ctrl_dg - 1.0) * 100.0;
+            let verdict = if vs_ctrl < -15.0 {
+                "✅ PROMISING"
+            } else if vs_ctrl < -5.0 {
+                "⚠️ MARGINAL"
+            } else if vs_ctrl > 5.0 {
+                "❌ WORSE"
+            } else {
+                "➖ NEUTRAL"
+            };
+            println!(
+                "  {:>6}  {:>8}d  ── avg D/G {:>10.3}x  {:>+9.1}%  {}",
+                "", "", arm_avg, vs_ctrl, verdict
+            );
+            println!();
+        }
+    }
+
+    println!("  Key: D/G improvement = deleveraging success. T3 = TIER3 circuit fires.");
+    println!("  Hypothesis: cap=1% + delay=20d should break the multiplier jump cascade.");
 }

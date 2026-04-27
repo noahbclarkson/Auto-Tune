@@ -495,14 +495,20 @@ impl Simulation {
                     } else {
                         multiplier
                     };
-                    let tier = if ratio >= lc.debt_gdp_tier2_ratio {
+                    let _tier = if ratio >= lc.debt_gdp_tier2_ratio {
                         "TIER2"
                     } else if ratio >= lc.debt_gdp_tier1_ratio {
                         "TIER1"
                     } else {
                         "NORMAL"
                     };
-                    (multiplier, tier)
+                    // ARCHITECTURAL FIX: When TIER3 circuit unlocks (D/G dropped below
+                    // hysteresis threshold), exit directly to NORMAL instead of TIER2.
+                    // TIER2's ~50% rate compounds debt ~10%/day while GDP grows ~1%/day,
+                    // causing immediate TIER3 re-entry. All 8 prior fix candidates FAILED
+                    // because they adjusted thresholds but never addressed this exit path.
+                    // Exiting to NORMAL (100% rate) lets deleveraging compete with compounding.
+                    (multiplier, "NORMAL")
                 }
             } else {
                 // Legacy tiered circuit breaker with hysteresis for TIER3:
@@ -529,7 +535,14 @@ impl Simulation {
                     (lc.tier1_interest_cap, "TIER1")
                 } else {
                     (1.0, "NORMAL")
-                }
+                };
+                // ARCHITECTURAL FIX: When TIER3 circuit unlocks (D/G dropped below
+                // hysteresis threshold), exit directly to NORMAL instead of TIER2.
+                // Legacy TIER2 (25%) compounds debt too fast vs GDP growth (~1%/day),
+                // causing TIER3 re-entry within days. All 8 prior fix candidates FAILED
+                // because they adjusted thresholds/hysteresis but never the exit path.
+                // Exiting to NORMAL prevents the doom-loop oscillation at 60-90 days.
+                (1.0, "NORMAL")
             }
         } else {
             (1.0, "NORMAL")

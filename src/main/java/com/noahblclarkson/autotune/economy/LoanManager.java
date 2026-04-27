@@ -438,6 +438,12 @@ public class LoanManager {
                         } else if (ratio >= config.debtGdpTier1Ratio()) {
                             currentTier = "TIER1";
                         }
+                        // ARCHITECTURAL FIX: When TIER3 unlocks (D/G below hysteresis threshold),
+                        // exit to NORMAL instead of TIER2. TIER2's 50% rate compounds debt faster than
+                        // GDP grows (~1%/day), causing immediate re-entry. Exiting to NORMAL prevents
+                        // the doom-loop oscillation that all 8 prior fix candidates failed to solve.
+                        currentTier = "NORMAL";
+                        interestMultiplier = 1.0;
                     }
                 } else {
                     // Legacy tiered circuit breaker with hysteresis for TIER3:
@@ -469,6 +475,12 @@ public class LoanManager {
                         interestMultiplier = config.tier1InterestCap();
                         currentTier = "TIER1";
                     }
+                    // ARCHITECTURAL FIX: When TIER3 unlocks (D/G below hysteresis threshold),
+                    // exit to NORMAL instead of TIER2. Legacy TIER2 (25%) compounds debt too fast vs
+                    // GDP growth (~1%/day), causing TIER3 re-entry within days. All 8 fix candidates
+                    // failed because they never addressed this exit path. Exiting to NORMAL prevents it.
+                    currentTier = "NORMAL";
+                    interestMultiplier = 1.0;
                 }
 
                 if (!currentTier.equals("NORMAL")) {

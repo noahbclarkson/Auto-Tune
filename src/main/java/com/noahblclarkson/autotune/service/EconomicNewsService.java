@@ -381,6 +381,10 @@ public class EconomicNewsService {
         String msg;
         TextColor col;
         switch (tier) {
+            case "ADMIN_RECOVERY" -> {
+                msg = "🛠️ <gold>ADMIN RECOVERY MODE ACTIVE</gold> — new loans paused and interest frozen until an admin disables recovery mode.";
+                col = NamedTextColor.GOLD;
+            }
             case "TIER3" -> {
                 msg = "⚠️ <red>MARKET CIRCUIT BREAKER PAUSED</red> — debt is too high! Loans frozen until economy recovers.";
                 col = NamedTextColor.RED;

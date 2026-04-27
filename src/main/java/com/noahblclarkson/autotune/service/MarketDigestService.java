@@ -257,6 +257,7 @@ public class MarketDigestService {
             case "TIER1" -> CB_TIER1;
             case "TIER2" -> CB_TIER2;
             case "TIER3" -> CB_TIER3;
+            case "ADMIN_RECOVERY" -> "🛠️ Admin Recovery";
             default -> cb.tier();
         };
 

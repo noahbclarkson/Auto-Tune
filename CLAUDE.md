@@ -48,7 +48,7 @@ onDisable: WebServer stop -> TaskScheduler stop -> DatabaseManager shutdown
 |---------|---------|
 | `manager/` | Core domain logic: `MarketEngine` (pricing/spreads/trends), `ShopManager` (item cache, buyable logic), `AutosellManager`, `EconomyMetricsManager`, `TreasuryService` (tax collection) |
 | `database/` | `DatabaseManager` (HikariCP, migrations, async executor) + JDBI repositories |
-| `economy/` | `EconomyManager` (buy/sell processing via Vault), `LoanManager` (interest, defaults, circuit breaker) |
+| `economy/` | `EconomyManager` (buy/sell processing via Vault), `LoanManager` (interest, defaults, circuit breaker, and manual admin recovery mode that freezes interest and pauses new loans) |
 | `command/` | Cloud (Incendo) annotation-based commands: `/shop`, `/sell`, `/autosell`, `/loan`, `/transactions`, `/auction`, `/treasury`, `/autotune admin` |
 | `config/` | `ConfigManager` loads YAML; `AutoTuneConfig` is a nested record hierarchy (StorageConfig, WebConfig, EconomyConfig, LoanConfig, AutosellConfig, TreasuryConfig, GuiConfig, DebugConfig) |
 | `model/` | Immutable Java records with builder pattern: ShopItem, Transaction, Loan, PlayerData, EconomySnapshot, PriceHistory, etc. |

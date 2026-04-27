@@ -610,6 +610,7 @@ public class AdminCommand {
 
         sender.sendMessage(Component.text("  Tier: ", NamedTextColor.GRAY)
                 .append(switch (cb.tier()) {
+                    case "ADMIN_RECOVERY" -> Component.text("MANUAL RECOVERY", NamedTextColor.GOLD);
                     case "TIER3" -> Component.text("EMERGENCY", NamedTextColor.RED);
                     case "TIER2" -> Component.text("DANGER", NamedTextColor.RED);
                     case "TIER1" -> Component.text("WARNING", NamedTextColor.YELLOW);
@@ -702,6 +703,7 @@ public class AdminCommand {
         Component tierBadge;
         NamedTextColor tierColor;
         switch (cb.tier()) {
+            case "ADMIN_RECOVERY" -> { tierBadge = Component.text("ADMIN RECOVERY — MANUAL FREEZE", NamedTextColor.GOLD); tierColor = NamedTextColor.GOLD; }
             case "TIER3" -> { tierBadge = Component.text("TIER3 — EMERGENCY", NamedTextColor.RED); tierColor = NamedTextColor.RED; }
             case "TIER2" -> { tierBadge = Component.text("TIER2 — DANGER", NamedTextColor.RED); tierColor = NamedTextColor.RED; }
             case "TIER1" -> { tierBadge = Component.text("TIER1 — WARNING", NamedTextColor.YELLOW); tierColor = NamedTextColor.YELLOW; }

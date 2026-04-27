@@ -71,7 +71,12 @@ public class AdminWebhookService {
         if (tier.equals(lastCircuitBreakerTier)) return;
         lastCircuitBreakerTier = tier;
 
-        if ("TIER3".equals(tier) && cfg.notifyTier3()) {
+        if ("ADMIN_RECOVERY".equals(tier) && cfg.notifyTier3()) {
+            postAlert("🛠️ Admin Recovery Mode Enabled",
+                    "An admin manually froze loan interest at **0%** and paused new loan issuance. " +
+                            "Use `/at admin health` to monitor deleveraging and `/at admin recovery stop` when ready.",
+                    0xFF8800);
+        } else if ("TIER3".equals(tier) && cfg.notifyTier3()) {
             postAlert("🔴 Circuit Breaker TIER 3 — Loans Frozen",
                     "Debt/GDP ratio has exceeded the tier-3 threshold. All loan interest is **paused**. " +
                             "The economy needs intervention — check `/at admin health` on the server.",

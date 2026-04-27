@@ -53,9 +53,26 @@ public class LoanManager {
      * This prevents rapid open/close cycling when D/G hovers near the boundary.
      */
     private volatile boolean tier3CircuitLocked = false;
+    /**
+     * Admin-triggered recovery mode: hard-freezes loan interest at 0% and blocks
+     * all new loan issuance until an admin disables it.
+     */
+    private volatile boolean manualRecoveryMode = false;
 
     public void setTier3CircuitLocked(boolean locked) {
         this.tier3CircuitLocked = locked;
+    }
+
+    public void setManualRecoveryMode(boolean enabled) {
+        this.manualRecoveryMode = enabled;
+        this.tier3CircuitLocked = enabled;
+        if (!enabled) {
+            this.interestCircuitOpen = false;
+        }
+    }
+
+    public boolean isManualRecoveryMode() {
+        return manualRecoveryMode;
     }
 
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
@@ -142,6 +159,10 @@ public class LoanManager {
 
         if (!config.enabled()) {
             return LoanResult.error("Loans are disabled");
+        }
+
+        if (manualRecoveryMode) {
+            return LoanResult.error("Admin recovery mode is active: new loans are temporarily paused.");
         }
 
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -366,6 +387,12 @@ public class LoanManager {
     public void processInterest() {
         LoanConfig config = configManager.getConfig().loans();
         Duration compoundInterval = Duration.ofHours(config.compoundIntervalHours());
+
+        if (manualRecoveryMode) {
+            tier3CircuitLocked = true;
+            interestCircuitOpen = true;
+            return;
+        }
 
         // Counter-cyclical interest: smooth linear reduction of interest rate as debt/GDP rises.
         // multiplier = max(0, min(1.0, 1.0 - debtGdpRatio / tier3Ratio))
@@ -716,6 +743,18 @@ public class LoanManager {
     public CircuitBreakerStatus getCircuitBreakerStatus() {
         LoanConfig config = configManager.getConfig().loans();
         Optional<EconomySnapshot> latestSnapshot = snapshotRepository.findLatest();
+
+        if (manualRecoveryMode) {
+            double ratio = -1.0;
+            if (latestSnapshot.isPresent() && latestSnapshot.get().gdp().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal totalDebt = BigDecimal.ZERO;
+                for (Loan l : loanRepository.findAllUnpaid()) {
+                    totalDebt = totalDebt.add(l.currentBalance());
+                }
+                ratio = totalDebt.divide(latestSnapshot.get().gdp(), MathContext.DECIMAL128).doubleValue();
+            }
+            return new CircuitBreakerStatus("ADMIN_RECOVERY", ratio, 0.0, true, config.counterCyclical());
+        }
 
         if (latestSnapshot.isEmpty() || config.debtGdpTier3Ratio() <= 0.0) {
             return new CircuitBreakerStatus("NORMAL", -1.0, 1.0, false, config.counterCyclical());

@@ -246,6 +246,14 @@ public class ConfigValidator {
             v.add(S_LOANS + ".guildbuyerTotalDebtCap must be >= 0 (currently " + c.guildbuyerTotalDebtCap() + "). "
                     + "Set to 0 to disable the per-GuildBuyer debt cap.");
         }
+        if (c.tier3ExitMultiplierCap() < 0 || c.tier3ExitMultiplierCap() > 1) {
+            v.add(S_LOANS + ".tier3ExitMultiplierCap must be between 0 and 1 (currently " + c.tier3ExitMultiplierCap() + "). "
+                    + "Set to 1.0 to disable the graduated TIER3 exit cap.");
+        }
+        if (c.tier3ExitDelayTicks() < 0) {
+            v.add(S_LOANS + ".tier3ExitDelayTicks must be >= 0 (currently " + c.tier3ExitDelayTicks() + "). "
+                    + "Set to 0 to disable the graduated TIER3 exit delay window.");
+        }
         // ── Dangerous config warnings (soft errors — admins may have good reasons) ──
         if (c.debtGdpTier3Ratio() < 20.0) {
             v.add(S_LOANS + ".debtGdpTier3Ratio is " + c.debtGdpTier3Ratio() + " (below 20). "

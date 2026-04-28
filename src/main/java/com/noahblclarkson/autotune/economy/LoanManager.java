@@ -58,6 +58,15 @@ public class LoanManager {
      * all new loan issuance until an admin disables it.
      */
     private volatile boolean manualRecoveryMode = false;
+    /**
+     * Remaining ticks for the graduated TIER3 exit cap.
+     * After TIER3 circuit unlocks (D/G dropped below hysteresis threshold), the
+     * interest multiplier is capped at tier3ExitMultiplierCap for this many ticks.
+     * Prevents multiplier jump cascade: without this, multiplier jumps from 0% → 53%
+     * at D/G=14, causing TIER3 re-entry within days.
+     * Mirrors Rust's tier3_exit_delay_remaining field.
+     */
+    private int tier3ExitDelayRemaining = 0;
 
     public void setTier3CircuitLocked(boolean locked) {
         this.tier3CircuitLocked = locked;
@@ -436,7 +445,9 @@ public class LoanManager {
                     double hysteresisThreshold = config.debtGdpTier3Ratio() * (1.0 - config.tier3HysteresisBand());
 
                     // Check hysteresis unlock: if locked and ratio dropped below band, unlock.
-                    if (tier3CircuitLocked && ratio < hysteresisThreshold) {
+                    // also track whether we just transitioned from locked→unlocked to apply the exit cap.
+                    boolean justUnlockedCC = tier3CircuitLocked && ratio < hysteresisThreshold;
+                    if (justUnlockedCC) {
                         tier3CircuitLocked = false;
                         plugin.getLogger().info(String.format(
                             "[Auto-Tune] TIER3 hysteresis unlock (counter-cyclical) — D/G %.1fx (below %.1fx threshold). Interest may resume.",
@@ -469,8 +480,18 @@ public class LoanManager {
                         // exit to NORMAL instead of TIER2. TIER2's 50% rate compounds debt faster than
                         // GDP grows (~1%/day), causing immediate re-entry. Exiting to NORMAL prevents
                         // the doom-loop oscillation that all 8 prior fix candidates failed to solve.
+                        // Also apply graduated exit cap: clamp multiplier to tier3ExitMultiplierCap
+                        // during the delay window to prevent the multiplier jump cascade
+                        // (0% → ~53% at D/G=14) that re-triggers TIER3 within days.
                         currentTier = "NORMAL";
-                        interestMultiplier = 1.0;
+                        if (tier3ExitDelayRemaining > 0) {
+                            tier3ExitDelayRemaining--;
+                            interestMultiplier = Math.min(interestMultiplier, config.tier3ExitMultiplierCap());
+                        } else if (justUnlockedCC) {
+                            // TIER3 just unlocked — start the graduated exit delay window
+                            tier3ExitDelayRemaining = config.tier3ExitDelayTicks();
+                            interestMultiplier = Math.min(interestMultiplier, config.tier3ExitMultiplierCap());
+                        }
                     }
                 } else {
                     // Legacy tiered circuit breaker with hysteresis for TIER3:
@@ -479,7 +500,9 @@ public class LoanManager {
                     double hysteresisThreshold = config.debtGdpTier3Ratio() * (1.0 - config.tier3HysteresisBand());
 
                     // Check hysteresis unlock: if locked and ratio dropped below band, unlock.
-                    if (tier3CircuitLocked && ratio < hysteresisThreshold) {
+                    // Track whether we just transitioned from locked→unlocked to apply the exit cap.
+                    boolean justUnlockedLegacy = tier3CircuitLocked && ratio < hysteresisThreshold;
+                    if (justUnlockedLegacy) {
                         tier3CircuitLocked = false;
                         plugin.getLogger().info(String.format(
                             "[Auto-Tune] TIER3 hysteresis unlock — D/G %.1fx (below %.1fx threshold). Interest may resume.",
@@ -506,8 +529,17 @@ public class LoanManager {
                     // exit to NORMAL instead of TIER2. Legacy TIER2 (25%) compounds debt too fast vs
                     // GDP growth (~1%/day), causing TIER3 re-entry within days. All 8 fix candidates
                     // failed because they never addressed this exit path. Exiting to NORMAL prevents it.
+                    // Also apply graduated exit cap: clamp multiplier to tier3ExitMultiplierCap
+                    // during the delay window to prevent the multiplier jump cascade that re-triggers TIER3.
                     currentTier = "NORMAL";
-                    interestMultiplier = 1.0;
+                    if (tier3ExitDelayRemaining > 0) {
+                        tier3ExitDelayRemaining--;
+                        interestMultiplier = Math.min(interestMultiplier, config.tier3ExitMultiplierCap());
+                    } else if (justUnlockedLegacy) {
+                        // TIER3 just unlocked — start the graduated exit delay window
+                        tier3ExitDelayRemaining = config.tier3ExitDelayTicks();
+                        interestMultiplier = Math.min(interestMultiplier, config.tier3ExitMultiplierCap());
+                    }
                 }
 
                 if (!currentTier.equals("NORMAL")) {

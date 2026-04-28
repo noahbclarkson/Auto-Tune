@@ -233,6 +233,20 @@ public record AutoTuneConfig(
             /// Prevents MM/GB loan accumulation from extending the TIER3 lock period.
             /// Default: false (MM/GB loans allowed during TIER3 lock for backward compatibility).
             boolean blockMmGbLoansDuringTier3,
+            /// Maximum interest rate during the graduated TIER3 exit delay window.
+            /// After TIER3 circuit unlocks (D/G drops below hysteresis threshold), the
+            /// interest multiplier is capped at this value for `tier3ExitDelayTicks`.
+            /// This prevents the immediate multiplier jump cascade that causes TIER3 re-trigger.
+            /// e.g. with tier3ExitMultiplierCap=0.10 and tier3ExitDelayTicks=1152 (4 days at 288 ticks/day):
+            /// D/G=14 → normal CC taper would give ~53%, but cap clamps to 10% for 4 days.
+            /// After the delay window expires, normal counter-cyclical taper resumes.
+            /// Set to 1.0 to disable (no cap). Default: 0.10 (10% cap).
+            double tier3ExitMultiplierCap,
+            /// Number of ticks for the graduated TIER3 exit delay window.
+            /// After TIER3 circuit unlocks, the interest cap applies for this many ticks
+            /// before normal counter-cyclical rates resume.
+            /// Default: 1152 (4 days at 288 ticks/day). Set to 0 to disable.
+            int tier3ExitDelayTicks,
             /// Hours a player must wait after a defaulted loan before they can take a new loan.
             int postDefaultCooldownHours,
             /// Maximum size of a single loan as a multiple of economy GDP.
@@ -258,6 +272,8 @@ public record AutoTuneConfig(
                     0.0,   // minInterestMultiplier: pure counter-cyclical (0% at D/G=tier3)
                     3.0,   // guildbuyerTotalDebtCap: 3× GDP per GuildBuyer
                     false, // blockMmGbLoansDuringTier3: allowed by default
+                    0.10,  // tier3ExitMultiplierCap: 10% cap during TIER3 exit delay (Rust parity)
+                    1152,  // tier3ExitDelayTicks: 4 days at 288 ticks/day (Rust parity)
                     168,   // postDefaultCooldownHours: 7 days
                     1.0,   // singleLoanGdpCap: single loan capped at 1× GDP
                     2.0,   // totalDebtGdpCap: economy-wide debt capped at 2× GDP

@@ -246,6 +246,15 @@ loans:
   # debt during catastrophic debt spiral. Existing loans remain unchanged.
   # Default: false (allows all players to take loans during TIER3).
   block-mm-gb-loans-during-tier3: false
+  # Maximum interest rate during the graduated TIER3 exit delay window.
+  # After TIER3 circuit unlocks (D/G drops below hysteresis threshold), the
+  # interest multiplier is capped at this value for tier3-exit-delay-ticks.
+  # Prevents the multiplier jump cascade (0% → 53% at D/G=14) that re-triggers TIER3.
+  # Set to 1.0 to disable. Default: 0.10 (10% cap).
+  tier3-exit-multiplier-cap: 0.10
+  # Number of ticks for the graduated TIER3 exit delay window.
+  # Default: 1152 (4 days at 288 ticks/day).
+  tier3-exit-delay-ticks: 1152
 
 gui:
   # Items per page in shop (max 45 = 5 rows x 9 columns)

@@ -74,6 +74,8 @@ class LoanManagerTest {
                 d.minInterestMultiplier(), // added 2026-04-25: Java/Rust config parity
                 d.guildbuyerTotalDebtCap(), // added 2026-04-25: Java/Rust config parity
                 d.blockMmGbLoansDuringTier3(), // added 2026-04-25: Java/Rust config parity
+                d.tier3ExitMultiplierCap(),   // added 2026-04-28: graduated TIER3 exit cap (Rust parity)
+                d.tier3ExitDelayTicks(),      // added 2026-04-28: graduated TIER3 exit cap (Rust parity)
                 d.postDefaultCooldownHours(),
                 d.singleLoanGdpCap(),
                 d.totalDebtGdpCap(),

@@ -243,6 +243,8 @@ public class ConfigManager {
                 section.getDouble("min-interest-multiplier", 0.0), // pure counter-cyclical by default
                 section.getDouble("guildbuyer-total-debt-cap", 3.0), // 3× GDP per GuildBuyer
                 section.getBoolean("block-mm-gb-loans-during-tier3", false),
+                section.getDouble("tier3-exit-multiplier-cap", 0.10), // graduated cap during TIER3 exit delay (Rust parity)
+                section.getInt("tier3-exit-delay-ticks", 1152),       // 4 days at 288 ticks/day (Rust parity)
                 section.getInt("post-default-cooldown-hours", 168),
                 section.getDouble("single-loan-gdp-cap", 1.0),
                 section.getDouble("total-debt-gdp-cap", 2.0),

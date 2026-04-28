@@ -1,0 +1,322 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { useAppContext } from '@/context/app-context';
+import { Header } from '@/components/layout/header';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { api, type Stats, type AuctionOrderDto, type AuctionFillDto, type AuctionMaterialDto } from '@/lib/api';
+import { formatCurrency, formatTimeAgo } from '@/lib/format';
+import { TrendingUp, TrendingDown, Clock, Package, ArrowUpDown } from 'lucide-react';
+
+interface AuctionStats {
+  orderCount: number;
+  fillCount: number;
+  activeOrderCount: number;
+  bookSummary: Record<string, { bestBid: number | null; bestAsk: number | null; bidCount: number; askCount: number }>;
+  recentFills: Array<{ id: string; quantity: number; price: number; filledAt: number }>;
+}
+
+function StatsBar({ stats }: { stats: AuctionStats }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <Card>
+        <CardContent className="p-4 text-center">
+          <p className="text-sm text-muted-foreground">Active Orders</p>
+          <p className="text-xl font-bold text-foreground">{stats.activeOrderCount}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="p-4 text-center">
+          <p className="text-sm text-muted-foreground">Total Fills</p>
+          <p className="text-xl font-bold text-foreground">{stats.fillCount.toLocaleString()}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="p-4 text-center">
+          <p className="text-sm text-muted-foreground">Materials Listed</p>
+          <p className="text-xl font-bold text-foreground">{Object.keys(stats.bookSummary).length}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="p-4 text-center">
+          <p className="text-sm text-muted-foreground">Spreadable Items</p>
+          <p className="text-xl font-bold text-foreground">
+            {Object.values(stats.bookSummary).filter((s) => s.bestBid !== null && s.bestAsk !== null).length}
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function SideBadge({ side }: { side: 'BUY' | 'SELL' }) {
+  return (
+    <Badge variant={side === 'BUY' ? 'default' : 'secondary'} className="text-xs">
+      {side === 'BUY' ? (
+        <><TrendingUp className="w-3 h-3 mr-1" />Buy</>
+      ) : (
+        <><TrendingDown className="w-3 h-3 mr-1" />Sell</>
+      )}
+    </Badge>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    ACTIVE: 'default',
+    FILLED: 'secondary',
+    CANCELLED: 'destructive',
+    EXPIRED: 'outline',
+  };
+  return <Badge variant={variants[status] ?? 'outline'} className="text-xs">{status}</Badge>;
+}
+
+function OrderRow({ order }: { order: AuctionOrderDto }) {
+  const fillPct = order.originalQuantity > 0
+    ? Math.round((order.filledQuantity / order.originalQuantity) * 100)
+    : 0;
+  return (
+    <tr className="border-b border-border last:border-0 hover:bg-muted/30">
+      <td className="px-3 py-2.5 text-muted-foreground text-sm">{order.material}</td>
+      <td className="px-3 py-2.5 text-center"><SideBadge side={order.side} /></td>
+      <td className="px-3 py-2.5 text-right font-medium text-foreground">
+        {formatCurrency(order.price)}
+      </td>
+      <td className="px-3 py-2.5 text-right text-muted-foreground text-sm">
+        {order.remainingQuantity.toLocaleString()} / {order.originalQuantity.toLocaleString()}
+      </td>
+      <td className="px-3 py-2.5 text-right">
+        <div className="flex items-center justify-end gap-2">
+          <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div className="h-full bg-primary rounded-full" style={{ width: `${fillPct}%` }} />
+          </div>
+          <span className="text-xs text-muted-foreground w-8">{fillPct}%</span>
+        </div>
+      </td>
+      <td className="px-3 py-2.5 text-center"><StatusBadge status={order.status} /></td>
+      <td className="px-3 py-2.5 text-right text-muted-foreground text-xs">
+        {formatTimeAgo(order.createdAt)}
+      </td>
+    </tr>
+  );
+}
+
+function OrdersTable({ orders }: { orders: AuctionOrderDto[] }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Active Orders</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {orders.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">No active orders</p>
+        ) : (
+          <div className="rounded-md border border-border overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">Material</th>
+                  <th className="px-3 py-2.5 text-center font-medium text-muted-foreground">Side</th>
+                  <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Price</th>
+                  <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Remaining</th>
+                  <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Filled</th>
+                  <th className="px-3 py-2.5 text-center font-medium text-muted-foreground">Status</th>
+                  <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Age</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((o) => <OrderRow key={o.id} order={o} />)}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RecentFills({ fills }: { fills: AuctionFillDto[] }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Recent Fills</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {fills.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">No recent fills</p>
+        ) : (
+          <div className="space-y-3">
+            {fills.map((f) => (
+              <div key={f.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 rounded bg-primary/10">
+                    <ArrowUpDown className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {f.quantity.toLocaleString()} @ {formatCurrency(f.price)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Total: {formatCurrency(f.total)}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">{formatTimeAgo(f.filledAt)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MaterialsBook({ materials }: { materials: AuctionMaterialDto[] }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">
+          <Package className="w-4 h-4 inline mr-1" />Material Summary
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {materials.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">No materials listed</p>
+        ) : (
+          <div className="rounded-md border border-border overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">Material</th>
+                  <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Best Bid</th>
+                  <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Best Ask</th>
+                  <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Spread</th>
+                  <th className="px-3 py-2.5 text-center font-medium text-muted-foreground">Orders</th>
+                </tr>
+              </thead>
+              <tbody>
+                {materials.map((m) => {
+                  const spread = m.bestBid !== null && m.bestAsk !== null
+                    ? ((m.bestAsk - m.bestBid) / m.bestBid * 100).toFixed(1)
+                    : null;
+                  return (
+                    <tr key={m.material} className="border-b border-border last:border-0 hover:bg-muted/30">
+                      <td className="px-3 py-2.5 font-medium text-foreground">{m.material}</td>
+                      <td className="px-3 py-2.5 text-right text-green-600 dark:text-green-400">
+                        {m.bestBid !== null ? formatCurrency(m.bestBid) : '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-red-600 dark:text-red-400">
+                        {m.bestAsk !== null ? formatCurrency(m.bestAsk) : '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-muted-foreground">
+                        {spread !== null ? `${spread}%` : '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-center text-muted-foreground">
+                        {m.totalOrders}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+type Tab = 'orders' | 'fills' | 'materials';
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'orders', label: 'Active Orders' },
+  { id: 'fills', label: 'Recent Fills' },
+  { id: 'materials', label: 'Materials' },
+];
+
+export default function AuctionPage() {
+  const { apiBase } = useAppContext();
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [orders, setOrders] = useState<AuctionOrderDto[]>([]);
+  const [fills, setFills] = useState<AuctionFillDto[]>([]);
+  const [materials, setMaterials] = useState<AuctionMaterialDto[]>([]);
+  const [auctionStats, setAuctionStats] = useState<AuctionStats | null>(null);
+  const [tab, setTab] = useState<Tab>('orders');
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [statsData, auctionStatsData, ordersData, fillsData, materialsData] = await Promise.all([
+        api.stats(apiBase),
+        api.auction.stats(apiBase).catch(() => null),
+        api.auction.orders(apiBase).catch(() => [] as AuctionOrderDto[]),
+        api.auction.fills(apiBase, 25).catch(() => [] as AuctionFillDto[]),
+        api.auction.materials(apiBase).catch(() => [] as AuctionMaterialDto[]),
+      ]);
+      setStats(statsData);
+      setAuctionStats(auctionStatsData);
+      setOrders(ordersData);
+      setFills(fillsData);
+      setMaterials(materialsData);
+      setError(null);
+    } catch {
+      setError('Could not load auction data. Is the server running?');
+    }
+  }, [apiBase]);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header totalItems={stats?.totalItems ?? 0} onlinePlayers={stats?.onlinePlayers ?? 0} />
+      <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Auction House</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Real-time order book — live data from this server
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-xs text-muted-foreground">Live</span>
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950 p-4">
+            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+          </div>
+        )}
+
+        {auctionStats && <StatsBar stats={auctionStats} />}
+
+        <div className="flex gap-1 border-b border-border">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                tab === t.id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'orders' && <OrdersTable orders={orders} />}
+        {tab === 'fills' && <RecentFills fills={fills} />}
+        {tab === 'materials' && <MaterialsBook materials={materials} />}
+      </main>
+    </div>
+  );
+}

@@ -352,6 +352,40 @@ export interface PlayerBadgesResponse {
   badges: PlayerBadgeDto[];
 }
 
+export interface AuctionOrderDto {
+  id: string;
+  playerUuid: string;
+  material: string;
+  price: number;
+  originalQuantity: number;
+  remainingQuantity: number;
+  filledQuantity: number;
+  side: 'BUY' | 'SELL';
+  status: 'ACTIVE' | 'FILLED' | 'CANCELLED' | 'EXPIRED';
+  createdAt: number;
+  expiresAt: number;
+  isActive: boolean;
+}
+
+export interface AuctionFillDto {
+  id: string;
+  buyOrderId: string;
+  sellOrderId: string;
+  quantity: number;
+  price: number;
+  total: number;
+  filledAt: number;
+}
+
+export interface AuctionMaterialDto {
+  material: string;
+  totalOrders: number;
+  buyOrders: number;
+  sellOrders: number;
+  bestBid: number | null;
+  bestAsk: number | null;
+}
+
 export interface PriceChangeDto {
   timestamp: number;
   currentPrice: number;
@@ -458,5 +492,23 @@ export const api = {
           `${base}/api/shop/favorites/${encodeURIComponent(playerName)}/${itemId}`
         ),
     },
+  },
+  auction: {
+    stats: (base: string) =>
+      fetchJson<{
+        orderCount: number;
+        fillCount: number;
+        activeOrderCount: number;
+        bookSummary: Record<string, { bestBid: number | null; bestAsk: number | null; bidCount: number; askCount: number }>;
+        recentFills: Array<{ id: string; quantity: number; price: number; filledAt: number }>;
+      }>(`${base}/api/auction/stats`),
+    orders: (base: string, material?: string) =>
+      fetchJson<AuctionOrderDto[]>(`${base}/api/auction/orders${material ? `?material=${encodeURIComponent(material)}` : ''}`),
+    fills: (base: string, limit = 50) =>
+      fetchJson<AuctionFillDto[]>(`${base}/api/auction/fills?limit=${limit}`),
+    materials: (base: string) =>
+      fetchJson<AuctionMaterialDto[]>(`${base}/api/auction/materials`),
+    player: (base: string, playerName: string) =>
+      fetchJson<AuctionOrderDto[]>(`${base}/api/auction/player/${encodeURIComponent(playerName)}`),
   },
 };

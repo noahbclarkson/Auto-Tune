@@ -510,5 +510,12 @@ export const api = {
       fetchJson<AuctionMaterialDto[]>(`${base}/api/auction/materials`),
     player: (base: string, playerName: string) =>
       fetchJson<AuctionOrderDto[]>(`${base}/api/auction/player/${encodeURIComponent(playerName)}`),
+    depth: (base: string, material: string, depth = 5) =>
+      fetchJson<{
+        material: string;
+        depth: number;
+        bids: Array<{ id: string; price: number; remainingQuantity: number; totalValue: number }>;
+        asks: Array<{ id: string; price: number; remainingQuantity: number; totalValue: number }>;
+      }>(`${base}/api/auction/depth?material=${encodeURIComponent(material)}&depth=${depth}`),
   },
 };

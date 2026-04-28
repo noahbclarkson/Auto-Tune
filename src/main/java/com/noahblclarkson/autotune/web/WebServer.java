@@ -741,6 +741,44 @@ public class WebServer {
             ctx.json(new ArrayList<>(summary.values()));
         });
 
+        // GET /api/auction/depth?material=X — depth chart data (top-N bids and asks for a material)
+        app.get("/api/auction/depth", ctx -> {
+            String material = ctx.queryParam("material");
+            if (material == null || material.isBlank()) {
+                ctx.status(400).result("material query param is required");
+                return;
+            }
+            int depth = ctx.queryParamAsClass("depth", Integer.class).getOrDefault(5);
+            int cappedDepth = Math.min(Math.max(depth, 1), 20);
+            Map<String, List<AuctionOrder>> depthMap = auctionRepository.findDepthByMaterial(material.toUpperCase(), cappedDepth);
+            List<Map<String, Object>> bids = depthMap.getOrDefault("bids", List.of()).stream()
+                    .map(o -> {
+                        Map<String, Object> m = new java.util.HashMap<>();
+                        m.put("id", o.id().toString());
+                        m.put("price", o.price().doubleValue());
+                        m.put("remainingQuantity", o.remainingQuantity());
+                        m.put("totalValue", o.price().multiply(BigDecimal.valueOf(o.remainingQuantity())).doubleValue());
+                        return m;
+                    })
+                    .collect(Collectors.toList());
+            List<Map<String, Object>> asks = depthMap.getOrDefault("asks", List.of()).stream()
+                    .map(o -> {
+                        Map<String, Object> m = new java.util.HashMap<>();
+                        m.put("id", o.id().toString());
+                        m.put("price", o.price().doubleValue());
+                        m.put("remainingQuantity", o.remainingQuantity());
+                        m.put("totalValue", o.price().multiply(BigDecimal.valueOf(o.remainingQuantity())).doubleValue());
+                        return m;
+                    })
+                    .collect(Collectors.toList());
+            Map<String, Object> result = new java.util.HashMap<>();
+            result.put("material", material.toUpperCase());
+            result.put("bids", bids);
+            result.put("asks", asks);
+            result.put("depth", cappedDepth);
+            ctx.json(result);
+        });
+
         // ── Player portfolio ─────────────────────────────────────────────────
         app.get("/api/portfolio/{playerName}", ctx -> {
             String playerName = ctx.pathParam(KEY_PLAYER_NAME);

@@ -12,6 +12,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 import java.util.UUID;
 
 @SuppressWarnings("PMD")
@@ -34,6 +35,55 @@ public class AuctionRepository {
                         .bind("id", id.toString())
                         .map((rs, ctx) -> mapOrder(rs))
                         .findFirst());
+    }
+
+    /**
+     * Returns top-N active orders for a material grouped by side, sorted by price.
+     * BUY orders: highest price first → best bid at index 0.
+     * SELL orders: lowest price first → best ask at index 0.
+     * Used for auction depth-chart rendering.
+     */
+    public Map<String, List<AuctionOrder>> findDepthByMaterial(String material, int depth) {
+        return jdbi.withHandle(handle -> {
+            List<AuctionOrder> buyOrders = handle.createQuery("""
+                    SELECT id, player_uuid, material, item_data, price,
+                           original_quantity, remaining_quantity, side, status,
+                           created_at, filled_at, expires_at
+                    FROM at_auction_orders
+                    WHERE material = :material
+                      AND side = 'BUY'
+                      AND status IN ('OPEN', 'PARTIALLY_FILLED')
+                      AND remaining_quantity > 0
+                      AND expires_at > CURRENT_TIMESTAMP
+                    ORDER BY price DESC
+                    LIMIT :limit
+                    """)
+                    .bind("material", material)
+                    .bind("limit", depth)
+                    .map((rs, ctx) -> mapOrder(rs))
+                    .list();
+            List<AuctionOrder> sellOrders = handle.createQuery("""
+                    SELECT id, player_uuid, material, item_data, price,
+                           original_quantity, remaining_quantity, side, status,
+                           created_at, filled_at, expires_at
+                    FROM at_auction_orders
+                    WHERE material = :material
+                      AND side = 'SELL'
+                      AND status IN ('OPEN', 'PARTIALLY_FILLED')
+                      AND remaining_quantity > 0
+                      AND expires_at > CURRENT_TIMESTAMP
+                    ORDER BY price ASC
+                    LIMIT :limit
+                    """)
+                    .bind("material", material)
+                    .bind("limit", depth)
+                    .map((rs, ctx) -> mapOrder(rs))
+                    .list();
+            Map<String, List<AuctionOrder>> result = new java.util.HashMap<>();
+            result.put("bids", buyOrders);
+            result.put("asks", sellOrders);
+            return result;
+        });
     }
 
     public List<AuctionOrder> findActiveByMaterial(String material) {

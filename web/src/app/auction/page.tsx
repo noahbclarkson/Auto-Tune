@@ -7,7 +7,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { api, type Stats, type AuctionOrderDto, type AuctionFillDto, type AuctionMaterialDto } from '@/lib/api';
 import { formatCurrency, formatTimeAgo } from '@/lib/format';
-import { TrendingUp, TrendingDown, Package, ArrowUpDown, Search, User } from 'lucide-react';
+import { TrendingUp, TrendingDown, Package, ArrowUpDown, Search, User, BarChart2 } from 'lucide-react';
+import { DepthChart } from '@/components/auction/depth-chart';
+import { type AuctionDepthData } from '@/components/auction/depth-chart-types';
 
 interface AuctionStats {
   orderCount: number;
@@ -186,7 +188,7 @@ function RecentFills({ fills }: { fills: AuctionFillDto[] }) {
   );
 }
 
-function MaterialsBook({ materials }: { materials: AuctionMaterialDto[] }) {
+function MaterialsBook({ materials, onSelectMaterial }: { materials: AuctionMaterialDto[]; onSelectMaterial?: (mat: string) => void }) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -216,7 +218,15 @@ function MaterialsBook({ materials }: { materials: AuctionMaterialDto[] }) {
                     : null;
                   return (
                     <tr key={m.material} className="border-b border-border last:border-0 hover:bg-muted/30">
-                      <td className="px-3 py-2.5 font-medium text-foreground">{m.material}</td>
+                      <td className="px-3 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => onSelectMaterial?.(m.material)}
+                          className="font-medium text-foreground hover:text-primary transition-colors text-left"
+                        >
+                          {m.material}
+                        </button>
+                      </td>
                       <td className="px-3 py-2.5 text-right text-green-600 dark:text-green-400">
                         {m.bestBid !== null ? formatCurrency(m.bestBid) : '—'}
                       </td>
@@ -241,11 +251,12 @@ function MaterialsBook({ materials }: { materials: AuctionMaterialDto[] }) {
   );
 }
 
-type Tab = 'orders' | 'fills' | 'materials' | 'myorders';
+type Tab = 'orders' | 'fills' | 'materials' | 'depth' | 'myorders';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'orders', label: 'Active Orders' },
   { id: 'fills', label: 'Recent Fills' },
   { id: 'materials', label: 'Materials' },
+  { id: 'depth', label: 'Depth' },
   { id: 'myorders', label: 'My Orders' },
 ];
 
@@ -258,6 +269,9 @@ export default function AuctionPage() {
   const [auctionStats, setAuctionStats] = useState<AuctionStats | null>(null);
   const [tab, setTab] = useState<Tab>('orders');
   const [materialFilter, setMaterialFilter] = useState('');
+  const [depthMaterial, setDepthMaterial] = useState<string>('');
+  const [depthData, setDepthData] = useState<AuctionDepthData | null>(null);
+  const [depthLoading, setDepthLoading] = useState(false);
   const [myOrdersPlayer, setMyOrdersPlayer] = useState('');
   const [myOrdersResult, setMyOrdersResult] = useState<AuctionOrderDto[] | null>(null);
   const [myOrdersError, setMyOrdersError] = useState<string | null>(null);
@@ -271,6 +285,7 @@ export default function AuctionPage() {
         api.auction.orders(apiBase).catch(() => [] as AuctionOrderDto[]),
         api.auction.fills(apiBase, 25).catch(() => [] as AuctionFillDto[]),
         api.auction.materials(apiBase).catch(() => [] as AuctionMaterialDto[]),
+        depthData !== null || depthMaterial === '' ? Promise.resolve() : api.auction.depth(apiBase, depthMaterial, 8).then(setDepthData).catch(() => setDepthData(null)),
       ]);
       setStats(statsData);
       setAuctionStats(auctionStatsData);
@@ -354,7 +369,15 @@ export default function AuctionPage() {
           </div>
         )}
         {tab === 'fills' && <RecentFills fills={fills} />}
-        {tab === 'materials' && <MaterialsBook materials={materials} />}
+        {tab === 'materials' && <MaterialsBook materials={materials} onSelectMaterial={(mat) => { setDepthMaterial(mat); setTab('depth'); }} />}
+        {tab === 'depth' && (
+          <DepthTab
+            material={depthMaterial}
+            data={depthData}
+            loading={depthLoading}
+            onLoad={(mat) => { setDepthMaterial(mat); setDepthLoading(true); api.auction.depth(apiBase, mat, 8).then(setDepthData).catch(() => setDepthData(null)).finally(() => setDepthLoading(false)); }}
+          />
+        )}
         {tab === 'myorders' && (
           <MyOrdersPanel
             apiBase={apiBase}
@@ -469,6 +492,83 @@ function MyOrdersPanel({
               </table>
             </div>
           )
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DepthTab({
+  material,
+  data,
+  loading,
+  onLoad,
+}: {
+  material: string;
+  data: AuctionDepthData | null;
+  loading: boolean;
+  onLoad: (mat: string) => void;
+}) {
+  const [input, setInput] = useState(material);
+
+  const handleLoad = () => {
+    if (input.trim()) onLoad(input.trim().toUpperCase());
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <BarChart2 className="w-4 h-4" />
+          Market Depth — {material || 'Select a material'}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Material (e.g. diamond, iron_ingot)..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleLoad()}
+            className="flex-1 text-sm bg-transparent border border-border rounded px-3 py-2 outline-none focus:border-primary transition-colors"
+          />
+          <button
+            onClick={handleLoad}
+            disabled={loading || !input.trim()}
+            className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50 transition-opacity"
+          >
+            {loading ? 'Loading...' : 'Load'}
+          </button>
+        </div>
+
+        {material && (
+          <p className="text-xs text-muted-foreground">
+            Depth chart for <span className="font-medium text-foreground">{material}</span>
+            {data && ` — ${data.bids.length} bid levels, ${data.asks.length} ask levels`}
+          </p>
+        )}
+
+        {loading && (
+          <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+            Loading depth data...
+          </div>
+        )}
+
+        {!loading && material && data && (
+          <DepthChart data={data} material={material} />
+        )}
+
+        {!loading && material && !data && (
+          <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+            No depth data for {material}. Try placing buy/sell orders first.
+          </div>
+        )}
+
+        {!material && (
+          <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
+            Enter a material and click Load to see the depth chart
+          </div>
         )}
       </CardContent>
     </Card>

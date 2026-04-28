@@ -476,21 +476,18 @@ public class LoanManager {
                         } else if (ratio >= config.debtGdpTier1Ratio()) {
                             currentTier = "TIER1";
                         }
-                        // ARCHITECTURAL FIX: When TIER3 unlocks (D/G below hysteresis threshold),
-                        // exit to NORMAL instead of TIER2. TIER2's 50% rate compounds debt faster than
-                        // GDP grows (~1%/day), causing immediate re-entry. Exiting to NORMAL prevents
-                        // the doom-loop oscillation that all 8 prior fix candidates failed to solve.
-                        // Also apply graduated exit cap: clamp multiplier to tier3ExitMultiplierCap
-                        // during the delay window to prevent the multiplier jump cascade
-                        // (0% → ~53% at D/G=14) that re-triggers TIER3 within days.
-                        currentTier = "NORMAL";
-                        if (tier3ExitDelayRemaining > 0) {
-                            tier3ExitDelayRemaining--;
-                            interestMultiplier = Math.min(interestMultiplier, config.tier3ExitMultiplierCap());
-                        } else if (justUnlockedCC) {
-                            // TIER3 just unlocked — start the graduated exit delay window
-                            tier3ExitDelayRemaining = config.tier3ExitDelayTicks();
-                            interestMultiplier = Math.min(interestMultiplier, config.tier3ExitMultiplierCap());
+                        // During exit delay: clamp multiplier and report NORMAL.
+                        // Outside exit delay but in normal sub-TIER3 range: preserve TIER1/TIER2 labels.
+                        if (tier3ExitDelayRemaining > 0 || justUnlockedCC) {
+                            currentTier = "NORMAL";
+                            if (tier3ExitDelayRemaining > 0) {
+                                tier3ExitDelayRemaining--;
+                                interestMultiplier = Math.min(interestMultiplier, config.tier3ExitMultiplierCap());
+                            } else if (justUnlockedCC) {
+                                // TIER3 just unlocked — start the graduated exit delay window
+                                tier3ExitDelayRemaining = config.tier3ExitDelayTicks();
+                                interestMultiplier = Math.min(interestMultiplier, config.tier3ExitMultiplierCap());
+                            }
                         }
                     }
                 } else {
@@ -525,20 +522,18 @@ public class LoanManager {
                         interestMultiplier = config.tier1InterestCap();
                         currentTier = "TIER1";
                     }
-                    // ARCHITECTURAL FIX: When TIER3 unlocks (D/G below hysteresis threshold),
-                    // exit to NORMAL instead of TIER2. Legacy TIER2 (25%) compounds debt too fast vs
-                    // GDP growth (~1%/day), causing TIER3 re-entry within days. All 8 fix candidates
-                    // failed because they never addressed this exit path. Exiting to NORMAL prevents it.
-                    // Also apply graduated exit cap: clamp multiplier to tier3ExitMultiplierCap
-                    // during the delay window to prevent the multiplier jump cascade that re-triggers TIER3.
-                    currentTier = "NORMAL";
-                    if (tier3ExitDelayRemaining > 0) {
-                        tier3ExitDelayRemaining--;
-                        interestMultiplier = Math.min(interestMultiplier, config.tier3ExitMultiplierCap());
-                    } else if (justUnlockedLegacy) {
-                        // TIER3 just unlocked — start the graduated exit delay window
-                        tier3ExitDelayRemaining = config.tier3ExitDelayTicks();
-                        interestMultiplier = Math.min(interestMultiplier, config.tier3ExitMultiplierCap());
+                    // During exit delay: clamp multiplier and report NORMAL.
+                    // Outside exit delay but in normal sub-TIER3 range: preserve TIER1/TIER2 labels.
+                    if (tier3ExitDelayRemaining > 0 || justUnlockedLegacy) {
+                        currentTier = "NORMAL";
+                        if (tier3ExitDelayRemaining > 0) {
+                            tier3ExitDelayRemaining--;
+                            interestMultiplier = Math.min(interestMultiplier, config.tier3ExitMultiplierCap());
+                        } else if (justUnlockedLegacy) {
+                            // TIER3 just unlocked — start the graduated exit delay window
+                            tier3ExitDelayRemaining = config.tier3ExitDelayTicks();
+                            interestMultiplier = Math.min(interestMultiplier, config.tier3ExitMultiplierCap());
+                        }
                     }
                 }
 

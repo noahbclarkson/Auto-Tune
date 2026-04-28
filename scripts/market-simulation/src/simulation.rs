@@ -518,7 +518,8 @@ impl Simulation {
                 let hysteresis_unlock = lc.debt_gdp_tier3_ratio * (1.0 - lc.tier3_hysteresis_band);
 
                 // Check hysteresis unlock first: if locked and ratio dropped below band, unlock.
-                if self.circuit_tier3_locked && ratio < hysteresis_unlock {
+                let just_unlocked = self.circuit_tier3_locked && ratio < hysteresis_unlock;
+                if just_unlocked {
                     self.circuit_tier3_locked = false;
                 }
 
@@ -528,21 +529,26 @@ impl Simulation {
                 } else if ratio >= lc.debt_gdp_tier3_ratio {
                     // First time crossing TIER3 threshold — engage the lock.
                     self.circuit_tier3_locked = true;
+                    // Cancel any in-progress graduated exit.
+                    self.tier3_exit_delay_remaining = 0;
                     (0.0, "TIER3")
+                } else if just_unlocked {
+                    // TIER3 circuit just unlocked — exit to NORMAL (bypass TIER2).
+                    // TIER2's ~50% rate compounds debt ~10%/day while GDP grows ~1%/day,
+                    // causing immediate TIER3 re-entry. Exiting to NORMAL (100% rate)
+                    // lets deleveraging compete with compounding.
+                    self.tier3_exit_delay_remaining = lc.tier3_exit_delay_ticks;
+                    (lc.tier3_exit_multiplier_cap, "NORMAL")
+                } else if self.tier3_exit_delay_remaining > 0 {
+                    self.tier3_exit_delay_remaining -= 1;
+                    (lc.tier3_exit_multiplier_cap, "NORMAL")
                 } else if ratio >= lc.debt_gdp_tier2_ratio {
                     (lc.tier2_interest_cap, "TIER2")
                 } else if ratio >= lc.debt_gdp_tier1_ratio {
                     (lc.tier1_interest_cap, "TIER1")
                 } else {
                     (1.0, "NORMAL")
-                };
-                // ARCHITECTURAL FIX: When TIER3 circuit unlocks (D/G dropped below
-                // hysteresis threshold), exit directly to NORMAL instead of TIER2.
-                // Legacy TIER2 (25%) compounds debt too fast vs GDP growth (~1%/day),
-                // causing TIER3 re-entry within days. All 8 prior fix candidates FAILED
-                // because they adjusted thresholds/hysteresis but never the exit path.
-                // Exiting to NORMAL prevents the doom-loop oscillation at 60-90 days.
-                (1.0, "NORMAL")
+                }
             }
         } else {
             (1.0, "NORMAL")

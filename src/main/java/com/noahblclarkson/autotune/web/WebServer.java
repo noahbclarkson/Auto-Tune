@@ -14,6 +14,7 @@ import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
+import com.noahblclarkson.autotune.database.AuctionRepository;
 import com.noahblclarkson.autotune.database.ShopFavoriteRepository;
 import com.noahblclarkson.autotune.economy.EconomyManager;
 import com.noahblclarkson.autotune.economy.LoanManager;
@@ -34,6 +35,8 @@ import com.noahblclarkson.autotune.model.PriceChangeDto;
 import com.noahblclarkson.autotune.model.PnLHistoryDto;
 import com.noahblclarkson.autotune.model.PortfolioDto;
 import com.noahblclarkson.autotune.model.Transaction;
+import com.noahblclarkson.autotune.model.AuctionOrder;
+import com.noahblclarkson.autotune.model.AuctionFill;
 import com.noahblclarkson.autotune.service.AdminAuditService;
 import com.noahblclarkson.autotune.service.PlayerImpactService;
 import com.noahblclarkson.autotune.service.PlayerStreakService;
@@ -55,6 +58,7 @@ import java.util.Locale;
 import java.util.logging.Level;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -127,6 +131,7 @@ public class WebServer {
     private final PlayerStreakService streakService;
     private final EconomyWhatMovedService whatMovedService;
     private final AdminAuditService auditService;
+    private final AuctionRepository auctionRepository;
     private final Gson gson;
 
     private Javalin app;
@@ -153,7 +158,8 @@ public class WebServer {
             Server server,
             PlayerStreakService streakService,
             EconomyWhatMovedService whatMovedService,
-            AdminAuditService auditService
+            AdminAuditService auditService,
+            AuctionRepository auctionRepository
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -179,6 +185,7 @@ public class WebServer {
         this.streakService = streakService;
         this.whatMovedService = whatMovedService;
         this.auditService = auditService;
+        this.auctionRepository = auctionRepository;
         this.gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .create();
@@ -563,6 +570,175 @@ public class WebServer {
                     avgRate,
                     overdueCount
             ));
+        });
+
+        // ── Auction house ─────────────────────────────────────────────────────
+        // GET /api/auction/stats — auction statistics
+        app.get("/api/auction/stats", ctx -> {
+            long orderCount = auctionRepository.countOrders();
+            long fillCount = auctionRepository.countFills();
+            List<AuctionOrder> activeOrders = auctionRepository.findAllActive();
+            // Best bid/ask per material for summary
+            Map<String, Map<String, BigDecimal>> bookSummary = new HashMap<>();
+            for (AuctionOrder order : activeOrders) {
+                bookSummary.computeIfAbsent(order.material(), k -> new HashMap<>());
+                Map<String, BigDecimal> side = bookSummary.get(order.material());
+                if (order.side() == AuctionOrder.OrderSide.BUY) {
+                    side.merge("bestBid", order.price(), (a, b) -> a.compareTo(b) > 0 ? a : b);
+                    side.merge("bidCount", BigDecimal.ONE, BigDecimal::add);
+                } else {
+                    side.merge("bestAsk", order.price(), (a, b) -> a.compareTo(b) < 0 ? a : b);
+                    side.merge("askCount", BigDecimal.ONE, BigDecimal::add);
+                }
+            }
+            // Recent fills
+            List<AuctionFill> recentFills = auctionRepository.findRecentFills(5);
+            List<Map<String, Object>> recentFillsDto = recentFills.stream()
+                    .map(f -> {
+                        Map<String, Object> m = new HashMap<>();
+                        m.put("id", f.id().toString());
+                        m.put("quantity", f.quantity());
+                        m.put("price", f.price().doubleValue());
+                        m.put("filledAt", f.filledAt().toEpochMilli());
+                        return m;
+                    })
+                    .collect(Collectors.toList());
+
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("totalOrders", orderCount);
+            stats.put("totalFills", fillCount);
+            stats.put("activeOrders", activeOrders.size());
+            stats.put("materialsWithOrders", bookSummary.size());
+            stats.put("bookSummary", bookSummary);
+            stats.put("recentFills", recentFillsDto);
+            ctx.json(stats);
+        });
+
+        // GET /api/auction/orders — all active orders (optionally by material)
+        app.get("/api/auction/orders", ctx -> {
+            String material = ctx.queryParam("material");
+            List<AuctionOrder> orders;
+            if (material != null && !material.isBlank()) {
+                orders = auctionRepository.findActiveByMaterial(material.toUpperCase());
+            } else {
+                orders = auctionRepository.findAllActive();
+            }
+            List<Map<String, Object>> dtos = orders.stream()
+                    .map(this::toAuctionOrderDto)
+                    .collect(Collectors.toList());
+            ctx.json(dtos);
+        });
+
+        // GET /api/auction/orders/{orderId} — single order
+        app.get("/api/auction/orders/{orderId}", ctx -> {
+            String idStr = ctx.pathParam("orderId");
+            try {
+                UUID orderId = UUID.fromString(idStr);
+                Optional<AuctionOrder> opt = auctionRepository.findById(orderId);
+                if (opt.isEmpty()) {
+                    ctx.status(404).result("Order not found: " + idStr);
+                    return;
+                }
+                ctx.json(toAuctionOrderDto(opt.get()));
+            } catch (IllegalArgumentException e) {
+                ctx.status(400).result("Invalid order ID format: " + idStr);
+            }
+        });
+
+        // GET /api/auction/fills — recent fills
+        app.get("/api/auction/fills", ctx -> {
+            int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(50);
+            int cappedLimit = Math.min(limit, 200);
+            List<AuctionFill> fills = auctionRepository.findRecentFills(cappedLimit);
+            List<Map<String, Object>> dtos = fills.stream()
+                    .map(f -> {
+                        Map<String, Object> m = new HashMap<>();
+                        m.put("id", f.id().toString());
+                        m.put("buyOrderId", f.buyOrderId().toString());
+                        m.put("sellOrderId", f.sellOrderId().toString());
+                        m.put("quantity", f.quantity());
+                        m.put("price", f.price().doubleValue());
+                        m.put("total", f.price().multiply(BigDecimal.valueOf(f.quantity())).doubleValue());
+                        m.put("filledAt", f.filledAt().toEpochMilli());
+                        return m;
+                    })
+                    .collect(Collectors.toList());
+            ctx.json(dtos);
+        });
+
+        // GET /api/auction/fills/{orderId} — fills for a specific order
+        app.get("/api/auction/fills/{orderId}", ctx -> {
+            String idStr = ctx.pathParam("orderId");
+            try {
+                UUID orderId = UUID.fromString(idStr);
+                List<AuctionFill> fills = auctionRepository.findFillsByOrder(orderId);
+                List<Map<String, Object>> dtos = fills.stream()
+                        .map(f -> {
+                            Map<String, Object> m = new HashMap<>();
+                            m.put("id", f.id().toString());
+                            m.put("quantity", f.quantity());
+                            m.put("price", f.price().doubleValue());
+                            m.put("filledAt", f.filledAt().toEpochMilli());
+                            return m;
+                        })
+                        .collect(Collectors.toList());
+                ctx.json(dtos);
+            } catch (IllegalArgumentException e) {
+                ctx.status(400).result("Invalid order ID format: " + idStr);
+            }
+        });
+
+        // GET /api/auction/player/{playerName} — player's active orders
+        app.get("/api/auction/player/{playerName}", ctx -> {
+            String playerName = ctx.pathParam(KEY_PLAYER_NAME);
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).result(MSG_PLAYER_NAME_REQUIRED);
+                return;
+            }
+            PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+            if (player == null) {
+                ctx.status(404).result(MSG_PLAYER_NOT_FOUND + playerName);
+                return;
+            }
+            List<AuctionOrder> orders = auctionRepository.findActiveByPlayer(player.uuid());
+            List<Map<String, Object>> dtos = orders.stream()
+                    .map(this::toAuctionOrderDto)
+                    .collect(Collectors.toList());
+            ctx.json(dtos);
+        });
+
+        // GET /api/auction/materials — list of materials with active orders, with best bid/ask
+        app.get("/api/auction/materials", ctx -> {
+            List<AuctionOrder> all = auctionRepository.findAllActive();
+            Map<String, Map<String, Object>> summary = new LinkedHashMap<>();
+            for (AuctionOrder order : all) {
+                summary.computeIfAbsent(order.material(), mat -> {
+                    Map<String, Object> s = new HashMap<>();
+                    s.put("material", mat);
+                    s.put("totalOrders", 0);
+                    s.put("buyOrders", 0);
+                    s.put("sellOrders", 0);
+                    s.put("bestBid", null);
+                    s.put("bestAsk", null);
+                    return s;
+                });
+                Map<String, Object> s = summary.get(order.material());
+                s.put("totalOrders", ((Number) s.get("totalOrders")).intValue() + 1);
+                if (order.side() == AuctionOrder.OrderSide.BUY) {
+                    s.put("buyOrders", ((Number) s.get("buyOrders")).intValue() + 1);
+                    BigDecimal currentBest = (BigDecimal) s.get("bestBid");
+                    if (currentBest == null || order.price().compareTo(currentBest) > 0) {
+                        s.put("bestBid", order.price().doubleValue());
+                    }
+                } else {
+                    s.put("sellOrders", ((Number) s.get("sellOrders")).intValue() + 1);
+                    BigDecimal currentBest = (BigDecimal) s.get("bestAsk");
+                    if (currentBest == null || order.price().compareTo(currentBest) < 0) {
+                        s.put("bestAsk", order.price().doubleValue());
+                    }
+                }
+            }
+            ctx.json(new ArrayList<>(summary.values()));
         });
 
         // ── Player portfolio ─────────────────────────────────────────────────
@@ -1565,5 +1741,22 @@ public class WebServer {
                 alert.createdAt().toEpochMilli(),
                 alert.triggeredAt() != null ? alert.triggeredAt().toEpochMilli() : null
         );
+    }
+
+    private Map<String, Object> toAuctionOrderDto(AuctionOrder order) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", order.id().toString());
+        m.put("playerUuid", order.playerUuid().toString());
+        m.put("material", order.material());
+        m.put("price", order.price().doubleValue());
+        m.put("originalQuantity", order.originalQuantity());
+        m.put("remainingQuantity", order.remainingQuantity());
+        m.put("filledQuantity", order.filledQuantity());
+        m.put("side", order.side().name());
+        m.put("status", order.status().name());
+        m.put("createdAt", order.createdAt().toEpochMilli());
+        m.put("expiresAt", order.expiresAt().toEpochMilli());
+        m.put("isActive", order.isActive());
+        return m;
     }
 }

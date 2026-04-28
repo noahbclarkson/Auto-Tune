@@ -457,7 +457,7 @@ function MyOrdersPanel({
                     <tr key={o.id} className="border-b border-border last:border-0 hover:bg-muted/30">
                       <td className="px-3 py-2.5 font-medium text-foreground">{o.material}</td>
                       <td className="px-3 py-2.5 text-center"><SideBadge side={o.side} /></td>
-                      <td className="px-3 py-2-5 text-right font-medium text-foreground">{formatCurrency(o.price)}</td>
+                      <td className="px-3 py-2.5 text-right font-medium text-foreground">{formatCurrency(o.price)}</td>
                       <td className="px-3 py-2.5 text-right text-muted-foreground text-sm">
                         {o.remainingQuantity.toLocaleString()} / {o.originalQuantity.toLocaleString()}
                       </td>

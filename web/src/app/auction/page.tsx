@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { api, type Stats, type AuctionOrderDto, type AuctionFillDto, type AuctionMaterialDto } from '@/lib/api';
 import { formatCurrency, formatTimeAgo } from '@/lib/format';
-import { TrendingUp, TrendingDown, Clock, Package, ArrowUpDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Package, ArrowUpDown, Search, User } from 'lucide-react';
 
 interface AuctionStats {
   orderCount: number;
@@ -102,15 +102,27 @@ function OrderRow({ order }: { order: AuctionOrderDto }) {
   );
 }
 
-function OrdersTable({ orders }: { orders: AuctionOrderDto[] }) {
+function OrdersTable({ orders, materialFilter }: { orders: AuctionOrderDto[]; materialFilter: string }) {
+  const filtered = materialFilter
+    ? orders.filter((o) => o.material.toLowerCase().includes(materialFilter.toLowerCase()))
+    : orders;
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Active Orders</CardTitle>
+        <CardTitle className="text-base">
+          Active Orders
+          {materialFilter && (
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              — filtered: <span className="text-primary">{materialFilter}</span>
+            </span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        {orders.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">No active orders</p>
+        {filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            {materialFilter ? 'No orders match that filter' : 'No active orders'}
+          </p>
         ) : (
           <div className="rounded-md border border-border overflow-x-auto">
             <table className="w-full text-sm">
@@ -126,7 +138,7 @@ function OrdersTable({ orders }: { orders: AuctionOrderDto[] }) {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o) => <OrderRow key={o.id} order={o} />)}
+                {filtered.map((o) => <OrderRow key={o.id} order={o} />)}
               </tbody>
             </table>
           </div>
@@ -229,11 +241,12 @@ function MaterialsBook({ materials }: { materials: AuctionMaterialDto[] }) {
   );
 }
 
-type Tab = 'orders' | 'fills' | 'materials';
+type Tab = 'orders' | 'fills' | 'materials' | 'myorders';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'orders', label: 'Active Orders' },
   { id: 'fills', label: 'Recent Fills' },
   { id: 'materials', label: 'Materials' },
+  { id: 'myorders', label: 'My Orders' },
 ];
 
 export default function AuctionPage() {
@@ -244,6 +257,10 @@ export default function AuctionPage() {
   const [materials, setMaterials] = useState<AuctionMaterialDto[]>([]);
   const [auctionStats, setAuctionStats] = useState<AuctionStats | null>(null);
   const [tab, setTab] = useState<Tab>('orders');
+  const [materialFilter, setMaterialFilter] = useState('');
+  const [myOrdersPlayer, setMyOrdersPlayer] = useState('');
+  const [myOrdersResult, setMyOrdersResult] = useState<AuctionOrderDto[] | null>(null);
+  const [myOrdersError, setMyOrdersError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -313,10 +330,147 @@ export default function AuctionPage() {
           ))}
         </div>
 
-        {tab === 'orders' && <OrdersTable orders={orders} />}
+        {tab === 'orders' && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Filter by material (e.g. diamond, iron_ingot)..."
+                value={materialFilter}
+                onChange={(e) => setMaterialFilter(e.target.value)}
+                className="flex-1 text-sm bg-transparent border-b border-border outline-none focus:border-primary transition-colors px-1 py-1"
+              />
+              {materialFilter && (
+                <button
+                  onClick={() => setMaterialFilter('')}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <OrdersTable orders={orders} materialFilter={materialFilter} />
+          </div>
+        )}
         {tab === 'fills' && <RecentFills fills={fills} />}
         {tab === 'materials' && <MaterialsBook materials={materials} />}
+        {tab === 'myorders' && (
+          <MyOrdersPanel
+            apiBase={apiBase}
+            player={myOrdersPlayer}
+            setPlayer={setMyOrdersPlayer}
+            result={myOrdersResult}
+            setResult={setMyOrdersResult}
+            error={myOrdersError}
+            setError={setMyOrdersError}
+          />
+        )}
       </main>
     </div>
+  );
+}
+
+function MyOrdersPanel({
+  apiBase,
+  player,
+  setPlayer,
+  result,
+  setResult,
+  error,
+  setError,
+}: {
+  apiBase: string;
+  player: string;
+  setPlayer: (v: string) => void;
+  result: AuctionOrderDto[] | null;
+  setResult: (v: AuctionOrderDto[] | null) => void;
+  error: string | null;
+  setError: (v: string | null) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const handleLookup = async () => {
+    if (!player.trim()) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const data = await api.auction.player(apiBase, player.trim());
+      setResult(data);
+    } catch {
+      setError('Could not load orders for that player. Check the name and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <User className="w-4 h-4" />
+          My Orders
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Enter player name..."
+            value={player}
+            onChange={(e) => setPlayer(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
+            className="flex-1 text-sm bg-transparent border border-border rounded px-3 py-2 outline-none focus:border-primary transition-colors"
+          />
+          <button
+            onClick={handleLookup}
+            disabled={loading || !player.trim()}
+            className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50 transition-opacity"
+          >
+            {loading ? 'Loading...' : 'Look Up'}
+          </button>
+        </div>
+
+        {error && (
+          <p className="text-sm text-red-500">{error}</p>
+        )}
+
+        {result !== null && (
+          result.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">No orders found for {player}</p>
+          ) : (
+            <div className="rounded-md border border-border overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">Material</th>
+                    <th className="px-3 py-2.5 text-center font-medium text-muted-foreground">Side</th>
+                    <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Price</th>
+                    <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Qty</th>
+                    <th className="px-3 py-2.5 text-center font-medium text-muted-foreground">Status</th>
+                    <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Age</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.map((o) => (
+                    <tr key={o.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                      <td className="px-3 py-2.5 font-medium text-foreground">{o.material}</td>
+                      <td className="px-3 py-2.5 text-center"><SideBadge side={o.side} /></td>
+                      <td className="px-3 py-2-5 text-right font-medium text-foreground">{formatCurrency(o.price)}</td>
+                      <td className="px-3 py-2.5 text-right text-muted-foreground text-sm">
+                        {o.remainingQuantity.toLocaleString()} / {o.originalQuantity.toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2.5 text-center"><StatusBadge status={o.status} /></td>
+                      <td className="px-3 py-2.5 text-right text-muted-foreground text-xs">{formatTimeAgo(o.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+      </CardContent>
+    </Card>
   );
 }

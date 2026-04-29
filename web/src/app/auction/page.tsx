@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -97,7 +98,16 @@ function OrderRow({ order }: { order: AuctionOrderDto }) {
     : 0;
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/30">
-      <td className="px-3 py-2.5 text-muted-foreground text-sm">{order.material}</td>
+      <td className="px-3 py-2.5 text-sm">
+        <Link
+          href={`/auction/order?id=${encodeURIComponent(order.id)}`}
+          className="font-medium text-foreground hover:text-primary transition-colors"
+          title={`View order ${order.id}`}
+        >
+          {order.material}
+        </Link>
+        <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{order.id.slice(0, 8)}</p>
+      </td>
       <td className="px-3 py-2.5 text-center"><SideBadge side={order.side} /></td>
       <td className="px-3 py-2.5 text-right font-medium text-foreground">
         {formatCurrency(order.price)}
@@ -499,7 +509,16 @@ function MyOrdersPanel({
                 <tbody>
                   {result.map((o) => (
                     <tr key={o.id} className="border-b border-border last:border-0 hover:bg-muted/30">
-                      <td className="px-3 py-2.5 font-medium text-foreground">{o.material}</td>
+                      <td className="px-3 py-2.5">
+                        <Link
+                          href={`/auction/order?id=${encodeURIComponent(o.id)}`}
+                          className="font-medium text-foreground hover:text-primary transition-colors"
+                          title={`View order ${o.id}`}
+                        >
+                          {o.material}
+                        </Link>
+                        <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">{o.id.slice(0, 8)}</p>
+                      </td>
                       <td className="px-3 py-2.5 text-center"><SideBadge side={o.side} /></td>
                       <td className="px-3 py-2.5 text-right font-medium text-foreground">{formatCurrency(o.price)}</td>
                       <td className="px-3 py-2.5 text-right text-muted-foreground text-sm">

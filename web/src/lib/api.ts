@@ -507,6 +507,12 @@ export const api = {
       fetchJson<AuctionOrderDto[]>(`${base}/api/auction/orders${material ? `?material=${encodeURIComponent(material)}` : ''}`),
     fills: (base: string, limit = 50) =>
       fetchJson<AuctionFillDto[]>(`${base}/api/auction/fills?limit=${limit}`),
+    order: (base: string, orderId: string) =>
+      fetchJson<AuctionOrderDto>(`${base}/api/auction/orders/${encodeURIComponent(orderId)}`),
+    fillsForOrder: (base: string, orderId: string) =>
+      fetchJson<Array<{ id: string; quantity: number; price: number; total: number; filledAt: number }>>(
+        `${base}/api/auction/fills/${encodeURIComponent(orderId)}`
+      ),
     materials: (base: string) =>
       fetchJson<AuctionMaterialDto[]>(`${base}/api/auction/materials`),
     player: (base: string, playerName: string) =>

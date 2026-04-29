@@ -678,6 +678,7 @@ public class WebServer {
                             m.put("id", f.id().toString());
                             m.put("quantity", f.quantity());
                             m.put("price", f.price().doubleValue());
+                            m.put("total", f.price().multiply(BigDecimal.valueOf(f.quantity())).doubleValue());
                             m.put("filledAt", f.filledAt().toEpochMilli());
                             return m;
                         })

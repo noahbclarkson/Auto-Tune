@@ -688,6 +688,22 @@ public class WebServer {
             }
         });
 
+        // GET /api/auction/fill-rate?days=N — fill count per day for sparklines
+        app.get("/api/auction/fill-rate", ctx -> {
+            int days = ctx.queryParamAsClass("days", Integer.class).getOrDefault(7);
+            int cappedDays = Math.min(Math.max(days, 1), 30);
+            List<AuctionRepository.DayFillCount> daily = auctionRepository.findFillsByDay(cappedDays);
+            List<Map<String, Object>> dtos = daily.stream()
+                    .map(d -> {
+                        Map<String, Object> m = new HashMap<>();
+                        m.put("date", d.date());
+                        m.put("count", d.count());
+                        return m;
+                    })
+                    .collect(Collectors.toList());
+            ctx.json(dtos);
+        });
+
         // GET /api/auction/player/{playerName} — player's active orders
         app.get("/api/auction/player/{playerName}", ctx -> {
             String playerName = ctx.pathParam(KEY_PLAYER_NAME);

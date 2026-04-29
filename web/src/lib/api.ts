@@ -518,5 +518,7 @@ export const api = {
         bids: Array<{ id: string; price: number; remainingQuantity: number; totalValue: number }>;
         asks: Array<{ id: string; price: number; remainingQuantity: number; totalValue: number }>;
       }>(`${base}/api/auction/depth?material=${encodeURIComponent(material)}&depth=${depth}`),
+    fillRate: (base: string, days = 7) =>
+      fetchJson<Array<{ date: string; count: number }>>(`${base}/api/auction/fill-rate?days=${days}`),
   },
 };

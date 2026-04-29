@@ -373,6 +373,28 @@ public class AuctionRepository {
                         .findOnly());
     }
 
+    /**
+     * Fill count per day for the last N days.
+     * @return List of {date (YYYY-MM-DD), count} sorted oldest→newest.
+     */
+    public List<DayFillCount> findFillsByDay(int days) {
+        return jdbi.withHandle(handle ->
+                handle.createQuery("""
+                        SELECT CAST(filled_at AS TEXT) AS date, COUNT(*) AS cnt
+                        FROM at_auction_fills
+                        WHERE filled_at >= datetime('now', :daysDiff)
+                        GROUP BY CAST(filled_at AS TEXT)
+                        ORDER BY date ASC
+                        """)
+                        .bind("daysDiff", "-" + days + " days")
+                        .map((rs, ctx) -> new DayFillCount(
+                                rs.getString("date"),
+                                rs.getInt("cnt")))
+                        .list());
+    }
+
+    public record DayFillCount(String date, int count) {}
+
     private AuctionOrder mapOrder(java.sql.ResultSet rs) {
         try {
             return AuctionOrder.builder()

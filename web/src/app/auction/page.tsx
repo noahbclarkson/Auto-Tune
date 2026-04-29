@@ -10,6 +10,7 @@ import { formatCurrency, formatTimeAgo } from '@/lib/format';
 import { TrendingUp, TrendingDown, Package, ArrowUpDown, Search, User, BarChart2 } from 'lucide-react';
 import { DepthChart } from '@/components/auction/depth-chart';
 import { type AuctionDepthData } from '@/components/auction/depth-chart-types';
+import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface AuctionStats {
   totalOrders: number;
@@ -20,7 +21,8 @@ interface AuctionStats {
   recentFills: Array<{ id: string; quantity: number; price: number; filledAt: number }>;
 }
 
-function StatsBar({ stats }: { stats: AuctionStats }) {
+function StatsBar({ stats, fillRate }: { stats: AuctionStats; fillRate: Array<{ date: string; count: number }> }) {
+  const sparkData = fillRate.map((d) => ({ date: d.date.slice(5), count: d.count }));
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <Card>
@@ -33,6 +35,20 @@ function StatsBar({ stats }: { stats: AuctionStats }) {
         <CardContent className="p-4 text-center">
           <p className="text-sm text-muted-foreground">Total Fills</p>
           <p className="text-xl font-bold text-foreground">{stats.totalFills.toLocaleString()}</p>
+          {sparkData.length > 1 && (
+            <div className="h-8 mt-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={sparkData}>
+                  <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={1.5} dot={false} />
+                  <Tooltip
+                    labelFormatter={(label) => `Day ${label}`}
+                    formatter={(value: number | undefined) => [value ?? 0, 'Fills']}
+                    contentStyle={{ fontSize: 11, padding: '2px 6px' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </CardContent>
       </Card>
       <Card>
@@ -276,23 +292,27 @@ export default function AuctionPage() {
   const [myOrdersPlayer, setMyOrdersPlayer] = useState('');
   const [myOrdersResult, setMyOrdersResult] = useState<AuctionOrderDto[] | null>(null);
   const [myOrdersError, setMyOrdersError] = useState<string | null>(null);
+  const [fillRateData, setFillRateData] = useState<Array<{ date: string; count: number }>>([]);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [statsData, auctionStatsData, ordersData, fillsData, materialsData] = await Promise.all([
+      const [statsData, auctionStatsData, ordersData, fillsData, materialsData, _depthResult, fillRate] = await Promise.all([
         api.stats(apiBase),
         api.auction.stats(apiBase).catch(() => null),
         api.auction.orders(apiBase).catch(() => [] as AuctionOrderDto[]),
         api.auction.fills(apiBase, 25).catch(() => [] as AuctionFillDto[]),
         api.auction.materials(apiBase).catch(() => [] as AuctionMaterialDto[]),
         depthData !== null || depthMaterial === '' ? Promise.resolve() : api.auction.depth(apiBase, depthMaterial, 8).then(setDepthData).catch(() => setDepthData(null)),
+        api.auction.fillRate(apiBase, 7).catch(() => [] as { date: string; count: number }[]),
       ]);
+      void _depthResult;
       setStats(statsData);
       setAuctionStats(auctionStatsData);
       setOrders(ordersData);
       setFills(fillsData);
       setMaterials(materialsData);
+      setFillRateData(fillRate);
       setError(null);
     } catch {
       setError('Could not load auction data. Is the server running?');
@@ -328,7 +348,7 @@ export default function AuctionPage() {
           </div>
         )}
 
-        {auctionStats && <StatsBar stats={auctionStats} />}
+        {auctionStats && <StatsBar stats={auctionStats} fillRate={fillRateData} />}
 
         <div className="flex gap-1 border-b border-border">
           {TABS.map((t) => (

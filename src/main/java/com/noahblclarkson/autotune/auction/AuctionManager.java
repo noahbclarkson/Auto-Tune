@@ -6,7 +6,9 @@ import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.AuctionRepository;
+import com.noahblclarkson.autotune.database.PendingNotificationRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
+import com.noahblclarkson.autotune.database.WatchedAuctionRepository;
 import com.noahblclarkson.autotune.model.AuctionFill;
 import com.noahblclarkson.autotune.model.AuctionOrder;
 import com.noahblclarkson.autotune.model.AuctionOrder.OrderSide;
@@ -50,6 +52,8 @@ public class AuctionManager {
     private final PlayerRepository playerRepo;
     private final AuctionMatchingEngine matchingEngine;
     private final TreasuryService treasuryService;
+    private final WatchedAuctionRepository watchedAuctionRepo;
+    private final PendingNotificationRepository pendingNotificationRepo;
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
     private final int defaultDurationHours;
 
@@ -61,6 +65,8 @@ public class AuctionManager {
             AuctionRepository auctionRepo,
             PlayerRepository playerRepo,
             TreasuryService treasuryService,
+            WatchedAuctionRepository watchedAuctionRepo,
+            PendingNotificationRepository pendingNotificationRepo,
             AutoTuneConfig config
     ) {
         this.plugin = plugin;
@@ -70,6 +76,8 @@ public class AuctionManager {
         this.playerRepo = playerRepo;
         this.matchingEngine = new AuctionMatchingEngine();
         this.treasuryService = treasuryService;
+        this.watchedAuctionRepo = watchedAuctionRepo;
+        this.pendingNotificationRepo = pendingNotificationRepo;
         this.defaultDurationHours = config.auction().defaultDurationHours();
     }
 
@@ -321,6 +329,8 @@ public class AuctionManager {
 
                 AuctionOrder cancelled = order.withStatusCancelled();
                 auctionRepo.update(cancelled);
+                // Remove all watch entries for this order.
+                watchedAuctionRepo.clearAllForOrder(order.id());
 
                 return AuctionResult.success(
                         "Order cancelled" + (order.side() == OrderSide.BUY
@@ -481,10 +491,54 @@ public class AuctionManager {
         buyOpt.ifPresent(buy -> {
             int newRemaining = Math.max(0, buy.remainingQuantity() - fill.quantity());
             auctionRepo.update(buy.withRemainingQuantity(newRemaining));
+            if (newRemaining == 0) {
+                notifyWatchersOfFill(buy, fill);
+            }
         });
         sellOpt.ifPresent(sell -> {
             int newRemaining = Math.max(0, sell.remainingQuantity() - fill.quantity());
             auctionRepo.update(sell.withRemainingQuantity(newRemaining));
+            if (newRemaining == 0) {
+                notifyWatchersOfFill(sell, fill);
+            }
+        });
+    }
+
+    /**
+     * Notify players watching an order that it has been fully filled.
+     * Offline players receive a pending notification delivered on next login.
+     */
+    private void notifyWatchersOfFill(AuctionOrder order, AuctionFill fill) {
+        List<String> watcherUuids = watchedAuctionRepo.fetchAndClearByOrder(order.id());
+        if (watcherUuids.isEmpty()) {
+            return;
+        }
+        String itemName = order.material().toLowerCase(java.util.Locale.ROOT)
+                .replace('_', ' ');
+        itemName = itemName.substring(0, 1).toUpperCase(java.util.Locale.ROOT)
+                + itemName.substring(1);
+        String msg = String.format(
+                "⚡ Your watched %s order for %d× %s fully filled (final fill: %d× at %s/unit)",
+                order.side().name().toLowerCase(),
+                order.originalQuantity(),
+                itemName,
+                fill.quantity(),
+                configManager.formatCurrency(fill.price()));
+        Bukkit.getScheduler().runTask(plugin, task -> {
+            for (String uuidStr : watcherUuids) {
+                try {
+                    UUID watcherUuid = UUID.fromString(uuidStr);
+                    Player watcher = Bukkit.getPlayer(watcherUuid);
+                    if (watcher != null) {
+                        watcher.sendMessage(net.kyori.adventure.text.Component.text(
+                                msg, net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+                    } else {
+                        pendingNotificationRepo.insert(watcherUuid, msg, "AUCTION_FILL");
+                    }
+                } catch (IllegalArgumentException ignored) {
+                    // Invalid UUID string — skip
+                }
+            }
         });
     }
 
@@ -580,11 +634,17 @@ public class AuctionManager {
                 buyOpt.ifPresent(buy -> {
                     int newRemaining = Math.max(0, buy.remainingQuantity() - quantity);
                     auctionRepo.update(buy.withRemainingQuantity(newRemaining));
+                    if (newRemaining == 0) {
+                        notifyWatchersOfFill(buy, fill);
+                    }
                 });
 
                 sellOpt.ifPresent(sell -> {
                     int newRemaining = Math.max(0, sell.remainingQuantity() - quantity);
                     auctionRepo.update(sell.withRemainingQuantity(newRemaining));
+                    if (newRemaining == 0) {
+                        notifyWatchersOfFill(sell, fill);
+                    }
                 });
 
                 return null;

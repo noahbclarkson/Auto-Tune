@@ -115,11 +115,25 @@ public class DatabaseManager {
             highestVersion = 3;
         }
 
+        // V4: Admin economy audit log
+        // Repair note: older rewrite-2 builds skipped V4 while advancing to V5.
+        // V4 is idempotent, so run it for schema version 5 as a one-time repair before V6.
+        if (currentVersion < 4 || currentVersion == 5) {
+            plugin.getLogger().info("Applying database migration V4 (Admin Audit Log)...");
+            runMigration("db/V4__Admin_Audit_Log.sql");
+            highestVersion = Math.max(highestVersion, 4);
+        }
+
         // V5: Player type column for archetype-aware loan enforcement
         if (currentVersion < 5) {
             plugin.getLogger().info("Applying database migration V5 (Player Types)...");
             runMigration("db/V5__Player_Types.sql");
             highestVersion = 5;
+        }
+        if (currentVersion < 6) {
+            plugin.getLogger().info("Applying database migration V5b (Watched Auctions)...");
+            runMigration("db/V5b__Watched_Auctions.sql");
+            highestVersion = 6;
         }
 
         // Add future migrations here:

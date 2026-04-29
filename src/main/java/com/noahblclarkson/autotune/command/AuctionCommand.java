@@ -7,6 +7,7 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.auction.AuctionManager;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.AuctionRepository;
+import com.noahblclarkson.autotune.database.WatchedAuctionRepository;
 import com.noahblclarkson.autotune.manager.MarketEngine;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.model.AuctionFill;
@@ -57,6 +58,7 @@ public class AuctionCommand {
     private final AutoTune plugin;
     private final MarketEngine marketEngine;
     private final ShopManager shopManager;
+    private final WatchedAuctionRepository watchedAuctionRepo;
 
     @Inject
     public AuctionCommand(
@@ -66,7 +68,8 @@ public class AuctionCommand {
             ConfigManager configManager,
             AutoTune plugin,
             MarketEngine marketEngine,
-            ShopManager shopManager
+            ShopManager shopManager,
+            WatchedAuctionRepository watchedAuctionRepo
     ) {
         this.auctionManager = auctionManager;
         this.auctionRepo = auctionRepo;
@@ -75,6 +78,7 @@ public class AuctionCommand {
         this.plugin = plugin;
         this.marketEngine = marketEngine;
         this.shopManager = shopManager;
+        this.watchedAuctionRepo = watchedAuctionRepo;
     }
 
     @Command("auction")
@@ -92,6 +96,10 @@ public class AuctionCommand {
                 .append(Component.text(" - View your active orders", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/auction cancel <order-id>", NamedTextColor.YELLOW)
                 .append(Component.text(" - Cancel an active order", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/auction watch <order-id>", NamedTextColor.YELLOW)
+                .append(Component.text(" - Notify you when an order fills", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/auction unwatch <order-id>", NamedTextColor.YELLOW)
+                .append(Component.text(" - Stop fill notifications", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/auction history", NamedTextColor.YELLOW)
                 .append(Component.text(" - Recent auction trades", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/auction reclaim", NamedTextColor.YELLOW)
@@ -284,6 +292,52 @@ public class AuctionCommand {
                         player.sendMessage(Component.text("✗ " + result.message(), NamedTextColor.RED));
                     }
                 });
+    }
+
+    @Command("auction watch <orderId>")
+    public void auctionWatch(Player player, @Argument("orderId") String orderIdStr) {
+        UUID orderId;
+        try {
+            orderId = UUID.fromString(orderIdStr);
+        } catch (IllegalArgumentException e) {
+            player.sendMessage(Component.text("Invalid order ID format", NamedTextColor.RED));
+            return;
+        }
+
+        var orderOpt = auctionRepo.findById(orderId);
+        if (orderOpt.isEmpty()) {
+            player.sendMessage(Component.text("Order not found", NamedTextColor.RED));
+            return;
+        }
+        AuctionOrder order = orderOpt.get();
+        if (!order.isActive()) {
+            player.sendMessage(Component.text("That order is no longer active", NamedTextColor.RED));
+            return;
+        }
+        if (watchedAuctionRepo.isWatching(player.getUniqueId(), orderId)) {
+            player.sendMessage(Component.text("You're already watching that order.", NamedTextColor.GRAY));
+            return;
+        }
+
+        watchedAuctionRepo.watch(player.getUniqueId(), orderId, "FILLED");
+        player.sendMessage(Component.text("✓ Watching ", NamedTextColor.GREEN)
+                .append(Component.text(order.side().name().toLowerCase(Locale.ROOT), NamedTextColor.YELLOW))
+                .append(Component.text(" order for " + order.remainingQuantity() + "× "
+                        + formatMaterial(order.material()) + ". You'll be notified when it fills.", NamedTextColor.GREEN)));
+    }
+
+    @Command("auction unwatch <orderId>")
+    public void auctionUnwatch(Player player, @Argument("orderId") String orderIdStr) {
+        UUID orderId;
+        try {
+            orderId = UUID.fromString(orderIdStr);
+        } catch (IllegalArgumentException e) {
+            player.sendMessage(Component.text("Invalid order ID format", NamedTextColor.RED));
+            return;
+        }
+
+        watchedAuctionRepo.unwatch(player.getUniqueId(), orderId);
+        player.sendMessage(Component.text("✓ No longer watching that order.", NamedTextColor.GREEN));
     }
 
     @Command("auction reclaim")

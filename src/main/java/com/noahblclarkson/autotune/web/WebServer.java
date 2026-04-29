@@ -16,6 +16,7 @@ import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.database.AuctionRepository;
 import com.noahblclarkson.autotune.database.ShopFavoriteRepository;
+import com.noahblclarkson.autotune.database.WatchedAuctionRepository;
 import com.noahblclarkson.autotune.economy.EconomyManager;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.EconomyMetricsManager;
@@ -132,6 +133,7 @@ public class WebServer {
     private final EconomyWhatMovedService whatMovedService;
     private final AdminAuditService auditService;
     private final AuctionRepository auctionRepository;
+    private final WatchedAuctionRepository watchedAuctionRepository;
     private final Gson gson;
 
     private Javalin app;
@@ -159,7 +161,8 @@ public class WebServer {
             PlayerStreakService streakService,
             EconomyWhatMovedService whatMovedService,
             AdminAuditService auditService,
-            AuctionRepository auctionRepository
+            AuctionRepository auctionRepository,
+            WatchedAuctionRepository watchedAuctionRepository
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -186,6 +189,7 @@ public class WebServer {
         this.whatMovedService = whatMovedService;
         this.auditService = auditService;
         this.auctionRepository = auctionRepository;
+        this.watchedAuctionRepository = watchedAuctionRepository;
         this.gson = new GsonBuilder()
                 .setPrettyPrinting()
                 .create();
@@ -794,6 +798,76 @@ public class WebServer {
             result.put("asks", asks);
             result.put("depth", cappedDepth);
             ctx.json(result);
+        });
+
+        // POST /api/auction/orders/{orderId}/watch?playerName=X — watch an order
+        app.post("/api/auction/orders/{orderId}/watch", ctx -> {
+            String orderIdStr = ctx.pathParam("orderId");
+            String playerName = ctx.queryParam("playerName");
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_REQUIRED));
+                return;
+            }
+            try {
+                UUID orderId = UUID.fromString(orderIdStr);
+                PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+                if (player == null) {
+                    ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + playerName));
+                    return;
+                }
+                if (auctionRepository.findById(orderId).isEmpty()) {
+                    ctx.status(404).json(Map.of(KEY_ERROR, "Order not found: " + orderIdStr));
+                    return;
+                }
+                watchedAuctionRepository.watch(player.uuid(), orderId, "FILLED");
+                ctx.status(201).json(Map.of("watching", true, "orderId", orderIdStr));
+            } catch (IllegalArgumentException e) {
+                ctx.status(400).json(Map.of(KEY_ERROR, "Invalid order ID format: " + orderIdStr));
+            }
+        });
+
+        // DELETE /api/auction/orders/{orderId}/watch?playerName=X — stop watching an order
+        app.delete("/api/auction/orders/{orderId}/watch", ctx -> {
+            String orderIdStr = ctx.pathParam("orderId");
+            String playerName = ctx.queryParam("playerName");
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_REQUIRED));
+                return;
+            }
+            try {
+                UUID orderId = UUID.fromString(orderIdStr);
+                PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+                if (player == null) {
+                    ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + playerName));
+                    return;
+                }
+                watchedAuctionRepository.unwatch(player.uuid(), orderId);
+                ctx.status(204).result("");
+            } catch (IllegalArgumentException e) {
+                ctx.status(400).json(Map.of(KEY_ERROR, "Invalid order ID format: " + orderIdStr));
+            }
+        });
+
+        // GET /api/auction/orders/{orderId}/watch?playerName=X — check if watching an order
+        app.get("/api/auction/orders/{orderId}/watch", ctx -> {
+            String orderIdStr = ctx.pathParam("orderId");
+            String playerName = ctx.queryParam("playerName");
+            if (playerName == null || playerName.isBlank()) {
+                ctx.status(400).json(Map.of(KEY_ERROR, MSG_PLAYER_NAME_REQUIRED));
+                return;
+            }
+            try {
+                UUID orderId = UUID.fromString(orderIdStr);
+                PlayerData player = playerRepository.findByName(playerName.trim()).orElse(null);
+                if (player == null) {
+                    ctx.status(404).json(Map.of(KEY_ERROR, MSG_PLAYER_NOT_FOUND + playerName));
+                    return;
+                }
+                boolean watching = watchedAuctionRepository.isWatching(player.uuid(), orderId);
+                ctx.json(Map.of("watching", watching, "orderId", orderIdStr));
+            } catch (IllegalArgumentException e) {
+                ctx.status(400).json(Map.of(KEY_ERROR, "Invalid order ID format: " + orderIdStr));
+            }
         });
 
         // ── Player portfolio ─────────────────────────────────────────────────

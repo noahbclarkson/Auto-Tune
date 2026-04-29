@@ -165,9 +165,9 @@ export function Hero() {
             {/* Stats strip */}
             <div className="flex flex-wrap gap-6 text-sm">
               {[
-                { label: 'Commands', value: '/shop · /sell · /loans' },
+                { label: 'Commands', value: '/shop · /auction · /loans' },
                 { label: 'Market tick', value: '5 min' },
-                { label: 'Circuit breaker', value: 'TIER3 at 15× D/G' },
+                { label: 'Circuit breaker', value: 'TIER3 at 30× D/G' },
                 { label: 'Cross-server', value: 'true-price network' },
               ].map(({ label, value }) => (
                 <div key={label}>

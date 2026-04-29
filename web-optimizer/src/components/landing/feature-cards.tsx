@@ -82,7 +82,7 @@ const features: { tag: string; title: string; description: string; stat: { label
     title: 'P2P Auction House',
     description:
       'Players post limit orders at their price, browse existing orders, and fill them instantly. Market price guidance helps players set competitive prices. All trades are taxed, filling the treasury automatically.',
-    stat: { label: 'Order expiry', value: 'configurable' },
+    stat: { label: 'Auction commands', value: '/auction post · watch · fills' },
     code: '/auction · /auction post · /auction reclaim',
     accent: 'amber',
     icon: Gavel,

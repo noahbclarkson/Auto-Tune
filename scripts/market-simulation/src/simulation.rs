@@ -684,7 +684,9 @@ impl Simulation {
                 .loans
                 .iter()
                 .filter(|l| {
-                    let borrower = &self.players[l.player_index];
+                    let Some(borrower) = self.players.get(l.player_index) else {
+                        return false;
+                    };
                     matches!(borrower.archetype, Archetype::GuildBuyer)
                         && matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted)
                 })
@@ -932,6 +934,15 @@ impl Simulation {
     pub fn stress_low_players(&mut self) {
         while self.players.len() > 2 {
             self.players.pop();
+        }
+        let remaining_players = self.players.len();
+        // Loans store player indexes. When the low-player stress event removes players,
+        // loans for departed players become unrecoverable and should not later index
+        // into the shortened player list.
+        for loan in self.loans.iter_mut() {
+            if loan.player_index >= remaining_players && loan.status == LoanStatus::Active {
+                loan.mark_defaulted();
+            }
         }
     }
 

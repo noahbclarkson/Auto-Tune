@@ -12,9 +12,10 @@ import { DepthChart } from '@/components/auction/depth-chart';
 import { type AuctionDepthData } from '@/components/auction/depth-chart-types';
 
 interface AuctionStats {
-  orderCount: number;
-  fillCount: number;
-  activeOrderCount: number;
+  totalOrders: number;
+  totalFills: number;
+  activeOrders: number;
+  materialsWithOrders: number;
   bookSummary: Record<string, { bestBid: number | null; bestAsk: number | null; bidCount: number; askCount: number }>;
   recentFills: Array<{ id: string; quantity: number; price: number; filledAt: number }>;
 }
@@ -25,13 +26,13 @@ function StatsBar({ stats }: { stats: AuctionStats }) {
       <Card>
         <CardContent className="p-4 text-center">
           <p className="text-sm text-muted-foreground">Active Orders</p>
-          <p className="text-xl font-bold text-foreground">{stats.activeOrderCount}</p>
+          <p className="text-xl font-bold text-foreground">{stats.activeOrders}</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-4 text-center">
           <p className="text-sm text-muted-foreground">Total Fills</p>
-          <p className="text-xl font-bold text-foreground">{stats.fillCount.toLocaleString()}</p>
+          <p className="text-xl font-bold text-foreground">{stats.totalFills.toLocaleString()}</p>
         </CardContent>
       </Card>
       <Card>

@@ -496,9 +496,10 @@ export const api = {
   auction: {
     stats: (base: string) =>
       fetchJson<{
-        orderCount: number;
-        fillCount: number;
-        activeOrderCount: number;
+        totalOrders: number;
+        totalFills: number;
+        activeOrders: number;
+        materialsWithOrders: number;
         bookSummary: Record<string, { bestBid: number | null; bestAsk: number | null; bidCount: number; askCount: number }>;
         recentFills: Array<{ id: string; quantity: number; price: number; filledAt: number }>;
       }>(`${base}/api/auction/stats`),

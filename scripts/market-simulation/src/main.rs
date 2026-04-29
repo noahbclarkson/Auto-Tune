@@ -2404,6 +2404,204 @@ fn run_correlation_test(seed: u64) {
     println!();
 }
 
+/// Sector correlation parameter sweep: tests sector_correlation = [0.05, 0.10, 0.20]
+/// on a stressed economy with a Diamond price shock at day 3.
+/// Uses a 10x shock (vs correlation-test's 2.5x) and 14-day horizon to get a clearer signal.
+///
+/// Hypothesis: Stronger correlation → ore prices co-move more tightly.
+/// Net effect depends on whether co-movement dampens individual spikes (good) or
+/// propagates shocks across the sector (bad).
+fn run_sector_correlation_sweep() {
+    let seed = 42u64;
+    let shock_tick = 288 * 3; // day 3
+    let shock_item = 5; // Diamond in default_items
+    let shock_mult = 10.0; // 10x shock (vs 2.5x in correlation-test)
+    let duration = 288 * 14; // 14 days
+
+    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("║       SECTOR CORRELATION PARAMETER SWEEP                   ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+    let correlation_values = [0.05, 0.10, 0.20];
+    let mut results: Vec<(f64, SweepResult)> = Vec::new();
+
+    for &corr in &correlation_values {
+        let mut config = SimConfig::default();
+        config.economy.sector_correlation = corr;
+        let label = match (corr * 100.0) as i32 {
+            5 => "corr=0.05 (current default)",
+            10 => "corr=0.10 (2× default)",
+            20 => "corr=0.20 (4× default)",
+            _ => "unknown",
+        };
+
+        println!("═══ {} ═══", label);
+        let items = run_correlation_sim(
+            label, config, seed, shock_tick, shock_item, shock_mult, duration,
+        );
+
+        // Snapshot at day 7 (tick 2016) and day 14 (tick 4032)
+        // We need to re-run to get day-7 snapshot since run_correlation_sim only returns final state
+        // Instead, compute from price history if available, or skip
+        let _final_gdp = items
+            .iter()
+            .find(|i| i.name == "Diamond")
+            .map(|_| {
+                // GDP is not in ItemState; use a proxy from engine
+                // For comparison purposes, use avg price level as stability proxy
+                let avg_price: f64 =
+                    items.iter().map(|i| i.price).sum::<f64>() / items.len().max(1) as f64;
+                let base_avg: f64 =
+                    items.iter().map(|i| i.base_price).sum::<f64>() / items.len().max(1) as f64;
+                avg_price / base_avg
+            })
+            .unwrap_or(1.0);
+
+        let final_diamond = items.iter().find(|i| i.name == "Diamond");
+        let diamond_displacement = final_diamond
+            .map(|d| (d.price / d.base_price - 1.0) * 100.0)
+            .unwrap_or(0.0);
+        let final_iron = items.iter().find(|i| i.name == "Iron Ingot");
+        let iron_displacement = final_iron
+            .map(|i| (i.price / i.base_price - 1.0) * 100.0)
+            .unwrap_or(0.0);
+
+        // Compute within-section (ores) correlation from final price-change series
+        let ore_items: Vec<&crate::engine::ItemState> = items
+            .iter()
+            .filter(|i| {
+                let cfg = SimConfig::default();
+                cfg.items
+                    .iter()
+                    .any(|c| c.name == i.name && c.section == "ores")
+            })
+            .collect();
+
+        let within_corr = if ore_items.len() >= 2 {
+            let mut total_corr = 0.0;
+            let mut count = 0;
+            for i in 0..ore_items.len() {
+                for j in (i + 1)..ore_items.len() {
+                    // Use price displacement as the correlation series
+                    let di =
+                        (ore_items[i].price - ore_items[i].base_price) / ore_items[i].base_price;
+                    let dj =
+                        (ore_items[j].price - ore_items[j].base_price) / ore_items[j].base_price;
+                    // Simple correlation: sign agreement
+                    let sign_agree = if di.signum() == dj.signum() {
+                        1.0
+                    } else {
+                        -1.0
+                    };
+                    let magnitude = (di.abs() * dj.abs()).sqrt();
+                    total_corr += sign_agree * magnitude;
+                    count += 1;
+                }
+            }
+            if count > 0 {
+                total_corr / count as f64
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        };
+
+        println!("  Diamond displacement: {:+.1}%", diamond_displacement);
+        println!("  Iron displacement:    {:+.1}%", iron_displacement);
+        println!("  Within-section corr: {:.4}", within_corr);
+        println!();
+
+        results.push((
+            corr,
+            SweepResult {
+                diamond_displacement,
+                iron_displacement,
+                within_corr,
+            },
+        ));
+    }
+
+    // Summary table
+    println!("╔══════════════════════════════════════════════════════════════╗");
+    println!("║  SWEEP SUMMARY                                              ║");
+    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "{:22} {:>16} {:>16} {:>16}",
+        "Parameter", "Diamond displ%", "Iron displ%", "Within-corr"
+    );
+    println!("{:-<22} {:->16} {:->16} {:->16}", "", "", "", "");
+    for (i, (_corr, r)) in results.iter().enumerate() {
+        let label = match i {
+            0 => "sector_correlation=0.05",
+            1 => "sector_correlation=0.10",
+            2 => "sector_correlation=0.20",
+            _ => "unknown",
+        };
+        println!(
+            "{:22} {:>+16.1} {:>+16.1} {:>16.4}",
+            label, r.diamond_displacement, r.iron_displacement, r.within_corr
+        );
+    }
+    println!();
+
+    // Verdict
+    let r05 = results
+        .iter()
+        .find(|(c, _)| (*c - 0.05).abs() < 0.001)
+        .unwrap()
+        .1;
+    let r10 = results
+        .iter()
+        .find(|(c, _)| (*c - 0.10).abs() < 0.001)
+        .unwrap()
+        .1;
+    let r20 = results
+        .iter()
+        .find(|(c, _)| (*c - 0.20).abs() < 0.001)
+        .unwrap()
+        .1;
+
+    let corr_trend = if r20.within_corr > r10.within_corr && r10.within_corr > r05.within_corr {
+        "monotonic increase"
+    } else {
+        "non-monotonic"
+    };
+
+    println!("  Correlation trend across sweep: {}", corr_trend);
+    println!(
+        "  0.05 → 0.10: within-corr Δ = {:+.4}",
+        r10.within_corr - r05.within_corr
+    );
+    println!(
+        "  0.10 → 0.20: within-corr Δ = {:+.4}",
+        r20.within_corr - r10.within_corr
+    );
+
+    // Stronger correlation amplifies co-movement (expected)
+    if r20.within_corr > r05.within_corr + 0.05 {
+        println!();
+        println!("  ✓ STRONGER CORRELATION AMPLIFIES SECTOR CO-MOVEMENT");
+        println!("    But net effect on D/G and GDP depends on shock direction.");
+        println!("    Higher correlation: risk of shock propagation across ore sector.");
+        println!("    Recommendation: do NOT increase default from 0.05 without proof of");
+        println!("    net benefit; run a full guild_stability sweep at each level.");
+    } else {
+        println!();
+        println!("  ⚠ NEUTRAL — sector correlation effect is sub-linear or noise.");
+        println!("    Recommendation: run full 14-day sweep with guild_stability archetype");
+        println!("    mix before changing the default.");
+    }
+    println!();
+}
+
+#[derive(Clone, Copy)]
+struct SweepResult {
+    diamond_displacement: f64,
+    iron_displacement: f64,
+    within_corr: f64,
+}
+
 /// Run a correlation simulation with a seeded RNG, returning final item states.
 fn run_correlation_sim(
     name: &str,
@@ -11392,6 +11590,9 @@ fn main() -> eframe::Result<()> {
         println!("  exploiter-stress - standard+MM + 2 Exploiters (stress-tests MM resilience)");
         println!("  exploiter-cap-test - standard+MM + 1 Exploiter (5% cap = 1 of 12 players)");
         println!("  correlation      - Sector correlation test (treatment vs control)");
+        println!(
+            "  sector-correlation-sweep - sector_correlation = [0.05/0.10/0.20] × 10x shock, 14d"
+        );
         println!("  market-event-test - DEMAND_SURGE / SUPPLY_GLUT / INFLATION / DEFLATION events");
         println!();
         println!("Special modes:");
@@ -11496,6 +11697,11 @@ fn main() -> eframe::Result<()> {
         // Sector correlation test: treatment vs control with identical seed
         let seed = 42u64;
         run_correlation_test(seed);
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--sector-correlation-sweep" {
+        run_sector_correlation_sweep();
         return Ok(());
     }
 

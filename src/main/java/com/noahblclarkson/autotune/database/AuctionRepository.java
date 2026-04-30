@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
@@ -378,17 +379,18 @@ public class AuctionRepository {
      * @return List of {date (YYYY-MM-DD), count} sorted oldest→newest.
      */
     public List<DayFillCount> findFillsByDay(int days) {
+        Instant cutoff = Instant.now().minus(days, ChronoUnit.DAYS);
         return jdbi.withHandle(handle ->
                 handle.createQuery("""
-                        SELECT CAST(filled_at AS TEXT) AS date, COUNT(*) AS cnt
+                        SELECT DATE(filled_at) AS fill_date, COUNT(*) AS cnt
                         FROM at_auction_fills
-                        WHERE filled_at >= datetime('now', :daysDiff)
-                        GROUP BY CAST(filled_at AS TEXT)
-                        ORDER BY date ASC
+                        WHERE filled_at >= :cutoff
+                        GROUP BY DATE(filled_at)
+                        ORDER BY fill_date ASC
                         """)
-                        .bind("daysDiff", "-" + days + " days")
+                        .bind("cutoff", Timestamp.from(cutoff))
                         .map((rs, ctx) -> new DayFillCount(
-                                rs.getString("date"),
+                                rs.getString("fill_date"),
                                 rs.getInt("cnt")))
                         .list());
     }

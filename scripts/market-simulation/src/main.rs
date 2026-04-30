@@ -11717,6 +11717,7 @@ fn main() -> eframe::Result<()> {
             Scenario::low_player(),
             Scenario::standard_with_mm(),
             Scenario::guild_stability_mm_fixed_guild(),
+            Scenario::guild_stability_2mm_fixed_guild_plus_floor(),
         ];
         crate::regression::run_regression_test(&scenarios, &baseline_dir, update);
         return Ok(());

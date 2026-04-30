@@ -12,6 +12,7 @@ import { TrendingUp, TrendingDown, Package, ArrowUpDown, Search, User, BarChart2
 import { DepthChart } from '@/components/auction/depth-chart';
 import { type AuctionDepthData } from '@/components/auction/depth-chart-types';
 import { DiscoveryOverlay } from '@/components/onboarding/discovery-overlay';
+import { PlayerIdentityStrip } from '@/components/auction/player-identity-strip';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface AuctionStats {
@@ -289,7 +290,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function AuctionPage() {
-  const { apiBase } = useAppContext();
+  const { apiBase, playerName, setPlayerName } = useAppContext();
   const [stats, setStats] = useState<Stats | null>(null);
   const [orders, setOrders] = useState<AuctionOrderDto[]>([]);
   const [fills, setFills] = useState<AuctionFillDto[]>([]);
@@ -361,6 +362,14 @@ export default function AuctionPage() {
         )}
 
         {auctionStats && <StatsBar stats={auctionStats} fillRate={fillRateData} />}
+
+        {/* Player identity strip — enables native watch notifications */}
+        <div className="bg-muted/30 rounded-lg px-4 py-3">
+          <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
+            Enter your Minecraft name to get <strong>in-game fill alerts</strong> for watched orders — works even while offline.
+          </p>
+          <PlayerIdentityStrip playerName={playerName} onPlayerNameChange={setPlayerName} />
+        </div>
 
         <div className="flex gap-1 border-b border-border">
           {TABS.map((t) => (

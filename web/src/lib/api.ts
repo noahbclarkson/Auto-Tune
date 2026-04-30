@@ -541,5 +541,20 @@ export const api = {
       }>(`${base}/api/auction/depth?material=${encodeURIComponent(material)}&depth=${depth}`),
     fillRate: (base: string, days = 7) =>
       fetchJson<Array<{ date: string; count: number }>>(`${base}/api/auction/fill-rate?days=${days}`),
+    watch: (base: string, orderId: string, playerName: string) =>
+      fetchJson<{ watching: boolean; orderId: string }>(
+        `${base}/api/auction/orders/${encodeURIComponent(orderId)}/watch?playerName=${encodeURIComponent(playerName)}`
+      ),
+    unwatch: (base: string, orderId: string, playerName: string) => {
+      const url = `${base}/api/auction/orders/${encodeURIComponent(orderId)}/watch?playerName=${encodeURIComponent(playerName)}`;
+      return fetch(url, { method: 'DELETE' }).then((r) => {
+        if (!r.ok) throw new Error(`API returned ${r.status}`);
+        return undefined as void;
+      });
+    },
+    watchStatus: (base: string, orderId: string, playerName: string) =>
+      fetchJson<{ watching: boolean; orderId: string }>(
+        `${base}/api/auction/orders/${encodeURIComponent(orderId)}/watch?playerName=${encodeURIComponent(playerName)}`
+      ),
   },
 };

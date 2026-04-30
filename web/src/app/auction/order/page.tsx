@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/app-context';
+import { PlayerIdentityStrip } from '@/components/auction/player-identity-strip';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -90,7 +91,7 @@ async function requestNotificationPermission(): Promise<boolean> {
 
 export default function OrderDetailPage() {
   const router = useRouter();
-  const { apiBase } = useAppContext();
+  const { apiBase, playerName, setPlayerName } = useAppContext();
 
   const [orderId, setOrderId] = useState<string>('');
   const [stats, setStats] = useState<Stats | null>(null);
@@ -99,6 +100,7 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [watchStatus, setWatchStatus] = useState<WatchStatus>('inactive');
+  const [watchLoading, setWatchLoading] = useState(false);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
   const notifiedRef = useRef(false);
 
@@ -116,6 +118,7 @@ export default function OrderDetailPage() {
   }, []);
 
   // Determine initial watch state
+  // Determine initial watch state
   useEffect(() => {
     if (!orderId) return;
     if (order) {
@@ -124,10 +127,17 @@ export default function OrderDetailPage() {
       } else if (isWatched(orderId)) {
         setWatchStatus('watching');
       } else {
-        setWatchStatus('inactive');
+        // Check native watch status if player name is known
+        if (playerName) {
+          api.auction.watchStatus(apiBase, orderId, playerName)
+            .then((res) => {
+              if (res.watching) setWatchStatus('watching');
+            })
+            .catch(() => null);
+        }
       }
     }
-  }, [orderId, order]);
+  }, [orderId, order, playerName, apiBase]);
 
   const fetchOrder = useCallback(async () => {
     if (!orderId) return;
@@ -192,14 +202,29 @@ export default function OrderDetailPage() {
 
   const handleWatchToggle = async () => {
     if (watchStatus === 'watching') {
+      if (playerName) {
+        setWatchLoading(true);
+        await api.auction.unwatch(apiBase, orderId, playerName).catch(() => null);
+        setWatchLoading(false);
+      }
       removeWatchedOrder(orderId);
       setWatchStatus('inactive');
       return;
     }
+    // When player name is known, use native watch (persists in-game/offline)
+    if (playerName) {
+      setWatchLoading(true);
+      const result = await api.auction.watch(apiBase, orderId, playerName).catch(() => null);
+      setWatchLoading(false);
+      if (result) {
+        setWatchStatus('watching');
+        return;
+      }
+    }
+    // Fall back to browser notifications
     const granted = await requestNotificationPermission();
     setNotifPermission(Notification.permission);
     if (!granted) {
-      // Just watch without notifications
       addWatchedOrder(orderId);
       setWatchStatus('watching');
       return;
@@ -229,6 +254,15 @@ export default function OrderDetailPage() {
           <ArrowLeft className="w-4 h-4" />
           Back to Auction House
         </button>
+
+        {/* Player identity strip for native watch notifications */}
+        <div className="bg-muted/30 rounded-lg px-4 py-3">
+          <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
+            Enter your Minecraft name to get <strong>in-game notifications</strong> when your watched orders fill — even while offline.
+            Without it, only browser notifications work (and only while this page is open).
+          </p>
+          <PlayerIdentityStrip playerName={playerName} onPlayerNameChange={setPlayerName} />
+        </div>
 
         {loading && (
           <div className="flex items-center justify-center py-16 gap-2 text-muted-foreground">
@@ -273,13 +307,16 @@ export default function OrderDetailPage() {
                   <button
                     type="button"
                     onClick={handleWatchToggle}
+                    disabled={watchLoading}
                     className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                       watchStatus === 'watching'
                         ? 'bg-primary text-primary-foreground hover:opacity-90'
                         : 'border border-border bg-background hover:bg-muted text-foreground'
                     }`}
                   >
-                    {watchStatus === 'watching' ? (
+                    {watchLoading ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" />Please wait…</>
+                    ) : watchStatus === 'watching' ? (
                       <><BellRing className="w-4 h-4" />Watching</>
                     ) : (
                       <><Bell className="w-4 h-4" />Watch Order</>
@@ -292,7 +329,10 @@ export default function OrderDetailPage() {
                     <p className="text-xs text-muted-foreground">Browser notifications will alert you on fill</p>
                   )}
                   {watchStatus === 'watching' && notifPermission === 'granted' && (
-                    <p className="text-xs text-emerald-500/70">You&apos;ll be notified when this order fills</p>
+                    <p className="text-xs text-emerald-500/70">{playerName ? "In-game + browser notifications will alert you on fill" : "You'll be notified when this order fills"}</p>
+                  )}
+                  {watchStatus === 'watching' && playerName && (
+                    <p className="text-xs text-primary/70">Watching via /auction watch — alerts even while offline</p>
                   )}
                 </div>
               )}

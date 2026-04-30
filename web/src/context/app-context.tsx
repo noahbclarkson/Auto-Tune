@@ -10,6 +10,8 @@ interface AppContextValue {
   toggleTheme: () => void;
   livePrices: Map<number, number>;
   isWsConnected: boolean;
+  playerName: string;
+  setPlayerName: (name: string) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -17,6 +19,21 @@ const AppContext = createContext<AppContextValue | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const apiBase = getApiBase();
+  const [playerName, setPlayerNameState] = useState('');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('autotune:player-name');
+    if (stored) setPlayerNameState(stored);
+  }, []);
+
+  const setPlayerName = useCallback((name: string) => {
+    setPlayerNameState(name);
+    if (name) {
+      localStorage.setItem('autotune:player-name', name);
+    } else {
+      localStorage.removeItem('autotune:player-name');
+    }
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem('theme');
@@ -46,6 +63,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toggleTheme,
         livePrices,
         isWsConnected: isConnected,
+        playerName,
+        setPlayerName,
       }}
     >
       {children}

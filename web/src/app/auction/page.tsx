@@ -11,6 +11,7 @@ import { formatCurrency, formatTimeAgo } from '@/lib/format';
 import { TrendingUp, TrendingDown, Package, ArrowUpDown, Search, User, BarChart2 } from 'lucide-react';
 import { DepthChart } from '@/components/auction/depth-chart';
 import { type AuctionDepthData } from '@/components/auction/depth-chart-types';
+import { DiscoveryOverlay } from '@/components/onboarding/discovery-overlay';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface AuctionStats {
@@ -338,6 +339,7 @@ export default function AuctionPage() {
   return (
     <div className="min-h-screen bg-background">
       <Header totalItems={stats?.totalItems ?? 0} onlinePlayers={stats?.onlinePlayers ?? 0} />
+      <DiscoveryOverlay page="auction" />
       <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>

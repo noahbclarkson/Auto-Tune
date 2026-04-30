@@ -15,9 +15,16 @@ const PORTFOLIO_TIPS = [
   "The P&L chart shows if you're a net buyer or net seller — adjust your strategy accordingly!",
 ];
 
+const AUCTION_TIPS = [
+  'Active Orders are player limit orders — click any material to open the full order detail and fill history.',
+  'Use the Depth tab before posting large orders. Thin books can move fast when one big wall fills.',
+  'Watching an order keeps it easy to track; native /auction watch notifications can alert you in-game when it fills.',
+];
+
 const STORAGE_KEYS = {
   items: 'autotune_discovery_items_seen',
   portfolio: 'autotune_discovery_portfolio_seen',
+  auction: 'autotune_discovery_auction_seen',
 } as const;
 
 type Page = keyof typeof STORAGE_KEYS;
@@ -35,7 +42,7 @@ export function DiscoveryOverlay({ page }: DiscoveryOverlayProps) {
     if (localStorage.getItem(key)) return;
 
     // Pick a random tip once per session
-    const tips = page === 'items' ? ITEMS_TIPS : PORTFOLIO_TIPS;
+    const tips = page === 'items' ? ITEMS_TIPS : page === 'portfolio' ? PORTFOLIO_TIPS : AUCTION_TIPS;
     setHint(tips[Math.floor(Math.random() * tips.length)]);
     setVisible(true);
 

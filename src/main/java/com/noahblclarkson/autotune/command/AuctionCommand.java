@@ -94,6 +94,8 @@ public class AuctionCommand {
                 .append(Component.text(" - Place a buy order", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/auction my", NamedTextColor.YELLOW)
                 .append(Component.text(" - View your active orders", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/auction info <order-id>", NamedTextColor.YELLOW)
+                .append(Component.text(" - Inspect order details and fills", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/auction cancel <order-id>", NamedTextColor.YELLOW)
                 .append(Component.text(" - Cancel an active order", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/auction watch <order-id>", NamedTextColor.YELLOW)
@@ -253,7 +255,7 @@ public class AuctionCommand {
 
         player.sendMessage(Component.empty());
         player.sendMessage(Component.text("Your Auction Orders", NamedTextColor.GOLD, TextDecoration.BOLD));
-        player.sendMessage(Component.text("Type /auction cancel <id> to cancel an order", NamedTextColor.GRAY));
+        player.sendMessage(Component.text("Click an order for details, or type /auction cancel <id> to cancel", NamedTextColor.GRAY));
         player.sendMessage(Component.text("──".repeat(20), NamedTextColor.DARK_GRAY));
         player.sendMessage(Component.empty());
 
@@ -265,12 +267,101 @@ public class AuctionCommand {
                     .append(Component.text(" " + sideLabel + " ", sideColor, TextDecoration.BOLD))
                     .append(Component.text(order.remainingQuantity() + "× " + formatMaterial(order.material()), NamedTextColor.WHITE))
                     .append(Component.text(" @ " + configManager.formatCurrency(order.price()), NamedTextColor.YELLOW))
-                    .append(Component.text(" (" + order.remainingQuantity() + "/" + order.originalQuantity() + " filled)", NamedTextColor.DARK_GRAY))
-                    .clickEvent(ClickEvent.suggestCommand("/auction cancel " + order.id()));
+                    .append(Component.text(" (" + order.filledQuantity() + "/" + order.originalQuantity() + " filled)", NamedTextColor.DARK_GRAY))
+                    .clickEvent(ClickEvent.suggestCommand("/auction info " + order.id()));
             player.sendMessage(line);
         }
 
         player.sendMessage(Component.empty());
+    }
+
+    @Command("auction info <orderId>")
+    public void auctionInfo(CommandSender sender, @Argument("orderId") String orderIdStr) {
+        UUID orderId;
+        try {
+            orderId = UUID.fromString(orderIdStr);
+        } catch (IllegalArgumentException e) {
+            sender.sendMessage(Component.text("Invalid order ID format", NamedTextColor.RED));
+            return;
+        }
+
+        var orderOpt = auctionRepo.findById(orderId);
+        if (orderOpt.isEmpty()) {
+            sender.sendMessage(Component.text("Order not found", NamedTextColor.RED));
+            return;
+        }
+
+        AuctionOrder order = orderOpt.get();
+        List<AuctionFill> fills = auctionRepo.findFillsByOrder(orderId);
+        int filled = order.filledQuantity();
+        int percent = order.originalQuantity() > 0 ? (filled * 100) / order.originalQuantity() : 0;
+        BigDecimal filledValue = fills.stream()
+                .map(fill -> fill.price().multiply(BigDecimal.valueOf(fill.quantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        TextColor sideColor = order.side() == OrderSide.BUY ? NamedTextColor.AQUA : NamedTextColor.LIGHT_PURPLE;
+        NamedTextColor statusColor = order.isActive() ? NamedTextColor.GREEN : NamedTextColor.GRAY;
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Auction Order ", NamedTextColor.GOLD, TextDecoration.BOLD)
+                .append(Component.text(order.id().toString().substring(0, 8), NamedTextColor.GRAY))
+                .clickEvent(ClickEvent.copyToClipboard(order.id().toString())));
+        sender.sendMessage(Component.text("ID: ", NamedTextColor.DARK_GRAY)
+                .append(Component.text(order.id().toString(), NamedTextColor.GRAY)
+                        .clickEvent(ClickEvent.copyToClipboard(order.id().toString()))));
+        sender.sendMessage(Component.text("Side: ", NamedTextColor.GRAY)
+                .append(Component.text(order.side().name(), sideColor, TextDecoration.BOLD))
+                .append(Component.text("   Status: ", NamedTextColor.GRAY))
+                .append(Component.text(order.status().name(), statusColor)));
+        sender.sendMessage(Component.text("Item: ", NamedTextColor.GRAY)
+                .append(Component.text(formatMaterial(order.material()), NamedTextColor.WHITE))
+                .append(Component.text("   Price: ", NamedTextColor.GRAY))
+                .append(Component.text(configManager.formatCurrency(order.price()) + "/unit", NamedTextColor.YELLOW)));
+        sender.sendMessage(Component.text("Filled: ", NamedTextColor.GRAY)
+                .append(Component.text(filled + "/" + order.originalQuantity() + " (" + percent + "%)", NamedTextColor.WHITE))
+                .append(Component.text("   Remaining: ", NamedTextColor.GRAY))
+                .append(Component.text(String.valueOf(order.remainingQuantity()), NamedTextColor.WHITE)));
+        sender.sendMessage(Component.text("Filled value: ", NamedTextColor.GRAY)
+                .append(Component.text(configManager.formatCurrency(filledValue), NamedTextColor.GOLD)));
+        sender.sendMessage(Component.text("Created: ", NamedTextColor.GRAY)
+                .append(Component.text(DATE_FORMAT.format(order.createdAt()), NamedTextColor.WHITE))
+                .append(Component.text("   Expires: ", NamedTextColor.GRAY))
+                .append(Component.text(DATE_FORMAT.format(order.expiresAt()), NamedTextColor.WHITE)));
+        if (order.filledAt() != null) {
+            sender.sendMessage(Component.text("Filled at: ", NamedTextColor.GRAY)
+                    .append(Component.text(DATE_FORMAT.format(order.filledAt()), NamedTextColor.WHITE)));
+        }
+
+        if (fills.isEmpty()) {
+            sender.sendMessage(Component.text("No fills recorded yet.", NamedTextColor.DARK_GRAY));
+        } else {
+            sender.sendMessage(Component.text("Recent fills", NamedTextColor.GOLD));
+            int shown = 0;
+            for (AuctionFill fill : fills) {
+                if (shown >= 5) {
+                    break;
+                }
+                BigDecimal total = fill.price().multiply(BigDecimal.valueOf(fill.quantity()));
+                sender.sendMessage(Component.text("  • ", NamedTextColor.DARK_GRAY)
+                        .append(Component.text(fill.quantity() + "×", NamedTextColor.WHITE))
+                        .append(Component.text(" @ " + configManager.formatCurrency(fill.price()), NamedTextColor.YELLOW))
+                        .append(Component.text(" = " + configManager.formatCurrency(total), NamedTextColor.GOLD))
+                        .append(Component.text(" (" + DATE_FORMAT.format(fill.filledAt()) + ")", NamedTextColor.DARK_GRAY)));
+                shown++;
+            }
+            if (fills.size() > shown) {
+                sender.sendMessage(Component.text("  ... and " + (fills.size() - shown) + " older fill(s)", NamedTextColor.DARK_GRAY));
+            }
+        }
+
+        if (order.isActive()) {
+            sender.sendMessage(Component.text("Actions: ", NamedTextColor.DARK_GRAY)
+                    .append(Component.text("/auction watch " + order.id(), NamedTextColor.YELLOW)
+                            .clickEvent(ClickEvent.suggestCommand("/auction watch " + order.id())))
+                    .append(Component.text("  ", NamedTextColor.DARK_GRAY))
+                    .append(Component.text("/auction cancel " + order.id(), NamedTextColor.YELLOW)
+                            .clickEvent(ClickEvent.suggestCommand("/auction cancel " + order.id()))));
+        }
+        sender.sendMessage(Component.empty());
     }
 
     @Command("auction cancel <orderId>")

@@ -59,7 +59,7 @@ onDisable: WebServer stop -> TaskScheduler stop -> DatabaseManager shutdown
 
 ### Database
 
-SQLite (default) or MariaDB. Schema versioned manually via `at_schema_version` table (not Flyway). Migrations in `src/main/resources/db/` — a single `V1__Initial_Schema.sql` (rewrite-2 consolidated all incremental migrations into one clean schema before first release). Schema includes: `at_items`, `at_market_history`, `at_players`, `at_autosell_items` (per-item autosell + min price), `at_loans`, `at_item_ratios`, `at_transactions`, `at_sections`, `at_economy_snapshots`, `at_price_alerts`. All async DB ops go through `DatabaseManager.supplyAsync()`/`runAsync()` with main-thread callbacks via `runOnMain()`. SQLite uses a single-thread executor; MySQL uses pool-sized executor.
+SQLite (default) or MariaDB. Schema versioned manually via `at_schema_version` table (not Flyway). Migrations in `src/main/resources/db/` now include the consolidated V1 plus incremental rewrite-2 repair/feature migrations through V7. Schema includes: `at_items`, `at_market_history`, `at_players`, `at_autosell_items` (per-item autosell + min price), `at_loans`, `at_item_ratios`, `at_transactions`, `at_sections`, `at_economy_snapshots`, `at_price_alerts`, auction tables, watched auctions, admin audit log, and `at_circuit_events` for circuit-breaker/admin-recovery timeline transitions. All async DB ops go through `DatabaseManager.supplyAsync()`/`runAsync()` with main-thread callbacks via `runOnMain()`. SQLite uses a single-thread executor; MySQL uses pool-sized executor.
 
 ### Market Engine (`MarketEngine.java`)
 
@@ -152,6 +152,7 @@ Player trades → Java Plugin (EconomyManager)
 - **Plugin → web/**: Bundled static Next.js dashboard served by Javalin on port 8989
 - **Auction house**: Implemented in Java plugin (rewrite-2). No auction functionality remains in Rust API server.
 - **Tax system**: `TreasuryService` collects buy/sell/auction/loan-interest taxes into the server treasury. `/treasury` command for balance, deposit, withdraw. Dynamic tax rates configurable per transaction type.
+- **Circuit timeline**: `LoanManager` records transitions between `NORMAL`, `TIER1`, `TIER2`, `TIER3`, and `ADMIN_RECOVERY` into `at_circuit_events`; `WebServer` exposes `/api/economy/circuit-events`; bundled `web/` annotates `/economy` history with those state changes.
 
 ## Active Engineering Roles
 

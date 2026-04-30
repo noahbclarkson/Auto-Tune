@@ -5,12 +5,14 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig.LoanConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.database.CircuitEventRepository;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.manager.TreasuryService;
 import com.noahblclarkson.autotune.service.BadgeService;
+import com.noahblclarkson.autotune.model.CircuitEvent;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
 import com.noahblclarkson.autotune.model.Loan;
 import com.noahblclarkson.autotune.model.Loan.LoanStatus;
@@ -43,6 +45,7 @@ public class LoanManager {
     private final LoanRepository loanRepository;
     private final PlayerRepository playerRepository;
     private final EconomySnapshotRepository snapshotRepository;
+    private final CircuitEventRepository circuitEventRepository;
     private final TreasuryService treasuryService;
     private final BadgeService badgeService;
     private volatile boolean interestCircuitOpen = false;
@@ -58,6 +61,7 @@ public class LoanManager {
      * all new loan issuance until an admin disables it.
      */
     private volatile boolean manualRecoveryMode = false;
+    private volatile String lastRecordedCircuitTier = null;
     /**
      * Remaining ticks for the graduated TIER3 exit cap.
      * After TIER3 circuit unlocks (D/G dropped below hysteresis threshold), the
@@ -73,15 +77,72 @@ public class LoanManager {
     }
 
     public void setManualRecoveryMode(boolean enabled) {
+        String previousTier = getEffectiveCircuitTier();
         this.manualRecoveryMode = enabled;
         this.tier3CircuitLocked = enabled;
         if (!enabled) {
             this.interestCircuitOpen = false;
         }
+        String newTier = getEffectiveCircuitTier();
+        if (!newTier.equals(previousTier)) {
+            recordCircuitTransition(previousTier, newTier, -1.0, BigDecimal.ZERO, BigDecimal.ZERO,
+                    enabled ? 0.0 : 1.0, true,
+                    enabled ? "Admin recovery mode enabled" : "Admin recovery mode disabled");
+        }
     }
 
     public boolean isManualRecoveryMode() {
         return manualRecoveryMode;
+    }
+
+    private String getEffectiveCircuitTier() {
+        return getCircuitBreakerStatus().tier();
+    }
+
+    private String describeCircuitTransition(String tier, double debtGdpRatio, double interestMultiplier) {
+        if (debtGdpRatio < 0.0) {
+            return tier.equals("NORMAL") ? "Circuit state normal" : "Circuit state changed to " + tier;
+        }
+        return String.format("Debt/GDP %.2fx; interest multiplier %.0f%%", debtGdpRatio, interestMultiplier * 100.0);
+    }
+
+    private void recordCircuitTransition(
+            String previousTierOverride,
+            String newTier,
+            double debtGdpRatio,
+            BigDecimal gdp,
+            BigDecimal totalDebt,
+            double interestMultiplier,
+            boolean adminInitiated,
+            String details
+    ) {
+        try {
+            String previousTier = previousTierOverride != null ? previousTierOverride : lastRecordedCircuitTier;
+            if (previousTier == null) {
+                Optional<CircuitEvent> latestEvent = circuitEventRepository.findLatest();
+                previousTier = latestEvent == null ? null : latestEvent.map(CircuitEvent::newTier).orElse(null);
+            }
+            if (newTier.equals(previousTier)) {
+                lastRecordedCircuitTier = newTier;
+                return;
+            }
+            lastRecordedCircuitTier = newTier;
+            if (previousTier == null && "NORMAL".equals(newTier)) {
+                return;
+            }
+            circuitEventRepository.insert(new CircuitEvent(
+                    previousTier,
+                    newTier,
+                    debtGdpRatio,
+                    gdp,
+                    totalDebt,
+                    interestMultiplier,
+                    adminInitiated,
+                    details
+            ));
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Failed to record circuit event", e);
+        }
     }
 
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
@@ -95,6 +156,7 @@ public class LoanManager {
             LoanRepository loanRepository,
             PlayerRepository playerRepository,
             EconomySnapshotRepository snapshotRepository,
+            CircuitEventRepository circuitEventRepository,
             TreasuryService treasuryService,
             BadgeService badgeService
     ) {
@@ -105,6 +167,7 @@ public class LoanManager {
         this.loanRepository = loanRepository;
         this.playerRepository = playerRepository;
         this.snapshotRepository = snapshotRepository;
+        this.circuitEventRepository = circuitEventRepository;
         this.treasuryService = treasuryService;
         this.badgeService = badgeService;
     }
@@ -419,6 +482,9 @@ public class LoanManager {
         // FIX (2026-03-30): Circuit breaker now counts ALL unpaid debt (ACTIVE + DEFAULTED).
         double interestMultiplier = 1.0;
         String currentTier = "NORMAL";
+        double circuitDebtGdpRatio = -1.0;
+        BigDecimal circuitGdp = BigDecimal.ZERO;
+        BigDecimal circuitTotalDebt = BigDecimal.ZERO;
         Optional<EconomySnapshot> latestSnapshot = snapshotRepository.findLatest();
         if (latestSnapshot.isPresent() && config.debtGdpTier3Ratio() > 0.0) {
             BigDecimal gdp = latestSnapshot.get().gdp();
@@ -426,8 +492,11 @@ public class LoanManager {
             for (Loan l : loanRepository.findAllUnpaid()) {
                 totalDebt = totalDebt.add(l.currentBalance());
             }
+            circuitGdp = gdp;
+            circuitTotalDebt = totalDebt;
             if (gdp.compareTo(BigDecimal.ZERO) > 0) {
                 double ratio = totalDebt.divide(gdp, MathContext.DECIMAL128).doubleValue();
+                circuitDebtGdpRatio = ratio;
 
                 if (config.counterCyclical()) {
                     // Continuous counter-cyclical taper: interest falls smoothly from 100% at
@@ -549,6 +618,9 @@ public class LoanManager {
                 }
             }
         }
+
+        recordCircuitTransition(null, currentTier, circuitDebtGdpRatio, circuitGdp, circuitTotalDebt,
+                interestMultiplier, false, describeCircuitTransition(currentTier, circuitDebtGdpRatio, interestMultiplier));
 
         if (interestMultiplier <= 0.0) {
             interestCircuitOpen = true;

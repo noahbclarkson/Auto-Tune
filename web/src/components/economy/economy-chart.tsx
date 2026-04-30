@@ -11,8 +11,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  ReferenceLine,
 } from 'recharts';
-import type { EconomySnapshotDto } from '@/lib/api';
+import type { EconomySnapshotDto, CircuitEventDto } from '@/lib/api';
 import { formatShortTime, formatShortDate } from '@/lib/format';
 
 type Period = '24h' | '7d' | '30d';
@@ -38,11 +39,24 @@ const METRIC_COLORS: Record<Metric, string> = {
   transactionVolume: '#10b981',
 };
 
-interface EconomyChartProps {
-  history: EconomySnapshotDto[];
+const TIER_COLORS: Record<string, string> = {
+  NORMAL: '#10b981',
+  TIER1: '#f59e0b',
+  TIER2: '#f97316',
+  TIER3: '#ef4444',
+  ADMIN_RECOVERY: '#a855f7',
+};
+
+function tierLabel(tier: string) {
+  return tier === 'ADMIN_RECOVERY' ? 'Recovery' : tier;
 }
 
-export function EconomyChart({ history }: EconomyChartProps) {
+interface EconomyChartProps {
+  history: EconomySnapshotDto[];
+  circuitEvents?: CircuitEventDto[];
+}
+
+export function EconomyChart({ history, circuitEvents = [] }: EconomyChartProps) {
   const [period, setPeriod] = useState<Period>('7d');
   const [activeMetrics, setActiveMetrics] = useState<Set<Metric>>(
     new Set<Metric>(['gdp', 'averagePriceChange']),
@@ -52,6 +66,11 @@ export function EconomyChart({ history }: EconomyChartProps) {
     const cutoff = Date.now() - PERIOD_MS[period];
     return history.filter((s) => s.timestamp >= cutoff);
   }, [history, period]);
+
+  const filteredEvents = useMemo(() => {
+    const cutoff = Date.now() - PERIOD_MS[period];
+    return circuitEvents.filter((event) => event.timestamp >= cutoff);
+  }, [circuitEvents, period]);
 
   function toggleMetric(metric: Metric) {
     setActiveMetrics((prev) => {
@@ -144,6 +163,15 @@ export function EconomyChart({ history }: EconomyChartProps) {
                   iconType="line"
                   wrapperStyle={{ fontSize: 11 }}
                 />
+                {filteredEvents.map((event) => (
+                  <ReferenceLine
+                    key={event.id}
+                    x={event.timestamp}
+                    stroke={TIER_COLORS[event.newTier] ?? '#64748b'}
+                    strokeDasharray="3 3"
+                    ifOverflow="extendDomain"
+                  />
+                ))}
                 {allMetrics.map(
                   (metric) =>
                     activeMetrics.has(metric) && (
@@ -161,6 +189,23 @@ export function EconomyChart({ history }: EconomyChartProps) {
                 )}
               </LineChart>
             </ResponsiveContainer>
+          </div>
+        )}
+        {filteredEvents.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {filteredEvents.slice(-8).map((event) => (
+              <div
+                key={event.id}
+                className="rounded-full border border-border bg-muted/40 px-2 py-1 text-muted-foreground"
+                title={event.details ?? undefined}
+              >
+                <span
+                  className="mr-1 inline-block h-2 w-2 rounded-full"
+                  style={{ backgroundColor: TIER_COLORS[event.newTier] ?? '#64748b' }}
+                />
+                {formatShortDate(event.timestamp)} · {event.previousTier ?? 'START'} → {tierLabel(event.newTier)}
+              </div>
+            ))}
           </div>
         )}
       </CardContent>

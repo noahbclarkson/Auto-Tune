@@ -136,8 +136,14 @@ public class DatabaseManager {
             highestVersion = 6;
         }
 
+        if (currentVersion < 7) {
+            plugin.getLogger().info("Applying database migration V7 (Circuit Events)...");
+            runMigration("db/V7__Circuit_Events.sql");
+            highestVersion = 7;
+        }
+
         // Add future migrations here:
-        // if (currentVersion < 4) { ... }
+        // if (currentVersion < 8) { ... }
 
         if (highestVersion > currentVersion) {
             setSchemaVersion(highestVersion);

@@ -9,6 +9,7 @@ import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.AutoTuneConfig.WebConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.BadgeRepository;
+import com.noahblclarkson.autotune.database.CircuitEventRepository;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
@@ -25,6 +26,7 @@ import com.noahblclarkson.autotune.manager.MarketEventService;
 import com.noahblclarkson.autotune.manager.PriceAlertManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.model.BadgeDto;
+import com.noahblclarkson.autotune.model.CircuitEvent;
 import com.noahblclarkson.autotune.model.MarketEvent;
 import com.noahblclarkson.autotune.model.EconomySnapshot;
 import com.noahblclarkson.autotune.model.Loan;
@@ -115,6 +117,7 @@ public class WebServer {
     private final ItemRepository itemRepository;
     private final MarketEngine marketEngine;
     private final EconomySnapshotRepository snapshotRepository;
+    private final CircuitEventRepository circuitEventRepository;
     private final EconomyMetricsManager economyMetricsManager;
     private final TransactionRepository transactionRepository;
     private final LoanRepository loanRepository;
@@ -146,6 +149,7 @@ public class WebServer {
             ItemRepository itemRepository,
             MarketEngine marketEngine,
             EconomySnapshotRepository snapshotRepository,
+            CircuitEventRepository circuitEventRepository,
             EconomyMetricsManager economyMetricsManager,
             TransactionRepository transactionRepository,
             LoanRepository loanRepository,
@@ -169,6 +173,7 @@ public class WebServer {
         this.itemRepository = itemRepository;
         this.marketEngine = marketEngine;
         this.snapshotRepository = snapshotRepository;
+        this.circuitEventRepository = circuitEventRepository;
         this.economyMetricsManager = economyMetricsManager;
         this.transactionRepository = transactionRepository;
         this.loanRepository = loanRepository;
@@ -472,6 +477,25 @@ public class WebServer {
                             s.averagePriceChange().doubleValue(),
                             s.transactionVolume().doubleValue(),
                             s.timestamp().toEpochMilli()
+                    ))
+                    .collect(Collectors.toList());
+            ctx.json(dtos);
+        });
+
+        app.get("/api/economy/circuit-events", ctx -> {
+            int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(100);
+            List<CircuitEventDto> dtos = circuitEventRepository.findRecent(limit).stream()
+                    .map(e -> new CircuitEventDto(
+                            e.id(),
+                            e.previousTier(),
+                            e.newTier(),
+                            e.debtGdpRatio(),
+                            e.gdp().doubleValue(),
+                            e.totalDebt().doubleValue(),
+                            e.interestMultiplier(),
+                            e.adminInitiated(),
+                            e.details(),
+                            e.timestamp().toEpochMilli()
                     ))
                     .collect(Collectors.toList());
             ctx.json(dtos);
@@ -1777,6 +1801,20 @@ public class WebServer {
             int playerCount,
             double averagePriceChange,
             double transactionVolume,
+            long timestamp
+    ) {
+    }
+
+    public record CircuitEventDto(
+            long id,
+            String previousTier,
+            String newTier,
+            double debtGdpRatio,
+            double gdp,
+            double totalDebt,
+            double interestMultiplier,
+            boolean adminInitiated,
+            String details,
             long timestamp
     ) {
     }

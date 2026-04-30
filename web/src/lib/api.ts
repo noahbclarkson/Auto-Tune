@@ -83,6 +83,19 @@ export interface EconomySnapshotDto {
   timestamp: number;
 }
 
+export interface CircuitEventDto {
+  id: number;
+  previousTier: string | null;
+  newTier: 'NORMAL' | 'TIER1' | 'TIER2' | 'TIER3' | 'ADMIN_RECOVERY' | string;
+  debtGdpRatio: number;
+  gdp: number;
+  totalDebt: number;
+  interestMultiplier: number;
+  adminInitiated: boolean;
+  details: string | null;
+  timestamp: number;
+}
+
 export interface GdpData {
   gdp: number;
   timestamp: number;
@@ -428,6 +441,8 @@ export const api = {
     debt: (base: string) => fetchJson<DebtData>(`${base}/api/economy/debt`),
     history: (base: string, limit = 100) =>
       fetchJson<EconomySnapshotDto[]>(`${base}/api/economy/history?limit=${limit}`),
+    circuitEvents: (base: string, limit = 100) =>
+      fetchJson<CircuitEventDto[]>(`${base}/api/economy/circuit-events?limit=${limit}`),
     trends: (base: string) => fetchJson<TrendDto[]>(`${base}/api/economy/trends`),
     whatMoved: (base: string) => fetchJson<WhatMovedEntry[]>(`${base}/api/economy/what-moved`),
     volumeMultiplier: (base: string) =>

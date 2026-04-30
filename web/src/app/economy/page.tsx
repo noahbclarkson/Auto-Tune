@@ -24,6 +24,7 @@ import {
   api,
   type Stats,
   type EconomySnapshotDto,
+  type CircuitEventDto,
   type GdpData,
   type InflationData,
   type DebtData,
@@ -68,19 +69,21 @@ export default function EconomyPage() {
   const [inflation, setInflation] = useState<InflationData | null>(null);
   const [debt, setDebt] = useState<DebtData | null>(null);
   const [history, setHistory] = useState<EconomySnapshotDto[]>([]);
+  const [circuitEvents, setCircuitEvents] = useState<CircuitEventDto[]>([]);
   const [volumeMultiplier, setVolumeMultiplier] = useState<VolumeMultiplierDto | null>(null);
   const [health, setHealth] = useState<AdminHealthDto | null>(null);
   const [whatMoved, setWhatMoved] = useState<WhatMovedEntry[]>([]);
 
   const fetchData = useCallback(async () => {
     try {
-      const [statsData, gdpData, inflationData, debtData, historyData, vmData, healthData, whatMovedData] =
+      const [statsData, gdpData, inflationData, debtData, historyData, circuitEventData, vmData, healthData, whatMovedData] =
         await Promise.all([
           api.stats(apiBase),
           api.economy.gdp(apiBase).catch(() => null),
           api.economy.inflation(apiBase).catch(() => null),
           api.economy.debt(apiBase).catch(() => null),
           api.economy.history(apiBase, 500).catch(() => []),
+          api.economy.circuitEvents(apiBase, 100).catch(() => []),
           api.economy.volumeMultiplier(apiBase).catch(() => null),
           api.admin.health(apiBase).catch(() => null),
           api.economy.whatMoved(apiBase).catch(() => [] as WhatMovedEntry[]),
@@ -90,6 +93,7 @@ export default function EconomyPage() {
       setInflation(inflationData as InflationData | null);
       setDebt(debtData as DebtData | null);
       setHistory((historyData as EconomySnapshotDto[]).reverse());
+      setCircuitEvents((circuitEventData as CircuitEventDto[]).reverse());
       setVolumeMultiplier(vmData as VolumeMultiplierDto | null);
       setHealth(healthData as AdminHealthDto | null);
       setWhatMoved(whatMovedData);
@@ -458,7 +462,7 @@ export default function EconomyPage() {
           <VolumeMultiplierGauge multiplier={volumeMultiplier.multiplier} />
         )}
 
-        <EconomyChart history={history} />
+        <EconomyChart history={history} circuitEvents={circuitEvents} />
       </main>
       <Footer />
     </div>

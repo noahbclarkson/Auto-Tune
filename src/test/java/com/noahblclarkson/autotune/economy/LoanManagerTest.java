@@ -4,6 +4,7 @@ import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.AutoTuneConfig.LoanConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.database.CircuitEventRepository;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
@@ -122,6 +123,7 @@ class LoanManagerTest {
         when(cfgMgr.getConfig()).thenReturn(fullConfig(loanCfg));
         LoanManager lm = new LoanManager(mock(AutoTune.class), cfgMgr, economy,
                 mock(DatabaseManager.class), loanRepo, playerRepo, snapRepo,
+                mock(CircuitEventRepository.class),
                 mock(TreasuryService.class), mock(com.noahblclarkson.autotune.service.BadgeService.class));
         if (playerData != null) {
             when(playerRepo.findByUuid(playerUuid)).thenReturn(Optional.of(playerData));

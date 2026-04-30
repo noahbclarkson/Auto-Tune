@@ -10,6 +10,7 @@ import com.noahblclarkson.autotune.database.AdminAuditRepository;
 import com.noahblclarkson.autotune.database.AutosellRepository;
 import com.noahblclarkson.autotune.database.AuctionRepository;
 import com.noahblclarkson.autotune.database.BadgeRepository;
+import com.noahblclarkson.autotune.database.CircuitEventRepository;
 import com.noahblclarkson.autotune.database.WatchedAuctionRepository;
 import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
@@ -137,6 +138,12 @@ public class AutoTuneModule extends AbstractModule {
     @Singleton
     public EconomySnapshotRepository provideEconomySnapshotRepository(DatabaseManager databaseManager) {
         return new EconomySnapshotRepository(databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public CircuitEventRepository provideCircuitEventRepository(DatabaseManager databaseManager) {
+        return new CircuitEventRepository(databaseManager);
     }
 
     @Provides

@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { api, type Stats, type AuctionOrderDto, type AuctionFillDto, type AuctionMaterialDto } from '@/lib/api';
 import { formatCurrency, formatTimeAgo } from '@/lib/format';
-import { TrendingUp, TrendingDown, Package, ArrowUpDown, Search, User, BarChart2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Package, ArrowUpDown, Search, User, BarChart2, Eye, Loader2 } from 'lucide-react';
 import { DepthChart } from '@/components/auction/depth-chart';
 import { type AuctionDepthData } from '@/components/auction/depth-chart-types';
 import { DiscoveryOverlay } from '@/components/onboarding/discovery-overlay';
@@ -423,6 +423,7 @@ export default function AuctionPage() {
         {tab === 'myorders' && (
           <MyOrdersPanel
             apiBase={apiBase}
+            playerName={playerName}
             player={myOrdersPlayer}
             setPlayer={setMyOrdersPlayer}
             result={myOrdersResult}
@@ -438,6 +439,7 @@ export default function AuctionPage() {
 
 function MyOrdersPanel({
   apiBase,
+  playerName,
   player,
   setPlayer,
   result,
@@ -446,6 +448,7 @@ function MyOrdersPanel({
   setError,
 }: {
   apiBase: string;
+  playerName: string;
   player: string;
   setPlayer: (v: string) => void;
   result: AuctionOrderDto[] | null;
@@ -454,12 +457,14 @@ function MyOrdersPanel({
   setError: (v: string | null) => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const [watchState, setWatchState] = useState<Record<string, 'watching' | 'not-watching' | 'loading'>>({});
 
   const handleLookup = async () => {
     if (!player.trim()) return;
     setLoading(true);
     setError(null);
     setResult(null);
+    setWatchState({});
     try {
       const data = await api.auction.player(apiBase, player.trim());
       setResult(data);
@@ -467,6 +472,59 @@ function MyOrdersPanel({
       setError('Could not load orders for that player. Check the name and try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!result || !playerName) {
+      setWatchState({});
+      return;
+    }
+    const activeOrders = result.filter((o) => o.status === 'ACTIVE');
+    if (activeOrders.length === 0) {
+      setWatchState({});
+      return;
+    }
+
+    let cancelled = false;
+    const initialState: Record<string, 'watching' | 'not-watching' | 'loading'> = {};
+    for (const o of activeOrders) {
+      initialState[o.id] = 'loading';
+    }
+    setWatchState(initialState);
+
+    Promise.all(
+      activeOrders.map(async (o) => {
+        try {
+          const res = await api.auction.watchStatus(apiBase, o.id, playerName);
+          return [o.id, res.watching ? 'watching' : 'not-watching'] as const;
+        } catch {
+          return [o.id, 'not-watching'] as const;
+        }
+      })
+    ).then((entries) => {
+      if (cancelled) return;
+      setWatchState(Object.fromEntries(entries));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBase, playerName, result]);
+
+  const handleWatchToggle = async (orderId: string, currentlyWatching: boolean) => {
+    if (!playerName) return;
+    setWatchState((prev) => ({ ...prev, [orderId]: 'loading' }));
+    try {
+      if (currentlyWatching) {
+        await api.auction.unwatch(apiBase, orderId, playerName);
+        setWatchState((prev) => ({ ...prev, [orderId]: 'not-watching' }));
+      } else {
+        await api.auction.watch(apiBase, orderId, playerName);
+        setWatchState((prev) => ({ ...prev, [orderId]: 'watching' }));
+      }
+    } catch {
+      setWatchState((prev) => ({ ...prev, [orderId]: currentlyWatching ? 'watching' : 'not-watching' }));
     }
   };
 
@@ -514,6 +572,7 @@ function MyOrdersPanel({
                     <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Price</th>
                     <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Qty</th>
                     <th className="px-3 py-2.5 text-center font-medium text-muted-foreground">Status</th>
+                    <th className="px-3 py-2.5 text-center font-medium text-muted-foreground">Watch</th>
                     <th className="px-3 py-2.5 text-right font-medium text-muted-foreground">Age</th>
                   </tr>
                 </thead>
@@ -536,6 +595,29 @@ function MyOrdersPanel({
                         {o.remainingQuantity.toLocaleString()} / {o.originalQuantity.toLocaleString()}
                       </td>
                       <td className="px-3 py-2.5 text-center"><StatusBadge status={o.status} /></td>
+                      <td className="px-3 py-2.5 text-center">
+                        {playerName && o.status === 'ACTIVE' ? (
+                          <button
+                            onClick={() => handleWatchToggle(o.id, watchState[o.id] === 'watching')}
+                            disabled={watchState[o.id] === 'loading'}
+                            className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors disabled:opacity-50 ${
+                              watchState[o.id] === 'watching'
+                                ? 'bg-primary/20 text-primary hover:bg-primary/30'
+                                : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                            }`}
+                            title={watchState[o.id] === 'watching' ? 'Stop watching' : 'Watch this order'}
+                          >
+                            {watchState[o.id] === 'loading' ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Eye className="w-3 h-3" />
+                            )}
+                            {watchState[o.id] === 'watching' ? 'Watching' : 'Watch'}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2.5 text-right text-muted-foreground text-xs">{formatTimeAgo(o.createdAt)}</td>
                     </tr>
                   ))}

@@ -14,7 +14,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import type { EconomySnapshotDto, CircuitEventDto } from '@/lib/api';
-import { formatShortTime, formatShortDate } from '@/lib/format';
+import { formatLargeCurrency, formatShortTime, formatShortDate } from '@/lib/format';
 
 type Period = '24h' | '7d' | '30d';
 type Metric = 'gdp' | 'averagePriceChange' | 'totalDebt' | 'transactionVolume';
@@ -49,6 +49,67 @@ const TIER_COLORS: Record<string, string> = {
 
 function tierLabel(tier: string) {
   return tier === 'ADMIN_RECOVERY' ? 'Recovery' : tier;
+}
+
+function formatDebtGdpRatio(ratio: number) {
+  if (!Number.isFinite(ratio)) return 'D/G --';
+  return `D/G ${ratio >= 10 ? ratio.toFixed(1) : ratio.toFixed(2)}×`;
+}
+
+function formatInterestMultiplier(multiplier: number) {
+  if (!Number.isFinite(multiplier)) return 'interest --';
+  return `${multiplier.toFixed(multiplier < 0.1 ? 2 : 1)}× interest`;
+}
+
+function eventTone(event: CircuitEventDto) {
+  if (event.newTier === 'ADMIN_RECOVERY') {
+    return 'border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300';
+  }
+  if (event.newTier === 'TIER3' || event.debtGdpRatio >= 30) {
+    return 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300';
+  }
+  if (event.newTier === 'TIER2' || event.debtGdpRatio >= 15) {
+    return 'border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-300';
+  }
+  if (event.newTier === 'TIER1' || event.debtGdpRatio >= 5) {
+    return 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300';
+  }
+  return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300';
+}
+
+function eventGuidance(event: CircuitEventDto) {
+  if (event.newTier === 'ADMIN_RECOVERY') {
+    return event.adminInitiated
+      ? 'Manual recovery active — early intervention performs best.'
+      : 'Recovery active — watch D/G before reopening loans.';
+  }
+  if (event.newTier === 'TIER3') {
+    return event.debtGdpRatio >= 30
+      ? 'Interest paused. Start recovery if D/G stays above 15×.'
+      : 'Circuit engaged — watch for a rebound after unlock.';
+  }
+  if (event.newTier === 'TIER2') {
+    return 'High debt pressure — prepare recovery if trend keeps rising.';
+  }
+  if (event.newTier === 'TIER1') {
+    return 'Early warning — monitor debt and loan defaults.';
+  }
+  if (event.newTier === 'NORMAL') {
+    return event.previousTier === 'TIER3' || event.previousTier === 'ADMIN_RECOVERY'
+      ? 'Circuit cleared — monitor the next 7 days for relapse.'
+      : 'Stable — no admin action needed.';
+  }
+  return 'Review details before changing economy settings.';
+}
+
+function eventTitle(event: CircuitEventDto) {
+  const details = event.details ? `\n${event.details}` : '';
+  return [
+    `${event.previousTier ?? 'START'} → ${tierLabel(event.newTier)}`,
+    formatDebtGdpRatio(event.debtGdpRatio),
+    `Debt ${formatLargeCurrency(event.totalDebt)} / GDP ${formatLargeCurrency(event.gdp)}`,
+    formatInterestMultiplier(event.interestMultiplier),
+  ].join('\n') + details;
 }
 
 interface EconomyChartProps {
@@ -192,20 +253,33 @@ export function EconomyChart({ history, circuitEvents = [] }: EconomyChartProps)
           </div>
         )}
         {filteredEvents.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          <div className="mt-3 space-y-2 text-xs">
+            <p className="font-medium text-muted-foreground">Recent circuit events</p>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {filteredEvents.slice(-8).map((event) => (
               <div
                 key={event.id}
-                className="rounded-full border border-border bg-muted/40 px-2 py-1 text-muted-foreground"
-                title={event.details ?? undefined}
+                className={`rounded-lg border px-3 py-2 ${eventTone(event)}`}
+                title={eventTitle(event)}
               >
-                <span
-                  className="mr-1 inline-block h-2 w-2 rounded-full"
-                  style={{ backgroundColor: TIER_COLORS[event.newTier] ?? '#64748b' }}
-                />
-                {formatShortDate(event.timestamp)} · {event.previousTier ?? 'START'} → {tierLabel(event.newTier)}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold">
+                    <span
+                      className="mr-1.5 inline-block h-2 w-2 rounded-full"
+                      style={{ backgroundColor: TIER_COLORS[event.newTier] ?? '#64748b' }}
+                    />
+                    {event.previousTier ?? 'START'} → {tierLabel(event.newTier)}
+                  </span>
+                  <span className="text-[11px] opacity-80">{formatShortDate(event.timestamp)}</span>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-medium text-[11px] opacity-90">
+                  <span>{formatDebtGdpRatio(event.debtGdpRatio)}</span>
+                  <span>{formatInterestMultiplier(event.interestMultiplier)}</span>
+                </div>
+                <p className="mt-1 leading-snug text-[11px] opacity-80">{eventGuidance(event)}</p>
               </div>
             ))}
+            </div>
           </div>
         )}
       </CardContent>

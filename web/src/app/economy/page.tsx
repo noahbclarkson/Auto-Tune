@@ -40,6 +40,38 @@ function volatilityLabel(v: number): { label: string; color: string; bg: string;
   return { label: 'Unstable', color: 'text-red-500', bg: 'bg-red-500', ring: 'ring-red-500' };
 }
 
+function debtGdpScore(ratio: number): number {
+  if (ratio < 3) return 100;
+  if (ratio < 5) return 75;
+  if (ratio < 15) return 45;
+  if (ratio < 30) return 20;
+  return 10;
+}
+
+function debtGdpTextColor(ratio: number): string {
+  if (ratio < 3) return 'text-emerald-500';
+  if (ratio < 5) return 'text-yellow-500';
+  if (ratio < 15) return 'text-amber-500';
+  if (ratio < 30) return 'text-orange-500';
+  return 'text-red-500';
+}
+
+function debtGdpBarColor(ratio: number): string {
+  if (ratio < 3) return 'bg-emerald-500';
+  if (ratio < 5) return 'bg-yellow-500';
+  if (ratio < 15) return 'bg-amber-500';
+  if (ratio < 30) return 'bg-orange-500';
+  return 'bg-red-500';
+}
+
+function debtGdpMessage(ratio: number): string {
+  if (ratio < 3) return 'Healthy — below TIER1 warning';
+  if (ratio < 5) return 'TIER1 warning — monitor trend';
+  if (ratio < 15) return 'TIER2 pressure — watch defaults';
+  if (ratio < 30) return 'Above unlock line — prepare early recovery';
+  return 'TIER3 active — interest relief engaged';
+}
+
 /** Composite economy health score 0–100 derived from admin health endpoint. */
 function computeHealthScore(h: AdminHealthDto): number {
   // Volatility component (40% weight) — most important
@@ -49,11 +81,9 @@ function computeHealthScore(h: AdminHealthDto): number {
     : h.avgVolatility < 0.25 ? 30
     : 10;
 
-  // Debt/GDP component (30% weight)
-  const d2gScore = h.debtGdpRatio < 0.5 ? 100
-    : h.debtGdpRatio < 1.0 ? 75
-    : h.debtGdpRatio < 3.0 ? 45
-    : 10;
+  // Debt/GDP component (30% weight) — aligned with default circuit thresholds:
+  // TIER1=3×, TIER2=5×, TIER3=30×, unlock line=15×.
+  const d2gScore = debtGdpScore(h.debtGdpRatio);
 
   // Buy/sell balance component (30% weight)
   const imbalance = Math.abs(h.buyPct - 50) / 50; // 0 = perfect, 1 = extreme
@@ -128,11 +158,7 @@ export default function EconomyPage() {
     : inflationVal > -0.5 ? { icon: Minus, label: 'Stable', color: 'text-sky-400', bg: 'bg-sky-500/10' }
     : { icon: TrendingDown, label: 'Deflating', color: 'text-blue-500', bg: 'bg-blue-500/10' };
 
-  const debtColor = debtToGdp === null ? 'text-muted-foreground'
-    : debtToGdp > 1.5 ? 'text-red-500'
-    : debtToGdp > 1.0 ? 'text-amber-500'
-    : debtToGdp > 0.5 ? 'text-emerald-500'
-    : 'text-emerald-400';
+  const debtColor = debtToGdp === null ? 'text-muted-foreground' : debtGdpTextColor(debtToGdp);
 
   const volInfo = health ? volatilityLabel(health.avgVolatility) : null;
 
@@ -231,7 +257,7 @@ export default function EconomyPage() {
               </p>
               {debtToGdp !== null && (
                 <p className={`text-xs font-medium mt-1 ${debtColor}`}>
-                  {debtToGdp > 1 ? '⚠' : '✓'} {debtToGdp.toFixed(1)}× GDP
+                  {debtToGdp >= 3 ? '⚠' : '✓'} {debtToGdp.toFixed(1)}× GDP
                 </p>
               )}
             </CardContent>
@@ -302,18 +328,18 @@ export default function EconomyPage() {
                 <div>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-muted-foreground">Debt / GDP</span>
-                    <span className={`font-medium ${health.debtGdpRatio < 0.5 ? 'text-emerald-500' : health.debtGdpRatio < 1.0 ? 'text-emerald-500' : health.debtGdpRatio < 3.0 ? 'text-amber-500' : 'text-red-500'}`}>
-                      {health.debtGdpRatio < 0.5 ? '100' : health.debtGdpRatio < 1.0 ? '75' : health.debtGdpRatio < 3.0 ? '45' : '10'} / 30
+                    <span className={`font-medium ${debtGdpTextColor(health.debtGdpRatio)}`}>
+                      {Math.round(debtGdpScore(health.debtGdpRatio) * 0.3)} / 30
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all ${health.debtGdpRatio < 0.5 ? 'bg-emerald-500' : health.debtGdpRatio < 1.0 ? 'bg-emerald-500' : health.debtGdpRatio < 3.0 ? 'bg-amber-500' : 'bg-red-500'}`}
-                      style={{ width: `${health.debtGdpRatio < 0.5 ? 100 : health.debtGdpRatio < 1.0 ? 75 : health.debtGdpRatio < 3.0 ? 45 : 10}%` }}
+                      className={`h-full rounded-full transition-all ${debtGdpBarColor(health.debtGdpRatio)}`}
+                      style={{ width: `${debtGdpScore(health.debtGdpRatio)}%` }}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {health.debtGdpRatio < 0.5 ? 'Minimal debt — economy growing' : health.debtGdpRatio < 1.0 ? 'Healthy debt level' : health.debtGdpRatio < 3.0 ? 'Elevated — monitor closely' : 'Dangerous — circuit breaker active'}
+                    {debtGdpMessage(health.debtGdpRatio)}
                   </p>
                 </div>
 
@@ -437,21 +463,25 @@ export default function EconomyPage() {
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
-                    width: `${Math.min(100, debtToGdp * 100)}%`,
-                    backgroundColor: debtToGdp > 1 ? '#ef4444' : debtToGdp > 0.5 ? '#f59e0b' : '#10b981',
+                    width: `${Math.min(100, (debtToGdp / 30) * 100)}%`,
+                    backgroundColor: debtToGdp >= 30 ? '#ef4444' : debtToGdp >= 15 ? '#f97316' : debtToGdp >= 5 ? '#f59e0b' : '#10b981',
                   }}
                 />
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Healthy (&lt;50%)</span>
-                <span>Warning (&gt;100%)</span>
-                <span>Circuit breaker at 1000%</span>
+                <span>Healthy (&lt;3×)</span>
+                <span>TIER2 at 5×</span>
+                <span>TIER3 at 30×</span>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                {debtToGdp > 1
-                  ? '⚠ Debt exceeds GDP. The circuit breaker pauses loan interest when debt exceeds 10× GDP.'
-                  : debtToGdp > 0.5
-                  ? 'Debt is elevated but manageable. Monitor for trends.'
+                {debtToGdp >= 30
+                  ? '🔴 TIER3 circuit threshold reached. Interest relief is active; consider manual recovery if D/G remains above the 15× unlock line.'
+                  : debtToGdp >= 15
+                  ? '🟠 Debt is above the default TIER3 unlock line. Watch closely for relapse and prepare early recovery if defaults rise.'
+                  : debtToGdp >= 5
+                  ? '⚠ TIER2 debt pressure. Monitor loan defaults and player borrowing before it compounds.'
+                  : debtToGdp >= 3
+                  ? 'Debt is entering TIER1 warning territory. Monitor for trends.'
                   : 'Debt-to-GDP is healthy. Economy is balanced.'}
               </p>
             </CardContent>

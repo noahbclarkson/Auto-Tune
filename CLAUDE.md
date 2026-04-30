@@ -152,7 +152,7 @@ Player trades → Java Plugin (EconomyManager)
 - **Plugin → web/**: Bundled static Next.js dashboard served by Javalin on port 8989
 - **Auction house**: Implemented in Java plugin (rewrite-2). No auction functionality remains in Rust API server.
 - **Tax system**: `TreasuryService` collects buy/sell/auction/loan-interest taxes into the server treasury. `/treasury` command for balance, deposit, withdraw. Dynamic tax rates configurable per transaction type.
-- **Circuit timeline**: `LoanManager` records transitions between `NORMAL`, `TIER1`, `TIER2`, `TIER3`, and `ADMIN_RECOVERY` into `at_circuit_events`; `WebServer` exposes `/api/economy/circuit-events`; bundled `web/` annotates `/economy` history with those state changes.
+- **Circuit timeline**: `LoanManager` records transitions between `NORMAL`, `TIER1`, `TIER2`, `TIER3`, and `ADMIN_RECOVERY` into `at_circuit_events`; `WebServer` exposes `/api/economy/circuit-events`; bundled `web/` annotates `/economy` history with those state changes and renders D/G, interest multiplier, and admin action guidance on recent event cards.
 
 ## Active Engineering Roles
 

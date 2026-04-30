@@ -59,20 +59,20 @@ impl Default for RateLimitConfig {
 }
 
 impl RateLimitConfig {
-    /// Fast: 30 req/min with burst of 10, good for general API traffic.
+    /// Registration: 10 requests/minute per IP, with a burst of 10.
     pub fn fast() -> Self {
         Self {
             capacity: 10.0,
-            refill_per_sec: 5.0,
+            refill_per_sec: 10.0 / 60.0,
             idle_timeout: Duration::from_secs(120),
         }
     }
 
-    /// Slow: 6 req/min, suited for expensive operations (e.g. price submission).
+    /// Price submission: 6 requests/minute per IP, with a burst of 6.
     pub fn submit() -> Self {
         Self {
             capacity: 6.0,
-            refill_per_sec: 1.0,
+            refill_per_sec: 6.0 / 60.0,
             idle_timeout: Duration::from_secs(60),
         }
     }

@@ -2,18 +2,18 @@
 
 > Auto-Tune Price Solver API — `rewrite-2`. Serves cross-server true-price discovery and exchange-rate calculation.
 
-**Base URL:** `http://localhost:8080` (development)  
-**Auth:** API key via `X-API-Key` header for write endpoints; public read for most endpoints.  
+**Base URL:** `http://localhost:8080` (development)
+**Auth:** API key via `Authorization: Bearer <api-key>` for write endpoints; public read for most endpoints.
 **Errors:** All error responses follow `{"error": "message"}`.
 
 ---
 
 ## Authentication
 
-Write endpoints require a server API key, passed as a header:
+Write endpoints require a server API key, passed as a bearer token:
 
-```
-X-API-Key: <your-api-key>
+```http
+Authorization: Bearer <your-api-key>
 ```
 
 API keys are returned once at registration (`POST /api/servers/register`) and must be stored securely. Only the hash is stored server-side.
@@ -153,13 +153,13 @@ If a server's rate is `1.5`, its prices are 1.5× the true price — its currenc
 
 ## Authenticated Endpoints
 
-These are scoped under `/api/servers/{server_id}` and require `X-API-Key`.
+These are scoped under `/api/servers/{server_id}` and require `Authorization: Bearer <server-api-key>`.
 
 ### `POST /api/servers/{server_id}/prices`
 
 Submit a price ratio matrix for this server. This triggers an asynchronous recomputation of true prices.
 
-**Headers:** `X-API-Key: <server-api-key>`
+**Headers:** `Authorization: Bearer <server-api-key>`
 
 **Request:**
 ```json
@@ -210,59 +210,17 @@ When limited, the server returns `429 Too Many Requests` with a `retry-after` he
 
 ## Security Model
 
-The API server is designed to prevent a single bad actor from poisoning the true-price solver. Three layers of defense:
+See [`SECURITY.md`](./SECURITY.md) for the full cross-server trust model. Current protections include:
 
-### 1. Manual Server Key Issuance
+- **Bearer-token auth:** write endpoints require `Authorization: Bearer <api-key>`.
+- **Server-ID binding:** a key can submit only for its own `/api/servers/{server_id}` path.
+- **Hashed keys:** plaintext API keys are shown once and only SHA-256 hashes are stored.
+- **Rate limits:** registration and price submission are IP-limited.
+- **Matrix validation:** malformed or non-transitive ratio matrices are rejected.
+- **Outlier filtering:** recomputation filters ratio observations beyond the configured log-space sigma threshold before solving.
+- **Plugin-level exchange rates:** the API publishes aggregate data; local plugins remain authority for how to apply exchange-rate effects.
 
-Servers cannot self-register without a maintainer-issued key. Before a server can submit prices, it must:
-1. Call `POST /api/servers/register` with a server name and email
-2. Wait for maintainer approval (keys are emailed — not instant)
-
-This prevents Sybil attacks where one entity registers hundreds of fake servers to dominate the ratio matrix.
-
-> **Note:** Current implementation is lightly Rate-Limited but not yet fully gated. Full manual-approval flow is on the roadmap.
-
-### 2. Outlier Detection in the Price Solver
-
-The least-squares solver computes a best-fit set of absolute prices from all server ratio matrices. Outlier servers — those submitting ratios wildly different from the consensus — contribute less to the final solution:
-
-- **Confidence scoring:** Each server's submission is scored by how well its ratios fit the global solution. Servers with high residual error (their ratios don't agree with others) receive lower weight.
-- **Minimum servers for consensus:** True prices require at least 2–3 independent servers. A single server's ratios produce undefined absolute prices (you can't solve absolute values from one server's relative measurements).
-
-```
-Server A: DIAMOND/IRON_INGOT = 9.5
-Server B: DIAMOND/IRON_INGOT = 9.8
-Server C: DIAMOND/IRON_INGOT = 28.0  ← Outlier: excluded or downweighted
-
-True price (solved): DIAMOND ≈ 9.6× IRON_INGOT
-```
-
-### 3. Per-Server Reputation Weighting
-
-Servers that have been submitting consistently over time earn higher weight in the solver:
-
-- New servers (first 7 days): 0.5× weight
-- Established servers (7–30 days): 1.0× weight
-- Mature servers (30+ days): 1.5× weight
-
-This means established servers vote with 3× the influence of brand-new ones, discouraging server churn-based manipulation.
-
-### 4. Rate Limiting
-
-Each IP is rate-limited on registration (10 req/min) and price submission (6 req/min). A single IP cannot flood the registry or overwhelm the solver.
-
-### Cross-Server Exchange Rates: Abuse Prevention
-
-Exchange rates (how much a server's economy differs from true prices) are computed at the plugin level — not by the API server. This is intentional:
-- A server's exchange rate is derived from its OWN price submission, not from external data
-- Players cannot influence exchange rates — only admins can
-- The API server never stores player-level transaction data
-
-### What the API Server Does NOT Have
-
-- **No player-level data:** No player IDs, no transaction records, no balances. Only server-level aggregated price ratios.
-- **No economic controls:** Cannot pause trading, freeze prices, or modify loan state — those are plugin-side decisions.
-- **No chat or social features:** Purely a price discovery mechanism.
+Important launch hardening still planned: registration approval/invite flow, key rotation/revocation endpoint, freshness filtering for stale submissions, plugin-version metadata, capped player-count weighting, and age/reputation weighting.
 
 ---
 

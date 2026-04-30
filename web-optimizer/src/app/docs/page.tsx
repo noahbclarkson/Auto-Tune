@@ -127,6 +127,15 @@ const CARDS: DocCard[] = [
     href: `${GITHUB_BASE}/API.md`,
   },
   {
+    title: 'Security & Trust Model',
+    description:
+      'How Auto-Tune protects the cross-server price network from manipulation. Server key auth, outlier rejection in the solver, reputation weighting, anti-Sybil measures, and data freshness requirements.',
+    audience: 'admin',
+    readingTime: '8 min',
+    href: `${GITHUB_BASE}/SECURITY.md`,
+    badge: 'Trust',
+  },
+  {
     title: 'Contributing Guide',
     description:
       'How to build Auto-Tune locally: Java 21, Gradle, Rust toolchain, web builds, test commands, code standards, and PR checklist.',

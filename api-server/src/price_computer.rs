@@ -172,6 +172,14 @@ fn anchor_price() -> f64 {
 /// Recompute true prices from all server submissions.
 /// Called asynchronously after each price submission.
 pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
+    // Freshness threshold: skip submissions older than this many hours.
+    // Prevents offline servers from indefinitely influencing true prices.
+    // Configurable via STALE_THRESHOLD_HOURS env var (default: 24 hours).
+    let stale_threshold_hours: i64 = std::env::var("STALE_THRESHOLD_HOURS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(24);
+
     // Load the most recent submission from each server
     let rows = sqlx::query(
         r#"
@@ -181,17 +189,21 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
             ratio_matrix_json,
             player_count
         FROM price_submissions
+        WHERE submitted_at >= NOW() - INTERVAL '1 hour' * $1
         ORDER BY server_id, submitted_at DESC
         "#,
     )
+    .bind(stale_threshold_hours)
     .fetch_all(pool)
     .await
     .context("fetching submissions for recomputation")?;
 
     if rows.is_empty() {
-        tracing::debug!("no submissions yet — skipping recomputation");
+        tracing::debug!("no fresh submissions — skipping recomputation");
         return Ok(());
     }
+
+    tracing::info!(count = rows.len(), "recomputing true prices from fresh submissions");
 
     // Parse submissions
     struct Submission {

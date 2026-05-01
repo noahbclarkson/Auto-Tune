@@ -120,14 +120,9 @@ Risks and follow-up ideas:
 
 ## Data freshness
 
-Current recomputation uses the latest submission from each registered server. The `servers` table tracks `last_seen`; `price_submissions` tracks `submitted_at`.
+Submissions older than `STALE_THRESHOLD_HOURS` (default: 24 hours, configurable via env var) are excluded from true-price recomputation. This prevents offline servers from indefinitely influencing the price network. A `NOW() - INTERVAL '1 hour' * $1` filter is applied in `recompute_true_prices()` using a prepared statement parameter.
 
-Recommended next hardening before public launch:
-
-- Exclude submissions older than a freshness window, e.g. 24 hours.
-- Surface freshness and server count in public true-price confidence copy.
-- Require the Java plugin to include plugin version metadata in submissions.
-- Exclude or downweight versions with incompatible ratio-generation logic.
+Surface freshness and server count in public true-price confidence copy.
 
 ---
 
@@ -187,10 +182,10 @@ Before presenting the network as production-grade public infrastructure:
 - [x] Per-IP write rate limits.
 - [x] Ratio matrix validation.
 - [x] Log-space 3σ outlier filtering.
-- [ ] Freshness filter for stale submissions.
+- [x] Freshness filter for stale submissions (`STALE_THRESHOLD_HOURS` env var, 24h default).
+- [x] Plugin version metadata in submissions (heartbeat carries `plugin_version`, stored in `servers.plugin_version`).
 - [ ] Key rotation/revocation endpoint.
 - [ ] Registration approval/invite flow.
-- [ ] Plugin version metadata in submissions.
 - [ ] Capped player-count weighting and age/reputation weighting.
 - [ ] Public confidence labels that explain low server count, stale data, and outlier suppression.
 

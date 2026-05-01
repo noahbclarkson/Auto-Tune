@@ -11656,7 +11656,8 @@ fn main() -> eframe::Result<()> {
         );
         println!("  --sixty-day-test           2MM+2GB+floor: 60-day long-run stability");
         println!("  --sixty-day-fix-test      tier3=50+min_int=0.20 vs ctrl × 2 seeds × 60d");
-        println!("  --sixty-day-hysteresis-test  hysteresis 50% vs 10% × 2 seeds × 60d");
+        println!("  --tier3-deep-hysteresis-test  hysteresis 0.50/0.70/0.80 + cap × 3 seeds × 60d");
+        println!("  --tier3-40-hysteresis-test  tier3=30/40 × hyst 50/60/70% × 3 seeds × 90d");
         println!("  --sixty-day-gb-debt-cap-test  GB debt cap 3×GDP vs uncapped × 2 seeds × 60d");
         println!("  --sixty-day-tier3-sweep        tier3=30/50/100 × 5 seeds × 60 days");
         println!(
@@ -12115,6 +12116,12 @@ fn main() -> eframe::Result<()> {
     // ─── TIER3 Deep Hysteresis + Extended Cap Test ──────────────────────
     if args.len() > 1 && args[1] == "--tier3-deep-hysteresis-test" {
         run_tier3_deep_hysteresis_test();
+        return Ok(());
+    }
+
+    // ─── TIER3=40 + Deeper Hysteresis 90-Day Test ──────────────────────
+    if args.len() > 1 && args[1] == "--tier3-40-hysteresis-test" {
+        run_tier3_40_hysteresis_test();
         return Ok(());
     }
 
@@ -17103,6 +17110,221 @@ fn run_tier3_deep_hysteresis_test() {
         } else {
             println!("  Neither FixB nor FixC shows sufficient improvement.");
             println!("  → Architecture change needed: debt write-down or TIER3→NORMAL bypass.");
+        }
+    }
+
+    println!();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SESSION: 2026-05-01 — TIER3=40 + Deeper Hysteresis 90-Day Test
+//
+// Prior finding (2026-04-26): Deep hysteresis (80%) reduces TIER3
+// oscillation count but barely moves final D/G at 60d.
+//
+// Next step from PLAN.md: Compare tier3=30/hyst=0.5 vs tier3=40/hyst=0.5
+// over 90 days — does a higher firing threshold reduce long-run D/G?
+// ═══════════════════════════════════════════════════════════════════
+
+fn run_tier3_40_hysteresis_test() {
+    use crate::analyzer::load_summary;
+    use crate::player::set_fixed_guild_threshold;
+
+    let seeds = [42u64, 12345u64, 98765u64];
+
+    println!("\n╔════════════════════════════════════════════════════════════════╗");
+    println!("║   TIER3=40 + HYSTERESIS BAND 90-DAY TEST                     ║");
+    println!("║  Question: Does tier3=40 reduce D/G vs tier3=30 at 90d?        ║");
+    println!("╚════════════════════════════════════════════════════════════════╝\n");
+
+    println!("  Arms:                                             ");
+    println!("    Ctrl  : tier3=30, hyst=0.50 (unlock at <15 D/G)  ");
+    println!("    FixA  : tier3=40, hyst=0.50 (unlock at <20 D/G)  ");
+    println!("    FixB  : tier3=40, hyst=0.60 (unlock at <16 D/G)  ");
+    println!("    FixC  : tier3=40, hyst=0.70 (unlock at <12 D/G)  ");
+    println!("  Config: 2MM + 2GB + 60% Diamond floor @ 5% threshold");
+    println!("  Duration: 90 days (25,920 ticks)\n");
+
+    #[derive(Debug, serde::Serialize)]
+    struct Metrics {
+        seed: u64,
+        arm: String,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        t3_events: u32,
+    }
+
+    let mut all: Vec<Metrics> = Vec::new();
+    let results_file = std::path::PathBuf::from("/tmp/autotune-sim/t3r40-results.json");
+
+    fn persist_results(path: &std::path::Path, all: &[Metrics]) {
+        if let Ok(json) = serde_json::to_string_pretty(all) {
+            let _ = std::fs::write(path, json);
+        }
+    }
+
+    for &seed in &seeds {
+        println!("  ── Seed {} ──", seed);
+
+        let arm_configs = [
+            ("Ctrl", 30.0, 0.50),
+            ("FixA", 40.0, 0.50),
+            ("FixB", 40.0, 0.60),
+            ("FixC", 40.0, 0.70),
+        ];
+
+        for &(name, t3, hyst) in &arm_configs {
+            let mut scenario = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+            scenario.name = format!("T3r40_{}_s{}", name, seed);
+            scenario.duration_ticks = 288 * 90;
+            scenario.config.loans.debt_gdp_tier3_ratio = t3;
+            scenario.config.loans.tier3_hysteresis_band = hyst;
+
+            let dir = format!(
+                "/tmp/autotune-sim/t3r40-{}-{}-{:.0}",
+                name.to_lowercase(),
+                seed,
+                hyst * 100.0
+            );
+            let path = std::path::PathBuf::from(&dir);
+            std::fs::create_dir_all(&path).ok();
+
+            set_fixed_guild_threshold(Some(0.05));
+            run_seeded_headless(&scenario, seed, &path).ok();
+            set_fixed_guild_threshold(None);
+
+            if let Ok(s) = load_summary(&path.join("simulation.db")) {
+                let dg = s.debt / s.gdp.max(1.0);
+                all.push(Metrics {
+                    seed,
+                    arm: name.to_string(),
+                    gdp: s.gdp,
+                    dg,
+                    vol: s.avg_volatility,
+                    t3_events: s.tier3_events,
+                });
+                println!(
+                    "    {:6}: tier3={:.0} hyst={:.0}  GDP={:>10.0}  D/G={:>6.3}x  T3={:>3}",
+                    name,
+                    t3,
+                    hyst * 100.0,
+                    s.gdp,
+                    dg,
+                    s.tier3_events
+                );
+            } else {
+                println!("    {:6}: FAILED", name);
+            }
+            let _ = std::fs::remove_dir_all(&path);
+            // Persist after each arm so SIGKILL preserves partial results
+            persist_results(&results_file, &all);
+        }
+        println!();
+    }
+
+    // ── Per-arm summary ─────────────────────────────────────────────────
+    println!("╔════════════════════════════════════════════════════════════════╗");
+    println!("║  TIER3=40 vs TIER3=30 — 90-DAY SUMMARY (3 seeds)                ║");
+    println!("╠════════════════════════════════════════════════════════════════╣");
+    println!(
+        "║  {:6}  {:>10}  {:>9}  {:>10}  {:>8}  {:>7}  ║",
+        "Arm", "tier3", "hyst%", "D/G avg", "Vol avg", "T3 avg"
+    );
+    println!("╠════════════════════════════════════════════════════════════════╣");
+
+    let ctrl_dg_avg = all
+        .iter()
+        .filter(|m| m.arm == "Ctrl")
+        .map(|m| m.dg)
+        .sum::<f64>()
+        / 3.0;
+
+    let arm_configs = [
+        ("Ctrl", 30.0, 0.50),
+        ("FixA", 40.0, 0.50),
+        ("FixB", 40.0, 0.60),
+        ("FixC", 40.0, 0.70),
+    ];
+
+    for &(name, t3, hyst) in &arm_configs {
+        let subset: Vec<_> = all.iter().filter(|m| m.arm == name).collect();
+        if subset.is_empty() {
+            continue;
+        }
+        let dg_avg = subset.iter().map(|m| m.dg).sum::<f64>() / subset.len() as f64;
+        let vol_avg = subset.iter().map(|m| m.vol).sum::<f64>() / subset.len() as f64;
+        let t3_avg = subset.iter().map(|m| m.t3_events as f64).sum::<f64>() / subset.len() as f64;
+        let vs_ctrl = if name == "Ctrl" {
+            0.0
+        } else {
+            (dg_avg / ctrl_dg_avg - 1.0) * 100.0
+        };
+        let verdict = if name == "Ctrl" {
+            "baseline"
+        } else if dg_avg < 12.0 {
+            "✓ stable"
+        } else if vs_ctrl < -15.0 {
+            "better"
+        } else if vs_ctrl < 0.0 {
+            "slightly better"
+        } else {
+            "worse"
+        };
+        println!(
+            "║  {:6}  {:>10.0}  {:>6.0}%  {:>9.3}x  {:>8.4}  {:>6.1}  ║  {}",
+            name,
+            t3,
+            hyst * 100.0,
+            dg_avg,
+            vol_avg,
+            t3_avg,
+            verdict
+        );
+    }
+    println!("╚════════════════════════════════════════════════════════════════╝");
+
+    // ── Key insight ──────────────────────────────────────────────────────
+    let fixa: Vec<_> = all.iter().filter(|m| m.arm == "FixA").collect();
+    if !fixa.is_empty() {
+        let fixa_avg = fixa.iter().map(|m| m.dg).sum::<f64>() / fixa.len() as f64;
+        let fixb: Vec<_> = all.iter().filter(|m| m.arm == "FixB").collect();
+        let fixc: Vec<_> = all.iter().filter(|m| m.arm == "FixC").collect();
+
+        println!("\n  KEY INSIGHT:");
+        if fixa_avg < ctrl_dg_avg * 0.85 {
+            println!(
+                "  FixA (tier3=40, hyst=50%) D/G {:.3}x vs ctrl {:.3}x → tier3=40 helps.",
+                fixa_avg, ctrl_dg_avg
+            );
+            println!("  → Safe production recommendation if D/G stays < 15x.");
+        } else {
+            println!(
+                "  FixA (tier3=40) D/G {:.3}x vs ctrl {:.3}x → marginal or worse.",
+                fixa_avg, ctrl_dg_avg
+            );
+            if !fixb.is_empty() {
+                let fixb_avg = fixb.iter().map(|m| m.dg).sum::<f64>() / fixb.len() as f64;
+                if fixb_avg < fixa_avg {
+                    println!(
+                        "  FixB (hyst=60%) {:.3}x beats FixA (hyst=50%) {:.3}x.",
+                        fixb_avg, fixa_avg
+                    );
+                }
+            }
+            if !fixc.is_empty() {
+                let fixc_avg = fixc.iter().map(|m| m.dg).sum::<f64>() / fixc.len() as f64;
+                if fixc_avg < fixa_avg {
+                    println!(
+                        "  FixC (hyst=70%) {:.3}x beats FixA (hyst=50%) {:.3}x.",
+                        fixc_avg, fixa_avg
+                    );
+                }
+            }
+            println!("  → Debt-stock problem: threshold tuning is not the fix.");
+            println!(
+                "  → Architectural options: forced deleveraging, loan maturity extension, GDP-linked debt cap."
+            );
         }
     }
 

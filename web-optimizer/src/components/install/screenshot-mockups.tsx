@@ -1,6 +1,5 @@
 'use client';
-
-import { Monitor, FileText, BarChart2 } from 'lucide-react';
+import { Monitor, FileText, BarChart2, Gavel } from 'lucide-react';
 
 // ─── Config File Mockup ────────────────────────────────────────────────────────
 
@@ -215,29 +214,95 @@ function DashboardMockup() {
   );
 }
 
+// ─── Auction House Mockup ───────────────────────────────────────────────────
+
+function AuctionMockup() {
+  const orders = [
+    { side: 'BUY', mat: 'DIAMOND', price: 305, qty: 12, fill: 0 },
+    { side: 'SELL', mat: 'DIAMOND', price: 318, qty: 5, fill: 0 },
+    { side: 'BUY', mat: 'DIAMOND', price: 298, qty: 22, fill: 0 },
+    { side: 'SELL', mat: 'DIAMOND', price: 325, qty: 8, fill: 0 },
+    { side: 'BUY', mat: 'EMERALD', price: 140, qty: 50, fill: 30 },
+    { side: 'SELL', mat: 'EMERALD', price: 155, qty: 20, fill: 0 },
+    { side: 'BUY', mat: 'IRON', price: 10, qty: 200, fill: 0 },
+    { side: 'SELL', mat: 'GOLD', price: 21, qty: 64, fill: 12 },
+  ];
+  return (
+    <div className="rounded-xl border border-gray-700 overflow-hidden bg-gray-900">
+      {/* Window chrome */}
+      <div className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-800 border-b border-gray-700">
+        <span className="w-3 h-3 rounded-full bg-red-500/70" />
+        <span className="w-3 h-3 rounded-full bg-amber-500/70" />
+        <span className="w-3 h-3 rounded-full bg-green-500/70" />
+        <span className="ml-3 text-xs text-gray-400 font-mono">/auction — Live Order Book</span>
+      </div>
+      <div className="p-3 space-y-1.5">
+        <div className="flex items-center justify-between text-[9px] text-gray-500 uppercase tracking-wider mb-1 px-1">
+          <span>Material</span>
+          <span>Bid · Ask</span>
+        </div>
+        {orders.map((o, i) => (
+          <div key={i} className="flex items-center justify-between px-2 py-1.5 rounded bg-gray-800/40 border border-gray-700/30">
+            <div className="flex items-center gap-2">
+              <span className={`text-[9px] font-mono font-bold ${o.side === 'BUY' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {o.side === 'BUY' ? '▲' : '▼'}
+              </span>
+              <span className="text-[10px] font-mono text-gray-300">{o.mat}</span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-mono">
+              <span className={o.side === 'BUY' ? 'text-emerald-400' : 'text-gray-600'}>${o.price}</span>
+              <span className="text-gray-600">·</span>
+              <span className={o.side === 'SELL' ? 'text-rose-300' : 'text-gray-600'}>${o.price + (o.side === 'BUY' ? 13 : -13)}</span>
+            </div>
+            {o.fill > 0 ? (
+              <span className="text-[9px] text-emerald-400">✓{o.fill}/{o.qty}</span>
+            ) : (
+              <span className="text-[9px] text-gray-500">{o.qty}</span>
+            )}
+          </div>
+        ))}
+        <div className="flex items-center justify-between pt-2 border-t border-gray-700/50 mt-2 px-1">
+          <span className="text-[9px] text-gray-500">Spread</span>
+          <span className="text-[9px] font-mono text-amber-400">DIAMOND $13 (4.1%)</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 const screenshots = [
   {
     Icon: FileText,
     title: 'Simple YAML Configuration',
-    description: 'One config file. Sensible defaults. The most important settings are at the top with clear comments. No external dependencies to configure — drop the JAR and it works.',
+    description:
+      'One config file. Sensible defaults. The most important settings are at the top with clear comments. No external dependencies to configure — drop the JAR and it works.',
     mockup: <ConfigMockup />,
     tag: 'Easy Setup',
   },
   {
     Icon: Monitor,
     title: 'Built-in Web Dashboard',
-    description: 'Every Auto-Tune install comes with a live web dashboard. Players check prices, trends, and market health without any extra setup. No separate web server required.',
+    description:
+      'Every Auto-Tune install comes with a live web dashboard. Players check prices, trends, and market health without any extra setup. No separate web server required.',
     mockup: <DashboardMockup />,
     tag: 'Zero Extra Setup',
   },
   {
     Icon: BarChart2,
     title: 'In-Game Market Browser',
-    description: 'Players browse the full economy directly in Minecraft. Search, filter by section, see live buy/sell prices and 24h trends. Prices update every 5 minutes automatically.',
+    description:
+      'Players browse the full economy directly in Minecraft. Search, filter by section, see live buy/sell prices and 24h trends. Prices update every 5 minutes automatically.',
     mockup: <ShopGuiMockup />,
     tag: 'For Your Players',
+  },
+  {
+    Icon: Gavel,
+    title: 'P2P Auction House',
+    description:
+      'Players post limit orders, browse the order book, and fill instantly. Depth chart shows liquidity. Native /auction watch alerts in-game when orders fill.',
+    mockup: <AuctionMockup />,
+    tag: 'Beyond /shop',
   },
 ];
 
@@ -247,11 +312,10 @@ export function InstallScreenshots() {
       <div className="mb-10 text-center">
         <p className="text-xs text-emerald-400 uppercase tracking-widest font-medium mb-2">What You Get</p>
         <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-          Three screens. Zero configuration required.
+          Four screens. Zero configuration required.
         </h2>
         <p className="text-gray-400 max-w-xl mx-auto text-sm leading-relaxed">
-          Auto-Tune comes with a complete UI out of the box — config file, in-game shop, and web dashboard.
-          Everything works immediately after install.
+          Auto-Tune comes with a complete UI out of the box — config file, in-game shop, web dashboard, and P2P auction house. Everything works immediately after install.
         </p>
       </div>
 

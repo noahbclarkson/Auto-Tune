@@ -229,6 +229,10 @@ public class DatabaseManager {
         }
     }
 
+    public boolean isSqlite() {
+        return configManager.getConfig().storage().type() == StorageConfig.StorageType.SQLITE;
+    }
+
     @NotNull
     public Jdbi getJdbi() {
         return jdbi;

@@ -10,7 +10,10 @@ import org.jetbrains.annotations.NotNull;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
@@ -20,9 +23,11 @@ import java.util.UUID;
 public class AuctionRepository {
 
     private final Jdbi jdbi;
+    private final boolean sqlite;
 
     public AuctionRepository(DatabaseManager databaseManager) {
         this.jdbi = databaseManager.getJdbi();
+        this.sqlite = databaseManager.isSqlite();
     }
 
     public Optional<AuctionOrder> findById(UUID id) {
@@ -379,20 +384,41 @@ public class AuctionRepository {
      * @return List of {date (YYYY-MM-DD), count} sorted oldest→newest.
      */
     public List<DayFillCount> findFillsByDay(int days) {
-        Instant cutoff = Instant.now().minus(days, ChronoUnit.DAYS);
-        return jdbi.withHandle(handle ->
-                handle.createQuery("""
-                        SELECT DATE(filled_at) AS fill_date, COUNT(*) AS cnt
-                        FROM at_auction_fills
-                        WHERE filled_at >= :cutoff
-                        GROUP BY DATE(filled_at)
-                        ORDER BY fill_date ASC
-                        """)
+        int windowDays = Math.max(1, days);
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        LocalDate startDate = today.minusDays(windowDays - 1L);
+        Instant cutoff = startDate.atStartOfDay().toInstant(ZoneOffset.UTC);
+
+        String fillDateExpression = sqlite
+                ? "DATE(filled_at / 1000, 'unixepoch')"
+                : "DATE(filled_at)";
+        String sql = """
+                SELECT %s AS fill_date, COUNT(*) AS cnt
+                FROM at_auction_fills
+                WHERE filled_at >= :cutoff
+                GROUP BY %s
+                ORDER BY fill_date ASC
+                """.formatted(fillDateExpression, fillDateExpression);
+
+        List<DayFillCount> rows = jdbi.withHandle(handle ->
+                handle.createQuery(sql)
                         .bind("cutoff", Timestamp.from(cutoff))
                         .map((rs, ctx) -> new DayFillCount(
                                 rs.getString("fill_date"),
                                 rs.getInt("cnt")))
                         .list());
+
+        Map<String, Integer> countsByDate = new HashMap<>();
+        for (DayFillCount row : rows) {
+            countsByDate.put(row.date(), row.count());
+        }
+
+        List<DayFillCount> result = new ArrayList<>(windowDays);
+        for (int i = 0; i < windowDays; i++) {
+            String date = startDate.plusDays(i).toString();
+            result.add(new DayFillCount(date, countsByDate.getOrDefault(date, 0)));
+        }
+        return result;
     }
 
     public record DayFillCount(String date, int count) {}

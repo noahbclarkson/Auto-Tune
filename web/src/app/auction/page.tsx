@@ -329,7 +329,7 @@ export default function AuctionPage() {
     } catch {
       setError('Could not load auction data. Is the server running?');
     }
-  }, [apiBase]);
+  }, [apiBase, depthData, depthMaterial]);
 
   useEffect(() => {
     fetchData();

@@ -47,10 +47,6 @@ interface AuctionAuditDto {
   warnings: string[];
 }
 
-function formatRate(rate: number, per: string = 'orders'): string {
-  return `${(rate * 100).toFixed(1)}% ${per}`;
-}
-
 function StatusRow({ label, count, accent }: { label: string; count: number; accent: 'green' | 'amber' | 'red' | 'muted' }) {
   const colors = { green: 'text-emerald-400', amber: 'text-amber-400', red: 'text-red-400', muted: 'text-muted-foreground' };
   return (

@@ -203,7 +203,10 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
         return Ok(());
     }
 
-    tracing::info!(count = rows.len(), "recomputing true prices from fresh submissions");
+    tracing::info!(
+        count = rows.len(),
+        "recomputing true prices from fresh submissions"
+    );
 
     // Parse submissions
     struct Submission {

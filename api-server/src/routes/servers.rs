@@ -77,6 +77,7 @@ pub async fn list_servers(pool: web::Data<PgPool>) -> impl Responder {
             s.player_count,
             s.created_at,
             s.last_seen,
+            s.plugin_version,
             ps.submitted_at AS last_submission_at,
             COALESCE(array_length(ps.item_names, 1), 0) AS last_submission_item_count
         FROM servers s
@@ -122,6 +123,10 @@ pub async fn list_servers(pool: web::Data<PgPool>) -> impl Responder {
                         .flatten(),
                     last_submission_item_count: r
                         .try_get::<Option<i32>, _>("last_submission_item_count")
+                        .ok()
+                        .flatten(),
+                    plugin_version: r
+                        .try_get::<Option<String>, _>("plugin_version")
                         .ok()
                         .flatten(),
                 });
@@ -171,11 +176,27 @@ pub async fn heartbeat(
     }
 
     let player_count = body.player_count;
+    let plugin_version = &body.plugin_version;
 
     // Build the UPDATE query conditionally — only update player_count if provided
-    let result = if let Some(pc) = player_count {
+    let result = if let (Some(pc), Some(pv)) = (player_count, plugin_version) {
+        sqlx::query(
+            "UPDATE servers SET last_seen = NOW(), player_count = $1, plugin_version = $2 WHERE id = $3 RETURNING last_seen",
+        )
+        .bind(pc)
+        .bind(pv)
+        .bind(path_server_id)
+        .fetch_one(pool.get_ref())
+        .await
+    } else if let Some(pc) = player_count {
         sqlx::query("UPDATE servers SET last_seen = NOW(), player_count = $1 WHERE id = $2 RETURNING last_seen")
             .bind(pc)
+            .bind(path_server_id)
+            .fetch_one(pool.get_ref())
+            .await
+    } else if let Some(pv) = plugin_version {
+        sqlx::query("UPDATE servers SET last_seen = NOW(), plugin_version = $1 WHERE id = $2 RETURNING last_seen")
+            .bind(pv)
             .bind(path_server_id)
             .fetch_one(pool.get_ref())
             .await

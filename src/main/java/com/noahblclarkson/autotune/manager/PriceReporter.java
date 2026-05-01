@@ -166,7 +166,7 @@ public class PriceReporter {
         String baseUrl = cfg.apiUrl().replaceAll("/$", "");
         String endpoint = baseUrl + "/api/servers/" + cfg.serverId() + "/heartbeat";
 
-        HeartbeatPayload payload = new HeartbeatPayload(onlinePlayers);
+        HeartbeatPayload payload = new HeartbeatPayload(onlinePlayers, plugin.getPluginMeta().getVersion());
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
                 .timeout(Duration.ofSeconds(10))
@@ -489,5 +489,5 @@ public class PriceReporter {
     ) {}
 
     /** Request body for POST /api/servers/{id}/heartbeat */
-    private record HeartbeatPayload(int player_count) {}
+    private record HeartbeatPayload(int player_count, String plugin_version) {}
 }

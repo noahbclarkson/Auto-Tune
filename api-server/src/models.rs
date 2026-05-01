@@ -15,6 +15,8 @@ pub struct Server {
     pub last_seen: DateTime<Utc>,
     pub last_submission_at: Option<DateTime<Utc>>,
     pub last_submission_item_count: Option<i32>,
+    /// Plugin version string (e.g. "2.0.0") of the Auto-Tune server, if reported.
+    pub plugin_version: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -38,6 +40,8 @@ pub struct RegisterServerResponse {
 #[derive(Debug, Deserialize)]
 pub struct HeartbeatRequest {
     pub player_count: Option<i32>,
+    /// Plugin version string (e.g. "2.0.0") of the Auto-Tune server.
+    pub plugin_version: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

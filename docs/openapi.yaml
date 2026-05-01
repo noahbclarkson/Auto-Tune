@@ -111,6 +111,9 @@ components:
       properties:
         player_count:
           type: integer
+        plugin_version:
+          type: string
+          description: Auto-Tune plugin version string (e.g. "2.0.0")
     PriceMatrix:
       type: object
       properties:
@@ -133,6 +136,9 @@ components:
           type: string
         name:
           type: string
+        plugin_version:
+          type: string
+          description: Auto-Tune plugin version of this server, if reported.
     NetworkStats:
       type: object
       properties:

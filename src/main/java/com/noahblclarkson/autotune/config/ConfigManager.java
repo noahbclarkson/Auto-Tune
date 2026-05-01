@@ -63,7 +63,15 @@ public class ConfigManager {
         }
     }
 
-    private AutoTuneConfig parseConfig(FileConfiguration cfg) {
+    /**
+     * Re-parses a FileConfiguration into an AutoTuneConfig record without persisting changes.
+     * Used by dry-run config preview and reload validation flows.
+     */
+    public AutoTuneConfig parseConfig(FileConfiguration cfg) {
+        return parseConfig(cfg, this.marketFrozen);
+    }
+
+    private AutoTuneConfig parseConfig(FileConfiguration cfg, boolean frozen) {
         return new AutoTuneConfig(
                 parseStorageConfig(cfg.getConfigurationSection("storage")),
                 parseWebConfig(cfg.getConfigurationSection("web")),
@@ -85,7 +93,7 @@ public class ConfigManager {
                 parsePriceMilestoneConfig(cfg.getConfigurationSection("price-milestone")),
                 parseMarketDigestConfig(cfg.getConfigurationSection("market-digest")),
                 parseOnboardingConfig(cfg.getConfigurationSection("onboarding")),
-                this.marketFrozen
+                frozen
         );
     }
 

@@ -5,6 +5,7 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.config.ConfigValidator;
 import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
@@ -34,6 +35,7 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.incendo.cloud.annotations.Argument;
 import org.incendo.cloud.annotations.Command;
@@ -184,6 +186,8 @@ public class AdminCommand {
                 .append(Component.text(" — Unfreeze price updates for one item", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin reload", NamedTextColor.YELLOW)
                 .append(Component.text(" — Reload config and caches", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin config preview <filename>", NamedTextColor.YELLOW)
+                .append(Component.text(" — Dry-run config.yml changes before reloading", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin transactions [player]", NamedTextColor.YELLOW)
                 .append(Component.text(" — View recent transaction history", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin exchange", NamedTextColor.YELLOW)
@@ -1196,6 +1200,61 @@ public class AdminCommand {
             plugin.getLogger().warning("Reload failed: " + e.getMessage());
             sender.sendMessage(Component.text("Reload failed: " + e.getMessage(), NamedTextColor.RED));
         }
+    }
+
+    @Command("autotune admin config preview <filename>")
+    @Permission("autotune.admin")
+    public void adminConfigPreview(CommandSender sender, @Argument("filename") String filename) {
+        Path configPath = plugin.getDataFolder().toPath().resolve(filename).normalize();
+        if (!configPath.startsWith(plugin.getDataFolder().toPath().normalize())) {
+            sender.sendMessage(Component.text("Config preview file must be inside the Auto-Tune plugin folder.", NamedTextColor.RED));
+            return;
+        }
+        if (!Files.exists(configPath)) {
+            sender.sendMessage(Component.text("Config preview file not found: " + filename, NamedTextColor.RED));
+            sender.sendMessage(Component.text("Copy config.yml to another filename, edit it, then preview that file.", NamedTextColor.GRAY));
+            return;
+        }
+
+        sender.sendMessage(Component.text("Validating config preview: " + filename, NamedTextColor.YELLOW));
+        try {
+            YamlConfiguration proposed = YamlConfiguration.loadConfiguration(configPath.toFile());
+            AutoTuneConfig parsed = configManager.parseConfig(proposed);
+            List<String> violations = ConfigValidator.validate(parsed);
+
+            if (!violations.isEmpty()) {
+                sender.sendMessage(Component.text("❌ Config has " + violations.size() + " error(s):", NamedTextColor.RED));
+                for (int i = 0; i < Math.min(violations.size(), 10); i++) {
+                    sender.sendMessage(Component.text("  • " + violations.get(i), NamedTextColor.RED));
+                }
+                if (violations.size() > 10) {
+                    sender.sendMessage(Component.text("  … and " + (violations.size() - 10) + " more. Fix above errors first.", NamedTextColor.DARK_RED));
+                }
+                return;
+            }
+
+            sender.sendMessage(Component.text("✅ Config is valid. No changes have been applied.", NamedTextColor.GREEN));
+            sender.sendMessage(Component.text("Key loan settings if loaded:", NamedTextColor.AQUA));
+            AutoTuneConfig.LoanConfig current = configManager.getConfig().loans();
+            AutoTuneConfig.LoanConfig preview = parsed.loans();
+            sendPreviewLine(sender, "Base interest", current.baseInterestRate() * 100 + "%", preview.baseInterestRate() * 100 + "%");
+            sendPreviewLine(sender, "TIER3 ratio", current.debtGdpTier3Ratio() + "x", preview.debtGdpTier3Ratio() + "x");
+            sendPreviewLine(sender, "TIER3 hysteresis", current.tier3HysteresisBand() * 100 + "%", preview.tier3HysteresisBand() * 100 + "%");
+            sendPreviewLine(sender, "Min interest multiplier", String.valueOf(current.minInterestMultiplier()), String.valueOf(preview.minInterestMultiplier()));
+            sendPreviewLine(sender, "GB debt cap", current.guildbuyerTotalDebtCap() + "x GDP", preview.guildbuyerTotalDebtCap() + "x GDP");
+            sender.sendMessage(Component.text("Run /at admin reload after replacing config.yml if this preview looks right.", NamedTextColor.GRAY));
+        } catch (Exception e) {
+            sender.sendMessage(Component.text("❌ Failed to parse YAML: " + e.getMessage(), NamedTextColor.RED));
+            sender.sendMessage(Component.text("Check indentation, quotes, and nested sections.", NamedTextColor.DARK_GRAY));
+        }
+    }
+
+    private void sendPreviewLine(CommandSender sender, String label, String current, String preview) {
+        boolean changed = !current.equals(preview);
+        sender.sendMessage(Component.text("  " + (changed ? "✎ " : "  ") + label + ": ", changed ? NamedTextColor.YELLOW : NamedTextColor.GRAY)
+                .append(Component.text(current, NamedTextColor.DARK_GRAY))
+                .append(Component.text(" → ", NamedTextColor.GRAY))
+                .append(Component.text(preview, changed ? NamedTextColor.GOLD : NamedTextColor.DARK_GRAY)));
     }
 
     @Command("autotune admin transaction-min")

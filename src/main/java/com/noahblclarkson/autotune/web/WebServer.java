@@ -1286,6 +1286,66 @@ public class WebServer {
             ctx.json(Map.of("entries", result, "count", result.size()));
         });
 
+        // GET /api/admin/auction-audit — auction integrity and liquidity signals
+        app.get("/api/admin/auction-audit", ctx -> {
+            int days = ctx.queryParamAsClass("days", Integer.class).getOrDefault(7);
+            int cappedDays = Math.min(Math.max(1, days), 30);
+            var statusCounts = auctionRepository.countOrdersByStatus();
+            var churn = auctionRepository.findOrderChurn(cappedDays);
+            var materialHealth = auctionRepository.findMaterialBookHealth(50);
+            long selfTradeFills = auctionRepository.countSelfTradeFills(cappedDays);
+
+            Map<String, Object> statusDto = new LinkedHashMap<>();
+            for (AuctionOrder.OrderStatus status : AuctionOrder.OrderStatus.values()) {
+                statusDto.put(status.name().toLowerCase(Locale.ROOT), statusCounts.getOrDefault(status, 0L));
+            }
+
+            List<Map<String, Object>> thinBooks = materialHealth.stream()
+                    .filter(AuctionRepository.MaterialBookHealth::isThinBook)
+                    .limit(10)
+                    .map(this::toMaterialBookHealthDto)
+                    .collect(Collectors.toList());
+            List<Map<String, Object>> largeSellWalls = materialHealth.stream()
+                    .filter(AuctionRepository.MaterialBookHealth::hasLargeSellWall)
+                    .limit(10)
+                    .map(this::toMaterialBookHealthDto)
+                    .collect(Collectors.toList());
+
+            List<String> warnings = new ArrayList<>();
+            if (selfTradeFills > 0) {
+                warnings.add("Self-trade fills detected — review matching engine behavior and player activity.");
+            }
+            if (churn.cancellationRate() >= 0.35 && churn.totalOrders() >= 10) {
+                warnings.add("High cancellation churn — watch for spoofing or players testing thin books.");
+            }
+            if (!thinBooks.isEmpty()) {
+                warnings.add("Thin auction books found — listed prices may be easy to manipulate.");
+            }
+            if (!largeSellWalls.isEmpty()) {
+                warnings.add("Large sell walls found — check for whale inventory dumps or price suppression.");
+            }
+
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("days", cappedDays);
+            response.put("statusCounts", statusDto);
+            response.put("churn", Map.of(
+                    "totalOrders", churn.totalOrders(),
+                    "activeOrders", churn.activeOrders(),
+                    "filledOrders", churn.filledOrders(),
+                    "cancelledOrders", churn.cancelledOrders(),
+                    "expiredOrders", churn.expiredOrders(),
+                    "reclaimedOrders", churn.reclaimedOrders(),
+                    "cancellationRate", churn.cancellationRate(),
+                    "fillRate", churn.fillRate(),
+                    "expirationRate", churn.expirationRate()
+            ));
+            response.put("selfTradeFills", selfTradeFills);
+            response.put("thinBooks", thinBooks);
+            response.put("largeSellWalls", largeSellWalls);
+            response.put("warnings", warnings);
+            ctx.json(response);
+        });
+
         // GET /api/admin/config — current config values vs defaults vs recommended ranges
         app.get("/api/admin/config", ctx -> {
             AutoTuneConfig cfg = configManager.getConfig();
@@ -1908,6 +1968,21 @@ public class WebServer {
                 alert.createdAt().toEpochMilli(),
                 alert.triggeredAt() != null ? alert.triggeredAt().toEpochMilli() : null
         );
+    }
+
+    private Map<String, Object> toMaterialBookHealthDto(AuctionRepository.MaterialBookHealth health) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("material", health.material());
+        m.put("bidCount", health.bidCount());
+        m.put("askCount", health.askCount());
+        m.put("bidQuantity", health.bidQuantity());
+        m.put("askQuantity", health.askQuantity());
+        m.put("bestBid", health.bestBid() != null ? health.bestBid().doubleValue() : null);
+        m.put("bestAsk", health.bestAsk() != null ? health.bestAsk().doubleValue() : null);
+        m.put("largestSellQuantity", health.largestSellQuantity());
+        m.put("thinBook", health.isThinBook());
+        m.put("largeSellWall", health.hasLargeSellWall());
+        return m;
     }
 
     private Map<String, Object> toAuctionOrderDto(AuctionOrder order) {

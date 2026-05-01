@@ -7,10 +7,12 @@ import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.config.ConfigValidator;
 import com.noahblclarkson.autotune.database.ItemRepository;
+import com.noahblclarkson.autotune.database.AuctionRepository;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.PriceOverrideRepository;
 import com.noahblclarkson.autotune.database.TransactionRepository;
 import com.noahblclarkson.autotune.model.AdminAuditEntry.ActionType;
+import com.noahblclarkson.autotune.model.AuctionOrder;
 import com.noahblclarkson.autotune.service.AdminAuditService;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.economy.EconomyAdvisor;
@@ -94,6 +96,7 @@ public class AdminCommand {
     private final EconomySnapshotRepository economySnapshotRepository;
     private final EconomyAdvisor advisor;
     private final AdminAuditService auditService;
+    private final AuctionRepository auctionRepository;
 
     @Inject
     public AdminCommand(
@@ -113,7 +116,8 @@ public class AdminCommand {
             MarketDigestService marketDigestService,
             EconomySnapshotRepository economySnapshotRepository,
             EconomyAdvisor advisor,
-            AdminAuditService auditService
+            AdminAuditService auditService,
+            AuctionRepository auctionRepository
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -132,6 +136,7 @@ public class AdminCommand {
         this.economySnapshotRepository = economySnapshotRepository;
         this.advisor = advisor;
         this.auditService = auditService;
+        this.auctionRepository = auctionRepository;
     }
 
     @Command("autotune admin advice")
@@ -152,6 +157,8 @@ public class AdminCommand {
                 .append(Component.text(" — Full economy diagnostic report", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin audit", NamedTextColor.YELLOW)
                 .append(Component.text(" — System health and consistency check", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin auction", NamedTextColor.YELLOW)
+                .append(Component.text(" — Auction integrity and liquidity check", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin auditlog [limit]", NamedTextColor.YELLOW)
                 .append(Component.text(" — History of admin actions (freezes, overrides, etc.)", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin trend [days]", NamedTextColor.YELLOW)
@@ -320,6 +327,11 @@ public class AdminCommand {
         issues += checkCircuitBreaker(sender);
         sender.sendMessage(Component.empty());
 
+        // ── 6. Auction integrity ───────────────────────────────────────────
+        sender.sendMessage(Component.text("Auction Integrity", NamedTextColor.YELLOW, TextDecoration.BOLD));
+        issues += checkAuctionIntegrity(sender, 7);
+        sender.sendMessage(Component.empty());
+
         // ── Summary ────────────────────────────────────────────────────────
         sender.sendMessage(Component.empty());
         if (issues == 0) {
@@ -332,6 +344,105 @@ public class AdminCommand {
                     NamedTextColor.GRAY));
         }
         sender.sendMessage(Component.empty());
+    }
+
+    @Command("autotune admin auction")
+    @Permission("autotune.admin")
+    public void adminAuction(CommandSender sender) {
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Auction Integrity Audit", NamedTextColor.GOLD, TextDecoration.BOLD)
+                .append(Component.text(" — last 7 days", NamedTextColor.DARK_GRAY)));
+        sender.sendMessage(Component.empty());
+        int issues = checkAuctionIntegrity(sender, 7);
+        sender.sendMessage(Component.empty());
+        if (issues == 0) {
+            sender.sendMessage(Component.text("✅ Auction house looks healthy.", NamedTextColor.GREEN)
+                    .decorate(TextDecoration.BOLD));
+        } else {
+            sender.sendMessage(Component.text("⚠️  " + issues + " auction warning(s) found.", NamedTextColor.YELLOW)
+                    .decorate(TextDecoration.BOLD));
+            sender.sendMessage(Component.text("  Review thin books, sell walls, and cancellation churn before tweaking fees.",
+                    NamedTextColor.GRAY));
+        }
+        sender.sendMessage(Component.empty());
+    }
+
+    private int checkAuctionIntegrity(CommandSender sender, int days) {
+        int issues = 0;
+        var statusCounts = auctionRepository.countOrdersByStatus();
+        var churn = auctionRepository.findOrderChurn(days);
+        var materialHealth = auctionRepository.findMaterialBookHealth(50);
+        long selfTradeFills = auctionRepository.countSelfTradeFills(days);
+        long activeOrders = statusCounts.getOrDefault(AuctionOrder.OrderStatus.OPEN, 0L)
+                + statusCounts.getOrDefault(AuctionOrder.OrderStatus.PARTIALLY_FILLED, 0L);
+
+        sender.sendMessage(Component.text("  Active orders: ", NamedTextColor.GRAY)
+                .append(Component.text(activeOrders, NamedTextColor.WHITE))
+                .append(Component.text(" | Filled: ", NamedTextColor.GRAY))
+                .append(Component.text(statusCounts.getOrDefault(AuctionOrder.OrderStatus.FILLED, 0L), NamedTextColor.WHITE))
+                .append(Component.text(" | Cancelled: ", NamedTextColor.GRAY))
+                .append(Component.text(statusCounts.getOrDefault(AuctionOrder.OrderStatus.CANCELLED, 0L), NamedTextColor.WHITE)));
+
+        sender.sendMessage(Component.text("  7d churn: ", NamedTextColor.GRAY)
+                .append(Component.text(churn.totalOrders() + " orders", NamedTextColor.WHITE))
+                .append(Component.text(" | fills ", NamedTextColor.GRAY))
+                .append(Component.text(formatRate(churn.fillRate()), NamedTextColor.GREEN))
+                .append(Component.text(" | cancels ", NamedTextColor.GRAY))
+                .append(Component.text(formatRate(churn.cancellationRate()),
+                        churn.cancellationRate() >= 0.35 && churn.totalOrders() >= 10
+                                ? NamedTextColor.YELLOW : NamedTextColor.WHITE))
+                .append(Component.text(" | expires ", NamedTextColor.GRAY))
+                .append(Component.text(formatRate(churn.expirationRate()), NamedTextColor.WHITE)));
+
+        if (selfTradeFills > 0) {
+            issues++;
+            sender.sendMessage(Component.text("  ❌ " + selfTradeFills
+                    + " self-trade fill(s) found — investigate immediately.", NamedTextColor.RED));
+        } else {
+            sender.sendMessage(Component.text("  ✅ No self-trade fills detected.", NamedTextColor.GREEN));
+        }
+
+        if (churn.cancellationRate() >= 0.35 && churn.totalOrders() >= 10) {
+            issues++;
+            sender.sendMessage(Component.text("  ⚠️  Cancellation churn is high — possible spoofing or price probing.",
+                    NamedTextColor.YELLOW));
+        }
+
+        List<AuctionRepository.MaterialBookHealth> thinBooks = materialHealth.stream()
+                .filter(AuctionRepository.MaterialBookHealth::isThinBook)
+                .limit(5)
+                .collect(Collectors.toList());
+        if (!thinBooks.isEmpty() && activeOrders >= 5) {
+            issues++;
+            sender.sendMessage(Component.text("  ⚠️  Thin books: ", NamedTextColor.YELLOW)
+                    .append(Component.text(formatMaterialHealth(thinBooks), NamedTextColor.WHITE)));
+        } else if (materialHealth.isEmpty()) {
+            sender.sendMessage(Component.text("  ℹ️  No active auction books yet.", NamedTextColor.GRAY));
+        } else {
+            sender.sendMessage(Component.text("  ✅ No major thin-book warnings.", NamedTextColor.GREEN));
+        }
+
+        List<AuctionRepository.MaterialBookHealth> sellWalls = materialHealth.stream()
+                .filter(AuctionRepository.MaterialBookHealth::hasLargeSellWall)
+                .limit(5)
+                .collect(Collectors.toList());
+        if (!sellWalls.isEmpty()) {
+            issues++;
+            sender.sendMessage(Component.text("  ⚠️  Large sell walls: ", NamedTextColor.YELLOW)
+                    .append(Component.text(formatMaterialHealth(sellWalls), NamedTextColor.WHITE)));
+        }
+        return issues;
+    }
+
+    private String formatRate(double rate) {
+        return String.format(Locale.ROOT, "%.0f%%", rate * 100.0);
+    }
+
+    private String formatMaterialHealth(List<AuctionRepository.MaterialBookHealth> materials) {
+        return materials.stream()
+                .map(m -> m.material() + " (B" + m.bidCount() + "/A" + m.askCount()
+                        + ", sellQ " + m.askQuantity() + ")")
+                .collect(Collectors.joining(", "));
     }
 
     private boolean checkVault(CommandSender sender) {

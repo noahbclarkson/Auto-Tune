@@ -81,8 +81,9 @@ The auction house matching engine and in-game GUI are fully implemented in the J
 Components:
 - `AuctionMatchingEngine.java` — price-time priority, maker price execution, fill generation
 - `AuctionManager.java` — order placement, fill processing, escrow for buy orders
-- `AuctionRepository.java` — JDBI CRUD for `at_auction_orders` + `at_auction_fills` tables. Note: SQLite JDBC stores bound `Timestamp` values as integer epoch milliseconds, so daily fill aggregation must use `DATE(filled_at / 1000, 'unixepoch')` on SQLite and `DATE(filled_at)` on MySQL/MariaDB.
+- `AuctionRepository.java` — JDBI CRUD + audit queries for `at_auction_orders` + `at_auction_fills` tables. Note: SQLite JDBC stores bound `Timestamp` values as integer epoch milliseconds, so daily fill aggregation must use `DATE(filled_at / 1000, 'unixepoch')` on SQLite and `DATE(filled_at)` on MySQL/MariaDB; active/expired order queries should bind `Instant.now()` as a `Timestamp` instead of comparing against SQL `CURRENT_TIMESTAMP`.
 - `AuctionCommand.java` — Cloud command `/auction` (browse, sell, buy, my, cancel, history)
+- `AdminCommand.java` + `WebServer.java` expose auction integrity health (`/at admin auction`, `/api/admin/auction-audit`): status counts, 7d churn, self-trade fills, thin books, and large sell-wall warnings.
 - `AuctionGui.java` — 6-row chest GUI with sell/buy columns, click-to-fill, cancel
 - `MarketHistoryGui.java` — in-game price history chart (JFreeChart rendered to BufferedImage)
 

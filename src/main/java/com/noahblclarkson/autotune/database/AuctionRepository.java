@@ -51,6 +51,7 @@ public class AuctionRepository {
      */
     public Map<String, List<AuctionOrder>> findDepthByMaterial(String material, int depth) {
         return jdbi.withHandle(handle -> {
+            Timestamp now = Timestamp.from(Instant.now());
             List<AuctionOrder> buyOrders = handle.createQuery("""
                     SELECT id, player_uuid, material, item_data, price,
                            original_quantity, remaining_quantity, side, status,
@@ -60,12 +61,13 @@ public class AuctionRepository {
                       AND side = 'BUY'
                       AND status IN ('OPEN', 'PARTIALLY_FILLED')
                       AND remaining_quantity > 0
-                      AND expires_at > CURRENT_TIMESTAMP
+                      AND expires_at > :now
                     ORDER BY price DESC
                     LIMIT :limit
                     """)
                     .bind("material", material)
                     .bind("limit", depth)
+                    .bind("now", now)
                     .map((rs, ctx) -> mapOrder(rs))
                     .list();
             List<AuctionOrder> sellOrders = handle.createQuery("""
@@ -77,12 +79,13 @@ public class AuctionRepository {
                       AND side = 'SELL'
                       AND status IN ('OPEN', 'PARTIALLY_FILLED')
                       AND remaining_quantity > 0
-                      AND expires_at > CURRENT_TIMESTAMP
+                      AND expires_at > :now
                     ORDER BY price ASC
                     LIMIT :limit
                     """)
                     .bind("material", material)
                     .bind("limit", depth)
+                    .bind("now", now)
                     .map((rs, ctx) -> mapOrder(rs))
                     .list();
             Map<String, List<AuctionOrder>> result = new java.util.HashMap<>();
@@ -102,10 +105,11 @@ public class AuctionRepository {
                         WHERE material = :material
                           AND status IN ('OPEN', 'PARTIALLY_FILLED')
                           AND remaining_quantity > 0
-                          AND expires_at > CURRENT_TIMESTAMP
+                          AND expires_at > :now
                         ORDER BY side ASC, price DESC, created_at ASC
                         """)
                         .bind("material", material)
+                        .bind("now", Timestamp.from(Instant.now()))
                         .map((rs, ctx) -> mapOrder(rs))
                         .list());
     }
@@ -120,10 +124,11 @@ public class AuctionRepository {
                         WHERE player_uuid = :playerUuid
                           AND status IN ('OPEN', 'PARTIALLY_FILLED')
                           AND remaining_quantity > 0
-                          AND expires_at > CURRENT_TIMESTAMP
+                          AND expires_at > :now
                         ORDER BY created_at DESC
                         """)
                         .bind("playerUuid", playerUuid.toString())
+                        .bind("now", Timestamp.from(Instant.now()))
                         .map((rs, ctx) -> mapOrder(rs))
                         .list());
     }
@@ -137,10 +142,11 @@ public class AuctionRepository {
                         FROM at_auction_orders
                         WHERE status IN ('OPEN', 'PARTIALLY_FILLED')
                           AND remaining_quantity > 0
-                          AND expires_at > CURRENT_TIMESTAMP
+                          AND expires_at > :now
                         ORDER BY created_at DESC
                         LIMIT 200
                         """)
+                        .bind("now", Timestamp.from(Instant.now()))
                         .map((rs, ctx) -> mapOrder(rs))
                         .list());
     }
@@ -175,9 +181,10 @@ public class AuctionRepository {
                         FROM at_auction_orders
                         WHERE status IN ('OPEN', 'PARTIALLY_FILLED')
                           AND remaining_quantity > 0
-                          AND expires_at <= CURRENT_TIMESTAMP
+                          AND expires_at <= :now
                         ORDER BY expires_at ASC
                         """)
+                        .bind("now", Timestamp.from(Instant.now()))
                         .map((rs, ctx) -> mapOrder(rs))
                         .list());
     }
@@ -379,6 +386,121 @@ public class AuctionRepository {
                         .findOnly());
     }
 
+    /** @return Order counts grouped by auction status. */
+    public Map<OrderStatus, Long> countOrdersByStatus() {
+        return jdbi.withHandle(handle -> {
+            Map<OrderStatus, Long> counts = new HashMap<>();
+            handle.createQuery("""
+                    SELECT status, COUNT(*) AS cnt
+                    FROM at_auction_orders
+                    GROUP BY status
+                    """)
+                    .map((rs, ctx) -> Map.entry(
+                            OrderStatus.valueOf(rs.getString("status")),
+                            rs.getLong("cnt")))
+                    .forEach(entry -> counts.put(entry.getKey(), entry.getValue()));
+            for (OrderStatus status : OrderStatus.values()) {
+                counts.putIfAbsent(status, 0L);
+            }
+            return counts;
+        });
+    }
+
+    /**
+     * Recent order churn summary. Uses created_at as the analysis window so admins can see
+     * whether newly-created orders are filling, cancelling, or expiring.
+     */
+    public AuctionChurnSummary findOrderChurn(int days) {
+        int windowDays = Math.max(1, days);
+        Instant cutoff = Instant.now().minusSeconds(windowDays * 24L * 60L * 60L);
+        Map<OrderStatus, Long> counts = jdbi.withHandle(handle -> {
+            Map<OrderStatus, Long> result = new HashMap<>();
+            handle.createQuery("""
+                    SELECT status, COUNT(*) AS cnt
+                    FROM at_auction_orders
+                    WHERE created_at >= :cutoff
+                    GROUP BY status
+                    """)
+                    .bind("cutoff", Timestamp.from(cutoff))
+                    .map((rs, ctx) -> Map.entry(
+                            OrderStatus.valueOf(rs.getString("status")),
+                            rs.getLong("cnt")))
+                    .forEach(entry -> result.put(entry.getKey(), entry.getValue()));
+            return result;
+        });
+
+        long open = counts.getOrDefault(OrderStatus.OPEN, 0L);
+        long partial = counts.getOrDefault(OrderStatus.PARTIALLY_FILLED, 0L);
+        long filled = counts.getOrDefault(OrderStatus.FILLED, 0L);
+        long cancelled = counts.getOrDefault(OrderStatus.CANCELLED, 0L);
+        long expired = counts.getOrDefault(OrderStatus.EXPIRED, 0L);
+        long reclaimed = counts.getOrDefault(OrderStatus.RECLAIMED, 0L);
+        long total = open + partial + filled + cancelled + expired + reclaimed;
+        return new AuctionChurnSummary(windowDays, total, open + partial, filled,
+                cancelled, expired, reclaimed, rate(cancelled, total), rate(filled, total), rate(expired, total));
+    }
+
+    /**
+     * Active material-level liquidity summary for audit dashboards.
+     * BUY side: best bid is max price. SELL side: best ask is min price.
+     */
+    public List<MaterialBookHealth> findMaterialBookHealth(int limit) {
+        int cappedLimit = Math.min(Math.max(limit, 1), 100);
+        return jdbi.withHandle(handle -> handle.createQuery("""
+                SELECT material,
+                       SUM(CASE WHEN side = 'BUY' THEN 1 ELSE 0 END) AS bid_count,
+                       SUM(CASE WHEN side = 'SELL' THEN 1 ELSE 0 END) AS ask_count,
+                       SUM(CASE WHEN side = 'BUY' THEN remaining_quantity ELSE 0 END) AS bid_quantity,
+                       SUM(CASE WHEN side = 'SELL' THEN remaining_quantity ELSE 0 END) AS ask_quantity,
+                       MAX(CASE WHEN side = 'BUY' THEN price ELSE NULL END) AS best_bid,
+                       MIN(CASE WHEN side = 'SELL' THEN price ELSE NULL END) AS best_ask,
+                       MAX(CASE WHEN side = 'SELL' THEN remaining_quantity ELSE 0 END) AS largest_sell_quantity
+                FROM at_auction_orders
+                WHERE status IN ('OPEN', 'PARTIALLY_FILLED')
+                  AND remaining_quantity > 0
+                  AND expires_at > :now
+                GROUP BY material
+                ORDER BY (bid_count + ask_count) DESC, material ASC
+                LIMIT :limit
+                """)
+                .bind("limit", cappedLimit)
+                .bind("now", Timestamp.from(Instant.now()))
+                .map((rs, ctx) -> new MaterialBookHealth(
+                        rs.getString("material"),
+                        rs.getInt("bid_count"),
+                        rs.getInt("ask_count"),
+                        rs.getInt("bid_quantity"),
+                        rs.getInt("ask_quantity"),
+                        rs.getBigDecimal("best_bid"),
+                        rs.getBigDecimal("best_ask"),
+                        rs.getInt("largest_sell_quantity")))
+                .list());
+    }
+
+    /** @return Count of recent fills where both sides belonged to the same player. */
+    public long countSelfTradeFills(int days) {
+        int windowDays = Math.max(1, days);
+        Instant cutoff = Instant.now().minusSeconds(windowDays * 24L * 60L * 60L);
+        return jdbi.withHandle(handle -> handle.createQuery("""
+                SELECT COUNT(*)
+                FROM at_auction_fills af
+                JOIN at_auction_orders buy_order ON buy_order.id = af.buy_order_id
+                JOIN at_auction_orders sell_order ON sell_order.id = af.sell_order_id
+                WHERE af.filled_at >= :cutoff
+                  AND buy_order.player_uuid = sell_order.player_uuid
+                """)
+                .bind("cutoff", Timestamp.from(cutoff))
+                .map((rs, ctx) -> rs.getLong(1))
+                .findOnly());
+    }
+
+    private static double rate(long numerator, long denominator) {
+        if (denominator <= 0) {
+            return 0.0;
+        }
+        return (double) numerator / (double) denominator;
+    }
+
     /**
      * Fill count per day for the last N days.
      * @return List of {date (YYYY-MM-DD), count} sorted oldest→newest.
@@ -422,6 +544,38 @@ public class AuctionRepository {
     }
 
     public record DayFillCount(String date, int count) {}
+
+    public record AuctionChurnSummary(
+            int days,
+            long totalOrders,
+            long activeOrders,
+            long filledOrders,
+            long cancelledOrders,
+            long expiredOrders,
+            long reclaimedOrders,
+            double cancellationRate,
+            double fillRate,
+            double expirationRate
+    ) {}
+
+    public record MaterialBookHealth(
+            String material,
+            int bidCount,
+            int askCount,
+            int bidQuantity,
+            int askQuantity,
+            BigDecimal bestBid,
+            BigDecimal bestAsk,
+            int largestSellQuantity
+    ) {
+        public boolean isThinBook() {
+            return bidCount < 2 || askCount < 2;
+        }
+
+        public boolean hasLargeSellWall() {
+            return askQuantity > 0 && largestSellQuantity >= Math.max(64, askQuantity / 2);
+        }
+    }
 
     private AuctionOrder mapOrder(java.sql.ResultSet rs) {
         try {

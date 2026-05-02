@@ -75,6 +75,15 @@ const steps = [
     detail: 'tradeRatio ∈ [−1, +1] where +1 = all buys. With 10 players and 1.5% max change, a 70% buy ratio causes +0.9% per tick. Consecutive-direction streaks trigger dampening (1/(1+streak×0.05), floor 25%).',
     accent: 'emerald',
   },
+  {
+    num: '07',
+    tag: 'AUCTION',
+    title: 'Auction Market Signal',
+    formula: 'auction fill → trade window → spread engine',
+    summary: 'Auction fills are recorded as market trades. An active order book tightens the /shop spread for that material.',
+    detail: 'Every auction fill — buy orders crossing sell orders — is added to the 7-day trade window used by the spread engine. Materials with active auction markets get tighter /shop spreads. The auction and /shop are the same underlying market, just different interfaces.',
+    accent: 'rose',
+  },
 ];
 
 const accentBorder: Record<string, string> = {

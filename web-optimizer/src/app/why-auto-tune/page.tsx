@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, TrendingUp, TrendingDown, Users, Zap, Shield, BarChart2, Clock } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Users, Zap, Shield, BarChart2, Clock, Gavel } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Why Auto-Tune | Auto-Tune',
@@ -255,6 +255,17 @@ export default function WhyAutoTunePage() {
             badgeColor="bg-violet-950/60 text-violet-400 border border-violet-800/50"
             explanation="New player joins, sells their first Diamond. Static shop: $250, feels arbitrary. Auto-Tune: price reflects current market activity. They learned something real about the economy just by trading. They come back."
           />
+          <ScenarioCard
+            icon={Gavel}
+            title="P2P Auction House"
+            staticPrice="Fixed /shop"
+            autotunePrice="Live order book"
+            staticEffect="Single price, no depth"
+            autotuneEffect="Bid/ask ladder + fills"
+            badge="Beyond /shop"
+            badgeColor="bg-rose-950/60 text-rose-400 border border-rose-800/50"
+            explanation="Players place limit orders at their own prices. When a buy and sell order cross, the trade executes instantly. Market depth is visible, spreads are transparent, and players who read the order book earn more than players who just use /shop. Auction fills feed back into the price engine, sharpening every item's spread."
+          />
         </div>
 
         {/* Price history sparklines */}
@@ -337,6 +348,14 @@ export default function WhyAutoTunePage() {
                 accent: 'border-violet-800/50',
                 iconBg: 'bg-violet-950/60',
                 iconColor: 'text-violet-400',
+              },
+              {
+                icon: Gavel,
+                title: 'Auction market depth',
+                body: 'The built-in P2P auction house lets players post limit orders and fill each other directly. Order book activity — bid/ask spreads, fill rates, thin books — feeds back into the spread engine, sharpening prices for everyone. Players who read the ladder earn more than players who just use /shop.',
+                accent: 'border-rose-800/50',
+                iconBg: 'bg-rose-950/60',
+                iconColor: 'text-rose-400',
               },
             ].map(({ icon: Icon, title, body, accent, iconBg, iconColor }) => (
               <div key={title} className={`bg-gray-900/60 border rounded-xl p-5 ${accent}`}>

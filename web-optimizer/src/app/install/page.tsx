@@ -439,7 +439,7 @@ export default function InstallPage() {
             },
             {
               q: 'What if Auto-Tune\'s prices go crazy?',
-              a: 'There\'s a circuit breaker. If debt-to-GDP exceeds 10×, loans pause and interest stops accruing. Prices freeze at their last valid point until the economy stabilises. Admins can also set floor and ceiling prices per item.',
+              a: 'There\'s a circuit breaker. If debt-to-GDP exceeds 30×, loans pause and interest stops accruing. Prices freeze at their last valid point until the economy stabilises. Admins can also set floor and ceiling prices per item.',
             },
             {
               q: 'Does it work with EssentialsX, CMIE, or other economy plugins?',

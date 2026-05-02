@@ -279,7 +279,7 @@ const CONFIG_FINDINGS: Finding[] = [
         + 'The 7% GDP advantage is a 14d artifact — it does not persist.',
       'For servers under 14 days, 7% remains defensible for the GDP boost. For servers running 30d+, '
         + '5% is strictly better on D/G with essentially no GDP cost. The old default of 15–30% is '
-        + 'catastrophically bad. Monitor D/G monthly — if it climbs above 10×, lower to 5%.',
+        + 'catastrophically bad. Monitor D/G monthly — if it climbs above 15×, lower to 5%.',
     ],
     metrics: [
       { label: '7% GDP (14d)', value: '1,261K', note: 'best across 5 seeds' },

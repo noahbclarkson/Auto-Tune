@@ -40,6 +40,11 @@ public record AuctionOrder(
                 && remainingQuantity > 0;
     }
 
+    /** Short order identifier — first 8 characters of the full UUID. */
+    public String shortId() {
+        return id.toString().substring(0, 8);
+    }
+
     public int filledQuantity() {
         return originalQuantity - remainingQuantity;
     }

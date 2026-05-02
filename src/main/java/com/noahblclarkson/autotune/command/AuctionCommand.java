@@ -263,7 +263,7 @@ public class AuctionCommand {
             TextColor sideColor = order.side() == OrderSide.BUY ? NamedTextColor.AQUA : NamedTextColor.LIGHT_PURPLE;
             String sideLabel = order.side() == OrderSide.BUY ? "BUY" : "SELL";
 
-            Component line = Component.text("[" + order.id().toString().substring(0, 8) + "...]", NamedTextColor.GRAY)
+            Component line = Component.text("[" + order.shortId() + "...]", NamedTextColor.GRAY)
                     .append(Component.text(" " + sideLabel + " ", sideColor, TextDecoration.BOLD))
                     .append(Component.text(order.remainingQuantity() + "× " + formatMaterial(order.material()), NamedTextColor.WHITE))
                     .append(Component.text(" @ " + configManager.formatCurrency(order.price()), NamedTextColor.YELLOW))
@@ -303,9 +303,9 @@ public class AuctionCommand {
 
         sender.sendMessage(Component.empty());
         sender.sendMessage(Component.text("Auction Order ", NamedTextColor.GOLD, TextDecoration.BOLD)
-                .append(Component.text(order.id().toString().substring(0, 8), NamedTextColor.GRAY))
+                .append(Component.text(order.shortId(), NamedTextColor.GRAY))
                 .clickEvent(ClickEvent.copyToClipboard(order.id().toString())));
-        sender.sendMessage(Component.text("ID: ", NamedTextColor.DARK_GRAY)
+        sender.sendMessage(Component.text("Full ID: ", NamedTextColor.DARK_GRAY)
                 .append(Component.text(order.id().toString(), NamedTextColor.GRAY)
                         .clickEvent(ClickEvent.copyToClipboard(order.id().toString()))));
         sender.sendMessage(Component.text("Side: ", NamedTextColor.GRAY)

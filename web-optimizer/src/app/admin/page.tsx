@@ -433,7 +433,7 @@ export default function AdminPage() {
               <h3 className="text-white font-semibold">Debt/GDP Ratio (D/G)</h3>
             </div>
             <p className="text-sm text-slate-400 leading-relaxed">
-              Total active economy debt divided by server GDP. The circuit breaker fires at <strong className="text-emerald-400">10×</strong> (TIER3) — all loan interest pauses until D/G drops below <strong className="text-emerald-400">9×</strong>. Healthy servers run 3–8×. Above 15× means the circuit is actively containing the economy.
+              Total active economy debt divided by server GDP. The circuit breaker fires at <strong className="text-emerald-400">30×</strong> (TIER3) — all loan interest pauses until D/G drops below <strong className="text-emerald-400">15×</strong>. Healthy servers run 3–8×. Above 15× means the circuit is actively containing the economy.
             </p>
             <Link href="/economy" className="inline-flex items-center gap-1 text-xs text-emerald-500 mt-3 hover:text-emerald-400">
               Learn how the circuit breaker works <ArrowRight className="w-3 h-3" />

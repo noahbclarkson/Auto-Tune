@@ -145,6 +145,7 @@ pub async fn get_true_prices(pool: web::Data<PgPool>) -> impl Responder {
                     confidence: r.try_get::<f64, _>("confidence").unwrap_or(0.0),
                     servers: r.try_get::<i32, _>("server_count").unwrap_or(0),
                     anchored: r.try_get::<bool, _>("anchored").unwrap_or(true),
+                    last_updated: r.try_get::<DateTime<Utc>, _>("last_updated").ok(),
                 })
                 .collect();
 

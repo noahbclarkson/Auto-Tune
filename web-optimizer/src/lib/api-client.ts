@@ -15,6 +15,8 @@ export interface TruePrice {
   confidence: number;
   servers: number;
   anchored: boolean;
+  /** ISO timestamp of when this item's true price was last recomputed */
+  lastUpdated: string | null;
 }
 
 export interface TruePricesResponse {

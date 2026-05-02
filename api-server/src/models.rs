@@ -82,6 +82,8 @@ pub struct TruePriceEntry {
     pub servers: i32,
     /// True if this item's price is anchored to the reference item (ratio graph connected)
     pub anchored: bool,
+    /// Timestamp of the most recent recomputation that updated this item
+    pub last_updated: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize)]

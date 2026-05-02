@@ -7,10 +7,30 @@ import {
   type TruePrice,
 } from '@/lib/api-client';
 import { PriceHistoryChart } from '@/components/prices/price-history-chart';
-import { Anchor, Users, TrendingUp } from 'lucide-react';
+import { Anchor, Users, TrendingUp, AlertTriangle } from 'lucide-react';
 
 interface TruePricesLiveProps {
   prices: TruePrice[];
+}
+
+const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function freshnessLabel(lastUpdated: string | null): { label: string; color: string; bg: string; stale: boolean } {
+  if (!lastUpdated) {
+    return { label: 'Unknown', color: 'text-gray-500', bg: 'bg-gray-900/60 border-gray-700/50', stale: true };
+  }
+  const age = Date.now() - new Date(lastUpdated).getTime();
+  if (age > STALE_THRESHOLD_MS) {
+    const hours = Math.round(age / (1000 * 60 * 60));
+    const label = hours >= 24 ? `${Math.round(hours / 24)}d old` : `${hours}h old`;
+    return { label, color: 'text-rose-400', bg: 'bg-rose-950/40 border-rose-800/50', stale: true };
+  }
+  const minutes = Math.round(age / (1000 * 60));
+  if (minutes < 60) {
+    return { label: `${minutes}m ago`, color: 'text-emerald-400', bg: 'bg-emerald-950/40 border-emerald-800/50', stale: false };
+  }
+  const hours = Math.round(minutes / 60);
+  return { label: `${hours}h ago`, color: 'text-emerald-400', bg: 'bg-emerald-950/40 border-emerald-800/50', stale: false };
 }
 
 function confidenceColor(conf: number): string {
@@ -40,6 +60,28 @@ function ConfidenceBar({ conf }: { conf: number }) {
         {(conf * 100).toFixed(0)}%
       </span>
     </div>
+  );
+}
+
+function ServerCountBadge({ servers, stale }: { servers: number; stale: boolean }) {
+  if (servers === 0) {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-rose-400 bg-rose-950/40 border border-rose-800/50 px-1 py-0.5 rounded">
+        <AlertTriangle className="w-2.5 h-2.5" /> no servers
+      </span>
+    );
+  }
+  if (servers === 1) {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-400 bg-amber-950/40 border border-amber-800/50 px-1 py-0.5 rounded">
+        1 server
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 px-1 py-0.5 rounded">
+      <Users className="w-2.5 h-2.5" /> {servers} servers
+    </span>
   );
 }
 
@@ -112,7 +154,7 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
                 <th className="text-left py-2 pr-4 text-gray-400 font-medium">Item</th>
                 <th className="text-left py-2 pr-4 text-gray-400 font-medium">True Price</th>
                 <th className="text-left py-2 pr-4 text-gray-400 font-medium hidden sm:table-cell">Confidence</th>
-                <th className="text-left py-2 text-gray-400 font-medium hidden md:table-cell">Servers</th>
+                <th className="text-left py-2 text-gray-400 font-medium hidden md:table-cell">Coverage</th>
               </tr>
             </thead>
             <tbody>
@@ -120,6 +162,7 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
                 .filter((entry) => !showAnchored || entry.anchored)
                 .map((entry) => {
                 const selected = selectedItem === entry.item;
+                const freshness = freshnessLabel(entry.lastUpdated);
                 const confColor = confidenceColor(entry.confidence);
                 const confBg = confidenceBg(entry.confidence);
                 return (
@@ -131,12 +174,17 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
                     onClick={() => setSelectedItem(entry.item)}
                   >
                     <td className="py-2.5 pr-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${entry.anchored ? 'bg-emerald-500' : 'bg-gray-600'}`} />
                         <span className={`font-medium ${selected ? 'text-white' : 'text-gray-200'}`}>{entry.item}</span>
                         {entry.anchored && (
                           <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-1 py-0.5 rounded uppercase tracking-wide">
                             <Anchor className="w-2.5 h-2.5" /> anchor
+                          </span>
+                        )}
+                        {freshness.stale && (
+                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold ${freshness.color} ${freshness.bg} border px-1 py-0.5 rounded`}>
+                            <AlertTriangle className="w-2.5 h-2.5" /> {freshness.label}
                           </span>
                         )}
                       </div>
@@ -150,9 +198,11 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
                       <ConfidenceBar conf={entry.confidence} />
                     </td>
                     <td className="py-2.5 hidden md:table-cell">
-                      <div className="flex items-center gap-1 text-gray-400">
-                        <Users className="w-3 h-3" />
-                        <span className="text-xs font-mono">{entry.servers}</span>
+                      <div className="flex flex-col gap-1">
+                        <ServerCountBadge servers={entry.servers} stale={freshness.stale} />
+                        {!freshness.stale && (
+                          <span className={`text-[10px] font-mono ${freshness.color}`}>{freshness.label}</span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -165,7 +215,7 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
           )}
         </div>
 
-        {/* Confidence legend */}
+        {/* Confidence + coverage legend */}
         <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-gray-800/60">
           <span className="text-xs text-gray-600">Confidence:</span>
           <div className="flex items-center gap-1.5">
@@ -180,9 +230,13 @@ export function TruePricesLive({ prices }: TruePricesLiveProps) {
             <div className="w-3 h-1.5 rounded-full bg-rose-500" />
             <span className="text-xs text-rose-400">&lt;40% low</span>
           </div>
-          <div className="flex items-center gap-1.5 ml-auto">
+          <div className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             <span className="text-xs text-gray-500">anchor item</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            <span className="text-xs text-gray-500">stale (&gt;24h)</span>
           </div>
         </div>
       </div>

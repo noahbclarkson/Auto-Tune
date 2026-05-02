@@ -119,6 +119,16 @@ export function StabilityPreview() {
           </div>
         )}
 
+        {/* Safe install workflow */}
+        <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-xs">
+          <span className="text-amber-300 font-semibold">Safe install workflow: </span>
+          <ol className="text-gray-400 mt-1 space-y-0.5 list-decimal list-inside">
+            <li>Upload this file to your server's Auto-Tune plugin folder</li>
+            <li>Run <code className="text-emerald-400">/at admin config preview &lt;filename&gt;</code> to validate before going live</li>
+            <li>Replace <code className="text-emerald-400">config.yml</code> then run <code className="text-emerald-400">/at reload</code></li>
+          </ol>
+        </div>
+
         {/* Tune-up note */}
         <div className="p-3 rounded-lg bg-gray-900/60 border border-gray-800 text-xs text-gray-400">
           <span className="text-white font-medium">Key parameter to tune after 1 week: </span>

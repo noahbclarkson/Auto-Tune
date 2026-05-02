@@ -260,9 +260,9 @@ export default function EconomyPage() {
                   <div>
                     <p className="text-sm font-medium text-white mb-1">Circuit breaker prevents collapse</p>
                     <p className="text-xs text-gray-400 leading-relaxed">
-                      When total debt exceeds 15× GDP, loan interest pauses automatically.
+                      When total debt exceeds 30× GDP, loan interest pauses automatically.
                       This prevents cascade default loops while the economy deleverages.
-                      It re-enables once debt drops below 13.5× GDP.
+                      It re-enables once debt drops below 15× GDP.
                     </p>
                   </div>
                 </div>
@@ -402,7 +402,7 @@ export default function EconomyPage() {
               },
               {
                 tier: 'TIER 2',
-                ratio: 'D/G &gt; 10×',
+                ratio: 'D/G &gt; 5×',
                 interest: '25%',
                 color: 'text-amber-400',
                 border: 'border-amber-800/50',
@@ -410,7 +410,7 @@ export default function EconomyPage() {
               },
               {
                 tier: 'TIER 3',
-                ratio: 'D/G &gt; 15×',
+                ratio: 'D/G &gt; 30×',
                 interest: '0%',
                 color: 'text-rose-400',
                 border: 'border-rose-800/50',
@@ -433,8 +433,8 @@ export default function EconomyPage() {
           </div>
 
           <p className="text-xs text-gray-500">
-            The circuit breaker uses a <strong className="text-gray-400">10% hysteresis band</strong> —
-            once TIER3 fires at D/G &gt; 15×, it stays locked until D/G drops below 13.5×.
+            The circuit breaker uses a <strong className="text-gray-400">50% hysteresis band</strong> —
+            once TIER3 fires at D/G &gt; 30×, it stays locked until D/G drops below 15×.
             This prevents rapid oscillation near the boundary.
           </p>
         </div>

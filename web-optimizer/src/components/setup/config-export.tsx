@@ -125,7 +125,9 @@ export function ConfigExport() {
       <div className="text-center mb-6">
         <h2 className="text-xl font-bold text-white mb-2">Your config is ready</h2>
         <p className="text-gray-400 text-sm">
-          Copy or download the generated config, then paste it into your server's <code className="text-emerald-400 bg-gray-800 px-1.5 py-0.5 rounded text-xs">config.yml</code>.
+          Download the generated config, upload it to your server, run{' '}
+          <code className="text-emerald-400 bg-gray-800 px-1.5 py-0.5 rounded text-xs">/at admin config preview</code>{' '}
+          to validate, then replace <code className="text-emerald-400 bg-gray-800 px-1.5 py-0.5 rounded text-xs">config.yml</code> and reload.
         </p>
       </div>
 

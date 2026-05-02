@@ -92,13 +92,13 @@ _Living document. Update after every session. Prioritize ruthlessly._
 
 **Ecosystem observations / prioritized ideas:**
 1. **Plugin Engineer:** expand config preview into a full config diff surface: economy update interval, spread/slippage, auction fees/limits, price reporter settings, and warnings for changed storage/API credentials.
-2. **Web/Public setup:** when the setup wizard exports config.yml, teach the safe workflow: copy to plugin folder → `/at admin config preview exported.yml` → replace `config.yml` → `/at admin reload`.
+2. ✅ **Web/Public setup:** when the setup wizard exports config.yml, teach the safe workflow: copy to plugin folder → `/at admin config preview exported.yml` → replace `config.yml` → `/at admin reload`.
 3. **Bundled dashboard:** add auction integrity/audit cards for cancellation churn, thin books, large sell walls, suspicious self-trade/fill patterns, and material-level liquidity risk.
 4. **Player web delight:** add weekly market recap/player digest pages: best trade, biggest mover, watched orders filled, materials the player influenced, and server-wide “hot market” stories.
 5. **API/server trust:** implement freshness filtering, plugin/protocol version metadata, key rotation/revocation, capped player-count weighting, and explanatory confidence labels before public true-price launch.
 6. **Sim Lab:** model auction manipulation and cross-server manipulation: thin-book spoofing, cancellation storms, whale sell walls, one fake high-player server, many Sybils, and clustered outlier submissions.
 
-**Next best work:** API freshness filter + plugin version metadata, then auction audit dashboard and public setup wizard safe-preview copy.
+**Next best work:** API freshness filter + plugin version metadata. Setup wizard safe-preview workflow: ✅ DONE (c6fd302).
 
 ## Plugin Update (2026-05-01 01:45 UTC) — Auction Fill-Rate SQLite Regression Fix ✅
 

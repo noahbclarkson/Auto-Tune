@@ -1345,15 +1345,62 @@ public class AdminCommand {
             }
 
             sender.sendMessage(Component.text("✅ Config is valid. No changes have been applied.", NamedTextColor.GREEN));
-            sender.sendMessage(Component.text("Key loan settings if loaded:", NamedTextColor.AQUA));
-            AutoTuneConfig.LoanConfig current = configManager.getConfig().loans();
-            AutoTuneConfig.LoanConfig preview = parsed.loans();
-            sendPreviewLine(sender, "Base interest", current.baseInterestRate() * 100 + "%", preview.baseInterestRate() * 100 + "%");
-            sendPreviewLine(sender, "TIER3 ratio", current.debtGdpTier3Ratio() + "x", preview.debtGdpTier3Ratio() + "x");
-            sendPreviewLine(sender, "TIER3 hysteresis", current.tier3HysteresisBand() * 100 + "%", preview.tier3HysteresisBand() * 100 + "%");
-            sendPreviewLine(sender, "Min interest multiplier", String.valueOf(current.minInterestMultiplier()), String.valueOf(preview.minInterestMultiplier()));
-            sendPreviewLine(sender, "GB debt cap", current.guildbuyerTotalDebtCap() + "x GDP", preview.guildbuyerTotalDebtCap() + "x GDP");
-            sender.sendMessage(Component.text("Run /at admin reload after replacing config.yml if this preview looks right.", NamedTextColor.GRAY));
+            AutoTuneConfig current = configManager.getConfig();
+            AutoTuneConfig.LoanConfig lcCurrent = current.loans();
+            AutoTuneConfig.LoanConfig lcPreview = parsed.loans();
+            AutoTuneConfig.EconomyConfig ecCurrent = current.economy();
+            AutoTuneConfig.EconomyConfig ecPreview = parsed.economy();
+            AutoTuneConfig.AuctionConfig acCurrent = current.auction();
+            AutoTuneConfig.AuctionConfig acPreview = parsed.auction();
+            AutoTuneConfig.PriceReporterConfig prCurrent = current.priceReporter();
+            AutoTuneConfig.PriceReporterConfig prPreview = parsed.priceReporter();
+            AutoTuneConfig.ExchangeRateConfig erCurrent = current.exchangeRate();
+            AutoTuneConfig.ExchangeRateConfig erPreview = parsed.exchangeRate();
+
+            sender.sendMessage(Component.text("─── Loans ────────────────────────────", NamedTextColor.AQUA));
+            sendPreviewLine(sender, "Base interest", lcCurrent.baseInterestRate() * 100 + "%", lcPreview.baseInterestRate() * 100 + "%");
+            sendPreviewLine(sender, "TIER3 ratio", lcCurrent.debtGdpTier3Ratio() + "x", lcPreview.debtGdpTier3Ratio() + "x");
+            sendPreviewLine(sender, "TIER3 hysteresis", lcCurrent.tier3HysteresisBand() * 100 + "%", lcPreview.tier3HysteresisBand() * 100 + "%");
+            sendPreviewLine(sender, "Min interest multiplier", String.valueOf(lcCurrent.minInterestMultiplier()), String.valueOf(lcPreview.minInterestMultiplier()));
+            sendPreviewLine(sender, "GB debt cap", lcCurrent.guildbuyerTotalDebtCap() + "x GDP", lcPreview.guildbuyerTotalDebtCap() + "x GDP");
+            sendPreviewLine(sender, "Block MM/GB during TIER3", boolStr(lcCurrent.blockMmGbLoansDuringTier3()), boolStr(lcPreview.blockMmGbLoansDuringTier3()));
+            sendPreviewLine(sender, "TIER3 exit cap", lcCurrent.tier3ExitMultiplierCap() * 100 + "%", lcPreview.tier3ExitMultiplierCap() * 100 + "%");
+            sendPreviewLine(sender, "TIER3 exit delay", formatTicks(lcCurrent.tier3ExitDelayTicks()), formatTicks(lcPreview.tier3ExitDelayTicks()));
+            sendPreviewLine(sender, "Total debt cap", lcCurrent.totalDebtGdpCap() + "x GDP", lcPreview.totalDebtGdpCap() + "x GDP");
+            sendPreviewLine(sender, "Counter-cyclical", boolStr(lcCurrent.counterCyclical()), boolStr(lcPreview.counterCyclical()));
+
+            sender.sendMessage(Component.text("─── Economy ──────────────────────────", NamedTextColor.AQUA));
+            sendPreviewLine(sender, "Update interval", formatMs(ecCurrent.updateInterval()), formatMs(ecPreview.updateInterval()));
+            sendPreviewLine(sender, "Max price change", ecCurrent.maxPriceChangePercent() + "%", ecPreview.maxPriceChangePercent() + "%");
+            sendPreviewLine(sender, "Slippage coeff", ecCurrent.slippageCoeff() + "", ecPreview.slippageCoeff() + "");
+            sendPreviewLine(sender, "Sell pressure mult", ecCurrent.sellPressureMultiplier() + "x", ecPreview.sellPressureMultiplier() + "x");
+            sendPreviewLine(sender, "Sector correlation", ecCurrent.sectorCorrelation() + "", ecPreview.sectorCorrelation() + "");
+            sendPreviewLine(sender, "Trend dampening", ecCurrent.trendDampening() + "", ecPreview.trendDampening() + "");
+            sendPreviewLine(sender, "Seed from shared prices", boolStr(ecCurrent.seedFromSharedPrices()), boolStr(ecPreview.seedFromSharedPrices()));
+
+            sender.sendMessage(Component.text("─── Auction ───────────────────────────", NamedTextColor.AQUA));
+            sendPreviewLine(sender, "Default duration", acCurrent.defaultDurationHours() + "h", acPreview.defaultDurationHours() + "h");
+            sendPreviewLine(sender, "Expiration check interval", acCurrent.expirationCheckIntervalMinutes() + "m", acPreview.expirationCheckIntervalMinutes() + "m");
+
+            sender.sendMessage(Component.text("─── Price Reporter ───────────────────", NamedTextColor.AQUA));
+            sendPreviewLine(sender, "Enabled", boolStr(prCurrent.enabled()), boolStr(prPreview.enabled()));
+            sendPreviewLine(sender, "API URL", maskUrl(prCurrent.apiUrl()), maskUrl(prPreview.apiUrl()));
+            sendPreviewLine(sender, "Report interval", prCurrent.reportIntervalMinutes() + "m", prPreview.reportIntervalMinutes() + "m");
+
+            sender.sendMessage(Component.text("─── Exchange Rate ─────────────────────", NamedTextColor.AQUA));
+            sendPreviewLine(sender, "Enabled", boolStr(erCurrent.enabled()), boolStr(erPreview.enabled()));
+            sendPreviewLine(sender, "Fetch interval", erCurrent.fetchIntervalMinutes() + "m", erPreview.fetchIntervalMinutes() + "m");
+
+            boolean loanChanged = lcCurrent.baseInterestRate() != lcPreview.baseInterestRate()
+                    || lcCurrent.debtGdpTier3Ratio() != lcPreview.debtGdpTier3Ratio();
+            boolean economyChanged = ecCurrent.updateInterval() != ecPreview.updateInterval()
+                    || ecCurrent.slippageCoeff() != ecPreview.slippageCoeff()
+                    || ecCurrent.sellPressureMultiplier() != ecPreview.sellPressureMultiplier()
+                    || ecCurrent.sectorCorrelation() != ecPreview.sectorCorrelation();
+            if (loanChanged || economyChanged) {
+                sender.sendMessage(Component.text("  ⚠ Review changes above before applying.", NamedTextColor.YELLOW));
+            }
+            sender.sendMessage(Component.text("Replace config.yml, then /at admin reload.", NamedTextColor.DARK_GRAY));
         } catch (Exception e) {
             sender.sendMessage(Component.text("❌ Failed to parse YAML: " + e.getMessage(), NamedTextColor.RED));
             sender.sendMessage(Component.text("Check indentation, quotes, and nested sections.", NamedTextColor.DARK_GRAY));
@@ -1366,6 +1413,37 @@ public class AdminCommand {
                 .append(Component.text(current, NamedTextColor.DARK_GRAY))
                 .append(Component.text(" → ", NamedTextColor.GRAY))
                 .append(Component.text(preview, changed ? NamedTextColor.GOLD : NamedTextColor.DARK_GRAY)));
+    }
+
+    private String boolStr(boolean b) { return b ? "true" : "false"; }
+
+    private String formatTicks(int ticks) {
+        if (ticks <= 0) return "disabled";
+        int days = ticks / 288;
+        int remainder = ticks % 288;
+        int hours = remainder / 12;
+        return days > 0 ? ticks + " ticks (" + days + "d" + (hours > 0 ? " " + hours + "h" : "") + ")" : ticks + " ticks (" + hours + "h)";
+    }
+
+    private String formatMs(long ms) {
+        if (ms < 0) return "disabled";
+        if (ms >= 86400000) return (ms / 86400000) + "d";
+        if (ms >= 3600000) return (ms / 3600000) + "h";
+        if (ms >= 60000) return (ms / 60000) + "m";
+        return ms + "ms";
+    }
+
+    private String maskUrl(String url) {
+        if (url == null || url.isBlank()) return "none";
+        // mask api key portion
+        int slashIdx = url.indexOf("://");
+        if (slashIdx < 0) return url;
+        String after = url.substring(slashIdx + 3);
+        int atIdx = after.indexOf("@");
+        if (atIdx >= 0) {
+            return url.substring(0, slashIdx + 3) + "****" + after.substring(atIdx);
+        }
+        return url;
     }
 
     @Command("autotune admin transaction-min")

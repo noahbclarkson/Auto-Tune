@@ -376,18 +376,32 @@ Alerts trigger when the next market tick crosses the threshold. Alerts persist a
 
 ### Auction House
 
-The auction house provides a traditional order-book marketplace:
+The auction house provides a traditional order-book marketplace — players place limit orders, and trades execute when buy/sell orders cross. Unlike the instant `/shop`, the auction lets players set their own prices and sizes.
 
 ```
-/auction browse        ← view buy/sell orders
-/auction sell <price>  ← list item in hand for sale
-/auction buy <order-id> ← fill a sell order
+/auction browse        ← view buy/sell orders (market depth)
+/auction sell <price>  ← list item in hand for sale (limit order)
+/auction buy <order-id> ← fill a seller's order
 /auction my            ← view your active orders
 /auction cancel <id>   ← cancel your order
 /auction history       ← your fill history
+/auction info <id>     ← inspect an order in detail
 ```
 
-Orders expire after 72 hours (configurable). When an order expires, buy orders refund escrowed funds automatically; sell orders return items to the player if online.
+**Screens:** the bundled web dashboard at `/auction` provides 4 tabs — Active Orders (with material filter), Recent Fills, Materials Book, and My Orders — plus a depth chart showing bid/ask ladder depth. Access it at `http://your-server:8989/auction`.
+
+
+**Thin book warnings:** when an item's order book has very low open interest (few orders, small sizes), admins see a warning in `/at admin auction` and in the `/admin` dashboard. Thin books let large orders move prices significantly. The warning appears when active buy + sell order count is below the configurable threshold.
+
+
+**Order expiry:** orders expire after 72 hours by default (configurable via `auction.default-duration-hours`). When an order expires:
+- Buy orders: escrowed funds are **automatically refunded**
+- Sell orders: items must be reclaimed via `/auction reclaim` (not returned automatically)
+
+**Integrity monitoring:** `/at admin auction` shows 7-day cancellation churn, fill/cancel/expire rates, self-trade fills, and large sell-wall warnings. Use this to detect manipulation patterns such as cancellation spoofing or spoofed bid walls.
+
+
+**Watching orders:** players can run `/auction watch <id>` to receive an in-game notification when a watched order fills. Watch state persists across restarts and works for offline players via pending login notifications.
 
 ### Achievement Badges
 

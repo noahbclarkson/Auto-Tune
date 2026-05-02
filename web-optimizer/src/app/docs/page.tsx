@@ -82,6 +82,14 @@ const CARDS: DocCard[] = [
     readingTime: '12 min',
     href: `${GITHUB_BASE}/MIGRATION.md`,
   },
+  {
+    title: 'Auction House Guide',
+    description:
+      'Complete reference for the built-in P2P auction house: limit orders, order book, fill notifications, native /auction commands, integrity monitoring for admins, and thin-book/spoofing detection.',
+    audience: 'admin',
+    readingTime: '10 min',
+    href: `${GITHUB_BASE}/SERVER_ADMIN_GUIDE.md#auction-house`,
+  },
   // FAQ
   {
     title: 'FAQ',

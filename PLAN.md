@@ -1316,3 +1316,30 @@ New baseline: `guildstability+2mm+7%gb+floor.json` at c7ac047.
 1. Public confidence indicators on `/true-prices` (showing server count, data age).
 2. "Config Preview" panel in the bundled dashboard.
 3. "Market Maker" leaderboard tracking in the Java plugin.
+
+## Web & Ecosystem Update (2026-05-03 07:35 UTC) — Player Quickstart Auction Section ✅
+
+**rewrite-2 at `3012360`** | `./gradlew build` ✅ PMD 0 | web/ 12 routes ✅ | web-optimizer/ 22 routes ✅ | Pushed ✅
+
+**Built this session:**
+- `docs/PLAYER_QUICKSTART.md` — auction house section added (51 lines). Player guide now covers: auction vs /sell comparison (no spread, price control, partial fills, watch notifications), key commands table (`/auction browse`, `/auction sell`, `/auction buy`, `/auction my`, `/auction cancel`, `/auction watch`, `/auction reclaim`), thin-book depth tip referencing bundled web dashboard depth chart, and a key commands summary table that includes auction alongside the original 5 core commands.
+- DiscoveryOverlay AUCTION_TIPS already had player-facing auction documentation; PLAYER_QUICKSTART.md was the GitHub-hosted public doc missing this coverage.
+- CSV export end-to-end verification: Java endpoint exists at `/api/portfolio/{playerName}/transactions.csv` (WebServer.java:932) with from/to/limit params; frontend has Export History (CSV) button in portfolio/page.tsx; spec SPEC-PORTFOLIO-CSV-EXPORT.md was documenting existing implementation, not a TODO.
+
+**Ecosystem audit results:**
+- web-optimizer/docs index: Auction House Guide card targets `SERVER_ADMIN_GUIDE.md#auction-house` for admin audience ✅
+- web-optimizer/install page: 4 "What You Get" mockup cards (Dashboard/Config/Shop/Auction) ✅
+- Auction integrity signals on public /auction page: already present (INTEGRITY_ITEMS array covers cancellation churn, self-trade detection, thin book warnings, large sell wall alerts) ✅
+- SPEC-POST-INSTALL-DISCOVERY-FUNNEL.md: already implemented ✅
+- SPEC-PORTFOLIO-CSV-EXPORT.md: already implemented ✅
+- web/ bundled dashboard auction: 4 tabs + AdminAuctionCard + My Orders watch toggles ✅
+
+**Key remaining gaps identified:**
+1. Public install page step 4 (Configure basic settings): teaches manual YAML editing. Could add safe workflow teaching: copy exported YAML → `/at admin config preview` → replace → reload. Low code, high trust value.
+2. Install page step 5 (Verify): mentions `/at admin health` but doesn't teach the config preview workflow for first-time admins reviewing their config.
+3. Auction integrity signals on public site are shown to visitors evaluating Auto-Tune, but there's no equivalent "integrity telemetry" card visible on the `/admin` page of the bundled web dashboard showing real server data (AdminAuctionCard exists but needs verification of wiring to `/api/admin/auction-audit`).
+
+**Still blocked:**
+- API server deploy (Arc/Fly.io token)
+- Real testimonials (human outreach)
+

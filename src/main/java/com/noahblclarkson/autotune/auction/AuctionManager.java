@@ -890,18 +890,25 @@ public class AuctionManager {
         Bukkit.getScheduler().runTask(plugin, () -> {
             try {
                 if (order.side() == OrderSide.BUY) {
-                    // Refund escrowed funds to the player
+                    // Refund escrowed funds to the player.
+                    // Use OfflinePlayer so refunds are always credited, even when
+                    // the player is offline when their order expires.
                     BigDecimal refund = order.price()
                             .multiply(BigDecimal.valueOf(order.remainingQuantity()));
+                    org.bukkit.OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(order.playerUuid());
+                    economy.depositPlayer(offlinePlayer, refund.doubleValue());
+
+                    String refundMsg = "⚠ Your buy order for " + order.remainingQuantity()
+                            + "× " + formatMaterialName(order.material())
+                            + " expired. " + configManager.formatCurrency(refund)
+                            + " refunded to your balance.";
                     Player player = Bukkit.getPlayer(order.playerUuid());
                     if (player != null) {
-                        economy.depositPlayer(player, refund.doubleValue());
                         player.sendMessage(net.kyori.adventure.text.Component.text(
-                                "⚠️ Your buy order for " + order.remainingQuantity() + "× "
-                                        + formatMaterialName(order.material())
-                                        + " expired. " + configManager.formatCurrency(refund)
-                                        + " refunded to your balance.",
+                                refundMsg,
                                 net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+                    } else {
+                        pendingNotificationRepo.insert(order.playerUuid(), refundMsg, "AUCTION_EXPIRY");
                     }
                 } else {
                     // Return items to the seller's inventory (if online)

@@ -6,6 +6,31 @@ _Living document. Update after every session. Prioritize ruthlessly._
 
 ---
 
+## Cron (2026-05-04 12:27 UTC) — Bug Hunting & Repo Health ✅
+
+**rewrite-2 at `df0b815`** | `./gradlew build` ✅ PMD 0 | `./gradlew test` ✅ | Pushed ✅
+
+**Strategic redirect:** Noah directed bugs + repo health over features. Updated MEMORY.md.
+
+**Bugs fixed:**
+- Partial fill notification showed pre-fill remaining qty instead of post-fill (`3c9d016`)
+- Offline sellers never received payment in both matching engine and GUI paths (`3c9d016`)
+- Buy orders from offline buyers matched → items lost; added online-player filter before matching (`3c9d016`)
+- Expired buy order refunds silently dropped when owner offline (`adcacde`)
+
+**Repo health:**
+- Removed duplicate imports (AuctionManager, ConfigManager, EnchantmentPricing)
+- Upgraded sqlx 0.7 → 0.8 in API server, resolved future-incompat warning (`bfd38ee`)
+- Both TS projects pass `tsc --noEmit` with zero errors, no `any` types
+- All Rust crates clippy clean
+
+**Noted for future sessions:**
+- 50/117 Java files have blanket `@SuppressWarnings("PMD")` — needs targeted cleanup
+- Buy/sell async methods record market engine side effects before economy withdrawal
+- Transaction ordering in EconomyManager could cause phantom price movements in rare races
+
+---
+
 ## Cron (2026-05-04 07:21 UTC) — Web & Ecosystem Audit ✅
 
 **rewrite-2 at `db2b67c`** | `web-optimizer/` build ✅ | `web/` build ✅ | Pushed ✅

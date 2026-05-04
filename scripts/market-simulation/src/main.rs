@@ -11685,6 +11685,9 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --admin-recovery-test    Economy freeze / recovery mode vs natural deleveraging"
         );
+        println!(
+            "  --floor-90d-compare      60% floor vs no floor × 3 seeds × 90d: does floor reduce D/G or mask it?"
+        );
         return Ok(());
     }
 
@@ -11746,6 +11749,11 @@ fn main() -> eframe::Result<()> {
 
     if args.len() > 1 && args[1] == "--admin-recovery-test" {
         run_admin_recovery_mode_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--floor-90d-compare" {
+        run_floor_90d_compare();
         return Ok(());
     }
 
@@ -20045,4 +20053,174 @@ fn run_exit_cap_sweep() {
 
     println!("  Key: D/G improvement = deleveraging success. T3 = TIER3 circuit fires.");
     println!("  Hypothesis: cap=1% + delay=20d should break the multiplier jump cascade.");
+}
+
+
+/// 90-day floor comparison: 60% Diamond floor vs NO floor.
+/// Answers: "Does 60% floor reduce final D/G or just mask it?"
+/// Uses production config (2MM + 2GB + 3Cas + 3Far + 2Tra) × 3 seeds.
+fn run_floor_90d_compare() {
+    use crate::analyzer::{load_all_prices, load_summary};
+    use crate::player::set_fixed_guild_threshold;
+
+    let seeds = vec![42u64, 12345u64, 98765u64];
+    let days = 90;
+    let ticks = 288 * days;
+    let threshold = 0.05;
+
+    println!("\n╔════════════════════════════════════════════════════════════════╗");
+    println!("║         90-DAY FLOOR COMPARISON TEST                         ║");
+    println!("║  60% Diamond floor vs NO floor × 3 seeds × 90 days          ║");
+    println!("║  Question: Does floor reduce D/G or just mask it?           ║");
+    println!("╚════════════════════════════════════════════════════════════════╝\n");
+    println!("  Config: 2MM + 2GB + 3Cas + 3Far + 2Tra, 5% GB threshold");
+    println!("  Duration: {} days ({} ticks)", days, ticks);
+    println!("  Seeds: {:?}\n", seeds);
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct Result {
+        seed: u64,
+        has_floor: bool,
+        gdp: f64,
+        debt: f64,
+        dg: f64,
+        bpd: f64,
+        spd: f64,
+        vol: f64,
+        diamond_internal: f64,
+        diamond_displayed: f64,
+    }
+
+    impl Result {
+        fn from_db(db_path: &std::path::Path, seed: u64, has_floor: bool) -> Option<Self> {
+            let s = load_summary(db_path).ok()?;
+            let prices = load_all_prices(db_path).unwrap_or_default();
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            Some(Self {
+                seed,
+                has_floor,
+                gdp: s.gdp,
+                debt: s.debt,
+                dg: s.debt / s.gdp.max(1.0),
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                vol: s.avg_volatility,
+                diamond_internal: di,
+                diamond_displayed: dd,
+            })
+        }
+    }
+
+    let mut results: Vec<Result> = Vec::new();
+
+    println!(
+        "  {:>6} {:>8} {:>12} {:>10} {:>8} {:>8} {:>8} {:>10} {:>10}",
+        "Seed", "Floor", "GDP", "D/G", "BPD%", "SPD%", "Vol(CV)", "Dia Int", "Dia Disp"
+    );
+    println!(
+        "  {:>6} {:>8} {:>12} {:>10} {:>8} {:>8} {:>8} {:>10} {:>10}",
+        "──────", "────────", "────────────", "──────────",
+        "────────", "────────", "────────", "──────────", "──────────"
+    );
+
+    // Run both arms for each seed
+    for &seed in &seeds {
+        for has_floor in [true, false] {
+            let mut scenario = if has_floor {
+                Scenario::guild_stability_2mm_fixed_guild_plus_floor()
+            } else {
+                Scenario::guild_stability_2mm_fixed_guild()
+            };
+            let label = if has_floor { "60%" } else { "none" };
+            scenario.name = format!("90d_floor_{}_seed{}", label, seed);
+            scenario.duration_ticks = ticks;
+
+            let out_dir = PathBuf::from(format!(
+                "/tmp/autotune-floor-90d-{}-{}",
+                label, seed
+            ));
+            let _ = std::fs::remove_dir_all(&out_dir);
+            std::fs::create_dir_all(&out_dir).ok();
+
+            set_fixed_guild_threshold(Some(threshold));
+            run_seeded_headless(&scenario, seed, &out_dir).ok();
+            set_fixed_guild_threshold(None);
+
+            if let Some(r) = Result::from_db(&out_dir.join("simulation.db"), seed, has_floor) {
+                println!(
+                    "  {:>6} {:>8} {:>12.0} {:>9.3}x {:>7.3}% {:>7.3}% {:>8.4} {:>10.2} {:>10.2}",
+                    seed,
+                    label,
+                    r.gdp as i64,
+                    r.dg,
+                    r.bpd * 100.0,
+                    r.spd * 100.0,
+                    r.vol,
+                    r.diamond_internal,
+                    r.diamond_displayed,
+                );
+                results.push(r);
+            } else {
+                println!(
+                    "  {:>6} {:>8} {:>12} {:>10} {:>8} {:>8} {:>8} {:>10} {:>10}",
+                    seed, label, "FAILED", "—", "—", "—", "—", "—", "—"
+                );
+            }
+
+            let _ = std::fs::remove_dir_all(&out_dir);
+        }
+    }
+
+    // Averages
+    if results.len() >= 4 {
+        println!("\n  ── Averages (90-day) ──");
+        for has_floor in [true, false] {
+            let subset: Vec<_> = results.iter().filter(|r| r.has_floor == has_floor).collect();
+            if subset.is_empty() { continue; }
+            let label = if has_floor { "60% floor" } else { "no floor" };
+            let gdp_avg = subset.iter().map(|r| r.gdp).sum::<f64>() / subset.len() as f64;
+            let dg_avg = subset.iter().map(|r| r.dg).sum::<f64>() / subset.len() as f64;
+            let vol_avg = subset.iter().map(|r| r.vol).sum::<f64>() / subset.len() as f64;
+            let bpd_avg = subset.iter().map(|r| r.bpd).sum::<f64>() / subset.len() as f64;
+            let spd_avg = subset.iter().map(|r| r.spd).sum::<f64>() / subset.len() as f64;
+            let dia_avg = subset.iter().map(|r| r.diamond_internal).sum::<f64>() / subset.len() as f64;
+
+            println!(
+                "    {:<12} GDP={:>12.0}  D/G={:>7.3}x  Vol={:>6.4}  BPD={:>6.3}%  SPD={:>6.3}%  DiaInt={:>8.2}",
+                label,
+                gdp_avg as i64,
+                dg_avg,
+                vol_avg,
+                bpd_avg * 100.0,
+                spd_avg * 100.0,
+                dia_avg,
+            );
+        }
+
+        // Delta
+        let floor_avg_dg: f64 = results.iter().filter(|r| r.has_floor).map(|r| r.dg).sum::<f64>()
+            / results.iter().filter(|r| r.has_floor).count().max(1) as f64;
+        let nofloor_avg_dg: f64 = results.iter().filter(|r| !r.has_floor).map(|r| r.dg).sum::<f64>()
+            / results.iter().filter(|r| !r.has_floor).count().max(1) as f64;
+        let floor_avg_gdp: f64 = results.iter().filter(|r| r.has_floor).map(|r| r.gdp).sum::<f64>()
+            / results.iter().filter(|r| r.has_floor).count().max(1) as f64;
+        let nofloor_avg_gdp: f64 = results.iter().filter(|r| !r.has_floor).map(|r| r.gdp).sum::<f64>()
+            / results.iter().filter(|r| !r.has_floor).count().max(1) as f64;
+
+        println!("\n  ── Delta (floor − no floor) ──");
+        println!("    D/G:  {:.3}x ({})", floor_avg_dg - nofloor_avg_dg,
+            if floor_avg_dg < nofloor_avg_dg { "floor BETTER" } else { "no floor BETTER" });
+        println!("    GDP:  {:.0} ({:.1}%)",
+            floor_avg_gdp - nofloor_avg_gdp,
+            (floor_avg_gdp - nofloor_avg_gdp) / nofloor_avg_gdp.max(1.0) * 100.0);
+        println!("\n  VERDICT: {}", if floor_avg_dg < nofloor_avg_dg {
+            "Floor REDUCES D/G at 90d — genuine structural improvement, not just masking."
+        } else if (floor_avg_dg - nofloor_avg_dg).abs() < 1.0 {
+            "Floor is NEUTRAL on D/G at 90d — neither helps nor hurts long-run solvency."
+        } else {
+            "Floor INCREASES D/G at 90d — masking effect. Floor makes displayed prices look stable but worsens debt dynamics."
+        });
+    }
 }

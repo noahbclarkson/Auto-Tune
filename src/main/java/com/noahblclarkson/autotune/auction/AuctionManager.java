@@ -402,16 +402,22 @@ public class AuctionManager {
      *                         The caller is responsible for catching and refunding.
      */
     private void processFill(AuctionFill fill) {
-        // Fetch both orders first — needed for economy ops.
+        // Fetch both orders first — needed for economy ops and notifications.
         Optional<AuctionOrder> sellOpt = auctionRepo.findById(fill.sellOrderId());
         Optional<AuctionOrder> buyOpt = auctionRepo.findById(fill.buyOrderId());
+
+        // ── DB write FIRST (source of truth) ─────────────────────────────────
+        // Record fill as PENDING before running any economy operations.
+        // This prevents phantom transactions: if economy ops fail, we can
+        // compensate rather than having money created from nothing.
+        AuctionFill pendingFill = fill.withStatus(AuctionFill.FillStatus.PENDING);
+        auctionRepo.insertFill(pendingFill);
 
         // Shared error array so lambdas can write errors for the outer method to read.
         // Array reference is effectively final; contents are mutated by lambdas.
         Exception[] economyError = new Exception[1];
 
         // ── Seller credit on main thread ──────────────────────────────────────
-        // Use separate final latch per op so lambda captures work correctly.
         final CountDownLatch sellerLatch = new CountDownLatch(1);
         if (sellOpt.isPresent()) {
             AuctionOrder sell = sellOpt.get();
@@ -458,6 +464,8 @@ public class AuctionManager {
             throw new RuntimeException("Interrupted while waiting for seller credit", e);
         }
         if (economyError[0] != null) {
+            // Mark FAILED and let the caller handle compensation for the seller.
+            auctionRepo.updateFillStatus(fill.id(), AuctionFill.FillStatus.FAILED);
             throw new RuntimeException("Seller credit failed for fill " + fill.id()
                     + ": " + economyError[0].getMessage(), economyError[0]);
         }
@@ -475,9 +483,8 @@ public class AuctionManager {
                     Player buyer = Bukkit.getPlayer(buy.playerUuid());
                     if (buyer == null) {
                         // Buyer offline — cannot deliver to offline inventory.
-                        // This should not happen because the matching engine now
-                        // filters out buy orders from offline players, but guard
-                        // against races between match and delivery.
+                        // This should not happen because the matching engine filters
+                        // buy orders from offline players, but guard against races.
                         economyError[0] = new RuntimeException(
                                 "Buyer " + buy.playerUuid() + " went offline before item delivery");
                         return;
@@ -502,14 +509,24 @@ public class AuctionManager {
             throw new RuntimeException("Interrupted while waiting for buyer item delivery", e);
         }
         if (economyError[0] != null) {
+            // Mark FAILED. Buyer item delivery failed — seller has already been credited.
+            // The caller should use FAILED fill status to decide compensation:
+            // the seller was paid (correct), but the buyer's items were not delivered.
+            // Admin intervention required to reconcile the seller credit vs missing delivery.
+            auctionRepo.updateFillStatus(fill.id(), AuctionFill.FillStatus.FAILED);
+            plugin.getLogger().warning(
+                    "[Auto-Tune] Buyer item delivery failed for fill " + fill.id()
+                            + ": " + economyError[0].getMessage()
+                            + ". Seller credit of " + fill.price().multiply(BigDecimal.valueOf(fill.quantity()))
+                            + " may need manual review.");
             throw new RuntimeException("Buyer item delivery failed for fill " + fill.id()
                     + ": " + economyError[0].getMessage(), economyError[0]);
         }
 
-        // ── Economy ops succeeded — now record to DB ─────────────────────────
-        auctionRepo.insertFill(fill);
+        // ── Economy ops succeeded — mark fill COMPLETED ───────────────────────
+        auctionRepo.updateFillStatus(fill.id(), AuctionFill.FillStatus.COMPLETED);
 
-        // Update remaining quantities on both orders
+        // Update remaining quantities on both orders and send notifications
         buyOpt.ifPresent(buy -> {
             int newRemaining = Math.max(0, buy.remainingQuantity() - fill.quantity());
             auctionRepo.update(buy.withRemainingQuantity(newRemaining));
@@ -718,6 +735,7 @@ public class AuctionManager {
                 .quantity(quantity)
                 .price(execPrice)
                 .filledAt(now)
+                .status(AuctionFill.FillStatus.COMPLETED)
                 .build();
 
         return CompletableFuture.supplyAsync(() -> {

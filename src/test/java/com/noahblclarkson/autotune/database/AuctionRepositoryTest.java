@@ -56,7 +56,8 @@ class AuctionRepositoryTest {
                     sell_order_id VARCHAR(36) NOT NULL,
                     quantity INTEGER NOT NULL,
                     price DECIMAL(20, 2) NOT NULL,
-                    filled_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    filled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    status VARCHAR(16) NOT NULL DEFAULT 'COMPLETED'
                 )
                 """));
 

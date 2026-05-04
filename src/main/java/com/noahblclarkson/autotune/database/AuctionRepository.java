@@ -214,7 +214,7 @@ public class AuctionRepository {
     public List<AuctionFill> findFillsByOrder(UUID orderId) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""
-                        SELECT id, buy_order_id, sell_order_id, quantity, price, filled_at
+                        SELECT id, buy_order_id, sell_order_id, quantity, price, filled_at, status
                         FROM at_auction_fills
                         WHERE buy_order_id = :id OR sell_order_id = :id
                         ORDER BY filled_at DESC
@@ -227,6 +227,7 @@ public class AuctionRepository {
                                 .quantity(rs.getInt("quantity"))
                                 .price(rs.getBigDecimal("price"))
                                 .filledAt(rs.getTimestamp("filled_at").toInstant())
+                                .status(AuctionFill.FillStatus.valueOf(rs.getString("status")))
                                 .build())
                         .list());
     }
@@ -234,7 +235,7 @@ public class AuctionRepository {
     public List<AuctionFill> findRecentFills(int limit) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""
-                        SELECT id, buy_order_id, sell_order_id, quantity, price, filled_at
+                        SELECT id, buy_order_id, sell_order_id, quantity, price, filled_at, status
                         FROM at_auction_fills
                         ORDER BY filled_at DESC
                         LIMIT :limit
@@ -247,6 +248,7 @@ public class AuctionRepository {
                                 .quantity(rs.getInt("quantity"))
                                 .price(rs.getBigDecimal("price"))
                                 .filledAt(rs.getTimestamp("filled_at").toInstant())
+                                .status(AuctionFill.FillStatus.valueOf(rs.getString("status")))
                                 .build())
                         .list());
     }
@@ -254,7 +256,7 @@ public class AuctionRepository {
     public List<AuctionFill> findRecentFillsByMaterial(String material, int limit) {
         return jdbi.withHandle(handle ->
                 handle.createQuery("""
-                        SELECT af.id, af.buy_order_id, af.sell_order_id, af.quantity, af.price, af.filled_at
+                        SELECT af.id, af.buy_order_id, af.sell_order_id, af.quantity, af.price, af.filled_at, af.status
                         FROM at_auction_fills af
                         JOIN at_auction_orders ao ON ao.id = af.sell_order_id
                         WHERE ao.material = :material
@@ -270,6 +272,7 @@ public class AuctionRepository {
                                 .quantity(rs.getInt("quantity"))
                                 .price(rs.getBigDecimal("price"))
                                 .filledAt(rs.getTimestamp("filled_at").toInstant())
+                                .status(AuctionFill.FillStatus.valueOf(rs.getString("status")))
                                 .build())
                         .list());
     }
@@ -322,9 +325,9 @@ public class AuctionRepository {
         jdbi.useHandle(handle ->
                 handle.createUpdate("""
                         INSERT INTO at_auction_fills
-                          (id, buy_order_id, sell_order_id, quantity, price, filled_at)
+                          (id, buy_order_id, sell_order_id, quantity, price, filled_at, status)
                         VALUES
-                          (:id, :buyOrderId, :sellOrderId, :qty, :price, :filledAt)
+                          (:id, :buyOrderId, :sellOrderId, :qty, :price, :filledAt, :status)
                         """)
                         .bind("id", fill.id().toString())
                         .bind("buyOrderId", fill.buyOrderId().toString())
@@ -332,6 +335,21 @@ public class AuctionRepository {
                         .bind("qty", fill.quantity())
                         .bind("price", fill.price())
                         .bind("filledAt", Timestamp.from(fill.filledAt()))
+                        .bind("status", fill.status().name())
+                        .execute());
+    }
+
+    /**
+     * Update the status of a fill record.
+     * Used after economy ops complete to mark PENDING → COMPLETED or FAILED.
+     */
+    public void updateFillStatus(@NotNull UUID fillId, @NotNull AuctionFill.FillStatus status) {
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                        UPDATE at_auction_fills SET status = :status WHERE id = :id
+                        """)
+                        .bind("id", fillId.toString())
+                        .bind("status", status.name())
                         .execute());
     }
 

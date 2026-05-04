@@ -6,6 +6,30 @@ _Living document. Update after every session. Prioritize ruthlessly._
 
 ---
 
+## Cron (2026-05-04 19:03 UTC) — API Docs Stale Auth Header + Rate Limits Fixed ✅
+
+**rewrite-2 at `77c3e9d`** | `./gradlew build` ✅ PMD 0 | `web/` 14 routes ✅ | `web-optimizer/` 22 routes ✅ | Pushed ✅
+
+**Bug fixed: `web-optimizer/src/app/api-docs/page.tsx` had 3 stale doc issues:**
+1. **Wrong auth header** in 4 places: said `X-API-Key` but API server uses `Authorization: Bearer <api-key>` (confirmed in `api-server/src/auth.rs`)
+2. **Wrong rate limits**: said "1 req/tick per server" and "1/IP/hour" — actual limits: submit=6 req/min/IP, registry=10 req/min/IP (from `rate_limit.rs`)
+3. **Minecraft jargon**: heartbeat said "once per tick" — removed
+
+**Build verification (all clean):** Gradle PMD 0, both web TypeScript checks, api-server clippy, price-solver clippy, market-sim check
+
+**Code audit (no new bugs found):** WebServer error handling solid, phantom transaction fix confirmed, offline payment fix confirmed, AuctionRepository SQLite date fix confirmed, MarketEngine division guards confirmed, no TODO/FIXMEs
+
+**Docs drift risk identified:** `docs/API.md` and `docs/SECURITY.md` were correctly updated in a prior session, but `api-docs/page.tsx` was missed. Pattern: when Rust API server changes, the web-optimizer's human-readable page may not sync.
+
+**PMD suppression audit:** 69/124 Java files still have blanket `@SuppressWarnings("PMD")` — deferred (high-value but tedious). Recommended: one large file per session.
+
+**Next priorities:**
+1. PMD targeted suppression cleanup — start with `MarketEngine.java` (802 lines, critical engine file)
+2. Add docs sync reminder to API server README
+3. Check remaining web-optimizer docs pages for API consistency
+
+---
+
 ## Cron (2026-05-04 12:27 UTC) — Bug Hunting & Repo Health ✅
 
 **rewrite-2 at `df0b815`** | `./gradlew build` ✅ PMD 0 | `./gradlew test` ✅ | Pushed ✅

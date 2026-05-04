@@ -7,7 +7,7 @@ description = "Auto-Tune price discovery API server"
 [dependencies]
 actix-web = "4"
 actix-cors = "0.7"
-sqlx = { version = "0.7", features = [
+sqlx = { version = "0.8", features = [
     "postgres",
     "runtime-tokio",
     "tls-rustls",

@@ -142,8 +142,11 @@ public class DatabaseManager {
             highestVersion = 7;
         }
 
-        // Add future migrations here:
-        // if (currentVersion < 8) { ... }
+        if (currentVersion < 8) {
+            plugin.getLogger().info("Applying database migration V8 (Auction Fill Status)...");
+            runMigration("db/V8__Auction_Fill_Status.sql");
+            highestVersion = 8;
+        }
 
         if (highestVersion > currentVersion) {
             setSchemaVersion(highestVersion);

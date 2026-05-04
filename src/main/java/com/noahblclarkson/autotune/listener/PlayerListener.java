@@ -8,6 +8,7 @@ import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.PendingNotificationRepository;
 import com.noahblclarkson.autotune.database.PendingNotificationRepository.PendingNotification;
+import com.noahblclarkson.autotune.auction.AuctionManager;
 import com.noahblclarkson.autotune.economy.LoanManager;
 import com.noahblclarkson.autotune.manager.AutosellManager;
 import com.noahblclarkson.autotune.manager.ScoreboardManager;
@@ -45,6 +46,7 @@ public class PlayerListener implements Listener {
     private final ScoreboardManager scoreboardManager;
     private final Permission vaultPerms;
     private final PendingNotificationRepository pendingNotificationRepository;
+    private final AuctionManager auctionManager;
     private final AutoTune plugin;
 
     @Inject
@@ -57,7 +59,8 @@ public class PlayerListener implements Listener {
             AutosellManager autosellManager,
             ScoreboardManager scoreboardManager,
             Permission vaultPerms,
-            PendingNotificationRepository pendingNotificationRepository
+            PendingNotificationRepository pendingNotificationRepository,
+            AuctionManager auctionManager
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
@@ -68,6 +71,7 @@ public class PlayerListener implements Listener {
         this.scoreboardManager = scoreboardManager;
         this.vaultPerms = vaultPerms;
         this.pendingNotificationRepository = pendingNotificationRepository;
+        this.auctionManager = auctionManager;
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
@@ -89,7 +93,21 @@ public class PlayerListener implements Listener {
         }).thenAccept(data -> databaseManager.runOnMain(() -> {
             checkLoanWarning(player, data.activeLoan());
             deliverPendingNotifications(player, data.pending());
-        })).exceptionally(ex -> {
+        })).thenRunAsync(() -> {
+            // Auto-reclaim expired sell order items for the player.
+            // Runs on pool thread to avoid blocking main; reclaimExpiredOrders
+            // internally schedules item delivery on the main thread.
+            try {
+                int reclaimed = auctionManager.reclaimExpiredOrders(player);
+                if (reclaimed > 0) {
+                    LOGGER.info("Auto-reclaimed " + reclaimed + " item(s) from expired "
+                            + "auction sell orders for " + player.getName());
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Failed to auto-reclaim auction items for "
+                        + player.getName(), e);
+            }
+        }).exceptionally(ex -> {
             LOGGER.log(Level.WARNING, "Failed to process player join", ex);
             return null;
         });

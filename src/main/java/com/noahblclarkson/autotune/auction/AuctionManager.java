@@ -941,9 +941,14 @@ public class AuctionManager {
                                         + " expired. Items returned to your inventory.",
                                 net.kyori.adventure.text.format.NamedTextColor.YELLOW));
                     }
-                    // Note: if the player is offline, items are NOT returned automatically.
-                    // They remain in the database as EXPIRED and must be manually reclaimed.
-                    // Consider: add a /auction reclaim command for offline players.
+                    // Player is offline — items remain in the DB as EXPIRED.
+                    // They will be auto-reclaimed on next login (PlayerListener).
+                    // Send a pending notification so the player knows.
+                    pendingNotificationRepo.insert(order.playerUuid(),
+                            "\u26a0 Your sell order for " + order.remainingQuantity()
+                                    + "\u00d7 " + formatMaterialName(order.material())
+                                    + " expired while you were offline. Items returned to your inventory.",
+                            "AUCTION_EXPIRY");
                 }
             } catch (Exception e) {
                 error.set(e);

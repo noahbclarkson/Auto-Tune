@@ -181,7 +181,7 @@ export default function DocsPage() {
             <span className="font-semibold text-amber-300">These docs track the rewrite-2 branch</span>
             {' '}&mdash; in-development version targeting Paper 1.21.4. All findings and defaults reflect rewrite-2.{' '}
             <a
-              href="https://github.com/noahbclarkson/Auto-Tune/tree/master/docs"
+              href="https://github.com/noahbclarkson/Auto-Tune/tree/rewrite-2/docs"
               target="_blank"
               rel="noopener noreferrer"
               className="underline underline-offset-2 text-amber-300 hover:text-amber-200"

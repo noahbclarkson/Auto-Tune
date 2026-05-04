@@ -125,7 +125,7 @@ function AuthBox() {
         <div>
           <p className="text-sm font-semibold text-amber-300 mb-1">Server authentication required</p>
           <p className="text-xs text-gray-400 leading-relaxed">
-            All write endpoints require an <code className="text-amber-300 font-mono">X-API-Key</code> header.
+            All write endpoints require an <code className="text-amber-300 font-mono">Authorization: Bearer &lt;api-key&gt;</code> header.
             Register your server at <Link href="/servers" className="text-amber-300 hover:underline">/servers</Link> to get an API key.
             Keys are shown once at registration — store them in a password manager.
           </p>
@@ -175,7 +175,7 @@ export default function ApiDocsPage() {
           <div className="grid sm:grid-cols-2 gap-4 mb-4">
             {[
               { label: 'Base URL', value: 'https://api.autotune.dev/v1' },
-              { label: 'Auth', value: 'X-API-Key header' },
+              { label: 'Auth', value: 'Authorization: Bearer <api-key>' },
               { label: 'Format', value: 'JSON' },
               { label: 'Submit interval', value: 'Every 5 min (1× per tick)' },
             ].map(({ label, value }) => (
@@ -198,7 +198,7 @@ export default function ApiDocsPage() {
           </p>
           <div className="rounded-lg border border-gray-800 bg-gray-950/60 p-4 mb-4">
             <p className="text-xs text-gray-500 mb-2 font-semibold">Request header</p>
-            <code className="text-sm font-mono text-sky-300">X-API-Key: at_srv_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code>
+            <code className="text-sm font-mono text-sky-300">Authorization: Bearer at_srv_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code>
           </div>
           <div className="flex items-start gap-2 text-xs text-gray-400">
             <Shield className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
@@ -264,7 +264,7 @@ export default function ApiDocsPage() {
           <Endpoint
             method="POST"
             path="/v1/servers/:id/heartbeat"
-            description="Send a heartbeat to keep your server's status as Online on the /servers page. Send every 5 minutes (once per tick)."
+            description="Send a heartbeat to keep your server's status as Online on the /servers page. Send every 5 minutes."
             params={[
               { name: 'player_count', type: 'integer', required: false, description: 'Current online player count (used for server health monitoring)' },
             ]}
@@ -420,7 +420,7 @@ export default function ApiDocsPage() {
               <tbody className="divide-y divide-gray-800/40">
                 {[
                   { status: '400', code: 'INVALID_REQUEST', meaning: 'Malformed JSON or missing required fields' },
-                  { status: '401', code: 'UNAUTHORIZED', meaning: 'Missing or invalid X-API-Key' },
+                  { status: '401', code: 'UNAUTHORIZED', meaning: 'Missing or invalid Authorization header (expected: Bearer <key>)' },
                   { status: '403', code: 'FORBIDDEN', meaning: 'Valid key but action not permitted (e.g. wrong server ID in path)' },
                   { status: '422', code: 'UNPROCESSABLE', meaning: 'Valid JSON but failed validation (e.g. negative ratio value)' },
                   { status: '429', code: 'RATE_LIMITED', meaning: 'Too many submissions. Check Retry-After header.' },
@@ -440,8 +440,8 @@ export default function ApiDocsPage() {
           <div className="flex items-start gap-2 text-xs text-gray-400">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
             <span>
-              <strong className="text-gray-300">Rate limits:</strong> Submit endpoint: 1 req/tick per server. Registry: 1/IP/hour.
-              True prices / exchange rates: 60 req/min per IP (public, no key required).
+              <strong className="text-gray-300">Rate limits:</strong> Price submission: 6 req/min per IP. Server registration: 10 req/min per IP.
+              True prices / exchange rates: public, no rate limit (no key required).
             </span>
           </div>
         </Section>

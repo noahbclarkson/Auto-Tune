@@ -493,6 +493,9 @@ public class AuctionManager {
             auctionRepo.update(buy.withRemainingQuantity(newRemaining));
             if (newRemaining == 0) {
                 notifyWatchersOfFill(buy, fill);
+                notifyOwnerOfFullFill(buy);
+            } else {
+                notifyOwnerOfPartialFill(buy, fill);
             }
         });
         sellOpt.ifPresent(sell -> {
@@ -500,6 +503,9 @@ public class AuctionManager {
             auctionRepo.update(sell.withRemainingQuantity(newRemaining));
             if (newRemaining == 0) {
                 notifyWatchersOfFill(sell, fill);
+                notifyOwnerOfFullFill(sell);
+            } else {
+                notifyOwnerOfPartialFill(sell, fill);
             }
         });
     }
@@ -538,6 +544,54 @@ public class AuctionManager {
                 } catch (IllegalArgumentException ignored) {
                     // Invalid UUID string — skip
                 }
+            }
+        });
+    }
+
+    /**
+     * Notify the order owner that their order has been fully filled.
+     * Sends one message for the complete fill.
+     */
+    private void notifyOwnerOfFullFill(AuctionOrder order) {
+        String itemName = order.material().toLowerCase(java.util.Locale.ROOT)
+                .replace('_', ' ');
+        itemName = itemName.substring(0, 1).toUpperCase(java.util.Locale.ROOT)
+                + itemName.substring(1);
+        String msg = String.format(
+                "⚡ Your %s order for %d× %s has been fully filled",
+                order.side().name().toLowerCase(),
+                order.originalQuantity(),
+                itemName);
+        sendOwnerMessage(order.playerUuid(), msg);
+    }
+
+    /**
+     * Notify the order owner that their order received a partial fill.
+     * Shows the fill quantity and remaining amount.
+     */
+    private void notifyOwnerOfPartialFill(AuctionOrder order, AuctionFill fill) {
+        String itemName = order.material().toLowerCase(java.util.Locale.ROOT)
+                .replace('_', ' ');
+        itemName = itemName.substring(0, 1).toUpperCase(java.util.Locale.ROOT)
+                + itemName.substring(1);
+        String msg = String.format(
+                "📦 Partial fill on your %s order: %d× %s filled at %s/unit (%d remaining)",
+                order.side().name().toLowerCase(),
+                fill.quantity(),
+                itemName,
+                configManager.formatCurrency(fill.price()),
+                order.remainingQuantity());
+        sendOwnerMessage(order.playerUuid(), msg);
+    }
+
+    private void sendOwnerMessage(UUID playerUuid, String msg) {
+        Bukkit.getScheduler().runTask(plugin, task -> {
+            Player owner = Bukkit.getPlayer(playerUuid);
+            if (owner != null) {
+                owner.sendMessage(net.kyori.adventure.text.Component.text(
+                        msg, net.kyori.adventure.text.format.NamedTextColor.GREEN));
+            } else {
+                pendingNotificationRepo.insert(playerUuid, msg, "AUCTION_FILL");
             }
         });
     }
@@ -636,6 +690,9 @@ public class AuctionManager {
                     auctionRepo.update(buy.withRemainingQuantity(newRemaining));
                     if (newRemaining == 0) {
                         notifyWatchersOfFill(buy, fill);
+                        notifyOwnerOfFullFill(buy);
+                    } else {
+                        notifyOwnerOfPartialFill(buy, fill);
                     }
                 });
 
@@ -644,6 +701,9 @@ public class AuctionManager {
                     auctionRepo.update(sell.withRemainingQuantity(newRemaining));
                     if (newRemaining == 0) {
                         notifyWatchersOfFill(sell, fill);
+                        notifyOwnerOfFullFill(sell);
+                    } else {
+                        notifyOwnerOfPartialFill(sell, fill);
                     }
                 });
 

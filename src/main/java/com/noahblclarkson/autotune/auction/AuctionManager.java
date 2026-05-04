@@ -28,16 +28,16 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 @Singleton
 @SuppressWarnings("PMD")
@@ -92,6 +92,13 @@ public class AuctionManager {
             int quantity,
             @NotNull BigDecimal pricePerUnit
     ) {
+        // Snapshot online player UUIDs on the calling thread (main thread) so
+        // the async block can safely filter buy orders without cross-thread
+        // Bukkit API calls.
+        Set<UUID> onlineUuids = Bukkit.getOnlinePlayers().stream()
+                .map(Player::getUniqueId)
+                .collect(Collectors.toUnmodifiableSet());
+
         return CompletableFuture.supplyAsync(() -> {
             if (quantity <= 0) {
                 return AuctionResult.error("Quantity must be positive");
@@ -119,8 +126,14 @@ public class AuctionManager {
                         .expiresAt(Instant.now().plus(defaultDurationHours, ChronoUnit.HOURS))
                         .build();
 
-                // Load existing orders for matching
-                List<AuctionOrder> existingOrders = auctionRepo.findActiveByMaterial(material.name());
+                // Load existing orders for matching.
+                // Filter out BUY orders from offline players — items cannot be
+                // delivered to offline inventories, so those orders must wait
+                // until their owner is online to participate in matching.
+                List<AuctionOrder> existingOrders = auctionRepo.findActiveByMaterial(material.name())
+                        .stream()
+                        .filter(o -> o.side() != OrderSide.BUY || onlineUuids.contains(o.playerUuid()))
+                        .toList();
 
                 // Attempt matching against existing buy orders
                 AuctionMatchingEngine.MatchResult result = matchingEngine.matchOrder(order, existingOrders);
@@ -408,21 +421,25 @@ public class AuctionManager {
 
             Bukkit.getScheduler().runTask(plugin, task -> {
                 try {
-                    Player seller = Bukkit.getPlayer(sell.playerUuid());
-                    if (seller == null) {
-                        economyError[0] = new RuntimeException("Seller " + sell.playerUuid() + " is offline");
-                        return;
-                    }
-                    economy.depositPlayer(seller, netProceeds.doubleValue());
-                    // Notify seller that their listing was filled.
+                    // Use OfflinePlayer for deposit so sellers are credited even when offline.
+                    org.bukkit.OfflinePlayer offlineSeller = Bukkit.getOfflinePlayer(sell.playerUuid());
+                    economy.depositPlayer(offlineSeller, netProceeds.doubleValue());
+
+                    // Notify seller if online; queue for offline delivery otherwise.
                     String itemName = sell.material().toLowerCase(java.util.Locale.ROOT)
                             .replace('_', ' ');
                     itemName = itemName.substring(0, 1).toUpperCase(java.util.Locale.ROOT)
                             + itemName.substring(1);
-                    seller.sendMessage(net.kyori.adventure.text.Component.text(
-                            "⚡ Your auction listing sold: " + fill.quantity() + "× " + itemName
-                                    + " for " + configManager.formatCurrency(grossProceeds) + " total",
-                            net.kyori.adventure.text.format.NamedTextColor.GREEN));
+                    String saleMsg = "\u26a1 Your auction listing sold: " + fill.quantity()
+                            + "\u00d7 " + itemName + " for "
+                            + configManager.formatCurrency(grossProceeds) + " total";
+                    Player seller = Bukkit.getPlayer(sell.playerUuid());
+                    if (seller != null) {
+                        seller.sendMessage(net.kyori.adventure.text.Component.text(
+                                saleMsg, net.kyori.adventure.text.format.NamedTextColor.GREEN));
+                    } else {
+                        pendingNotificationRepo.insert(sell.playerUuid(), saleMsg, "AUCTION_FILL");
+                    }
                 } catch (Exception e) {
                     economyError[0] = e;
                 } finally {
@@ -457,7 +474,12 @@ public class AuctionManager {
                 try {
                     Player buyer = Bukkit.getPlayer(buy.playerUuid());
                     if (buyer == null) {
-                        economyError[0] = new RuntimeException("Buyer " + buy.playerUuid() + " is offline");
+                        // Buyer offline — cannot deliver to offline inventory.
+                        // This should not happen because the matching engine now
+                        // filters out buy orders from offline players, but guard
+                        // against races between match and delivery.
+                        economyError[0] = new RuntimeException(
+                                "Buyer " + buy.playerUuid() + " went offline before item delivery");
                         return;
                     }
                     Material mat = Material.valueOf(materialName);
@@ -495,7 +517,7 @@ public class AuctionManager {
                 notifyWatchersOfFill(buy, fill);
                 notifyOwnerOfFullFill(buy);
             } else {
-                notifyOwnerOfPartialFill(buy, fill);
+                notifyOwnerOfPartialFill(buy, fill, newRemaining);
             }
         });
         sellOpt.ifPresent(sell -> {
@@ -505,7 +527,7 @@ public class AuctionManager {
                 notifyWatchersOfFill(sell, fill);
                 notifyOwnerOfFullFill(sell);
             } else {
-                notifyOwnerOfPartialFill(sell, fill);
+                notifyOwnerOfPartialFill(sell, fill, newRemaining);
             }
         });
     }
@@ -568,8 +590,12 @@ public class AuctionManager {
     /**
      * Notify the order owner that their order received a partial fill.
      * Shows the fill quantity and remaining amount.
+     *
+     * @param order        the original order (pre-fill snapshot)
+     * @param fill         the fill that just occurred
+     * @param newRemaining the remaining quantity AFTER this fill
      */
-    private void notifyOwnerOfPartialFill(AuctionOrder order, AuctionFill fill) {
+    private void notifyOwnerOfPartialFill(AuctionOrder order, AuctionFill fill, int newRemaining) {
         String itemName = order.material().toLowerCase(java.util.Locale.ROOT)
                 .replace('_', ' ');
         itemName = itemName.substring(0, 1).toUpperCase(java.util.Locale.ROOT)
@@ -580,7 +606,7 @@ public class AuctionManager {
                 fill.quantity(),
                 itemName,
                 configManager.formatCurrency(fill.price()),
-                order.remainingQuantity());
+                newRemaining);
         sendOwnerMessage(order.playerUuid(), msg);
     }
 
@@ -640,15 +666,28 @@ public class AuctionManager {
         Bukkit.getScheduler().runTask(plugin, () -> {
             try {
                 // Credit seller (after auction tax deduction).
-                Player seller = Bukkit.getPlayer(sellerUuid);
-                if (seller != null) {
-                    economy.depositPlayer(seller, netProceeds.doubleValue());
-                }
+                // Use OfflinePlayer so sellers are credited even when not online.
+                org.bukkit.OfflinePlayer seller = Bukkit.getOfflinePlayer(sellerUuid);
+                economy.depositPlayer(seller, netProceeds.doubleValue());
+
                 // Give buyer their items.
                 Player buyer = Bukkit.getPlayer(buyerUuid);
                 if (buyer != null) {
                     Material mat = Material.valueOf(material);
                     buyer.getInventory().addItem(new ItemStack(mat, quantity));
+                } else {
+                    // Buyer went offline between GUI click and fill — log for admin.
+                    // Items cannot be delivered to offline inventory; store notification
+                    // so they know to use /auction reclaim when back online.
+                    plugin.getLogger().warning(
+                            "[Auto-Tune] Buyer " + buyerUuid + " offline during fill "
+                                    + fillId + " — " + quantity + "× " + material
+                                    + " not delivered. Player should /auction reclaim.");
+                    pendingNotificationRepo.insert(buyerUuid,
+                            "\u26a0 You were offline when your buy order was filled: "
+                                    + quantity + "\u00d7 " + material
+                                    + ". Use /auction reclaim to retrieve your items.",
+                            "AUCTION_FILL");
                 }
             } catch (Exception e) {
                 economyError.set(e);
@@ -692,7 +731,7 @@ public class AuctionManager {
                         notifyWatchersOfFill(buy, fill);
                         notifyOwnerOfFullFill(buy);
                     } else {
-                        notifyOwnerOfPartialFill(buy, fill);
+                        notifyOwnerOfPartialFill(buy, fill, newRemaining);
                     }
                 });
 
@@ -703,7 +742,7 @@ public class AuctionManager {
                         notifyWatchersOfFill(sell, fill);
                         notifyOwnerOfFullFill(sell);
                     } else {
-                        notifyOwnerOfPartialFill(sell, fill);
+                        notifyOwnerOfPartialFill(sell, fill, newRemaining);
                     }
                 });
 

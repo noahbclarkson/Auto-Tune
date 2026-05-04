@@ -3,7 +3,6 @@ package com.noahblclarkson.autotune.config;
 import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig.*;
 import com.noahblclarkson.autotune.model.ItemTier;
-import com.noahblclarkson.autotune.config.AutoTuneConfig.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;

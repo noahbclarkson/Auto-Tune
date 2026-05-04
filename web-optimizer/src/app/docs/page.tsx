@@ -85,10 +85,10 @@ const CARDS: DocCard[] = [
   {
     title: 'Auction House Guide',
     description:
-      'Complete reference for the built-in P2P auction house: limit orders, order book, fill notifications, native /auction commands, integrity monitoring for admins, and thin-book/spoofing detection.',
+      'Complete reference for the built-in P2P auction house: limit orders, order book, fill notifications, native /auction commands, depth chart reading, integrity monitoring, and thin-book/spoofing detection.',
     audience: 'admin',
     readingTime: '10 min',
-    href: `${GITHUB_BASE}/SERVER_ADMIN_GUIDE.md#auction-house`,
+    href: `${GITHUB_BASE}/AUCTION_HOUSE_GUIDE.md`,
   },
   // FAQ
   {
@@ -366,6 +366,7 @@ export default function DocsPage() {
               { href: '/changelog', label: 'Changelog', desc: 'Version history and release notes' },
               { href: '/roadmap', label: 'Roadmap', desc: 'Planned features and priorities' },
               { href: '/api-docs', label: 'API Reference', desc: 'Interactive API docs for cross-server server' },
+              { href: '/auction', label: 'Auction House', desc: 'P2P order-book marketplace — order book demo, commands, integrity monitoring' },
             ].map(({ href, label, desc }) => (
               <Link
                 key={href}

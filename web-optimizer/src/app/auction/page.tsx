@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Gavel, TrendingUp, TrendingDown, Shield, Clock, ArrowRight, CheckCircle, BarChart2, AlertTriangle, Eye, Users } from 'lucide-react';
+import { DepthChart } from '@/components/auction/depth-chart';
 
 // ─── Mock auction data ────────────────────────────────────────────────────────
 
@@ -17,6 +18,24 @@ const MOCK_ORDERS = [
   { side: 'SELL', mat: 'GOLD', price: 21, qty: 64, filled: 12, status: 'partial' },
   { side: 'BUY', mat: 'GOLD', price: 19, qty: 100, filled: 0, status: 'active' },
   { side: 'SELL', mat: 'NETHERITE', price: 2200, qty: 3, filled: 0, status: 'active' },
+];
+
+const MOCK_BIDS = [
+  { price: 305, qty: 12 },
+  { price: 298, qty: 34 },
+  { price: 290, qty: 52 },
+  { price: 285, qty: 68 },
+  { price: 280, qty: 79 },
+  { price: 270, qty: 88 },
+];
+
+const MOCK_ASKS = [
+  { price: 318, qty: 8 },
+  { price: 325, qty: 18 },
+  { price: 330, qty: 30 },
+  { price: 340, qty: 46 },
+  { price: 355, qty: 60 },
+  { price: 370, qty: 75 },
 ];
 
 const MOCK_FILLS = [
@@ -191,6 +210,34 @@ export default function AuctionPage() {
         <div className="grid lg:grid-cols-2 gap-6">
           <OrderBook />
           <RecentFills />
+        </div>
+      </section>
+
+      {/* Depth Chart */}
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-gray-800/40 bg-gray-900/30">
+        <div className="text-center mb-8">
+          <p className="text-xs text-sky-400 uppercase tracking-widest font-medium mb-2">Market Depth</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">See where the market is thin</h2>
+          <p className="text-gray-400 max-w-lg mx-auto text-sm leading-relaxed">
+            The depth chart shows cumulative bid/ask quantities at each price level. Green area = buy walls; Rose area = sell walls. Where the two areas meet is the natural equilibrium.
+          </p>
+        </div>
+        <div className="max-w-2xl mx-auto">
+          <DepthChart bids={MOCK_BIDS} asks={MOCK_ASKS} />
+        </div>
+        <div className="mt-6 max-w-2xl mx-auto grid sm:grid-cols-3 gap-3 text-xs text-gray-500">
+          <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-3">
+            <p className="text-emerald-400 font-medium mb-1">Bid walls</p>
+            <p>Green area shows how much buying support exists at each price. Larger green = stronger buy support.</p>
+          </div>
+          <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-3">
+            <p className="text-rose-400 font-medium mb-1">Ask walls</p>
+            <p>Rose area shows sell pressure. A tall rose spike means a large seller could move the price down.</p>
+          </div>
+          <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-3">
+            <p className="text-sky-400 font-medium mb-1">Thin books</p>
+            <p>Small total area = thin book. Admins see a warning when a material has very low open interest.</p>
+          </div>
         </div>
       </section>
 

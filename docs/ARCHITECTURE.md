@@ -189,7 +189,7 @@ Standalone Rust app that mirrors the Java MarketEngine exactly. Used to:
 
 **Key finding (2026-03-25):** ALL 840 parameter combinations tested produced stable markets (avg volatility < 0.05). The engine is robust across the full parameter space. Underselling (prices 30–65% below base) is structural — player archetypes (farmer-heavy) drive it, not engine parameters.
 
-**Loan circuit breaker:** Rust sim now mirrors Java LoanManager — pauses interest when `debt / GDP > 10.0`. Verified in stressed scenario: debt went from catastrophic to manageable.
+**Loan circuit breaker:** Rust sim now mirrors Java LoanManager — pauses interest when `debt / GDP > 30.0` (default `debt-gdp-tier3-ratio: 30.0`). Verified in stressed scenario: debt went from catastrophic to manageable.
 
 **Analyzer CLI:**
 ```

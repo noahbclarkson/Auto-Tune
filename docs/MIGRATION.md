@@ -152,7 +152,7 @@ rewrite-2 uses a **new pricing model** compared to the old flat-price system:
 | Volume liquidity | None | Per-item spread reduction |
 | Trade history | Simple average | Recency-weighted window |
 | Sector correlation | None | Related items nudge together |
-| Loan circuit breaker | None | Pauses interest if debt/GDP > 10× |
+| Loan circuit breaker | None | Pauses interest if debt/GDP > 30× (default `debt-gdp-tier3-ratio: 30.0`) |
 
 **Implications:**
 - Prices will settle away from base prices naturally (typically 40–70% below base in balanced economies)

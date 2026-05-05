@@ -60,10 +60,10 @@ In `config.yml`, configure your economy to attract or designate players as Marke
 
 Loans are **required** for a healthy economy. Without credit, GuildBuyer purchases fail and prices crash.
 
-- **Circuit Breaker:** Enabled automatically. If Debt/GDP exceeds 15×, interest pauses until D/G drops to 13.5× (10% hysteresis band)
+- **Circuit Breaker:** Enabled automatically. If Debt/GDP exceeds 30× (`debt-gdp-tier3-ratio`), interest pauses until D/G drops below `tier3 × (1 − hysteresis-band)` (default unlock: below 15× with 50% hysteresis band)
 - **Post-default cooldown:** Players who default are blocked from new loans for **7 days** (`post-default-cooldown-hours: 168`)
 - **Counter-cyclical interest:** Interest rate reduces as D/G rises (enabled by default). Prevents most cascade scenarios before the circuit breaker fires.
-- **TIER3 ratio:** Set to `15` (not 10). Prevents TIER3 noise in healthy economies. At 15×, counter-cyclical handles debt before the circuit breaker is needed.
+- **TIER3 ratio:** Default is `30.0` — circuit fires at 30× D/G, unlocks below 15× with 50% hysteresis band. Counter-cyclical handles debt accumulation before the circuit breaker is needed.
 
 > **Disable loans only if:** Your economy has no borrowable capital and no need for credit. Most SMPs benefit from loans.
 

@@ -493,7 +493,7 @@ Economy health diagnostics. Same data as `/at admin health` command.
 }
 ```
 
-`circuitBreakerTier`: `"TIER0"` (healthy), `"TIER1"` (>3× debt/GDP), `"TIER2"` (>5×), `"TIER3"` (>10×).
+`circuitBreakerTier`: `"TIER0"` (healthy), `"TIER1"` (>3× debt/GDP), `"TIER2"` (>5×), `"TIER3"` (>30×).
 
 ---
 

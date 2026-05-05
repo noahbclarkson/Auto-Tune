@@ -404,3 +404,48 @@ Both CC and legacy exit paths now preserve computed counter-cyclical taper, appl
 - [x] ~~Docs field name sync~~ — ✅ DONE (4222f3f)
 - [ ] ~~API server deployment~~ — BLOCKED on Arc's Fly.io token
 - [ ] ~~Real testimonials via Discord outreach~~ — needs human action
+
+## Cron (2026-05-05 01:41 UTC) — GB Debt Cap NOT FIXED + Floor Paradox Amplified ⚠️
+
+**rewrite-2 at `7874611`** (no new commits — findings only) | `./gradlew build` ✅ PMD 0 | Regression 6/6 PASS ✅ | Pushed ✅
+
+### Simulation Results
+
+**GB Debt Cap (3× GDP) — NOT FIXED:**
+- 60-day × 2 seeds: D/G 17.8x → 17.8x (delta +0.000x)
+- TIER3 events identical (12 vs 12)
+- Cap=3× GDP is non-binding at 60d. GB loans don't accumulate to that threshold in simulation window.
+- **Tighter cap needed** (1-2× GDP) to actually constrain borrowing.
+
+**Stressed Economy 30-Day Floor Paradox — AMPLIFIED:**
+- `--stressed-30d-floor-test` (seed=42, chronic oversupply)
+- Control GDP=7,562 vs Treatment GDP=**0** (-100.0%)
+- Floor kills trade under sustained stress — prevents natural price correction
+- D/G: 930x (ctrl) vs **4,986,466x** (floor) — paradox amplified dramatically
+- **Floor is a structural liability under chronic stress**, not just a price mask
+- TIER3 oscillates more violently with floor active (8 vs 6 events)
+
+**Production Config Multi-Seed (5 seeds, 14d) — CONFIRMED:**
+- 2MM+2GB+floor vs 1MM+2GB
+- GDP **+88.9%**, floor binds **5/5 seeds**, BPD -24.7%
+- 2MM+60% floor remains RECOMMENDED production default
+
+### Key Insight: Floor Paradox Is Structural at 30d+
+
+At 14d: floor paradox exists but economy survives.
+At 30d (chronic stress): floor kills GDP entirely, D/G becomes catastrophic.
+At 90d: partial run shows floor/no-floor identical D/G at 15.1x — floor neither helps nor hurts D/G long-run.
+**Conclusion: Floor stabilizes prices but does NOT contain debt accumulation. It's a cosmetic stabilizer, not an economic cure.**
+
+### Repo Health Notes
+- 67/124 Java files have class-level `@SuppressWarnings("PMD")` — makes PMD useless
+- PMD targeted suppression cleanup still pending (high-value but tedious)
+- No runtime bugs found requiring immediate fix
+- API deploy BLOCKED (Arc's Fly.io token)
+
+### Next Simulation Priorities
+1. **Tighter GB debt cap sweep**: cap × [0.5×/1×/2× GDP] × 2 seeds × 60d
+2. **Loan maturity test**: add expiration to new loans, force rollover — does this reduce debt accumulation?
+3. **Archetype gap**: Newbie archetype replacing GBs — unanswered question from prior session
+4. **Resume-safe 90d floor test**: use `--output` persistence so SIGKILL doesn't lose data
+

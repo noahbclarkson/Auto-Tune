@@ -356,6 +356,86 @@ public class EconomyManager {
         return TransactionResult.success(TransactionType.SELL, amount, netProceeds);
     }
 
+    /**
+     * Sells a stack that has already been removed from the player's inventory.
+     *
+     * <p>The /sell GUI stores items in its own temporary inventory. By the time
+     * the inventory closes, those items are no longer in the player's storage
+     * slots, so {@link #processSellImmediate(Player, ShopItem, int, ItemStack)}
+     * would incorrectly fail its player-inventory removal step. This method is
+     * for that detached-stack flow: the caller owns returning the item on
+     * failure, while successful sales leave the stack consumed by the GUI.
+     */
+    public TransactionResult processDetachedSellImmediate(
+            @NotNull Player player,
+            @NotNull ShopItem item,
+            int amount,
+            @Nullable ItemStack itemStack
+    ) {
+        java.util.UUID playerId = player.getUniqueId();
+        BigDecimal basePricePerUnit = marketEngine.getSellPrice(item, amount);
+
+        // Apply enchantment multiplier if the item has enchantments
+        BigDecimal pricePerUnit;
+        if (itemStack != null) {
+            double enchantMult = EnchantmentPricing.getMultiplier(itemStack,
+                    configManager.getConfig().enchantment());
+            if (enchantMult > 1.0) {
+                pricePerUnit = EnchantmentPricing.applyMultiplier(basePricePerUnit, enchantMult);
+            } else {
+                pricePerUnit = basePricePerUnit;
+            }
+        } else {
+            pricePerUnit = basePricePerUnit;
+        }
+
+        BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
+
+        // Collect sell tax from proceeds before calculating net to player
+        BigDecimal taxAmount = treasuryService.collectSellTax(totalPrice);
+        BigDecimal netProceeds = totalPrice.subtract(taxAmount);
+
+        // Detached stacks are already out of the player's inventory. Deposit
+        // first; if Vault fails, the caller still has the stack and can return it.
+        if (!deposit(player, netProceeds.doubleValue())) {
+            return TransactionResult.economyError();
+        }
+
+        final BigDecimal finalPricePerUnit = pricePerUnit;
+        final BigDecimal finalNetProceeds = netProceeds;
+        try {
+            databaseManager.supplyAsync(() -> {
+                Transaction transaction = Transaction.builder()
+                        .playerUuid(playerId)
+                        .itemId(item.id())
+                        .type(TransactionType.SELL)
+                        .amount(amount)
+                        .pricePerUnit(finalPricePerUnit)
+                        .totalPrice(finalNetProceeds)
+                        .build();
+
+                transactionRepository.insert(transaction);
+                playerStreakService.onTransaction(transaction.playerUuid());
+                priceReporter.recordTransaction(item, transaction);
+                playerRepository.addTransaction(playerId, finalNetProceeds, false);
+                marketEngine.recordSell(item.id(), amount);
+                shopManager.invalidateBuyableCache(item.id());
+
+                // Award badges for sell activity
+                badgeService.onSell(playerId, finalNetProceeds);
+
+                return null;
+            }).join();
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "[Auto-Tune] DB write failed after detached sell for " + player.getName()
+                            + " (amount=" + amount + ", net=" + netProceeds + "). "
+                            + "Money deposited but transaction not recorded. Manual DB review may be needed.", e);
+        }
+
+        return TransactionResult.success(TransactionType.SELL, amount, netProceeds);
+    }
+
     public CompletableFuture<TransactionResult> processCartAsync(@NotNull Player player, @NotNull List<CartItem> cart) {
         java.util.UUID playerId = player.getUniqueId();
         BigDecimal totalBuyCost = BigDecimal.ZERO;

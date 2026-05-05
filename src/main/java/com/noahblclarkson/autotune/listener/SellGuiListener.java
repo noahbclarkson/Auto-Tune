@@ -64,7 +64,9 @@ public class SellGuiListener implements Listener {
         int totalItemsSold = 0;
         BigDecimal totalEarned = BigDecimal.ZERO;
 
-        for (ItemStack stack : event.getInventory().getContents()) {
+        Inventory sellInventory = event.getInventory();
+        for (int slot = 0; slot < sellInventory.getSize(); slot++) {
+            ItemStack stack = sellInventory.getItem(slot);
             if (stack == null || stack.getType().isAir()) {
                 continue;
             }
@@ -73,19 +75,22 @@ public class SellGuiListener implements Listener {
             if (shopItemOpt.isEmpty()) {
                 // Item not in shop — return it to the player instead of losing it
                 returnItem(player, stack);
+                sellInventory.setItem(slot, null);
                 continue;
             }
 
             ShopItem shopItem = shopItemOpt.get();
             // Pass the actual ItemStack so enchantment pricing can be applied
-            EconomyManager.TransactionResult result = economyManager.processSellImmediate(
+            EconomyManager.TransactionResult result = economyManager.processDetachedSellImmediate(
                     player, shopItem, stack.getAmount(), stack);
 
             if (result.success()) {
                 totalItemsSold += result.amount();
                 totalEarned = totalEarned.add(result.totalPrice());
+                sellInventory.setItem(slot, null);
             } else {
                 returnItem(player, stack);
+                sellInventory.setItem(slot, null);
             }
         }
 

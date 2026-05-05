@@ -172,7 +172,7 @@ loans:
   default-penalty: 75             # bigger credit penalty for defaulting (was 50)
 ```
 
-The loan circuit breaker is **on by default** — it pauses interest if total debt exceeds 10× the economy's GDP. Don't disable it.
+The loan circuit breaker is **on by default** — it pauses interest if total debt exceeds the `debt-gdp-tier3-ratio` multiplier times the economy's GDP (default: **30×**). Don't disable it.
 
 ---
 
@@ -222,7 +222,7 @@ Access at `http://your-server:8989` (or your configured port):
 
 **Volatility** (on the home page): Average absolute % price change per day. Above 10% means prices are swinging wildly — consider reducing `maxPriceChangePercent`.
 
-**Debt / GDP ratio**: Should stay below 1×. A ratio above 5× means players are borrowing too much relative to economic activity. The circuit breaker kicks in at 10×.
+**Debt / GDP ratio**: Should stay below 1×. A ratio above 5× means players are borrowing too much relative to economic activity. The circuit breaker kicks in at **30×** by default (`debt-gdp-tier3-ratio`).
 
 **Spread width** (BPD + SPD): Above 15% total spread means low market liquidity — players are being gouged on buy/sell prices. Add more tradeable items or reduce `baseSpread`.
 
@@ -381,7 +381,7 @@ The auction house provides a traditional order-book marketplace — players plac
 ```
 /auction browse        ← view buy/sell orders (market depth)
 /auction sell <price>  ← list item in hand for sale (limit order)
-/auction buy <order-id> ← fill a seller's order
+/auction buy <material> <price> [qty] ← place a buy order (fills automatically if price ≥ best ask)
 /auction my            ← view your active orders
 /auction cancel <id>   ← cancel your order
 /auction history       ← your fill history
@@ -391,7 +391,7 @@ The auction house provides a traditional order-book marketplace — players plac
 **Screens:** the bundled web dashboard at `/auction` provides 4 tabs — Active Orders (with material filter), Recent Fills, Materials Book, and My Orders — plus a depth chart showing bid/ask ladder depth. Access it at `http://your-server:8989/auction`.
 
 
-**Thin book warnings:** when an item's order book has very low open interest (few orders, small sizes), admins see a warning in `/at admin auction` and in the `/admin` dashboard. Thin books let large orders move prices significantly. The warning appears when active buy + sell order count is below the configurable threshold.
+**Thin book warnings:** when an item's order book has very low open interest (few orders, small sizes), admins see a warning in `/at admin auction` and in the `/admin` dashboard. Thin books let large orders move prices significantly. The warning appears when the book has fewer than 2 bid orders or fewer than 2 ask orders.
 
 
 **Order expiry:** orders expire after 72 hours by default (configurable via `auction.default-duration-hours`). When an order expires:

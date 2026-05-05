@@ -141,6 +141,13 @@ pub struct LoanConfig {
     /// Set to 0.0 to disable. Recommended: 3.0 to 5.0 (3-5× economy GDP).
     /// Default: 3.0.
     pub guildbuyer_total_debt_cap: f64,
+    /// Economy-wide total debt cap: cumulative active debt across all players
+    /// is capped at economy GDP × this factor. Mirrors Java LoanManager's
+    /// totalDebtGdpCap check and prevents the simulation from allowing system-wide
+    /// borrowing levels that production servers reject.
+    /// Set to 0.0 to disable. Default: 2.0.
+    #[serde(default = "default_total_debt_gdp_cap")]
+    pub total_debt_gdp_cap: f64,
     /// Block new MM/GB loans during TIER3 circuit lock.
     ///
     /// When TIER3 fires (D/G >= tier3_ratio), the circuit locks at 0% interest.
@@ -294,6 +301,7 @@ impl Default for LoanConfig {
             min_interest_multiplier: 0.0, // pure counter-cyclical: 0% at D/G=tier3Ratio (30.0 by default)
             tier3_hysteresis_band: 0.5, // 50% band: unlock at D/G < 50% of tier3 (15 when tier3=30)
             guildbuyer_total_debt_cap: 3.0, // cap GB debt at 3× GDP during TIER3 lock — prevents zero-interest loan accumulation
+            total_debt_gdp_cap: 2.0, // cap active economy-wide debt at 2× GDP, matching Java LoanManager/config.yml
             block_mm_gb_loans_during_tier3: false, // MM/GB loans allowed during TIER3 lock by default
             tier3_exit_multiplier_cap: 0.10, // 10% cap during graduated TIER3 exit — prevents multiplier jump cascade
             tier3_exit_delay_ticks: 1152, // 4 days at 288 ticks/day — gives economy time to deleverage
@@ -389,6 +397,10 @@ pub fn default_items() -> Vec<ItemConfig> {
 pub const TICKS_PER_DAY: u64 = 288;
 pub const TICKS_PER_HOUR: u64 = 12;
 
+fn default_total_debt_gdp_cap() -> f64 {
+    2.0
+}
+
 impl SimConfig {
     pub fn trade_window_ticks(&self) -> u64 {
         self.economy.trade_window_days as u64 * TICKS_PER_DAY
@@ -408,5 +420,25 @@ impl SimConfig {
 
     pub fn loan_duration_ticks(&self) -> u64 {
         self.loans.default_duration_days as u64 * TICKS_PER_DAY
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SimConfig;
+
+    #[test]
+    fn missing_total_debt_gdp_cap_deserializes_to_java_default() {
+        let mut value = serde_json::to_value(SimConfig::default()).unwrap();
+        value
+            .get_mut("loans")
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .remove("total_debt_gdp_cap");
+
+        let config: SimConfig = serde_json::from_value(value).unwrap();
+
+        assert_eq!(2.0, config.loans.total_debt_gdp_cap);
     }
 }

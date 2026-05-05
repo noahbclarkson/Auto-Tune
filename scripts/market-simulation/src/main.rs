@@ -661,12 +661,16 @@ impl Scenario {
     }
 
     /// Verifies per-loan GDP cap behavior.
-    /// Uses a tight single_loan_gdp_cap (0.5) to force early-tick cap events.
+    /// Uses a tight single_loan_gdp_cap (0.1) to force early-tick cap events.
     /// Players start with low balance to trigger loan requests in early ticks.
     pub fn loan_cap_test() -> Self {
         let mut config = SimConfig::default();
-        // Cap each loan at 50% of GDP — very tight, triggers early when economy is small
-        config.loans.single_loan_gdp_cap = 0.5;
+        // Cap each loan at 10% of rolling 24h GDP — tight enough to trigger early
+        // with Java-parity GDP semantics.
+        config.loans.single_loan_gdp_cap = 0.1;
+        // This scenario isolates per-loan cap behavior; economy-wide total debt cap
+        // is verified separately via Java/Rust parity review.
+        config.loans.total_debt_gdp_cap = 0.0;
         // Slightly higher base loan multiplier so raw loan requests exceed the cap
         config.loans.max_loan_multiplier = 3.0;
 
@@ -5765,7 +5769,7 @@ fn run_volume_trader_test() {
     let _ = std::fs::remove_dir_all(&treat_dir);
 }
 
-/// Runs the loan_cap_test scenario with tight per-loan GDP cap (0.5× GDP)
+/// Runs the loan_cap_test scenario with tight per-loan GDP cap (0.1× GDP)
 /// and reports all cap events — which loans were capped, by how much, and when.
 fn run_loan_cap_verification() {
     use crate::player::set_global_seeded_rng;
@@ -5773,7 +5777,7 @@ fn run_loan_cap_verification() {
 
     println!("\n╔══════════════════════════════════════════════════════════════╗");
     println!("║       PER-LOAN GDP CAP VERIFICATION TEST                   ║");
-    println!("║  single_loan_gdp_cap=0.5 — loans capped at 50% of GDP      ║");
+    println!("║  single_loan_gdp_cap=0.1 — loans capped at 10% of GDP      ║");
     println!("╚══════════════════════════════════════════════════════════════╝\n");
 
     // Control: cap disabled (0.0)
@@ -5781,9 +5785,9 @@ fn run_loan_cap_verification() {
     ctrl_scenario.config.loans.single_loan_gdp_cap = 0.0;
     ctrl_scenario.name = "Loan Cap: No Cap (control)".into();
 
-    // Treatment: cap = 0.5× GDP
+    // Treatment: cap = 0.1× GDP
     let treat_scenario = Scenario::loan_cap_test();
-    // single_loan_gdp_cap already 0.5 from loan_cap_test()
+    // single_loan_gdp_cap already 0.1 from loan_cap_test()
 
     // Run control
     println!("─── Control (cap disabled) ───");
@@ -5821,7 +5825,7 @@ fn run_loan_cap_verification() {
     );
 
     // Run treatment
-    println!("─── Treatment (cap = 0.5× GDP) ───");
+    println!("─── Treatment (cap = 0.1× GDP) ───");
     set_global_seeded_rng(seed);
     let mut treat_sim = Simulation::new_seeded(treat_scenario.config.clone(), seed);
     treat_sim.events = treat_scenario.events.clone();
@@ -20055,7 +20059,6 @@ fn run_exit_cap_sweep() {
     println!("  Hypothesis: cap=1% + delay=20d should break the multiplier jump cascade.");
 }
 
-
 /// 90-day floor comparison: 60% Diamond floor vs NO floor.
 /// Answers: "Does 60% floor reduce final D/G or just mask it?"
 /// Uses production config (2MM + 2GB + 3Cas + 3Far + 2Tra) × 3 seeds.
@@ -20121,8 +20124,15 @@ fn run_floor_90d_compare() {
     );
     println!(
         "  {:>6} {:>8} {:>12} {:>10} {:>8} {:>8} {:>8} {:>10} {:>10}",
-        "──────", "────────", "────────────", "──────────",
-        "────────", "────────", "────────", "──────────", "──────────"
+        "──────",
+        "────────",
+        "────────────",
+        "──────────",
+        "────────",
+        "────────",
+        "────────",
+        "──────────",
+        "──────────"
     );
 
     // Run both arms for each seed
@@ -20137,10 +20147,7 @@ fn run_floor_90d_compare() {
             scenario.name = format!("90d_floor_{}_seed{}", label, seed);
             scenario.duration_ticks = ticks;
 
-            let out_dir = PathBuf::from(format!(
-                "/tmp/autotune-floor-90d-{}-{}",
-                label, seed
-            ));
+            let out_dir = PathBuf::from(format!("/tmp/autotune-floor-90d-{}-{}", label, seed));
             let _ = std::fs::remove_dir_all(&out_dir);
             std::fs::create_dir_all(&out_dir).ok();
 
@@ -20177,15 +20184,21 @@ fn run_floor_90d_compare() {
     if results.len() >= 4 {
         println!("\n  ── Averages (90-day) ──");
         for has_floor in [true, false] {
-            let subset: Vec<_> = results.iter().filter(|r| r.has_floor == has_floor).collect();
-            if subset.is_empty() { continue; }
+            let subset: Vec<_> = results
+                .iter()
+                .filter(|r| r.has_floor == has_floor)
+                .collect();
+            if subset.is_empty() {
+                continue;
+            }
             let label = if has_floor { "60% floor" } else { "no floor" };
             let gdp_avg = subset.iter().map(|r| r.gdp).sum::<f64>() / subset.len() as f64;
             let dg_avg = subset.iter().map(|r| r.dg).sum::<f64>() / subset.len() as f64;
             let vol_avg = subset.iter().map(|r| r.vol).sum::<f64>() / subset.len() as f64;
             let bpd_avg = subset.iter().map(|r| r.bpd).sum::<f64>() / subset.len() as f64;
             let spd_avg = subset.iter().map(|r| r.spd).sum::<f64>() / subset.len() as f64;
-            let dia_avg = subset.iter().map(|r| r.diamond_internal).sum::<f64>() / subset.len() as f64;
+            let dia_avg =
+                subset.iter().map(|r| r.diamond_internal).sum::<f64>() / subset.len() as f64;
 
             println!(
                 "    {:<12} GDP={:>12.0}  D/G={:>7.3}x  Vol={:>6.4}  BPD={:>6.3}%  SPD={:>6.3}%  DiaInt={:>8.2}",
@@ -20200,27 +20213,55 @@ fn run_floor_90d_compare() {
         }
 
         // Delta
-        let floor_avg_dg: f64 = results.iter().filter(|r| r.has_floor).map(|r| r.dg).sum::<f64>()
+        let floor_avg_dg: f64 = results
+            .iter()
+            .filter(|r| r.has_floor)
+            .map(|r| r.dg)
+            .sum::<f64>()
             / results.iter().filter(|r| r.has_floor).count().max(1) as f64;
-        let nofloor_avg_dg: f64 = results.iter().filter(|r| !r.has_floor).map(|r| r.dg).sum::<f64>()
+        let nofloor_avg_dg: f64 = results
+            .iter()
+            .filter(|r| !r.has_floor)
+            .map(|r| r.dg)
+            .sum::<f64>()
             / results.iter().filter(|r| !r.has_floor).count().max(1) as f64;
-        let floor_avg_gdp: f64 = results.iter().filter(|r| r.has_floor).map(|r| r.gdp).sum::<f64>()
+        let floor_avg_gdp: f64 = results
+            .iter()
+            .filter(|r| r.has_floor)
+            .map(|r| r.gdp)
+            .sum::<f64>()
             / results.iter().filter(|r| r.has_floor).count().max(1) as f64;
-        let nofloor_avg_gdp: f64 = results.iter().filter(|r| !r.has_floor).map(|r| r.gdp).sum::<f64>()
+        let nofloor_avg_gdp: f64 = results
+            .iter()
+            .filter(|r| !r.has_floor)
+            .map(|r| r.gdp)
+            .sum::<f64>()
             / results.iter().filter(|r| !r.has_floor).count().max(1) as f64;
 
         println!("\n  ── Delta (floor − no floor) ──");
-        println!("    D/G:  {:.3}x ({})", floor_avg_dg - nofloor_avg_dg,
-            if floor_avg_dg < nofloor_avg_dg { "floor BETTER" } else { "no floor BETTER" });
-        println!("    GDP:  {:.0} ({:.1}%)",
+        println!(
+            "    D/G:  {:.3}x ({})",
+            floor_avg_dg - nofloor_avg_dg,
+            if floor_avg_dg < nofloor_avg_dg {
+                "floor BETTER"
+            } else {
+                "no floor BETTER"
+            }
+        );
+        println!(
+            "    GDP:  {:.0} ({:.1}%)",
             floor_avg_gdp - nofloor_avg_gdp,
-            (floor_avg_gdp - nofloor_avg_gdp) / nofloor_avg_gdp.max(1.0) * 100.0);
-        println!("\n  VERDICT: {}", if floor_avg_dg < nofloor_avg_dg {
-            "Floor REDUCES D/G at 90d — genuine structural improvement, not just masking."
-        } else if (floor_avg_dg - nofloor_avg_dg).abs() < 1.0 {
-            "Floor is NEUTRAL on D/G at 90d — neither helps nor hurts long-run solvency."
-        } else {
-            "Floor INCREASES D/G at 90d — masking effect. Floor makes displayed prices look stable but worsens debt dynamics."
-        });
+            (floor_avg_gdp - nofloor_avg_gdp) / nofloor_avg_gdp.max(1.0) * 100.0
+        );
+        println!(
+            "\n  VERDICT: {}",
+            if floor_avg_dg < nofloor_avg_dg {
+                "Floor REDUCES D/G at 90d — genuine structural improvement, not just masking."
+            } else if (floor_avg_dg - nofloor_avg_dg).abs() < 1.0 {
+                "Floor is NEUTRAL on D/G at 90d — neither helps nor hurts long-run solvency."
+            } else {
+                "Floor INCREASES D/G at 90d — masking effect. Floor makes displayed prices look stable but worsens debt dynamics."
+            }
+        );
     }
 }

@@ -680,6 +680,19 @@ impl Simulation {
             let gb_debt_cap = self.config.loans.guildbuyer_total_debt_cap;
             let gb_debt_cap_enabled = gb_debt_cap > 0.0;
 
+            // Economy-wide total debt cap: mirrors Java LoanManager.totalDebtGdpCap.
+            // Java rejects new loans when active debt + requested amount would exceed
+            // GDP × totalDebtGdpCap. The sim must model this or stress runs will allow
+            // debt states production servers now prevent.
+            let total_debt_cap = self.config.loans.total_debt_gdp_cap;
+            let total_debt_cap_enabled = total_debt_cap > 0.0;
+            let current_active_debt: f64 = self
+                .loans
+                .iter()
+                .filter(|l| matches!(l.status, LoanStatus::Active))
+                .map(|l| l.current_balance)
+                .sum();
+
             let current_gb_debt: f64 = self
                 .loans
                 .iter()
@@ -714,10 +727,12 @@ impl Simulation {
 
                 // Per-loan GDP cap: no single loan can exceed economy GDP × single_loan_gdp_cap
                 // (matches Java LoanManager.processLoanRequest: singleLoanGdpCap check)
+                let gdp_window = 288u64;
+                let window_start = self.current_tick.saturating_sub(gdp_window);
                 let gdp: f64 = self
                     .transactions
                     .iter()
-                    .filter(|tx| tx.tx_type == TransactionType::Buy)
+                    .filter(|tx| tx.tick >= window_start && tx.tx_type == TransactionType::Buy)
                     .map(|tx| tx.total_price)
                     .sum();
                 let amount_after_perloan_cap =
@@ -728,10 +743,34 @@ impl Simulation {
                         amount_raw
                     };
 
+                if amount_after_perloan_cap < amount_raw {
+                    self.loan_cap_log.push(LoanCapRecord {
+                        tick: self.current_tick,
+                        player_id: player_idx,
+                        raw_amount: amount_raw,
+                        capped_amount: amount_after_perloan_cap,
+                        gdp,
+                        cap_ratio: self.config.loans.single_loan_gdp_cap,
+                        cap_value: gdp * self.config.loans.single_loan_gdp_cap,
+                    });
+                }
+
+                // Economy-wide active debt cap: reject if projected active debt would exceed cap.
+                let amount_after_total_cap = if total_debt_cap_enabled && gdp > 0.0 {
+                    let cap_limit = gdp * total_debt_cap;
+                    if current_active_debt + amount_after_perloan_cap > cap_limit {
+                        0.0
+                    } else {
+                        amount_after_perloan_cap
+                    }
+                } else {
+                    amount_after_perloan_cap
+                };
+
                 // GuildBuyer total debt cap: reject or reduce if total GB debt would exceed cap
                 let amount_after_gb_cap = if is_guild_buyer && gb_debt_cap_enabled && gdp > 0.0 {
                     let cap_limit = gdp * gb_debt_cap;
-                    let new_total = current_gb_debt + amount_after_perloan_cap;
+                    let new_total = current_gb_debt + amount_after_total_cap;
                     if current_gb_debt >= cap_limit {
                         // GB debt already at cap — reject loan entirely
                         0.0
@@ -739,10 +778,10 @@ impl Simulation {
                         // Would exceed cap — cap at the remaining allowance
                         (cap_limit - current_gb_debt).max(0.0)
                     } else {
-                        amount_after_perloan_cap
+                        amount_after_total_cap
                     }
                 } else {
-                    amount_after_perloan_cap
+                    amount_after_total_cap
                 };
 
                 // Only create loan if amount is meaningful (> 1.0)

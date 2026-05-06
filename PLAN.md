@@ -535,5 +535,65 @@ This partially overturns the earlier 14d conclusion that 60% floor was the produ
 1. Run 5-seed long-horizon floor-strength sweep: no floor vs 30% vs 45% vs 60% over 60–90d.
 2. Reconsider production default: no floor or lower floor may be healthier than 60% at 90d.
 3. Document floors as UX guardrails, not debt/GDP stabilizers.
+## Cron (2026-05-06 02:14 UTC) — Web & Ecosystem: Floor Docs Corrected ✅
+
+**Commit:** `a2dbf60 fix(docs): correct floor recommendation with 90-day sim data` → pushed to `rewrite-2`
+
+**rewrite-2 at `a2dbf60`** | `./gradlew build` ✅ PMD 0 | `web/` build ✅ (13 routes, npm install fixed prior crash) | `web-optimizer/` build ✅ (22 routes) | Rust cargo check ✅
+
+**Focus:** docs drift audit and correction — the 90-day floor sweep (`ad322bd`) directly contradicted existing docs that said "60% floor = sweet spot +6.5% GDP".
+
+### Finding: Floor Docs Were Stale — 90-Day Data Overturns 14-Day "Sweet Spot"
+
+| Horizon | 60% floor | vs no floor |
+|---------|-----------|-------------|
+| 14d | GDP +29.2%, D/G 0.71x | beneficial |
+| **90d** | **GDP -19.1%, D/G +1.6x worse** | **harmful** |
+
+Floor suppresses natural price correction → inventory glut → long-run GDP contraction.
+
+**Root cause:** 60% floor was validated at 14-day horizon. Long-run 90-day sweep (`--floor-90d-compare`) was run today and showed the benefit reverses after ~60 days.
+
+**Docs fixed (12 files in `a2dbf60`):**
+- `docs/CONFIG_GUIDE.md` — floor section rewritten with 90d findings
+- `docs/QUICKSTART.md` — short answer and section 3 rewritten
+- `docs/ECONOMY_CONCEPTS.md` — floor paradox updated with 90d data
+- `docs/SERVER_ADMIN_GUIDE.md` — floor percent section corrected
+- `docs/ECOSYSTEM_ANALYSIS.md` — past recommendation annotated
+- `docs/SPEC-SERVER-SETUP-WIZARD.md` — seller_protection → 40% floor
+- `web-optimizer/src/app/findings/page.tsx` — metrics: 14d vs 90d breakdown
+- `web-optimizer/src/app/config-preview/page.tsx` — floor impact copy corrected
+- `web-optimizer/src/components/simulator/config-impact-preview.tsx` — verdict 'caution', detail updated
+- `web-optimizer/src/components/setup/config-export.tsx` — floor 60% → 40% for seller_protection
+- `web-optimizer/src/components/setup/economy-goals-selector.tsx` — seller_protection description updated
+- `PLAN.md` — earlier 14d finding cross-referenced to 90d correction
+
+**TypeScript fix:** `config-impact-preview.tsx` had invalid `verdict: 'short-term only'` — changed to `verdict: 'caution'` per type union.
+
+**Remaining stale check:** grep for "sweet spot + floor", "+6.5% GDP", "+10.7% GDP" — all remaining hits properly context-labeled as 14-day data.
+
+### Bug Audit: No New Bugs Found
+- `AutosellManager.sellInventory()`: passes actual `ItemStack` refs to `processSellImmediate()` — correct inventory ownership pattern ✅
+- `PriceAlertManager`: offline → `pendingNotificationRepository.insert()` ✅
+- `BadgeService`, `PlayerStreakService`: `Bukkit.getPlayer()` used only with null+online check ✅
+
+### Ecosystem Coherence Notes
+- Docs drift pattern is now well-documented and systemic: config defaults change in code but docs files across `docs/` and `web-optimizer/` are separate and don't get updated in the same commit.
+- Auction ecosystem: complete end-to-end. No further integration gaps.
+- API deploy still blocked on Arc/Fly.io token.
+
+### Feature Ideas (Post-Bug-Fix)
+1. **Market Digest REST endpoint** — `MarketDigestService` runs but no web endpoint for history
+2. **API freshness filtering** — filter stale submissions in `recompute_true_prices()`
+3. **Auction fill opportunity hints** — compare bid/ask to shop buy/sell with "liquidity signal" framing
+4. **Setup wizard safe workflow teaching** — completion screen teaches preview → replace → reload
+
+### Next Priorities
+1. PMD targeted suppression audit (WebServer.java ~2000 LOC) — tedious, non-urgent
+2. Java/Rust GuildBuyer cap exact parity audit (Rust partial-fills vs Java full-reject)
+3. Wait for API deploy unblock (Arc/Fly.io token)
+
+---
+
 4. Audit Java/Rust GuildBuyer cap exact parity: Rust partial-fills remaining allowance; Java rejects the whole request.
 

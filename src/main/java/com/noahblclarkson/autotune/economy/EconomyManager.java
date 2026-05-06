@@ -22,6 +22,7 @@ import com.noahblclarkson.autotune.service.PlayerStreakService;
 import com.noahblclarkson.autotune.util.EnchantmentPricing;
 import com.noahblclarkson.autotune.util.ItemSerializer;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.Bukkit;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.entity.Player;
@@ -94,12 +95,16 @@ public class EconomyManager {
     }
 
     public boolean withdraw(@NotNull Player player, double amount) {
-        EconomyResponse response = economy.withdrawPlayer(player, amount);
+        // Use OfflinePlayer so Vault works for both online and offline players.
+        EconomyResponse response = economy.withdrawPlayer(
+                Bukkit.getOfflinePlayer(player.getUniqueId()), amount);
         return response.transactionSuccess();
     }
 
     public boolean deposit(@NotNull Player player, double amount) {
-        EconomyResponse response = economy.depositPlayer(player, amount);
+        // Use OfflinePlayer so Vault works for both online and offline players.
+        EconomyResponse response = economy.depositPlayer(
+                Bukkit.getOfflinePlayer(player.getUniqueId()), amount);
         return response.transactionSuccess();
     }
 

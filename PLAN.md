@@ -449,3 +449,91 @@ At 90d: partial run shows floor/no-floor identical D/G at 15.1x — floor neithe
 3. **Archetype gap**: Newbie archetype replacing GBs — unanswered question from prior session
 4. **Resume-safe 90d floor test**: use `--output` persistence so SIGKILL doesn't lose data
 
+
+## Cron (2026-05-05 19:15 UTC) — Docs Drift: Stale Circuit Breaker Thresholds Fixed ✅
+
+**rewrite-2 at `9efe654`** | `./gradlew build` ✅ PMD 0 | `web-optimizer/` build ✅ (22 routes) | Pushed ✅
+
+**Focus:** Noah's redirect — bug/repo-health pass. Docs drift audit for stale circuit-breaker threshold references.
+
+### Bugs Found and Fixed
+
+5 docs files had stale references to the circuit breaker firing at "10×" D/G when the actual default is `debt-gdp-tier3-ratio: 30.0`.
+
+**Files fixed (5):**
+- `docs/SERVER_ADMIN_GUIDE.md` — 3 stale 10× references corrected; thin-book "configurable threshold" removed (hardcoded: <2 bid or <2 ask orders); `/auction buy <order-id>` → `/auction buy <material> <price> [qty]`
+- `docs/DASHBOARD_API.md` — `circuitBreakerTier` TIER3 label (>10×) → (>30×)
+- `docs/MIGRATION.md` — "Pauses interest if debt/GDP > 10×" → "> 30× (default `debt-gdp-tier3-ratio: 30.0`)"
+- `docs/ARCHITECTURE.md` — "debt / GDP > 10.0" → "> 30.0"
+- `docs/QUICKSTART.md` — stale "TIER3 ratio: Set to 15 (not 10)" recommendation → current default 30 with correct hysteresis unlock math
+
+### Root Cause
+tier3_ratio default was 10 → 15 → 30 over multiple commits; these doc files weren't all updated in the same commits. This is the same docs-drift pattern seen in prior sessions (API.md X-API-Key → Bearer).
+
+### Pattern Risk
+When changing config defaults, ALL docs referencing that config key must be updated in the same commit. Consider a CI check that flags doc files containing config key names when those keys are changed.
+
+### Verification
+- `./gradlew build` ✅ PMD 0
+- `cd web-optimizer && npm run build` ✅ (22 routes)
+- Grep for remaining stale 10× circuit references: all remaining hits are legitimate (10%/day debt growth, 10% hysteresis band, historical changelog entries, FAQ day-10 recovery timing)
+- Builds all clean
+
+### Next Priorities
+1. Continue docs drift audit — check CONFIG_GUIDE.md, FAQ.md, and any remaining .md files for other stale references
+2. API deploy remains #1 external blocker (Arc/Fly.io token)
+3. Real testimonials remain #2 external blocker (human outreach)
+
+## Cron (2026-05-06 01:51 UTC) — Simulation Lab: Regression Baselines Refreshed + 90d Floor Warning ⚠️
+
+**Commit:** `test(simulation): refresh baselines after loan cap parity` → pushed to `rewrite-2` | Rust sim regression 6/6 ✅ | `cargo test` 11/11 ✅ | clippy ✅ | fmt ✅
+
+**Focus:** Rust market-simulation repo health and long-horizon engine insight after Java-parity loan cap changes.
+
+### Regression Baselines Refreshed
+`cargo run --quiet -- --regression` initially flagged drift in 3/6 scenarios:
+- Standard Economy
+- Spread Stability Test
+- Standard+MM Economy
+
+This was expected drift from `d82cd39 fix(simulation): align loan caps with Java GDP rules`. The stored baselines were still from `c7ac0470`, before rolling-24h GDP loan caps and economy-wide debt cap enforcement. Refreshed all six baselines against the corrected engine.
+
+Verification:
+- `cargo run --quiet -- --regression --update && cargo run --quiet -- --regression` ✅ — 6/6 pass
+- `cargo test -q` ✅ — 11/11 pass
+- `cargo clippy -- -D warnings` ✅
+- `cargo fmt -- --check` ✅
+
+### 90-Day Floor Comparison — 60% Floor Looks Structurally Bad
+Ran `cargo run --release -- --floor-90d-compare`:
+- Scenario: 2MM + 2GB + 3Cas + 3Far + 2Tra, 5% GB threshold
+- Horizon: 90 days
+- Seeds: 42, 12345, 98765
+
+| Arm | Avg GDP | Avg D/G | Vol(CV) | Diamond internal |
+| --- | ---: | ---: | ---: | ---: |
+| 60% Diamond floor | 1.532M | 14.639x | 0.0724 | $317.57 |
+| No floor | 1.893M | 13.019x | 0.0442 | $437.46 |
+
+**Delta:** floor worsened D/G by `+1.620x` and reduced GDP by `-19.1%`.
+
+Seed detail:
+- 42: floor `17.804x` vs no-floor `11.985x` — floor much worse
+- 12345: floor `11.384x` vs no-floor `12.737x` — floor modestly better
+- 98765: floor `14.728x` vs no-floor `14.335x` — floor slightly worse
+
+### Engine Insight
+The 60% Diamond floor is **not** a structural solvency fix. At 90d it mostly masks price weakness and can worsen GDP + D/G. It may still be acceptable as a player-facing UX guardrail, but it should not be marketed or configured as an economy-health lever.
+
+This partially overturns the earlier 14d conclusion that 60% floor was the production sweet spot. Short-horizon stability was misleading; long-horizon D/G says the floor can become harmful.
+
+### Loan / GuildBuyer Sanity Checks
+- `--loan-cap-test` ✅ — 4 capped loans, raw `$110,341` → capped `$15,976` (85.5% reduction), issued total down 76.4%.
+- `--guildbuyer-failure-test` ✅ — 7-day cooldown still reduces D/G `1.986x` → `0.916x` (53.8%).
+
+### Next Priorities
+1. Run 5-seed long-horizon floor-strength sweep: no floor vs 30% vs 45% vs 60% over 60–90d.
+2. Reconsider production default: no floor or lower floor may be healthier than 60% at 90d.
+3. Document floors as UX guardrails, not debt/GDP stabilizers.
+4. Audit Java/Rust GuildBuyer cap exact parity: Rust partial-fills remaining allowance; Java rejects the whole request.
+

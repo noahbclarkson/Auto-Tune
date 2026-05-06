@@ -1,7 +1,7 @@
 {
   "scenario_name": "Low Player Count",
-  "engine_git_rev": "c7ac0470",
-  "config_hash": "5c4251f958754934aee7b44ce48c03ae",
+  "engine_git_rev": "9efe6544",
+  "config_hash": "62dc93d5f446159a34dac394c9c767c4",
   "checkoints": [
     {
       "tick": 806,

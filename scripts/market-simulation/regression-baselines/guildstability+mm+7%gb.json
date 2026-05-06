@@ -1,7 +1,7 @@
 {
   "scenario_name": "GuildStability+MM+7%GB",
-  "engine_git_rev": "c7ac0470",
-  "config_hash": "5c4251f958754934aee7b44ce48c03ae",
+  "engine_git_rev": "9efe6544",
+  "config_hash": "62dc93d5f446159a34dac394c9c767c4",
   "checkoints": [
     {
       "tick": 806,
@@ -98,8 +98,8 @@
           "name": "Cobblestone",
           "base_price": 1.0,
           "price": 0.83,
-          "bpd": 0.018312945442782547,
-          "spd": 0.022081009561686602,
+          "bpd": 0.01831294544278255,
+          "spd": 0.022081009561686606,
           "trend_direction": "Stable",
           "avg_volatility": 1.4713799121538242e-15
         },
@@ -107,7 +107,7 @@
           "name": "Rotten Flesh",
           "base_price": 2.0,
           "price": 1.5,
-          "bpd": 0.014026097556709891,
+          "bpd": 0.014026097556709893,
           "spd": 0.015729202832044303,
           "trend_direction": "Stable",
           "avg_volatility": 0.0
@@ -117,7 +117,7 @@
           "base_price": 20.0,
           "price": 9.09,
           "bpd": 0.009650579788141635,
-          "spd": 0.009795600438196123,
+          "spd": 0.009795600438196122,
           "trend_direction": "Stable",
           "avg_volatility": 0.0036220258427676843
         },
@@ -161,8 +161,8 @@
           "name": "Netherite Ingot",
           "base_price": 2500.0,
           "price": 1159.07,
-          "bpd": 0.009754504530235443,
-          "spd": 0.009775957460588887,
+          "bpd": 0.009754504530235438,
+          "spd": 0.009775957460588883,
           "trend_direction": "Stable",
           "avg_volatility": 0.00663210957798556
         }
@@ -283,8 +283,8 @@
           "name": "Rotten Flesh",
           "base_price": 2.0,
           "price": 1.46,
-          "bpd": 0.008837100628885269,
-          "spd": 0.009842432756506108,
+          "bpd": 0.00883710062888527,
+          "spd": 0.00984243275650611,
           "trend_direction": "Stable",
           "avg_volatility": 9.125120750343761e-16
         },
@@ -425,8 +425,8 @@
           "name": "Netherite Ingot",
           "base_price": 2500.0,
           "price": 695.84,
-          "bpd": 0.008826470719897242,
-          "spd": 0.008680280279143164,
+          "bpd": 0.008826470719897244,
+          "spd": 0.008680280279143165,
           "trend_direction": "Stable",
           "avg_volatility": 0.001630433114717915
         }

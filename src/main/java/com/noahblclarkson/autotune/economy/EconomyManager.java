@@ -125,8 +125,9 @@ public class EconomyManager {
                     TransactionResult.belowMinimum(TransactionType.BUY, minQty, minVal, amount));
         }
 
-        // Collect buy tax before checking balance — player pays item cost + tax
-        BigDecimal taxAmount = treasuryService.collectBuyTax(totalPrice);
+        // Calculate buy tax before checking balance — player pays item cost + tax.
+        // Only collect it after the Vault withdrawal succeeds.
+        BigDecimal taxAmount = treasuryService.calculateBuyTax(totalPrice);
         BigDecimal totalWithTax = totalPrice.add(taxAmount);
 
         if (!hasBalance(player, totalWithTax.doubleValue())) {
@@ -142,7 +143,8 @@ public class EconomyManager {
         // Process atomically: DB write first, then money withdrawal, then inventory.
         // This ensures the transaction record is the first thing that succeeds.
         // If DB write fails, nothing changes (no money taken, no items given).
-        // Tax is collected before withdrawal — it comes out of player's balance.
+        // Tax is calculated before withdrawal — it comes out of player's balance,
+        // but treasury state is only updated once withdrawal succeeds.
         final BigDecimal finalTaxAmount = taxAmount;
         return databaseManager.supplyAsync(() -> {
             // 1. Persist transaction record
@@ -168,6 +170,7 @@ public class EconomyManager {
                         + "Player should not have received items.");
                 return TransactionResult.economyError();
             }
+            treasuryService.collectTaxAmount(finalTaxAmount);
 
             // 3. Give items — last step.
             giveItems(player, item, amount);
@@ -203,8 +206,9 @@ public class EconomyManager {
                     TransactionResult.belowMinimum(TransactionType.SELL, minQty, minVal, amount));
         }
 
-        // Collect sell tax from proceeds before calculating net to player
-        BigDecimal taxAmount = treasuryService.collectSellTax(totalPrice);
+        // Calculate sell tax from proceeds before calculating net to player.
+        // Only collect it after the sell completes successfully.
+        BigDecimal taxAmount = treasuryService.calculateSellTax(totalPrice);
         BigDecimal netProceeds = totalPrice.subtract(taxAmount);
 
         // Process atomically: DB write first (source of truth), then inventory modification.
@@ -245,6 +249,7 @@ public class EconomyManager {
                 withdraw(player, netProceeds.doubleValue());
                 return TransactionResult.error("Failed to remove items from inventory");
             }
+            treasuryService.collectTaxAmount(taxAmount);
 
             // Award badges for sell activity
             badgeService.onSell(playerId, netProceeds);
@@ -292,8 +297,9 @@ public class EconomyManager {
 
         BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
 
-        // Collect sell tax from proceeds before calculating net to player
-        BigDecimal taxAmount = treasuryService.collectSellTax(totalPrice);
+        // Calculate sell tax from proceeds before calculating net to player.
+        // Only collect it after item removal and Vault deposit succeed.
+        BigDecimal taxAmount = treasuryService.calculateSellTax(totalPrice);
         BigDecimal netProceeds = totalPrice.subtract(taxAmount);
 
         // Step 1: Remove items from inventory FIRST.
@@ -313,6 +319,7 @@ public class EconomyManager {
             player.getInventory().setStorageContents(preRemoval);
             return TransactionResult.economyError();
         }
+        treasuryService.collectTaxAmount(taxAmount);
 
         // Step 3: Persist transaction to DB. Using supplyAsync + join to keep
         // the synchronous UX of processSellImmediate while ensuring data integrity.
@@ -391,8 +398,9 @@ public class EconomyManager {
 
         BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
 
-        // Collect sell tax from proceeds before calculating net to player
-        BigDecimal taxAmount = treasuryService.collectSellTax(totalPrice);
+        // Calculate sell tax from proceeds before calculating net to player.
+        // Only collect it after Vault deposit succeeds.
+        BigDecimal taxAmount = treasuryService.calculateSellTax(totalPrice);
         BigDecimal netProceeds = totalPrice.subtract(taxAmount);
 
         // Detached stacks are already out of the player's inventory. Deposit
@@ -400,6 +408,7 @@ public class EconomyManager {
         if (!deposit(player, netProceeds.doubleValue())) {
             return TransactionResult.economyError();
         }
+        treasuryService.collectTaxAmount(taxAmount);
 
         final BigDecimal finalPricePerUnit = pricePerUnit;
         final BigDecimal finalNetProceeds = netProceeds;
@@ -483,9 +492,10 @@ public class EconomyManager {
             }
         }
 
-        // Pre-calculate tax totals (collected once, stored for DB phase)
-        BigDecimal totalBuyTax = treasuryService.collectBuyTax(totalBuyCost);
-        BigDecimal totalSellTax = treasuryService.collectSellTax(totalSellProfit);
+        // Pre-calculate tax totals for pricing/balance checks. Treasury state is
+        // updated only after the cart successfully completes.
+        BigDecimal totalBuyTax = treasuryService.calculateBuyTax(totalBuyCost);
+        BigDecimal totalSellTax = treasuryService.calculateSellTax(totalSellProfit);
 
         // Net cost = (buyCost + buyTax) - (sellProfit - sellTax)
         BigDecimal netCost = (totalBuyCost.add(totalBuyTax)).subtract(totalSellProfit.subtract(totalSellTax));
@@ -520,13 +530,13 @@ public class EconomyManager {
         final BigDecimal finalNetCost = netCost;
         return databaseManager.supplyAsync(() -> {
             // Phase 1: Record all transactions to DB (atomic — all or nothing)
-            // Taxes were already collected during pre-validation; record gross amounts in DB.
+            // Taxes were already calculated during pre-validation; record gross amounts in DB.
             for (CartItem cartItem : cart) {
                 BigDecimal actualPricePerUnit = cartItem.isBuying()
                         ? marketEngine.getBuyPrice(cartItem.shopItem(), cartItem.quantity())
                         : marketEngine.getSellPrice(cartItem.shopItem(), cartItem.quantity());
                 BigDecimal actualTotalPrice = actualPricePerUnit.multiply(BigDecimal.valueOf(cartItem.quantity()));
-                // Record the actual sale price (treasury already has the tax from pre-validation).
+                // Record the actual sale price (treasury is updated after successful completion).
                 // For a mixed cart, net to player is handled via finalNetCost below.
 
                 Transaction transaction = Transaction.builder()
@@ -597,14 +607,18 @@ public class EconomyManager {
                 // player from gaining money from a partially-failed cart.
                 if (finalNetCost.compareTo(BigDecimal.ZERO) > 0) {
                     // netCost > 0: player was charged for buys — refund it
-                    withdraw(player, finalNetCost.doubleValue());
+                    deposit(player, finalNetCost.doubleValue());
                 } else if (finalNetCost.compareTo(BigDecimal.ZERO) < 0) {
                     // netCost < 0: player received sell earnings — reclaim them
                     // (some sell items were already removed and can't be restored)
-                    deposit(player, finalNetCost.abs().doubleValue());
+                    withdraw(player, finalNetCost.abs().doubleValue());
                 }
                 // netCost == 0: nothing to refund
+                return TransactionResult.error("Failed to remove cart sell items");
             }
+
+            treasuryService.collectTaxAmount(totalBuyTax);
+            treasuryService.collectTaxAmount(totalSellTax);
 
             // Award badges for cart transactions
             if (finalNetCost.compareTo(BigDecimal.ZERO) > 0) {

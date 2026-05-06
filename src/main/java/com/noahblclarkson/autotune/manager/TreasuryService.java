@@ -83,22 +83,36 @@ public class TreasuryService {
     // ── Tax collection ───────────────────────────────────────────────────────
 
     /**
+     * Calculates tax on a buy transaction without mutating treasury state.
+     */
+    public BigDecimal calculateBuyTax(BigDecimal totalCost) {
+        if (!isEnabled()) return BigDecimal.ZERO;
+        AutoTuneConfig.TaxConfig tax = configManager.getConfig().tax();
+        if (tax.buyTaxPercent() <= 0) return BigDecimal.ZERO;
+
+        return calculatePercentTax(totalCost, tax.buyTaxPercent());
+    }
+
+    /**
      * Collect tax on a buy transaction. The tax is deducted from the player's
      * already-withdrawn cost before the transaction is recorded.
      * Returns the tax amount collected (0 if disabled).
      */
     public BigDecimal collectBuyTax(BigDecimal totalCost) {
+        BigDecimal taxAmount = calculateBuyTax(totalCost);
+        collectTaxAmount(taxAmount);
+        return taxAmount;
+    }
+
+    /**
+     * Calculates tax on a sell transaction without mutating treasury state.
+     */
+    public BigDecimal calculateSellTax(BigDecimal totalProceeds) {
         if (!isEnabled()) return BigDecimal.ZERO;
         AutoTuneConfig.TaxConfig tax = configManager.getConfig().tax();
-        if (tax.buyTaxPercent() <= 0) return BigDecimal.ZERO;
+        if (tax.sellTaxPercent() <= 0) return BigDecimal.ZERO;
 
-        BigDecimal taxAmount = totalCost
-                .multiply(BigDecimal.valueOf(tax.buyTaxPercent()))
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        if (taxAmount.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
-
-        treasuryBalance.updateAndGet(current -> current.add(taxAmount));
-        return taxAmount;
+        return calculatePercentTax(totalProceeds, tax.sellTaxPercent());
     }
 
     /**
@@ -106,17 +120,20 @@ public class TreasuryService {
      * sale proceeds before they are deposited. Returns the tax amount (0 if disabled).
      */
     public BigDecimal collectSellTax(BigDecimal totalProceeds) {
+        BigDecimal taxAmount = calculateSellTax(totalProceeds);
+        collectTaxAmount(taxAmount);
+        return taxAmount;
+    }
+
+    /**
+     * Calculates tax on an auction fill without mutating treasury state.
+     */
+    public BigDecimal calculateAuctionTax(BigDecimal sellerProceeds) {
         if (!isEnabled()) return BigDecimal.ZERO;
         AutoTuneConfig.TaxConfig tax = configManager.getConfig().tax();
-        if (tax.sellTaxPercent() <= 0) return BigDecimal.ZERO;
+        if (tax.auctionTaxPercent() <= 0) return BigDecimal.ZERO;
 
-        BigDecimal taxAmount = totalProceeds
-                .multiply(BigDecimal.valueOf(tax.sellTaxPercent()))
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        if (taxAmount.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
-
-        treasuryBalance.updateAndGet(current -> current.add(taxAmount));
-        return taxAmount;
+        return calculatePercentTax(sellerProceeds, tax.auctionTaxPercent());
     }
 
     /**
@@ -125,17 +142,20 @@ public class TreasuryService {
      * Returns the tax amount (0 if disabled).
      */
     public BigDecimal collectAuctionTax(BigDecimal sellerProceeds) {
+        BigDecimal taxAmount = calculateAuctionTax(sellerProceeds);
+        collectTaxAmount(taxAmount);
+        return taxAmount;
+    }
+
+    /**
+     * Calculates tax on loan interest without mutating treasury state.
+     */
+    public BigDecimal calculateLoanInterestTax(BigDecimal interestAmount) {
         if (!isEnabled()) return BigDecimal.ZERO;
         AutoTuneConfig.TaxConfig tax = configManager.getConfig().tax();
-        if (tax.auctionTaxPercent() <= 0) return BigDecimal.ZERO;
+        if (tax.loanInterestTaxPercent() <= 0) return BigDecimal.ZERO;
 
-        BigDecimal taxAmount = sellerProceeds
-                .multiply(BigDecimal.valueOf(tax.auctionTaxPercent()))
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        if (taxAmount.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
-
-        treasuryBalance.updateAndGet(current -> current.add(taxAmount));
-        return taxAmount;
+        return calculatePercentTax(interestAmount, tax.loanInterestTaxPercent());
     }
 
     /**
@@ -143,17 +163,30 @@ public class TreasuryService {
      * to a loan balance. Returns the tax amount (0 if disabled).
      */
     public BigDecimal collectLoanInterestTax(BigDecimal interestAmount) {
-        if (!isEnabled()) return BigDecimal.ZERO;
-        AutoTuneConfig.TaxConfig tax = configManager.getConfig().tax();
-        if (tax.loanInterestTaxPercent() <= 0) return BigDecimal.ZERO;
-
-        BigDecimal taxAmount = interestAmount
-                .multiply(BigDecimal.valueOf(tax.loanInterestTaxPercent()))
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        if (taxAmount.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
-
-        treasuryBalance.updateAndGet(current -> current.add(taxAmount));
+        BigDecimal taxAmount = calculateLoanInterestTax(interestAmount);
+        collectTaxAmount(taxAmount);
         return taxAmount;
+    }
+
+    /**
+     * Records a tax amount that was previously calculated and is now known to
+     * belong to a successful transaction. No-op for zero/negative amounts.
+     */
+    public void collectTaxAmount(BigDecimal taxAmount) {
+        if (taxAmount == null || taxAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        treasuryBalance.updateAndGet(current -> current.add(taxAmount));
+    }
+
+    private BigDecimal calculatePercentTax(BigDecimal amount, double percent) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0 || percent <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal taxAmount = amount
+                .multiply(BigDecimal.valueOf(percent))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        return taxAmount.compareTo(BigDecimal.ZERO) > 0 ? taxAmount : BigDecimal.ZERO;
     }
 
     // ── Treasury withdrawals ────────────────────────────────────────────────

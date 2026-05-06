@@ -62,7 +62,7 @@ public class CartConfirmGui {
     public void showBuyConfirm(ShopItem shopItem, int amount) {
         BigDecimal pricePerUnit = shopManager.getBuyPrice(shopItem, amount);
         BigDecimal subtotal = pricePerUnit.multiply(BigDecimal.valueOf(amount));
-        BigDecimal tax = plugin.getTreasuryService().collectBuyTax(subtotal);
+        BigDecimal tax = plugin.getTreasuryService().calculateBuyTax(subtotal);
         BigDecimal total = subtotal.add(tax);
         BigDecimal playerBalance = BigDecimal.valueOf(economyManager.getBalance(player));
 
@@ -150,7 +150,7 @@ public class CartConfirmGui {
         }
 
         BigDecimal subtotal = pricePerUnit.multiply(BigDecimal.valueOf(amount));
-        BigDecimal tax = plugin.getTreasuryService().collectSellTax(subtotal);
+        BigDecimal tax = plugin.getTreasuryService().calculateSellTax(subtotal);
         BigDecimal netProceeds = subtotal.subtract(tax);
 
         String title = "§e§lConfirm Sale";

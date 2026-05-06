@@ -453,7 +453,7 @@ const CHANGELOG = [
         tag: 'AUC',
         tagColor: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
         title: 'Auction House 2.0 — order expiry + auto-reclaim',
-        detail: 'Sell orders expire after 72h (configurable TTL). Expired orders auto-return items to online players, or sit in /auction reclaim for offline players. BUY orders auto-refund escrowed funds. Cleanup task runs every 15 min.',
+        detail: 'Sell orders expire after 72h (configurable TTL). Expired items auto-return to online players or wait in /auction reclaim; undelivered buy-order fills are also saved instead of lost. BUY orders auto-refund escrowed funds. Cleanup task runs every 15 min.',
         section: 0,
         commit: null,
       },

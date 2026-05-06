@@ -148,6 +148,12 @@ public class DatabaseManager {
             highestVersion = 8;
         }
 
+        if (currentVersion < 9) {
+            plugin.getLogger().info("Applying database migration V9 (Auction Pending Returns)...");
+            runMigration("db/V9__Auction_Pending_Returns.sql");
+            highestVersion = 9;
+        }
+
         if (highestVersion > currentVersion) {
             setSchemaVersion(highestVersion);
         }

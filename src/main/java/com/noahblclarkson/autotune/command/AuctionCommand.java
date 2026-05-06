@@ -88,9 +88,9 @@ public class AuctionCommand {
                 .append(Component.text(" - Player-to-player trading", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/auction", NamedTextColor.YELLOW)
                 .append(Component.text(" - Browse active orders", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/auction sell <price> [qty=1]", NamedTextColor.YELLOW)
+        sender.sendMessage(Component.text("/auction sell <price> <qty>", NamedTextColor.YELLOW)
                 .append(Component.text(" - List item from hand for sale", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/auction buy <material> <price> [qty=1]", NamedTextColor.YELLOW)
+        sender.sendMessage(Component.text("/auction buy <material> <price> <qty>", NamedTextColor.YELLOW)
                 .append(Component.text(" - Place a buy order", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/auction my", NamedTextColor.YELLOW)
                 .append(Component.text(" - View your active orders", NamedTextColor.GRAY)));
@@ -105,7 +105,7 @@ public class AuctionCommand {
         sender.sendMessage(Component.text("/auction history", NamedTextColor.YELLOW)
                 .append(Component.text(" - Recent auction trades", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/auction reclaim", NamedTextColor.YELLOW)
-                .append(Component.text(" - Reclaim items from expired sell orders", NamedTextColor.GRAY)));
+                .append(Component.text(" - Reclaim expired sell orders and pending deliveries", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/auction price <material>", NamedTextColor.YELLOW)
                 .append(Component.text(" - Check market price before posting", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
@@ -434,13 +434,19 @@ public class AuctionCommand {
     @Command("auction reclaim")
     public void auctionReclaim(Player player) {
         List<AuctionOrder> expired = auctionManager.getExpiredSellOrdersForPlayer(player.getUniqueId());
-        if (expired == null || expired.isEmpty()) {
-            player.sendMessage(Component.text("You have no expired sell orders to reclaim.", NamedTextColor.GRAY));
+        int pendingCount = auctionManager.getPendingReturnCount(player.getUniqueId());
+        if ((expired == null || expired.isEmpty()) && pendingCount == 0) {
+            player.sendMessage(Component.text("You have no expired sell orders or pending returns to reclaim.", NamedTextColor.GRAY));
             return;
         }
-
-        player.sendMessage(Component.text(
-                "Reclaiming items from " + expired.size() + " expired sell order(s)...", NamedTextColor.YELLOW));
+        if (expired != null && !expired.isEmpty()) {
+            player.sendMessage(Component.text(
+                    "Reclaiming items from " + expired.size() + " expired sell order(s)...", NamedTextColor.YELLOW));
+        }
+        if (pendingCount > 0) {
+            player.sendMessage(Component.text(
+                    "Reclaiming " + pendingCount + " pending return(s)...", NamedTextColor.YELLOW));
+        }
 
         int items = auctionManager.reclaimExpiredOrders(player);
         if (items > 0) {
@@ -643,13 +649,13 @@ public class AuctionCommand {
         sender.sendMessage(Component.text("──".repeat(20), NamedTextColor.DARK_GRAY));
         if (bestAsk != null || bestBid != null) {
             sender.sendMessage(Component.text("  Tip: Use ", NamedTextColor.DARK_GRAY)
-                    .append(Component.text("/auction sell <price> [qty]", NamedTextColor.YELLOW))
+                    .append(Component.text("/auction sell <price> <qty>", NamedTextColor.YELLOW))
                     .append(Component.text(" or ", NamedTextColor.DARK_GRAY))
-                    .append(Component.text("/auction buy " + material + " <price> [qty]", NamedTextColor.YELLOW)));
+                    .append(Component.text("/auction buy " + material + " <price> <qty>", NamedTextColor.YELLOW)));
         } else {
             sender.sendMessage(Component.text("  No auction orders yet for this item.", NamedTextColor.DARK_GRAY));
             sender.sendMessage(Component.text("  Be the first to post! ", NamedTextColor.DARK_GRAY)
-                    .append(Component.text("/auction sell <price> [qty]", NamedTextColor.YELLOW)));
+                    .append(Component.text("/auction sell <price> <qty>", NamedTextColor.YELLOW)));
         }
         sender.sendMessage(Component.empty());
     }

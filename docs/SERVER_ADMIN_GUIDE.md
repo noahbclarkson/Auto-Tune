@@ -380,8 +380,8 @@ The auction house provides a traditional order-book marketplace — players plac
 
 ```
 /auction browse        ← view buy/sell orders (market depth)
-/auction sell <price>  ← list item in hand for sale (limit order)
-/auction buy <material> <price> [qty] ← place a buy order (fills automatically if price ≥ best ask)
+/auction sell <price> <qty> ← list item in hand for sale (limit order)
+/auction buy <material> <price> <qty> ← place a buy order (fills automatically if price ≥ best ask)
 /auction my            ← view your active orders
 /auction cancel <id>   ← cancel your order
 /auction history       ← your fill history
@@ -396,7 +396,8 @@ The auction house provides a traditional order-book marketplace — players plac
 
 **Order expiry:** orders expire after 72 hours by default (configurable via `auction.default-duration-hours`). When an order expires:
 - Buy orders: escrowed funds are **automatically refunded**
-- Sell orders: items must be reclaimed via `/auction reclaim` (not returned automatically)
+- Sell orders: items are returned to online players when possible; otherwise they are saved for `/auction reclaim`
+- Filled buy orders: if items cannot be delivered because the buyer is offline or their inventory is full, they are saved as pending returns for `/auction reclaim`
 
 **Integrity monitoring:** `/at admin auction` shows 7-day cancellation churn, fill/cancel/expire rates, self-trade fills, and large sell-wall warnings. Use this to detect manipulation patterns such as cancellation spoofing or spoofed bid walls.
 

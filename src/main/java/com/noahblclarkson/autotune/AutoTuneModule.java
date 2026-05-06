@@ -8,6 +8,7 @@ import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.guild.GuildService;
 import com.noahblclarkson.autotune.database.AdminAuditRepository;
 import com.noahblclarkson.autotune.database.AutosellRepository;
+import com.noahblclarkson.autotune.database.AuctionPendingReturnRepository;
 import com.noahblclarkson.autotune.database.AuctionRepository;
 import com.noahblclarkson.autotune.database.BadgeRepository;
 import com.noahblclarkson.autotune.database.CircuitEventRepository;
@@ -156,6 +157,12 @@ public class AutoTuneModule extends AbstractModule {
     @Singleton
     public AuctionRepository provideAuctionRepository(DatabaseManager databaseManager) {
         return new AuctionRepository(databaseManager);
+    }
+
+    @Provides
+    @Singleton
+    public AuctionPendingReturnRepository provideAuctionPendingReturnRepository(DatabaseManager databaseManager) {
+        return new AuctionPendingReturnRepository(databaseManager);
     }
 
     @Provides

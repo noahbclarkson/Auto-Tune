@@ -94,14 +94,13 @@ public class PlayerListener implements Listener {
             checkLoanWarning(player, data.activeLoan());
             deliverPendingNotifications(player, data.pending());
         })).thenRunAsync(() -> {
-            // Auto-reclaim expired sell order items for the player.
+            // Auto-reclaim expired sell order items and pending auction deliveries.
             // Runs on pool thread to avoid blocking main; reclaimExpiredOrders
             // internally schedules item delivery on the main thread.
             try {
                 int reclaimed = auctionManager.reclaimExpiredOrders(player);
                 if (reclaimed > 0) {
-                    LOGGER.info("Auto-reclaimed " + reclaimed + " item(s) from expired "
-                            + "auction sell orders for " + player.getName());
+                    LOGGER.info("Auto-reclaimed " + reclaimed + " pending auction item(s) for " + player.getName());
                 }
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "Failed to auto-reclaim auction items for "

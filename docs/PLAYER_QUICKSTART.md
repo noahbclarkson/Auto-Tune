@@ -154,12 +154,12 @@ The auction house lets you trade items directly with other players at prices **y
 | Command | What it does |
 |---------|-------------|
 | `/auction browse` | View all active buy/sell orders (the order book) |
-| `/auction sell <price>` | Post a sell limit order for the item in your hand |
-| `/auction buy <order-id>` | Fill a seller's order — they get coins, you get items |
+| `/auction sell <price> <qty>` | Post a sell limit order for the item in your hand |
+| `/auction buy <material> <price> <qty>` | Place a buy order; fills automatically when it crosses a sell order |
 | `/auction my` | View your active orders and fill history |
 | `/auction cancel <id>` | Cancel an active order (items/coins returned immediately) |
 | `/auction watch <id>` | Get an in-game alert when an order fills |
-| `/auction reclaim` | Get items back from expired sell orders |
+| `/auction reclaim` | Get expired sell-order items and pending auction deliveries back |
 
 ### Why Use the Auction Instead of /sell?
 
@@ -170,7 +170,7 @@ The auction house lets you trade items directly with other players at prices **y
 
 ### How It Works
 
-Post a sell order at your target price. Your items go into escrow. When a buyer runs `/auction buy <your-order-id>`, the trade executes immediately — they pay your price and receive your items. Orders expire after 72 hours. Run `/auction reclaim` to get items back from expired orders.
+Post a sell order at your target price. Your items go into escrow. Buyers place bids with `/auction buy <material> <price> <qty>`. If their bid crosses your ask, the matching engine fills the trade immediately — they pay your price and receive your items. Orders expire after 72 hours. Run `/auction reclaim` to get back expired sell-order items and any auction deliveries saved while you were offline or out of inventory space.
 
 **Tip:** Before posting a large sell order, use `/auction browse` to check the order book depth. In a thin book, one large order can move the market significantly against you. The depth chart on the bundled web dashboard (`/auction` → Depth tab) shows liquidity at each price level.
 
@@ -186,8 +186,8 @@ Watch any order with `/auction watch <id>` to receive a notification when it fil
 | `/sell` | Sell items instantly at market price |
 | `/compare <a> <b>` | Check if an item is cheap or expensive vs its 7-day average |
 | `/auction browse` | View the live player order book |
-| `/auction sell <price>` | Post a sell order at your price |
-| `/auction buy <id>` | Fill a seller's order directly |
+| `/auction sell <price> <qty>` | Post a sell order at your price |
+| `/auction buy <material> <price> <qty>` | Place a buy order at your bid price |
 | `/auction watch <id>` | Get alerted when an order fills |
 | `/loans` | Borrow coins for large purchases |
 | `/transactions` | Review your trading history |

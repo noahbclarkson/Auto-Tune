@@ -210,7 +210,8 @@ In-game order-book auction system. Players place buy/sell orders, matched by pri
 
 **Expiration behavior:**
 - Buy orders: escrowed funds are **automatically refunded** when expired
-- Sell orders: items are **NOT returned automatically** — players must reclaim via `/auction reclaim`
+- Sell orders: items are returned to online players when possible; otherwise they are saved for `/auction reclaim`
+- Filled buy orders: if the buyer is offline or their inventory is full, undelivered items are saved for `/auction reclaim` instead of being lost
 
 Set `expiration-check-interval-minutes: 0` only if you want to manage order expiry manually via `/auction cancel`.
 

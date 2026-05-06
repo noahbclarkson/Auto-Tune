@@ -51,13 +51,13 @@ const MOCK_FILLS = [
 
 const COMMANDS = [
   { cmd: '/auction browse', desc: 'View live buy/sell order book with depth' },
-  { cmd: '/auction sell <price>', desc: 'Place a sell limit order (your item in hand)' },
-  { cmd: '/auction buy <order-id>', desc: 'Fill a seller\'s order directly' },
+  { cmd: '/auction sell <price> <qty>', desc: 'Place a sell limit order (your item in hand)' },
+  { cmd: '/auction buy <material> <price> <qty>', desc: 'Place a buy order; fills automatically when it crosses an ask' },
   { cmd: '/auction my', desc: 'View your active orders and fill history' },
   { cmd: '/auction watch <id>', desc: 'Get in-game alert when an order fills' },
   { cmd: '/auction cancel <id>', desc: 'Cancel one of your active orders' },
   { cmd: '/auction info <id>', desc: 'Inspect any order in detail' },
-  { cmd: '/auction reclaim', desc: 'Reclaim items from expired sell orders' },
+  { cmd: '/auction reclaim', desc: 'Reclaim expired items and pending deliveries' },
 ];
 
 const INTEGRITY_ITEMS = [

@@ -179,7 +179,7 @@ const UPDATES = [
     accentBg: 'bg-amber-950/60 border-amber-800/50',
     tag: 'AUCTION',
     title: 'Auction House 2.0 — order expiry + auto-reclaim',
-    detail: 'Sell orders now expire after a configurable TTL (default 72h). Expired orders auto-return items to online players, or sit in /auction reclaim for offline players. BUY orders auto-refund escrowed funds.',
+    detail: 'Sell orders now expire after a configurable TTL (default 72h). Expired items auto-return to online players or wait in /auction reclaim; undelivered buy-order fills are also saved instead of lost. BUY orders auto-refund escrowed funds.',
     href: null,
   },
   {

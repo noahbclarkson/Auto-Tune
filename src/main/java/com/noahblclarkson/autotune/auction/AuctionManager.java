@@ -5,15 +5,18 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.database.AuctionPendingReturnRepository;
 import com.noahblclarkson.autotune.database.AuctionRepository;
 import com.noahblclarkson.autotune.database.PendingNotificationRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.WatchedAuctionRepository;
 import com.noahblclarkson.autotune.model.AuctionFill;
 import com.noahblclarkson.autotune.model.AuctionOrder;
+import com.noahblclarkson.autotune.model.AuctionPendingReturn;
 import com.noahblclarkson.autotune.model.AuctionOrder.OrderSide;
 import com.noahblclarkson.autotune.model.AuctionOrder.OrderStatus;
 import com.noahblclarkson.autotune.manager.TreasuryService;
+import com.noahblclarkson.autotune.util.ItemSerializer;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
@@ -28,6 +31,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,6 +58,7 @@ public class AuctionManager {
     private final TreasuryService treasuryService;
     private final WatchedAuctionRepository watchedAuctionRepo;
     private final PendingNotificationRepository pendingNotificationRepo;
+    private final AuctionPendingReturnRepository pendingReturnRepo;
     private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
     private final int defaultDurationHours;
 
@@ -67,6 +72,7 @@ public class AuctionManager {
             TreasuryService treasuryService,
             WatchedAuctionRepository watchedAuctionRepo,
             PendingNotificationRepository pendingNotificationRepo,
+            AuctionPendingReturnRepository pendingReturnRepo,
             AutoTuneConfig config
     ) {
         this.plugin = plugin;
@@ -78,6 +84,7 @@ public class AuctionManager {
         this.treasuryService = treasuryService;
         this.watchedAuctionRepo = watchedAuctionRepo;
         this.pendingNotificationRepo = pendingNotificationRepo;
+        this.pendingReturnRepo = pendingReturnRepo;
         this.defaultDurationHours = config.auction().defaultDurationHours();
     }
 
@@ -368,6 +375,10 @@ public class AuctionManager {
         return auctionRepo.findExpiredSellOrdersByPlayer(playerUuid);
     }
 
+    public int getPendingReturnCount(UUID playerUuid) {
+        return pendingReturnRepo.countUnreturnedForPlayer(playerUuid);
+    }
+
     public List<AuctionFill> getRecentFills(int limit) {
         return auctionRepo.findRecentFills(limit);
     }
@@ -491,7 +502,11 @@ public class AuctionManager {
                     }
                     Material mat = Material.valueOf(materialName);
                     ItemStack items = new ItemStack(mat, qty);
-                    buyer.getInventory().addItem(items);
+                    // addItem returns overflow — save undelivered items so player can reclaim.
+                    Map<Integer, ItemStack> overflow = buyer.getInventory().addItem(items);
+                    if (!overflow.isEmpty()) {
+                        saveOverflowReturns(buyer.getUniqueId(), fill.id(), materialName, overflow);
+                    }
                 } catch (Exception e) {
                     economyError[0] = e;
                 } finally {
@@ -687,19 +702,30 @@ public class AuctionManager {
                 org.bukkit.OfflinePlayer seller = Bukkit.getOfflinePlayer(sellerUuid);
                 economy.depositPlayer(seller, netProceeds.doubleValue());
 
-                // Give buyer their items.
+                // Give buyer their items. Any overflow is persisted for /auction reclaim.
                 Player buyer = Bukkit.getPlayer(buyerUuid);
                 if (buyer != null) {
                     Material mat = Material.valueOf(material);
-                    buyer.getInventory().addItem(new ItemStack(mat, quantity));
+                    ItemStack items = new ItemStack(mat, quantity);
+                    Map<Integer, ItemStack> overflow = buyer.getInventory().addItem(items);
+                    if (!overflow.isEmpty()) {
+                        saveOverflowReturns(buyerUuid, fillId, material, overflow);
+                    }
                 } else {
-                    // Buyer went offline between GUI click and fill — log for admin.
-                    // Items cannot be delivered to offline inventory; store notification
-                    // so they know to use /auction reclaim when back online.
+                    // Buyer went offline between GUI click and fill. Save the items
+                    // instead of just logging — otherwise the fill is paid but undelivered.
                     plugin.getLogger().warning(
                             "[Auto-Tune] Buyer " + buyerUuid + " offline during fill "
                                     + fillId + " — " + quantity + "× " + material
-                                    + " not delivered. Player should /auction reclaim.");
+                                    + " not delivered. Saved for /auction reclaim.");
+                    AuctionPendingReturn offlineReturn = AuctionPendingReturn.builder()
+                            .playerUuid(buyerUuid)
+                            .fillId(fillId)
+                            .material(material)
+                            .quantity(quantity)
+                            .reason(AuctionPendingReturn.Reason.OFFLINE_BUYER)
+                            .build();
+                    pendingReturnRepo.insert(offlineReturn);
                     pendingNotificationRepo.insert(buyerUuid,
                             "\u26a0 You were offline when your buy order was filled: "
                                     + quantity + "\u00d7 " + material
@@ -832,10 +858,6 @@ public class AuctionManager {
      */
     public int reclaimExpiredOrders(Player player) {
         List<AuctionOrder> expired = auctionRepo.findExpiredSellOrdersByPlayer(player.getUniqueId());
-        if (expired.isEmpty()) {
-            return 0;
-        }
-
         int itemsReturned = 0;
         for (AuctionOrder order : expired) {
             try {
@@ -844,6 +866,16 @@ public class AuctionManager {
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
                         "Failed to reclaim auction order " + order.id() + ": " + e.getMessage(), e);
+            }
+        }
+
+        for (AuctionPendingReturn pending : pendingReturnRepo.findUnreturnedForPlayer(player.getUniqueId())) {
+            try {
+                int reclaimed = reclaimPendingReturn(player, pending);
+                itemsReturned += reclaimed;
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING,
+                        "Failed to reclaim pending auction return " + pending.id() + ": " + e.getMessage(), e);
             }
         }
         return itemsReturned;
@@ -866,6 +898,9 @@ public class AuctionManager {
                 int returned = order.remainingQuantity() - (overflow.isEmpty() ? 0 :
                         overflow.values().stream().mapToInt(ItemStack::getAmount).sum());
                 itemsRef.set(returned);
+                if (!overflow.isEmpty()) {
+                    saveOverflowReturns(player.getUniqueId(), null, order.material(), overflow);
+                }
 
                 player.sendMessage(net.kyori.adventure.text.Component.text(
                         "✓ Reclaimed " + returned + "× " + formatMaterialName(order.material())
@@ -899,11 +934,76 @@ public class AuctionManager {
     }
 
     /**
+     * Reclaim a pending item return that was saved because the original
+     * delivery could not fit in the player's inventory.
+     */
+    private int reclaimPendingReturn(Player player, AuctionPendingReturn pending) {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Exception> error = new AtomicReference<>();
+        AtomicReference<Integer> itemsRef = new AtomicReference<>(0);
+
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            try {
+                ItemStack stack = pending.itemData() != null
+                        ? ItemSerializer.deserializeItemStack(pending.itemData())
+                        : new ItemStack(Material.valueOf(pending.material()), pending.quantity());
+                stack.setAmount(pending.quantity());
+
+                Map<Integer, ItemStack> overflow = player.getInventory().addItem(stack);
+                int overflowCount = overflow.values().stream().mapToInt(ItemStack::getAmount).sum();
+                int returned = pending.quantity() - overflowCount;
+                itemsRef.set(Math.max(0, returned));
+
+                if (overflow.isEmpty()) {
+                    pendingReturnRepo.markReturned(pending.id());
+                } else {
+                    ItemStack remaining = overflow.values().iterator().next().clone();
+                    remaining.setAmount(overflowCount);
+                    pendingReturnRepo.updateUnreturnedPayload(
+                            pending.id(), overflowCount, ItemSerializer.serializeItemStack(remaining));
+                }
+
+                if (returned > 0) {
+                    player.sendMessage(net.kyori.adventure.text.Component.text(
+                            "✓ Reclaimed " + returned + "× " + formatMaterialName(pending.material())
+                                    + " from pending auction delivery.",
+                            net.kyori.adventure.text.format.NamedTextColor.GREEN));
+                } else {
+                    player.sendMessage(net.kyori.adventure.text.Component.text(
+                            "⚠ No inventory space for pending auction delivery. Free space and run /auction reclaim again.",
+                            net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+                }
+            } catch (Exception e) {
+                error.set(e);
+            } finally {
+                latch.countDown();
+            }
+        });
+
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            plugin.getLogger().warning("Interrupted while reclaiming pending return " + pending.id());
+            return 0;
+        }
+
+        if (error.get() != null) {
+            plugin.getLogger().log(Level.WARNING,
+                    "Error reclaiming pending return " + pending.id() + ": " + error.get().getMessage());
+            return 0;
+        }
+
+        return itemsRef.get();
+    }
+
+    /**
      * Expire a single order: update status, refund/return as appropriate.
      */
     private void expireOrder(AuctionOrder order) {
         CountDownLatch latch = new CountDownLatch(1);
         AtomicReference<Exception> error = new AtomicReference<>();
+        AtomicReference<AuctionOrder> updatedOrder = new AtomicReference<>(order.withStatusExpired());
 
         Bukkit.getScheduler().runTask(plugin, () -> {
             try {
@@ -934,7 +1034,11 @@ public class AuctionManager {
                     if (player != null) {
                         Material mat = Material.valueOf(order.material());
                         ItemStack items = new ItemStack(mat, order.remainingQuantity());
-                        player.getInventory().addItem(items);
+                        Map<Integer, ItemStack> overflow = player.getInventory().addItem(items);
+                        if (!overflow.isEmpty()) {
+                            saveOverflowReturns(order.playerUuid(), null, order.material(), overflow);
+                        }
+                        updatedOrder.set(order.withStatusReclaimed());
                         player.sendMessage(net.kyori.adventure.text.Component.text(
                                 "⚠️ Your sell order for " + order.remainingQuantity() + "× "
                                         + formatMaterialName(order.material())
@@ -972,7 +1076,40 @@ public class AuctionManager {
         }
 
         // Update order status in DB
-        auctionRepo.update(order.withStatusExpired());
+        auctionRepo.update(updatedOrder.get());
+    }
+
+    /**
+     * Persist items Bukkit could not add to a player's inventory. Bukkit's
+     * addItem API reports undelivered stacks in its return map; ignoring that
+     * map silently destroys items when an inventory is full.
+     */
+    private void saveOverflowReturns(UUID playerUuid, UUID fillId, String materialName, Map<Integer, ItemStack> overflow) {
+        int total = 0;
+        for (ItemStack item : overflow.values()) {
+            ItemStack copy = item.clone();
+            total += copy.getAmount();
+            AuctionPendingReturn pending = AuctionPendingReturn.builder()
+                    .playerUuid(playerUuid)
+                    .fillId(fillId)
+                    .material(copy.getType().name())
+                    .itemData(ItemSerializer.serializeItemStack(copy))
+                    .quantity(copy.getAmount())
+                    .reason(AuctionPendingReturn.Reason.INVENTORY_FULL)
+                    .build();
+            pendingReturnRepo.insert(pending);
+        }
+
+        String message = "⚠ " + total + "× " + formatMaterialName(materialName)
+                + " could not fit in your inventory and was saved. Use /auction reclaim to retrieve it.";
+        Player player = Bukkit.getPlayer(playerUuid);
+        if (player != null) {
+            player.sendMessage(net.kyori.adventure.text.Component.text(
+                    message,
+                    net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+        } else {
+            pendingNotificationRepo.insert(playerUuid, message, "AUCTION_RETURN");
+        }
     }
 
     private String formatMaterialName(String material) {

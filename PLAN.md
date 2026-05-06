@@ -6,6 +6,29 @@ _Living document. Update after every session. Prioritize ruthlessly._
 
 ---
 
+## Cron (2026-05-06 08:30 UTC) — Simulation Lab: GuildBuyer Cap Java Parity Fixed ✅
+
+**Commit:** `fix(simulation): align GuildBuyer cap with Java` | `cargo clippy -- -D warnings` ✅ | `cargo fmt` ✅ | `cargo test` 11/11 ✅ | `--loan-cap-test` ✅ | `--sixty-day-gb-debt-cap-test` ✅
+
+**Bug/parity fixed: Rust sim GuildBuyer debt cap did not match Java.**
+- Java `LoanManager.guildbuyerTotalDebtCap` is **per GuildBuyer player**, counts **active debt only**, and **rejects the whole loan** if projected debt exceeds GDP × cap.
+- Rust was treating it as **cumulative across all GuildBuyers**, counting **active + defaulted**, and **partially filling** to remaining allowance.
+- Fixed Rust to match Java exactly: per-player active debt, full rejection, comments updated in `simulation.rs`, `config.rs`, and 60d test labels.
+
+**60-day result after parity fix:** 3× per-GB cap is **non-binding / not a stabilizer** in the current production-like config.
+- Seed 42: control D/G `21.038x` → cap `21.038x`, T3 `9 → 9`
+- Seed 12345: control D/G `14.549x` → cap `14.549x`, T3 `3 → 3`
+- Mean: `17.793x → 17.793x` (0.000x change)
+
+**Engine insight:** With the economy-wide active debt cap default at `2× GDP`, a per-player GuildBuyer cap of `3× GDP` is mostly a guardrail and cannot be expected to stabilize long-run D/G. Earlier Rust conclusions that treated `guildbuyer_total_debt_cap=3.0` as a 60d fix were optimistic because the sim behavior diverged from Java. Treat the cap as safety documentation parity, not a tuning lever.
+
+**Actionable recommendation:** Do not pitch `guildbuyer_total_debt_cap=3.0` as a solution to 60d instability. Prioritize no-floor / low-floor long-run configs and only test tighter GB caps (`1–2× GDP`) if we are comfortable constraining GuildBuyer liquidity.
+
+**Next priorities:**
+1. Run no-floor / 40% floor long-run production comparison after the floor docs correction.
+2. If testing GB caps further, sweep `1×/2×/3×` with Java-parity behavior and track lost liquidity/GDP, not just D/G.
+3. Continue Rust/Java parity audits before using sim results to change plugin defaults.
+
 ## Cron (2026-05-04 19:03 UTC) — API Docs Stale Auth Header + Rate Limits Fixed ✅
 
 **rewrite-2 at `77c3e9d`** | `./gradlew build` ✅ PMD 0 | `web/` 14 routes ✅ | `web-optimizer/` 22 routes ✅ | Pushed ✅

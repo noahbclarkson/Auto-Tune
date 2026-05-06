@@ -18736,17 +18736,18 @@ fn run_sixty_day_hysteresis_test() {
 }
 
 /// 60-Day GB Debt Cap Test
-/// Tests whether capping total GuildBuyer debt at 3× GDP fixes the 60-day instability.
+/// Tests whether capping each GuildBuyer's active debt at 3× GDP fixes the 60-day instability.
 ///
 /// Root cause (confirmed over 3 fix attempts):
 ///   GB loans OPEN during TIER3 lock period (0% interest) and ACCUMULATE.
 ///   When circuit re-enables, accumulated zero-interest debt services catastrophically.
 ///
-/// Fix: guildbuyer_total_debt_cap = 3.0 (3× economy GDP) prevents accumulation
-/// during TIER3 lock. When total GB debt would exceed cap, loans are rejected/reduced.
+/// Fix: guildbuyer_total_debt_cap = 3.0 (3× economy GDP) prevents one GB from
+/// accumulating disproportionate debt. When that player's projected active GB debt
+/// would exceed cap, the loan is rejected (matching Java LoanManager behavior).
 ///
 /// Control: uncapped GB debt (guildbuyer_total_debt_cap = 0.0)
-/// Treatment: capped GB debt at 3× GDP (guildbuyer_total_debt_cap = 3.0)
+/// Treatment: per-GB active debt capped at 3× GDP (guildbuyer_total_debt_cap = 3.0)
 fn run_sixty_day_gb_debt_cap_test() {
     use crate::analyzer::load_summary;
 
@@ -18757,7 +18758,7 @@ fn run_sixty_day_gb_debt_cap_test() {
 ╔════════════════════════════════════════════════════════════════════════════╗"
     );
     println!("║     60-DAY GB DEBT CAP TEST                                      ║");
-    println!("║  Control: GB debt uncapped  vs  Fix: GB debt cap 3× GDP             ║");
+    println!("║  Control: GB debt uncapped  vs  Cap: per-GB active debt 3× GDP      ║");
     println!("╚════════════════════════════════════════════════════════════════════════════╝\n");
 
     let mut ctrl_metrics = Vec::new();
@@ -18777,11 +18778,11 @@ fn run_sixty_day_gb_debt_cap_test() {
         std::fs::create_dir_all(&ctrl_path).ok();
         run_seeded_headless(&ctrl, seed, &ctrl_path).ok();
 
-        // ── Fix: GB debt capped at 3× GDP ─────────────────────────────────────
+        // ── Cap: per-GB active debt capped at 3× GDP ───────────────────────────
         let mut fix = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
-        fix.name = format!("Fix_60d_GBcap_s{}", seed);
+        fix.name = format!("Cap_60d_GBcap_s{}", seed);
         fix.duration_ticks = 288 * 60;
-        fix.config.loans.guildbuyer_total_debt_cap = 3.0; // THE FIX
+        fix.config.loans.guildbuyer_total_debt_cap = 3.0;
         let fix_dir = format!("/tmp/autotune-sim/60d-gbcap-{}", seed);
         let fix_path = std::path::PathBuf::from(&fix_dir);
         std::fs::create_dir_all(&fix_path).ok();
@@ -18823,7 +18824,7 @@ fn run_sixty_day_gb_debt_cap_test() {
                 "worse"
             };
             println!(
-                "    Seed {}:  Ctrl D/G={:.3}x  Fix D/G={:.3}x  Delta={:+.3}x  T3 Ctrl={} Fix={}  {}",
+                "    Seed {}:  Ctrl D/G={:.3}x  Cap D/G={:.3}x  Delta={:+.3}x  T3 Ctrl={} Cap={}  {}",
                 seed,
                 ctrl_dg,
                 fix_dg,
@@ -18846,7 +18847,7 @@ fn run_sixty_day_gb_debt_cap_test() {
     println!("  ╠════════════════════════════════════════════════════════════════╣");
     println!(
         "  ║  {:>6}  {:>12}  {:>10}  {:>10}  {:>8}  {:>7}  ║",
-        "Seed", "GDP", "D/G_ctrl", "D/G_fix", "Delta", "Verdict"
+        "Seed", "GDP", "D/G_ctrl", "D/G_cap", "Delta", "Verdict"
     );
     println!("  ╠════════════════════════════════════════════════════════════════╣");
 
@@ -18902,7 +18903,7 @@ fn run_sixty_day_gb_debt_cap_test() {
     );
     println!("  ╠════════════════════════════════════════════════════════════════╣");
     println!(
-        "  ║  TIER3 events: Ctrl={:.0}  Fix={:.0}                            ║",
+        "  ║  TIER3 events: Ctrl={:.0}  Cap={:.0}                            ║",
         ctrl_t3_mean as u32, fix_t3_mean as u32
     );
     println!("  ╠════════════════════════════════════════════════════════════════╣");
@@ -18914,12 +18915,14 @@ fn run_sixty_day_gb_debt_cap_test() {
   VERDICT:"
     );
     if stable && improved {
-        println!("    FIX CONFIRMED -- GB debt cap 3× GDP resolves 60d instability");
+        println!("    CAP EFFECTIVE -- per-GB debt cap 3× GDP resolves 60d instability");
         println!(
             "    D/G mean: {:.1}x → {:.1}x, below 10x stability threshold",
             ctrl_dg_mean, fix_dg_mean
         );
-        println!("    RECOMMENDATION: Add guildbuyer_total_debt_cap = 3.0 to production config");
+        println!(
+            "    RECOMMENDATION: Keep guildbuyer_total_debt_cap = 3.0 as production guardrail"
+        );
     } else if improved {
         println!("    PARTIAL -- GB debt cap improves D/G but may not fully resolve");
         println!(
@@ -18930,9 +18933,11 @@ fn run_sixty_day_gb_debt_cap_test() {
         );
         println!("    RECOMMENDATION: Consider tighter cap (2× GDP) or remove floor");
     } else {
-        println!("    NOT FIXED -- GB debt cap does NOT resolve instability");
+        println!("    NOT FIXED -- 3× per-GB cap does NOT resolve instability");
         println!("    D/G mean: {:.1}x → {:.1}x", ctrl_dg_mean, fix_dg_mean);
-        println!("    RECOMMENDATION: Try tighter GB cap (1-2× GDP) or remove Diamond floor");
+        println!(
+            "    RECOMMENDATION: Treat 3× cap as a guardrail, not a stabilizer; test tighter caps only if willing to constrain GB liquidity, and prioritize no-floor/low-floor long-run configs."
+        );
     }
 }
 

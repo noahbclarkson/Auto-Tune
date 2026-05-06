@@ -673,9 +673,10 @@ impl Simulation {
             let is_market_maker = matches!(player.archetype, Archetype::MarketMaker);
             let mm_can_borrow = self.config.loans.mm_opening_loan_allowed || !is_market_maker;
 
-            // GuildBuyer total debt cap: prevents zero-interest loan accumulation during
-            // TIER3 lock. When GB debt would exceed guildbuyer_total_debt_cap × GDP,
-            // reject or reduce the new loan.
+            // GuildBuyer debt cap: mirrors Java LoanManager.guildbuyerTotalDebtCap.
+            // This is a per-GuildBuyer active-debt cap, not an economy-wide sum across
+            // all GuildBuyers. Java rejects the whole request if projected debt exceeds
+            // GDP × cap, so the sim must reject rather than partially filling a loan.
             let is_guild_buyer = matches!(player.archetype, Archetype::GuildBuyer);
             let gb_debt_cap = self.config.loans.guildbuyer_total_debt_cap;
             let gb_debt_cap_enabled = gb_debt_cap > 0.0;
@@ -693,16 +694,10 @@ impl Simulation {
                 .map(|l| l.current_balance)
                 .sum();
 
-            let current_gb_debt: f64 = self
+            let current_player_gb_debt: f64 = self
                 .loans
                 .iter()
-                .filter(|l| {
-                    let Some(borrower) = self.players.get(l.player_index) else {
-                        return false;
-                    };
-                    matches!(borrower.archetype, Archetype::GuildBuyer)
-                        && matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted)
-                })
+                .filter(|l| l.player_index == player_idx && matches!(l.status, LoanStatus::Active))
                 .map(|l| l.current_balance)
                 .sum();
 
@@ -767,16 +762,14 @@ impl Simulation {
                     amount_after_perloan_cap
                 };
 
-                // GuildBuyer total debt cap: reject or reduce if total GB debt would exceed cap
+                // GuildBuyer debt cap: Java rejects the whole loan if this player's
+                // projected active debt would exceed GDP × guildbuyerTotalDebtCap.
                 let amount_after_gb_cap = if is_guild_buyer && gb_debt_cap_enabled && gdp > 0.0 {
                     let cap_limit = gdp * gb_debt_cap;
-                    let new_total = current_gb_debt + amount_after_total_cap;
-                    if current_gb_debt >= cap_limit {
-                        // GB debt already at cap — reject loan entirely
+                    let new_total = current_player_gb_debt + amount_after_total_cap;
+                    if new_total > cap_limit {
+                        // Would exceed cap — reject loan entirely (Java parity).
                         0.0
-                    } else if new_total > cap_limit {
-                        // Would exceed cap — cap at the remaining allowance
-                        (cap_limit - current_gb_debt).max(0.0)
                     } else {
                         amount_after_total_cap
                     }

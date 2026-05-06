@@ -525,9 +525,9 @@ Simulation testing across 5 seeds confirms: **2 MarketMakers + 2 GuildBuyers** p
 
 ### The Floor Percent
 
-Set `spread.floor-percent: 0.60` (60% of base price). Simulation confirms this is the sweet spot:
-- **50–55%:** barely binds, marginal benefit
-- **60%:** uniquely beneficial — +6.5% GDP vs no floor
-- **70%+:** destructive — internal prices collapse while displayed prices stay artificially high
+**⚠️ Updated recommendation (90-day sim):** The floor is NOT a long-run health mechanism.
+- **Short-term servers (<30 days):** 50-60% floor is fine — seller protection benefit outweighs long-run cost
+- **Long-running servers (>60 days):** Set to 30% or disable. Floor at 60% → GDP -19.1% and D/G +1.6x worse at 90d vs no floor.
+- **70%+:** destructive regardless of horizon — internal prices collapse while displayed prices stay high
 
 _For full config documentation, see [CONFIG_GUIDE.md](./CONFIG_GUIDE.md). For architecture internals, see [ARCHITECTURE.md](./ARCHITECTURE.md)._

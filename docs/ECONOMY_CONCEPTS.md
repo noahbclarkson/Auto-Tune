@@ -79,7 +79,12 @@ Setting a hard price floor (e.g. Diamond minimum $300) seems like an obvious pro
 4. Oversupply drives the *internal* price down to $150 even though displayed price is frozen.
 5. The economy becomes increasingly artificial, detached from real supply/demand signals.
 
-**The simulation finding:** A 60% floor ($300 on Diamond base $500) binds in 5/5 seeds and increases GDP +10.7% vs no floor — but raises D/G by +22%. The GDP gain is real; the D/G cost is real too. **The sweet spot is 60% floor + 2MM + 2GB archetype mix**, where the MMs and GBs prevent the oversupply spiral that floor paradox creates.
+**90-day simulation finding:** Floor is NOT a long-run health mechanism.
+- **14-day:** 60% floor → GDP +29%, D/G 0.71x (benefit)
+- **90-day:** 60% floor → GDP **-19.1%**, D/G **+1.6x worse** vs no floor
+- Floor suppresses natural price correction → inventory glut → GDP contraction over time
+- **Short-term servers (<30 days):** 50-60% floor is fine — seller protection benefit outweighs long-run cost
+- **Long-running servers (>60 days):** Disable or use 30%. Above 70% destroys the economy regardless of horizon.
 
 ---
 
@@ -115,10 +120,10 @@ From 5-seed, 30-day simulation of 2MM + 2GB + 60% floor:
 
 | Metric | Value | Interpretation |
 |--------|-------|---------------|
-| GDP | $1.2M+/day | Active, trading economy |
-| D/G | 7–8x | Normal range for MM+GB mix |
+| GDP | $1.5M+ (no floor) | Active, trading economy |
+| D/G | 13x (no floor) / 14.6x (60% floor) | Floor worsens D/G over 90d |
 | Buy % | 65–75% | Slightly buy-heavy, not oversold |
 | BPD | 0.8–1.2% | Tight spreads |
 | Volatility | < 0.015 | Stable prices |
 
-The Floor Paradox doesn't fully resolve in 30 days — Diamond internal price ($25–$160) stays well below the $300 displayed floor. But GDP is strong and the economy grows. The floor protects new sellers from joining a crashed economy; the archetype mix prevents the floor from creating total detachment.
+The Floor Paradox is real: at 90 days, 60% floor → GDP -19.1% and D/G +1.6x worse vs no floor. Short-run (14d) shows GDP +29% — the benefit reverses after ~60 days. Use floors as a display guardrail for short-term servers; disable for long-running servers (>60 days).

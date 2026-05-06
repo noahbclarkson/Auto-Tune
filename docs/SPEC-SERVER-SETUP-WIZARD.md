@@ -48,7 +48,7 @@ Side note: "Auto-Tune adapts automatically. This just sets the starting spread."
 
 Multi-select (up to 2):
 - **📈 Player Trading Volume** — "Encourage lots of buys and sells. Tighter spreads." → baseSpread -0.05
-- **🛡️ Seller Protection** — "Protect sellers from price crashes. Floor at 60%." → enable 60% floor
+- **🛡️ Seller Protection** — "Light price-floor guardrail for displayed prices. 40% floor (vs 60% default). Note: long-run 90d sim shows floors reduce GDP over time — consider disabling for servers >60 days." → floor-percent: 40
 - **💰 Server Treasury** — "Grow the server's war chest via taxes." → treasury.tax-rate 2-5%
 - **⚡ Fast Price Discovery** — "Prices react quickly to new items." → maxPriceChangePercent 2.0
 - **🔒 Low Debt** — "Keep players out of trouble. Strict loan limits." → loan.credit-score-multiplier 1.5, post-default-cooldown 336h
@@ -88,7 +88,7 @@ Sections to include:
 economy:
   baseSpread: 0.20        # Starting spread (0.15=tight, 0.30=wide)
   spread:
-    floor-percent: 60     # Floor: items can't drop below 60% of base price
+    floor-percent: 40     # Floor: items can't drop below 40% of base price (⚠️ 90d sim: floors reduce long-run GDP — use light protection or disable)
   loans:
     counter-cyclical: true
     post-default-cooldown-hours: 336   # 14 days (low debt goal)
@@ -169,8 +169,8 @@ The stability preview cards are pre-computed from the 840-config parameter sweep
 
 | Server Type | Archetype Config | Base Spread | Goals → delta |
 |---|---|---|---|
-| SMP | 2MM + 2GB @ 7% | 0.20 | +seller_protection → +60% floor |
-| Skyblock | 1MM + 3GB @ 7% | 0.20 | +seller_protection → +60% floor |
+| SMP | 2MM + 2GB @ 7% | 0.20 | +seller_protection → +40% floor (light, long-run aware) |
+| Skyblock | 1MM + 3GB @ 7% | 0.20 | +seller_protection → +40% floor (light, long-run aware) |
 | Faction | 1MM + 1GB @ 7% | 0.25 | +low_debt → stricter loans |
 | Economy | 3MM + 1GB | 0.15 | +volume → -0.05 spread |
 | Custom | user picks | 0.20 | per goal selections |

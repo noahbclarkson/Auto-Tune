@@ -14,7 +14,7 @@ const GOALS: Array<{ key: GoalKey; name: string; description: string; icon: stri
   {
     key: 'seller_protection',
     name: '🛡️ Seller Protection',
-    description: 'Protect sellers from price crashes. Floor at 60%.',
+    description: 'Display guardrail: displayed prices won\'t crash below floor. Note: long-run 90d data shows floors reduce GDP — use light protection (30-50%) or disable for servers >60 days.',
     icon: '🛡️',
   },
   {

@@ -162,9 +162,9 @@ LOWER PRIORITY — Sim Lab:
 
 **rewrite-2 at `201aa21`** | `./gradlew build` ✅ PMD 0 | Regression 6/6 PASS | Pushed
 
-**Floor × Long-Run sweep findings:**
-- 60% floor = optimal sweet spot: +29.2% GDP at 14d, floor binds, D/G 0.71x
-- Floor paradox: at 90% floor, internal Diamond collapses to $0.40 while displayed shows $450 — trade volume drops, hiding GDP collapse behind stable-looking displayed price
+**Floor × Long-Run sweep findings (14d, partial):**
+- 60% floor = optimal sweet spot at 14d: +29.2% GDP, floor binds, D/G 0.71x
+- ⚠️ **Overturned by 90d sweep (2026-05-06):** 60% floor → GDP -19.1%, D/G +1.6x worse vs no floor at 90d. Floor is short-term only. See 2026-05-06 PLAN entry for full correction.
 
 **Admin Recovery Timing:** Day 3 is optimal (D/G 0.72x, saves 19.4% defaults vs natural).
 

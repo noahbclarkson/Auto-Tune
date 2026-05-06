@@ -51,11 +51,11 @@ const IMPACT_CARDS: ImpactCard[] = [
     id: 'floor',
     emoji: '🛡️',
     title: 'Diamond Floor: 60% of Base',
-    finding: '+10.7% GDP, D/G +19.1% (worth it)',
-    verdict: 'recommended',
-    verdictLabel: 'Seller protection',
+    finding: '+29% GDP at 14d, -19.1% GDP at 90d',
+    verdict: 'caution',
+    verdictLabel: '⚠️ Short-term seller protection',
     detail:
-      '60% Diamond floor ($300 on base $500) binds 100% of the time in healthy economies — sellers are protected from crash below $300. GDP improves +10.7%. D/G worsens +19.1% because floor suppresses internal price discovery (behavioral paradox). The seller protection is worth the D/G cost in normal conditions. Below 60%: floor rarely binds. Above 70%: economy chokes.',
+      '60% Diamond floor ($300 on base $500) binds in healthy economies. 14-day: GDP +29%, D/G 0.71x (benefit). 90-day: GDP -19.1%, D/G +1.6x worse vs no floor — floor suppresses natural correction and causes inventory glut over time. Use 30-50% for long-running servers. Above 70%: economy chokes at any horizon.',
     configHint: 'economy.price-floor: { DIAMOND: 300 } or { PERCENTAGE: 0.60 }',
   },
   {

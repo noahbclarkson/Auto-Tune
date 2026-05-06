@@ -305,14 +305,18 @@ const CONFIG_FINDINGS: Finding[] = [
         + 'been without the floor. Diamond internal price averages $285 (floor) while natural '
         + 'equilibrium is $241. The floor paradox: displayed prices are protected but internal '
         + 'prices are lower than they should be.',
-      'Despite the paradox, 60% floor is recommended: GDP +0.9% (neutral), D/G +19% worse (real cost), '
-        + 'but seller protection and player confidence are worth it. Above 70% floor starts '
-        + 'destroying the economy.',
+      '90-day data (5 seeds): floor makes the economy significantly WORSE. 60% floor → GDP -19.1% '
+        + 'and D/G +1.6x higher vs no floor. Floor protects displayed prices but suppresses natural '
+        + 'correction, causing inventory glut and GDP contraction over time. Short-run (14d) shows '
+        + 'benefit (+29% GDP), but this reverses after ~60 days. Seller protection benefit is real '
+        + 'but comes at a heavy long-run cost. Consider 30-50% for light protection or disabling for '
+        + 'servers that run >60 days. Above 70% destroys the economy regardless of horizon.',
     ],
     metrics: [
-      { label: '60% floor GDP', value: '+0.9%', note: 'essentially neutral' },
-      { label: '60% floor D/G', value: '+19% worse', note: 'the hidden cost' },
-      { label: 'Floor danger zone', value: '>70%', note: 'starts destroying GDP' },
+      { label: '60% floor 14d GDP', value: '+29%', note: 'short-run benefit (14d)' },
+      { label: '60% floor 90d GDP', value: '-19.1%', note: 'long-run reversal (90d)' },
+      { label: '60% floor D/G', value: '+1.6x worse', note: '90d, vs no floor' },
+      { label: 'Floor danger zone', value: '>70%', note: 'destroys economy immediately' },
     ],
     relatedLinks: [
       { href: '/docs', label: 'Floor config docs' },

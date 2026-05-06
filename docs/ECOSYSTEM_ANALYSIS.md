@@ -52,7 +52,7 @@ Mechanism: Newbies replace sell pressure with buy pressure. In healthy: demand s
 
 **Casual-heavy (6Cas+1Far+1Tra) devastates 2MM+2GB+floor:** GDP −39.0%, D/G +1.399x worse, vol −37.5%. The 2MM+2GB+floor config is balanced for 3Cas+3Far+2Tra standard mix. **Casual-heavy servers need a different config (lower guild_buyer_multiplier, higher diamond floor). Archetype mix is a first-order concern.**
 
-**Production recommendation updated (2026-04-20):** `2MM + 2GB @ 5% + 60% Diamond floor + counter-cyclical=true + tier3_ratio=30 + sell_pressure_multiplier=1.0`. 7%→5% updated based on 30d simulation: 7% GDP advantage disappears at 30d (+0.7%) while D/G is +2.89× worse. Use 7% only for servers <14 days.
+**Production recommendation (2026-04-20):** `2MM + 2GB @ 5% + 60% Diamond floor + counter-cyclical=true + tier3_ratio=30 + sell_pressure_multiplier=1.0`. (⚠️ **Updated 2026-05-06:** 90-day sim shows 60% floor → GDP -19.1%, D/G +1.6x worse vs no floor. Floor is a short-term seller-protection tool, not a long-run health mechanism. See CONFIG_GUIDE.md for current guidance.)
 
 ---
 

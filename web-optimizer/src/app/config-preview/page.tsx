@@ -273,10 +273,10 @@ function simulate(before: ParsedConfig, after: ParsedConfig): SimResult {
     const diff = after.floorPercent - before.floorPercent;
     if (Math.abs(diff) > 0.01) {
       if (diff > 0 && diff <= 0.10) {
-        impacts.push({ param: 'price floor', effect: `↑ +${(diff * 100).toFixed(0)}pp — Seller protection improves. +10.7% GDP at 60% floor.`, severity: 'positive' });
+        impacts.push({ param: 'price floor', effect: `↑ +${(diff * 100).toFixed(0)}pp — Seller protection improves (short-term). ⚠️ 90d sim: 60% floor → GDP -19.1% — use 30-50% for long-run health.`, severity: 'positive' });
       } else if (diff > 0.10) {
         impacts.push({ param: 'price floor', effect: `↑ +${(diff * 100).toFixed(0)}pp — Risk of economy choke. Floor above 70% destroys GDP.`, severity: 'negative' });
-        warnings.push(`Floor at ${(after.floorPercent * 100).toFixed(0)}% risks choking the economy. 60% is the recommended maximum.`);
+        warnings.push(`Floor at ${(after.floorPercent * 100).toFixed(0)}% risks choking the economy. 50% max recommended for long-run servers.`);
       } else {
         impacts.push({ param: 'price floor', effect: `↓ ${(diff * 100).toFixed(0)}pp — Less seller protection. Floor rarely binds below 50%.`, severity: 'warning' });
       }
@@ -409,7 +409,7 @@ function buildDiff(before: ParsedConfig, after: ParsedConfig): DiffEntry[] {
         impact = d > 0 ? 'Stronger default deterrent' : 'Faster re-entry — more risk';
       } else if (meta.key === 'floorPercent') {
         if (d > 0.10) { severity = 'negative'; impact = 'Above 70% — risk of economy choke'; }
-        else if (d > 0) { severity = 'positive'; impact = '+10.7% GDP at 60% floor — seller protection'; }
+        else if (d > 0) { severity = 'positive'; impact = 'Seller protection (short-term) — ⚠️ 90d: floor → GDP -19.1%, use 30-50% for long-run servers'; }
         else { severity = 'warning'; impact = 'Floor rarely binds below 50%'; }
       } else if (meta.key === 'baseSpread') {
         severity = d > 0 ? 'negative' : 'positive';

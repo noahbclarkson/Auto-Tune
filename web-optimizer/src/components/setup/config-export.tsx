@@ -19,7 +19,7 @@ function generateYaml(
   const clampedSpread = Math.max(0.10, Math.min(0.40, spread));
 
   // Collect goal-based additions
-  const floorPercent = goals.includes('seller_protection') ? 60 : 0;
+  const floorPercent = goals.includes('seller_protection') ? 40 : 0;
   const treasuryTax = goals.includes('treasury') ? 0.03 : defaults.treasury.taxRate;
   const lowDebt = goals.includes('low_debt');
   const funVolatility = goals.includes('fun_volatility');
@@ -37,7 +37,7 @@ function generateYaml(
 
   if (floorPercent > 0) {
     lines.push('  spread:');
-    lines.push(`    floor-percent: ${floorPercent}     # Floor: items cannot drop below ${floorPercent}% of base price`);
+    lines.push(`    floor-percent: ${floorPercent}     # ⚠️ 90d sim: floors reduce long-run GDP — use 30-50% or disable for servers >60 days`);
   }
 
   if (funVolatility) {

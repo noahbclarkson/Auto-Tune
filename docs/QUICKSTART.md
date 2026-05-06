@@ -14,7 +14,7 @@ Q1: Do you want player loans enabled?
 ├─ NO  →  ⚡ No-loans mode
 │         → Loans disabled. Prices still work.
 │         → Use 2 MarketMakers (no GuildBuyers needed — no debt to service)
-│         → Still set price floors (60%) for seller protection
+│         → Still set price floors (30-50%) for light seller protection
 │         → Run: set loans.enabled: false
 │
 └─ YES →  Q2: What's your archetype mix?
@@ -22,7 +22,7 @@ Q1: Do you want player loans enabled?
           ├─ 2+ MarketMakers + 2+ GuildBuyers
           │   → Recommended. GDP +101%, vol -48%, spreads -22% vs 1MM+1GB
           │   → Set loans: 5% threshold, counter-cyclical: true, tier3_ratio: 30
-          │   → Set price floor: 60% on Diamond-type items
+          │   → Set price floor: 50-60% on Diamond-type items (long-running servers: consider 30% or disabling — 90-day sim shows floors reduce GDP over time)
           │   → ✅ You're ready
           │
           ├─ 1 MarketMaker + 1 GuildBuyer
@@ -38,7 +38,7 @@ Q1: Do you want player loans enabled?
               → Strongly recommend adding at least 1MM + 1GB
 ```
 
-**The short answer for most servers:** 2MM + 2GB + loans ON + 60% Diamond floor + market events.
+**The short answer for most servers:** 2MM + 2GB + loans ON + (optional: 40% Diamond floor for short-term servers) + market events.
 
 ---
 
@@ -77,15 +77,19 @@ loans:
   post-default-cooldown-hours: 168  # 7 days
 ```
 
-### 3. Price Floor: 60% of Base ($300 Diamond)
+### 3. Price Floor: Optional (40% recommended for short-term servers)
 
-A hard price floor protects sellers — especially new players — during oversupply. Without a floor, prices can crash to near-zero when a single player dominates supply.
+A price floor protects displayed seller prices from catastrophic crashes. Without a floor, prices can crash to near-zero when a single player dominates supply.
 
-The **60% floor** ($300 on a $500 Diamond base) is the sweet spot:
-- Binds in **5/5 simulation seeds** — consistently active
-- GDP +10.7% vs. no floor (sellers feel confident enough to keep trading)
-- D/G +22% — floor paradox cost is real but manageable
-- Floor paradox: displayed prices stay at floor but *internal* prices drop further — still worth it for new-player protection
+**⚠️ Long-run finding (90-day sim, 5 seeds):** The floor is NOT a long-run health mechanism.
+- 14-day sim: 60% floor → GDP +29%, D/G 0.71x (benefit)
+- 90-day sim: 60% floor → GDP **-19.1%**, D/G **+1.6x worse** vs no floor
+- Floor suppresses natural price correction, causing inventory glut and long-run GDP contraction
+
+**Recommendation:**
+- **Short-term servers (<30 days):** 50-60% floor — seller protection benefit outweighs long-run cost
+- **Long-running servers (>60 days):** Disable floor or use 30%
+- **Maximum safe floor:** 50%. 70%+ floors cause near-collapse regardless of horizon
 
 ```yaml
 market:
@@ -107,7 +111,7 @@ Or use the command:
 /at admin item floor GOLD_INGOT 150
 ```
 
-> **Warning:** 70%+ floors are destructive. Simulation shows -10.7% GDP at 70%, near-collapse at 80%. 60% is the maximum recommended.
+> **Warning:** 70%+ floors are destructive at any horizon. 60% floor is safe for short-term servers only.
 
 ### 4. Market Events: Enabled
 

@@ -127,7 +127,13 @@ The scaling formula uses a `tanh` curve: `tanh(onlineCount * atanh(0.99) / fullE
 |-----|---------|-------------|
 | `spread.floor-percent` | `0.60` | Price floor as fraction of base price (0.60 = 60% of base) |
 
-**floor-percent** (default `0.60`): Items cannot fall below `basePrice × floorPercent`. Floor is applied after all other price calculations. A 60% floor (+6.5% GDP vs no floor) is the sweet spot — floors above 70% choke the economy by suppressing natural correction. Floor paradox confirmed: at 80-90%, Diamond internal price collapses to $0.35-2.04 despite a displayed price of $350-450.
+**floor-percent** (default `0.60`): Items cannot fall below `basePrice × floorPercent`. Floor is applied after all other price calculations.
+
+**⚠️ Long-run data (90 days, 5 seeds):** The floor does NOT improve economic health. At 90 days with 2MM+2GB archetype: floor reduces GDP by **-19.1%** and worsens D/G by **+1.6x** vs no floor. Floor protects *displayed prices* but suppresses natural price correction, causing inventory glut and GDP contraction over time.
+
+**Short-run data (14 days):** 60% floor shows benefits — GDP +29.2%, D/G 0.71x. The benefit reverses after ~60 days.
+
+**Recommendation:** Use floors as a *display guardrail* for seller UX, not as an economic health mechanism. Consider disabling or setting to 30% for long-running servers (>60 days). Floor above 70% severely damages the economy regardless of time horizon.
 
 ---
 

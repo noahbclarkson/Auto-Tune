@@ -10,6 +10,63 @@ Noah has directed: **stop adding features, focus on finding and fixing bugs, and
 
 ---
 
+## Cron (2026-05-07 18:47 UTC) — Web & Ecosystem: Roadmap Drift Fixed ✅
+
+**rewrite-2 at `1887630`** | `./gradlew build` ✅ PMD 0 | `web-optimizer/` build ✅ (27 routes) | `web/` build ✅ (13 routes) | Pushed ✅
+
+### Bug found: Roadmap had two stale items
+
+1. **TIER3 hysteresis unlock value was wrong** — said "locks at 0% until D/G < **9.0×** (92% fewer oscillations)".
+   - **Root cause:** `9.0` came from the OLD defaults (`tier3_ratio=10`, `hysteresis_band=0.1 → unlock at 9×`).
+   - **Current defaults:** `tier3_ratio=30`, `hysteresis_band=0.5 → unlock at **15×**`.
+   - **Math:** 30 × (1 − 0.5) = 15. The 9.0 was never updated when defaults changed.
+
+2. **"Price anchoring from cross-server true prices"** was marked `in-progress` but was already implemented.
+   - Rust API server has `anchored` field in `models.rs` and `price_computer.rs`.
+   - True-prices API returns it per-item. Feature shipped weeks ago.
+
+### Verification
+- Both fixes: `web-optimizer/` build ✅ (27 routes)
+- `web/` build ✅ (13 routes)
+- `./gradlew build` ✅ PMD 0
+- Push successful to `rewrite-2`
+
+### Ecosystem audit findings
+- Auction ecosystem: **complete** on both surfaces — `AdminAuctionCard` (thin books, large sell walls, self-trade fills, churn metrics) in `web/`, depth chart + order book in `web-optimizer/public /auction`.
+- API deploy: still **#1 blocker** — all frontend wiring done (`/servers`, `/true-prices`, `/widget` routes complete), needs Arc's Fly.io token.
+- Testimonials: still fictional — needs human outreach.
+- PMD suppression audit: 67/124 Java files still have blanket `@SuppressWarnings("PMD")` — deferred, high-value but tedious.
+
+### Feature ideas (post-bug-fix, for Plugin Engineer / Sim Lab cycles)
+
+**HIGH PRIORITY — Adoption blockers:**
+1. API server deploy — true-prices, server count, activity feed live on Fly.io
+2. Real testimonials via Discord DM outreach to actual server admins
+
+**MEDIUM PRIORITY — Web & docs:**
+1. Auction opportunity hints panel: compare auction best bid/ask to shop buy/sell. "Likely arbitrage" framing with risk labels — careful wording to avoid exploit loops.
+2. True-prices confidence copy: distinguish low server count / stale data / outlier-suppressed consensus rather than one generic number.
+3. Setup wizard "safe config" teaching: completion screen teaches `config preview` → replace → reload. Already partially done in `config-export.tsx` but could be surfaced more prominently on `/setup`.
+4. Player weekly market recap page: best trade, biggest mover, watched orders filled, materials traded, server-wide hot market stories.
+5. Server key issuance portal: human-in-the-loop invite flow for server admins. Anti-Sybil.
+
+**MEDIUM PRIORITY — Plugin:**
+1. Auction order short aliases: `/auction i <id>`, `/auction w <id>`, `/auction c <id>` — reduce UUID friction for command-line players.
+2. Config diff surface (web admin): warn when economy update interval, spread/slippage, auction fees/limits, or price reporter settings change.
+3. Market Digest REST endpoint: expose `MarketDigestService` via `GET /api/economy/digest` for web dashboard.
+
+**MEDIUM PRIORITY — Sim Lab:**
+1. Auction LOB stress model: thin-book spoofing, cancellation storms, whale sell walls. Rust has no LOB model — manual test plan or minimal Rust LOB implementation.
+2. GuildBuyer debt cap sweep: cap × [0.5×/1×/2× GDP] × 60d × 2 seeds — does tighter cap actually reduce D/G?
+3. Floor × D/G long-run: resume-safe 90d floor strength sweep (no floor vs 30% vs 45% vs 60% × 3 seeds).
+
+**LOWER PRIORITY — DevEx:**
+1. OpenAPI/Swagger for API server (roadmap item)
+2. Automated engine sync tests (Java ↔ Rust ↔ TS) (roadmap item)
+3. PMD targeted suppression audit — one critical file per session (e.g., `MarketEngine.java`)
+
+---
+
 ## Cron (2026-05-07 01:12 UTC) — `web/` Build Fix: Next.js 15.5.15 → 15.5.5 ✅
 
 **rewrite-2 at `b4da546`** | `./gradlew build` ✅ PMD 0 | `web/` 13 routes ✅ | `web-optimizer/` 27 routes ✅ | No new commits (clean session)

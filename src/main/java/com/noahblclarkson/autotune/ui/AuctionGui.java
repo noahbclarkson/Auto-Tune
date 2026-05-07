@@ -339,7 +339,10 @@ public class AuctionGui {
                     // DB write succeeded: now apply the real effects
                     Bukkit.getScheduler().runTask(AutoTune.getInstance(), () -> {
                         removeItems(player, needed, fillQty);
-                        economy.depositPlayer(player, totalCost.doubleValue());
+                        // Use OfflinePlayer so the deposit works even if player disconnects
+                        // before this task runs on the main thread.
+                        economy.depositPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
+                                totalCost.doubleValue());
                         player.sendMessage(Component.text("Sold " + fillQty + "x "
                                 + formatMaterial(order.material()) + " for "
                                 + configManager.formatCurrency(totalCost) + "!", NamedTextColor.GREEN));
@@ -380,8 +383,11 @@ public class AuctionGui {
         // Snapshot balance for refund if needed
         double balanceBefore = economy.getBalance(player);
 
-        // Withdraw first — if this fails we abort without touching DB
-        if (!economy.withdrawPlayer(player, totalCost.doubleValue()).transactionSuccess()) {
+        // Withdraw first — if this fails we abort without touching DB.
+        // Use OfflinePlayer so the withdrawal works even if player disconnects
+        // before the scheduler runs the main-thread task.
+        if (!economy.withdrawPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
+                totalCost.doubleValue()).transactionSuccess()) {
             player.sendMessage(Component.text("Failed to withdraw funds.", NamedTextColor.RED));
             return;
         }
@@ -406,8 +412,11 @@ public class AuctionGui {
                 })
                 .exceptionally(ex -> {
                     // DB write failed — refund the player's money.
+                    // Use OfflinePlayer so the refund succeeds even if player disconnects
+                    // before this task runs on the main thread.
                     Bukkit.getScheduler().runTask(AutoTune.getInstance(), () -> {
-                        economy.depositPlayer(player, totalCost.doubleValue());
+                        economy.depositPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
+                                totalCost.doubleValue());
                         player.sendMessage(Component.text("Purchase failed: could not record transaction. "
                                 + "Your funds have been refunded.", NamedTextColor.RED));
                         open(player);

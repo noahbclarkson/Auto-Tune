@@ -217,7 +217,10 @@ public class AuctionManager {
 
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     try {
-                        escrowRef.set(economy.withdrawPlayer(player, totalCost.doubleValue()));
+                        // Use OfflinePlayer so the withdrawal works even if player disconnects
+                        // before this task runs on the main thread.
+                        escrowRef.set(economy.withdrawPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
+                                totalCost.doubleValue()));
                     } catch (Exception e) {
                         escrowError.set(e);
                     } finally {
@@ -288,10 +291,13 @@ public class AuctionManager {
 
                     return AuctionResult.success(filledMsg, result.matchedOrder(), fills);
                 } catch (Exception e) {
-                    // Matching or DB operation failed — refund the escrowed money on main thread
+                    // Matching or DB operation failed — refund the escrowed money on main thread.
+                    // Use OfflinePlayer so the refund succeeds even if player disconnects
+                    // before this task runs on the main thread.
                     CountDownLatch refundLatch = new CountDownLatch(1);
                     Bukkit.getScheduler().runTask(plugin, task -> {
-                        economy.depositPlayer(player, totalCost.doubleValue());
+                        economy.depositPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
+                                totalCost.doubleValue());
                         refundLatch.countDown();
                     });
                     try {
@@ -329,12 +335,15 @@ public class AuctionManager {
                     return AuctionResult.error("Order is not active");
                 }
 
-                // Refund escrowed funds for buy orders — must run on main thread (Vault Economy)
+                // Refund escrowed funds for buy orders — must run on main thread (Vault Economy).
+                // Use OfflinePlayer so the refund succeeds even if player disconnects
+                // before this task runs on the main thread.
                 if (order.side() == OrderSide.BUY) {
                     BigDecimal refund = order.price().multiply(BigDecimal.valueOf(order.remainingQuantity()));
                     CountDownLatch refundLatch = new CountDownLatch(1);
                     Bukkit.getScheduler().runTask(plugin, task -> {
-                        economy.depositPlayer(player, refund.doubleValue());
+                        economy.depositPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
+                                refund.doubleValue());
                         refundLatch.countDown();
                     });
                     try {

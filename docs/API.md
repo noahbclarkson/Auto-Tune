@@ -220,7 +220,7 @@ See [`SECURITY.md`](./SECURITY.md) for the full cross-server trust model. Curren
 - **Outlier filtering:** recomputation filters ratio observations beyond the configured log-space sigma threshold before solving.
 - **Plugin-level exchange rates:** the API publishes aggregate data; local plugins remain authority for how to apply exchange-rate effects.
 
-Important launch hardening still planned: registration approval/invite flow, key rotation/revocation endpoint, freshness filtering for stale submissions, plugin-version metadata, capped player-count weighting, and age/reputation weighting.
+Important launch hardening still planned: registration approval/invite flow, key rotation/revocation endpoint, capped player-count weighting, age/reputation weighting, and public confidence labels that explain low server count, stale data, and outlier suppression. Freshness filtering for stale submissions and heartbeat plugin-version metadata are already implemented.
 
 ---
 

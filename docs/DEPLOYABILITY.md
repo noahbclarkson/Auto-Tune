@@ -41,10 +41,10 @@ _Review before any deployment attempt. All items must be ✅ before going live._
 
 ## ✅ Security
 
-- [ ] API key auth: `Authorization: Bearer <key>` header checked via `ApiKeyAuth` middleware
-- [ ] API key stored as bcrypt hash (not plaintext) — `auth.rs` uses `sha2`/`hex`
-- [ ] Rate limiting: `RateLimiter` on submit + register endpoints (30/min submit, 5/min register per IP)
-- [ ] CORS configured: `CORS_ALLOWED_ORIGINS` env var (comma-separated), defaults to localhost + autotune.dev
+- [x] API key auth: `Authorization: Bearer <key>` header checked via `ApiKeyAuth` middleware
+- [x] API key stored as SHA-256 hash (not plaintext) — `auth.rs` uses `sha2`/`hex`
+- [x] Rate limiting: `RateLimiter` on submit + register endpoints (6/min submit, 10/min register per IP)
+- [x] CORS configured: `CORS_ALLOWED_ORIGINS` env var (comma-separated), defaults to localhost + autotune.dev
 - [ ] `DATABASE_URL` pulled from env (never hardcoded)
 - [ ] `rustls` TLS (no OpenSSL runtime required in container)
 

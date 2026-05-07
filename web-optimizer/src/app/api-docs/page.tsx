@@ -126,7 +126,7 @@ function AuthBox() {
           <p className="text-sm font-semibold text-amber-300 mb-1">Server authentication required</p>
           <p className="text-xs text-gray-400 leading-relaxed">
             All write endpoints require an <code className="text-amber-300 font-mono">Authorization: Bearer &lt;api-key&gt;</code> header.
-            Register your server at <Link href="/servers" className="text-amber-300 hover:underline">/servers</Link> to get an API key.
+            Register your server through <code className="text-amber-300 font-mono">POST /api/servers/register</code> to get an API key.
             Keys are shown once at registration — store them in a password manager.
           </p>
         </div>
@@ -174,10 +174,10 @@ export default function ApiDocsPage() {
         <Section id="overview" title="Overview">
           <div className="grid sm:grid-cols-2 gap-4 mb-4">
             {[
-              { label: 'Base URL', value: 'https://api.autotune.dev/v1' },
+              { label: 'Base URL', value: 'https://api.autotune.gg' },
               { label: 'Auth', value: 'Authorization: Bearer <api-key>' },
               { label: 'Format', value: 'JSON' },
-              { label: 'Submit interval', value: 'Every 5 min (1× per tick)' },
+              { label: 'Submit interval', value: 'Every 5 min by default' },
             ].map(({ label, value }) => (
               <div key={label} className="rounded-lg border border-gray-800 bg-gray-900/40 px-4 py-3">
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{label}</p>
@@ -202,7 +202,7 @@ export default function ApiDocsPage() {
           </div>
           <div className="flex items-start gap-2 text-xs text-gray-400">
             <Shield className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
-            <span>Keys are hashed on storage. The API only stores a bcrypt hash — your raw key is never stored server-side and cannot be recovered.</span>
+            <span>Keys are hashed on storage. The API stores only a SHA-256 hash — your raw key is returned once and cannot be recovered.</span>
           </div>
         </Section>
 
@@ -215,69 +215,66 @@ export default function ApiDocsPage() {
 
           <Endpoint
             method="POST"
-            path="/v1/servers"
+            path="/api/servers/register"
             description="Register a new server and receive an API key."
             params={[
-              { name: 'name', type: 'string', required: true, description: 'Display name for your server (shown on /servers page)' },
-              { name: 'player_count', type: 'integer', required: true, description: 'Approximate player capacity (used for weighting submissions)' },
+              { name: 'name', type: 'string', required: true, description: 'Display name for your server' },
             ]}
             response={{
               status: '201 Created',
               body: `{
-  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "api_key": "at_srv_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-  "name": "My SMP Server",
-  "player_count": 50,
-  "registered_at": "2026-03-28T12:00:00Z"
+  "server_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "api_key": "64_hex_chars"
 }`,
             }}
             notes={[
               'The api_key is returned ONCE at registration. Store it securely — it cannot be recovered.',
               'Server name is shown publicly on /servers. Use anything you like.',
-              'Rate limit: 1 registration per IP per hour.',
+              'Rate limit: 10 registrations per minute per IP, with a burst of 10.',
             ]}
             accent="emerald"
           />
 
           <Endpoint
             method="GET"
-            path="/v1/servers"
+            path="/api/servers"
             description="List all registered servers and their latest heartbeat timestamps."
             response={{
               status: '200 OK',
-              body: `{
-  "servers": [
-    {
-      "id": "a1b2c3d4-...",
-      "name": "My SMP Server",
-      "player_count": 50,
-      "last_seen": "2026-03-28T23:45:00Z",
-      "submission_count": 1247
-    }
-  ],
-  "total": 12
-}`,
+              body: `[
+  {
+    "id": "a1b2c3d4-...",
+    "name": "My SMP Server",
+    "player_count": 50,
+    "created_at": "2026-03-28T12:00:00Z",
+    "last_seen": "2026-03-28T23:45:00Z",
+    "last_submission_at": "2026-03-28T23:40:00Z",
+    "last_submission_item_count": 48,
+    "plugin_version": "2.0.0"
+  }
+]`,
             }}
             accent="sky"
           />
 
           <Endpoint
             method="POST"
-            path="/v1/servers/:id/heartbeat"
-            description="Send a heartbeat to keep your server's status as Online on the /servers page. Send every 5 minutes."
+            path="/api/servers/:id/heartbeat"
+            description="Send an authenticated heartbeat to keep server status and metadata fresh. Send every 5 minutes."
             params={[
-              { name: 'player_count', type: 'integer', required: false, description: 'Current online player count (used for server health monitoring)' },
+              { name: 'player_count', type: 'integer', required: false, description: 'Current online player count' },
+              { name: 'plugin_version', type: 'string', required: false, description: 'Auto-Tune plugin version, if available' },
             ]}
-            response={{ status: '200 OK', body: '{ "ok": true }' }}
-            notes={['If no heartbeat is received within 1 hour, the server is marked as Offline.', 'No API key required for heartbeat — uses the server UUID in the URL path.']}
+            response={{ status: '200 OK', body: '{ "ok": true, "server_id": "a1b2c3d4-...", "last_seen": "2026-03-28T23:45:00Z" }' }}
+            notes={['Requires Authorization: Bearer <api-key>. The key must belong to the server UUID in the path.', 'If no heartbeat or price submission arrives recently, the server appears stale/offline in ecosystem views.']}
             accent="sky"
           />
         </Section>
 
         <Section id="prices" title="Price Submission">
           <p className="text-sm text-gray-400 mb-4 leading-relaxed">
-            Submit anonymised price ratios once per tick (every 5 minutes). Only the <em>relative</em>{' '}
-            ratios are sent — e.g. "Diamond is 100× the price of Iron Ingot" rather than absolute values.
+            Submit anonymised price ratios periodically (default: every 5 minutes). Only the <em>relative</em>{' '}
+            ratios are sent — e.g. "Diamond is 100× the price of Dirt" rather than absolute values.
             This means your server&apos;s base prices stay private.
           </p>
 
@@ -287,7 +284,7 @@ export default function ApiDocsPage() {
               <div>
                 <p className="text-sm font-semibold text-sky-300 mb-1">What data is shared?</p>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  Only: server ID, item pairs with their base price ratios, tick timestamp, trade volume.
+                  Only: server ID, item names, an item-to-item ratio matrix, and current player count.
                   No player names, no transaction amounts, no inventory data.
                 </p>
               </div>
@@ -296,41 +293,40 @@ export default function ApiDocsPage() {
 
           <Endpoint
             method="POST"
-            path="/v1/prices"
-            description="Submit a batch of price ratios for this server's current tick."
+            path="/api/servers/:id/prices"
+            description="Submit this server's current item ratio matrix."
             params={[
-              { name: 'server_id', type: 'string (UUID)', required: true, description: 'Your server UUID from registration' },
-              { name: 'tick', type: 'integer', required: true, description: 'The current market tick number (auto-incremented by the plugin)' },
-              { name: 'ratios', type: 'array', required: true, description: 'Array of { base_item, target_item, ratio, volume } objects — see format below' },
-              { name: 'total_volume', type: 'number', required: true, description: 'Total trade volume for this tick across all items' },
+              { name: 'item_names', type: 'string[]', required: true, description: 'Ordered item names for the matrix axes' },
+              { name: 'ratio_matrix', type: 'number[][]', required: true, description: 'Square reciprocal matrix where matrix[i][j] = item_i price ÷ item_j price' },
+              { name: 'player_count', type: 'integer', required: true, description: 'Current online player count for freshness/metadata' },
             ]}
             response={{
-              status: '201 Created',
+              status: '200 OK',
               body: `{
-  "submission_id": "sub_abc123",
-  "ratios_received": 48,
-  "outliers_filtered": 0,
-  "next_tick": 8924
+  "success": true,
+  "items_processed": 3
 }`,
             }}
             notes={[
-              'Submit exactly once per tick. Duplicate submissions within the same tick window are deduplicated.',
-              'Minimum 5 servers must be active before outlier filtering activates (3σ log-space detection).',
-              'Submission is fire-and-forget: the API queues it for processing and returns immediately.',
-              'If your server misses a tick, it\'s fine — the solver handles gaps gracefully.',
+              'The authenticated API key must match the server UUID in the path.',
+              'The ratio matrix is validated for shape, positivity, reciprocal consistency, and transitivity before storage.',
+              'Recomputation runs asynchronously after submission and uses only fresh submissions by default (STALE_THRESHOLD_HOURS=24).',
+              'Rate limit: 6 submissions per minute per IP, with a burst of 6.',
             ]}
             accent="sky"
           />
 
           <div className="rounded-lg border border-gray-800 bg-gray-900/40 p-4 mb-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Ratios format detail</p>
-            <pre className="text-xs font-mono text-gray-300 whitespace-pre-wrap">{`"ratios": [
-  { "base_item": "minecraft:diamond",  "target_item": "minecraft:iron_ingot", "ratio": 10.0,  "volume": 250 },
-  { "base_item": "minecraft:diamond",  "target_item": "minecraft:gold_ingot", "ratio": 5.0,   "volume": 80 },
-  { "base_item": "minecraft:iron_ingot","target_item": "minecraft:coal",      "ratio": 0.5,   "volume": 1200 }
-]`}</pre>
+            <pre className="text-xs font-mono text-gray-300 whitespace-pre-wrap">{`"item_names": ["minecraft:dirt", "minecraft:cobblestone", "minecraft:diamond"],
+"ratio_matrix": [
+  [1.0,   0.5,  0.001],
+  [2.0,   1.0,  0.002],
+  [1000.0, 500.0, 1.0]
+],
+"player_count": 24`}</pre>
             <p className="text-xs text-gray-500 mt-2">
-              Ratio = base_item price ÷ target_item price. Ratios should be expressed in log-space by the plugin before submission to reduce outlier impact.
+              Matrix values are plain price ratios, not log values. The solver converts ratios to log-space internally for outlier filtering and least-squares solving.
             </p>
           </div>
         </Section>
@@ -339,32 +335,32 @@ export default function ApiDocsPage() {
           <p className="text-sm text-gray-400 mb-4 leading-relaxed">
             After multiple servers submit data, the API solves a constrained least-squares system
             over the ratio graph. The result is a globally consistent set of item prices anchored
-            to a reference item (defaults to iron_ingot = 1.0).
+            to a reference item (defaults to dirt = 0.10, configurable on the API server).
           </p>
 
           <Endpoint
             method="GET"
-            path="/v1/true-prices"
+            path="/api/prices/true"
             description="Fetch the latest computed true prices across all items."
             response={{
               status: '200 OK',
               body: `{
   "prices": [
-    { "item": "minecraft:diamond",       "price": 250.0,  "confidence": 0.92 },
-    { "item": "minecraft:iron_ingot",    "price": 1.0,    "confidence": 1.0  },
-    { "item": "minecraft:gold_ingot",   "price": 5.0,    "confidence": 0.87 }
+    {
+      "item": "minecraft:diamond",
+      "price": 250.0,
+      "confidence": 0.92,
+      "servers": 8,
+      "anchored": true,
+      "last_updated": "2026-03-28T23:40:00Z"
+    }
   ],
-  "anchored_to": "minecraft:iron_ingot",
-  "solver_iterations": 23,
-  "total_servers": 8,
-  "total_submissions": 1847,
-  "outliers_filtered": 12,
   "last_updated": "2026-03-28T23:40:00Z"
 }`,
             }}
             notes={[
               'Confidence reflects the variance across servers — items traded on many servers score higher.',
-              'Prices are updated every 30 minutes. The web dashboard at /true-prices shows the live data.',
+              'Prices are recomputed asynchronously after accepted submissions, using the latest fresh submission per server.',
               'New servers can seed their economy from these prices rather than starting from scratch.',
             ]}
             accent="emerald"
@@ -381,7 +377,7 @@ export default function ApiDocsPage() {
 
           <Endpoint
             method="GET"
-            path="/v1/exchange-rates"
+            path="/api/servers/exchange-rates"
             description="Fetch per-server exchange rates vs the global true-price baseline."
             response={{
               status: '200 OK',
@@ -405,7 +401,7 @@ export default function ApiDocsPage() {
         <Section id="errors" title="Error Codes">
           <p className="text-sm text-gray-400 mb-4 leading-relaxed">
             All errors return a JSON body with an <code className="text-sky-300 font-mono">error</code> field.
-            HTTP status codes follow REST conventions.
+            HTTP status codes follow REST conventions; there is no separate machine-readable error code field yet.
           </p>
 
           <div className="rounded-xl border border-gray-800 bg-gray-900/40 overflow-hidden mb-4">
@@ -425,7 +421,6 @@ export default function ApiDocsPage() {
                   { status: '422', code: 'UNPROCESSABLE', meaning: 'Valid JSON but failed validation (e.g. negative ratio value)' },
                   { status: '429', code: 'RATE_LIMITED', meaning: 'Too many submissions. Check Retry-After header.' },
                   { status: '500', code: 'INTERNAL_ERROR', meaning: 'API server error. Check status page.' },
-                  { status: '503', code: 'UNAVAILABLE', meaning: 'Solver is down or still initialising (try again in 5 min)' },
                 ].map(({ status, code, meaning }) => (
                   <tr key={code}>
                     <td className="px-4 py-3 font-mono text-xs text-sky-300">{status}</td>
@@ -441,7 +436,7 @@ export default function ApiDocsPage() {
             <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
             <span>
               <strong className="text-gray-300">Rate limits:</strong> Price submission: 6 req/min per IP. Server registration: 10 req/min per IP.
-              True prices / exchange rates: public, no rate limit (no key required).
+              True prices / exchange rates are public reads and do not require an API key.
             </span>
           </div>
         </Section>

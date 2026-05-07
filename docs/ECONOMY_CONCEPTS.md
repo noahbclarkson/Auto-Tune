@@ -30,10 +30,10 @@ Total unpaid loan debt (active + defaulted) divided by GDP. This is the most mis
 | < 1.0x | Healthy. Debt is easily serviced. | None needed. |
 | 1.0x – 3.0x | Normal. Players are borrowing to buy dips. | Monitor. |
 | 3.0x – 10.0x | Elevated. Debt is accumulating. | Check loan settings. |
-| 10.0x – 15.0x | Warning (TIER2). Interest is reducing. | Review archetype mix. |
-| > 15.0x | Circuit breaker (TIER3). Interest paused. | Emergency: use `/at admin recovery` or adjust config. |
+| 10.0x – 30.0x | Warning (TIER2). Interest is reducing. | Review archetype mix. |
+| > 30.0x | Circuit breaker (TIER3). Interest paused. | Emergency: use `/at admin recovery` or adjust config. |
 
-The circuit breaker (TIER3 at 15x) fires when debt becomes unsustainable. At that point, interest drops to 0% and the economy is given space to deleverage. With `counter-cyclical=true` (default), interest gradually reduces as D/G rises — preventing most cascade scenarios before the circuit breaker is needed.
+The circuit breaker (TIER3 at 30× D/G by default) fires when debt becomes unsustainable. At that point, interest drops to 0% and the economy is given space to deleverage; with the default 50% hysteresis band, it unlocks only after D/G falls below 15×. With `counter-cyclical=true` (default), interest gradually reduces as D/G rises — preventing most cascade scenarios before the circuit breaker is needed.
 
 ---
 

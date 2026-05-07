@@ -2,9 +2,42 @@
 
 _Living document. Update after every session. Prioritize ruthlessly._
 
+**⚠️ STRATEGIC REDIRECT (2026-05-04): Bug Fixes + Repo Health over New Features**
+
+Noah has directed: **stop adding features, focus on finding and fixing bugs, and clean up the repo**. The auction ecosystem, circuit telemetry, config preview, and depth charts are all done. The product needs correctness, stability, and maintainability.
+
 **Branch:** `rewrite-2` (do NOT merge to master)
 
 ---
+
+## Cron (2026-05-07 01:12 UTC) — `web/` Build Fix: Next.js 15.5.15 → 15.5.5 ✅
+
+**rewrite-2 at `b4da546`** | `./gradlew build` ✅ PMD 0 | `web/` 13 routes ✅ | `web-optimizer/` 27 routes ✅ | No new commits (clean session)
+
+**Bug found: `web/` build failure — webpack API incompatibility**
+
+`web/` uses Next.js 15.5.15. Build failed with:
+```
+TypeError: _webpack.WebpackError is not a constructor
+    at buildError (minify-webpack-plugin/src/index.js:24:16)
+```
+`minify-webpack-plugin` was compiled against an older webpack API that changed in newer webpack versions bundled with Next.js 15.5.15.
+
+**Fix:** `cd web && npm install next@15.5.5` — downgrades to a compatible webpack version. Build passes cleanly.
+
+**Verification:** `cd web && npm run build` ✅ (13 routes) | `cd web-optimizer && npm run build` ✅ (27 routes) | `./gradlew build` ✅ PMD 0
+
+**Ecosystem state:** All builds clean. Auction ecosystem complete and correct (confirmed from prior sessions). API deploy still #1 blocker (all frontend wiring done, needs Fly.io token). Testimonials still fictional. postcss known Next.js upgrade blocker.
+
+**Feature ideation (non-committed, for next feature cycle):**
+1. Market Digest REST endpoint — high admin value, medium effort
+2. API freshness filtering hardening in `recompute_true_prices()`
+3. Auction/shop spread opportunity UI with "liquidity signal" framing
+4. Setup wizard explicit preview → replace → reload teaching
+5. Player market impact score web surface
+
+---
+
 
 ## Cron (2026-05-06 08:30 UTC) — Simulation Lab: GuildBuyer Cap Java Parity Fixed ✅
 

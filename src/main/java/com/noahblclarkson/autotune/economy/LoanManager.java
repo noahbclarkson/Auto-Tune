@@ -18,6 +18,7 @@ import com.noahblclarkson.autotune.model.Loan;
 import com.noahblclarkson.autotune.model.Loan.LoanStatus;
 import com.noahblclarkson.autotune.model.PlayerData;
 import net.milkbowl.vault.economy.Economy;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -206,7 +207,10 @@ public class LoanManager {
 
             CompletableFuture<LoanResult> future = new CompletableFuture<>();
             databaseManager.runOnMain(() -> {
-                if (!economy.depositPlayer(player, result.loan().principal().doubleValue()).transactionSuccess()) {
+                // Use OfflinePlayer so the deposit works even if the player goes offline
+                // before this scheduled task runs on the main thread.
+                if (!economy.depositPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
+                        result.loan().principal().doubleValue()).transactionSuccess()) {
                     future.complete(LoanResult.error("Economy transaction failed"));
                     return;
                 }
@@ -384,7 +388,10 @@ public class LoanManager {
                             return;
                         }
 
-                        if (!economy.withdrawPlayer(player, paymentAmount.doubleValue()).transactionSuccess()) {
+                        // Use OfflinePlayer so the withdrawal works even if the player goes offline
+                        // before this scheduled task runs on the main thread.
+                        if (!economy.withdrawPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
+                                paymentAmount.doubleValue()).transactionSuccess()) {
                             future.complete(LoanResult.error("Economy transaction failed"));
                             return;
                         }
@@ -408,8 +415,10 @@ public class LoanManager {
                                                     + " (amount=" + paymentAmount + "). Restoring funds.", ex);
                                     // DB write failed but money was already withdrawn — refund the player
                                     // to avoid losing their funds. Must run on main thread for Vault ops.
+                                    // Use OfflinePlayer so the refund succeeds even if the player goes offline.
                                     databaseManager.runOnMain(() ->
-                                            economy.depositPlayer(player, paymentAmount.doubleValue()));
+                                            economy.depositPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
+                                                    paymentAmount.doubleValue()));
                                     future.complete(LoanResult.error("Database error — funds restored"));
                                     return null;
                                 });

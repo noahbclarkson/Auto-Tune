@@ -697,10 +697,27 @@ public class AuctionManager {
         UUID sellerUuid = sellOpt.map(AuctionOrder::playerUuid).orElse(sellOrderId);
         UUID buyerUuid = buyOpt.map(AuctionOrder::playerUuid).orElse(buyOrderId);
 
-        // ── Economy ops FIRST — then DB write ──────────────────────────────────
-        // Run seller credit and buyer item delivery on the main thread, waiting
-        // for both to complete before touching the DB. If either fails, throw so
-        // the caller refunds escrow and no DB record is created.
+        // ── DB write FIRST — then economy ops ────────────────────────────────────
+        // Record fill as PENDING in DB before running any economy operations.
+        // If economy ops (seller credit, buyer item delivery) fail, we can mark the
+        // fill FAILED and the caller issues compensating refund. This is better
+        // than crediting the seller and then failing to record the fill — which
+        // would create phantom money.
+        AuctionFill fill = AuctionFill.builder()
+                .id(fillId)
+                .buyOrderId(buyOrderId)
+                .sellOrderId(sellOrderId)
+                .quantity(quantity)
+                .price(execPrice)
+                .filledAt(now)
+                .status(AuctionFill.FillStatus.PENDING)
+                .build();
+
+        // DB write FIRST: record as PENDING before economy ops.
+        // This is the source-of-truth record. If economy ops fail, we mark FAILED
+        // and the caller issues compensating refund — preventing phantom money.
+        auctionRepo.insertFill(fill);
+
         CountDownLatch economyLatch = new CountDownLatch(1);
         AtomicReference<Exception> economyError = new AtomicReference<>();
 
@@ -760,23 +777,12 @@ public class AuctionManager {
             throw new RuntimeException("Interrupted while processing auction fill " + fillId, e);
         }
 
-        // Economy ops succeeded. Now atomically write to DB — if this fails,
-        // money and items are already with the right players (better outcome than
-        // DB showing a fill that never delivered).
-        AuctionFill fill = AuctionFill.builder()
-                .id(fillId)
-                .buyOrderId(buyOrderId)
-                .sellOrderId(sellOrderId)
-                .quantity(quantity)
-                .price(execPrice)
-                .filledAt(now)
-                .status(AuctionFill.FillStatus.COMPLETED)
-                .build();
+        // DB write already done as PENDING before economy ops (see above).
+        // Economy ops succeeded. Now mark fill COMPLETED.
+        auctionRepo.updateFillStatus(fillId, AuctionFill.FillStatus.COMPLETED);
 
         return CompletableFuture.supplyAsync(() -> {
             try {
-                auctionRepo.insertFill(fill);
-
                 buyOpt.ifPresent(buy -> {
                     int newRemaining = Math.max(0, buy.remainingQuantity() - quantity);
                     auctionRepo.update(buy.withRemainingQuantity(newRemaining));

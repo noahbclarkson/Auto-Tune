@@ -669,10 +669,10 @@ public class AuctionManager {
      * Returns a CompletableFuture so callers can await DB completion before applying
      * their own economy/inventory effects (enables atomicity in the GUI layer).
      *
-     * CRITICAL: Economy ops (seller credit + buyer item delivery) run FIRST on the
-     * Bukkit main thread via CountDownLatch/await. Only after they succeed do we
-     * write to the DB. If economy ops fail we throw a RuntimeException and the caller
-     * (AuctionGui) refunds the buyer's escrowed money — no DB record is created.
+     * DB write FIRST: the fill is recorded as PENDING before any economy ops run.
+     * This prevents phantom transactions — if economy ops fail, the fill is marked
+     * FAILED and the caller (AuctionGui) issues compensating refund. If economy ops
+     * succeed, the fill is marked COMPLETED. The DB record is the source of truth.
      *
      * @param buyOrderId  The buy order ID (may be a player UUID in GUI direct-fill path)
      * @param sellOrderId The sell order ID (may be a player UUID in GUI direct-fill path)
@@ -1066,7 +1066,7 @@ public class AuctionManager {
                     pendingNotificationRepo.insert(order.playerUuid(),
                             "\u26a0 Your sell order for " + order.remainingQuantity()
                                     + "\u00d7 " + formatMaterialName(order.material())
-                                    + " expired while you were offline. Items returned to your inventory.",
+                                    + " expired while you were offline. Items will be returned to your inventory on next login.",
                             "AUCTION_EXPIRY");
                 }
             } catch (Exception e) {

@@ -706,7 +706,62 @@ Floor suppresses natural price correction → inventory glut → long-run GDP co
 2. Java/Rust GuildBuyer cap exact parity audit (Rust partial-fills vs Java full-reject)
 3. Wait for API deploy unblock (Arc/Fly.io token)
 
----
 
-4. Audit Java/Rust GuildBuyer cap exact parity: Rust partial-fills remaining allowance; Java rejects the whole request.
+## Cron (2026-05-08 13:37 UTC) — Full Ecosystem Audit: No Bugs Found ✅
 
+**rewrite-2 at `d3b5dce`** | `./gradlew build` ✅ PMD 0 | `web/` 13 routes ✅ | `web-optimizer/` 22 routes ✅ | Rust fmt/clippy ✅ | Pushed: none (audit session)
+
+### Build Status
+All builds clean:
+- `./gradlew build` ✅ PMD 0 (1m23s)
+- `cd web && npm run build` ✅ (13 routes, Next.js 15.5.5)
+- `cd web-optimizer && npm run build` ✅ (22 routes)
+- Rust sim: fmt check + clippy clean ✅
+
+### Full Ecosystem Audit: No Bugs Found
+
+**Java economy paths — all clean:**
+- All `economy.withdrawPlayer/depositPlayer` calls use `Bukkit.getOfflinePlayer()` ✅
+- `processFill()` (matching engine): DB-first PENDING insert → seller credit → buyer item delivery ✅ (phantom transaction fix confirmed complete at f3b47ae)
+- `recordFillAsync()` (GUI path): DB-first PENDING insert → seller credit → buyer delivery with offline fallback ✅
+- `expireOrder()`: BUY refund uses OfflinePlayer, SELL items saved as EXPIRED for auto-reclaim ✅
+- `EconomyManager.withdraw/deposit`: both use `Bukkit.getOfflinePlayer()` ✅ (b4da546)
+- `processBuyAsync`, `processSellImmediate`, `processDetachedSellImmediate`, `processCartAsync`: all use withdraw/deposit wrappers ✅
+
+**Auction inventory handling — all clean:**
+- All `addItem` overflow cases handled via `saveOverflowReturns()` or `pendingReturnRepo` ✅
+- Offline buyer fallback creates `AuctionPendingReturn` + `PendingNotification` ✅
+- `SellGuiListener` uses `processDetachedSellImmediate()` for GUI-detached stacks ✅ (d1ae2f4)
+
+**Rust simulation — all clean:**
+- `cargo fmt --check` pass ✅, `cargo clippy -- -D warnings` pass ✅
+- No TODOs/FIXMEs/unsafe blocks ✅
+
+**Docs drift — all clean:**
+- TIER3 threshold (30× fire, 15× unlock with 50% band) correctly documented in CONFIG_GUIDE, QUICKSTART, ECONOMY_CONCEPTS, 60D_FIX_ANALYSIS, roadmap ✅
+
+**PMD suppression status (known, not acted per Noah's redirect):**
+- 51/119 Java files have PMD suppressions (43% rate)
+- No PMD violations (blanket suppressions hide what violations exist)
+- No TODOs/FIXMEs in main codebase
+
+### Ecosystem State
+
+Everything is clean. No bugs found. Key patterns verified:
+1. **Phantom transaction**: DB-first PENDING pattern correctly applied in both auction fill paths
+2. **Offline money ops**: `Bukkit.getOfflinePlayer()` used everywhere for economy calls
+3. **Inventory overflow**: durable reclaim records created in all overflow/offline cases
+4. **Docs parity**: TIER3 thresholds correctly documented everywhere
+
+**Still blocked:** API deploy (Arc's Fly.io token), real testimonials (human outreach)
+
+### Feature Ideas (Post-Bug-Fix)
+1. **Admin auction reclaim log**: audit trail of `/auction reclaim` calls
+2. **MarketDigestService REST endpoint**: expose digest history on bundled dashboard
+3. **Auction fill opportunity hints**: compare bid/ask to shop buy/sell as liquidity signal
+4. **GuildBuyer debt cap sweep**: Sim Lab — does tighter cap improve long-run D/G?
+
+### Next Priorities
+1. PMD targeted suppression audit (51 files — tedious, non-urgent per Noah's redirect)
+2. Java/Rust GuildBuyer cap exact parity audit (Rust partial-fills vs Java full-reject)
+3. Wait for API deploy unblock (Arc's Fly.io token)

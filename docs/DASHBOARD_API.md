@@ -510,7 +510,7 @@ Current config values, defaults, and recommended ranges.
   },
   "loans": {
     "baseInterestRate": { "current": 0.05, "default": 0.05, "range": [0.0, 1.0], "unit": "decimal" },
-    "debtGdpTier3Ratio": { "current": 15.0, "default": 15.0, "range": [1.0, 100.0], "unit": "ratio" },
+    "debtGdpTier3Ratio": { "current": 30.0, "default": 30.0, "range": [1.0, 100.0], "unit": "ratio" },
     "postDefaultCooldownHours": { "current": 168, "default": 168, "range": [0, 8760], "unit": "hours" },
     "counterCyclical": { "current": true, "default": true, "unit": "boolean", "description": "Reduce interest as Debt/GDP rises" }
   },

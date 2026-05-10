@@ -1395,9 +1395,9 @@ public class WebServer {
                 ),
                 "debtGdpTier3Ratio", Map.of(
                     KEY_CURRENT, loan.debtGdpTier3Ratio(),
-                    KEY_DEFAULT, 15.0,
-                    KEY_RANGE_MIN, 12.0,
-                    KEY_RANGE_MAX, 15.0,
+                    KEY_DEFAULT, 30.0,
+                    KEY_RANGE_MIN, 20.0,
+                    KEY_RANGE_MAX, 100.0,
                     KEY_UNIT, "ratio",
                     KEY_LABEL, "Circuit Breaker Threshold"
                 ),

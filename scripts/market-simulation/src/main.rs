@@ -1859,6 +1859,42 @@ impl Scenario {
             speed_ticks_per_sec: 200,
         }
     }
+
+    /// Flash Crash scenario: inject a sudden price crash to Diamond (item 0)
+    /// at day 5, then measure panic spread to correlated items.
+    pub fn flash_crash_panic_spread_test() -> Self {
+        Self {
+            name: "Flash Crash + Panic Spread".to_string(),
+            config: SimConfig::default(),
+            players: vec![
+                ArchetypeConfig {
+                    archetype: "Casual".into(),
+                    count: 5,
+                },
+                ArchetypeConfig {
+                    archetype: "Farmer".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Trader".into(),
+                    count: 3,
+                },
+                ArchetypeConfig {
+                    archetype: "Hoarder".into(),
+                    count: 2,
+                },
+            ],
+            seed: None,
+            events: Vec::new(),
+            stress_events: vec![StressEvent::PriceShock {
+                at_tick: 288 * 5,
+                item_index: 0,
+                price_multiplier: 0.6,
+            }],
+            duration_ticks: 288 * 21,
+            speed_ticks_per_sec: 200,
+        }
+    }
 }
 
 /// InsiderTrader + Stressed Economy: guildbuyer_failure_test + 2 InsiderTraders
@@ -11853,6 +11889,7 @@ fn main() -> eframe::Result<()> {
                     Scenario::guild_stability_mm_gs_phase2_redesign()
                 }
                 "correlation" => Scenario::correlation(),
+                "flash-crash" | "flash_crash_panic_spread" => Scenario::flash_crash_panic_spread_test(),
                 _ => {
                     eprintln!(
                         "Unknown scenario: {}. Use --list-scenarios to see available.",

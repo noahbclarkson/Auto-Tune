@@ -49,7 +49,6 @@ public class OnboardingCommand {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter
             .ofPattern("MMM d, yyyy")
             .withZone(ZoneId.systemDefault());
-    private static final MiniMessage MINI = MiniMessage.miniMessage();
 
     private final AutoTune plugin;
     private final ConfigManager configManager;

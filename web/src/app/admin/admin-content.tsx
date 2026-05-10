@@ -419,21 +419,21 @@ export function AdminContent() {
                 <div className="w-3 h-3 rounded-full bg-amber-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <div className="font-medium text-amber-400">Tier 1 — Warning</div>
-                  <div className="text-muted-foreground text-xs">D/G 3–5x. Interest capped at 50%.</div>
+                  <div className="text-muted-foreground text-xs">D/G 3–5x. Interest proportionally reduced (50% at 5x).</div>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-3 h-3 rounded-full bg-orange-500 mt-0.5 flex-shrink-0" />
                 <div>
                   <div className="font-medium text-orange-400">Tier 2 — Danger</div>
-                  <div className="text-muted-foreground text-xs">D/G 5–10x. Interest capped at 25%.</div>
+                  <div className="text-muted-foreground text-xs">D/G 5–30x. Interest proportionally reduced (25% at 10x).</div>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-500 mt-0.5 flex-shrink-0" />
                 <div>
                   <div className="font-medium text-red-400">Tier 3 — Emergency</div>
-                  <div className="text-muted-foreground text-xs">D/G &gt;10x. Interest paused entirely.</div>
+                  <div className="text-muted-foreground text-xs">D/G &gt;30x. Interest paused entirely.</div>
                 </div>
               </div>
             </div>

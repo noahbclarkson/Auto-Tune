@@ -388,9 +388,8 @@ export default function SweepResultsPage() {
               <ul className="space-y-1.5 text-sm text-gray-400">
                 <li>• <span className="text-gray-300">All 840 configs are stable</span> (volatility &lt; 0.05) — the engine is mathematically robust</li>
                 <li>• <span className="text-gray-300">Underselling is structural</span>: even the best configs have 34–63% price displacement below base</li>
-                <li>• <span className="text-emerald-400">Best buy ratio</span>: sp=0.80, bs=0.25, mc=1.5 → 62.3% buy ratio, stable</li>
-                <li>• <span className="text-emerald-400">Least displacement</span>: sp=0.80, bs=0.15, mc=0.75, td=0.10 → −33.9%, 45.1% buy ratio, stable</li>
-                <li>• <span className="text-gray-300">sp=0.80 is the sweet spot</span> for balanced economies — consistently triggers tier3 circuit breaker if debt builds</li>
+                <li>• <span className="text-emerald-400">Best D/G stability</span>: sp=1.0, bs=0.20, mc=1.5 → D/G 4.73x, buy ratio 47.2% — symmetric default confirmed</li>
+                <li>• <span className="text-gray-300">sp=0.80 worsens D/G ~40%</span> for +5% GDP — only for growth-oriented servers willing to monitor debt closely</li>
                 <li>• <span className="text-gray-300">Debt/GDP below 1×</span> requires buyer-heavy player mix (Hoarders + GuildBuyers)</li>
               </ul>
             </div>

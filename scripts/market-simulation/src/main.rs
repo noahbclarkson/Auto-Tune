@@ -11889,7 +11889,9 @@ fn main() -> eframe::Result<()> {
                     Scenario::guild_stability_mm_gs_phase2_redesign()
                 }
                 "correlation" => Scenario::correlation(),
-                "flash-crash" | "flash_crash_panic_spread" => Scenario::flash_crash_panic_spread_test(),
+                "flash-crash" | "flash_crash_panic_spread" => {
+                    Scenario::flash_crash_panic_spread_test()
+                }
                 _ => {
                     eprintln!(
                         "Unknown scenario: {}. Use --list-scenarios to see available.",

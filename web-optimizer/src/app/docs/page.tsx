@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ExternalLink, BookOpen, Wand2, Users, Code2, Zap, ArrowRight } from 'lucide-react';
+import { ExternalLink, BookOpen, Wand2, Users, Code2, Zap, ArrowRight, MessageSquare } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Documentation | Auto-Tune',
@@ -150,6 +150,15 @@ const CARDS: DocCard[] = [
     audience: 'developer',
     readingTime: '6 min',
     href: `${GITHUB_BASE}/CONTRIBUTING.md`,
+  },
+  {
+    title: 'Discord Bot',
+    description:
+      'Set up the Auto-Tune Discord bot for in-Discord economy monitoring. Run /at status, /at price, /at top, and /at help from any Discord channel.',
+    audience: 'admin',
+    readingTime: '4 min',
+    href: 'https://github.com/noahbclarkson/Auto-Tune/blob/rewrite-2/discord-bot',
+    badge: 'Discord',
   },
 ];
 

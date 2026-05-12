@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { Download, Server, FileText, Zap, CheckCircle, ExternalLink, BookOpen, AlertTriangle, Users, TrendingUp, Shield, ChevronDown, Monitor } from 'lucide-react';
+import { Download, Server, FileText, Zap, CheckCircle, ExternalLink, BookOpen, AlertTriangle, Users, TrendingUp, Shield, ChevronDown, Monitor, MessageSquare } from 'lucide-react';
 import { InstallScreenshots } from '@/components/install/screenshot-mockups';
 
 export const metadata: Metadata = {
@@ -128,6 +128,31 @@ const STEPS = [
         <code className="text-sky-300 font-mono">/at admin health</code> to see the economy health dashboard.
         The web dashboard is available at <code className="text-sky-300 font-mono">http://your-server:8989</code>.
       </p>
+    ),
+  },
+  {
+    num: '06',
+    icon: MessageSquare,
+    title: 'Optional: Add a Discord bot',
+    command: null,
+    detail: (
+      <>
+        <p className="mb-3">
+          Auto-Tune includes a Discord bot for in-Discord economy monitoring.{' '}
+          Admins and players can check prices, server health, and top traders without leaving Discord.
+        </p>
+        <div className="bg-gray-950 border border-gray-800 rounded-lg px-4 py-3 text-xs font-mono text-gray-300 mb-3">
+          <div className="text-gray-500 mb-1"># Run the bot</div>
+          <div><span className="text-gray-500">cd</span> discord-bot <span className="text-amber-400">&amp;&amp;</span> npm install</div>
+          <div><span className="text-amber-400">DISCORD_BOT_TOKEN=</span>... <span className="text-amber-400">AUTOTUNE_API_URL=</span>... <span className="text-gray-500">node</span> index.js</div>
+        </div>
+        <div className="text-xs text-gray-500 mb-3">
+          Commands: <code className="text-sky-300 font-mono">/at status</code> · <code className="text-sky-300 font-mono">/at price [item]</code> · <code className="text-sky-300 font-mono">/at top</code> · <code className="text-sky-300 font-mono">/at help</code>
+        </div>
+        <p className="text-xs text-gray-500">
+          See <a href="https://github.com/noahbclarkson/Auto-Tune/blob/rewrite-2/discord-bot" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">discord-bot/</a> for setup details.
+        </p>
+      </>
     ),
   },
 ];

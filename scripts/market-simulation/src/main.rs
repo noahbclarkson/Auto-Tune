@@ -4599,7 +4599,7 @@ fn run_whale_stress_test() {
     let dg_delta = treat_dg / ctrl_dg;
     let gdp_delta = (treat_gdp - ctrl_gdp) / ctrl_gdp * 100.0;
     let buy_delta = (treat_buy - ctrl_buy) * 100.0;
-    let vol_delta = (treat_vol - ctrl_vol) * 100.0;
+    let vol_delta = treat_vol - ctrl_vol;
     println!(
         "  {:20} {:>12.3}x {:>12.3}x {:>+10.3}x",
         "Debt/GDP", ctrl_dg, treat_dg, dg_delta
@@ -4660,10 +4660,10 @@ fn run_whale_stress_test() {
 
     // Multi-seed summary
     println!("\n─── Multi-seed Summary ───");
-    let mut dg_ctrls = vec![];
-    let mut dg_treats = vec![];
-    let mut gdp_ctrls = vec![];
-    let mut gdp_treats = vec![];
+    let mut dg_ctrls = vec![ctrl_dg];
+    let mut dg_treats = vec![treat_dg];
+    let mut gdp_ctrls = vec![ctrl_gdp];
+    let mut gdp_treats = vec![treat_gdp];
 
     for &seed in &seeds[1..] {
         let mut cs = ctrl_scenario.clone();
@@ -11624,7 +11624,7 @@ fn main() -> eframe::Result<()> {
             "  marketmaker-test - 1 GuildBuyer + 1 MarketMaker + 4 Casual + 3 Farmer + 2 Trader"
         );
         println!(
-            "  standard-with-mm - 5 Casual + 3 Farmer + 2 Trader + 1 MarketMaker (RECOMMENDED)"
+            "  standard-with-mm - 5 Casual + 3 Farmer + 2 Trader + 1 MarketMaker (legacy baseline)"
         );
         println!("  standard-with-mm-fixed-guild - standard+MM + 2 GuildBuyer at 5% threshold");
         println!("  exploiter-stress - standard+MM + 2 Exploiters (stress-tests MM resilience)");

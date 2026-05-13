@@ -232,8 +232,9 @@ pub struct WhaleConfig {
     pub accumulate_ticks: u64,
     /// Ticks to stay dormant after a dump (default: 432 = 1.5 days).
     pub dormant_ticks: u64,
-    /// How much inventory to accumulate per item (default: 5000).
-    pub _accumulate_qty: i32,
+    /// Maximum quantity of any single item the Whale can sell in one tick.
+    /// None = no cap (current behavior). Setting a cap spreads sell-wall shocks.
+    pub max_dump_per_item: Option<i32>,
     /// Dump sell price as fraction of perceived value (default: 0.50).
     pub dump_price_factor: f64,
     /// True = buy heavily during accumulation phase.
@@ -245,7 +246,7 @@ impl Default for WhaleConfig {
         Self {
             accumulate_ticks: 864, // 3 days
             dormant_ticks: 432,    // 1.5 days
-            _accumulate_qty: 5000,
+            max_dump_per_item: None,
             dump_price_factor: 0.50,
             aggressive_buy: true,
         }
@@ -1097,11 +1098,19 @@ impl PlayerAgent {
 
     /// Create a Whale — wealthy erratic player who accumulates then dumps inventory.
     /// A single whale can destabilize an otherwise healthy economy.
-    pub fn new_whale(index: usize, item_count: usize, _base_prices: &[f64]) -> Self {
+    pub fn new_whale(
+        index: usize,
+        item_count: usize,
+        _base_prices: &[f64],
+        max_dump_per_item: Option<i32>,
+    ) -> Self {
         let mut rng = SeededRng;
         // Whale starts with massive capital — 20x normal player budget
         let budget = rng.random(1_000_000.0..2_000_000.0);
-        let whale_cfg = WhaleConfig::default();
+        let whale_cfg = WhaleConfig {
+            max_dump_per_item,
+            ..WhaleConfig::default()
+        };
 
         let mut agent = Self {
             id: index,
@@ -2493,6 +2502,11 @@ impl PlayerAgent {
                 if qty <= 0 {
                     continue;
                 }
+                // Apply per-item sell cap (spreads dump across ticks if set)
+                let qty = match cfg.max_dump_per_item {
+                    Some(cap) if cap > 0 => qty.min(cap),
+                    _ => qty,
+                };
                 let perceived = self.perceived_values.get(&i).copied().unwrap_or(item.price);
                 let dump_price = perceived * cfg.dump_price_factor;
                 let sell_price = item.sell_price().min(dump_price);
@@ -2528,9 +2542,14 @@ impl PlayerAgent {
                 self.total_traded += total_value;
                 self.total_trades += 1;
             }
-            self.whale_is_dumping = false;
-            self.whale_dormant_ticks = cfg.dormant_ticks;
-            self.whale_ticks_since_dump = 0;
+            // Only enter dormant if ALL inventory is now sold.
+            // With a sell cap, this may take multiple ticks.
+            let any_remaining = self.inventory.values().any(|&q| q > 0);
+            if !any_remaining {
+                self.whale_is_dumping = false;
+                self.whale_dormant_ticks = cfg.dormant_ticks;
+                self.whale_ticks_since_dump = 0;
+            }
             return;
         }
 

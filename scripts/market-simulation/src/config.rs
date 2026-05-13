@@ -37,6 +37,12 @@ pub struct SimConfig {
     /// the price-dip trigger more grounded in real market activity rather than
     /// drifting perceived values. May reduce D/G oscillation in stable economies.
     pub guild_vwap_targets: bool,
+    /// Maximum quantity a Whale can sell in a single tick per item.
+    /// None = no cap (whale dumps all inventory in one tick, causing sell-wall shocks).
+    /// Setting a cap (e.g. Some(500)) spreads whale dumps across multiple ticks,
+    /// reducing market shocks. Maps directly to WhaleConfig::max_dump_per_item.
+    #[serde(default)]
+    pub whale_max_dump_per_item: Option<i32>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -234,6 +240,7 @@ impl Default for SimConfig {
             mm_initial_capital_max: None,
             guild_phase2_dip_threshold: None,
             guild_vwap_targets: false,
+            whale_max_dump_per_item: None,
         }
     }
 }
@@ -440,5 +447,18 @@ mod tests {
         let config: SimConfig = serde_json::from_value(value).unwrap();
 
         assert_eq!(2.0, config.loans.total_debt_gdp_cap);
+    }
+
+    #[test]
+    fn missing_whale_cap_deserializes_to_uncapped_default() {
+        let mut value = serde_json::to_value(SimConfig::default()).unwrap();
+        value
+            .as_object_mut()
+            .unwrap()
+            .remove("whale_max_dump_per_item");
+
+        let config: SimConfig = serde_json::from_value(value).unwrap();
+
+        assert_eq!(None, config.whale_max_dump_per_item);
     }
 }

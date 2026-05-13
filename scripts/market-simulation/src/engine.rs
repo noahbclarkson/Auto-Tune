@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
-use crate::config::{SimConfig, TICKS_PER_DAY};
+use crate::config::{SimConfig, TICKS_PER_DAY, default_tier_for};
 use crate::events::{MarketEvent, apply_event_multiplier};
 
 const ATANH_099: f64 = 2.6466524123622457;
@@ -463,11 +463,19 @@ impl MarketEngine {
         let player_scaling = Self::calculate_player_scaling(online_count, config);
         let scaled_ratio = trade_ratio * player_scaling;
 
+        let item_tier = config
+            .items
+            .get(item_idx)
+            .and_then(|ic| ic.tier)
+            .unwrap_or_else(|| default_tier_for(&self.items[item_idx].name));
+
         let max_change_percent = config
             .items
             .get(item_idx)
             .and_then(|ic| ic.max_price_change_override)
-            .unwrap_or(config.economy.max_price_change_percent)
+            .unwrap_or(
+                config.economy.max_price_change_percent * item_tier.max_price_change_multiplier(),
+            )
             / 100.0;
 
         let mut price_change_percent = scaled_ratio * max_change_percent;
@@ -509,11 +517,16 @@ impl MarketEngine {
         global_volume_multiplier: f64,
         config: &SimConfig,
     ) -> SpreadResult {
+        let item_tier = config
+            .items
+            .get(item_idx)
+            .and_then(|ic| ic.tier)
+            .unwrap_or_else(|| default_tier_for(&self.items[item_idx].name));
         let base_spread = config
             .items
             .get(item_idx)
             .and_then(|ic| ic.base_spread_override)
-            .unwrap_or(config.spread.base_spread);
+            .unwrap_or(config.spread.base_spread * item_tier.spread_multiplier());
         let half_spread = base_spread / 2.0;
 
         let mut bpd = half_spread;

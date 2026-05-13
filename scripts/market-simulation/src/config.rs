@@ -221,6 +221,323 @@ pub struct ItemConfig {
     /// Spreads still compute normally. Mirrors Java ShopItem.priceFrozen.
     #[serde(default)]
     pub price_frozen: bool,
+    /// Item rarity tier for spread and price-change multipliers.
+    /// Higher tiers get wider spreads and more volatile price changes —
+    /// rare items are inherently harder to trade fairly.
+    /// Mirrors Java ItemTier + ShopItem.effectiveTier()/effectiveSpreadMultiplier()/effectiveMaxPriceChangeMultiplier().
+    /// Admin overrides (Java DB overrides) take precedence over this default.
+    /// Default (None): inferred from item name via default_tier_for().
+    #[serde(default)]
+    pub tier: Option<ItemTier>,
+}
+
+/// Item rarity tier for spread and price-change multipliers.
+/// Higher tiers get wider spreads and more volatile price changes.
+/// Mirrors Java ItemTier. Default classification mirrors ItemTier.defaultTierFor().
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ItemTier {
+    Common,
+    Uncommon,
+    Rare,
+    Epic,
+    Legendary,
+}
+
+impl ItemTier {
+    pub fn spread_multiplier(self) -> f64 {
+        match self {
+            ItemTier::Common => 1.0,
+            ItemTier::Uncommon => 1.2,
+            ItemTier::Rare => 1.5,
+            ItemTier::Epic => 1.8,
+            ItemTier::Legendary => 2.2,
+        }
+    }
+
+    pub fn max_price_change_multiplier(self) -> f64 {
+        match self {
+            ItemTier::Common => 1.0,
+            ItemTier::Uncommon => 1.1,
+            ItemTier::Rare => 1.25,
+            ItemTier::Epic => 1.4,
+            ItemTier::Legendary => 1.6,
+        }
+    }
+}
+
+/// Returns the default tier for an item name.
+/// Mirrors Java ItemTier.defaultTierFor().
+pub fn default_tier_for(name: &str) -> ItemTier {
+    let upper = normalize_material_name(name);
+    if matches_legendary(&upper) {
+        ItemTier::Legendary
+    } else if matches_epic(&upper) {
+        ItemTier::Epic
+    } else if matches_rare(&upper) {
+        ItemTier::Rare
+    } else if matches_uncommon(&upper) {
+        ItemTier::Uncommon
+    } else {
+        ItemTier::Common
+    }
+}
+
+fn normalize_material_name(name: &str) -> String {
+    name.trim()
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() {
+                ch.to_ascii_uppercase()
+            } else {
+                '_'
+            }
+        })
+        .collect::<String>()
+        .split('_')
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("_")
+}
+
+fn matches_legendary(upper: &str) -> bool {
+    matches!(
+        upper,
+        "NETHER_STAR"
+            | "DRAGON_BREATH"
+            | "ELYTRA"
+            | "SHULKER_BOX"
+            | "SHULKER_BOX_ITEM"
+            | "ENDER_PEARL"
+            | "ENDER_EYE"
+            | "NETHER_WART"
+            | "GHAST_TEAR"
+            | "BLAZE_ROD"
+            | "MAGMA_CREAM"
+            | "BEACON"
+            | "CONDUIT"
+            | "HEART_OF_THE_SEA"
+            | "NAUTIL_SHELL"
+            | "PHANTOM_MEMBRANE"
+            | "FOX_SPAWN_EGG"
+            | "ALLAY_SPAWN_EGG"
+            | "WARDEN_SPAWN_EGG"
+            | "WITHER_SKELETON_SKULL"
+            | "WITHER_SKELETON_SKULL_ITEM"
+            | "DRAGON_HEAD"
+            | "DRAGON_EGG"
+            | "RABBIT_HIDE"
+            | "RABBIT_FOOT"
+            | "NAUSEA_APPLE"
+    )
+}
+
+fn matches_epic(upper: &str) -> bool {
+    matches!(
+        upper,
+        "DIAMOND_SWORD"
+            | "DIAMOND_PICKAXE"
+            | "DIAMOND_AXE"
+            | "DIAMOND_SHOVEL"
+            | "DIAMOND_HOE"
+            | "DIAMOND_HELMET"
+            | "DIAMOND_CHESTPLATE"
+            | "DIAMOND_LEGGINGS"
+            | "DIAMOND_BOOTS"
+            | "NETHERITE_SWORD"
+            | "NETHERITE_PICKAXE"
+            | "NETHERITE_AXE"
+            | "NETHERITE_SHOVEL"
+            | "NETHERITE_HOE"
+            | "NETHERITE_HELMET"
+            | "NETHERITE_CHESTPLATE"
+            | "NETHERITE_LEGGINGS"
+            | "NETHERITE_BOOTS"
+            | "GOLDEN_APPLE"
+            | "ENCHANTED_GOLDEN_APPLE"
+            | "FIRE_CHARGE"
+            | "FIREWORK_ROCKET"
+            | "BOOK_AND_QUILL"
+            | "WRITTEN_BOOK"
+            | "NAME_TAG"
+            | "LEAD"
+            | "SADDLE"
+            | "SNOWBALL"
+            | "EGG"
+            | "BOW"
+            | "CROSSBOW"
+            | "TRIDENT"
+            | "SHIELD"
+            | "TOTEM_OF_UNDYING"
+            | "LINGERING_POTION"
+            | "SPLASH_POTION"
+            | "POTION"
+            | "EXPERIENCE_BOTTLE"
+            | "BLUE_BUNDLE"
+            | "BUNDLE"
+            | "NETHERITE_INGOT"
+            | "NETHERITE_SCRAP"
+            | "CHAINMAIL_HELMET"
+            | "CHAINMAIL_CHESTPLATE"
+            | "CHAINMAIL_LEGGINGS"
+            | "CHAINMAIL_BOOTS"
+    )
+}
+
+fn matches_rare(upper: &str) -> bool {
+    matches!(
+        upper,
+        "DIAMOND"
+            | "EMERALD"
+            | "NETHER_QUARTZ"
+            | "GLOWSTONE_DUST"
+            | "BLAZE_POWDER"
+            | "PRISMARINE_SHARD"
+            | "PRISMARINE_CRYSTALS"
+            | "NAUTILUS_SHELL"
+            | "AMETHYST_SHARD"
+            | "CALCITE"
+            | "TUFF"
+            | "DEEPSLATE"
+            | "RAW_GOLD"
+            | "RAW_GOLD_BLOCK"
+            | "RAW_IRON"
+            | "RAW_IRON_BLOCK"
+            | "ANCIENT_DEBRIS"
+            | "DEBRIS"
+            | "CRYING_OBSIDIAN"
+            | "GLOW_INK_SAC"
+            | "GLOW_ITEM_FRAME"
+            | "ITEM_FRAME"
+            | "HONEYCOMB"
+            | "HONEYCOMB_BLOCK"
+            | "HONEY_BLOCK"
+            | "SLIME_BALL"
+            | "SLIME_BLOCK"
+            | "FERMENTED_SPIDER_EYE"
+            | "MOSS_BLOCK"
+            | "ROOTED_DIRT"
+            | "DRIPSTONE_BLOCK"
+    )
+}
+
+fn matches_uncommon(upper: &str) -> bool {
+    matches!(
+        upper,
+        "IRON_INGOT"
+            | "GOLD_INGOT"
+            | "BRICK"
+            | "NETHER_BRICK"
+            | "BRICK_ITEM"
+            | "NETHER_BRICK_ITEM"
+            | "PAPER"
+            | "BOOK"
+            | "BOOKSHELF"
+            | "FURNACE"
+            | "CHEST"
+            | "ENDER_CHEST"
+            | "TRAPPED_CHEST"
+            | "HOPPER"
+            | "DROPPER"
+            | "DISPENSER"
+            | "PISTON"
+            | "STICKY_PISTON"
+            | "OBSERVER"
+            | "HOPPER_MINECART"
+            | "RAIL"
+            | "POWERED_RAIL"
+            | "DETECTOR_RAIL"
+            | "ACTIVATOR_RAIL"
+            | "MINECART"
+            | "CHEST_MINECART"
+            | "COMPARATOR"
+            | "REPEATER"
+            | "DAYLIGHT_DETECTOR"
+            | "LECTERN"
+            | "CAULDRON"
+            | "BREWING_STAND"
+            | "ANVIL"
+            | "CHIPPED_ANVIL"
+            | "DAMAGED_ANVIL"
+            | "GRINDSTONE"
+            | "STONECUTTER"
+            | "LOOM"
+            | "CARTOGRAPHY_TABLE"
+            | "SMITHING_TABLE"
+            | "FLETCHING_TABLE"
+            | "LAPIS_LAZULI"
+            | "LAPIS_BLOCK"
+            | "IRON_BLOCK"
+            | "GOLD_BLOCK"
+            | "DIAMOND_BLOCK"
+            | "EMERALD_BLOCK"
+            | "NETHERITE_BLOCK"
+            | "COAL_BLOCK"
+            | "REDSTONE_BLOCK"
+            | "COBBLESTONE_BLOCK"
+            | "STONE_BRICKS"
+            | "STONE_BRICK_SLAB"
+            | "STONE_BRICK_STAIRS"
+            | "IRON_DOOR"
+            | "GOLDEN_RAIL"
+            | "LIGHT"
+            | "SPYGLASS"
+            | "GOLDEN_HELMET"
+            | "GOLDEN_CHESTPLATE"
+            | "GOLDEN_LEGGINGS"
+            | "GOLDEN_BOOTS"
+            | "LEATHER_HELMET"
+            | "LEATHER_CHESTPLATE"
+            | "LEATHER_LEGGINGS"
+            | "LEATHER_BOOTS"
+            | "IRON_HELMET"
+            | "IRON_CHESTPLATE"
+            | "IRON_LEGGINGS"
+            | "IRON_BOOTS"
+            | "TURTLE_HELMET"
+            | "SCUTE"
+            | "FEATHER"
+            | "FLINT"
+            | "STRING"
+            | "WOOL"
+            | "CARPET"
+            | "PAINTING"
+            | "ARROW"
+            | "SPECTRAL_ARROW"
+            | "COOKIE"
+            | "CAKE"
+            | "BREAD"
+            | "GOLDEN_CARROT"
+            | "BEETROOT_SOUP"
+            | "RABBIT_STEW"
+            | "MUSHROOM_STEW"
+            | "SUSPICIOUS_STEW"
+            | "PUMPKIN_PIE"
+            | "SWEET_BERRIES"
+            | "GLOW_BERRIES"
+            | "DRIED_KELP"
+            | "DRIED_KELP_BLOCK"
+            | "ROTTEN_FLESH"
+            | "PORKCHOP"
+            | "COOKED_PORKCHOP"
+            | "BEEF"
+            | "COOKED_BEEF"
+            | "CHICKEN"
+            | "COOKED_CHICKEN"
+            | "MUTTON"
+            | "COOKED_MUTTON"
+            | "RABBIT"
+            | "COOKED_RABBIT"
+            | "COD"
+            | "SALMON"
+            | "TROPICAL_FISH"
+            | "PUFFERFISH"
+            | "COOKED_COD"
+            | "COOKED_SALMON"
+            | "MELON_SEEDS"
+            | "PUMPKIN_SEEDS"
+            | "WHEAT_SEEDS"
+    )
 }
 
 impl Default for SimConfig {
@@ -327,6 +644,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             price_floor_override: None,
             price_ceiling_override: None,
             price_frozen: false,
+            tier: None,
         },
         ItemConfig {
             name: "Rotten Flesh".into(),
@@ -337,6 +655,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             price_floor_override: None,
             price_ceiling_override: None,
             price_frozen: false,
+            tier: None,
         },
         ItemConfig {
             name: "Redstone".into(),
@@ -347,6 +666,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             price_floor_override: None,
             price_ceiling_override: None,
             price_frozen: false,
+            tier: None,
         },
         ItemConfig {
             name: "Iron Ingot".into(),
@@ -357,6 +677,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             price_floor_override: None,
             price_ceiling_override: None,
             price_frozen: false,
+            tier: None,
         },
         ItemConfig {
             name: "Blaze Rod".into(),
@@ -367,6 +688,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             price_floor_override: None,
             price_ceiling_override: None,
             price_frozen: false,
+            tier: None,
         },
         ItemConfig {
             name: "Diamond".into(),
@@ -377,6 +699,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             price_floor_override: None,
             price_ceiling_override: None,
             price_frozen: false,
+            tier: None,
         },
         ItemConfig {
             name: "Golden Apple".into(),
@@ -387,6 +710,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             price_floor_override: None,
             price_ceiling_override: None,
             price_frozen: false,
+            tier: None,
         },
         ItemConfig {
             name: "Netherite Ingot".into(),
@@ -397,6 +721,7 @@ pub fn default_items() -> Vec<ItemConfig> {
             price_floor_override: None,
             price_ceiling_override: None,
             price_frozen: false,
+            tier: None,
         },
     ]
 }
@@ -432,7 +757,7 @@ impl SimConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::SimConfig;
+    use super::{ItemTier, SimConfig, default_tier_for};
 
     #[test]
     fn missing_total_debt_gdp_cap_deserializes_to_java_default() {
@@ -460,5 +785,31 @@ mod tests {
         let config: SimConfig = serde_json::from_value(value).unwrap();
 
         assert_eq!(None, config.whale_max_dump_per_item);
+    }
+
+    #[test]
+    fn item_tier_defaults_match_java_material_names() {
+        assert_eq!(ItemTier::Common, default_tier_for("Cobblestone"));
+        assert_eq!(ItemTier::Uncommon, default_tier_for("Iron Ingot"));
+        assert_eq!(ItemTier::Rare, default_tier_for("Diamond"));
+        assert_eq!(ItemTier::Epic, default_tier_for("Golden Apple"));
+        assert_eq!(ItemTier::Legendary, default_tier_for("Blaze Rod"));
+        assert_eq!(ItemTier::Uncommon, default_tier_for("Diamond Block"));
+        assert_eq!(ItemTier::Uncommon, default_tier_for("Netherite Block"));
+        assert_eq!(ItemTier::Epic, default_tier_for("Netherite Ingot"));
+    }
+
+    #[test]
+    fn item_tier_multipliers_match_java_item_tier() {
+        assert_eq!(1.0, ItemTier::Common.spread_multiplier());
+        assert_eq!(1.0, ItemTier::Common.max_price_change_multiplier());
+        assert_eq!(1.2, ItemTier::Uncommon.spread_multiplier());
+        assert_eq!(1.1, ItemTier::Uncommon.max_price_change_multiplier());
+        assert_eq!(1.5, ItemTier::Rare.spread_multiplier());
+        assert_eq!(1.25, ItemTier::Rare.max_price_change_multiplier());
+        assert_eq!(1.8, ItemTier::Epic.spread_multiplier());
+        assert_eq!(1.4, ItemTier::Epic.max_price_change_multiplier());
+        assert_eq!(2.2, ItemTier::Legendary.spread_multiplier());
+        assert_eq!(1.6, ItemTier::Legendary.max_price_change_multiplier());
     }
 }

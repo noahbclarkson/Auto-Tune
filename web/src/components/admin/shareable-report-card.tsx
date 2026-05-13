@@ -28,21 +28,30 @@ function computeScore(h: AdminHealthDto): number {
   const d2gScore = h.debtGdpRatio < 0.5 ? 100 : h.debtGdpRatio < 1.0 ? 75 : h.debtGdpRatio < 3.0 ? 45 : 10;
   const imbalance = Math.abs(h.buyPct - 50) / 50;
   const balScore = Math.round((1 - imbalance) * 100);
-  return Math.round(volScore * 0.4 + d2gScore * 0.3 + balScore * 0.3);
+  const baseScore = Math.round(volScore * 0.4 + d2gScore * 0.3 + balScore * 0.3);
+
+  if (h.circuitBreakerTier === 'ADMIN_RECOVERY' || h.circuitBreakerTier === 'TIER3') return Math.min(baseScore, 10);
+  if (h.circuitBreakerTier === 'TIER2') return Math.min(baseScore, 30);
+  if (h.circuitBreakerTier === 'TIER1') return Math.min(baseScore, 60);
+  return baseScore;
 }
 
 function circuitLabel(tier: string): string {
   if (tier === 'NORMAL') return 'Normal';
+  if (tier === 'ADMIN_RECOVERY') return 'Admin Recovery';
   if (tier === 'TIER1') return 'Tier 1';
   if (tier === 'TIER2') return 'Tier 2';
-  return 'Tier 3';
+  if (tier === 'TIER3') return 'Tier 3';
+  return tier;
 }
 
 function circuitColor(tier: string): string {
   if (tier === 'NORMAL') return 'text-emerald-400';
+  if (tier === 'ADMIN_RECOVERY') return 'text-yellow-400';
   if (tier === 'TIER1') return 'text-amber-400';
   if (tier === 'TIER2') return 'text-orange-400';
-  return 'text-red-400';
+  if (tier === 'TIER3') return 'text-red-400';
+  return 'text-muted-foreground';
 }
 
 export function ShareableReportCard({ health, serverName, compact = false }: ReportCardProps) {

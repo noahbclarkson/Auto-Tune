@@ -77,11 +77,17 @@ export function FirstRunVerificationCard() {
           setTradeState('warn');
         }
 
-        // Circuit status
-        if (healthData.circuitBreakerTier === 'NORMAL') {
-          setCircuitState('pass');
+        // Trade/circuit health
+        if (healthData.circuitBreakerTier === 'TIER2' || healthData.circuitBreakerTier === 'TIER3') {
+          setCircuitState('fail');
+        } else if (
+          healthData.circuitBreakerTier === 'TIER1' ||
+          healthData.buyPct < 20 ||
+          healthData.buyPct > 80
+        ) {
+          setCircuitState('warn');
         } else {
-          setCircuitState(healthData.circuitBreakerTier === 'TIER1' ? 'warn' : 'fail');
+          setCircuitState('pass');
         }
       } else {
         setItemsState('loading');
@@ -136,9 +142,9 @@ export function FirstRunVerificationCard() {
       detail: health
         ? health.circuitBreakerTier !== 'NORMAL'
           ? `Circuit ${health.circuitBreakerTier} active — see Circuit Breaker Tiers section below`
-          : health.buyPct >= 20
-          ? `Buy/Sell ${health.buyPct.toFixed(0)}%/${health.sellPct.toFixed(0)}% — economy is balanced`
-          : `Buy ratio only ${health.buyPct.toFixed(0)}% — see Economy Concepts docs for tips`
+          : health.buyPct >= 20 && health.buyPct <= 80
+          ? `Buy/Sell ${health.buyPct.toFixed(0)}%/${health.sellPct.toFixed(0)}% — enough two-sided activity for price discovery`
+          : `Buy/Sell ${health.buyPct.toFixed(0)}%/${health.sellPct.toFixed(0)}% — watch for one-sided activity`
         : 'Checking…',
     },
   ];

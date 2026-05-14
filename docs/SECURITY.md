@@ -189,4 +189,4 @@ Before presenting the network as production-grade public infrastructure:
 - [ ] Capped player-count weighting and age/reputation weighting.
 - [ ] Public confidence labels that explain low server count, stale data, and outlier suppression.
 
-Auto-Tune is close to a trustworthy cross-server network, but the public launch story should be honest: the solver has strong mathematical safeguards today; registration governance, freshness filtering, and reputation controls are the next required hardening layer.
+Auto-Tune is close to a trustworthy cross-server network, but the public launch story should be honest: the solver has strong mathematical safeguards today; registration governance, key lifecycle controls, public confidence labels, and reputation weighting are the next required hardening layer.

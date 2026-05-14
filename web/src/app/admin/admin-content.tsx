@@ -28,6 +28,7 @@ import {
   Link2,
 } from 'lucide-react';
 import { ShareableReportCard, decodeHealthReport, encodeHealthReport } from '@/components/admin/shareable-report-card';
+import { FirstRunVerificationCard } from '@/components/admin/first-run-verification-card';
 
 function HealthBadge({ tier, className = '' }: { tier: string; className?: string }) {
   if (tier === 'NORMAL') {
@@ -441,6 +442,7 @@ export function AdminContent() {
         </Card>
 
         {/* Config Health Dashboard */}
+        <FirstRunVerificationCard />
         <ConfigHealthCard />
 
         {/* Auction Integrity */}

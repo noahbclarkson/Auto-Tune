@@ -610,6 +610,21 @@ impl Scenario {
         scenario
     }
 
+    /// Recommended config plus 2 VolumeTraders.
+    ///
+    /// VolumeTraders improved the older 2MM+2GB baseline, but IT+VT cancelled out
+    /// and Newbie+GB already improves two-sided balance. Keep this as an explicit
+    /// stress-test scenario instead of assuming VT stacks with the recommended mix.
+    pub fn recommended_config_plus_vt() -> Self {
+        let mut scenario = Self::recommended_config();
+        scenario.name = "Recommended+2VT: 2MM+2GB+1Far+2Newbie+2VT+Floor".to_string();
+        scenario.players.push(ArchetypeConfig {
+            archetype: "VolumeTrader".into(),
+            count: 2,
+        });
+        scenario
+    }
+
     /// Archetype mix test: Casual-heavy variant.
     /// Replaces Farmers with Casuals to test whether more balanced gather/demand
     /// improves economy health beyond the 2MM+2GB config.
@@ -11813,6 +11828,8 @@ fn main() -> eframe::Result<()> {
         println!("  --it-removal-test         2MM+2GB+floor: WITH vs WITHOUT InsiderTraders");
         println!("  --healthy-baseline-5seed  2MM+2GB+floor × 5 seeds: statistical baseline");
         println!("  --gb-newbie-healthy-test   2MM+2GB+1Far+2Newbie vs 2MM+2GB+3Far × 5 seeds");
+        println!("  --recommended-longrun-test recommended config vs baseline × 30/60d × 5 seeds");
+        println!("  --recommended-vt-test      recommended config vs +2VT × 5 seeds");
         println!("  --newbie-no-gb-test       2MM+2Newbie vs 2MM+2GB: can Newbies replace GBs?");
         println!("  --threshold-30day-test     5%% vs 7%% GB threshold × 3 seeds × 30 days");
         println!(
@@ -12435,6 +12452,16 @@ fn main() -> eframe::Result<()> {
         return Ok(());
     }
 
+    if args.len() > 1 && args[1] == "--recommended-longrun-test" {
+        run_recommended_longrun_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--recommended-vt-test" {
+        run_recommended_vt_test();
+        return Ok(());
+    }
+
     // ─── Newbie-No-GB Test ────────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--newbie-no-gb-test" {
         run_newbie_no_gb_test();
@@ -12449,6 +12476,263 @@ fn main() -> eframe::Result<()> {
 
     // GUI mode
     run_gui()
+}
+
+#[derive(Debug, Clone)]
+struct RecommendedEval {
+    arm: &'static str,
+    days: u64,
+    seed: u64,
+    gdp: f64,
+    dg: f64,
+    vol: f64,
+    bpd: f64,
+    buy_ratio: f64,
+    tier3_events: u32,
+}
+
+fn mean_std(values: &[f64]) -> (f64, f64) {
+    if values.is_empty() {
+        return (0.0, 0.0);
+    }
+    let mean = values.iter().sum::<f64>() / values.len() as f64;
+    let std = (values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64).sqrt();
+    (mean, std)
+}
+
+fn run_recommended_eval(
+    mut scenario: Scenario,
+    arm: &'static str,
+    days: u64,
+    seed: u64,
+) -> Option<RecommendedEval> {
+    scenario.duration_ticks = 288 * days;
+    let out_dir = PathBuf::from(format!("/tmp/autotune-rec-{arm}-{days}d-{seed}"));
+    let _ = std::fs::remove_dir_all(&out_dir);
+
+    if let Err(e) = run_seeded_headless(&scenario, seed, &out_dir) {
+        eprintln!("\n  ✗ {arm} {days}d seed {seed}: {e}");
+        let _ = std::fs::remove_dir_all(&out_dir);
+        return None;
+    }
+
+    let summary = match load_summary(&out_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("\n  ✗ {arm} {days}d seed {seed}: summary load failed: {e}");
+            let _ = std::fs::remove_dir_all(&out_dir);
+            return None;
+        }
+    };
+    let _ = std::fs::remove_dir_all(&out_dir);
+
+    Some(RecommendedEval {
+        arm,
+        days,
+        seed,
+        gdp: summary.gdp,
+        dg: summary.debt / summary.gdp.max(1.0),
+        vol: summary.avg_volatility,
+        bpd: summary.avg_bpd,
+        buy_ratio: summary.buy_ratio,
+        tier3_events: summary.tier3_events,
+    })
+}
+
+fn print_recommended_summary(results: &[RecommendedEval], control: &str, treatment: &str) {
+    let mut days: Vec<u64> = results.iter().map(|r| r.days).collect();
+    days.sort_unstable();
+    days.dedup();
+
+    for day in days {
+        let ctrl: Vec<&RecommendedEval> = results
+            .iter()
+            .filter(|r| r.days == day && r.arm == control)
+            .collect();
+        let treat: Vec<&RecommendedEval> = results
+            .iter()
+            .filter(|r| r.days == day && r.arm == treatment)
+            .collect();
+
+        if ctrl.is_empty() || treat.is_empty() {
+            continue;
+        }
+
+        let (ctrl_gdp, ctrl_gdp_std) = mean_std(&ctrl.iter().map(|r| r.gdp).collect::<Vec<_>>());
+        let (treat_gdp, treat_gdp_std) = mean_std(&treat.iter().map(|r| r.gdp).collect::<Vec<_>>());
+        let (ctrl_dg, ctrl_dg_std) = mean_std(&ctrl.iter().map(|r| r.dg).collect::<Vec<_>>());
+        let (treat_dg, treat_dg_std) = mean_std(&treat.iter().map(|r| r.dg).collect::<Vec<_>>());
+        let (ctrl_vol, _) = mean_std(&ctrl.iter().map(|r| r.vol).collect::<Vec<_>>());
+        let (treat_vol, _) = mean_std(&treat.iter().map(|r| r.vol).collect::<Vec<_>>());
+        let (ctrl_buy, _) = mean_std(&ctrl.iter().map(|r| r.buy_ratio).collect::<Vec<_>>());
+        let (treat_buy, _) = mean_std(&treat.iter().map(|r| r.buy_ratio).collect::<Vec<_>>());
+        let ctrl_tier3: u32 = ctrl.iter().map(|r| r.tier3_events).sum();
+        let treat_tier3: u32 = treat.iter().map(|r| r.tier3_events).sum();
+        let wins = treat
+            .iter()
+            .filter(|t| {
+                ctrl.iter()
+                    .find(|c| c.seed == t.seed)
+                    .is_some_and(|c| t.dg < c.dg)
+            })
+            .count();
+
+        println!("\n  ── {day}d summary: {treatment} vs {control} ──");
+        println!(
+            "  GDP:       {:.0} ± {:.0} → {:.0} ± {:.0} ({:+.1}%)",
+            ctrl_gdp,
+            ctrl_gdp_std,
+            treat_gdp,
+            treat_gdp_std,
+            (treat_gdp - ctrl_gdp) / ctrl_gdp.max(1.0) * 100.0
+        );
+        println!(
+            "  D/G:       {:.3}x ± {:.3}x → {:.3}x ± {:.3}x ({:+.3}x)",
+            ctrl_dg,
+            ctrl_dg_std,
+            treat_dg,
+            treat_dg_std,
+            treat_dg - ctrl_dg
+        );
+        println!(
+            "  Vol(CV):   {:.3}% → {:.3}% ({:+.1}%)",
+            ctrl_vol * 100.0,
+            treat_vol * 100.0,
+            (treat_vol - ctrl_vol) / ctrl_vol.max(0.000_001) * 100.0
+        );
+        println!(
+            "  Buy ratio: {:.1}% → {:.1}% ({:+.1}pp)",
+            ctrl_buy * 100.0,
+            treat_buy * 100.0,
+            (treat_buy - ctrl_buy) * 100.0
+        );
+        println!(
+            "  TIER3:     {} → {} total events | D/G wins: {}/{} seeds",
+            ctrl_tier3,
+            treat_tier3,
+            wins,
+            treat.len()
+        );
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RECOMMENDED CONFIG LONG-RUN VALIDATION
+//  Control: 2MM+2GB+3Far+floor baseline
+//  Treat:   2MM+2GB+1Far+2Newbie+floor recommended candidate
+//  Question: Does the 14-day Newbie+GB advantage survive 30/60 days?
+// ═══════════════════════════════════════════════════════════════════════
+fn run_recommended_longrun_test() {
+    use std::io::Write;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+    let days: Vec<u64> = vec![30, 60];
+    let total = seeds.len() * days.len() * 2;
+    let mut done = 0;
+    let mut results: Vec<RecommendedEval> = Vec::new();
+
+    println!("\n╔════════════════════════════════════════════════════════════════════╗");
+    println!("║     RECOMMENDED CONFIG LONG-RUN VALIDATION — 30/60d × 5 seeds ║");
+    println!("║  Baseline: 2MM+2GB+3Far+floor  Treat: 1Far+2Newbie+floor     ║");
+    println!("╚════════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}", seeds);
+    println!("  Goal: verify 14-day Newbie+GB gains do not become long-run leverage risk.\n");
+    println!(
+        "  {:>5} {:>11} {:>6} {:>12} {:>9} {:>8} {:>7} {:>7} {:>5}",
+        "Days", "Arm", "Seed", "GDP", "D/G", "Vol(CV)", "BPD%", "Buy%", "T3"
+    );
+
+    for &day in &days {
+        for &seed in &seeds {
+            for (arm, scenario) in [
+                (
+                    "baseline",
+                    Scenario::guild_stability_2mm_fixed_guild_plus_floor(),
+                ),
+                ("recommended", Scenario::recommended_config()),
+            ] {
+                done += 1;
+                eprint!("\r  [{done}/{total}] {arm} {day}d seed={seed}");
+                std::io::stderr().flush().ok();
+                if let Some(r) = run_recommended_eval(scenario, arm, day, seed) {
+                    println!(
+                        "\r  {:>5} {:>11} {:>6} {:>12.0} {:>8.3}x {:>7.3}% {:>6.2}% {:>6.1}% {:>5}",
+                        r.days,
+                        r.arm,
+                        r.seed,
+                        r.gdp,
+                        r.dg,
+                        r.vol * 100.0,
+                        r.bpd * 100.0,
+                        r.buy_ratio * 100.0,
+                        r.tier3_events
+                    );
+                    results.push(r);
+                }
+            }
+        }
+    }
+
+    print_recommended_summary(&results, "baseline", "recommended");
+    println!(
+        "\n  Verdict heuristic: recommend only if 60d D/G improves in ≥4/5 seeds and TIER3 does not increase.\n"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RECOMMENDED CONFIG + VOLUMETRADERS TEST
+//  Control: recommended_config()
+//  Treat:   recommended_config() + 2 VolumeTraders
+//  Question: Does VT add liquidity after Newbie+GB, or dilute the demand sink?
+// ═══════════════════════════════════════════════════════════════════════
+fn run_recommended_vt_test() {
+    use std::io::Write;
+
+    let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
+    let total = seeds.len() * 2;
+    let mut done = 0;
+    let mut results: Vec<RecommendedEval> = Vec::new();
+
+    println!("\n╔════════════════════════════════════════════════════════════════════╗");
+    println!("║       RECOMMENDED CONFIG + 2VT TEST — 14d × 5 seeds          ║");
+    println!("║  Control: recommended Newbie+GB  Treat: recommended + 2VT    ║");
+    println!("╚════════════════════════════════════════════════════════════════════╝\n");
+    println!("  Seeds: {:?}\n", seeds);
+    println!(
+        "  {:>5} {:>14} {:>6} {:>12} {:>9} {:>8} {:>7} {:>7} {:>5}",
+        "Days", "Arm", "Seed", "GDP", "D/G", "Vol(CV)", "BPD%", "Buy%", "T3"
+    );
+
+    for &seed in &seeds {
+        for (arm, scenario) in [
+            ("recommended", Scenario::recommended_config()),
+            ("recommended_vt", Scenario::recommended_config_plus_vt()),
+        ] {
+            done += 1;
+            eprint!("\r  [{done}/{total}] {arm} 14d seed={seed}");
+            std::io::stderr().flush().ok();
+            if let Some(r) = run_recommended_eval(scenario, arm, 14, seed) {
+                println!(
+                    "\r  {:>5} {:>14} {:>6} {:>12.0} {:>8.3}x {:>7.3}% {:>6.2}% {:>6.1}% {:>5}",
+                    r.days,
+                    r.arm,
+                    r.seed,
+                    r.gdp,
+                    r.dg,
+                    r.vol * 100.0,
+                    r.bpd * 100.0,
+                    r.buy_ratio * 100.0,
+                    r.tier3_events
+                );
+                results.push(r);
+            }
+        }
+    }
+
+    print_recommended_summary(&results, "recommended", "recommended_vt");
+    println!(
+        "\n  Verdict heuristic: add VT only if D/G improves in ≥4/5 seeds without GDP loss or volatility increase.\n"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════

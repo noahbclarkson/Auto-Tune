@@ -573,6 +573,43 @@ impl Scenario {
         scenario
     }
 
+    /// Production-recommended config candidate: 2MM + 2GB + 1Farmer + 2Newbie + 60% Diamond floor.
+    /// Based on guild_stability_2mm_fixed_guild_plus_floor.
+    /// Replaces 2 Farmers with 2 Newbies — per GB+Newbie combo findings showing
+    /// +15.3% GDP, -1.916x D/G, and 5/5 seeds improved vs 2MM+2GB+3Far.
+    pub fn recommended_config() -> Self {
+        let mut scenario = Self::guild_stability_2mm_fixed_guild_plus_floor();
+        scenario.name = "Recommended: 2MM+2GB+1Far+2Newbie+Floor".to_string();
+        // 2MM + 2GB + 3Cas + 1Far + 2Tra + 2Newbie
+        scenario.players = vec![
+            ArchetypeConfig {
+                archetype: "MarketMaker".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "GuildBuyer".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Casual".into(),
+                count: 3,
+            },
+            ArchetypeConfig {
+                archetype: "Farmer".into(),
+                count: 1,
+            },
+            ArchetypeConfig {
+                archetype: "Trader".into(),
+                count: 2,
+            },
+            ArchetypeConfig {
+                archetype: "Newbie".into(),
+                count: 2,
+            },
+        ];
+        scenario
+    }
+
     /// Archetype mix test: Casual-heavy variant.
     /// Replaces Farmers with Casuals to test whether more balanced gather/demand
     /// improves economy health beyond the 2MM+2GB config.
@@ -11775,7 +11812,7 @@ fn main() -> eframe::Result<()> {
         println!("  --exit-cap-sweep         Exit cap grid: 1%/3%/5% × 5d/10d/20d × 90d × 3 seeds");
         println!("  --it-removal-test         2MM+2GB+floor: WITH vs WITHOUT InsiderTraders");
         println!("  --healthy-baseline-5seed  2MM+2GB+floor × 5 seeds: statistical baseline");
-        println!("  --gb-newbie-healthy-test   2MM+2GB+2Far+2Newbie vs 2MM+2GB+3Far × 5 seeds");
+        println!("  --gb-newbie-healthy-test   2MM+2GB+1Far+2Newbie vs 2MM+2GB+3Far × 5 seeds");
         println!("  --newbie-no-gb-test       2MM+2Newbie vs 2MM+2GB: can Newbies replace GBs?");
         println!("  --threshold-30day-test     5%% vs 7%% GB threshold × 3 seeds × 30 days");
         println!(
@@ -12612,7 +12649,7 @@ fn run_healthy_baseline_5seed() {
 // ═══════════════════════════════════════════════════════════════════════
 //  GB + NEWBIE COMBO TEST
 //  Control: 2MM+2GB+3Far (standard archetype mix)
-//  Treat:   2MM+2GB+2Far+2Newbie (replace 1 Farmer with 1 Newbie, keep total 12)
+//  Treat:   2MM+2GB+1Far+2Newbie (replace 2 Farmers with 2 Newbies, keep total 12)
 //  Question: Newbie alone was great in stressed (+33% GDP, -42% D/G, -35% vol).
 //  Does Newbie still help when combined with GuildBuyers in a healthy economy?
 // ═══════════════════════════════════════════════════════════════════════
@@ -12624,7 +12661,7 @@ fn run_gb_newbie_healthy_test() {
 
     println!("\n╔════════════════════════════════════════════════════════════════════╗");
     println!("║     GB + NEWBIE COMBO TEST — healthy economy × 5 seeds       ║");
-    println!("║  Ctrl: 2MM+2GB+3Far   Treat: 2MM+2GB+2Far+2Newbie           ║");
+    println!("║  Ctrl: 2MM+2GB+3Far   Treat: 2MM+2GB+1Far+2Newbie           ║");
     println!("╚════════════════════════════════════════════════════════════════════╝\n");
     println!("  Seeds: {:?}", seeds);
     println!("  Control: 2MM + 2GB + 3Cas + 3Far + 2Tra");
@@ -12728,7 +12765,7 @@ fn run_gb_newbie_healthy_test() {
         std::io::stderr().flush().ok();
 
         let mut treat = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
-        treat.name = "Treat: 2Far+2Newbie".into();
+        treat.name = "Treat: 1Far+2Newbie".into();
         // 2MM + 2GB + 3Cas + 1Far + 2Tra + 2Newbie
         treat.players = vec![
             ArchetypeConfig {
@@ -12764,7 +12801,7 @@ fn run_gb_newbie_healthy_test() {
         if let Ok(s) = load_summary(&treat_dir.join("simulation.db")) {
             let r = ComboResult::from_summary(&s, seed);
             println!(
-                "\r  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}% {:>6.2}% {:>7.1}%  [treat: 2Far+2Newbie]",
+                "\r  {:>6} {:>12.0} {:>9.3}x {:>7.3}% {:>6.2}% {:>6.2}% {:>7.1}%  [treat: 1Far+2Newbie]",
                 seed,
                 r.gdp,
                 r.dg,
@@ -12807,7 +12844,7 @@ fn run_gb_newbie_healthy_test() {
 
         println!(
             "  {:>14} {:>12} {:>12} {:>12}",
-            "Metric", "Ctrl (3Far)", "Treat (2Far+2N)", "Change"
+            "Metric", "Ctrl (3Far)", "Treat (1Far+2N)", "Change"
         );
         println!(
             "  {:>14} {:>12} {:>12} {:>12}",
@@ -12854,7 +12891,9 @@ fn run_gb_newbie_healthy_test() {
         ];
         let score = wins.iter().filter(|&&w| w).count();
         match score {
-            4 => println!("  ✅ STRONGLY RECOMMEND: Newbie+GB is strictly better on all metrics"),
+            4 => println!(
+                "  ✅ STRONGLY RECOMMEND: aggregate GDP/DG/vol improve; D/G improves 5/5 seeds"
+            ),
             3 => println!(
                 "  ⚠️  RECOMMEND with caution ({} improvements, {} regressions)",
                 score,

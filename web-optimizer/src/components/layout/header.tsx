@@ -6,7 +6,7 @@ import {
   Github, BarChart2, Home, BookOpen, DollarSign, Server,
   TrendingUp, Grid, FlaskConical, Code2, Map, Download,
   Sliders, GitCommit, Wand2, Tag, Wifi, ChevronDown, FileText, Settings,
-  Gavel, MessageSquare,
+  Gavel, MessageSquare, Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/landing/theme-toggle';
@@ -53,6 +53,7 @@ const NAV_SECTIONS: { label: string; items: { href: string; label: string; icon:
       { href: '/true-prices',    label: 'True Prices',  icon: Wifi },
       { href: '/exchange-rates', label: 'Rates',        icon: TrendingUp },
       { href: '/servers',        label: 'Servers',      icon: Server },
+      { href: '/trust',         label: 'Trust',       icon: Shield },
       { href: '/roadmap',        label: 'Roadmap',      icon: Map },
       { href: '/changelog',      label: 'Changelog',    icon: GitCommit },
       { href: '/api-docs',       label: 'API',          icon: Code2 },

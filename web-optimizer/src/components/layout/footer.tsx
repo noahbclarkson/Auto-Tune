@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { TrendingUp, Github, ExternalLink } from 'lucide-react';
+import { TrendingUp, Github, ExternalLink, BookOpen } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -58,15 +58,10 @@ export function Footer() {
               <ExternalLink className="w-3.5 h-3.5" />
               Changelog
             </Link>
-            <a
-              href="https://github.com/noahbclarkson/Auto-Tune/blob/rewrite-2/docs/FAQ.md"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-colors"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
+            <Link href="/faq" className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-colors">
+              <BookOpen className="w-3.5 h-3.5" />
               FAQ
-            </a>
+            </Link>
           </div>
         </div>
 

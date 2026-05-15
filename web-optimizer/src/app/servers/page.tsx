@@ -290,7 +290,9 @@ export default async function ServersPage() {
                 {
                   icon: Shield,
                   title: 'Privacy-first',
-                  desc: 'Only anonymised ratio matrices are shared — no player data, no item names, no economy values.',
+                  desc: (
+                    <>Only anonymised ratio matrices are shared — no player data, no item names, no economy values. <a href="/trust" className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2">See our safeguards →</a></>
+                  ),
                 },
               ].map(({ icon: Icon, title, desc }) => (
                 <div key={title} className="bg-gray-900/30 border border-gray-800/40 rounded-xl p-4">

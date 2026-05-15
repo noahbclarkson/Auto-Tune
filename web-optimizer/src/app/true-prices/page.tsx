@@ -54,6 +54,11 @@ export default async function TruePricesPage() {
             relative prices, then anchor one item to an absolute value so the whole market has a
             practical price scale.
           </p>
+          <p className="mt-3">
+            <a href="/trust" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium underline underline-offset-2">
+              Learn about our trust &amp; governance model →
+            </a>
+          </p>
         </div>
 
         {hasLiveData ? (

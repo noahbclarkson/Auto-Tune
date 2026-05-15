@@ -167,10 +167,14 @@ export function ExchangeRatesClient() {
         </div>
 
         {/* Context link */}
-        <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-gray-500">
+        <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
           <span>Want to see individual servers?</span>
           <Link href="/servers" className="text-emerald-400 hover:underline">
             View all registered servers →
+          </Link>
+          <span className="hidden sm:inline">·</span>
+          <Link href="/trust" className="text-emerald-400 hover:underline">
+            How trust &amp; safeguards work →
           </Link>
         </div>
 

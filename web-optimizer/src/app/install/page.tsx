@@ -410,8 +410,9 @@ export default function InstallPage() {
           <div className="pl-4">submit-interval-minutes: <span className="text-amber-400">30</span></div>
         </div>
         <p className="text-xs text-gray-500">
-          See <Link href="/true-prices" className="text-emerald-400 hover:underline">True Prices</Link> and{' '}
-          <Link href="/servers" className="text-emerald-400 hover:underline">Server Explorer</Link> to learn more.
+          See <Link href="/true-prices" className="text-emerald-400 hover:underline">True Prices</Link>,{' '}
+          <Link href="/servers" className="text-emerald-400 hover:underline">Server Explorer</Link>, and{' '}
+          <Link href="/trust" className="text-emerald-400 hover:underline">Trust &amp; Safeguards</Link> to learn more.
         </p>
       </div>
 

@@ -13,7 +13,7 @@ Added combined whale anti-dump mitigation configs to Rust `market-simulation`:
 
 Added new `WhaleConfig` fields and `PlayerAgent` state for tracking cooldowns. Spread shock trigger wired into simulation tick (after volume recorded, before price discovery).
 
-**Finding:** Whale stress (uncapped dump) produces D/G 6.134× vs control 2.601×. Capped sell (500 units/item/tick) reduces to 5.333× (~13% improvement). Combined configs available for plugin engineer tuning — cap alone is insufficient, spread shock + cooldown are the complementary components.
+**Finding:** Whale stress (uncapped dump) produces D/G 6.134× vs control 2.601×. Capped sell (500 units/item/tick) reduces to 5.333× (~13% improvement). Spread shock + capped combined arm now tested in harness (Shock: cap + spread shock trigger 0.10 + multiplier 2.5× + duration 288 ticks). Results show 4-column table: Control / Whale / Capped / Shock. Combined configs available for plugin engineer tuning — cap alone is insufficient, spread shock + cooldown are the complementary components.
 
 ## 2026-05-15 — Web & Ecosystem: Trust Page + Test Cleanup
 

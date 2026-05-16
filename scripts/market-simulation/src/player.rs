@@ -2525,7 +2525,8 @@ impl PlayerAgent {
 
         // If on cooldown, skip selling LEGENDARY/EPIC items
         if self.whale_ticks_since_high_value_sell > 0 {
-            // Skip high-value sells during cooldown if any inventory remains
+            // Items are filtered below in the dump loop using default_tier_for.
+            // Decrement will happen at the top of the next decide_whale call.
         }
 
         // If currently dumping, complete the dump and then enter dormant
@@ -2534,6 +2535,14 @@ impl PlayerAgent {
             for (i, item) in items.iter().enumerate() {
                 let qty = self.inventory.get(&i).copied().unwrap_or(0);
                 if qty <= 0 {
+                    continue;
+                }
+                // Classify item tier for cooldown enforcement
+                let tier = crate::config::default_tier_for(&item.name);
+                let is_high_value = tier == crate::config::ItemTier::Epic
+                    || tier == crate::config::ItemTier::Legendary;
+                // Skip high-value items during cooldown
+                if self.whale_ticks_since_high_value_sell > 0 && is_high_value {
                     continue;
                 }
                 // Apply per-item sell cap (spreads dump across ticks if set)
@@ -2575,6 +2584,11 @@ impl PlayerAgent {
                 *self.inventory.entry(i).or_insert(0) -= qty;
                 self.total_traded += total_value;
                 self.total_trades += 1;
+
+                // Start cooldown after high-value item sells
+                if is_high_value && let Some(cooldown) = cfg.high_value_sell_cooldown_ticks {
+                    self.whale_ticks_since_high_value_sell = cooldown;
+                }
             }
             // Only enter dormant if ALL inventory is now sold.
             // With a sell cap, this may take multiple ticks.

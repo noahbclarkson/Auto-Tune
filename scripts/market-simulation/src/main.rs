@@ -4596,15 +4596,24 @@ fn run_whale_stress_test() {
     let mut capped_scenario = Scenario::whale_stress();
     capped_scenario.config.whale_max_dump_per_item = Some(cap_per_item);
 
+    let mut shock_scenario = Scenario::whale_stress();
+    shock_scenario.config.whale_spread_shock_trigger_bps = 0.10;
+    shock_scenario.config.whale_spread_shock_multiplier = 2.5;
+    shock_scenario.config.whale_spread_shock_duration_ticks = 288;
+    shock_scenario.config.whale_max_dump_per_item = Some(cap_per_item);
+
     let ctrl_summary_dir = PathBuf::from("/tmp/autotune-whale-ctrl");
     let treat_summary_dir = PathBuf::from("/tmp/autotune-whale-treat");
     let capped_summary_dir = PathBuf::from("/tmp/autotune-whale-capped");
+    let shock_summary_dir = PathBuf::from("/tmp/autotune-whale-shock");
     let _ = std::fs::remove_dir_all(&ctrl_summary_dir);
     let _ = std::fs::remove_dir_all(&treat_summary_dir);
     let _ = std::fs::remove_dir_all(&capped_summary_dir);
+    let _ = std::fs::remove_dir_all(&shock_summary_dir);
     std::fs::create_dir_all(&ctrl_summary_dir).ok();
     std::fs::create_dir_all(&treat_summary_dir).ok();
     std::fs::create_dir_all(&capped_summary_dir).ok();
+    std::fs::create_dir_all(&shock_summary_dir).ok();
 
     let mut ctrl_s = ctrl_scenario.clone();
     ctrl_s.seed = Some(seeds[0]);
@@ -4631,6 +4640,14 @@ fn run_whale_stress_test() {
         return;
     }
 
+    println!("\n─── Mitigation+ (+Whale capped + spread shock) ───");
+    let mut shock_s = shock_scenario.clone();
+    shock_s.seed = Some(seeds[0]);
+    if let Err(e) = run_headless(&shock_s, Some(shock_summary_dir.clone())) {
+        eprintln!("  Shock treatment error: {}", e);
+        return;
+    }
+
     let ctrl_sum = match load_summary(&ctrl_summary_dir.join("simulation.db")) {
         Ok(s) => s,
         Err(e) => {
@@ -4652,60 +4669,76 @@ fn run_whale_stress_test() {
             return;
         }
     };
+    let shock_sum = match load_summary(&shock_summary_dir.join("simulation.db")) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  Shock summary error: {}", e);
+            return;
+        }
+    };
 
     let ctrl_dg = ctrl_sum.debt / ctrl_sum.gdp.max(1.0);
     let treat_dg = treat_sum.debt / treat_sum.gdp.max(1.0);
     let capped_dg = capped_sum.debt / capped_sum.gdp.max(1.0);
+    let shock_dg = shock_sum.debt / shock_sum.gdp.max(1.0);
     let ctrl_gdp = ctrl_sum.gdp;
     let treat_gdp = treat_sum.gdp;
     let capped_gdp = capped_sum.gdp;
+    let shock_gdp = shock_sum.gdp;
     let ctrl_buy = ctrl_sum.buy_ratio;
     let treat_buy = treat_sum.buy_ratio;
     let capped_buy = capped_sum.buy_ratio;
+    let shock_buy = shock_sum.buy_ratio;
     let ctrl_vol = ctrl_sum.avg_volatility;
     let treat_vol = treat_sum.avg_volatility;
     let capped_vol = capped_sum.avg_volatility;
+    let shock_vol = shock_sum.avg_volatility;
 
-    println!("\n╔══════════════════════════════════════════════════════════════╗");
+    println!("\n╔══════════════════════════════════════════════════════════════════════════╗");
     println!(
-        "║       RESULTS (seed={})                              ║",
+        "║       RESULTS (seed={})                                            ║",
         seeds[0]
     );
-    println!("╚══════════════════════════════════════════════════════════════╝");
+    println!("╚══════════════════════════════════════════════════════════════════════════╝");
     println!(
-        "  {:20} {:>12} {:>12} {:>12} {:>10}",
-        "Metric", "Control", "Whale", "Capped", "Cap vs Whale"
+        "  {:20} {:>12} {:>12} {:>12} {:>12} {:>10}",
+        "Metric", "Control", "Whale", "Capped", "Shock", "Shock vs Whale"
     );
     println!(
-        "  {:─<20} {:─<12} {:─<12} {:─<12} {:─<10}",
-        "", "", "", "", ""
+        "  {:─<20} {:─<12} {:─<12} {:─<12} {:─<12} {:─<10}",
+        "", "", "", "", "", ""
     );
     let dg_delta = treat_dg / ctrl_dg;
     let capped_dg_delta = capped_dg / treat_dg;
+    let shock_dg_delta = shock_dg / treat_dg;
     let gdp_delta = (treat_gdp - ctrl_gdp) / ctrl_gdp * 100.0;
     let capped_gdp_delta = (capped_gdp - treat_gdp) / treat_gdp * 100.0;
+    let shock_gdp_delta = (shock_gdp - treat_gdp) / treat_gdp * 100.0;
     let capped_buy_delta = (capped_buy - treat_buy) * 100.0;
+    let shock_buy_delta = (shock_buy - treat_buy) * 100.0;
     let vol_delta = treat_vol - ctrl_vol;
     let capped_vol_delta = capped_vol - treat_vol;
+    let shock_vol_delta = shock_vol - treat_vol;
     println!(
-        "  {:20} {:>12.3}x {:>12.3}x {:>12.3}x {:>10.3}x",
-        "Debt/GDP", ctrl_dg, treat_dg, capped_dg, capped_dg_delta
+        "  {:20} {:>12.3}x {:>12.3}x {:>12.3}x {:>12.3}x {:>10.3}x",
+        "Debt/GDP", ctrl_dg, treat_dg, capped_dg, shock_dg, shock_dg_delta
     );
     println!(
-        "  {:20} {:>12.0} {:>12.0} {:>12.0} {:>+10.1}%",
-        "Final GDP", ctrl_gdp, treat_gdp, capped_gdp, capped_gdp_delta
+        "  {:20} {:>12.0} {:>12.0} {:>12.0} {:>12.0} {:>+10.1}%",
+        "Final GDP", ctrl_gdp, treat_gdp, capped_gdp, shock_gdp, shock_gdp_delta
     );
     println!(
-        "  {:20} {:>12.1}% {:>12.1}% {:>12.1}% {:>+10.1}pp",
+        "  {:20} {:>12.1}% {:>12.1}% {:>12.1}% {:>12.1}% {:>+10.1}pp",
         "Buy Ratio",
         ctrl_buy * 100.0,
         treat_buy * 100.0,
         capped_buy * 100.0,
-        capped_buy_delta
+        shock_buy * 100.0,
+        shock_buy_delta
     );
     println!(
-        "  {:20} {:>12.4}  {:>12.4}  {:>12.4}  {:>+10.4}",
-        "Avg Volatility", ctrl_vol, treat_vol, capped_vol, capped_vol_delta
+        "  {:20} {:>12.4}  {:>12.4}  {:>12.4}  {:>12.4}  {:>+10.4}",
+        "Avg Volatility", ctrl_vol, treat_vol, capped_vol, shock_vol, shock_vol_delta
     );
 
     let dg_verdict = if dg_delta > 1.5 {
@@ -4751,9 +4784,11 @@ fn run_whale_stress_test() {
     let mut dg_ctrls = vec![ctrl_dg];
     let mut dg_treats = vec![treat_dg];
     let mut dg_cappeds = vec![capped_dg];
+    let mut dg_shocks = vec![shock_dg];
     let mut gdp_ctrls = vec![ctrl_gdp];
     let mut gdp_treats = vec![treat_gdp];
     let mut gdp_cappeds = vec![capped_gdp];
+    let mut gdp_shocks = vec![shock_gdp];
 
     for &seed in &seeds[1..] {
         let mut cs = ctrl_scenario.clone();
@@ -4786,36 +4821,55 @@ fn run_whale_stress_test() {
             dg_cappeds.push(s.debt / s.gdp.max(1.0));
             gdp_cappeds.push(s.gdp);
         }
+        let mut shock = shock_scenario.clone();
+        shock.seed = Some(seed);
+        let shock_dir = PathBuf::from(format!("/tmp/autotune-whale-shock-{}", seed));
+        std::fs::create_dir_all(&shock_dir).ok();
+        if run_headless(&shock, Some(shock_dir.clone())).is_ok()
+            && let Ok(s) = load_summary(&shock_dir.join("simulation.db"))
+        {
+            dg_shocks.push(s.debt / s.gdp.max(1.0));
+            gdp_shocks.push(s.gdp);
+        }
     }
 
     if !dg_ctrls.is_empty() {
         let avg_ctrl_dg = dg_ctrls.iter().sum::<f64>() / dg_ctrls.len() as f64;
         let avg_treat_dg = dg_treats.iter().sum::<f64>() / dg_treats.len() as f64;
         let avg_capped_dg = dg_cappeds.iter().sum::<f64>() / dg_cappeds.len() as f64;
+        let avg_shock_dg = dg_shocks.iter().sum::<f64>() / dg_shocks.len() as f64;
         let avg_ctrl_gdp = gdp_ctrls.iter().sum::<f64>() / gdp_ctrls.len() as f64;
         let avg_treat_gdp = gdp_treats.iter().sum::<f64>() / gdp_treats.len() as f64;
         let avg_capped_gdp = gdp_cappeds.iter().sum::<f64>() / gdp_cappeds.len() as f64;
+        let avg_shock_gdp = gdp_shocks.iter().sum::<f64>() / gdp_shocks.len() as f64;
         let multi_dg_delta = avg_treat_dg / avg_ctrl_dg;
         let multi_gdp_delta = (avg_treat_gdp - avg_ctrl_gdp) / avg_ctrl_gdp * 100.0;
         println!(
-            "  {:20} {:>12.3}x {:>12.3}x {:>12.3}x {:>10.3}x",
+            "  {:20} {:>12.3}x {:>12.3}x {:>12.3}x {:>12.3}x {:>10.3}x",
             "Avg D/G (all seeds)",
             avg_ctrl_dg,
             avg_treat_dg,
             avg_capped_dg,
-            avg_capped_dg / avg_treat_dg
+            avg_shock_dg,
+            avg_shock_dg / avg_treat_dg
         );
         println!(
-            "  {:20} {:>12.0} {:>12.0} {:>12.0} {:>+10.1}%",
+            "  {:20} {:>12.0} {:>12.0} {:>12.0} {:>12.0} {:>+10.1}%",
             "Avg GDP (all seeds)",
             avg_ctrl_gdp,
             avg_treat_gdp,
             avg_capped_gdp,
-            (avg_capped_gdp - avg_treat_gdp) / avg_treat_gdp * 100.0
+            avg_shock_gdp,
+            (avg_shock_gdp - avg_treat_gdp) / avg_treat_gdp * 100.0
         );
         println!(
             "  Baseline Whale vs control: D/G ratio {:.3}x, GDP {:+.1}%",
             multi_dg_delta, multi_gdp_delta
+        );
+        println!(
+            "  Capped vs Whale: D/G {:.3}x | Shock vs Whale: D/G {:.3}x",
+            avg_capped_dg / avg_treat_dg,
+            avg_shock_dg / avg_treat_dg
         );
     }
 }

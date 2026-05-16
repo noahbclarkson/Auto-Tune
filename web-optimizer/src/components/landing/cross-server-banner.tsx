@@ -43,6 +43,8 @@ export function CrossServerBanner() {
             <Link href="/true-prices" className="text-emerald-400 hover:underline">True Prices</Link>
             {' '}·{' '}
             <Link href="/servers" className="text-emerald-400 hover:underline">Server Explorer</Link>
+            {' '}·{' '}
+            <Link href="/trust" className="text-emerald-400 hover:underline">Trust &amp; Safeguards</Link>
           </span>
           <span className="text-gray-700">·</span>
           <span>Opt-in only. No player data shared. Your economy stays yours.</span>

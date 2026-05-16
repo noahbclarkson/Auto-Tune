@@ -2,6 +2,48 @@
 
 > What's changed in the rewrite-2 branch.
 
+## 2026-05-16 — Simulation Lab: Combined Whale Anti-Dump Mitigation Configs
+
+### Simulation Lab
+Added combined whale anti-dump mitigation configs to Rust `market-simulation`:
+- `whale_spread_shock_trigger_bps`: trigger spread shock when sell volume exceeds bps threshold
+- `whale_spread_shock_multiplier`: spread multiplier during shock (default 2.5×)
+- `whale_spread_shock_duration_ticks`: shock duration (default 288 ticks = 1 day)
+- `whale_high_value_sell_cooldown_ticks`: cooldown on high-value item sells (default 12 ticks)
+
+Added new `WhaleConfig` fields and `PlayerAgent` state for tracking cooldowns. Spread shock trigger wired into simulation tick (after volume recorded, before price discovery).
+
+**Finding:** Whale stress (uncapped dump) produces D/G 6.134× vs control 2.601×. Capped sell (500 units/item/tick) reduces to 5.333× (~13% improvement). Combined configs available for plugin engineer tuning — cap alone is insufficient, spread shock + cooldown are the complementary components.
+
+## 2026-05-15 — Web & Ecosystem: Trust Page + Test Cleanup
+
+### Web & Ecosystem
+- **Trust & Governance page** (`/trust`): Core principles, safeguards grid (live/partial/planned badges), data boundary table, honest caveat. Linked from true-prices, exchange-rates, servers, and cross-server banner.
+- **Public FAQ page** (`/faq`): 10-category searchable FAQ with accordion UX, live keyword search, code block styling, Discord/GitHub CTA for unresolved questions. Added to header nav (Learn section).
+- **Footer:** Fixed `/faq` internal link (was external GitHub link).
+- **First-run verification card:** Added bundled `/admin` first-run card so new admins confirm economy is live without backend surface changes.
+- **Test replacement:** `AutoTuneTest.java` (no-op placeholder) → `TransactionResultTest.java` covering real `TransactionResult` cases.
+
+### Builds
+- `web-optimizer/` 24 routes ✅ | `web/` ✅ | Java PMD 0 ✅
+
+## 2026-05-14 — Simulation Lab: Recommended Config Long-Run Validation
+
+### Simulation Lab
+`recommended_config` (2MM + 2GB + 3Cas + 1Far + 2Tra + 2Newbie + 60% Diamond floor) validated across 30d × 5 seeds and 60d × 5 seeds vs control (3Far, no Newbie):
+- 30d: GDP +26.1%, D/G −3.045×, vol −10.4%, TIER3 unchanged 0→0, D/G wins 4/5 seeds
+- 60d: GDP +1.6%, D/G −1.579×, vol −34.4%, TIER3 unchanged 2→2, D/G wins 4/5 seeds
+
+**Recommendation:** Newbie+GB config holds as strongest default candidate. Seed 42 regression noted (D/G 14.5× vs 9.1× at 60d) — random outlier confirmed in 4/5 seeds.
+
+VT stacking test: `recommended_config + 2VT` failed — GDP −11.2%, D/G −0.122× only, vol +10.5%, D/G wins only 2/5 seeds. **Do not stack VT on Newbie+GB defaults.**
+
+## 2026-05-13 — Simulation Lab: Rust ItemTier Parity + IT+VT Cancellation
+
+### Simulation Lab
+- Added Rust `ItemTier` mirroring Java spread/max-price-change multipliers (COMMON 1.0/1.0 → LEGENDARY 2.2/1.6). Explicit per-item overrides take precedence. Regression baselines refreshed after intentional engine-parity change.
+- IT+VT combination test: **cancels** — IT (+30.1% GDP, +2.41× D/G) + VT (−9.2% GDP) = net −7.7% GDP. D/G improvement −0.22× is marginal. **Never combine IT+VT in any config.**
+
 ## 2026-04-26 — Simulation Lab: 8/8 Fix Candidates Failed, Architectural Fix Required
 
 ### Simulation Lab

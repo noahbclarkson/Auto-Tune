@@ -197,6 +197,7 @@ impl Simulation {
                 item_count,
                 &base_prices,
                 self.config.whale_max_dump_per_item,
+                self.config.whale_high_value_sell_cooldown_ticks,
             ),
         };
         self.players.push(player);
@@ -365,6 +366,28 @@ impl Simulation {
             .filter(|e| e.is_active(self.current_tick))
             .cloned()
             .collect();
+
+        // Whale spread shock trigger: check if any item's sell volume exceeds threshold
+        if self.config.whale_spread_shock_trigger_bps > 0.0 {
+            let trigger_bps = self.config.whale_spread_shock_trigger_bps;
+            let threshold = trigger_bps; // already in bps (0.10 = 10%)
+            for item in &self.engine.items {
+                if item.tick_sell_volume > 0 {
+                    // sell volume exceeds threshold: trigger spread shock
+                    let item_base = item.base_price;
+                    let sell_value = item.tick_sell_volume as f64 * item_base;
+                    if sell_value > threshold * item_base * 1000.0 {
+                        // trigger spread shock
+                        if self.engine.shock_remaining_ticks == 0 {
+                            self.engine.spread_shock = self.config.whale_spread_shock_multiplier;
+                            self.engine.shock_remaining_ticks =
+                                self.config.whale_spread_shock_duration_ticks;
+                        }
+                        break; // only one shock per tick
+                    }
+                }
+            }
+        }
 
         self.engine.tick(
             online_count,

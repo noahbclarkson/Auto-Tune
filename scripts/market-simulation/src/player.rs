@@ -239,6 +239,10 @@ pub struct WhaleConfig {
     pub dump_price_factor: f64,
     /// True = buy heavily during accumulation phase.
     pub aggressive_buy: bool,
+    /// Minimum ticks between high-value (Epic+) sells. Prevents continuous
+    /// Diamond/Netherite dumping. None = no cooldown.
+    #[allow(dead_code)]
+    pub high_value_sell_cooldown_ticks: Option<u64>,
 }
 
 impl Default for WhaleConfig {
@@ -249,6 +253,7 @@ impl Default for WhaleConfig {
             max_dump_per_item: None,
             dump_price_factor: 0.50,
             aggressive_buy: true,
+            high_value_sell_cooldown_ticks: Some(12),
         }
     }
 }
@@ -336,6 +341,9 @@ pub struct PlayerAgent {
     pub whale_dormant_ticks: u64,
     /// Internal whale state: whether whale is currently dumping inventory.
     pub whale_is_dumping: bool,
+    /// Internal whale state: ticks since last high-value (Epic+) sell.
+    /// Used to enforce whale_high_value_sell_cooldown_ticks.
+    pub whale_ticks_since_high_value_sell: u64,
 }
 
 impl PlayerAgent {
@@ -386,6 +394,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -439,6 +448,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -496,6 +506,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -549,6 +560,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -602,6 +614,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent
@@ -662,6 +675,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         // Newbies prefer cheap basic items
@@ -723,6 +737,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         // AFK farmers prefer cheap gathered items (building blocks, ores, drops)
@@ -794,6 +809,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -874,6 +890,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -948,6 +965,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, base_prices);
         agent.init_preferences(item_count);
@@ -1016,6 +1034,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, &[]);
         agent.init_preferences(item_count);
@@ -1090,6 +1109,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, &[]);
         agent.init_preferences(item_count);
@@ -1103,12 +1123,14 @@ impl PlayerAgent {
         item_count: usize,
         _base_prices: &[f64],
         max_dump_per_item: Option<i32>,
+        high_value_sell_cooldown_ticks: Option<u64>,
     ) -> Self {
         let mut rng = SeededRng;
         // Whale starts with massive capital — 20x normal player budget
         let budget = rng.random(1_000_000.0..2_000_000.0);
         let whale_cfg = WhaleConfig {
             max_dump_per_item,
+            high_value_sell_cooldown_ticks,
             ..WhaleConfig::default()
         };
 
@@ -1157,6 +1179,7 @@ impl PlayerAgent {
             whale_ticks_since_dump: 0,
             whale_dormant_ticks: 0,
             whale_is_dumping: false,
+            whale_ticks_since_high_value_sell: 0,
         };
         agent.init_perceived_values(item_count, &[]);
         agent.init_preferences(item_count);
@@ -2493,6 +2516,17 @@ impl PlayerAgent {
             Some(c) => c.clone(),
             None => return, // Not a whale — shouldn't happen
         };
+
+        // Track cooldown ticks: decrement if positive
+        if self.whale_ticks_since_high_value_sell > 0 {
+            self.whale_ticks_since_high_value_sell =
+                self.whale_ticks_since_high_value_sell.saturating_sub(1);
+        }
+
+        // If on cooldown, skip selling LEGENDARY/EPIC items
+        if self.whale_ticks_since_high_value_sell > 0 {
+            // Skip high-value sells during cooldown if any inventory remains
+        }
 
         // If currently dumping, complete the dump and then enter dormant
         if self.whale_is_dumping {

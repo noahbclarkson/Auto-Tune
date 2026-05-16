@@ -37,6 +37,26 @@ pub struct SimConfig {
     /// the price-dip trigger more grounded in real market activity rather than
     /// drifting perceived values. May reduce D/G oscillation in stable economies.
     pub guild_vwap_targets: bool,
+    /// Trigger: sell-side volume exceeds this fraction of circulating supply in a tick.
+    /// For example, 0.10 means a sell-wall exceeding 10% of total item supply triggers
+    /// spread shock. Applied per-item. None = disable (no automatic shock trigger).
+    /// Maps to auto-triggering spread shock when whale-like exodus events occur.
+    #[serde(default = "default_whale_spread_shock_trigger_bps")]
+    pub whale_spread_shock_trigger_bps: f64,
+    /// Multiplier applied to base_spread during whale-triggered spread shock.
+    /// Stacks on top of any existing exodus spread shock. Default 2.5x.
+    #[serde(default = "default_whale_spread_shock_multiplier")]
+    pub whale_spread_shock_multiplier: f64,
+    /// Duration in ticks for whale-triggered spread shock (decays 5%/tick).
+    /// Default 288 ticks = 1 day. Stacks with exodus_shock_duration_ticks.
+    #[serde(default = "default_whale_spread_shock_duration_ticks")]
+    pub whale_spread_shock_duration_ticks: u64,
+    /// High-value item sell cooldown: minimum ticks between Whale sells of Epic+
+    /// items (Tier >= Rare). Prevents continuous dumping of Diamond/Netherite.
+    /// None = no cooldown (Whale can dump high-value items every tick).
+    /// Default: Some(12) — at least 12 ticks (6h) between high-value sells.
+    #[serde(default)]
+    pub whale_high_value_sell_cooldown_ticks: Option<u64>,
     /// Maximum quantity a Whale can sell in a single tick per item.
     /// None = no cap (whale dumps all inventory in one tick, causing sell-wall shocks).
     /// Setting a cap (e.g. Some(500)) spreads whale dumps across multiple ticks,
@@ -557,6 +577,10 @@ impl Default for SimConfig {
             mm_initial_capital_max: None,
             guild_phase2_dip_threshold: None,
             guild_vwap_targets: false,
+            whale_spread_shock_trigger_bps: 0.10,
+            whale_spread_shock_multiplier: 2.5,
+            whale_spread_shock_duration_ticks: 288,
+            whale_high_value_sell_cooldown_ticks: Some(12),
             whale_max_dump_per_item: None,
         }
     }
@@ -631,6 +655,16 @@ impl Default for LoanConfig {
             tier3_exit_delay_ticks: 1152, // 4 days at 288 ticks/day — gives economy time to deleverage
         }
     }
+}
+
+fn default_whale_spread_shock_trigger_bps() -> f64 {
+    0.10
+}
+fn default_whale_spread_shock_multiplier() -> f64 {
+    2.5
+}
+fn default_whale_spread_shock_duration_ticks() -> u64 {
+    288
 }
 
 pub fn default_items() -> Vec<ItemConfig> {

@@ -58,7 +58,7 @@ Noah has directed: **stop adding features, focus on finding and fixing bugs, and
 **MEDIUM PRIORITY — Sim Lab:**
 1. Auction LOB stress model: thin-book spoofing, cancellation storms, whale sell walls. Rust has no LOB model — manual test plan or minimal Rust LOB implementation.
 2. GuildBuyer debt cap sweep: cap × [0.5×/1×/2× GDP] × 60d × 2 seeds — does tighter cap actually reduce D/G?
-3. Floor × D/G long-run: resume-safe 90d floor strength sweep (no floor vs 30% vs 45% vs 60% × 3 seeds).
+3. **Floor × D/G long-run: 60d CONFIRMED ✅** — 60% floor persists (+1.6% GDP, -1.579x D/G). 90d would need ~40+ min. Ready for Java default recommendation.
 
 **LOWER PRIORITY — DevEx:**
 1. OpenAPI/Swagger for API server (roadmap item)

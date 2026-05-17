@@ -126,6 +126,22 @@ See `/findings` page → "Is the 2MM+2GB+floor config stable at 60+ days?" for f
 
 ---
 
+## 2026-05-16 — Simulation Lab: Whale Anti-Dump Final Results
+
+### Simulation Results
+5-seed whale stress test (seeds: 42, 12345, 98765, 77777, 11111):
+
+| Arm | Avg D/G | vs Control | vs Whale |
+|-----|---------|------------|----------|
+| Control | 2.601x | — | — |
+| Whale | 5.975x | +130% | — |
+| Capped (500) | 5.578x | +114% | -6.6% |
+| **Shock (cap+spread)** | **4.555x** | **+75%** | **-23.8%** |
+
+**Finding:** cap(500) + spread shock provides **18.3% additional D/G reduction** over cap-only. Combined: 76.2% of uncapped whale D/G vs 93.4% for cap-only. **Recommendation: enable both cap(500) + spread shock together.**
+
+---
+
 ## 2026-04-14 — Critical Parameter Correction
 
 ### Changed

@@ -4709,15 +4709,15 @@ fn run_whale_stress_test() {
         "", "", "", "", "", ""
     );
     let dg_delta = treat_dg / ctrl_dg;
-    let capped_dg_delta = capped_dg / treat_dg;
+    let _capped_dg_delta = capped_dg / treat_dg;
     let shock_dg_delta = shock_dg / treat_dg;
     let gdp_delta = (treat_gdp - ctrl_gdp) / ctrl_gdp * 100.0;
-    let capped_gdp_delta = (capped_gdp - treat_gdp) / treat_gdp * 100.0;
+    let _capped_gdp_delta = (capped_gdp - treat_gdp) / treat_gdp * 100.0;
     let shock_gdp_delta = (shock_gdp - treat_gdp) / treat_gdp * 100.0;
-    let capped_buy_delta = (capped_buy - treat_buy) * 100.0;
+    let _capped_buy_delta = (capped_buy - treat_buy) * 100.0;
     let shock_buy_delta = (shock_buy - treat_buy) * 100.0;
     let vol_delta = treat_vol - ctrl_vol;
-    let capped_vol_delta = capped_vol - treat_vol;
+    let _capped_vol_delta = capped_vol - treat_vol;
     let shock_vol_delta = shock_vol - treat_vol;
     println!(
         "  {:20} {:>12.3}x {:>12.3}x {:>12.3}x {:>12.3}x {:>10.3}x",

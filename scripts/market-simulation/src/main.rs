@@ -4577,7 +4577,7 @@ fn run_it_added_test() {
 fn run_whale_stress_test() {
     use crate::analyzer::load_summary;
     let seeds: Vec<u64> = vec![42, 12345, 98765, 77777, 11111];
-    let cap_per_item = 500;
+    let cap_per_item = 100;
 
     println!("\n╔══════════════════════════════════════════════════════════════╗");
     println!("║       WHALE STRESS TEST                                    ║");

@@ -651,6 +651,36 @@ public class MarketEngine {
         tickSellVolume.merge(itemId, amount, Integer::sum);
     }
 
+    /**
+     * Returns the number of units of this item sold in the current tick.
+     */
+    public int getTickSellVolume(int itemId) {
+        return tickSellVolume.getOrDefault(itemId, 0);
+    }
+
+    /**
+     * Returns the remaining cooldown ticks for this item's high-value sell cooldown.
+     * Returns 0 if no cooldown is active.
+     */
+    public int getSellCooldownRemaining(int itemId) {
+        return itemSellCooldowns.getOrDefault(itemId, 0);
+    }
+
+    /**
+     * Sets a sell cooldown for an item (used after Epic/Legendary item sells).
+     */
+    public void setSellCooldown(int itemId, int ticks) {
+        itemSellCooldowns.put(itemId, ticks);
+    }
+
+    /**
+     * Returns how many ticks the current spread shock has remaining.
+     * Used in sell-cap error messages so players know when they can sell again.
+     */
+    public int getShockRemainingTicks() {
+        return shockRemainingTicks;
+    }
+
     public Map<Integer, BigDecimal> getPriceCache() {
         return Map.copyOf(priceCache);
     }

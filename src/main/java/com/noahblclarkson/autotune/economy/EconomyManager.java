@@ -13,6 +13,7 @@ import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.manager.PriceReporter;
 import com.noahblclarkson.autotune.manager.TreasuryService;
 import com.noahblclarkson.autotune.model.CartItem;
+import com.noahblclarkson.autotune.model.ItemTier;
 import com.noahblclarkson.autotune.model.PlayerData;
 import com.noahblclarkson.autotune.model.ShopItem;
 import com.noahblclarkson.autotune.model.Transaction;
@@ -216,6 +217,31 @@ public class EconomyManager {
         BigDecimal taxAmount = treasuryService.calculateSellTax(totalPrice);
         BigDecimal netProceeds = totalPrice.subtract(taxAmount);
 
+        // Whale anti-dump: enforce per-item sell cap and cooldown before accepting the sell.
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump = configManager.getConfig().whaleAntiDump();
+        if (antiDump.enabled()) {
+            // Check cooldown for Epic/Legendary items
+            Integer cooldown = antiDump.highValueSellCooldownTicks();
+            if (cooldown != null && item.effectiveTier() != ItemTier.COMMON
+                    && item.effectiveTier() != ItemTier.UNCOMMON && item.effectiveTier() != ItemTier.RARE) {
+                int remaining = marketEngine.getSellCooldownRemaining(item.id());
+                if (remaining > 0) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.error("High-value item sell cooldown active: " + remaining + " ticks remaining"));
+                }
+            }
+            // Check per-item sell cap
+            Integer cap = antiDump.maxSellPerItemPerTick();
+            if (cap != null) {
+                int tickSell = marketEngine.getTickSellVolume(item.id());
+                if (tickSell + amount > cap) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.error("Sell cap exceeded: max " + cap + " per tick for " + item.material().name()
+                                    + ". Try again shortly."));
+                }
+            }
+        }
+
         // Process atomically: DB write first (source of truth), then inventory modification.
         // This prevents item loss if the DB write fails — inventory is only touched after
         // the transaction is safely persisted. On DB failure nothing changes.
@@ -307,6 +333,29 @@ public class EconomyManager {
         BigDecimal taxAmount = treasuryService.calculateSellTax(totalPrice);
         BigDecimal netProceeds = totalPrice.subtract(taxAmount);
 
+        // Whale anti-dump: enforce per-item sell cap and cooldown before recording.
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump = configManager.getConfig().whaleAntiDump();
+        if (antiDump.enabled()) {
+            // Check cooldown for Epic/Legendary items
+            Integer cooldown = antiDump.highValueSellCooldownTicks();
+            if (cooldown != null && item.effectiveTier() != ItemTier.COMMON
+                    && item.effectiveTier() != ItemTier.UNCOMMON && item.effectiveTier() != ItemTier.RARE) {
+                int remaining = marketEngine.getSellCooldownRemaining(item.id());
+                if (remaining > 0) {
+                    return TransactionResult.error("High-value item sell cooldown active: " + remaining + " ticks remaining");
+                }
+            }
+            // Check per-item sell cap
+            Integer cap = antiDump.maxSellPerItemPerTick();
+            if (cap != null) {
+                int tickSell = marketEngine.getTickSellVolume(item.id());
+                if (tickSell + amount > cap) {
+                    return TransactionResult.error("Sell cap exceeded: max " + cap + " per tick for " + item.material().name()
+                            + ". Ticks remaining: " + marketEngine.getShockRemainingTicks());
+                }
+            }
+        }
+
         // Step 1: Remove items from inventory FIRST.
         // If this fails, we abort without touching money or DB.
         // Clone the inventory contents so we can restore on failure.
@@ -363,6 +412,16 @@ public class EconomyManager {
                     "[Auto-Tune] DB write failed after sell for " + player.getName()
                             + " (amount=" + amount + ", net=" + netProceeds + "). "
                             + "Money deposited but transaction not recorded. Manual DB review may be needed.", e);
+        }
+
+        // Set cooldown for Epic/Legendary items
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump2 = configManager.getConfig().whaleAntiDump();
+        if (antiDump2.enabled()) {
+            Integer cooldown = antiDump2.highValueSellCooldownTicks();
+            if (cooldown != null && item.effectiveTier() != ItemTier.COMMON
+                    && item.effectiveTier() != ItemTier.UNCOMMON && item.effectiveTier() != ItemTier.RARE) {
+                marketEngine.setSellCooldown(item.id(), cooldown);
+            }
         }
 
         return TransactionResult.success(TransactionType.SELL, amount, netProceeds);

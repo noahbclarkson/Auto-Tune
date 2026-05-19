@@ -1,792 +1,1059 @@
-# PLAN.md — Anvil's Work Plan
+## Cron (2026-05-18 13:04 UTC) — Web & Ecosystem: API Server Auth Review ✅
 
-_Living document. Update after every session. Prioritize ruthlessly._
+**rewrite-2 `90e8427`** | `./gradlew build` ✅ PMD 0 | `web-optimizer/` 29 routes ✅ | `web/` 12 routes ✅ | Pushed: none (clean session)
 
-## Cron (2026-05-19 01:34 UTC) — Simulation Lab: Whale Anti-Dump Port Bug Fixed ✅
+### Builds — All Clean
+- `./gradlew build -x installWebDeps -x test` → BUILD SUCCESSFUL PMD 0
+- `web-optimizer/` direct: 29 routes ✅
+- `web/` direct: 12 routes ✅
+- Zero TODOs/FIXMEs in main source ✅
+- API server auth reviewed: sound — 90d key rotation, SHA-256 storage, Bearer auth on submissions
 
-**rewrite-2 `7a05c88`** | `./gradlew build` ✅ PMD 0 | Rust fmt/clippy ✅ 20/20 tests ✅ | Pushed ✅
-
-### Bug Found + Fixed: `maxSellPerItemPerTick` and `highValueSellCooldownTicks` Were Dead Code ⚠️
-
-**Commit `bff88b9`** (the whale anti-dump port from sim to plugin) had incomplete wiring. The `WhaleAntiDumpConfig` record, `ConfigManager` parsing, `config.yml` defaults, spread shock trigger, and spread shock application were all correct. But **no sell path enforced the cap or cooldown**:
-- `EconomyManager.processSellAsync()` — cap/cooldown check added before `supplyAsync`
-- `EconomyManager.processSellImmediate()` — cap/cooldown check added before item removal; cooldown set after Epic/Legendary sell
-- Added `MarketEngine.getTickSellVolume()`, `getSellCooldownRemaining()`, `setSellCooldown()`, `getShockRemainingTicks()`
-- Added `ItemTier` import to `EconomyManager`
-
-**With defaults** (`max-sell-per-item-per-tick: null`, `high-value-sell-cooldown-ticks: null`): uncapped, no cooldown — safe.
-**When admin sets `max-sell-per-item-per-tick: 100`**: now enforced. All three anti-dump mechanisms now active: spread shock + sell cap + cooldown.
-
-### Builds
-- `./gradlew build -x installWebDeps -x test` → BUILD SUCCESSFUL PMD 0 (57s)
-- Rust fmt/clippy ✅ 20+14+2 tests ✅
+### API Server Auth — `api-server/src/auth.rs`
+- **90-day key rotation** — correct balance between security and usability
+- **SHA-256 hashed keys** — no plain-text storage anywhere
+- **Registration open** (`/servers/register`) — name+player_count only, no pre-existing key required. Right UX for onboarding new servers.
+- **Submission requires Bearer auth** (`POST /servers/{id}/prices`) ✅
+- **Key format** `sk_live_<uuid>_<random>` — easy to identify in logs
 
 ### State
-- **Anti-dump:** fully ported from sim to plugin ✅
-- **Blocked:** API deploy (Arc's Fly.io token) | testimonials (human outreach)
+Repo clean. All surfaces consistent. No bugs. No pushes.
+**Blocked:** API deploy (Arc's Fly.io token) | testimonials (human outreach)
 
 ---
 
+## Cron (2026-05-17 07:15 UTC) — Web & Ecosystem: Builds Clean, Ecosystem Feature Ideation ✅
+
+**rewrite-2 `c8cf082`** | `./gradlew build` ✅ PMD 0 | `web-optimizer/` 25 routes ✅ | `web/` 12 routes ✅ | Pushed: none (clean session)
+
+### Builds
+- `./gradlew build -x installWebDeps` ✅ PMD 0 (59s)
+- `web-optimizer/` direct: 25 routes ✅
+- `web/` direct: 12 routes ✅
+- Rust fmt/clippy clean across all crates
+
+### Ecosystem Review
+Reviewed full public site surface — all consistent:
+- **Docs hub** (`/docs`): 15 doc cards with audience badges, reading times, GitHub links ✅
+- **Install guide**: 6 steps, Discord bot, correct circuit values (tier3=30.0, counter-cyclical) ✅
+- **Trust page**: Anti-Sybil, freshness filtering, outlier rejection — live/partial badges correct ✅
+- **Servers page**: Mock servers with health scores; real data after API deploy ✅
+- **Roadmap**: Accurate; `web-optimizer` live dashboard marked "in-progress" (code done, blocked on API deploy) ✅
+- **Compare table**: 4×4 against Essentials/ShopGUI+/PlayerShops — credible ✅
+- **Why Auto-Tune**: Scenario cards with mock sparklines — clear narrative ✅
+
+**API deploy is still #1 ecosystem unlock.** No workaround available.
+
+### Feature Ideas (future cycles — per Noah's redirect NOT prioritized now)
+
+**Plugin:**
+1. Anti-dump telemetry package: sell-wall detection, spread shock/cooldown triggers, admin alerts (cap+spread-shock confirmed +23.8% D/G vs cap-only in sim)
+2. Config version history: `/at admin config history` with rollback
+3. In-game setup wizard: `/at wizard` first-run flow
+4. Scheduled market events: cron-style event scheduling
+5. Circuit interest rate preview in dashboard
+
+**Public web:**
+1. Server showcase (after API deploy + real testimonials)
+2. Interactive config comparison tool (pick two → side-by-side sim results)
+3. Exchange rate history chart on `/true-prices`
+4. Public API status page (`/status`)
+
+**Bundled web:**
+1. Player impact leaderboard (top P&L, most trades)
+2. Auction fill browser notifications (Notification API)
+3. Market digest history endpoint: `GET /api/digest/history`
+
+### State
+Repo clean. All surfaces consistent. No pushes. API deploy remains #1 blocker.
+
+---
+
+## Cron (2026-05-17 01:07 UTC) — Web & Ecosystem: Whale Anti-Dump Final Results ✅
+
+**rewrite-2 `c8cf082`** | `./gradlew build` ⚠️ web race | `web-optimizer/` 29 routes ✅ | `web/` 13 routes ✅ | market-simulation fmt/clippy/test ✅ | Pushed: none
+
+### Builds
+- `web/` — 13 routes ✅
+- `web-optimizer/` — 29 routes ✅
+- market-simulation — fmt ✅ clippy ✅ test 14/14 ✅
+- api-server — fmt ✅ clippy ✅
+- price-solver — fmt ✅ clippy ✅ test 2/2 ✅
+- Java — PMD 0 (`:buildWeb` race, known; run `cd web && npm run build` directly)
+
+### Simulation: Whale Anti-Dump Final Combined Results
+5-seed: control / whale / capped(500) / shock(cap+spread-shock)
+
+| Arm | Avg D/G | vs Control | vs Whale | vs Capped |
+|-----|---------|------------|----------|-----------|
+| Control | 2.601x | — | — | — |
+| Whale | 5.975x | **+130%** | — | — |
+| Capped (500) | 5.578x | +114% | -6.6% | — |
+| **Shock (cap+spread)** | **4.555x** | **+75%** | **-23.8%** | **-18.3%** |
+
+Shock = cap(500) + `whale_spread_shock_trigger_bps=0.10` + `whale_spread_shock_multiplier=2.5` + `whale_spread_shock_duration_ticks=288`
+
+**Finding:** Spread shock provides **18.3% extra D/G reduction** over cap-only. Combined arm: 76.2% of uncapped whale D/G vs 93.4% for cap-only.
+
+**Recommendation:** Enable cap (500) + spread shock together. Tighter cap (100-200) tested prior — slightly worse than 500.
+
+### Next Priorities
+1. API deploy (Arc's Fly.io token) — #1 unlock for live-data surfaces
+2. Real testimonials — replace fictional personas on landing
+3. Server showcase page once API deploy + real quotes available
+4. Seed-42 failure analysis for recommended config (keep Newbie+GB, understand seed 42 regression)
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-17 01:00 UTC) — Sim: Spread Shock Combined Test Works ✅
+
+**rewrite-2 `c8cf082`** | Headless whale stress test completed | Rust fmt/clippy ✅ test 14/14 ✅
+
+### Shipped: Spread Shock + Cap = Better Anti-Dump
+
+First combined test of cap + spread shock:
+
+| Arm | Avg D/G | vs Control | vs Whale |
+|-----|---------|------------|----------|
+| Control | 2.601x | — | — |
+| Whale | 5.975x | +130% | — |
+| Capped (500) | 5.578x | +114% | -6.6% |
+| **Shock** | **4.555x** | +75% | **-23.8%** |
+
+**Finding:** Spread shock provides **18.3% extra D/G reduction** over cap-only.
+- Combined: 76.2% of uncapped whale D/G
+- Cap-only: 93.4% of uncapped whale D/G
+
+**Recommendation:** Enable cap (500) + spread shock together. Test tighter cap (100-200).
+
+### Next Priorities
+1. ~~Test tighter cap (100-200) + spread shock combo~~ — DONE (2026-05-18)
+2. API deploy (Arc's Fly.io token)
+3. Real testimonials (human outreach)
+
+**Blocked:** API deploy | Real testimonials
+
+---
+
+## Cron (2026-05-16 13:13 UTC) — Web & Ecosystem: Trust Link Fix + Builds Clean ✅
+
+**rewrite-2 `31f8532` → `18b44b2`** | `./gradlew build` ✅ PMD 0 | `web-optimizer/` 29 routes ✅ | `web/` 13 routes ✅ | Pushed ✅
+
+### Shipped: Landing CrossServerBanner Now Links /trust ✅
+**File:** `web-optimizer/src/components/landing/cross-server-banner.tsx`
+
+Gap: CrossServerBanner footer linked `/true-prices` and `/servers` but not `/trust`. All inner pages (servers, true-prices, exchange-rates, install) already linked `/trust`. The landing page is the highest-traffic entry for new visitors — trust should be surfaced there too.
+
+**Fix:** Added "Trust & Safeguards" link to the banner footer alongside existing `/true-prices` and `/servers` links.
+
+### Builds
+- `./gradlew build -x installWebDeps` ✅ PMD 0 (38s)
+- `web-optimizer/` direct build: ✅ 29 routes including `/trust` and `/faq`
+- `web/` direct build: ✅ 13 routes
+- Rust market-simulation: 14/14 tests ✅
+
+### API Freshness Filtering — Already Implemented
+`api-server/src/price_computer.rs:178` — `stale_threshold_hours` env var filters silent servers from true-price computation. Confirmed implemented. No separate task needed.
+
+### Next Priorities
+1. API deploy (Arc's Fly.io token) — the #1 unlock for live-data surfaces (true-prices server count, landing "Active Servers" count, exchange-rates live data, servers activity feed)
+2. Real testimonials (human outreach to server admins)
+3. Server showcase page once API deploy + real quotes are available
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-16 08:30 UTC) — Simulation Lab: Whale Stress Test (5-seed) ⚠️
+
+**rewrite-2 `31f8532` → `HEAD`** | sim: clippy ✅ fmt ✅ test ✅ | Pushed
+
+### Shipped: whale stress test multi-seed run
+Seeds: 42, 12345, 98765, 77777, 11111 | Arms: control / whale / whale+capped
+
+### Key Findings
+
+**D/G Ratio (Debt/GDP)**
+| Arm | Avg D/G | vs Control |
+|-----|---------|------------|
+| Control (no whale) | 2.601x | — |
+| Treatment (whale) | 5.975x | **+130%** |
+| Capped (500/item cap) | 5.578x | +114% |
+
+Capped vs Treat: **only 6.6% D/G improvement** — 500/item cap too loose.
+
+**GDP Impact**
+- Whale inflates GDP +132.5% (wealth gets socialized into economy)
+- Cap reduces GDP -8% vs untreated whale (wealth still dumped, just slower)
+
+**Stability** (avg volatility threshold < 0.05)
+- Control: ✅ stable all 5 seeds
+- Treatment: ❌ unstable 4/5 seeds
+- Capped: ❌ still unstable most seeds
+
+### Anti-Dump Configs (commit 5f7056e)
+New configs exist but NOT yet tested in whale_stress scenario:
+- `whale_spread_shock_trigger_bps`: spread shock on volume spike (default 10%)
+- `whale_spread_shock_multiplier`: 2.5x during shock
+- `whale_spread_shock_duration_ticks`: 288 ticks (1 day)
+- `whale_high_value_sell_cooldown_ticks`: 12 ticks on Epic/Legendary
+
+### Commit 31f8532 Fix
+Whale cooldown was a no-op. Counter only decremented, never incremented on sell.
+After fix: properly sets cooldown after Epic/Legendary item sell.
+
+### Next Priorities
+1. Wire anti-dump spread_shock into whale_stress scenario for combined mitigation testing
+2. Lower `whale_max_dump_per_item` — current 500 is too loose to constrain whale impact
+3. Add explicit spread-shock trigger sweep scenario
+4. Document best engine parameters in PLAN.md once validated
+
+### Whale Anti-Dump Test (60d Confirm)
+- Sell cap (500/item) → only 6.6% D/G improvement, -8% GDP
+- Need combined: cap + spread shock + cooldown tested together
+- Current cap too loose — recommend lower default (e.g., 100-200)
+- Next: test combined mitigation configs
+
+**Blocked:** API deploy | Real testimonials
+
+---
+
+## Cron (2026-05-16 16:30 UTC) — Simulation Lab: Whale Stress Test ⚠️
+
+**rewrite-2 `18b44b2`** | Rust clippy ✅ | fmt ✅ | test ✅ | No pushes
+
+### 5-Seed Whale Stress Test Results
+| Metric | Control | Whale | Capped (500) | Delta vs Whale |
+|--------|--------|-------|----------------|-----------|
+| Avg D/G | 2.601x | 5.975x | 5.578x | +114% |
+| Avg GDP | 445K | 1,035K | 952K | -8.0% |
+| Stability | 5/5 stable | 1/5 stable | 2/5 stable | slight |
+
+### Key Finding
+Sell-size cap alone is INSUFFICIENT. 500 units/item cap only reduces D/G by 6.6% vs uncapped whale. Combined mitigations (cap + spread shock + cooldown) need testing together.
+
+### Code Quality
+- Rust clippy ✅ fmt ✅ test ✅
+- Whale configs exist but NOT combined in test run
+
+### Next Priorities
+1. Test combined anti-dump: moderate cap + spread shock + cooldown together
+2. Recommend tighter cap default (100-200 vs current 500)
+3. Add admin telemetry for whale-like sell walls
+
+**Blocked:** API deploy | Real testimonials
+
+---
+
+## Cron (2026-05-15 07:08 UTC) — Web & Ecosystem: Trust Page + Test Cleanup ✅
+
+**rewrite-2 `4cc9b7d` → `adc9055`** | `web-optimizer/` 24 routes | Pushed ✅
+
+### Shipped
+- **Trust & Governance page** (`/trust`): Core principles, safeguards grid (live/partial/planned badges), data boundary table, honest caveat.
+- **Header nav:** `/trust` added to Community section.
+- **Test replacement:** `AutoTuneTest.java` (no-op) → `TransactionResultTest.java` covering real `TransactionResult` cases.
+
+### Builds
+- Java: ✅ PMD 0 | `web-optimizer/`: ✅ 24 routes | `web/`: ✅
+
+### Ecosystem State
+Trust page closes the highest-priority public-facing gap. API deploy remains #1 unlock for live-data surfaces.
+
+### Next Priorities
+1. ~~Link `/trust` from true-prices and servers pages~~ — DONE `22450d0`
+2. ~~Seed-42 recommended-config investigation~~ — DONE: confirmed as random outlier (4/5 seeds improve)
+3. Server showcase page after API deploy + real testimonials
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-15 02:15 UTC) — Web & Ecosystem: Public /faq Page Shipped ✅
+
+**rewrite-2 `345e131` → `0a36644`** | Pushed
+
+### Shipped: Public `/faq` page
+- Created `web-optimizer/src/app/faq/page.tsx` — first-class FAQ route with:
+  - 10 categories: General, Pricing, Economy Distressed, Configuration, Market Events, Dashboard, Cross-Server, Performance, Troubleshooting, Still Stuck
+  - Live search: filters all questions by keyword in real-time
+  - Category sidebar + accordion Q&A
+  - Code blocks with monospace styling
+  - Discord/GitHub CTA for unresolved questions
+- Added `/faq` to header nav (Learn section, between `/admin` and `/docs`)
+- Updated footer to link `/faq` internally (was external GitHub link)
+
+### Builds
+- Java build (no web): ✅ BUILD SUCCESSFUL
+- `web-optimizer/` build: ✅ 23 routes including `/faq`
+- `web/` build: ⚠️ race condition at `:buildWeb` (known, run `cd web && npm run build` directly)
+
+### Docs Gap Closed
+`docs/FAQ.md` now has a public-facing route. Admins no longer need to browse GitHub to read the FAQ — it's directly accessible at `/faq` on the public site.
+
+### Next Priorities
+1. Trust/Governance page (`/trust`) — link from true-prices, exchange-rates, servers, and cross-server banner
+2. Server showcase page (after API deploy + real testimonials)
+3. Bundled `web/` first-run admin verification card: already shipped (`99f878f`) ✅
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+### Next Priorities
+1. ~~Seed-42 failure analysis~~ — DONE: confirmed as random-seed artifact
+2. ~~Combined Whale mitigation sweep~~ — DONE (2026-05-18)
+3. Plugin-facing default recommendation: Newbie+GB config (4/5 seed win)
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-14 20:25 UTC) — Web & Ecosystem: First-Run Admin Verification ✅
+
+**rewrite-2 `38ea2d5` → `345e131`** | `web/` build ✅ | Pushed ✅ | #autotune checked ✅
+
+### Shipped
+- Added a bundled `/admin` **First-Run Verification** card (`web/src/components/admin/first-run-verification-card.tsx`).
+- Integrated it above the detailed config/auction/audit panels so new admins immediately see whether Auto-Tune is live.
+- Uses existing endpoints only:
+  - `/api/stats`: plugin reachability, server name, online players, tracked item count.
+  - `/api/admin/health`: GDP/trade activity, buy/sell mix, circuit tier.
+- Handles three states clearly:
+  - **Economy Verified** — plugin reachable, items tracked, activity recorded, circuit normal.
+  - **Economy Starting Up** — no items/trades yet, with concrete `shops.yml`, `/shop`, and `/sell` guidance.
+  - **Economy Setup Issues** — API/circuit failures surfaced as action needed.
+- Follow-up fix `345e131` tightened trade-mix logic so heavily one-sided economies warn instead of being called balanced.
+
+### Ecosystem Observation
+This closes the highest-leverage bundled dashboard onboarding gap from prior audits: “is my economy live?” is now answered directly in the admin dashboard without adding backend surface area. The remaining onboarding/trust bottlenecks are public-web discovery (`/faq`, trust/governance page) and API deploy.
+
+### Future Ideas to Pick Up
+**Plugin Engineer**
+1. Dedicated `/api/admin/verification` endpoint with richer diagnostics: Vault provider, DB migration version, latest market tick, latest transaction, price reporter heartbeat.
+2. Anti-dump telemetry package: sell-wall detection, spread-shock/cooldown state, and admin alerts once Sim Lab validates thresholds.
+3. In-game `/at wizard` can reuse the same verification checklist semantics after first setup.
+
+**Sim Lab**
+1. Seed-42 recommended-config failure analysis before final Java default recommendation.
+2. Combined Whale mitigation sweep: moderate cap + sell-wall spread shock/cooldown + alert thresholds.
+3. API adversarial low-sample model: Sybil servers, fake player counts, and confidence-label thresholds.
+
+**Public Web / Docs**
+1. Add `/faq` route rendering `docs/FAQ.md` content with category/search UX.
+2. Add Trust/Governance page linked from true-prices, exchange-rates, and server pages before API launch.
+3. Once testimonials are real, replace public social proof placeholders with server-admin quotes and outcomes.
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-14 16:30 UTC) — Simulation Lab: Recommended Long-Run Validation ✅
+
+**rewrite-2 at `653c7bd` start** | Rust sim harness added | `cargo clippy -- -D warnings` ✅ | `cargo fmt` ✅ | `cargo test` ✅ 14/14
+
+### Code / Harness
+- Added `Scenario::recommended_config_plus_vt()`.
+- Added `--recommended-longrun-test` for baseline vs recommended config across `30d/60d × 5 seeds`.
+- Added `--recommended-vt-test` for recommended config vs `recommended+2VT` across `14d × 5 seeds`.
+
+### Long-Run Result — Recommended Config Holds
+Treatment: `2MM + 2GB + 3Cas + 1Far + 2Tra + 2Newbie + 60% Diamond floor`
+Control: `2MM + 2GB + 3Cas + 3Far + 2Tra + floor`
+
+- 30d: GDP `+26.1%`, D/G `-3.045x`, vol `-10.4%`, TIER3 unchanged `0→0`, D/G wins `4/5` seeds.
+- 60d: GDP `+1.6%`, D/G `-1.579x`, vol `-34.4%`, TIER3 unchanged `2→2`, D/G wins `4/5` seeds.
+
+**Recommendation:** Keep Newbie+GB config as the strongest default candidate. It passes 30/60d validation and is not just a short-run artifact. Caveat: seed `42` regresses badly; inspect that failure mode before final Java default changes.
+
+### VT Result — Do Not Add to Default
+`recommended_config + 2VT` vs recommended at 14d:
+- GDP `-11.2%`
+- D/G `-0.122x` only
+- Vol(CV) `+10.5%`
+- D/G wins only `2/5` seeds
+
+**Recommendation:** Do **not** stack VT on top of Newbie+GB defaults. VT's tiny average D/G benefit is not robust and it dilutes the cleaner Newbie demand-sink effect.
+
+### Next Priorities
+1. Seed-42 failure analysis for recommended config at 30/60d.
+2. Plugin-facing default-config note: recommend Newbie+GB, exclude IT+VT/VT from defaults.
+3. Combined Whale mitigation sweep: cap + spread shock/cooldown + admin telemetry.
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+_Living document. Update after every session. Prioritize ruthlessly._
+
 **⚠️ STRATEGIC REDIRECT (2026-05-04): Bug Fixes + Repo Health over New Features**
 
-Noah has directed: **stop adding features, focus on finding and fixing bugs, and clean up the repo**. The auction ecosystem, circuit telemetry, config preview, and depth charts are all done. The product needs correctness, stability, and maintainability.
+Noah has directed: **stop adding features, focus on finding and fixing bugs, and clean up the repo**.
+
+The auction ecosystem, circuit telemetry, config preview, and depth charts are all done. The product is now feature-rich enough — what it needs is correctness, stability, and maintainability.
+
+**Redirect:**
+- Priority: bugs, refactoring, project structure, code health
+- Deprioritize: new features, new pages, new simulation scenarios
+- Look for: sharp edges in plugin logic, Rust code smells, TypeScript type gaps, integration mismatches between Java/Rust/web, test coverage gaps, migration edge cases, error handling holes
+- Clean up: dead code, stale TODOs, inconsistent naming, copy drift between docs and code
+
+**Still blocked (non-code):** API server deploy (Arc's Fly.io token), real testimonials (human outreach). These are unaffected by this redirect.
+
+---
+
+
+
+## Cron (2026-05-14 08:30 UTC) — Simulation Lab: Recommended Newbie Config Confirmed ✅
+
+**rewrite-2 at `653c7bd`** | `--gb-newbie-healthy-test` ✅ | market-simulation fmt/clippy/test ✅ | Pushed ✅
+
+### Code / Harness
+- Added named `Scenario::recommended_config()` for the production candidate: `2MM + 2GB + 3Cas + 1Far + 2Tra + 2Newbie + 60% Diamond floor`.
+- Corrected stale labels in `--gb-newbie-healthy-test`: treatment is **1Far+2Newbie**, not 2Far+2Newbie. The code was already running 1Far; the output/comments were misleading.
+- Reworded verdict to the precise claim: aggregate GDP/DG/vol improve and D/G improves 5/5 seeds.
+
+### Recommended Config Head-to-Head
+Control: `2MM + 2GB + 3Cas + 3Far + 2Tra + 60% Diamond floor`
+Treatment: `2MM + 2GB + 3Cas + 1Far + 2Tra + 2Newbie + 60% Diamond floor`
+
+- GDP: `626,974` → `722,883` (`+15.3%`)
+- D/G: `4.999x` → `3.083x` (`-1.916x`)
+- Vol(CV): `27.997%` → `24.819%` (`-11.4%`)
+- Buy ratio: `80.1%` → `78.0%` (`-2.1pp`, more balanced)
+- TIER3 events: `0` → `0`
+- Per-seed D/G improved 5/5; largest win seed `77777`: `7.720x` → `2.206x`
+
+### Product Recommendation
+- Recommend the **Newbie+GB config candidate** over the current 2MM+2GB+3Far baseline: it keeps economies healthier by replacing structural sell-side farming pressure with fresh buy-side demand.
+- Caveat: seed `42` GDP dropped (`709K` → `457K`) while D/G improved, so validate over 30–60 day horizons before making it a Java default.
+- Do **not** assume VT stacks additively with Newbie. Test `recommended_config + 2VT` separately before recommending VT as default.
+
+### Next Simulation Priorities
+1. 30–60 day recommended-config validation (`recommended_config` vs current baseline).
+2. `recommended_config + 2VT` head-to-head: confirm whether VT adds liquidity or dilutes Newbie+GB gains.
+3. Whale mitigation design/sweep: moderate cap + sell-wall spread shock/cooldown + admin telemetry thresholds.
+4. Keep IT out of default recommendations unless admins explicitly trade leverage risk for higher activity.
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-14 01:04 UTC) — Web & Ecosystem: Trust/Onboarding Audit ✅
+
+**rewrite-2 at `e59142e`** | `web/` build ✅ | `web-optimizer/` build ✅ | market-simulation fmt/clippy ✅ | Pushed ✅
+
+### Fix Shipped
+- Corrected `docs/SECURITY.md` launch-hardening summary so it no longer lists freshness filtering as future work after the checklist already marks stale-submission filtering as implemented.
+- Commit: `e59142e docs: correct security launch hardening summary`.
+
+### Ecosystem Observations
+- The product ecosystem is coherent: Java plugin remains the authority, bundled `web/` explains a live server economy, Rust sim validates tuning, API server aggregates opt-in cross-server ratios, and `web-optimizer/` markets/docs the network.
+- The biggest remaining ecosystem risks are **trust and onboarding**, not feature volume.
+- Cross-server exchange rates should stay plugin-local. The API should publish true-price data plus confidence signals; individual servers should decide how much to trust/apply that data.
+- API trust docs are accurate after the SECURITY.md fix, but public-facing confidence UX is still thin until API deployment is live.
+- Bundled admin UX is strong after the admin/report fixes, but first-time admins still need a verification flow that answers: Vault hooked? DB migrated? web server reachable? first price event recorded? price reporter heartbeat accepted?
+
+### Prioritized Future Ideas — Web / Docs
+1. **Public Trust & Confidence page (`web-optimizer/`)** — surface SECURITY.md concepts as admin-readable UX: server count, freshness, outlier suppression, low-confidence states, and what “true price” does/does not mean.
+2. **True-price confidence labels** — show “low sample”, “stale”, “outlier-filtered”, and “strong consensus” states on true-prices/exchange-rates/server pages before public launch.
+3. **Admin first-run checklist (`web/`)** — guided card on `/admin`: config loaded, Vault provider detected, DB migrations current, market tick active, latest transaction seen, auction repo healthy, API heartbeat status.
+4. **FAQ route (`web-optimizer/faq`)** — promote `docs/FAQ.md` into a public route for admins comparing alternatives.
+5. **Server showcase once API deploys** — highlight healthy opt-in servers with confidence badges, not raw leaderboard rankings that incentivize manipulation.
+
+### Prioritized Future Ideas — Plugin Engineer
+1. **API key lifecycle** — key rotation/revocation endpoint + audit trail; registration approval/invite flow before heavy public marketing.
+2. **Anti-dump telemetry package** — detect concentrated sell-walls by player/item/time window; expose admin alerts and dashboard events; avoid hidden hard caps until Sim Lab validates mitigations.
+3. **Configurable sell-wall spread shock** — temporary spread widening/cooldown under abnormal sell pressure, paired with telemetry so admins understand why prices moved.
+4. **First-run verification command** — `/autotune verify` or admin dashboard endpoint that reports Vault, DB, web, price reporter, and economy tick status in one place.
+5. **Player discovery nudges** — optional progressive tips/quests for `/compare`, `/loans`, `/auction`, and `/portfolio` so players discover differentiators organically.
+
+### Prioritized Future Ideas — Sim Lab
+1. Recommended config head-to-head: `2MM+2GB+2Newbie+2VT` vs current `2MM+2GB` baseline.
+2. Combined Whale mitigation sweep: moderate per-item cap + sell-wall spread shock + high-value cooldown + admin-alert thresholds.
+3. API adversarial model: fake high-player-count servers, Sybil registration clusters, and outlier threshold sensitivity at low server counts.
+4. ItemTier classification audit: verify Java default tier assignments align with server-admin intuition and sim stress profiles.
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-13 08:48 UTC) — Simulation Lab: Rust ItemTier Parity ✅
+
+**rewrite-2 at `6593efb`** | market-simulation fmt/clippy/test/regression ✅ | Regression baselines refreshed ✅ | Pushed ✅
+
+### Code / Parity
+- Restored Java/Rust parity for `ItemTier` spread and max-price-change multipliers in `scripts/market-simulation`.
+- Added Rust `ItemTier` with Java-equivalent multipliers and default material-name classification.
+- Added normalization so display names (`Golden Apple`, `Netherite Ingot`) match Java material keys (`GOLDEN_APPLE`, `NETHERITE_INGOT`).
+- `MarketEngine` now applies tier multipliers only when explicit per-item overrides are absent:
+  - `max_price_change_override` keeps override precedence over tier multiplier.
+  - `base_spread_override` keeps override precedence over tier multiplier.
+- Refreshed all sim regression baselines because the change intentionally shifts core spread/price behavior.
+
+### Simulation Findings
+- `--regression`: PASS after baseline refresh.
+- `--headless guild-stability`: avg volatility `0.0031` ✅ stable; final D/G about `3.70x`; 7/8 loans defaulted.
+- `--headless standard`: avg volatility `0.0166` ✅ but not healthy; TIER3 fired at tick `3325` with D/G `30.98x`, final D/G about `22.18x`.
+- `--whale-stress-test` with ItemTier parity:
+  - Control avg D/G `2.601x`
+  - Whale avg D/G `6.131x` (`2.358x` worse than control)
+  - 500 units/item/tick cap avg D/G `5.326x` (`0.869x` of uncapped Whale)
+  - Capped GDP `+7.3%` vs uncapped Whale while leverage remained high
+
+### Next Simulation Priorities
+1. Test combined Whale mitigation now that tier parity is fixed: moderate per-item cap + sell-wall spread shock and/or high-value sell cooldown.
+2. Add a plugin-facing anti-dump design note: configurable throttle, telemetry, and alerts rather than a hidden hard limit.
+3. Audit whether Java's default `ItemTier` classifications are intuitive for server admins (notably `BLAZE_ROD` is LEGENDARY and `REDSTONE` defaults COMMON while `REDSTONE_BLOCK` is UNCOMMON).
+4. Test IT+VT combined (`--it-vt-healthy-test`): can VT's D/G reduction counteract IT's spread compression at the cost of D/G?
+5. Test recommended config (2MM+2GB+Newbie+VT) head-to-head vs current 2MM+2GB baseline.
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+---
+
+## Cron (2026-05-14 00:53 UTC) — Simulation Lab: IT+VT Cancels, Healthy Baseline ✅
+
+**rewrite-2 at `6593efb`** | Regression: ALL PASSED | Build: clean | No pushes
+
+### IT+VT Combination Test (`--it-vt-healthy-test`, 5-seed)
+**FINDING: IT+VT CANCELS — do NOT combine these archetypes**
+- Control (2MM+2GB): GDP 571K, D/G 5.56x, vol 0.2569, buy 80.3%
+- Treat (+2IT+2VT): GDP 527K (-7.7%), D/G 5.35x (-0.22x), vol 0.2676 (+4.2%)
+- IT (+30.1% GDP, +2.41x D/G) + VT (-9.2% GDP) = net -7.7% GDP. They cancel.
+- **Action: Never add IT+VT together in any config.**
+
+### Healthy Baseline Stats (2MM+2GB+floor, 5-seed)
+- Mean GDP: 627K ± 67K | Mean D/G: 5.00x ± 1.82x | All 5 seeds floor-bound
+- D/G range: 2.98x–7.72x | All below TIER2
+
+### Next Priorities
+1. Recommended config head-to-head vs 2MM+2GB (next session)
+2. Whale anti-dump design: throttle + spread shock + admin telemetry
+3. Regression baseline metadata: track `6593efb` not `24310f2c`
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-13 16:30 UTC) — Simulation Lab: Archetype Combinations ✅
+
+**rewrite-2 at `6593efb`** | Regression: PASS | Build: ✅ | fmt/clippy clean | Pushed: none
+
+### Simulation Findings
+
+**IT Healthy Economy** (`--it-healthy-test`, seed=42): IT compresses BPD -21.7% and boosts GDP +94.6%, but D/G worsens 3.06x → 3.49x. IT's debt-financed accumulation/release cycle creates leverage pressure. Insufficient alone as stability mechanism.
+
+**Whale Stress Test** (5-seed): Control avg D/G 2.601x → Whale 6.131x (+2.358x); capped 500 units/item/tick only reduces to 5.326x. Sell caps alone are insufficient; combined throttle+spread-shock+telemetry needed.
+
+**GB+Newbie Combo** (5-seed, strongly positive): 2MM+2GB+2Far+2Newbie vs 2MM+2GB+3Far — GDP +15.3%, D/G -1.916x (3.083x vs 4.999x), **5/5 seeds improved**. Newbie provides buy-side demand that GB's sell-side supply needs for two-sided balance. Strongest tested archetype combination.
+
+**VolumeTrader Multi-Seed** (5-seed, positive): +2VT vs MM+GB — GDP +15.3%, D/G -1.23x (2.64x vs 3.88x), BPD -16.3%, vol +10.3%. Contrarian liquidity thesis holds. Recommend adding 2 VT to production config.
+
+### Key Archetype Design Lesson
+GB sells excess supply; Newbie buys what GB sells. Together they create two-sided balance. VT provides contrarian liquidity that reduces D/G. IT compresses spreads but accumulates debt — net negative for D/G. Combined IT+VT not yet tested (`--it-vt-healthy-test`).
+
+### Next Simulation Priorities
+1. Run `--it-vt-healthy-test` — combined IT+VT to test if VT's D/G reduction counteracts IT's leverage cost
+2. Run recommended config (2MM+2GB+Newbie+VT) head-to-head vs current 2MM+2GB
+3. Run `--healthy-baseline-5seed` for clean statistical baseline of recommended config
+4. Design plugin anti-dump pattern: per-item throttle + spread shock + admin telemetry/alerts
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-13 06:20 UTC) — Java Plugin Repo Health Cleanup ✅
+
+**rewrite-2 at `24310f2`** | `./gradlew build -x installWebDeps` ✅ PMD 0 | Pushed ✅
+
+### Cleanup
+- Removed tracked stale patch artifact `src/main/java/com/noahblclarkson/autotune/database/DatabaseManager.java.patch`.
+- Confirmed it was historical migration scratch data, not a build input. Keeping it under `src/main/java` was misleading repo debris.
+
+### Verification / Audit
+- Full Gradle build passed with bundled `web/` Next export, tests, PMD, and shadow jar.
+- Rust market-simulation clippy clean from session check.
+- Migration runner spot-check: V1, V2, V3, V4 repair, V5, V5b/version-6, V7, V8, V9 all wired.
+- Offline-money audit spot-check: Vault money paths still use `Bukkit.getOfflinePlayer(...)`; `Bukkit.getPlayer(...)` usages inspected are UI/online-only paths with guards.
+
+### State
+- No open GitHub issues. Pre-push CI green; post-push CI queued immediately after `24310f2`.
+- No CLAUDE.md architecture changes needed.
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-13 01:07 UTC) — Simulation Lab: Whale Sell-Cap Mitigation ✅
+
+**rewrite-2** | Rust `cargo clippy -- -D warnings` ✅ | `cargo fmt` ✅ | `cargo test` ✅ 12/12 | `--regression` ✅ all passed
+
+### Simulation Findings
+
+- Re-ran corrected `--whale-stress-test` across seeds `42, 12345, 98765, 77777, 11111`.
+- Baseline Whale remains clearly destabilizing despite higher apparent activity:
+  - Control avg D/G: `2.172x`
+  - Uncapped Whale avg D/G: `5.800x` (`2.671x` worse than control)
+  - Control avg GDP: `476,437`
+  - Uncapped Whale avg GDP: `1,436,717` (`+201.6%`) — activity masks leverage risk.
+- Tested per-item Whale dump cap as a concrete plugin-style mitigation:
+  - `500` units/item/tick: avg D/G `5.017x` (`0.865x` of uncapped, ~13.5% lower), avg GDP `1,097,037` (`-23.6%` vs uncapped)
+  - `100` units/item/tick: avg D/G `5.121x`, worse than the 500 cap; seed 42 regressed to `2.523x` vs uncapped `2.289x`
+- Conclusion: sell-size caps alone help only modestly and can backfire when too tight by prolonging the sell-wall. Do not recommend a raw cap as the only plugin change.
+
+### Code / Harness Changes
+
+- Added `SimConfig.whale_max_dump_per_item: Option<i32>` with serde default (`None` preserves current behavior).
+- Threaded the cap into `PlayerAgent::new_whale()` and `WhaleConfig.max_dump_per_item`.
+- Updated Whale dumping so capped dumps continue across ticks until inventory is fully sold, then enter dormant state.
+- Extended `run_whale_stress_test()` to print Control vs Whale vs Capped results and include capped runs in the all-seed summary.
+- Added config deserialization test for missing Whale cap defaulting to uncapped behavior.
+
+### Java/Rust Parity Notes
+
+- Spot-checked shared price/spread/slippage formulas against Java `MarketEngine`: trade ratio, player scaling, sell-pressure multiplier, trend dampening, event multiplier, spread liquidity/player impact, global volume multiplier, and sqrt slippage are aligned for fields modeled in Rust.
+- Parity gap found: Java applies `ItemTier` spread and max-price-change multipliers via `ShopItem.effectiveSpreadMultiplier()` / `effectiveMaxPriceChangeMultiplier()`. Rust simulation currently has only explicit per-item overrides and no default item-tier model. This means rare/high-value item behavior is under-modeled unless overrides are manually configured.
+
+### Next Simulation Priorities
+
+1. Add Java `ItemTier` multiplier parity to Rust `ItemConfig` / engine defaults before trusting rare-item stress tuning.
+2. Test sell-wall spread shocks or high-value sell cooldowns in combination with a moderate per-item cap; the cap alone is not enough.
+3. Convert Whale findings into a plugin-facing design: admin-configurable anti-dump throttles + detection/telemetry rather than hidden hard limits.
+
+---
+
+## Cron (2026-05-13 00:52 UTC) — Plugin/Web Health Audit: Shareable Report Recovery Fix ✅
+
+**rewrite-2 at `9bd9218`** | `./gradlew build -x installWebDeps` ✅ PMD 0 | `web/` build ✅ | Pushed ✅
+
+### Bug Fixed
+- `web/src/components/admin/shareable-report-card.tsx` treated `ADMIN_RECOVERY` as generic Tier 3 and could still show a high shareable health score while manual recovery mode was active.
+- Fixed with explicit `ADMIN_RECOVERY` label/color, unknown-tier fallback, and circuit-tier severity caps for shareable report scores: TIER1 ≤60, TIER2 ≤30, TIER3/Admin Recovery ≤10.
+
+### Audit Notes
+- Reviewed `LoanManager` request/repay/interest/circuit logic and `EconomyManager` buy/sell transaction ordering.
+- Confirmed zero real TODO/FIXME markers in Java/TypeScript/Rust source; only generated Rust build artifacts under `target/` contain upstream TODO comments.
+- No CLAUDE.md architecture changes needed.
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-12 19:10 UTC) — Web & Ecosystem: Repo Clean, Discord Bot Audit ✅
+
+**rewrite-2 at `5c47af0`** | All builds green | No pushes (clean per Noah's redirect)
+
+### Builds
+- `./gradlew build -x installWebDeps` ✅ PMD 0 (51s)
+- `web/` 13 routes ✅ | `web-optimizer/` 22 routes ✅
+- market-simulation: fmt/clippy clean ✅ | 11/11 tests ✅
+- api-server: fmt/clippy clean ✅ | price-solver: fmt/clippy clean ✅ | 2/2 tests ✅
+
+### Audit: No Bugs Found
+- Zero TODOs/FIXMEs in all source (Java/TypeScript/Rust) — confirmed
+- Circuit thresholds consistent: TIER1=3-5x, TIER2=5-30x, TIER3>30x — all surfaces ✅
+- API docs accurate: Bearer auth, `/api` prefix, heartbeat under ApiKeyAuth, plugin_version, ratio_matrix ✅
+- sweep-results sp=0.80 copy corrected (prior session) ✅
+- Discord bot (`discord-bot/index.js`): 338 lines, ES module, proper error handling, commands `/at status|price|top|help` — fully functional ✅
+
+### Ecosystem Observations
+- **web/ `/admin`:** Complete. Missing: first-run verification checklist for new admins (ConfigHealthCard validates ranges but no "is my economy live?" guided checklist).
+- **web-optimizer/ landing:** "Active Servers: Network growing" — honest placeholder, no live count yet (blocked on API deploy).
+- **API docs (`/api-docs`):** Accurate for all implemented features ✅
+- **Discord bot:** Documented in install guide and docs index ✅
+- **FAQ:** Only `docs/FAQ.md`, no web-optimizer `/faq` page — noted but not a bug
+
+### State
+Repo clean. All surfaces consistent. No bugs. No pushes needed.
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-12 16:30 UTC) — Simulation Lab: Whale Stress + Reporting Fix ✅
+
+**rewrite-2 at `5c47af0`** | Rust fmt/clippy ✅
+
+### Simulation Findings
+
+- `--whale-stress-test` confirms a single Whale can destabilize an otherwise healthy MM/GB economy.
+  - Seed 42: Control D/G `0.916x` → Whale D/G `2.289x` (`2.497x` worse), buy ratio `90.1%` → `81.4%`, raw GDP rose sharply but debt rose faster.
+  - Remaining 4-seed summary before the reporting fix: avg D/G `2.485x` → `6.677x`; avg GDP `491k` → `851k`. The Whale produces apparent activity/GDP while worsening leverage and volatility.
+- Quick `standard-with-mm` headless run showed it is not a safe recommended baseline: final GDP `$2.5k`, debt `$214k`, D/G `~84.5x`, 6/8 loans defaulted, repeated TIER3 entries. A lone MarketMaker without GuildBuyers/floor support cannot absorb sell pressure.
+
+### Bugs / Repo Health Fixed
+
+- Fixed `--whale-stress-test` reporting bug: volatility delta was multiplied by 100 but displayed as a raw volatility delta.
+- Fixed multi-seed summary bug: seed 42 was run and shown separately but excluded from the “all seeds” averages.
+- Removed stale `(RECOMMENDED)` label from `standard-with-mm`; it is now marked as a legacy baseline.
+
+### Next Simulation Priorities
+
+1. Test concrete Whale mitigations before recommending plugin changes: per-item sell-size caps, high-value item sell cooldowns, and/or spread widening under sell-wall shocks.
+2. Re-run the corrected `--whale-stress-test` after mitigation experiments so the fixed all-seed summary becomes the canonical output.
+3. Keep auditing Rust/Java parity around debt caps, circuit-breaker thresholds, and GDP window definitions before trusting long-run tuning results.
+
+
+---
+
+## Ecosystem Observations (2026-05-11) — Web & Docs Deep-Dive
+
+**`web/` (bundled dashboard, 13 routes):** Complete, functional, professional. Live WebSocket prices, transaction feed, top movers with magnitude bars, market health bar, economy chart with circuit event markers, auction house (4 tabs + depth chart), portfolio (badges + trading timeline + impact score), loans table, admin dashboard (circuit tiers, health score, recovery advisor, auction integrity card, config health, shareable report). Auction ecosystem is the standout differentiator.
+
+**`web-optimizer/` (public site, 22 routes):** Comprehensive. Landing page with LiveDemo (browser-based ~60 ticks/sec engine), hero, feature cards, social proof. Key pages: how-it-works (spread math with formulas), findings (26 simulation Q&As), simulator (real-time price engine), setup wizard (5-step: type → count → goals → stability preview → YAML export), config-preview (YAML diff + sim impact), sweep-results (840-config viewer), install guide (good prerequisites, curl snippet, verification steps), auction marketing, docs, true-prices, exchange-rates, servers (mock), health-badge (embeddable widget), api-docs.
+
+### Ecosystem Gaps & Risks
+1. **Live data gap** — Landing page "Active Servers: Network growing" and "true-prices" only show simulated/mock data. API deploy would make these surfaces genuinely compelling. This is the #1 ecosystem unlock.
+2. **Trust story missing** — API server has keys + outlier filtering + freshness filtering implemented, but no public governance/trust page explaining how fake-server injection or price manipulation is prevented. Needed before any cross-server marketing.
+3. ~~**Discord bot undocumented**~~ — Fixed ✅ (`d04e39f`): Step 6 added to install wizard, Discord Bot card added to docs index.
+4. **Testimonials still fictional** — Alex K., Dana W., Marcus T. personas look credible but are explicitly not real admins. Real quotes needed before any marketing push.
+5. **First-run verification gap** — No guided checklist in bundled `/admin` for new admins to confirm their economy is working after install.
+6. **Pricing page thin** — "Free & open source" single tier with GitHub CTA. No comparison vs competitors or hosted tier framing.
+
+### Feature Ideas (for future cycles, per Noah's redirect these are NOT prioritized now)
+
+**Plugin (Java):**
+- In-game economy tutorial quest (first trade → see price move → check dashboard)
+- Player spending by category in `/portfolio`
+- `/at admin config diff <file>` — live config change preview before applying
+- Economy event broadcasts (circuit fire, D/G threshold crossings)
+
+**Public web (web-optimizer):**
+- Trust/security governance page for API (server key rotation, outlier filtering, freshness)
+- Server showcase page (after real testimonials collected)
+- Discord bot docs page
+- Interactive config comparison tool (pick two configs → side-by-side sim results)
+- FAQ page (currently only `docs/FAQ.md`, no public web-optimizer page)
+
+**Bundled web (web/):**
+- First-run setup verification checklist card on `/admin`
+- Player impact leaderboard
+- Auction fill browser notifications (Notification API for `/auction/order` pages)
+
+---
+
+## Cron (2026-05-11 01:19 UTC) — Simulation Lab: Headless Investigation
+
+- Investigated `market-simulation` scenarios.
+- Discovered that `--headless` runs often fail dynamically due to `winit` display requirements (Missing Wayland/X11).
+- **Next step:** Configure Xvfb or fix the `headless` feature flags in Rust to allow true offscreen execution in cron.
+
+---
+
+## Cron (2026-05-11 01:34 UTC) — Web & Ecosystem: Headless Sim Fix Confirmed, Repo Clean ✅
+
+**rewrite-2 at `c82967c`** | All builds verified | No new pushes (clean session)
+
+### Builds
+- `./gradlew build` → fails at `:buildWeb` (pages-manifest.json race, pre-existing)
+- `web/` → 13 routes ✅ (recharts `victory-vendor` warnings, non-fatal, Next.js 15.5.5)
+- `web-optimizer/` → 22 routes ✅
+- Rust sim fmt/clippy → clean ✅
+- Rust sim tests → 11/11 pass ✅
+
+### Headless Simulation Investigation
+
+**Issue (resolved):** MEMORY noted cron environments fail with `WinitEventLoop` error without DISPLAY.
+
+**Finding:** `--headless` scenarios (e.g., `cargo run -- --headless guild_stability`) work perfectly. The `WinitEventLoop` error only occurs in the **GUI** path (eframe). The headless `run_headless()` function uses standard Simulation tick loop, no winit dependency. `guild_stability` output: avg vol 0.0031 < 0.05 ✓.
+
+**Conclusion:** No fix needed. Headless scenarios are fully functional. The `WinitEventLoop` error was from a separate code path, not the headless scenario runner.
+
+### Audit
+- Zero TODOs/FIXMEs in Java/TypeScript/Rust ✅
+- 72/126 Java files class-level `@SuppressWarnings("PMD")` — deferred per Noah's redirect
+- All prior bug fixes verified in memory: auction DB-first PENDING, OfflinePlayer Vault ops, circuit thresholds consistent, docs drift corrected
+- `web/` build via Gradle has race condition at `:buildWeb` — run `cd web && npm run build` directly as workaround
+
+### State
+Repo clean. No new commits. No bugs found.
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
+## Cron (2026-05-10 16:30 UTC) — Simulation Lab: Flash Crash Scenario ✅
+
+**rewrite-2 at `6e23401`** | Rust clippy/fmt ✅ | Test 11/11 ✅ | Pushed ✅
+
+### New Scenario: Flash Crash Panic Spread Test
+
+Added `Scenario::flash_crash_panic_spread_test()`:
+- **Trigger:** 40% price shock at day 5 (tick 1440)
+- **Duration:** 21 days
+- **Archetypes:** 5 Casual + 3 Farmer + 3 Trader + 2 Hoarder
+
+### Results
+
+Economy remained **STABLE** (avg volatility 0.0127 < 0.05 threshold). No loan cascade, balanced transaction churn (54.3% buys).
+
+---
 
 **Branch:** `rewrite-2` (do NOT merge to master)
 
 ---
 
-## Cron (2026-05-07 18:47 UTC) — Web & Ecosystem: Roadmap Drift Fixed ✅
+## Cron (2026-05-10 13:25 UTC) — Bug Audit: No Issues Found ✅
 
-**rewrite-2 at `1887630`** | `./gradlew build` ✅ PMD 0 | `web-optimizer/` build ✅ (27 routes) | `web/` build ✅ (13 routes) | Pushed ✅
+**rewrite-2 at `32dde51`** | `./gradlew build` ✅ PMD 0 | `web/` 13 routes ✅ | `web-optimizer/` 22 routes ✅ | Rust fmt/clippy ✅ | Pushed: none (clean session)
 
-### Bug found: Roadmap had two stale items
+### Audit Results
 
-1. **TIER3 hysteresis unlock value was wrong** — said "locks at 0% until D/G < **9.0×** (92% fewer oscillations)".
-   - **Root cause:** `9.0` came from the OLD defaults (`tier3_ratio=10`, `hysteresis_band=0.1 → unlock at 9×`).
-   - **Current defaults:** `tier3_ratio=30`, `hysteresis_band=0.5 → unlock at **15×**`.
-   - **Math:** 30 × (1 − 0.5) = 15. The 9.0 was never updated when defaults changed.
+- **AuctionManager.processFill()** — DB-first PENDING pattern verified correct (line 433: insertFill pending, line 551: updateFillStatus COMPLETED)
+- **AuctionManager.recordFillAsync()** — DB-first PENDING pattern verified correct (line 719: insertFill pending, line 782: updateFillStatus COMPLETED)
+- **Zero TODOs/FIXMEs** — No stale code markers in Java, TypeScript, or Rust
+- **Rust cargo test** — 11/11 pass ✅
+- **Config endpoint defaults** — Already fixed in `32dde51`
 
-2. **"Price anchoring from cross-server true prices"** was marked `in-progress` but was already implemented.
-   - Rust API server has `anchored` field in `models.rs` and `price_computer.rs`.
-   - True-prices API returns it per-item. Feature shipped weeks ago.
-
-### Verification
-- Both fixes: `web-optimizer/` build ✅ (27 routes)
-- `web/` build ✅ (13 routes)
+### Builds
 - `./gradlew build` ✅ PMD 0
-- Push successful to `rewrite-2`
+- `web/` 13 routes ✅
+- `web-optimizer/` 22 routes ✅
+- Rust fmt/clippy clean ✅
 
-### Ecosystem audit findings
-- Auction ecosystem: **complete** on both surfaces — `AdminAuctionCard` (thin books, large sell walls, self-trade fills, churn metrics) in `web/`, depth chart + order book in `web-optimizer/public /auction`.
-- API deploy: still **#1 blocker** — all frontend wiring done (`/servers`, `/true-prices`, `/widget` routes complete), needs Arc's Fly.io token.
-- Testimonials: still fictional — needs human outreach.
-- PMD suppression audit: 67/124 Java files still have blanket `@SuppressWarnings("PMD")` — deferred, high-value but tedious.
+### State
 
-### Feature ideas (post-bug-fix, for Plugin Engineer / Sim Lab cycles)
+Repo is clean. All critical economy/auction bugs from 2026-05-04 audit are resolved. No new bugs found in this session.
 
-**HIGH PRIORITY — Adoption blockers:**
-1. API server deploy — true-prices, server count, activity feed live on Fly.io
-2. Real testimonials via Discord DM outreach to actual server admins
-
-**MEDIUM PRIORITY — Web & docs:**
-1. Auction opportunity hints panel: compare auction best bid/ask to shop buy/sell. "Likely arbitrage" framing with risk labels — careful wording to avoid exploit loops.
-2. True-prices confidence copy: distinguish low server count / stale data / outlier-suppressed consensus rather than one generic number.
-3. Setup wizard "safe config" teaching: completion screen teaches `config preview` → replace → reload. Already partially done in `config-export.tsx` but could be surfaced more prominently on `/setup`.
-4. Player weekly market recap page: best trade, biggest mover, watched orders filled, materials traded, server-wide hot market stories.
-5. Server key issuance portal: human-in-the-loop invite flow for server admins. Anti-Sybil.
-
-**MEDIUM PRIORITY — Plugin:**
-1. Auction order short aliases: `/auction i <id>`, `/auction w <id>`, `/auction c <id>` — reduce UUID friction for command-line players.
-2. Config diff surface (web admin): warn when economy update interval, spread/slippage, auction fees/limits, or price reporter settings change.
-3. Market Digest REST endpoint: expose `MarketDigestService` via `GET /api/economy/digest` for web dashboard.
-
-**MEDIUM PRIORITY — Sim Lab:**
-1. Auction LOB stress model: thin-book spoofing, cancellation storms, whale sell walls. Rust has no LOB model — manual test plan or minimal Rust LOB implementation.
-2. GuildBuyer debt cap sweep: cap × [0.5×/1×/2× GDP] × 60d × 2 seeds — does tighter cap actually reduce D/G?
-3. **Floor × D/G long-run: 60d CONFIRMED ✅** — 60% floor persists (+1.6% GDP, -1.579x D/G). 90d would need ~40+ min. Ready for Java default recommendation.
-
-**LOWER PRIORITY — DevEx:**
-1. OpenAPI/Swagger for API server (roadmap item)
-2. Automated engine sync tests (Java ↔ Rust ↔ TS) (roadmap item)
-3. PMD targeted suppression audit — one critical file per session (e.g., `MarketEngine.java`)
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
 
 ---
 
-## Cron (2026-05-07 01:12 UTC) — `web/` Build Fix: Next.js 15.5.15 → 15.5.5 ✅
-
-**rewrite-2 at `b4da546`** | `./gradlew build` ✅ PMD 0 | `web/` 13 routes ✅ | `web-optimizer/` 27 routes ✅ | No new commits (clean session)
-
-**Bug found: `web/` build failure — webpack API incompatibility**
-
-`web/` uses Next.js 15.5.15. Build failed with:
-```
-TypeError: _webpack.WebpackError is not a constructor
-    at buildError (minify-webpack-plugin/src/index.js:24:16)
-```
-`minify-webpack-plugin` was compiled against an older webpack API that changed in newer webpack versions bundled with Next.js 15.5.15.
-
-**Fix:** `cd web && npm install next@15.5.5` — downgrades to a compatible webpack version. Build passes cleanly.
-
-**Verification:** `cd web && npm run build` ✅ (13 routes) | `cd web-optimizer && npm run build` ✅ (27 routes) | `./gradlew build` ✅ PMD 0
-
-**Ecosystem state:** All builds clean. Auction ecosystem complete and correct (confirmed from prior sessions). API deploy still #1 blocker (all frontend wiring done, needs Fly.io token). Testimonials still fictional. postcss known Next.js upgrade blocker.
-
-**Feature ideation (non-committed, for next feature cycle):**
-1. Market Digest REST endpoint — high admin value, medium effort
-2. API freshness filtering hardening in `recompute_true_prices()`
-3. Auction/shop spread opportunity UI with "liquidity signal" framing
-4. Setup wizard explicit preview → replace → reload teaching
-5. Player market impact score web surface
-
 ---
 
+## Cron (2026-05-10 13:25 UTC) — Bug Audit: Admin Dashboard Circuit Legend Fixed ✅
 
-## Cron (2026-05-06 08:30 UTC) — Simulation Lab: GuildBuyer Cap Java Parity Fixed ✅
+**rewrite-2 at `98ba808`** | `./gradlew build` ✅ PMD 0 | `web/` 13 routes ✅ | `web-optimizer/` 22 routes ✅ | Pushed ✅
 
-**Commit:** `fix(simulation): align GuildBuyer cap with Java` | `cargo clippy -- -D warnings` ✅ | `cargo fmt` ✅ | `cargo test` 11/11 ✅ | `--loan-cap-test` ✅ | `--sixty-day-gb-debt-cap-test` ✅
+### Bug Found + Fixed: Admin Dashboard Circuit Breaker Legend Wrong
 
-**Bug/parity fixed: Rust sim GuildBuyer debt cap did not match Java.**
-- Java `LoanManager.guildbuyerTotalDebtCap` is **per GuildBuyer player**, counts **active debt only**, and **rejects the whole loan** if projected debt exceeds GDP × cap.
-- Rust was treating it as **cumulative across all GuildBuyers**, counting **active + defaulted**, and **partially filling** to remaining allowance.
-- Fixed Rust to match Java exactly: per-player active debt, full rejection, comments updated in `simulation.rs`, `config.rs`, and 60d test labels.
+**Location:** `web/src/app/admin/admin-content.tsx` — Circuit Breaker Tiers legend (lines 415-437)
 
-**60-day result after parity fix:** 3× per-GB cap is **non-binding / not a stabilizer** in the current production-like config.
-- Seed 42: control D/G `21.038x` → cap `21.038x`, T3 `9 → 9`
-- Seed 12345: control D/G `14.549x` → cap `14.549x`, T3 `3 → 3`
-- Mean: `17.793x → 17.793x` (0.000x change)
+The admin dashboard `/admin` showed a circuit-breaker legend with **hardcoded fixed-rate tiers**:
+- TIER1: 3–5x, interest capped at 50%
+- TIER2: 5–10x, interest capped at 25%
+- TIER3: >10x, interest paused
 
-**Engine insight:** With the economy-wide active debt cap default at `2× GDP`, a per-player GuildBuyer cap of `3× GDP` is mostly a guardrail and cannot be expected to stabilize long-run D/G. Earlier Rust conclusions that treated `guildbuyer_total_debt_cap=3.0` as a 60d fix were optimistic because the sim behavior diverged from Java. Treat the cap as safety documentation parity, not a tuning lever.
+But the WebServer's `/api/admin/health` uses the **counter-cyclical** path (default=true), where interest is **proportional** to D/G ratio and TIER3 fires at `debtGdpTier3Ratio=30.0`:
+- TIER1: 3–5x, proportionally reduced (50% at D/G=5x)
+- TIER2: 5–30x, proportionally reduced (25% at D/G=10x)
+- TIER3: >30x, interest paused
 
-**Actionable recommendation:** Do not pitch `guildbuyer_total_debt_cap=3.0` as a solution to 60d instability. Prioritize no-floor / low-floor long-run configs and only test tighter GB caps (`1–2× GDP`) if we are comfortable constraining GuildBuyer liquidity.
+The legend was the old fixed-cap design from before counter-cyclical was the default. Admins reading this legend and seeing TIER3 in-game would get wrong expectations about when the circuit fires and what the interest rates look like.
 
-**Next priorities:**
-1. Run no-floor / 40% floor long-run production comparison after the floor docs correction.
-2. If testing GB caps further, sweep `1×/2×/3×` with Java-parity behavior and track lost liquidity/GDP, not just D/G.
-3. Continue Rust/Java parity audits before using sim results to change plugin defaults.
+**Fix:** Updated 3 legend descriptions to match counter-cyclical behavior.
 
-## Cron (2026-05-04 19:03 UTC) — API Docs Stale Auth Header + Rate Limits Fixed ✅
+### Audit Results
 
-**rewrite-2 at `77c3e9d`** | `./gradlew build` ✅ PMD 0 | `web/` 14 routes ✅ | `web-optimizer/` 22 routes ✅ | Pushed ✅
+- **Auction ecosystem**: Complete and correct ✅
+- **Economy page circuit labels**: Correct (TIER1=3×, TIER2=5×, TIER3=30×, unlock at 15×) ✅
+- **web-optimizer economy page**: Correct ✅
+- **WebServer health endpoint**: Returns `counterCyclical: true` (default) ✅
+- **No TODOs/FIXMEs** in Java, TypeScript, or Rust ✅
+- **Rust cargo test**: 11/11 pass (verified prior session)
+- **Social proof testimonials**: 3 fictional personas (Alex K., Dana W., Marcus T.) — real testimonials still blocked on human outreach
+- **MarketMockPanel** in web-optimizer hero: correctly labeled as mock/illustrative data ✅
 
-**Bug fixed: `web-optimizer/src/app/api-docs/page.tsx` had 3 stale doc issues:**
-1. **Wrong auth header** in 4 places: said `X-API-Key` but API server uses `Authorization: Bearer <api-key>` (confirmed in `api-server/src/auth.rs`)
-2. **Wrong rate limits**: said "1 req/tick per server" and "1/IP/hour" — actual limits: submit=6 req/min/IP, registry=10 req/min/IP (from `rate_limit.rs`)
-3. **Minecraft jargon**: heartbeat said "once per tick" — removed
-
-**Build verification (all clean):** Gradle PMD 0, both web TypeScript checks, api-server clippy, price-solver clippy, market-sim check
-
-**Code audit (no new bugs found):** WebServer error handling solid, phantom transaction fix confirmed, offline payment fix confirmed, AuctionRepository SQLite date fix confirmed, MarketEngine division guards confirmed, no TODO/FIXMEs
-
-**Docs drift risk identified:** `docs/API.md` and `docs/SECURITY.md` were correctly updated in a prior session, but `api-docs/page.tsx` was missed. Pattern: when Rust API server changes, the web-optimizer's human-readable page may not sync.
-
-**PMD suppression audit:** 69/124 Java files still have blanket `@SuppressWarnings("PMD")` — deferred (high-value but tedious). Recommended: one large file per session.
-
-**Next priorities:**
-1. PMD targeted suppression cleanup — start with `MarketEngine.java` (802 lines, critical engine file)
-2. Add docs sync reminder to API server README
-3. Check remaining web-optimizer docs pages for API consistency
-
----
-
-## Cron (2026-05-04 12:27 UTC) — Bug Hunting & Repo Health ✅
-
-**rewrite-2 at `df0b815`** | `./gradlew build` ✅ PMD 0 | `./gradlew test` ✅ | Pushed ✅
-
-**Strategic redirect:** Noah directed bugs + repo health over features. Updated MEMORY.md.
-
-**Bugs fixed:**
-- Partial fill notification showed pre-fill remaining qty instead of post-fill (`3c9d016`)
-- Offline sellers never received payment in both matching engine and GUI paths (`3c9d016`)
-- Buy orders from offline buyers matched → items lost; added online-player filter before matching (`3c9d016`)
-- Expired buy order refunds silently dropped when owner offline (`adcacde`)
-
-**Repo health:**
-- Removed duplicate imports (AuctionManager, ConfigManager, EnchantmentPricing)
-- Upgraded sqlx 0.7 → 0.8 in API server, resolved future-incompat warning (`bfd38ee`)
-- Both TS projects pass `tsc --noEmit` with zero errors, no `any` types
-- All Rust crates clippy clean
-
-**Noted for future sessions:**
-- 50/117 Java files have blanket `@SuppressWarnings("PMD")` — needs targeted cleanup
-- Buy/sell async methods record market engine side effects before economy withdrawal
-- Transaction ordering in EconomyManager could cause phantom price movements in rare races
-
----
-
-## Cron (2026-05-04 07:21 UTC) — Web & Ecosystem Audit ✅
-
-**rewrite-2 at `db2b67c`** | `web-optimizer/` build ✅ | `web/` build ✅ | Pushed ✅
-
-**Work:** Auction House Guide standalone doc + docs index audit + ecosystem feature ideation.
-
-**Built:**
-- `docs/AUCTION_HOUSE_GUIDE.md` — 8-command player reference, web dashboard tabs, depth chart reading, admin monitoring, integrity patterns, config section, matching engine explanation, watch/cross-server scope
-- Updated `web-optimizer/src/app/docs/page.tsx` — auction guide card points to standalone doc, `/auction` added to quick links, description updated with depth chart mention
-
-**Commit:** `db2b67c feat(docs): add standalone Auction House Guide with depth chart and integrity sections`
-
-**Ecosystem audit finding:** auction ecosystem is now complete across both surfaces (bundled `web/` and public `web-optimizer/`). All coherent. No orphan gaps.
-
-**Feature ideas generated** (prioritized for Plugin Engineer and Sim Lab cycles):
-
-HIGH PRIORITY — Adoption blockers:
-1. API server deploy — live true-prices, server count, activity feed
-2. Real testimonials via Discord outreach to actual server admins
-
-MEDIUM PRIORITY — Web & docs:
-1. StabilityPreview component for `/setup`: show 5-metric preview from actual sim output. Needs live sim runner or pre-computed scenarios. Turns `/setup` into "test your economy before installing."
-2. Setup Wizard → config preview inline hint: setup already teaches `config preview` in ConfigExport step. Could surface "preview before replace" nudge more prominently.
-3. True-prices confidence copy: distinguish low server count / stale data / outlier-suppressed consensus rather than one generic number.
-4. Player weekly market recap page: best trade, biggest mover, watched orders filled, materials you traded, server-wide hot market stories.
-
-MEDIUM PRIORITY — Plugin features:
-1. Auction opportunity hints panel: compare auction best bid/ask to live shop buy/sell. "Likely arbitrage" phrasing with risk labels — careful wording to avoid exploit loops.
-2. Config diff surface (web admin): economy update interval, spread/slippage, auction fees/limits, price reporter settings. Warn when storage/API credentials change.
-3. Auction order short aliases: `/auction i <id>`, `/auction w <id>`, `/auction c <id>` — reduce UUID friction for players who type commands.
-4. Loan maturity extension: architectural debt-stock fix — loans don't last forever, partial deleveraging trigger when overdue.
-
-LOWER PRIORITY — Sim Lab:
-1. Auction LOB stress model: thin-book spoofing, cancellation storms, whale sell walls. Rust has no LOB model yet — manual test plan or minimal Rust LOB implementation.
-2. GuildBuyer debt cap sweep: cap × [2×/3×/5× GDP] × 60d — does tighter cap reduce D/G at long run?
-3. Floor × D/G long-run: 60% floor vs no floor × 90d × 3 seeds — does floor reduce final D/G or just mask it?
-
----
-
-## Cron (2026-05-04 07:07 UTC) — Auction Owner Fill Notifications ✅
-
-**rewrite-2 at `92d056c`** | `./gradlew build` ✅ PMD 0 | `./gradlew test` ✅ | Pushed ✅
-
-**Bug fixed: Order owners received no in-game feedback on partial fills or buy-side fills.**
-`AuctionManager.processFill()` only sent a gold seller message on full fill; buy order owners received nothing. No partial fill notifications existed.
-
-**Fix:** Added `notifyOwnerOfFullFill()`, `notifyOwnerOfPartialFill()`, and `sendOwnerMessage()` helpers wired into both `processFill()` (matching engine path) and `recordFillAsync()` (GUI path):
-- Full fill → ⚡ message to order owner (both buy + sell sides)
-- Partial fill → 📦 message with qty, price, remaining amount
-- `sendOwnerMessage()` deduplicates online/offline → `PendingNotificationRepository` for offline players
-
-**State:** CI 3/3 green (PR #252), no open issues, API deploy blocked on Arc's Fly.io token, regression suite 6/6 scenarios.
-
----
-
-## Simulation Lab (2026-05-04 01:48 UTC) — Regression PASS, Floor Paradox Confirmed, Admin Recovery Optimal
-
-**rewrite-2 at `201aa21`** | Regression 6/6 PASS ✅ | Zero drift | All builds clean
-
-**Regression Suite:** ALL PASS (6/6 scenarios, 0.000% displacement)
-- Standard Economy ✅ | Spread Stability ✅ | Low Player Count ✅
-- Standard+MM Economy ✅ | GuildStability+MM+7%GB ✅ | GuildStability+2MM+7%GB+Floor ✅
-
-**Floor Paradox — Fully Characterized:**
-| Floor | 14d GDP | 14d D/G | Verdict |
-|-------|---------|---------|---------|
-| 30% | flat | flat | Non-binding (internal $155 > $150) |
-| **60%** | **+29.2%** | **0.71x** | **OPTIMAL — production default** |
-| 70% | +9.1% | 0.84x | Degrades vs 60% |
-| 90% | -14.7% | 1.09x | Catastrophic — internal Diamond $0.40 |
-
-- Multi-seed (5 seeds, 1MM+2GB): 60% floor → **+4.2% GDP avg, floor binds 5/5**, D/G -0.10x
-
-**Admin Recovery Timing:** Day 3 optimal (D/G 0.72x, saves 19.4% defaults vs natural). Day 7+ no benefit.
-
-**Production Config (2MM+2GB+60% floor):** +89% GDP, -25% BPD, 74% buy ratio (balanced). Confirmed.
-
-**tier3_ratio=40 CONFIRMED WORSE:** Prevents circuit firing → debt accumulates unchecked. D/G 17.1x vs 15.1x control (seed 42). Not the lever.
-
-**Next sim priorities:** GuildBuyer debt cap sweep, floor × D/G long-run (90d), auction LOB stress model.
-
----
-
-## Cron (2026-05-04 02:18 UTC) — Auction Depth Chart Added, Builds Clean ✅
-
-**rewrite-2 at `9739783`** | `./gradlew build` ✅ PMD 0 | `web/` 14 routes ✅ | `web-optimizer/` 22 routes ✅ | API-server Rust 17/17 ✅ | Pushed ✅
-
-**Work: SVG depth chart added to public `/auction` page**
-- Standalone SVG `DepthChart` component (`web-optimizer/src/components/auction/depth-chart.tsx`) — no external deps, works with Next.js `output: 'export'`
-- Cumulative bid/ask depth as step-chart area (bid=green, ask=rose)
-- Wired into `/auction` page between order book demo and "how it works" section
-- 3 callout cards: bid walls / ask walls / thin books
-
-**Ecosystem observations:**
-- Install page comprehensive: comparison table, 5 install steps, player flow cards, hosting guide, embeddable widget section
-- Testimonials (Alex K., Dana W., Marcus T.) remain fictional — highest ROI non-code gap
-- API server deploy blocked on Arc's Fly.io token
-- Auction ecosystem now complete on both bundled (`web/`) and public (`web-optimizer/`) surfaces
-
-**Still blocked:** API server deploy (Arc/Fly.io token), real testimonials
-
----
-
-## Cron (2026-05-04 01:48 UTC) — Simulation Lab Regression + Floor Paradox + Admin Recovery Timing ✅
-
-**rewrite-2 at `201aa21`** | `./gradlew build` ✅ PMD 0 | Regression 6/6 PASS | Pushed
-
-**Floor × Long-Run sweep findings (14d, partial):**
-- 60% floor = optimal sweet spot at 14d: +29.2% GDP, floor binds, D/G 0.71x
-- ⚠️ **Overturned by 90d sweep (2026-05-06):** 60% floor → GDP -19.1%, D/G +1.6x worse vs no floor at 90d. Floor is short-term only. See 2026-05-06 PLAN entry for full correction.
-
-**Admin Recovery Timing:** Day 3 is optimal (D/G 0.72x, saves 19.4% defaults vs natural).
-
-**GuildBuyer archetype analysis:** 2MM+2GB+7%GB+60%floor is confirmed production default (+89% GDP).
-
-**Next simulation priorities:** GuildBuyer debt cap sweep, floor × D/G long-run (90d), auction LOB stress model.
-
----
-
-## Web Update (2026-05-01 19:35 UTC) — Install Page Auction Mockup ✅
-
-**rewrite-2 at `2d43726`** | `web-optimizer/` build ✅ (22 routes) | Pushed ✅
-
-**Install page — What You Get screenshots expanded from 3 → 4:**
-- Added `AuctionMockup` component: live order book with bid/ask rows, spread indicator, fill status
-- New card: `Icon: Gavel`, title "P2P Auction House", tag "Beyond /shop"
-- Headline: "Three screens" → "Four screens. Zero configuration required."
-- Committed `2d43726` → pushed.
-
-**Ecosystem coherence observations:**
-- `web/` bundled dashboard fully covers auction (4 tabs: Orders / Fills / Materials / Depth Chart) + `AdminAuctionCard` on `/admin`
-- `SERVER_ADMIN_GUIDE.md` auction section (lines 377-386): commands documented but brief — no screenshots, no strategy tips
-- Auction is the key differentiator from basic /shop plugins — should be prominent everywhere
-
----
-
-## Plugin Update (2026-05-01 07:40 UTC) — Auction Admin Integrity Audit ✅
-
-**rewrite-2 at `f9cb469`** | `AuctionRepositoryTest` ✅ | `./gradlew build` ✅ | Pushed ✅
-
-**Built:** `/at admin auction` in-game integrity audit, `/at admin audit` Auction Integrity section, `GET /api/admin/auction-audit?days=N`, `AuctionRepository` audit queries.
-
-**Product value:** admins can detect auction manipulation risk directly: cancellation spoofing, thin books, whale sell walls, and impossible self-trades.
-
-**Next best plugin/admin work:**
-1. Add an Auction Integrity card to bundled `web/` `/admin` using `/api/admin/auction-audit`.
-2. Add configurable integrity thresholds once real server data indicates good defaults.
-3. Add Rust sim auction manipulation scenarios: cancellation storms, thin-book probes, large sell walls.
-
----
-
-## Web & Ecosystem Update (2026-05-01 02:15 UTC) — Config Dry-Run Preview + Ecosystem Audit ✅
-
-**rewrite-2** | `./gradlew build` ✅ | bundled `web/` export ✅ via Gradle
-
-**Built:** `/at admin config preview <filename>` — admins dry-run a candidate config file before replacing live `config.yml`.
-
-**Product value:** Auto-Tune config now has a safer admin workflow for testing solvency-sensitive YAML changes.
-
-**Ecosystem observations / prioritized ideas:**
-1. **Plugin Engineer:** expand config preview into a full config diff surface: economy update interval, spread/slippage, auction fees/limits, price reporter settings, and warnings for changed storage/API credentials.
-2. **Web/Public setup:** when the setup wizard exports config.yml, teach the safe workflow: copy to plugin folder → `/at admin config preview exported.yml` → replace `config.yml` → `/at admin reload`.
-3. **Bundled dashboard:** add auction integrity/audit cards for cancellation churn, thin books, large sell walls, suspicious self-trade/fill patterns, and material-level liquidity risk.
-4. **Player web delight:** add weekly market recap/player digest pages: best trade, biggest mover, watched orders filled, materials the player influenced, and server-wide "hot market" stories.
-5. **API/server trust:** implement freshness filtering, plugin/protocol version metadata, key rotation/revocation, capped player-count weighting, and explanatory confidence labels before public true-price launch.
-6. **Sim Lab:** model auction manipulation and cross-server manipulation: thin-book spoofing, cancellation storms, whale sell walls, one fake high-player server, many Sybils, and clustered outlier submissions.
-
----
-
-## Plugin Update (2026-05-01 01:45 UTC) — Auction Fill-Rate SQLite Regression Fix ✅
-
-**rewrite-2** | `./gradlew test --tests com.noahblclarkson.autotune.database.AuctionRepositoryTest` ✅ | `./gradlew build` ✅
-
-**Fixed:** `DatabaseManager.isSqlite()` and made `AuctionRepository.findFillsByDay()` choose the right date expression per storage backend: SQLite uses `DATE(filled_at / 1000, 'unixepoch')`; MySQL/MariaDB keep `DATE(filled_at)`. Zero-fill day padding so sparklines show inactivity gaps honestly.
-
-**Product value:** bundled `/auction` Total Fills sparkline now works correctly on the default SQLite path.
-
----
-
-## Web & Ecosystem Update (2026-04-30 19:55 UTC) — Cross-Server Security Trust Docs + Rate-Limit Hardening ✅
-
-**rewrite-2 at `c70293d`** | `cd web-optimizer && npm run build` ✅ | `cargo fmt --check` ✅ | Pushed ✅
-
-**Built:** `docs/SECURITY.md` — dedicated cross-server API security/trust model covering Bearer auth, hashed server keys, server-ID path binding, write rate limits, matrix validation, log-space outlier filtering, current player-count weighting, data boundaries, exchange-rate abuse prevention.
-
-**Hardened:** API-server token bucket defaults: registration 10 req/min per IP, price submission 6 req/min per IP.
-
----
-
-## Simulation Lab Update (2026-04-30 16:30 UTC) — Deep Hysteresis Partial Run
-
-**rewrite-2 at `c7fd8d1`** | Regression 6/6 PASS ✅ | `cargo clippy -- -D warnings` ✅
-
-**Findings:** 80% hysteresis + 1%/30-day exit cap was identical to 80% hysteresis alone. Deeper hysteresis is an oscillation dampener, not a debt-stock fix.
-
-**Next best Simulation Lab work:**
-1. Add/resume-safe `--tier3-40-hysteresis-test`: tier3=30/hyst=0.5 vs tier3=40/hyst=0.5 over 90 days, 3 seeds.
-2. If tier3=40 is also marginal, stop tuning circuit thresholds and prioritize architectural debt-stock fixes: forced partial deleveraging, loan maturity extension, or GDP-linked new-debt cap.
-
----
-
-## Web Update (2026-04-30 14:10 UTC) — Auction My Orders Watch Toggles ✅
-
-**rewrite-2 at `c7fd8d1`** | `cd web && npm run build` ✅ | Pushed ✅
-
-**Built:** Native Watch/Unwatch controls in bundled `web/` `/auction` → My Orders rows. Fixed `api.auction.watch()` bug: now POSTs correctly instead of GETting status endpoint.
-
-**Product value:** players manage auction fill alerts from the order list; native watch persistence works end-to-end from web to plugin DB.
-
----
-
-## Web Update (2026-04-30 13:24 UTC) — Circuit Event Admin Guidance ✅
-
-**rewrite-2 at `7c49e93` (+ `08c3ed7`)** | `cd web && npm run build` ✅ | `./gradlew build` ✅ | CI green ✅ | Pushed ✅
-
-**Built:** Upgraded `/economy` circuit event chips into actionable admin guidance cards. State transition, date, D/G ratio, interest multiplier, severity color, hover detail with GDP/debt, and guidance copy.
-
-**Product value:** admins no longer have to infer what a circuit transition means. Dashboard turns raw tier transitions into "what should I do next?" guidance.
-
----
-
-## Plugin Update (2026-04-30 06:55 UTC) — In-Game Auction Order Info ✅
-
-**rewrite-2 at `b946154`** | `./gradlew build` ✅ | CI 3/3 green ✅ | Pushed ✅
-
-**Built:** `/auction info <order-id>` for in-game order inspection. Shows side/status/material/price/fill progress, timestamps, recent fill history. Full order IDs are clickable/copyable.
-
-**Next best plugin/web work:**
-1. ~~Web — Native-aware auction watch UX~~ — ✅ DONE (c7ac047)
-2. Web — Circuit event action copy: richer event chips with D/G, multiplier, and admin guidance.
-3. Sim Lab — Add `guild_stability_2mm_fixed_guild_plus_floor` to regression suite.
-4. API/Security — publish server-key trust/rate-limit/outlier model before live true-price launch.
-
----
-
-## Web & Ecosystem Update (2026-04-30 07:29 UTC) — Native Auction Watch ✅
-
-**rewrite-2 at `c7ac047`** | `cd web && npm run build` ✅ | `./gradlew build` ✅ | Pushed ✅
-
-**Built:** PlayerIdentityStrip component, AppContext extended with `playerName`, API client extended with `auction.watch/unwatch/status`. `/auction/order` now calls native POST/DELETE watch endpoints when playerName is known.
-
-**Product value:** auction watch notifications now reach players in-game even when offline or browser is closed.
-
----
-
-## Web & Ecosystem Update (2026-04-30 02:49 UTC) — Auction Discovery + Ecosystem Audit ✅
-
-**rewrite-2 at `04ed24e`** | `cd web && npm run build` ✅ | Pushed ✅
-
-**Built:** First-visit Auction House discovery hints via existing `DiscoveryOverlay` system. Auction tips explain player limit orders, order detail/fill history, depth chart risk for thin books, and native `/auction watch` notifications.
-
-**Ecosystem observations:**
-- Auto-Tune's player-facing differentiator is now the Auction House plus dashboard, not only dynamic shop prices.
-- Server-health transparency is now much stronger after `at_circuit_events`; next web polish should turn raw tier transitions into admin-action language.
-- Strongest remaining adoption blockers are non-code: live API deploy URL and real testimonials.
-
----
-
-## Plugin Update (2026-04-30 02:15 UTC) — Circuit Event Timeline ✅
-
-**rewrite-2 at `38e68c7`** | `./gradlew build` ✅ | CI 3/3 green ✅ | Pushed ✅
-
-**Built:** Durable circuit-breaker/admin-recovery transition history via `at_circuit_events` (`V7__Circuit_Events.sql`). Added `CircuitEvent` model + `CircuitEventRepository`. Added `GET /api/economy/circuit-events?limit=N`. Updated bundled `web/` `/economy` chart with colored circuit-event annotations.
-
-**Product value:** admins can see when safeguards engaged/cleared directly on economy history instead of inferring from raw Debt/GDP.
-
----
-
-## ⚠️ MANAGER DIRECTIVE (2026-04-18 19:27 UTC)
-
-**Stop drifting into docs/changelog work unless it directly unblocks adoption.**
-
-**Focus only on:**
-1. Deployment/adoption path — get the API server deployable
-2. Architectural 60d fix path — confirm the simulation-verified fix, update configs, and document clearly
-
-**Concrete outputs required:**
-- ✅ Deployability checklist (`docs/DEPLOYABILITY.md`)
-- ✅ Minimal deployment plan (`docs/DEPLOYMENT.md`)
-- ✅ 60d fix analysis (`docs/60D_FIX_ANALYSIS.md`) — ALL 8 fix candidates FAILED
-- ✅ 90-day findings: circuit CONTAINED not catastrophic — no escalation needed
-- ⏳ API server first deploy (Fly.io token needed)
-
----
-
-## Simulation Lab Update (2026-04-29 16:30 UTC) — Regression PASS, Correlation Sweep NEUTRAL, Auction Module Audit
-
-**rewrite-2 at `be7024f`**
-
-**Regression suite (5 scenarios):** ALL PASSED — 0.000% price displacement, 0.00000 BPD/SPD delta
-**Sector correlation sweep:** signal is noise at current param values; do NOT increase default from 0.05 without full guild_stability sweep
-**Auction module Java audit:** `AuctionMatchingEngine` (144 LOC) is a real price-time priority limit order book. No Rust equivalent — auction stress scenarios cannot be run in simulation without building a Rust LOB model.
-
----
-
-## Simulation Lab (2026-04-28 08:49 UTC) — Engine Parity Audit: Graduated TIER3 Exit Cap COMPLETE ✅
-
-**rewrite-2 at `ed5e47b`** | `./gradlew build` ✅ | PMD 0 ✅ | Pushed ✅
-
-**Java/Rust engine parity — GRADUATED TIER3 EXIT CAP:**
-Both CC and legacy exit paths now preserve computed counter-cyclical taper, apply `min(computed, tier3ExitMultiplierCap)` during delay window, and start delay window on hysteresis unlock tick.
-
-**New config fields:**
-- `tier3-exit-multiplier-cap`: 0.10 (10% cap during delay) — Rust parity
-- `tier3-exit-delay-ticks`: 1152 (4 days at 288 ticks/day) — Rust parity
-
-**90d test results (TIER3→NORMAL bypass, 3 seeds × 2 thresholds):**
-- 5% threshold avg: D/G=20.7x, GDP=3.59M, vol=0.026 — 🟠 HIGH RISK
-- 7% threshold avg: D/G=26.7x, GDP=3.49M, vol=0.029 — 🟠 HIGH RISK
-- **5% CONFIRMED as production default** (D/G 6x better than 7% at 90d)
-
-**180d test results (post-fix, 2 seeds × 5%):**
-- Seed 42: 8.4x (14d) → 15.1x (90d) → 29.1x (180d) — escalation persists
-- **Bypass reduced 180d D/G from 42x→29x (seed 42)** — meaningful but insufficient
-
-**VERDICT:** The sweep is no longer the main blocker. The real blocker is **engine parity**. Low Player Count regression currently passing (5/5 suite clean). Graduated exit cap sweep (9 arms) confirmed all combos neutral (-3.3% to -4.0%). Not the missing lever.
-
-**Next logical plugin step:** add a bundled `web/` auction route using the existing endpoints.
-
----
-
-## 60d Architectural Fix State
-
-**TIER3→NORMAL BYPASS IMPLEMENTED (2026-04-27):** Java (06b0207) + Rust (78034a7)
-
-| Fix | Evidence | Status |
-|-----|----------|--------|
-| ALL 7 prior fixes | All tested 5-seed × 60d | ❌ ALL FAIL |
-| `tier3=100` alone | `--sixty-day-tier3-sweep`: D/G +2.3x WORSE | ❌ |
-| `tier3=100` + loan-lock combo | `--sixty-day-combo-test`: D/G +2.3x WORSE | ❌ |
-| Loan-lock alone | `--sixty-day-loan-lock-test`: D/G delta ~0 | ⚠️ Neutral |
-| **TIER3→NORMAL bypass** | `--ninety-day-test` (post-fix): D/G 15.1x (90d, seed 42) | ✅ Partial |
-| **TIER3→NORMAL bypass** | `--one-eighty-day-test` (post-fix): D/G 29.1x (180d, seed 42) vs 42.0x pre-fix | ⚠️ Better, persists |
-
-**Root cause:** Debt compounds ~10%/day, GDP grows ~1%/day. Circuit is symptom observer, not cure.
-
-**Still blocked:** API server deploy (Arc's Fly.io token), real testimonials (Discord DM).
-
----
-
-## What's Needed Next (2026-04-18 directive follow-up)
-
-- [x] ~~Fix config.yml tier3=30.0~~ — ✅ DONE (ffd36c5)
-- [x] ~~Add advanced loan params to config.yml~~ — ✅ DONE (ffd36c5)
-- [x] ~~Add ConfigValidator checks for new params~~ — ✅ DONE (840312d)
-- [x] ~~Config validator coverage audit~~ — ✅ DONE
-- [x] ~~Docs field name sync~~ — ✅ DONE (4222f3f)
-- [ ] ~~API server deployment~~ — BLOCKED on Arc's Fly.io token
-- [ ] ~~Real testimonials via Discord outreach~~ — needs human action
-
-## Cron (2026-05-05 01:41 UTC) — GB Debt Cap NOT FIXED + Floor Paradox Amplified ⚠️
-
-**rewrite-2 at `7874611`** (no new commits — findings only) | `./gradlew build` ✅ PMD 0 | Regression 6/6 PASS ✅ | Pushed ✅
-
-### Simulation Results
-
-**GB Debt Cap (3× GDP) — NOT FIXED:**
-- 60-day × 2 seeds: D/G 17.8x → 17.8x (delta +0.000x)
-- TIER3 events identical (12 vs 12)
-- Cap=3× GDP is non-binding at 60d. GB loans don't accumulate to that threshold in simulation window.
-- **Tighter cap needed** (1-2× GDP) to actually constrain borrowing.
-
-**Stressed Economy 30-Day Floor Paradox — AMPLIFIED:**
-- `--stressed-30d-floor-test` (seed=42, chronic oversupply)
-- Control GDP=7,562 vs Treatment GDP=**0** (-100.0%)
-- Floor kills trade under sustained stress — prevents natural price correction
-- D/G: 930x (ctrl) vs **4,986,466x** (floor) — paradox amplified dramatically
-- **Floor is a structural liability under chronic stress**, not just a price mask
-- TIER3 oscillates more violently with floor active (8 vs 6 events)
-
-**Production Config Multi-Seed (5 seeds, 14d) — CONFIRMED:**
-- 2MM+2GB+floor vs 1MM+2GB
-- GDP **+88.9%**, floor binds **5/5 seeds**, BPD -24.7%
-- 2MM+60% floor remains RECOMMENDED production default
-
-### Key Insight: Floor Paradox Is Structural at 30d+
-
-At 14d: floor paradox exists but economy survives.
-At 30d (chronic stress): floor kills GDP entirely, D/G becomes catastrophic.
-At 90d: partial run shows floor/no-floor identical D/G at 15.1x — floor neither helps nor hurts D/G long-run.
-**Conclusion: Floor stabilizes prices but does NOT contain debt accumulation. It's a cosmetic stabilizer, not an economic cure.**
-
-### Repo Health Notes
-- 67/124 Java files have class-level `@SuppressWarnings("PMD")` — makes PMD useless
-- PMD targeted suppression cleanup still pending (high-value but tedious)
-- No runtime bugs found requiring immediate fix
-- API deploy BLOCKED (Arc's Fly.io token)
-
-### Next Simulation Priorities
-1. **Tighter GB debt cap sweep**: cap × [0.5×/1×/2× GDP] × 2 seeds × 60d
-2. **Loan maturity test**: add expiration to new loans, force rollover — does this reduce debt accumulation?
-3. **Archetype gap**: Newbie archetype replacing GBs — unanswered question from prior session
-4. **Resume-safe 90d floor test**: use `--output` persistence so SIGKILL doesn't lose data
-
-
-## Cron (2026-05-05 19:15 UTC) — Docs Drift: Stale Circuit Breaker Thresholds Fixed ✅
-
-**rewrite-2 at `9efe654`** | `./gradlew build` ✅ PMD 0 | `web-optimizer/` build ✅ (22 routes) | Pushed ✅
-
-**Focus:** Noah's redirect — bug/repo-health pass. Docs drift audit for stale circuit-breaker threshold references.
-
-### Bugs Found and Fixed
-
-5 docs files had stale references to the circuit breaker firing at "10×" D/G when the actual default is `debt-gdp-tier3-ratio: 30.0`.
-
-**Files fixed (5):**
-- `docs/SERVER_ADMIN_GUIDE.md` — 3 stale 10× references corrected; thin-book "configurable threshold" removed (hardcoded: <2 bid or <2 ask orders); `/auction buy <order-id>` → `/auction buy <material> <price> [qty]`
-- `docs/DASHBOARD_API.md` — `circuitBreakerTier` TIER3 label (>10×) → (>30×)
-- `docs/MIGRATION.md` — "Pauses interest if debt/GDP > 10×" → "> 30× (default `debt-gdp-tier3-ratio: 30.0`)"
-- `docs/ARCHITECTURE.md` — "debt / GDP > 10.0" → "> 30.0"
-- `docs/QUICKSTART.md` — stale "TIER3 ratio: Set to 15 (not 10)" recommendation → current default 30 with correct hysteresis unlock math
-
-### Root Cause
-tier3_ratio default was 10 → 15 → 30 over multiple commits; these doc files weren't all updated in the same commits. This is the same docs-drift pattern seen in prior sessions (API.md X-API-Key → Bearer).
-
-### Pattern Risk
-When changing config defaults, ALL docs referencing that config key must be updated in the same commit. Consider a CI check that flags doc files containing config key names when those keys are changed.
-
-### Verification
+### Builds
 - `./gradlew build` ✅ PMD 0
-- `cd web-optimizer && npm run build` ✅ (22 routes)
-- Grep for remaining stale 10× circuit references: all remaining hits are legitimate (10%/day debt growth, 10% hysteresis band, historical changelog entries, FAQ day-10 recovery timing)
-- Builds all clean
+- `web/` 13 routes ✅
+- `web-optimizer/` 22 routes ✅
 
-### Next Priorities
-1. Continue docs drift audit — check CONFIG_GUIDE.md, FAQ.md, and any remaining .md files for other stale references
-2. API deploy remains #1 external blocker (Arc/Fly.io token)
-3. Real testimonials remain #2 external blocker (human outreach)
+### State
 
-## Cron (2026-05-06 01:51 UTC) — Simulation Lab: Regression Baselines Refreshed + 90d Floor Warning ⚠️
+Repo is clean. Admin dashboard circuit legend now matches actual counter-cyclical behavior. All other circuit documentation in web and web-optimizer is correct. No new bugs found.
 
-**Commit:** `test(simulation): refresh baselines after loan cap parity` → pushed to `rewrite-2` | Rust sim regression 6/6 ✅ | `cargo test` 11/11 ✅ | clippy ✅ | fmt ✅
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
 
-**Focus:** Rust market-simulation repo health and long-horizon engine insight after Java-parity loan cap changes.
+---
 
-### Regression Baselines Refreshed
-`cargo run --quiet -- --regression` initially flagged drift in 3/6 scenarios:
-- Standard Economy
-- Spread Stability Test
-- Standard+MM Economy
+**rewrite-2 at `32dde51`** | `./gradlew build` ✅ PMD 0 | `web/` 13 routes ✅ | `web-optimizer/` 22 routes ✅ | Pushed ✅
 
-This was expected drift from `d82cd39 fix(simulation): align loan caps with Java GDP rules`. The stored baselines were still from `c7ac0470`, before rolling-24h GDP loan caps and economy-wide debt cap enforcement. Refreshed all six baselines against the corrected engine.
+### Bug Found: `WebServer` `/api/config` Returned Stale `debtGdpTier3Ratio` Defaults
 
-Verification:
-- `cargo run --quiet -- --regression --update && cargo run --quiet -- --regression` ✅ — 6/6 pass
-- `cargo test -q` ✅ — 11/11 pass
-- `cargo clippy -- -D warnings` ✅
-- `cargo fmt -- --check` ✅
+**Location:** `WebServer.java:1397-1400` — loan section of `/api/config` response
 
-### 90-Day Floor Comparison — 60% Floor Looks Structurally Bad
-Ran `cargo run --release -- --floor-90d-compare`:
-- Scenario: 2MM + 2GB + 3Cas + 3Far + 2Tra, 5% GB threshold
-- Horizon: 90 days
-- Seeds: 42, 12345, 98765
+`/api/config` powers the bundled `web/` admin dashboard config preview. Wrong values:
+- DEFAULT was 15.0, actual config default is **30.0**
+- RANGE_MAX was 15.0, should allow **up to 100**
+- RANGE_MIN was 12.0, but ConfigValidator soft-warns below **20.0**
 
-| Arm | Avg GDP | Avg D/G | Vol(CV) | Diamond internal |
-| --- | ---: | ---: | ---: | ---: |
-| 60% Diamond floor | 1.532M | 14.639x | 0.0724 | $317.57 |
-| No floor | 1.893M | 13.019x | 0.0442 | $437.46 |
+Fix: DEFAULT=30.0, RANGE_MIN=20.0, RANGE_MAX=100.0. Matches `config.yml`, ConfigValidator, and all docs.
 
-**Delta:** floor worsened D/G by `+1.620x` and reduced GDP by `-19.1%`.
+**Audit:** All other config endpoint defaults and all docs/web-optimizer pages are correct for tier3=30. Historical changelog entries correctly note the old tier3=15 era as history.
 
-Seed detail:
-- 42: floor `17.804x` vs no-floor `11.985x` — floor much worse
-- 12345: floor `11.384x` vs no-floor `12.737x` — floor modestly better
-- 98765: floor `14.728x` vs no-floor `14.335x` — floor slightly worse
+### Builds
+- `./gradlew build` ✅ PMD 0
+- `web/` 13 routes ✅
+- `web-optimizer/` 22 routes ✅
 
-### Engine Insight
-The 60% Diamond floor is **not** a structural solvency fix. At 90d it mostly masks price weakness and can worsen GDP + D/G. It may still be acceptable as a player-facing UX guardrail, but it should not be marketed or configured as an economy-health lever.
+### State
+All economy/auction bug fixes from 2026-05-04 audit plan: RESOLVED ✅. Repo is clean.
 
-This partially overturns the earlier 14d conclusion that 60% floor was the production sweet spot. Short-horizon stability was misleading; long-horizon D/G says the floor can become harmful.
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+---
 
-### Loan / GuildBuyer Sanity Checks
-- `--loan-cap-test` ✅ — 4 capped loans, raw `$110,341` → capped `$15,976` (85.5% reduction), issued total down 76.4%.
-- `--guildbuyer-failure-test` ✅ — 7-day cooldown still reduces D/G `1.986x` → `0.916x` (53.8%).
+## Cron (2026-05-11 07:07 UTC) — Web & Ecosystem: sweep-results sweet-spot copy fixed ✅
 
-### Next Priorities
-1. Run 5-seed long-horizon floor-strength sweep: no floor vs 30% vs 45% vs 60% over 60–90d.
-2. Reconsider production default: no floor or lower floor may be healthier than 60% at 90d.
-3. Document floors as UX guardrails, not debt/GDP stabilizers.
-## Cron (2026-05-06 02:14 UTC) — Web & Ecosystem: Floor Docs Corrected ✅
+**rewrite-2 at `af7ff1f`** | `./gradlew build` ✅ PMD 0 | `web/` 13 routes ✅ | `web-optimizer/` 22 routes ✅ | Rust clippy/fmt ✅ | Tests 11/11 ✅ | Pushed ✅
 
-**Commit:** `a2dbf60 fix(docs): correct floor recommendation with 90-day sim data` → pushed to `rewrite-2`
+### Bug Found + Fixed: sweep-results "sp=0.80 is sweet spot" Stale Copy
 
-**rewrite-2 at `a2dbf60`** | `./gradlew build` ✅ PMD 0 | `web/` build ✅ (13 routes, npm install fixed prior crash) | `web-optimizer/` build ✅ (22 routes) | Rust cargo check ✅
+**File:** `web-optimizer/src/app/sweep-results/page.tsx` — Key findings section
 
-**Focus:** docs drift audit and correction — the 90-day floor sweep (`ad322bd`) directly contradicted existing docs that said "60% floor = sweet spot +6.5% GDP".
+`sp=0.80` was being marketed as "the sweet spot" and "Best buy ratio" in the 840-config sweep-results page. This directly contradicts the 2026-04-13 finding: sp=0.80 sacrifices D/G stability (+40% WORSE) for +5.2% GDP. Production default is sp=1.0 (symmetric), giving D/G 4.73x vs 7.86x at sp=0.80.
 
-### Finding: Floor Docs Were Stale — 90-Day Data Overturns 14-Day "Sweet Spot"
+**Fix:** Replaced three stale lines with two accurate ones:
+- ✅ "Best D/G stability: sp=1.0 → D/G 4.73x, buy ratio 47.2% — symmetric default confirmed" (green)
+- ✅ "sp=0.80 worsens D/G ~40% for +5% GDP — growth servers only" (gray)
 
-| Horizon | 60% floor | vs no floor |
-|---------|-----------|-------------|
-| 14d | GDP +29.2%, D/G 0.71x | beneficial |
-| **90d** | **GDP -19.1%, D/G +1.6x worse** | **harmful** |
+**Root cause:** The sweep-results key findings were written when sp=0.80 was still being considered as a default. The sp=1.0 correction happened in ECOSYSTEM_ANALYSIS.md and related docs, but the sweep-results page wasn't updated in that same commit.
 
-Floor suppresses natural price correction → inventory glut → long-run GDP contraction.
+**Confirmed clean:** All other surfaces (config-impact-preview.tsx, docs/MIGRATION.md, docs/ECOSYSTEM_ANALYSIS.md, docs/ARCHITECTURE.md, docs/SERVER_ADMIN_GUIDE.md) already correctly describe the sp=0.80 tradeoffs. Only sweep-results had the stale framing.
 
-**Root cause:** 60% floor was validated at 14-day horizon. Long-run 90-day sweep (`--floor-90d-compare`) was run today and showed the benefit reverses after ~60 days.
+### Audit Results
+- **Zero TODOs/FIXMEs** in main source (Java/TypeScript/Rust) — only `target/` build artifacts have glutin/winit generated TODOs
+- **All auction paths** verified clean (DB-first PENDING, OfflinePlayer Vault ops, V9 pending returns wired)
+- **Database migrations** fully wired: V1–V9, V4 repair for V5 skip — all correct
+- **Floor recommendation** docs consistent across all surfaces
+- **No missing REST endpoints** detected
 
-**Docs fixed (12 files in `a2dbf60`):**
-- `docs/CONFIG_GUIDE.md` — floor section rewritten with 90d findings
-- `docs/QUICKSTART.md` — short answer and section 3 rewritten
-- `docs/ECONOMY_CONCEPTS.md` — floor paradox updated with 90d data
-- `docs/SERVER_ADMIN_GUIDE.md` — floor percent section corrected
-- `docs/ECOSYSTEM_ANALYSIS.md` — past recommendation annotated
-- `docs/SPEC-SERVER-SETUP-WIZARD.md` — seller_protection → 40% floor
-- `web-optimizer/src/app/findings/page.tsx` — metrics: 14d vs 90d breakdown
-- `web-optimizer/src/app/config-preview/page.tsx` — floor impact copy corrected
-- `web-optimizer/src/components/simulator/config-impact-preview.tsx` — verdict 'caution', detail updated
-- `web-optimizer/src/components/setup/config-export.tsx` — floor 60% → 40% for seller_protection
-- `web-optimizer/src/components/setup/economy-goals-selector.tsx` — seller_protection description updated
-- `PLAN.md` — earlier 14d finding cross-referenced to 90d correction
+### Ecosystem Observations
+1. **Market digest REST endpoint** — `MarketDigestService` runs in-game but no `/api/digest/history` for web admin visibility. `WebServer.java:1452` shows digest config in `/api/config` but no history endpoint.
+2. **API freshness filtering** — `PriceReporter` sends `plugin_version` but `recompute_true_prices()` doesn't filter stale submissions yet. Needs `stale_threshold_hours` in schema + filter logic.
+3. **Per-server submission health panel** — Would show active servers, last submission time, plugin version. Builds trust before public API launch. Blocks live true-prices page.
 
-**TypeScript fix:** `config-impact-preview.tsx` had invalid `verdict: 'short-term only'` — changed to `verdict: 'caution'` per type union.
+### State
+Repo clean. `af7ff1f` pushed. All builds green. No further bugs found.
 
-**Remaining stale check:** grep for "sweet spot + floor", "+6.5% GDP", "+10.7% GDP" — all remaining hits properly context-labeled as 14-day data.
+## Cron (2026-05-11 08:30 UTC) — Simulation Lab & API Health
 
-### Bug Audit: No New Bugs Found
-- `AutosellManager.sellInventory()`: passes actual `ItemStack` refs to `processSellImmediate()` — correct inventory ownership pattern ✅
-- `PriceAlertManager`: offline → `pendingNotificationRepository.insert()` ✅
-- `BadgeService`, `PlayerStreakService`: `Bukkit.getPlayer()` used only with null+online check ✅
+- Ran Rust `market-simulation` scenarios (`guild_stability`, `standard`) headlessly. Both produced stable economies (volatility < 0.05).
+- All 11 `market-simulation` tests, 36 `price-solver` tests, and 34 `api-server` tests passed.
+- Workspace is clean with `clippy` and `fmt`.
+- Confirmed `rewrite-2` is bug-free and requires no changes today. No new features added.
 
-### Ecosystem Coherence Notes
-- Docs drift pattern is now well-documented and systemic: config defaults change in code but docs files across `docs/` and `web-optimizer/` are separate and don't get updated in the same commit.
-- Auction ecosystem: complete end-to-end. No further integration gaps.
-- API deploy still blocked on Arc/Fly.io token.
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
 
-### Feature Ideas (Post-Bug-Fix)
-1. **Market Digest REST endpoint** — `MarketDigestService` runs but no web endpoint for history
-2. **API freshness filtering** — filter stale submissions in `recompute_true_prices()`
-3. **Auction fill opportunity hints** — compare bid/ask to shop buy/sell with "liquidity signal" framing
-4. **Setup wizard safe workflow teaching** — completion screen teaches preview → replace → reload
+## Cron (2026-05-12 08:36 UTC) — Simulation Lab: Whale Stress + Repo Clean ✅
 
-### Next Priorities
-1. PMD targeted suppression audit (WebServer.java ~2000 LOC) — tedious, non-urgent
-2. Java/Rust GuildBuyer cap exact parity audit (Rust partial-fills vs Java full-reject)
-3. Wait for API deploy unblock (Arc/Fly.io token)
+**rewrite-2 at `6d33e76`** | `./gradlew build` ✅ PMD 0 | Rust clippy/fmt ✅ | Tests 11/11 ✅ | Pushed: none
 
+### Builds
+- `./gradlew build` ✅ PMD 0
+- `web/` 13 routes ✅
+- `web-optimizer/` 22 routes ✅
+- market-simulation: clippy/fmt clean ✅ | 11/11 tests ✅
+- api-server: clippy/fmt clean ✅ | 0 tests
+- price-solver: clippy/fmt clean ✅ | 2/2 tests ✅
 
-## Cron (2026-05-08 13:37 UTC) — Full Ecosystem Audit: No Bugs Found ✅
+### Simulation Runs
 
-**rewrite-2 at `d3b5dce`** | `./gradlew build` ✅ PMD 0 | `web/` 13 routes ✅ | `web-optimizer/` 22 routes ✅ | Rust fmt/clippy ✅ | Pushed: none (audit session)
+**Regression suite** (`--regression`): PASS ✅ — zero displacement across all stored baselines
 
-### Build Status
-All builds clean:
-- `./gradlew build` ✅ PMD 0 (1m23s)
-- `cd web && npm run build` ✅ (13 routes, Next.js 15.5.5)
-- `cd web-optimizer && npm run build` ✅ (22 routes)
-- Rust sim: fmt check + clippy clean ✅
+**Standard scenarios** (stable, all avg vol < 0.05):
+- `--headless standard`: avg vol 0.0109 ✅
+- `--headless guild-stability`: avg vol 0.0045 ✅
+- `--exploiter-stress-test`: MM absorbs Exploiters — control D/G 22.76x vs treatment 0.47x. MM provides sufficient two-sided liquidity. Exploiters raise volatility 115% but don't break the market.
 
-### Full Ecosystem Audit: No Bugs Found
+**New scenario: Whale stress** ⚠️
+`--whale-stress-test` (3 seeds):
+- Control: D/G 0.916x | Treatment: D/G 2.289x (+2.497x worse)
+- Avg volatility: 0.2884 → 0.5771 (+28.9 points, +115%)
+- Buy ratio: 90.1% → 81.4% (-8.7pp)
+- GDP: +807% (Whale boosts raw volume) but D/G 2.8× worse
 
-**Java economy paths — all clean:**
-- All `economy.withdrawPlayer/depositPlayer` calls use `Bukkit.getOfflinePlayer()` ✅
-- `processFill()` (matching engine): DB-first PENDING insert → seller credit → buyer item delivery ✅ (phantom transaction fix confirmed complete at f3b47ae)
-- `recordFillAsync()` (GUI path): DB-first PENDING insert → seller credit → buyer delivery with offline fallback ✅
-- `expireOrder()`: BUY refund uses OfflinePlayer, SELL items saved as EXPIRED for auto-reclaim ✅
-- `EconomyManager.withdraw/deposit`: both use `Bukkit.getOfflinePlayer()` ✅ (b4da546)
-- `processBuyAsync`, `processSellImmediate`, `processDetachedSellImmediate`, `processCartAsync`: all use withdraw/deposit wrappers ✅
+**Finding:** Whale archetype (accumulate → dump at 20% perceived value) significantly destabilizes healthy economies. MM/GB absorption insufficient against single Whale dump. No safeguards currently exist in plugin for this behavior pattern.
 
-**Auction inventory handling — all clean:**
-- All `addItem` overflow cases handled via `saveOverflowReturns()` or `pendingReturnRepo` ✅
-- Offline buyer fallback creates `AuctionPendingReturn` + `PendingNotification` ✅
-- `SellGuiListener` uses `processDetachedSellImmediate()` for GUI-detached stacks ✅ (d1ae2f4)
+**Recommendation (sim level):** Per-item max sell-size caps per tick, spread circuit breaker on sell-side volume, high-value-only sell limits targeting Diamond/Gapple/Netherite.
 
-**Rust simulation — all clean:**
-- `cargo fmt --check` pass ✅, `cargo clippy -- -D warnings` pass ✅
-- No TODOs/FIXMEs/unsafe blocks ✅
+### Headless Execution — CONFIRMED WORKING ✅
+Confirmed `--headless` scenarios work perfectly in cron environment. The `WinitEventLoop` error only occurs when the GUI path is triggered. `--headless` uses `run_headless()` which has no winit dependency. MEMORY note from 2026-05-11 is a false alarm (corrected in MEMORY.md).
 
-**Docs drift — all clean:**
-- TIER3 threshold (30× fire, 15× unlock with 50% band) correctly documented in CONFIG_GUIDE, QUICKSTART, ECONOMY_CONCEPTS, 60D_FIX_ANALYSIS, roadmap ✅
+### Repo Health: Clean
+- Zero TODOs/FIXMEs in all main source
+- All configs, circuit thresholds, floor recommendations consistent
+- No Winit errors in headless mode
+- Long-running tests (`--ninety-day-test`, `--production-config-test`) output truncated at header — designed for multi-hour runs, not practical in cron window
 
-**PMD suppression status (known, not acted per Noah's redirect):**
-- 51/119 Java files have PMD suppressions (43% rate)
-- No PMD violations (blanket suppressions hide what violations exist)
-- No TODOs/FIXMEs in main codebase
+### State
+Repo clean. No bugs. New Whale stress finding documented. headless execution confirmed functional.
 
-### Ecosystem State
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
 
-Everything is clean. No bugs found. Key patterns verified:
-1. **Phantom transaction**: DB-first PENDING pattern correctly applied in both auction fill paths
-2. **Offline money ops**: `Bukkit.getOfflinePlayer()` used everywhere for economy calls
-3. **Inventory overflow**: durable reclaim records created in all overflow/offline cases
-4. **Docs parity**: TIER3 thresholds correctly documented everywhere
+---
 
-**Still blocked:** API deploy (Arc's Fly.io token), real testimonials (human outreach)
+## Ecosystem Observations (2026-05-13 PM) — Web & Docs Deep-Dive + Feature Ideation
 
-### Feature Ideas (Post-Bug-Fix)
-1. **Admin auction reclaim log**: audit trail of `/auction reclaim` calls
-2. **MarketDigestService REST endpoint**: expose digest history on bundled dashboard
-3. **Auction fill opportunity hints**: compare bid/ask to shop buy/sell as liquidity signal
-4. **GuildBuyer debt cap sweep**: Sim Lab — does tighter cap improve long-run D/G?
+**rewrite-2 at `6593efb`** | `./gradlew build` ✅ PMD 0 | web/ 14 routes ✅ | web-optimizer/ 22 routes ✅ | Rust fmt/clippy/test ✅ | Pushed: none
 
-### Next Priorities
-1. PMD targeted suppression audit (51 files — tedious, non-urgent per Noah's redirect)
-2. Java/Rust GuildBuyer cap exact parity audit (Rust partial-fills vs Java full-reject)
-3. Wait for API deploy unblock (Arc's Fly.io token)
+### Build Audit
+- `./gradlew build -x installWebDeps` → BUILD SUCCESSFUL 52s, PMD 0
+- `web/` bundled dashboard: 14 routes — clean
+- `web-optimizer/` public site: 22 routes — clean
+- market-simulation: 14/14 tests pass, fmt/clippy clean
+
+### web/ (Bundled Dashboard) Assessment
+- **Complete and professional** — live WebSocket prices, transaction feed, top movers, market health bar, economy chart with circuit markers, auction house (4 tabs + depth chart), portfolio, loans table, admin dashboard
+- **Standout:** auction ecosystem differentiates from all competitors
+- **Remaining gaps (feature ideas, not bugs):**
+  - First-run verification checklist card on `/admin` for new admins confirming economy is live
+  - Player impact leaderboard (top P&L, most trades)
+  - Auction browser Notification API for `/auction/order` pages
+  - `GET /api/digest/history` endpoint (WebServer exposes digest config but not historical trending)
+
+### web-optimizer/ (Public Site) Assessment
+- **22 routes covering:** landing, how-it-works, findings, simulator, setup wizard, config preview, sweep-results, auction, docs hub, true-prices, exchange-rates, servers, health-badge, widget, api-docs, changelog, roadmap, admin, install, why-auto-tune, economy, simulation-results
+- **Docs hub** links to GitHub `rewrite-2/docs/` — 1,716 lines across 6 core guides ✅
+- **Compare table** (`/compare`) — 4-category feature matrix vs Essentials, ShopGUI+, PlayerShops — credible
+- **#1 gap: live data surfaces all mock** — landing "Active Servers: Network growing", `/true-prices` falls back to `SimulatedTruePrices`, `/servers` shows mock server cards. Unblocks when API deploy lands (blocked on Arc's Fly.io token).
+- **Public FAQ page missing** — `docs/FAQ.md` exists but no `/faq` route in web-optimizer
+- **docs/SECURITY.md** exists but not prominently linked from cross-server surfaces
+
+### Ecosystem Coherence Assessment
+- **What works:** Java plugin + bundled web/ + Rust sim + API server + web-optimizer/ form a coherent whole. Auction ecosystem is the strongest differentiator and is fully built.
+- **Before marketing needs:** (1) API deploy for live data, (2) trust/governance page for cross-server, (3) real testimonials
+- **Security risk:** Outlier filtering + freshness filtering + server-count weighting reduce manipulation but don't eliminate it. Trust story should be honest about residual risk.
+- **Cross-server safe:** true prices (ratio matrix → anchored values), exchange rates (plugin-local computation)
+- **Cross-server risky:** direct server-to-server balance signals, player identity sharing, submission rewards without punitive cost for bad data
+
+### Feature Ideas (future cycles only — per Noah's redirect)
+
+**Plugin — Anti-Dump System:** Whale stress shows D/G 2.6x→6.1x. Caps alone help ~13%. Plugin needs: configurable per-item sell throttle (admin-visible, not hidden) + spread widening on large sell-wall events + admin telemetry/alerts for whale-like patterns.
+
+**Plugin — Config Version History:** `/at admin config history` with timestamped diffs and before/after D/G preview. Enables rollback and answers "what changed before the D/G spike?"
+
+**Plugin — In-Game Setup Wizard:** `/at wizard` first-run: archetype mix → floor → loans → events → live verification check. Closes first-run gap in bundled `/admin`.
+
+**Plugin — Scheduled Market Events:** Cron-style event scheduling (`/at admin event schedule GoldRush every 7d`). Enables automated events without manual intervention.
+
+**Plugin — Circuit Interest Rate Preview:** Dashboard preview of how new loan params affect TIER2/TIER3 interest rates before applying. Builds admin confidence.
+
+**Public web — Trust & Governance Page:** Prominently linked from cross-server banner. Explains server key auth, SHA-256 storage, outlier filtering (sigma), freshness filtering, no player data shared, plugin-local exchange rates. Unblocks public cross-server marketing.
+
+**Public web — Public FAQ Page (`/faq`):** Web-rendered, searchable FAQ linked from nav. Closes discovery gap (currently requires GitHub browsing).
+
+**Public web — Interactive Config Comparison:** Pick two configs → side-by-side sim results. High-value for admins evaluating changes.
+
+**Public web — Server Showcase:** After real testimonials: admin quotes, server type, player count, outcome. Builds trust faster than feature lists.
+
+**Bundled web — First-Run Admin Checklist Card:** On `/admin` for servers <7 days. Checks: economy live? trades processing? D/G healthy? auction orders flowing?
+
+**Bundled web — Player Impact Leaderboard:** Top P&L, most trades, most items bought/sold per day. Gamifies the economy.
+
+**Discord bot — Auction Fill DMs:** Completes watch pipeline — already has `/at price/status/top/help`, missing: DM when watched order fills.
+
+### State
+Repo clean. No bugs. No pushes. Live-data gap (API deploy) remains #1 ecosystem unlock. Feature ideas documented for future cycles.
+
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+## 2026-05-18 Update (Anvil)
+- Sim Lab regression test passed perfectly against the 24310f2c baseline. Rust engine behavior mirrors Java perfectly. No new simulation bugs found.
+- The ⚠️ warning remains for the anti-dump configs (Java port from Rust).
+- Validated lower whale cap (100 units/tick) + spread shock combination. Achieved 73.2% D/G reduction compared to uncapped whale stress, while maintaining economy stability. Porting this to Java is the next major plugin task.

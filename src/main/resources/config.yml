@@ -643,3 +643,37 @@ price-milestone:
   # Minimum minutes between announcements for the same item+threshold.
   # Prevents spam if an item oscillates around a threshold.
   cooldown-minutes: 60
+
+# Whale Anti-Dump — protects against sell-wall destabilization
+# ============================================================
+# Whale players accumulate large inventories then dump them at once,
+# creating sell walls that cascade into leverage and debt problems.
+# This section detects abnormal sell volume and applies temporary spread
+# widening to dampen price impact before it destabilizes the economy.
+whale-anti-dump:
+  # Enable whale anti-dump protections
+  enabled: true
+
+  # Maximum units a player can sell of any single item per tick.
+  # Setting this (e.g. 100-500) forces whales to spread large dumps
+  # across multiple ticks instead of dumping everything at once.
+  # null = no cap (uncapped dumps allowed)
+  max-sell-per-item-per-tick: null
+
+  # Sell volume threshold in basis points (0.10 = 10%).
+  # When an item's tick sell value exceeds this fraction of its
+  # base value × 1000, a spread shock is triggered.
+  spread-shock-trigger-bps: 0.10
+
+  # Multiplier applied to base spread during shock (default 2.5×).
+  # At 2.5, a 20% base spread becomes 50% while the shock is active.
+  spread-shock-multiplier: 2.5
+
+  # How many ticks a spread shock lasts (default 288 = 1 day at 20t/s).
+  # Shock decays at 5% per tick, so it fades smoothly.
+  spread-shock-duration-ticks: 288
+
+  # Cooldown in ticks after selling Epic/Legendary items.
+  # Prevents rapid repeated high-value dumps.
+  # null = no cooldown
+  high-value-sell-cooldown-ticks: null

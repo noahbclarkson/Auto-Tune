@@ -29,6 +29,7 @@ public record AutoTuneConfig(
         @NotNull PriceMilestoneConfig priceMilestones,
         @NotNull MarketDigestConfig marketDigest,
         @NotNull OnboardingConfig onboarding,
+        @NotNull WhaleAntiDumpConfig whaleAntiDump,
         boolean marketFrozen
 ) {
 
@@ -791,6 +792,40 @@ public record AutoTuneConfig(
     ) {
         public static MarketDigestConfig defaults() {
             return new MarketDigestConfig(false, "daily", 0, 9, true, true, true, true, null);
+        }
+    }
+
+    /**
+     * Anti-dump configuration for whale-like sell-wall events.
+     *
+     * <p>Whale players accumulate large inventories then dump them at once, causing
+     * sell-wall shocks that destabilize otherwise healthy economies. These settings
+     * detect abnormal sell volume and apply temporary spread widening to dampen the
+     * price impact before it cascades into leverage/debt problems.
+     *
+     * @param enabled                         whether anti-dump is active (default true)
+     * @param maxSellPerItemPerTick           per-item sell cap per tick. Whales spreading dumps
+     *                                        across multiple ticks prevents sudden sell walls.
+     *                                        null = no cap (uncapped dump, default)
+     * @param spreadShockTriggerBps           sell volume trigger threshold in basis points (0.10 = 10%).
+     *                                        When an item's tick sell volume exceeds this fraction of its
+     *                                        base value × 1000, a spread shock is triggered.
+     * @param spreadShockMultiplier          multiplier applied to base spread during shock (default 2.5×).
+     * @param spreadShockDurationTicks        how many ticks the spread shock lasts (default 288 = 1 day).
+     *                                        Shock decays at 5% per tick.
+     * @param highValueSellCooldownTicks     cooldown in ticks after selling Epic/Legendary items.
+     *                                        null = no cooldown.
+     */
+    public record WhaleAntiDumpConfig(
+            boolean enabled,
+            @Nullable Integer maxSellPerItemPerTick,
+            double spreadShockTriggerBps,
+            double spreadShockMultiplier,
+            int spreadShockDurationTicks,
+            @Nullable Integer highValueSellCooldownTicks
+    ) {
+        public static WhaleAntiDumpConfig defaults() {
+            return new WhaleAntiDumpConfig(true, null, 0.10, 2.5, 288, 12);
         }
     }
 }

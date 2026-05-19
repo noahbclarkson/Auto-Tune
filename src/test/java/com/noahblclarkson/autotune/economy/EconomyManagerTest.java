@@ -92,6 +92,7 @@ class EconomyManagerTest {
                 AutoTuneConfig.PriceMilestoneConfig.defaults(),
                 AutoTuneConfig.MarketDigestConfig.defaults(),
                 AutoTuneConfig.OnboardingConfig.defaults(),
+                AutoTuneConfig.WhaleAntiDumpConfig.defaults(),
                 false);
         when(cm.getConfig()).thenReturn(cfg);
         return cm;

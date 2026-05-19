@@ -54,6 +54,11 @@ public class MarketEngine {
     private final Map<Integer, PriceOverride> overrideCache = new ConcurrentHashMap<>();
     private volatile double lastGlobalVolumeMultiplier = 1.0;
 
+    // Whale anti-dump spread shock state
+    private volatile double spreadShock = 1.0;
+    private volatile int shockRemainingTicks = 0;
+    private final Map<Integer, Integer> itemSellCooldowns = new ConcurrentHashMap<>();
+
     @Inject
     public MarketEngine(
             PluginAdapter adapter,
@@ -118,6 +123,25 @@ public class MarketEngine {
             for (ShopItem item : items) {
                 TradeMetrics metrics = calculateTradeMetrics(item.id(), tradeWindowStart, tradeWindowMs, economyConfig);
                 itemMetrics.put(item.id(), metrics);
+            }
+
+            // Whale anti-dump spread shock trigger: check if any item's tick sell volume
+            // exceeds the configured threshold and trigger spread widening if so.
+            AutoTuneConfig.WhaleAntiDumpConfig antiDump = configManager.getConfig().whaleAntiDump();
+            if (antiDump.enabled() && antiDump.spreadShockTriggerBps() > 0.0) {
+                double triggerBps = antiDump.spreadShockTriggerBps();
+                for (ShopItem item : items) {
+                    int tickSell = tickSellVolume.getOrDefault(item.id(), 0);
+                    if (tickSell > 0) {
+                        double sellValue = tickSell * item.price().doubleValue();
+                        double threshold = triggerBps * item.price().doubleValue() * 1000.0;
+                        if (sellValue > threshold && shockRemainingTicks == 0) {
+                            spreadShock = antiDump.spreadShockMultiplier();
+                            shockRemainingTicks = antiDump.spreadShockDurationTicks();
+                            break; // one shock per tick
+                        }
+                    }
+                }
             }
 
             // Pass 1: Calculate new prices and spreads (don't persist yet)
@@ -229,6 +253,17 @@ public class MarketEngine {
 
             tickBuyVolume.clear();
             tickSellVolume.clear();
+
+            // Decay spread shock and clear cooldowns
+            if (shockRemainingTicks > 0) {
+                shockRemainingTicks--;
+                spreadShock = 1.0 + (spreadShock - 1.0) * 0.95; // 5% decay per tick
+                if (shockRemainingTicks == 0) {
+                    spreadShock = 1.0;
+                }
+            }
+            // Cooldowns decay by 1 tick each
+            itemSellCooldowns.replaceAll((k, v) -> Math.max(0, v - 1));
 
             if (!frozen) {
                 computeAndStoreRatios(items);
@@ -439,6 +474,12 @@ public class MarketEngine {
 
         bpd *= globalVolumeMultiplier;
         spd *= globalVolumeMultiplier;
+
+        // Apply whale anti-dump spread shock (decays in tick())
+        if (spreadShock > 1.0) {
+            bpd *= spreadShock;
+            spd *= spreadShock;
+        }
 
         return new SpreadResult(
                 BigDecimal.valueOf(bpd).setScale(5, RoundingMode.HALF_UP),

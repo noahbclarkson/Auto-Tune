@@ -92,6 +92,7 @@ public class ConfigManager {
                 parsePriceMilestoneConfig(cfg.getConfigurationSection("price-milestone")),
                 parseMarketDigestConfig(cfg.getConfigurationSection("market-digest")),
                 parseOnboardingConfig(cfg.getConfigurationSection("onboarding")),
+                parseWhaleAntiDumpConfig(cfg.getConfigurationSection("whale-anti-dump")),
                 frozen
         );
     }
@@ -749,5 +750,23 @@ public class ConfigManager {
         }
 
         return new OnboardingConfig(true, checkIntervalHours, milestones);
+    }
+
+    private AutoTuneConfig.WhaleAntiDumpConfig parseWhaleAntiDumpConfig(ConfigurationSection section) {
+        if (section == null) {
+            return AutoTuneConfig.WhaleAntiDumpConfig.defaults();
+        }
+        return new AutoTuneConfig.WhaleAntiDumpConfig(
+                section.getBoolean("enabled", true),
+                section.contains("max-sell-per-item-per-tick")
+                        ? section.getInt("max-sell-per-item-per-tick")
+                        : null,
+                section.getDouble("spread-shock-trigger-bps", 0.10),
+                section.getDouble("spread-shock-multiplier", 2.5),
+                section.getInt("spread-shock-duration-ticks", 288),
+                section.contains("high-value-sell-cooldown-ticks")
+                        ? section.getInt("high-value-sell-cooldown-ticks")
+                        : null
+        );
     }
 }

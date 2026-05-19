@@ -83,6 +83,7 @@ class MarketEngineTest {
                 AutoTuneConfig.PriceMilestoneConfig.defaults(),
                 AutoTuneConfig.MarketDigestConfig.defaults(),
                 AutoTuneConfig.OnboardingConfig.defaults(),
+                AutoTuneConfig.WhaleAntiDumpConfig.defaults(),
                 false
         );
 

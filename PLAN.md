@@ -2,6 +2,31 @@
 
 _Living document. Update after every session. Prioritize ruthlessly._
 
+## Cron (2026-05-19 01:34 UTC) — Simulation Lab: Whale Anti-Dump Port Bug Fixed ✅
+
+**rewrite-2 `7a05c88`** | `./gradlew build` ✅ PMD 0 | Rust fmt/clippy ✅ 20/20 tests ✅ | Pushed ✅
+
+### Bug Found + Fixed: `maxSellPerItemPerTick` and `highValueSellCooldownTicks` Were Dead Code ⚠️
+
+**Commit `bff88b9`** (the whale anti-dump port from sim to plugin) had incomplete wiring. The `WhaleAntiDumpConfig` record, `ConfigManager` parsing, `config.yml` defaults, spread shock trigger, and spread shock application were all correct. But **no sell path enforced the cap or cooldown**:
+- `EconomyManager.processSellAsync()` — cap/cooldown check added before `supplyAsync`
+- `EconomyManager.processSellImmediate()` — cap/cooldown check added before item removal; cooldown set after Epic/Legendary sell
+- Added `MarketEngine.getTickSellVolume()`, `getSellCooldownRemaining()`, `setSellCooldown()`, `getShockRemainingTicks()`
+- Added `ItemTier` import to `EconomyManager`
+
+**With defaults** (`max-sell-per-item-per-tick: null`, `high-value-sell-cooldown-ticks: null`): uncapped, no cooldown — safe.
+**When admin sets `max-sell-per-item-per-tick: 100`**: now enforced. All three anti-dump mechanisms now active: spread shock + sell cap + cooldown.
+
+### Builds
+- `./gradlew build -x installWebDeps -x test` → BUILD SUCCESSFUL PMD 0 (57s)
+- Rust fmt/clippy ✅ 20+14+2 tests ✅
+
+### State
+- **Anti-dump:** fully ported from sim to plugin ✅
+- **Blocked:** API deploy (Arc's Fly.io token) | testimonials (human outreach)
+
+---
+
 **⚠️ STRATEGIC REDIRECT (2026-05-04): Bug Fixes + Repo Health over New Features**
 
 Noah has directed: **stop adding features, focus on finding and fixing bugs, and clean up the repo**. The auction ecosystem, circuit telemetry, config preview, and depth charts are all done. The product needs correctness, stability, and maintainability.

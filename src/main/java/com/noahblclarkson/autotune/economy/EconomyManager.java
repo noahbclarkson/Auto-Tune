@@ -467,6 +467,30 @@ public class EconomyManager {
         BigDecimal taxAmount = treasuryService.calculateSellTax(totalPrice);
         BigDecimal netProceeds = totalPrice.subtract(taxAmount);
 
+        // Whale anti-dump: enforce per-item sell cap and cooldown before accepting the sell.
+        // This check runs BEFORE any money operations so a rejected sell doesn't touch funds.
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump = configManager.getConfig().whaleAntiDump();
+        if (antiDump.enabled()) {
+            // Check cooldown for Epic/Legendary items
+            Integer cooldown = antiDump.highValueSellCooldownTicks();
+            if (cooldown != null && item.effectiveTier() != ItemTier.COMMON
+                    && item.effectiveTier() != ItemTier.UNCOMMON && item.effectiveTier() != ItemTier.RARE) {
+                int remaining = marketEngine.getSellCooldownRemaining(item.id());
+                if (remaining > 0) {
+                    return TransactionResult.error("High-value item sell cooldown active: " + remaining + " ticks remaining");
+                }
+            }
+            // Check per-item sell cap
+            Integer cap = antiDump.maxSellPerItemPerTick();
+            if (cap != null) {
+                int tickSell = marketEngine.getTickSellVolume(item.id());
+                if (tickSell + amount > cap) {
+                    return TransactionResult.error("Sell cap exceeded: max " + cap + " per tick for " + item.material().name()
+                            + ". Try again shortly.");
+                }
+            }
+        }
+
         // Detached stacks are already out of the player's inventory. Deposit
         // first; if Vault fails, the caller still has the stack and can return it.
         if (!deposit(player, netProceeds.doubleValue())) {

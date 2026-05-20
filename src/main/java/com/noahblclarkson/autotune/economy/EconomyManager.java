@@ -605,6 +605,39 @@ public class EconomyManager {
             }
         }
 
+        // Anti-dump pre-checks for SELL items in the cart.
+        // Runs synchronously before the async DB-first block so rejected sells
+        // never touch money or DB. Buy items are not subject to sell caps/cooldowns.
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump = configManager.getConfig().whaleAntiDump();
+        if (antiDump.enabled()) {
+            for (CartItem cartItem : cart) {
+                if (cartItem.isBuying()) {
+                    continue;
+                }
+                ShopItem item = cartItem.shopItem();
+                Integer cooldown = antiDump.highValueSellCooldownTicks();
+                if (cooldown != null && item.effectiveTier() != ItemTier.COMMON
+                        && item.effectiveTier() != ItemTier.UNCOMMON && item.effectiveTier() != ItemTier.RARE) {
+                    int remaining = marketEngine.getSellCooldownRemaining(item.id());
+                    if (remaining > 0) {
+                        return CompletableFuture.completedFuture(
+                                TransactionResult.error("High-value item sell cooldown active for " + item.material().name()
+                                        + ": " + remaining + " ticks remaining"));
+                    }
+                }
+                Integer cap = antiDump.maxSellPerItemPerTick();
+                if (cap != null) {
+                    int tickSell = marketEngine.getTickSellVolume(item.id());
+                    if (tickSell + cartItem.quantity() > cap) {
+                        return CompletableFuture.completedFuture(
+                                TransactionResult.error("Sell cap exceeded for " + item.material().name()
+                                        + ": max " + cap + " per tick. Try again shortly."));
+                    }
+                }
+            }
+        }
+
+
         // All pre-validation passed. Now process atomically:
         //   1. DB write first (source of truth for all transactions)
         //   2. Money movement (withdraw or deposit net difference)

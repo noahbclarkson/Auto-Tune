@@ -530,6 +530,17 @@ public class EconomyManager {
                             + "Money deposited but transaction not recorded. Manual DB review may be needed.", e);
         }
 
+
+        // Set cooldown for Epic/Legendary items
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump2 = configManager.getConfig().whaleAntiDump();
+        if (antiDump2.enabled()) {
+            Integer cooldown = antiDump2.highValueSellCooldownTicks();
+            if (cooldown != null && item.effectiveTier() != ItemTier.COMMON
+                    && item.effectiveTier() != ItemTier.UNCOMMON && item.effectiveTier() != ItemTier.RARE) {
+                marketEngine.setSellCooldown(item.id(), cooldown);
+            }
+        }
+
         return TransactionResult.success(TransactionType.SELL, amount, netProceeds);
     }
 

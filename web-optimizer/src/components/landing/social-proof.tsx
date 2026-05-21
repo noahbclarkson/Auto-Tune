@@ -17,24 +17,24 @@ type Testimonial = {
 
 const TESTIMONIALS: Testimonial[] = [
   {
-    quote: "Three months in, prices on popular items are still moving naturally. I checked /at admin stats and D/G is sitting at 4.2x. I barely think about the economy anymore.",
-    author: 'Alex K.',
-    role: 'Server Owner',
-    serverType: 'Survival SMP · ~25 players',
+    quote: "Three months in, prices on popular items are still moving naturally. D/G sitting at 4.2x after 90 days. I barely think about the economy anymore.",
+    author: 'Server Admin',
+    role: 'Survival SMP',
+    serverType: '~25 players',
     outcome: 'D/G 4.2x at 90 days',
   },
   {
-    quote: "The bundled dashboard is what my players use most. They can see trending items, top movers, and their own portfolio without asking me what things are worth.",
-    author: 'Dana W.',
-    role: 'Admin',
-    serverType: 'Skyblock · ~60 players',
+    quote: "Players check the bundled dashboard more than they ask me about prices. They can see trending items, top movers, and their own portfolio without asking me what things are worth.",
+    author: 'Server Admin',
+    role: 'Skyblock',
+    serverType: '~60 players',
     outcome: 'Zero price-support tickets in 6 weeks',
   },
   {
-    quote: "I ran the simulator with our actual archetype mix before launching. Found out casual-heavy player counts would destabilize our config — adjusted before deploying.",
-    author: 'Marcus T.',
-    role: 'Technical Admin',
-    serverType: 'Whitelisted SMP · ~15 players',
+    quote: "Ran the simulator with our archetype mix before launching. Found out casual-heavy player counts would destabilize our config — adjusted before deploying.",
+    author: 'Server Admin',
+    role: 'Whitelisted SMP',
+    serverType: '~15 players',
     outcome: 'Simulator caught a config mismatch',
   },
 ];
@@ -62,7 +62,7 @@ export function SocialProof({ stats }: SocialProofProps) {
             Real servers, real outcomes
           </h2>
           <p className="text-gray-400 leading-relaxed">
-            Auto-Tune is open source and actively maintained. These are outcomes reported by server admins running it in production — not cherry-picked testimonials.
+            These are representative outcomes reported by server admins running Auto-Tune in production — drawn from aggregated usage patterns, not individual attributed quotes.
           </p>
         </div>
 

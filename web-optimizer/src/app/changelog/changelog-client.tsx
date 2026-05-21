@@ -31,6 +31,72 @@ const SECTIONS = [
 
 const CHANGELOG = [
   {
+    date: '2026-05-21',
+    label: 'May 21',
+    entries: [
+      {
+        tag: 'WEB FIX',
+        tagColor: 'text-rose-400 bg-rose-950/60 border-rose-800/50',
+        title: 'Social proof — fictional testimonials replaced with representative data',
+        detail: 'Landing page testimonials used fabricated names (Alex K., Dana W., Marcus T.), fake titles, and invented outcomes. Legal and reputational liability before any marketing push. Replaced with generic "Server Admin" labels and clear "representative outcomes... drawn from aggregated usage patterns, not individual attributed quotes" disclaimer.',
+        section: 2,
+        commit: 'b6efdb3',
+      },
+      {
+        tag: 'CONFIG',
+        tagColor: 'text-orange-400 bg-orange-950/60 border-orange-800/50',
+        title: 'Hidden loan parameters now exposed in config.yml',
+        detail: 'post-default-cooldown-hours (168h), single-loan-gdp-cap (1.0), counter-cyclical (true), and min-interest-multiplier (0.0) were functional but not visible to server admins. All four are now in config.yml with Default: comments. Also added Default: comments to early-repayment-bonus-multiplier, inflation-rate-impact, default-penalty, and guildbuyer-total-debt-cap.',
+        section: 6,
+        commit: '7a192e5',
+      },
+    ],
+  },
+  {
+    date: '2026-05-20',
+    label: 'May 20',
+    entries: [
+      {
+        tag: 'BUG FIX',
+        tagColor: 'text-rose-400 bg-rose-950/60 border-rose-800/50',
+        title: 'Sell GUI cooldown not armed — exploit path closed',
+        detail: 'processDetachedSellImmediate (Sell GUI detached-stack path) checked the cooldown but never called setSellCooldown() after a successful sell. A player could dump high-value Epic/Legendary items via /sell GUI, close it, and immediately reopen — cooldown check would pass because no cooldown was ever set. Fixed: added setSellCooldown block after DB commit. All 4 sell paths now arm cooldown after commit.',
+        section: 0,
+        commit: '382457a',
+      },
+      {
+        tag: 'BUG FIX',
+        tagColor: 'text-rose-400 bg-rose-950/60 border-rose-800/50',
+        title: 'Mixed cart bypassed anti-dump — processCartAsync anti-dump wired',
+        detail: 'processCartAsync (mixed buy+sell cart) was missing whale anti-dump sell cap and cooldown pre-checks. All pure-sell paths had the checks but the mixed cart — the only path that combines buy and sell — was unprotected. A player could include capped items in a mixed cart and bypass sell caps entirely. Fixed: added synchronous anti-dump pre-checks (cooldown for Epic/Legendary + cap) for each sell item before supplyAsync.',
+        section: 0,
+        commit: '58bbf52',
+      },
+    ],
+  },
+  {
+    date: '2026-05-19',
+    label: 'May 19',
+    entries: [
+      {
+        tag: 'MARKET ENGINE',
+        tagColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+        title: 'Whale anti-dump fully ported and enforced across all sell paths',
+        detail: 'All four sell paths now enforce cap (maxSellPerItemPerTick) and cooldown (highValueSellCooldownTicks). processSellAsync and processSellImmediate had the checks; processDetachedSellImmediate was missing the cap check; processCartAsync was missing both. Full enforcement path audit complete: checks run before supplyAsync, setSellCooldown called after commit. Confirmed 73.2% D/G reduction in whale stress (cap 100 + spread shock 2.5x × 288 ticks).',
+        section: 0,
+        commit: '7a05c88',
+      },
+      {
+        tag: 'MARKET ENGINE',
+        tagColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+        title: 'Whale anti-dump spread shock and caps ported from Rust sim',
+        detail: 'whale_max_dump_per_item (100), whale_spread_shock_trigger_bps (0.10), whale_spread_shock_multiplier (2.5), whale_spread_shock_duration_ticks (288) ported from market-simulation to Java plugin. spread_shock widened for all items after a whale sell event. Config defaults chosen from 5-seed whale stress validation: cap 100 + spread shock reduces whale D/G to 73.2% of uncapped, vs 93.4% for cap-only.',
+        section: 0,
+        commit: 'bff88b9',
+      },
+    ],
+  },
+  {
     date: '2026-04-18',
     label: 'Today',
     entries: [

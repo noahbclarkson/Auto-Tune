@@ -187,14 +187,17 @@ loans:
   # Early repayment credit bonus multiplier
   # Bonus = base_bonus * (days_remaining / total_days) * this multiplier
   # Higher values reward early repayment more
+  # Default: 1.5.
   early-repayment-bonus-multiplier: 1.5
 
   # How much server inflation affects loan interest rates
   # Final rate *= (1 + avg_price_change% * this value)
   # 0.0 = inflation has no effect, 1.0 = full inflation passthrough
+  # Default: 0.5.
   inflation-rate-impact: 0.5
 
   # Credit score penalty for defaulting
+  # Default: 50.
   default-penalty: 50
 
   # Tiered debt/GDP circuit breaker — graduated interest caps prevent debt
@@ -239,6 +242,7 @@ loans:
   # Prevents a single active GB from accumulating outsized debt during TIER3 lock.
   # E.g., 3.0 × $4M GDP = $12M cap per GB. Reject new loans if GB's active
   # loans would exceed this amount. Set to 0 to disable. Default: 3.0.
+  # Default: 3.0.
   guildbuyer-total-debt-cap: 3.0
 
   # Block MarketMaker and GuildBuyer players from taking NEW loans while TIER3
@@ -246,6 +250,17 @@ loans:
   # debt during catastrophic debt spiral. Existing loans remain unchanged.
   # Default: false (allows all players to take loans during TIER3).
   block-mm-gb-loans-during-tier3: false
+
+  # Number of hours a player must wait after repaying a defaulted loan
+  # before they can take a new loan. Prevents rapid re-borrowing after default.
+  # Default: 168 (7 days).
+  post-default-cooldown-hours: 168
+
+  # Maximum value of a single new loan as a multiple of economy GDP.
+  # Prevents oversized loans relative to economy size. Set to 0 to disable.
+  # Default: 1.0 (1× GDP per loan).
+  single-loan-gdp-cap: 1.0
+
   # Maximum interest rate during the graduated TIER3 exit delay window.
   # After TIER3 circuit unlocks (D/G drops below hysteresis threshold), the
   # interest multiplier is capped at this value for tier3-exit-delay-ticks.
@@ -255,6 +270,11 @@ loans:
   # Number of ticks for the graduated TIER3 exit delay window.
   # Default: 1152 (4 days at 288 ticks/day).
   tier3-exit-delay-ticks: 1152
+
+  # Counter-cyclical interest: higher D/G ratio → lower interest rate.
+  # Reduces interest pressure when debt is high, increases it when debt is low.
+  # Default: true (enabled).
+  counter-cyclical: true
 
 gui:
   # Items per page in shop (max 45 = 5 rows x 9 columns)

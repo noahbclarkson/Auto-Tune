@@ -975,6 +975,75 @@ public class AdminCommand {
         sender.sendMessage(Component.text("Most Undersold Items (below fair value)", NamedTextColor.GOLD, TextDecoration.BOLD));
         renderVolatilityList(sender, undersells, 5, true);
 
+        // ── Anti-dump status ────────────────────────────────────────────────
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Anti-Dump Status", NamedTextColor.GOLD, TextDecoration.BOLD));
+
+        // Spread shock state
+        int shockTicks = marketEngine.getShockRemainingTicks();
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump = configManager.getConfig().whaleAntiDump();
+        if (shockTicks > 0) {
+            sender.sendMessage(Component.text("  ⚠ Spread shock ACTIVE — " + shockTicks + " ticks remaining", NamedTextColor.RED));
+            sender.sendMessage(Component.text("     Buy/sell spreads are "
+                    + String.format("%.1fx", marketEngine.getSpread(allItems.isEmpty() ? null : allItems.get(0).id()).bpd().doubleValue() / 0.05)
+                    + " wider than normal. Whale dump detected.", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.text("     Trigger: sell volume > "
+                    + (antiDump.spreadShockTriggerBps() * 100) + "% of tick threshold within 1 tick.", NamedTextColor.DARK_GRAY));
+        } else {
+            sender.sendMessage(Component.text("  ✓ No spread shock active", NamedTextColor.GREEN));
+        }
+
+        // Per-item high-value sell cooldowns (Epic/Legendary items with active cooldowns)
+        Integer cooldownTicks = antiDump.highValueSellCooldownTicks();
+        if (cooldownTicks != null && cooldownTicks > 0) {
+            List<String> coolingItems = new ArrayList<>();
+            for (ShopItem item : allItems) {
+                if (item.effectiveTier() != ItemTier.COMMON) {
+                    int remaining = marketEngine.getSellCooldownRemaining(item.id());
+                    if (remaining > 0) {
+                        coolingItems.add(item.getDisplayNameOrMaterial() + " (" + remaining + " ticks)");
+                    }
+                }
+            }
+            if (!coolingItems.isEmpty()) {
+                sender.sendMessage(Component.text("  ⏳ High-value sell cooldowns active:", NamedTextColor.YELLOW));
+                for (String item : coolingItems) {
+                    sender.sendMessage(Component.text("     • " + item, NamedTextColor.YELLOW));
+                }
+            } else {
+                sender.sendMessage(Component.text("  ✓ No high-value sell cooldowns active", NamedTextColor.GREEN));
+            }
+
+            // Items near sell cap (top 5 by tick volume)
+            List<Map.Entry<ShopItem, Integer>> itemVolumes = new ArrayList<>();
+            for (ShopItem item : allItems) {
+                int vol = marketEngine.getTickSellVolume(item.id());
+                if (vol > 0) {
+                    itemVolumes.add(Map.entry(item, vol));
+                }
+            }
+            itemVolumes.sort(Comparator.<Map.Entry<ShopItem, Integer>>comparingInt(Map.Entry::getValue).reversed());
+            Integer cap = antiDump.maxSellPerItemPerTick();
+            if (cap != null && cap > 0) {
+                sender.sendMessage(Component.text("  📊 Per-item sell volume this tick (cap: " + cap + ")", NamedTextColor.AQUA));
+                int shown = 0;
+                for (Map.Entry<ShopItem, Integer> entry : itemVolumes) {
+                    if (shown >= 5) break;
+                    ShopItem item = entry.getKey();
+                    int vol = entry.getValue();
+                    int remaining = cap - vol;
+                    NamedTextColor color = remaining < 0 ? NamedTextColor.RED
+                            : remaining < cap * 0.2 ? NamedTextColor.YELLOW : NamedTextColor.GREEN;
+                    sender.sendMessage(Component.text("     • " + item.getDisplayNameOrMaterial()
+                            + ": " + vol + "/" + cap + "  (" + (remaining < 0 ? "OVER CAP" : remaining + " remaining") + ")", color));
+                    shown++;
+                }
+                if (itemVolumes.isEmpty()) {
+                    sender.sendMessage(Component.text("     No sell volume this tick", NamedTextColor.GRAY));
+                }
+            }
+        }
+
         sender.sendMessage(Component.empty());
     }
 

@@ -1442,10 +1442,11 @@ public class AdminCommand {
         var economy = config.economy();
         var antiDump = config.whaleAntiDump();
 
-        // Floor check
+        // Floor check — trend dampening floor is in EconomyConfig, not SpreadConfig
         double baseSpread = economy.spread().baseSpread();
-        boolean hasFloor = economy.spread().floor() != null && economy.spread().floor() > 0;
-        double floorVal = hasFloor ? economy.spread().floor() : 0;
+        double trendFloor = economy.trendDampeningFloor();
+        boolean hasFloor = trendFloor > 0;
+        double floorVal = hasFloor ? trendFloor : 0;
 
         // Debt tier sanity
         double tier3 = loans.debtGdpTier3Ratio();

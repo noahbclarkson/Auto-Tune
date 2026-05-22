@@ -195,6 +195,8 @@ public class AdminCommand {
                 .append(Component.text(" — Reload config and caches", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin config preview <filename>", NamedTextColor.YELLOW)
                 .append(Component.text(" — Dry-run config.yml changes before reloading", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin validate", NamedTextColor.YELLOW)
+                .append(Component.text(" — Config health check and archetype assessment", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin transactions [player]", NamedTextColor.YELLOW)
                 .append(Component.text(" — View recent transaction history", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin exchange", NamedTextColor.YELLOW)
@@ -1380,6 +1382,173 @@ public class AdminCommand {
             plugin.getLogger().warning("Reload failed: " + e.getMessage());
             sender.sendMessage(Component.text("Reload failed: " + e.getMessage(), NamedTextColor.RED));
         }
+    }
+
+    @Command("autotune admin validate")
+    @Permission("autotune.admin")
+    public void adminValidate(CommandSender sender) {
+        AutoTuneConfig config = configManager.getConfig();
+        List<String> violations = ConfigValidator.validate(config);
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Auto-Tune Config Health Check", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
+        sender.sendMessage(Component.empty());
+
+        // ── 1. Hard violations (prevent economy from running correctly) ──
+        List<String> hard = violations.stream().filter(v -> !v.contains("Recommended")).toList();
+        List<String> soft = violations.stream().filter(v -> v.contains("Recommended")).toList();
+
+        if (!hard.isEmpty()) {
+            sender.sendMessage(Component.text("❌ Hard Violations (" + hard.size() + ")", NamedTextColor.RED, TextDecoration.BOLD));
+            for (String v : hard) {
+                sender.sendMessage(Component.text("  • " + v, NamedTextColor.RED));
+            }
+            sender.sendMessage(Component.empty());
+        }
+
+        // ── 2. Soft violations (risky or non-recommended values) ──
+        if (!soft.isEmpty()) {
+            sender.sendMessage(Component.text("⚠️  Warnings & Recommendations (" + soft.size() + ")", NamedTextColor.YELLOW, TextDecoration.BOLD));
+            for (String v : soft) {
+                sender.sendMessage(Component.text("  • " + v, NamedTextColor.YELLOW));
+            }
+            sender.sendMessage(Component.empty());
+        }
+
+        if (violations.isEmpty()) {
+            sender.sendMessage(Component.text("✅ Config is valid — no violations found.", NamedTextColor.GREEN)
+                    .decorate(TextDecoration.BOLD));
+            sender.sendMessage(Component.empty());
+        } else if (hard.isEmpty()) {
+            sender.sendMessage(Component.text("Config is valid but has " + soft.size() + " warning(s). "
+                    + "Economy will run, but review warnings above.", NamedTextColor.YELLOW));
+            sender.sendMessage(Component.empty());
+        } else {
+            sender.sendMessage(Component.text("❌ Config has " + hard.size() + " hard violation(s). "
+                    + "Fix the errors above before the economy can run correctly.", NamedTextColor.RED));
+            sender.sendMessage(Component.empty());
+            return;
+        }
+
+        // ── 3. Archetype assessment (admin guidance based on server type) ──
+        sender.sendMessage(Component.text("Archetype Assessment", NamedTextColor.GOLD, TextDecoration.BOLD));
+        assessArchetypes(sender, config);
+
+        sender.sendMessage(Component.empty());
+    }
+
+    private void assessArchetypes(CommandSender sender, AutoTuneConfig config) {
+        var loans = config.loans();
+        var economy = config.economy();
+        var antiDump = config.whaleAntiDump();
+
+        // Floor check
+        double baseSpread = economy.spread().baseSpread();
+        boolean hasFloor = economy.spread().floor() != null && economy.spread().floor() > 0;
+        double floorVal = hasFloor ? economy.spread().floor() : 0;
+
+        // Debt tier sanity
+        double tier3 = loans.debtGdpTier3Ratio();
+        boolean tier3Ok = tier3 >= 30.0;
+
+        // Anti-dump
+        boolean antiDumpEnabled = antiDump.enabled();
+        boolean hasSellCap = antiDump.maxSellPerItemPerTick() != null && antiDump.maxSellPerItemPerTick() > 0;
+        boolean hasCooldown = antiDump.highValueSellCooldownTicks() != null && antiDump.highValueSellCooldownTicks() > 0;
+        boolean hasSpreadShock = antiDump.spreadShockTriggerBps() > 0;
+
+        // Loan checks
+        boolean loansEnabled = loans.enabled();
+        double baseRate = loans.baseInterestRate();
+        boolean postDefaultCooldownOk = loans.postDefaultCooldownHours() >= 72;
+        boolean counterCyclic = loans.counterCyclical();
+        double totalDebtCap = loans.totalDebtGdpCap();
+
+        int score = 0;
+        int max = 9;
+
+        if (tier3Ok) score++;
+        else sender.sendMessage(Component.text("  ❌ TIER3 ratio is " + tier3 + " — should be ≥ 30 for stability at 60+ days", NamedTextColor.RED));
+
+        if (hasFloor) {
+            if (floorVal <= 0.50) {
+                sender.sendMessage(Component.text("  ✅ Floor set to " + (floorVal * 100) + "% — OK for short-run servers", NamedTextColor.GREEN));
+                score++;
+            } else {
+                sender.sendMessage(Component.text("  ⚠️  Floor is " + (floorVal * 100) + "% — simulation shows 60%+ floor harms long-run (>60d) GDP", NamedTextColor.YELLOW));
+                score++;
+            }
+        } else {
+            sender.sendMessage(Component.text("  ℹ️  No floor configured — prices can reach very low values (normal for mature economies)", NamedTextColor.GRAY));
+            score++;
+        }
+
+        if (!loansEnabled) {
+            sender.sendMessage(Component.text("  ℹ️  Loans disabled — economy runs without debt leverage", NamedTextColor.GRAY));
+        } else {
+            if (baseRate > 0 && baseRate <= 0.20) {
+                sender.sendMessage(Component.text("  ✅ Interest rate " + (baseRate * 100) + "% is reasonable", NamedTextColor.GREEN));
+                score++;
+            } else if (baseRate > 0.20) {
+                sender.sendMessage(Component.text("  ⚠️  Interest rate " + (baseRate * 100) + "% is high — may cause debt accumulation", NamedTextColor.YELLOW));
+                score++;
+            }
+
+            if (postDefaultCooldownOk) {
+                sender.sendMessage(Component.text("  ✅ Post-default cooldown: " + loans.postDefaultCooldownHours() + "h — prevents cascade re-borrowing", NamedTextColor.GREEN));
+                score++;
+            } else {
+                sender.sendMessage(Component.text("  ⚠️  Post-default cooldown " + loans.postDefaultCooldownHours() + "h is short (min 72h recommended) — risk of exploit cycles", NamedTextColor.YELLOW));
+                score++;
+            }
+
+            if (counterCyclic) {
+                sender.sendMessage(Component.text("  ✅ Counter-cyclical interest enabled — dampens debt cycles automatically", NamedTextColor.GREEN));
+                score++;
+            }
+
+            if (totalDebtCap > 0) {
+                sender.sendMessage(Component.text("  ✅ Economy-wide debt cap: " + totalDebtCap + "x GDP", NamedTextColor.GREEN));
+                score++;
+            } else {
+                sender.sendMessage(Component.text("  ℹ️  No economy-wide debt cap — total debt can grow without bound", NamedTextColor.GRAY));
+                score++;
+            }
+        }
+
+        if (antiDumpEnabled) {
+            sender.sendMessage(Component.text("  ✅ Whale anti-dump enabled", NamedTextColor.GREEN));
+            if (hasSellCap) {
+                sender.sendMessage(Component.text("     Per-item sell cap: " + antiDump.maxSellPerItemPerTick() + "/item/tick", NamedTextColor.GRAY));
+            }
+            if (hasCooldown) {
+                sender.sendMessage(Component.text("     High-value sell cooldown: " + antiDump.highValueSellCooldownTicks() + " ticks", NamedTextColor.GRAY));
+            }
+            if (hasSpreadShock) {
+                sender.sendMessage(Component.text("     Spread shock: trigger " + (antiDump.spreadShockTriggerBps() * 100) + "%, "
+                        + "mult " + antiDump.spreadShockMultiplier() + "x for " + antiDump.spreadShockDurationTicks() + " ticks", NamedTextColor.GRAY));
+            }
+            score++;
+        } else {
+            sender.sendMessage(Component.text("  ℹ️  Whale anti-dump disabled — large sell events can destabilize prices", NamedTextColor.GRAY));
+            score++;
+        }
+
+        // Base spread sanity
+        if (baseSpread >= 0.01 && baseSpread <= 0.20) {
+            sender.sendMessage(Component.text("  ✅ Base spread " + (baseSpread * 100) + "% is within recommended range (1-20%)", NamedTextColor.GREEN));
+            score++;
+        } else if (baseSpread > 0) {
+            sender.sendMessage(Component.text("  ⚠️  Base spread " + (baseSpread * 100) + "% is outside typical range — verify intentionality", NamedTextColor.YELLOW));
+            score++;
+        }
+
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(Component.text("Health score: " + score + "/" + max,
+                        score == max ? NamedTextColor.GREEN : (score >= max * 0.7 ? NamedTextColor.YELLOW : NamedTextColor.RED))
+                .append(Component.text("  — ", NamedTextColor.GRAY))
+                .append(Component.text(score == max ? "Looking healthy" : (score >= max * 0.7 ? "Review warnings above" : "Action recommended"),
+                        score == max ? NamedTextColor.GREEN : (score >= max * 0.7 ? NamedTextColor.YELLOW : NamedTextColor.RED))));
     }
 
     @Command("autotune admin config preview <filename>")

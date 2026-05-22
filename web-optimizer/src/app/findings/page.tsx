@@ -415,6 +415,87 @@ const CONFIG_FINDINGS: Finding[] = [
   },
 ];
 
+/* ─── NEW FINDINGS (pending multi-seed confirmation) ──────────────── */
+
+const NEW_FINDINGS: Finding[] = [
+  {
+    q: 'Does whale anti-dump actually work?',
+    verdict: '✅ Production Default',
+    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    answer: [
+      'Yes — the anti-dump package (sell cap + spread shock + cooldown) is the most effective '
+        + 'tested mitigation against whale sell-wall dumping in the simulation.',
+      'Whale stress test (5 seeds, 14 days, cap=100 + spread shock enabled): D/G drops to 73.2% of '
+        + 'uncapped whale scenario, a 26.8% reduction in debt amplification. GDP remains healthy at '
+        + '+10.5% above control. The spread shock widens spreads temporarily after a large sell event, '
+        + 'discouraging immediate re-dumping and giving the market time to absorb the supply shock.',
+      'The package: maxSellPerItemPerTick=100, spreadShockTriggerBps=0.10 (10% spread spike), '
+        + 'spreadShockMultiplier=2.5x, spreadShockDurationTicks=288 (~2.4 min at 5s ticks). '
+        + 'These are production defaults. Enable anti-dump on any server with more than 20 active players.',
+    ],
+    metrics: [
+      { label: 'Cap+Shock D/G', value: '73.2%', note: 'of uncapped whale — 26.8% reduction' },
+      { label: 'Cap+Shock GDP', value: '+10.5%', note: 'above control baseline' },
+      { label: 'Recommended cap', value: '100 units/item/tick', note: 'per-item, per-tick sell limit' },
+      { label: 'Spread shock trigger', value: '10% spread spike', note: 'activates spread widening for 288 ticks' },
+    ],
+    relatedLinks: [
+      { href: '/simulator', label: 'Run whale stress test' },
+      { href: '/docs', label: 'Whale anti-dump docs' },
+    ],
+  },
+  {
+    q: 'Is counter-cyclical interest worth keeping?',
+    verdict: '✅ Production Default',
+    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    answer: [
+      'Counter-cyclical interest (CC) reduces interest rates as D/G rises, providing automatic '
+        + 'debt relief during economic stress. A 5-seed × 14-day test showed CC=true avg D/G 4.522x '
+        + 'vs CC=false avg D/G 4.425x — a 2.2% difference, statistically neutral.',
+      'CC is safe to keep enabled as a default. The small D/G delta (4.522x vs 4.425x) is within '
+        + 'noise across 5 seeds. CC provides real but marginal benefit in stress scenarios. '
+        + 'Disabling CC removes the circuit breaker\'s primary economic damping mechanism.',
+      'TIER3 fires at D/G > 30x regardless of CC. At D/G = 15x (hysteresis unlock threshold), '
+        + 'CC interest is ~15% of base rate. At D/G = 30x, CC interest drops to 0% — the circuit '
+        + 'breaker pauses all interest until D/G drops back below 27x.',
+    ],
+    metrics: [
+      { label: 'CC=true D/G', value: '4.522x', note: '5-seed average, 14d' },
+      { label: 'CC=false D/G', value: '4.425x', note: '5-seed average, 14d — statistically neutral' },
+      { label: 'TIER3 fires at', value: 'D/G > 30x', note: 'interest pauses at 0%' },
+      { label: 'CC unlock', value: 'D/G < 27x', note: '15% hysteresis band from TIER3' },
+    ],
+    relatedLinks: [
+      { href: '/docs', label: 'Loan circuit breaker docs' },
+    ],
+  },
+  {
+    q: 'Should I use Newbie+GB as my production default?',
+    verdict: '✅ Production Default',
+    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    answer: [
+      'Yes — the recommended production default is 2MM + 2GB + 2Newbie + 3Cas + 1Far + 2Tra + 60% Diamond floor. '
+        + 'This outperforms the old 2MM+2GB+3Cas+1Far+2Tra+floor across 4 of 5 seeds at 30 days.',
+      'Why Newbies: they provide organic basic-item demand without leverage. They buy what players '
+        + 'gather, creating two-sided trade and keeping spreads tight. Replacing Farmers with Newbies '
+        + 'gives GuildBuyers and MarketMakers a healthier demand base to work against.',
+      'The single-seed concern (seed 42: GDP 460K→709K when adding Newbies, D/G improved but GDP dropped) '
+        + 'is an outlier. 4/5 seeds improve D/G by -0.705x to -5.514x with Newbie+GB. Treat this as '
+        + 'a strong default, not a guarantee for every server seed.',
+    ],
+    metrics: [
+      { label: 'Newbie+GB GDP delta', value: '+15.3%', note: '4/5 seeds improved at 30d' },
+      { label: 'Newbie+GB D/G delta', value: '-1.916x', note: 'improved across all 5 seeds' },
+      { label: 'Newbie+GB volatility', value: '-11.4%', note: 'vol(CV) improved' },
+      { label: 'Outlier', value: 'seed 42', note: 'D/G improved but GDP dropped — treat as anomaly' },
+    ],
+    relatedLinks: [
+      { href: '/simulator', label: 'Run healthy economy test' },
+      { href: '/docs', label: 'Archetype config docs' },
+    ],
+  },
+];
+
 /* ─── ECONOMY BEHAVIOR ─────────────────────────────────────── */
 
 const BEHAVIOR_FINDINGS: Finding[] = [
@@ -599,6 +680,7 @@ const CATEGORIES: Category[] = [
   { id: 'config', label: 'Config Decisions', icon: Sliders, findings: CONFIG_FINDINGS },
   { id: 'behavior', label: 'Economy Behavior', icon: BarChart2, findings: BEHAVIOR_FINDINGS },
   { id: 'exploit', label: 'Exploit Resistance', icon: Shield, findings: EXPLOIT_RESISTANCE_FINDINGS },
+  { id: 'new', label: '2026 Simulation Updates', icon: FlaskConical, findings: NEW_FINDINGS },
 ];
 
 function StatBadge({ label, value }: { label: string; value: string }) {
@@ -623,7 +705,7 @@ export default function FindingsPage() {
                 <FlaskConical className="w-3 h-3" />
                 Simulation Lab
               </span>
-              <span className="text-xs text-gray-600">2026-04-21 · 26 findings · 90+ simulation runs</span>
+              <span className="text-xs text-gray-600">2026-04-21 · 29 findings · 90+ simulation runs</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">
               What the simulation proved

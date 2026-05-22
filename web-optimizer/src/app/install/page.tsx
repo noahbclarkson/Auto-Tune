@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { Download, Server, FileText, Zap, CheckCircle, ExternalLink, BookOpen, AlertTriangle, Users, TrendingUp, Shield, ChevronDown, Monitor, MessageSquare } from 'lucide-react';
+import { Download, Server, FileText, Zap, CheckCircle, ExternalLink, BookOpen, AlertTriangle, Users, TrendingUp, Shield, ChevronDown, Monitor, MessageSquare, ArrowRight } from 'lucide-react';
 import { InstallScreenshots } from '@/components/install/screenshot-mockups';
 
 export const metadata: Metadata = {
@@ -369,6 +369,102 @@ export default function InstallPage() {
             Vault must be installed <strong className="text-amber-300">before</strong> Auto-Tune. If Vault is missing, the plugin will log errors and the economy commands won&apos;t work.
           </span>
         </div>
+      </div>
+
+      {/* Server profile preset picker */}
+      <div className="mb-12 rounded-xl border border-gray-800 bg-gray-900/60 p-6">
+        <h2 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
+          <span>Choose Your Server Profile</span>
+        </h2>
+        <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+          Auto-Tune ships with tested archetype presets for common server types. Picking the right
+          profile configures player mix, spread range, and circuit thresholds together — so you don&apos;t
+          have to tune each knob separately.
+        </p>
+        <div className="grid sm:grid-cols-3 gap-4">
+          {[
+            {
+              id: 'survival-smp',
+              label: 'Survival SMP',
+              icon: Users,
+              description: 'Balanced economy with active trading. 2 Market Makers + 2 Guild Buyers provide steady demand and liquidity.',
+              details: [
+                'Player mix: 2 MM · 2 GB · 3 Casuals · 1 Farmer · 2 Traders · 2 Newbies',
+                'Spread range: 2–10%',
+                'Diamond floor: 60%',
+                'Debt/GDP TIER3: 30×',
+              ],
+              badge: 'Recommended',
+              badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+            },
+            {
+              id: 'skyblock',
+              label: 'Skyblock',
+              icon: TrendingUp,
+              description: 'Island economies are sell-heavy and resource-constrained. Fewer players, higher spreads compensate.',
+              details: [
+                'Player mix: 2 MM · 1 GB · 2 Casuals · 2 Farmers · 1 Trader',
+                'Spread range: 5–15%',
+                'Diamond floor: 40%',
+                'Debt/GDP TIER3: 20×',
+              ],
+              badge: null,
+              badgeColor: '',
+            },
+            {
+              id: 'high-activity',
+              label: 'High-Activity Server',
+              icon: Zap,
+              description: 'Large, busy servers with many active players. Market Makers and Guild Buyers keep spreads tight and debt manageable.',
+              details: [
+                'Player mix: 4 MM · 3 GB · 4 Casuals · 2 Farmers · 3 Traders · 2 Newbies',
+                'Spread range: 1–8%',
+                'Diamond floor: 50%',
+                'Debt/GDP TIER3: 30×',
+              ],
+              badge: null,
+              badgeColor: '',
+            },
+          ].map((profile) => (
+            <div
+              key={profile.id}
+              className="rounded-xl border border-gray-700 bg-gray-900/80 p-5 flex flex-col gap-3 hover:border-gray-600 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="w-9 h-9 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center">
+                  <profile.icon className="w-4 h-4 text-gray-400" />
+                </div>
+                {profile.badge && (
+                  <span className={`text-xs px-2 py-0.5 rounded border font-medium shrink-0 ${profile.badgeColor}`}>
+                    {profile.badge}
+                  </span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white mb-1">{profile.label}</p>
+                <p className="text-xs text-gray-500 leading-relaxed">{profile.description}</p>
+              </div>
+              <div className="border-t border-gray-800 pt-3 space-y-1.5">
+                {profile.details.map((d) => (
+                  <p key={d} className="text-xs text-gray-400 font-mono">{d}</p>
+                ))}
+              </div>
+              <div className="mt-auto pt-3 border-t border-gray-800">
+                <Link
+                  href="/config-preview"
+                  className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 transition-colors"
+                >
+                  See full config preview
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-gray-600 mt-4">
+          Not sure? Start with Survival SMP — it&apos;s the most tested profile and works across the widest range of server sizes.
+          All profiles are starting points; adjust based on your player count and activity level.
+        </p>
       </div>
 
       {/* Video demo */}

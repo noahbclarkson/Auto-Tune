@@ -274,8 +274,8 @@ export default async function ServersPage() {
               </div>
             </div>
 
-            {/* Benefits */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Benefits + widget promo */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               {[
                 {
                   icon: TrendingUp,
@@ -292,6 +292,14 @@ export default async function ServersPage() {
                   title: 'Privacy-first',
                   desc: (
                     <>Only anonymised ratio matrices are shared — no player data, no item names, no economy values. <a href="/trust" className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2">See our safeguards →</a></>
+                  ),
+                },
+                {
+                  icon: Activity,
+                  title: 'Embed a health badge',
+                  desc: (
+                    <>Show your server's live economy health on your website or Discord with a <a href="/widget" className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2">free embeddable widget</a> — copy one line of HTML.
+                    </>
                   ),
                 },
               ].map(({ icon: Icon, title, desc }) => (

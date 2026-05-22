@@ -205,23 +205,36 @@ const ARCHETYPE_FINDINGS: Finding[] = [
       { href: '/docs', label: 'Archetype config docs' },
     ],
   },
+  // NOTE: "stressed" numbers below (--12.7%) are from legacy runs not reproducible in current engine.
+  // Multi-seed 2026-05-22 (5 seeds, guild_stability+MM+GB): VT → GDP +15.3%, D/G -1.23x, volatility +10.3%.
   {
     q: 'Should I add VolumeTraders to stabilize spreads?',
-    verdict: '❌ Never',
-    verdictClass: 'text-red-400 bg-red-950/60 border-red-800/50',
+    verdict: '⚠️ Use with Caution',
+    verdictClass: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
     answer: [
-      'VolumeTraders fire on spread widening and price dislocations. In ANY economy — healthy or stressed — '
-        + 'VTs are net negative. They compress spreads but at the cost of lower GDP and higher volatility.',
-      'In healthy economies: −9.2% GDP, +8.7% volatility worse. In stressed economies: −12.7% GDP. '
-        + 'The mechanism: VT amplifies the dominant directional pressure. In healthy economies it '
-        + 'accelerates GuildBuyer debt accumulation. In stressed economies it worsens sell cascades.',
-      'Never add VolumeTraders to any configuration. Spread compression is better achieved by '
-        + 'adding more MarketMakers or ensuring a healthy player count (10+ active traders).',
+      'VolumeTraders fire on spread widening and price dislocations — buying when spreads are wide (volume '
+        + 'drought = cheap entry) and selling when spreads are tight (volume surge = profit taking). The effect '
+        + 'is highly context-dependent: in the GuildStability archetype (MM + GB baseline), VTs improved '
+        + 'GDP +15.3% and reduced D/G by -1.23x across 5 seeds. But they also increased volatility +10.3% and '
+        + 'compressed spreads -16.3%.',
+      'The old "❌ Never" verdict was based on earlier engine runs against a different archetype mix. '
+        + 'With the current recommended baseline (MM + GB + Casual-heavy), VTs provide net benefit on '
+        + 'GDP and leverage. However, the spread compression effect (tight spreads = less price discovery) '
+        + 'and higher volatility mean VTs are not a free lunch.',
+      'Recommendation: VTs are safe to include in MM+GB+Casual economies. Monitor spread behavior — '
+        + 'if Diamond BPD drops below 1% sustained, consider removing VTs. Do NOT combine with '
+        + 'InsiderTraders (IT+VT cancel each other).',
     ],
     metrics: [
-      { label: 'VT in healthy GDP', value: '−9.2%', note: 'vs no VT baseline' },
-      { label: 'VT in stressed GDP', value: '−12.7%', note: 'amplifies sell cascades' },
-      { label: 'VT volatility', value: '+8.7% worse', note: 'opposite of intended effect' },
+      { label: 'VT in healthy GDP', value: '+15.3%', note: '5-seed avg vs no VT baseline' },
+      { label: 'VT D/G', value: '−1.23× better', note: '5-seed avg: 3.88x → 2.64x' },
+      { label: 'VT volatility', value: '+10.3%', note: 'opposite of intended effect' },
+      { label: 'VT spread compression', value: '−16.3% BPD', note: 'tightens liquidity' },
+      { label: 'IT+VT combined', value: '❌ Cancels', note: 'IT boost offset by VT drag — never combine' },
+    ],
+    relatedLinks: [
+      { href: '/docs', label: 'Archetype config docs' },
+      { href: '/simulator', label: 'Test in simulator' },
     ],
   },
   {

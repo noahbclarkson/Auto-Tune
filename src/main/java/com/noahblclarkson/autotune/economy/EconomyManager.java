@@ -294,14 +294,13 @@ public class EconomyManager {
     }
 
     /**
-     * Sells items from the player's inventory synchronously.
-     * If itemStack is provided and has enchantments, an enchantment price multiplier is applied.
-     *
-     * Safety: items are removed FIRST, then money deposited, then DB write committed.
-     * If DB write fails after items are removed, money is NOT deposited — items are restored.
-     * This ordering is chosen over "DB first" because Vault withdraw/deposit must happen
-     * on main thread and cannot be cleanly rolled back; item removal from a player's
-     * inventory can be rolled back in-memory without DB involvement.
+     * Sells items from the player's inventory synchronously with DB-first transaction ordering.
+     * 
+     * Safety (DB-first): DB write first, then money, then inventory. This mirrors
+     * processCartAsync and processBuyAsync for consistent error handling:
+     * - DB write fails → nothing changes (player sees error, no items lost)
+     * - Money fails after DB → transaction recorded but no money → admin review
+     * - Inventory fails after DB+money → refund money (compensating transaction)
      */
     public TransactionResult processSellImmediate(
             @NotNull Player player,
@@ -356,63 +355,64 @@ public class EconomyManager {
             }
         }
 
-        // Step 1: Remove items from inventory FIRST.
-        // If this fails, we abort without touching money or DB.
-        // Clone the inventory contents so we can restore on failure.
-        ItemStack[] preRemoval = player.getInventory().getStorageContents().clone();
-        if (!removeItems(player, item, amount)) {
-            // removeItems modifies in-place and returns false if there weren't enough
-            // items. Restore the snapshot so the player isn't left short-handed.
-            player.getInventory().setStorageContents(preRemoval);
+        // DB-FIRST: DB → money → inventory (mirrors processCartAsync)
+        // 1. DB write first. If fails, nothing changes.
+        // 2. Deposit money. If fails, transaction exists but no money.
+        // 3. Remove inventory last. If fails, refund money (compensating).
+
+        // Verify player has enough items (check only, don't remove yet).
+        if (countItems(player, item) < amount) {
             return TransactionResult.insufficientItems(countItems(player, item), amount);
         }
 
-        // Step 2: Deposit net proceeds — only after items are safely removed.
-        if (!deposit(player, netProceeds.doubleValue())) {
-            // Rare: economy provider error. Restore items to player's inventory.
-            player.getInventory().setStorageContents(preRemoval);
-            return TransactionResult.economyError();
-        }
-        treasuryService.collectTaxAmount(taxAmount);
-
-        // Step 3: Persist transaction to DB. Using supplyAsync + join to keep
-        // the synchronous UX of processSellImmediate while ensuring data integrity.
-        // If this fails, money was already deposited and items removed — log for
-        // admin review but still report success to the player (items are gone,
-        // money is with them, which is the better outcome than items+gifts+broken ledger).
-        // Catches: DB errors, executor shutdown (RejectedExecutionException),
-        // interrupted threads, and any other unexpected failure from supplyAsync.
+        // Step 1: DB write FIRST. Blocks until complete.
         final BigDecimal finalPricePerUnit = pricePerUnit;
         final BigDecimal finalNetProceeds = netProceeds;
         try {
             databaseManager.supplyAsync(() -> {
-                Transaction transaction = Transaction.builder()
+                Transaction tx = Transaction.builder()
                         .playerUuid(playerId)
                         .itemId(item.id())
                         .type(TransactionType.SELL)
                         .amount(amount)
                         .pricePerUnit(finalPricePerUnit)
-                        .totalPrice(finalNetProceeds)
-                        .build();
-
-                transactionRepository.insert(transaction);
-            playerStreakService.onTransaction(transaction.playerUuid());
-                priceReporter.recordTransaction(item, transaction);
+                        .totalPrice(finalNetProceeds).build();
+                transactionRepository.insert(tx);
+                playerStreakService.onTransaction(tx.playerUuid());
+                priceReporter.recordTransaction(item, tx);
                 playerRepository.addTransaction(playerId, finalNetProceeds, false);
                 marketEngine.recordSell(item.id(), amount);
                 shopManager.invalidateBuyableCache(item.id());
-
-                // Award badges for sell activity
                 badgeService.onSell(playerId, finalNetProceeds);
-
                 return null;
             }).join();
         } catch (Exception e) {
+            // DB failed → nothing changed. Return error.
             plugin.getLogger().log(Level.WARNING,
-                    "[Auto-Tune] DB write failed after sell for " + player.getName()
-                            + " (amount=" + amount + ", net=" + netProceeds + "). "
-                            + "Money deposited but transaction not recorded. Manual DB review may be needed.", e);
+                    "[Auto-Tune] DB write failed for sell by " + player.getName()
+                            + " (item=" + item.id() + ", amount=" + amount
+                            + "). No changes made.", e);
+            return TransactionResult.error("Database error. Please try again.");
         }
+
+        // Step 2: Deposit money AFTER DB success.
+        if (!deposit(player, netProceeds.doubleValue())) {
+            // Money failed but DB succeeded. Transaction recorded but no money.
+            plugin.getLogger().warning("[Auto-Tune] DB OK but Vault deposit failed for "
+                    + player.getName() + ". Transaction exists but player unpaid.");
+            return TransactionResult.error("Transfer error. Transaction recorded. Contact admin.");
+        }
+        treasuryService.collectTaxAmount(taxAmount);
+
+        // Step 3: Remove inventory LAST. If fails → refund money.
+        if (!removeItems(player, item, amount)) {
+            // Compensating transaction: refund money.
+            plugin.getLogger().warning("[Auto-Tune] Item removal failed after payment for "
+                    + player.getName() + ". Refunding money.");
+            withdraw(player, netProceeds.doubleValue());
+            return TransactionResult.error("Failed to remove items. Refunded.");
+        }
+
 
         // Set cooldown for Epic/Legendary items
         AutoTuneConfig.WhaleAntiDumpConfig antiDump2 = configManager.getConfig().whaleAntiDump();

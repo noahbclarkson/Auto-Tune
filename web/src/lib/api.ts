@@ -275,6 +275,23 @@ export interface AdminHealthDto {
   }>;
   avgVolatility: number;
   timestamp: number;
+  antiDump: {
+    enabled: boolean;
+    spreadShockActive: boolean;
+    shockRemainingTicks: number;
+    spreadShockMultiplier: number;
+    spreadShockTriggerBps: number;
+    maxSellPerItemPerTick: number;
+    highValueSellCooldownTicks: number;
+    topVolumes: Array<{
+      id: number;
+      material: string;
+      displayName: string;
+      volume: number;
+      cap: number;
+      atCap: boolean;
+    }>;
+  };
 }
 
 export interface AdminAuditEntryDto {

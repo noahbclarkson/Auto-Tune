@@ -1260,6 +1260,43 @@ public class WebServer {
             response.put("topUndersoldItems", undersells.stream().limit(5).collect(Collectors.toList()));
             response.put("topVolatile", volatilities.stream().limit(5).collect(Collectors.toList()));
             response.put("topUndersold", undersells.stream().limit(5).collect(Collectors.toList()));
+
+            // Anti-dump telemetry
+            AutoTuneConfig.WhaleAntiDumpConfig antiDump = configManager.getConfig().whaleAntiDump();
+            int shockTicks = marketEngine.getShockRemainingTicks();
+            double spreadMult = marketEngine.getSpreadShockMultiplier();
+            List<Map<String, Object>> itemVolumes = new ArrayList<>();
+            for (ShopItem item : allItems) {
+                int vol = marketEngine.getTickSellVolume(item.id());
+                if (vol > 0) {
+                    Integer cap = antiDump.maxSellPerItemPerTick();
+                    Map<String, Object> entry = new HashMap<>();
+                    entry.put("id", item.id());
+                    entry.put("material", item.material().name());
+                    entry.put("displayName", item.getDisplayNameOrMaterial());
+                    entry.put("volume", vol);
+                    entry.put("cap", cap != null ? cap : -1);
+                    entry.put("atCap", cap != null && vol >= cap);
+                    itemVolumes.add(entry);
+                }
+            }
+            itemVolumes.sort((a, b) -> {
+                long va = ((Number) a.get("volume")).longValue();
+                long vb = ((Number) b.get("volume")).longValue();
+                return Long.compare(vb, va);
+            });
+
+            Map<String, Object> antiDumpStatus = new HashMap<>();
+            antiDumpStatus.put("enabled", antiDump.enabled());
+            antiDumpStatus.put("spreadShockActive", shockTicks > 0);
+            antiDumpStatus.put("shockRemainingTicks", shockTicks);
+            antiDumpStatus.put("spreadShockMultiplier", spreadMult);
+            antiDumpStatus.put("spreadShockTriggerBps", antiDump.spreadShockTriggerBps());
+            antiDumpStatus.put("maxSellPerItemPerTick", antiDump.maxSellPerItemPerTick() != null ? antiDump.maxSellPerItemPerTick() : -1);
+            antiDumpStatus.put("highValueSellCooldownTicks", antiDump.highValueSellCooldownTicks() != null ? antiDump.highValueSellCooldownTicks() : -1);
+            antiDumpStatus.put("topVolumes", itemVolumes.stream().limit(10).collect(Collectors.toList()));
+            response.put("antiDump", antiDumpStatus);
+
             response.put("timestamp", System.currentTimeMillis());
             ctx.json(response);
         });

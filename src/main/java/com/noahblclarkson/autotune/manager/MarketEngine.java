@@ -681,6 +681,13 @@ public class MarketEngine {
         return shockRemainingTicks;
     }
 
+    /**
+     * Returns the current spread shock multiplier. 1.0 means no shock active.
+     */
+    public double getSpreadShockMultiplier() {
+        return spreadShock;
+    }
+
     public Map<Integer, BigDecimal> getPriceCache() {
         return Map.copyOf(priceCache);
     }

@@ -524,10 +524,14 @@ public class EconomyManager {
                 return null;
             }).join();
         } catch (Exception e) {
+            // DB failed but money already deposited. No clean recovery without
+            // reversing the Vault deposit (which we can't do reliably). Log for
+            // admin review and return error so player knows the transaction failed.
             plugin.getLogger().log(Level.WARNING,
                     "[Auto-Tune] DB write failed after detached sell for " + player.getName()
                             + " (amount=" + amount + ", net=" + netProceeds + "). "
                             + "Money deposited but transaction not recorded. Manual DB review may be needed.", e);
+            return TransactionResult.error("Database error. Transaction failed. Contact admin.");
         }
 
 

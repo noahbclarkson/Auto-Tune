@@ -192,6 +192,13 @@ public class AuctionManager {
             int quantity,
             @NotNull BigDecimal pricePerUnit
     ) {
+        // Snapshot online player UUIDs on the calling thread (main thread) so
+        // the async block can safely filter sell orders without cross-thread
+        // Bukkit API calls.
+        Set<UUID> onlineUuids = Bukkit.getOnlinePlayers().stream()
+                .map(Player::getUniqueId)
+                .collect(Collectors.toUnmodifiableSet());
+
         return CompletableFuture.supplyAsync(() -> {
             if (quantity <= 0) {
                 return AuctionResult.error("Quantity must be positive");
@@ -259,7 +266,15 @@ public class AuctionManager {
                             .expiresAt(Instant.now().plus(defaultDurationHours, ChronoUnit.HOURS))
                             .build();
 
-                    List<AuctionOrder> existingOrders = auctionRepo.findActiveByMaterial(material.name());
+                    // Load existing orders for matching.
+                    // Filter out SELL orders from offline players — items cannot be
+                    // retrieved from offline inventories, and they cannot be delisted
+                    // mid-transaction once a match begins, so exclude them from matching
+                    // until the seller is back online.
+                    List<AuctionOrder> existingOrders = auctionRepo.findActiveByMaterial(material.name())
+                            .stream()
+                            .filter(o -> o.side() != OrderSide.SELL || onlineUuids.contains(o.playerUuid()))
+                            .toList();
                     AuctionMatchingEngine.MatchResult result = matchingEngine.matchOrder(order, existingOrders);
                     List<AuctionFill> fills = result.fills();
 

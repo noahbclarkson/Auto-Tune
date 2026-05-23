@@ -491,13 +491,9 @@ public class EconomyManager {
             }
         }
 
-        // Detached stacks are already out of the player's inventory. Deposit
-        // first; if Vault fails, the caller still has the stack and can return it.
-        if (!deposit(player, netProceeds.doubleValue())) {
-            return TransactionResult.economyError();
-        }
-        treasuryService.collectTaxAmount(taxAmount);
-
+        // DB-FIRST: DB → money (mirrors processSellAsync and processCartAsync)
+        // 1. DB write first. If fails, nothing changes.
+        // 2. Deposit money. If fails, transaction exists but no money.
         final BigDecimal finalPricePerUnit = pricePerUnit;
         final BigDecimal finalNetProceeds = netProceeds;
         try {
@@ -511,6 +507,7 @@ public class EconomyManager {
                         .totalPrice(finalNetProceeds)
                         .build();
 
+
                 transactionRepository.insert(transaction);
                 playerStreakService.onTransaction(transaction.playerUuid());
                 priceReporter.recordTransaction(item, transaction);
@@ -521,18 +518,25 @@ public class EconomyManager {
                 // Award badges for sell activity
                 badgeService.onSell(playerId, finalNetProceeds);
 
+
                 return null;
             }).join();
         } catch (Exception e) {
-            // DB failed but money already deposited. No clean recovery without
-            // reversing the Vault deposit (which we can't do reliably). Log for
-            // admin review and return error so player knows the transaction failed.
+            // DB failed → nothing changed. Return error.
             plugin.getLogger().log(Level.WARNING,
-                    "[Auto-Tune] DB write failed after detached sell for " + player.getName()
-                            + " (amount=" + amount + ", net=" + netProceeds + "). "
-                            + "Money deposited but transaction not recorded. Manual DB review may be needed.", e);
-            return TransactionResult.error("Database error. Transaction failed. Contact admin.");
+                    "[Auto-Tune] DB write failed for detached sell by " + player.getName()
+                            + " (item=" + item.id() + ", amount=" + amount
+                            + "). No changes made.", e);
+            return TransactionResult.error("Database error. Please try again.");
         }
+
+        // Step 2: Deposit money AFTER DB success.
+        if (!deposit(player, netProceeds.doubleValue())) {
+            plugin.getLogger().warning("[Auto-Tune] DB OK but Vault deposit failed for "
+                    + player.getName() + ". Transaction exists but player unpaid.");
+            return TransactionResult.error("Transfer error. Transaction recorded. Contact admin.");
+        }
+        treasuryService.collectTaxAmount(taxAmount);
 
 
         // Set cooldown for Epic/Legendary items

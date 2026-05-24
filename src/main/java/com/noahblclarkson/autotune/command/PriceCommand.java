@@ -14,6 +14,7 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.incendo.cloud.annotations.Argument;
 import org.incendo.cloud.annotations.Command;
 import org.incendo.cloud.annotations.Permission;
 import org.incendo.cloud.context.CommandContext;
@@ -61,8 +62,9 @@ public class PriceCommand {
 
     @Command("price <material>")
     @Permission("autotune.price")
-    public void onPrice(CommandContext<CommandSender> ctx) {
-        String materialName = ctx.get("material").toString().toUpperCase();
+    public void onPrice(CommandContext<CommandSender> ctx,
+                        @Argument("material") String material) {
+        String materialName = material.toUpperCase(java.util.Locale.ROOT);
 
         // Try exact material match
         Material mat = Material.matchMaterial(materialName);

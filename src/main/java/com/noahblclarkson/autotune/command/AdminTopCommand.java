@@ -79,7 +79,7 @@ public class AdminTopCommand {
                 .build();
     }
 
-    @Command("autotune admin top trades")
+    @Command("autotune admin top trades [period] [limit]")
     @Permission(PERMISSION)
     public void topTrades(org.bukkit.command.CommandSender sender,
                           @Argument(value = "period", suggestions = "leaderboard-period") @org.incendo.cloud.annotations.Default(PERIOD_DEFAULT) String period,
@@ -121,7 +121,7 @@ public class AdminTopCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin top loans")
+    @Command("autotune admin top loans [limit]")
     @Permission(PERMISSION)
     public void topLoans(org.bukkit.command.CommandSender sender,
                          @Argument("limit") @org.incendo.cloud.annotations.Default("10") int limit) {

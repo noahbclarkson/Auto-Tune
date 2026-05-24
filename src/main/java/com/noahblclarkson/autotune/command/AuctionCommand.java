@@ -550,7 +550,7 @@ public class AuctionCommand {
     @Command("auction price <material>")
     @Permission("autotune.auction")
     public void auctionPrice(CommandSender sender,
-                             @Argument(value = "material", suggestions = "materials") String material) {
+                             @Argument(value = "material", suggestions = "auction-materials") String material) {
         Material mat = parseMaterial(material);
         if (mat == null) {
             sender.sendMessage(Component.text("Unknown material: " + material, NamedTextColor.RED));

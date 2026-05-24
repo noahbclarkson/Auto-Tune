@@ -127,11 +127,11 @@ public class OnboardingCommand {
         }
     }
 
-    @Command("onboarding player")
+    @Command("onboarding player <target>")
     @Permission("autotune.admin")
     public void onOnboardingPlayer(
             CommandContext<CommandSender> ctx,
-            @Argument("player") String playerName
+            @Argument("target") String playerName
     ) {
         CommandSender sender = ctx.sender();
         UUID uuid = resolvePlayerUuid(playerName);

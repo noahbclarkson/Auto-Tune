@@ -1227,8 +1227,8 @@ public class AdminCommand {
     @Command("autotune admin history [limit]")
     @Permission("autotune.admin")
     public void adminHistory(CommandSender sender,
-                            @Argument(value = "limit") Optional<Integer> limitArg) {
-        int n = (limitArg == null || limitArg.orElse(0) < 1) ? 10 : Math.min(limitArg.orElse(10), 100);
+                            @Argument(value = "limit") @Default("10") int limit) {
+        int n = limit < 1 ? 10 : Math.min(limit, 100);
 
         List<EconomySnapshot> snapshots = economySnapshotRepository.findRecent(n);
         if (snapshots.isEmpty()) {
@@ -1706,9 +1706,19 @@ public class AdminCommand {
         return val > 0 ? configManager.formatCurrency(val) : "disabled";
     }
 
+    @Suggestions("admin-player-names")
+    public List<String> suggestAdminPlayerNames(CommandContext<?> ctx, String input) {
+        String lower = input.toLowerCase(Locale.ROOT);
+        return org.bukkit.Bukkit.getOnlinePlayers().stream()
+                .map(Player::getName)
+                .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(lower))
+                .limit(20)
+                .toList();
+    }
+
     @Command("autotune admin transactions [player]")
     @Permission("autotune.admin")
-    public void adminTransactions(CommandSender sender, @Argument(value = "player", suggestions = "minecraft-player") @Default("") String playerNameStr) {
+    public void adminTransactions(CommandSender sender, @Argument(value = "player", suggestions = "admin-player-names") @Default("") String playerNameStr) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(Component.text("This command must be used as a player.", NamedTextColor.RED));
             return;
@@ -2554,6 +2564,17 @@ public class AdminCommand {
                 + ". Normal price discovery resumes on the next market tick.", NamedTextColor.GREEN));
     }
 
+    @Suggestions("tier-name")
+    public List<String> suggestTiers(CommandContext<?> ctx, String input) {
+        String lower = input.toLowerCase(Locale.ROOT);
+        List<String> options = new java.util.ArrayList<>();
+        for (ItemTier tier : ItemTier.values()) {
+            options.add(tier.name().toLowerCase(Locale.ROOT));
+        }
+        options.add("clear");
+        return options.stream().filter(name -> name.contains(lower)).toList();
+    }
+
     @Command("autotune admin item tier <material> <tier>")
     @Permission("tier.admin")
     public void itemTier(
@@ -2742,7 +2763,7 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin event create")
+    @Command("autotune admin event create <name> <type> <materials> <multiplier> <durationHours>")
     @Permission("autotune.admin")
     public void adminEventCreate(
             CommandSender sender,
@@ -2832,7 +2853,7 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin event cancel")
+    @Command("autotune admin event cancel <eventId>")
     @Permission("autotune.admin")
     public void adminEventCancel(CommandSender sender, @Argument("eventId") String eventIdStr) {
         UUID eventId;

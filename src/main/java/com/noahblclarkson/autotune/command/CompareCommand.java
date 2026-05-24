@@ -82,9 +82,9 @@ public class CompareCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("compare <target>")
+    @Command("compare <player1>")
     @Permission(PERMISSION)
-    public void compareToOther(CommandSender sender, @Argument(value = "target", suggestions = SUGGESTION_COMPARE_PLAYERS) String targetName) {
+    public void compareToOther(CommandSender sender, @Argument(value = "player1", suggestions = SUGGESTION_COMPARE_PLAYERS) String targetName) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(Component.text("This command is for players only.", NamedTextColor.RED));
             return;

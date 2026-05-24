@@ -16,6 +16,7 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.incendo.cloud.annotations.Argument;
 import org.incendo.cloud.annotations.Command;
 import org.incendo.cloud.annotations.Permission;
 import org.incendo.cloud.annotations.suggestion.Suggestions;
@@ -77,9 +78,8 @@ public class ProfileCommand {
 
     @Command("profile <target>")
     @Permission("autotune.profile")
-    public void onProfileOther(CommandContext<CommandSender> ctx) {
-        String targetName = ctx.get("target");
-
+    public void onProfileOther(CommandContext<CommandSender> ctx,
+                               @Argument(value = "target", suggestions = "profile-targets") String targetName) {
         // Try online player first
         Player target = Bukkit.getPlayerExact(targetName);
         if (target != null) {

@@ -1,4 +1,33 @@
-## Cron (2026-05-18 13:04 UTC) — Web & Ecosystem: API Server Auth Review ✅
+## Cron (2026-05-24 12:42 UTC) — Web & Ecosystem: Circuit Event Modal Done ✅
+
+**rewrite-2 `61943a4`** | `./gradlew build` ✅ PMD 0 | `web/`: 12 routes ✅ | `web-optimizer/`: 29 routes ✅ | Pushed: `61943a4`
+
+### Circuit Event Detail Modal — DONE ✅
+New `CircuitEventModal` component wired into `EconomyChart` (`/economy` page):
+- Click any circuit event chip → modal with full event context
+- Tier transition badge (previousTier → newTier) with color coding
+- Stats: D/G ratio, total GDP, total debt, interest multiplier, timestamp
+- Admin-initiated badge when applicable
+- Recommended action text based on tier + D/G level
+- Escape/backdrop close
+
+Also: circuit event chips now have `cursor-pointer hover:brightness-110` to indicate clickability.
+
+### Ecosystem Gap Findings
+- **Leaderboard P&L:** `LeaderboardEntryDto` has volume data (totalBought/Sold) but no net P&L. P&L columns exist only at `HoldingDto` (per-item) level. A player-impact P&L leaderboard requires new backend aggregation.
+- **Exchange rate history:** `/exchange-rates` page has current-rate bar chart but no time-series. Would need API client extension + API server endpoint + new LineChart component.
+- **Config comparison tool:** `/config-playground` has sliders + YAML export. A "compare two configs side-by-side" mode would build on this foundation.
+
+### State
+Repo at `61943a4`. All builds passing. Pushed.
+**Blocked:** API deploy | Real testimonials
+
+### Next
+1. Exchange rate history chart (API + LineChart component)
+2. Config comparison tool (extend playground with two-config diff)
+3. `/compare` dedicated page (vs inline section on landing)
+
+---
 
 **rewrite-2 `90e8427`** | `./gradlew build` ✅ PMD 0 | `web-optimizer/` 29 routes ✅ | `web/` 12 routes ✅ | Pushed: none (clean session)
 

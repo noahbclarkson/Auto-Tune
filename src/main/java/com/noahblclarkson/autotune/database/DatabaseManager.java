@@ -18,6 +18,8 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -162,7 +164,7 @@ public class DatabaseManager {
     }
 
     private void runMigration(String resourcePath) throws SQLException {
-        StorageConfig config = configManager.getConfig().storage();
+        boolean mysql = configManager.getConfig().storage().type() == StorageConfig.StorageType.MYSQL;
 
         try (InputStream is = plugin.getResource(resourcePath)) {
             if (is == null) {
@@ -171,26 +173,74 @@ public class DatabaseManager {
 
             String sql = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
                     .lines()
-                    .filter(line -> !line.trim().startsWith("--"))
                     .collect(Collectors.joining("\n"));
-
-            if (config.type() == StorageConfig.StorageType.MYSQL) {
-                sql = sql.replace("AUTOINCREMENT", "AUTO_INCREMENT");
-                sql = sql.replace("INSERT OR IGNORE", "INSERT IGNORE");
-            }
 
             try (Connection conn = dataSource.getConnection();
                  Statement stmt = conn.createStatement()) {
-                for (String statement : sql.split(";", -1)) {
-                    String trimmed = statement.trim();
-                    if (!trimmed.isEmpty()) {
-                        stmt.execute(trimmed);
-                    }
+                for (String statement : splitSqlStatements(sql)) {
+                    stmt.execute(mysql ? translateForMysql(statement) : statement);
                 }
             }
         } catch (IOException e) {
             throw new SQLException("Failed to read migration script: " + resourcePath, e);
         }
+    }
+
+    private static String translateForMysql(String statement) {
+        return statement
+                .replace("AUTOINCREMENT", "AUTO_INCREMENT")
+                .replace("INSERT OR IGNORE", "INSERT IGNORE");
+    }
+
+    /**
+     * Splits a SQL script into individual executable statements. Strips {@code --}
+     * line comments (whole-line and inline) and treats semicolons inside single-quoted
+     * string literals as data rather than statement terminators. Migrations do not use
+     * block comments or trigger bodies, so those are intentionally not handled.
+     */
+    static List<String> splitSqlStatements(String sql) {
+        List<String> statements = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inString = false;
+        int length = sql.length();
+
+        for (int i = 0; i < length; i++) {
+            char c = sql.charAt(i);
+
+            if (inString) {
+                current.append(c);
+                if (c == '\'') {
+                    if (i + 1 < length && sql.charAt(i + 1) == '\'') {
+                        current.append('\'');
+                        i++;
+                    } else {
+                        inString = false;
+                    }
+                }
+            } else if (c == '\'') {
+                inString = true;
+                current.append(c);
+            } else if (c == '-' && i + 1 < length && sql.charAt(i + 1) == '-') {
+                while (i < length && sql.charAt(i) != '\n') {
+                    i++;
+                }
+                current.append('\n');
+            } else if (c == ';') {
+                addStatement(statements, current);
+            } else {
+                current.append(c);
+            }
+        }
+        addStatement(statements, current);
+        return statements;
+    }
+
+    private static void addStatement(List<String> statements, StringBuilder current) {
+        String trimmed = current.toString().trim();
+        if (!trimmed.isEmpty()) {
+            statements.add(trimmed);
+        }
+        current.setLength(0);
     }
 
     private void ensureSchemaVersionTable() throws SQLException {

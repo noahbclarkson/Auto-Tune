@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import type { EconomySnapshotDto, CircuitEventDto } from '@/lib/api';
 import { formatLargeCurrency, formatShortTime, formatShortDate } from '@/lib/format';
+import { CircuitEventModal } from './circuit-event-modal';
 
 type Period = '24h' | '7d' | '30d';
 type Metric = 'gdp' | 'averagePriceChange' | 'totalDebt' | 'transactionVolume';
@@ -122,6 +123,7 @@ export function EconomyChart({ history, circuitEvents = [] }: EconomyChartProps)
   const [activeMetrics, setActiveMetrics] = useState<Set<Metric>>(
     new Set<Metric>(['gdp', 'averagePriceChange']),
   );
+  const [selectedEvent, setSelectedEvent] = useState<CircuitEventDto | null>(null);
 
   const filteredData = useMemo(() => {
     const cutoff = Date.now() - PERIOD_MS[period];
@@ -259,8 +261,9 @@ export function EconomyChart({ history, circuitEvents = [] }: EconomyChartProps)
             {filteredEvents.slice(-8).map((event) => (
               <div
                 key={event.id}
-                className={`rounded-lg border px-3 py-2 ${eventTone(event)}`}
+                className={`rounded-lg border px-3 py-2 cursor-pointer hover:brightness-110 transition-all ${eventTone(event)}`}
                 title={eventTitle(event)}
+                onClick={() => setSelectedEvent(event)}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-semibold">
@@ -281,6 +284,10 @@ export function EconomyChart({ history, circuitEvents = [] }: EconomyChartProps)
             ))}
             </div>
           </div>
+        )}
+        {/* Circuit event detail modal */}
+        {selectedEvent && (
+          <CircuitEventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
         )}
       </CardContent>
     </Card>

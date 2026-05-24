@@ -507,6 +507,31 @@ const NEW_FINDINGS: Finding[] = [
       { href: '/docs', label: 'Archetype config docs' },
     ],
   },
+  {
+    q: 'How many Exploiters can my economy handle?',
+    verdict: '⚠️ Use with Caution',
+    verdictClass: 'text-yellow-400 bg-yellow-950/60 border-yellow-800/50',
+    answer: [
+      'Exploiters (griefers who exploit price manipulation for profit) must be capped at 1 per 20 players — '
+        + '5% of your server population. A 5-seed test showed that adding 1 Exploiter (5%) reduced Diamond prices by '
+        + '22% while containing hyperinflation. But adding 2 Exploiters (10%) caused Diamond to spike +411%, '
+        + 'and 3 Exploiters caused +1727% hyperinflation.',
+      'The finding: cap Exploiters at 1 (5% of server). More than 1 Exploiter overwhelms the market engine '
+        + 'because Exploiters profit from price dislocations, and they create more dislocations than the engine '
+        + 'can absorb. The anti-dump sell cap helps, but it cannot contain multi-Exploiter coordination.',
+      'If you suspect multiple Exploiters on your server, investigate and ban them. Auto-Tune '
+        + 'cannot economically constrain coordinated exploitation beyond a single actor.',
+    ],
+    metrics: [
+      { label: '1 Exploiter (5%)', value: '−22% Diamond', note: 'contained — use this as your cap' },
+      { label: '2 Exploiters (10%)', value: '+411% Diamond', note: 'hyperinflation begins' },
+      { label: '3 Exploiters (15%)', value: '+1727% Diamond', note: 'catastrophic hyperinflation' },
+      { label: 'Max safe', value: '1 Exploiter', note: 'per 20 players — 5% cap' },
+    ],
+    relatedLinks: [
+      { href: '/docs', label: 'Anti-exploit docs' },
+    ],
+  },
 ];
 
 /* ─── ECONOMY BEHAVIOR ─────────────────────────────────────── */

@@ -767,6 +767,24 @@ public class EconomyManager {
                 badgeService.onSell(playerId, finalNetCost.abs());
             }
 
+            // Set cooldowns for Epic/Legendary sell items
+            AutoTuneConfig.WhaleAntiDumpConfig antiDumpConf = configManager.getConfig().whaleAntiDump();
+            if (antiDumpConf.enabled()) {
+                Integer cooldownTicks = antiDumpConf.highValueSellCooldownTicks();
+                if (cooldownTicks != null) {
+                    for (CartItem cartItem : cart) {
+                        if (!cartItem.isBuying()) {
+                            ShopItem cartShopItem = cartItem.shopItem();
+                            if (cartShopItem.effectiveTier() != ItemTier.COMMON
+                                    && cartShopItem.effectiveTier() != ItemTier.UNCOMMON 
+                                    && cartShopItem.effectiveTier() != ItemTier.RARE) {
+                                marketEngine.setSellCooldown(cartShopItem.id(), cooldownTicks);
+                            }
+                        }
+                    }
+                }
+            }
+
             return TransactionResult.success(
                     finalNetCost.compareTo(BigDecimal.ZERO) > 0 ? TransactionType.BUY : TransactionType.SELL,
                     cart.size(),

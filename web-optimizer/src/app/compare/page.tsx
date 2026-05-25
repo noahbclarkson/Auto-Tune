@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, Minus, ArrowRight, Shield, Zap, Users, Globe, BarChart3 } from 'lucide-react';
+import React from 'react';
 
 const CATEGORIES = [
   {
@@ -270,8 +271,8 @@ export default function ComparePage() {
               </thead>
               <tbody>
                 {CATEGORIES.map((cat) => (
-                  <>
-                    <tr key={cat.label} className="border-b border-zinc-800 bg-zinc-900/40">
+                  <React.Fragment key={cat.label}>
+                    <tr className="border-b border-zinc-800 bg-zinc-900/40">
                       <td colSpan={5} className="px-5 py-3">
                         <div className="flex items-center gap-2">
                           <cat.icon className="w-4 h-4 text-zinc-500" />
@@ -291,7 +292,7 @@ export default function ComparePage() {
                         <td className="py-3.5 px-4"><Cell val={item.playershops} /></td>
                       </tr>
                     ))}
-                  </>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

@@ -8,7 +8,10 @@ use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::models::{ErrorResponse, ExchangeRateEntry, ExchangeRatesResponse};
+use crate::models::{
+    ErrorResponse, ExchangeRateEntry, ExchangeRateHistoryPoint, ExchangeRateHistoryResponse,
+    ExchangeRatesResponse,
+};
 
 /// GET /api/servers/exchange-rates
 pub async fn get_exchange_rates(pool: web::Data<PgPool>) -> impl Responder {
@@ -108,6 +111,49 @@ pub async fn get_exchange_rates(pool: web::Data<PgPool>) -> impl Responder {
         base: "true_prices".to_owned(),
         rates,
     })
+}
+
+/// GET /api/servers/{server_id}/exchange-rate-history
+/// Returns the exchange rate history for a specific server.
+pub async fn get_exchange_rate_history(
+    pool: web::Data<PgPool>,
+    path: web::Path<Uuid>,
+) -> impl Responder {
+    let server_id = path.into_inner();
+
+    let result = sqlx::query(
+        r#"
+        SELECT rate, player_count, snapshot_at
+        FROM server_exchange_rate_history
+        WHERE server_id = $1
+        ORDER BY snapshot_at DESC
+        LIMIT 200
+        "#,
+    )
+    .bind(server_id)
+    .fetch_all(pool.get_ref())
+    .await;
+
+    match result {
+        Ok(rows) => {
+            let history: Vec<ExchangeRateHistoryPoint> = rows
+                .into_iter()
+                .map(|r| ExchangeRateHistoryPoint {
+                    rate: r.try_get::<f64, _>("rate").unwrap_or(1.0),
+                    player_count: r.try_get::<i32, _>("player_count").unwrap_or(0),
+                    snapshot_at: r
+                        .try_get::<DateTime<Utc>, _>("snapshot_at")
+                        .unwrap_or_else(|_| Utc::now()),
+                })
+                .collect();
+
+            HttpResponse::Ok().json(ExchangeRateHistoryResponse { server_id, history })
+        }
+        Err(e) => {
+            tracing::error!("DB error fetching exchange rate history for {server_id}: {e}");
+            HttpResponse::InternalServerError().json(ErrorResponse::new("internal server error"))
+        }
+    }
 }
 
 /// Estimate a server's economy scale factor relative to true prices.

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DEFAULT_CONFIG, calculateSpread, type MarketConfig } from '@/lib/market-engine';
 import {
   LineChart,
@@ -12,7 +13,10 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts';
-import { Sliders, RotateCcw, Info, Copy, Check, AlertTriangle, TrendingUp, TrendingDown, Minus, Zap } from 'lucide-react';
+import {
+  Sliders, RotateCcw, Info, Copy, Check, AlertTriangle, TrendingUp, TrendingDown, Minus, Zap,
+  SplitSquareHorizontal, ArrowRight, Diff
+} from 'lucide-react';
 
 type Regime = 'BALANCED' | 'BUYER_HEAVY' | 'SELLER_HEAVY' | 'VOLATILE' | 'THIN_LIQUIDITY';
 
@@ -57,6 +61,17 @@ function computeRegime(
   if (buyRatio >= 0.62) return 'BUYER_HEAVY';
   if (buyRatio <= 0.38) return 'SELLER_HEAVY';
   return 'BALANCED';
+}
+
+function computeRegimeDiff(rA: Regime, rB: Regime): { same: boolean; label: string; desc: string } {
+  if (rA === rB) return { same: true, label: 'Same regime', desc: 'Both configs produce identical market regimes.' };
+  const aInfo = REGIME_INFO[rA];
+  const bInfo = REGIME_INFO[rB];
+  return {
+    same: false,
+    label: 'Regime mismatch',
+    desc: `Config A → ${aInfo.label}, Config B → ${bInfo.label}. The configs lead to fundamentally different market conditions.`,
+  };
 }
 
 function RiskWarning({ warning }: { warning: string }) {
@@ -129,7 +144,6 @@ function SpreadBar({ bpd, spd }: { bpd: number; spd: number }) {
   const total = bpd + spd;
   const buyPct = (bpd / total) * 100;
   const sellPct = (spd / total) * 100;
-  const mid = 50;
 
   return (
     <div className="space-y-1">
@@ -149,7 +163,7 @@ function SpreadBar({ bpd, spd }: { bpd: number; spd: number }) {
         />
         <div
           className="absolute top-0 h-full w-px bg-white/60"
-          style={{ left: `${mid}%`, transform: 'translateX(-50%)' }}
+          style={{ left: '50%', transform: 'translateX(-50%)' }}
         />
       </div>
       <div className="flex justify-between text-[10px] text-zinc-500">
@@ -199,7 +213,257 @@ function SliderRow({
   );
 }
 
-export default function ConfigPlaygroundPage() {
+// ─── Config serialization for URL sharing ───────────────────────────────────
+
+function configToBase64(config: MarketConfig, conditions: { buyRatio: number; players: number; traders: number; volume: number; zScore: number }): string {
+  const payload = { ...config, ...conditions };
+  return btoa(JSON.stringify(payload));
+}
+
+function base64ToConfig(encoded: string): { config: MarketConfig; conditions: { buyRatio: number; players: number; traders: number; volume: number; zScore: number } } | null {
+  try {
+    const payload = JSON.parse(atob(encoded));
+    const { baseSpread, volumeImpact, playerImpact, fullEffectPlayers, maxPriceChangePercent, liquidityCoeff, liquidityFullEffectTraders, tradeWindowDays, buyRatio, players, traders, volume, zScore } = payload;
+    return {
+      config: { baseSpread, volumeImpact, playerImpact, fullEffectPlayers, maxPriceChangePercent, liquidityCoeff, liquidityFullEffectTraders, tradeWindowDays },
+      conditions: { buyRatio: buyRatio ?? 0.7, players: players ?? 10, traders: traders ?? 8, volume: volume ?? 100, zScore: zScore ?? 0 },
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Config B panel (simplified — no sliders, just key params) ─────────────
+
+interface ConfigBProps {
+  config: MarketConfig;
+  onChange: (patch: Partial<MarketConfig>) => void;
+}
+
+function ConfigBPanel({ config, onChange }: ConfigBProps) {
+  return (
+    <div className="p-4 rounded-xl border border-indigo-900/40 bg-indigo-950/20 space-y-4">
+      <div className="flex items-center gap-2">
+        <div className="h-5 w-5 rounded bg-indigo-600 flex items-center justify-center">
+          <span className="text-[10px] font-bold text-white">B</span>
+        </div>
+        <h4 className="text-xs font-semibold text-indigo-300">Config B</h4>
+        <span className="text-[10px] text-zinc-500 ml-auto">second config to compare</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {([
+          { key: 'baseSpread', label: 'Base Spread', min: 0.05, max: 0.50, step: 0.01, format: (v: number) => `${(v * 100).toFixed(0)}%` },
+          { key: 'volumeImpact', label: 'Volume Impact', min: 0.0, max: 1.0, step: 0.05, format: (v: number) => v.toFixed(2) },
+          { key: 'playerImpact', label: 'Player Impact', min: 0.0, max: 1.0, step: 0.05, format: (v: number) => v.toFixed(2) },
+          { key: 'maxPriceChangePercent', label: 'Max Price Change', min: 0.5, max: 5.0, step: 0.1, format: (v: number) => `${v.toFixed(1)}%` },
+        ] as const).map(({ key, label, min, max, step, format }) => (
+          <div key={key} className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-medium text-zinc-400">{label}</label>
+              <span className="text-[10px] font-mono text-indigo-400">{format(config[key])}</span>
+            </div>
+            <input
+              type="range"
+              min={min}
+              max={max}
+              step={step}
+              value={config[key]}
+              onChange={(e) => onChange({ [key]: parseFloat(e.target.value) })}
+              className="w-full h-1 rounded-full appearance-none bg-zinc-800 cursor-pointer accent-indigo-500"
+            />
+          </div>
+        ))}
+      </div>
+
+      <p className="text-[10px] text-zinc-500">
+        Server conditions (players, traders, volume) are shared from Config A. Only engine parameters differ.
+      </p>
+    </div>
+  );
+}
+
+// ─── Param diff row ────────────────────────────────────────────────────────
+
+interface ParamDiffProps {
+  label: string;
+  a: number;
+  b: number;
+  format: (v: number) => string;
+  higherIsBetter?: 'a' | 'b' | false;
+}
+
+function ParamDiff({ label, a, b, format, higherIsBetter = false }: ParamDiffProps) {
+  const same = Math.abs(a - b) < 0.0001;
+  const diff = b - a;
+  const diffPct = Math.abs(a) > 0.0001 ? (diff / a) * 100 : 0;
+  const aWins = higherIsBetter === 'a' || (higherIsBetter === false && Math.abs(diff) < 0.0001 ? false : (higherIsBetter === false ? false : false));
+  const winner: 'a' | 'b' | 'same' = same ? 'same' : (Math.abs(diff) < 0.0001 ? 'same' : (diff < 0 ? 'a' : 'b'));
+
+  return (
+    <div className={`flex items-center gap-2 p-2 rounded-lg ${same ? 'bg-zinc-900/40' : 'bg-zinc-900/60'}`}>
+      <span className="text-[11px] text-zinc-400 w-36 shrink-0">{label}</span>
+      <span className={`text-[11px] font-mono ${same ? 'text-zinc-500' : 'text-emerald-400'}`}>{format(a)}</span>
+      {!same && (
+        <ArrowRight className="w-3 h-3 text-zinc-600 shrink-0" />
+      )}
+      {!same && (
+        <span className={`text-[11px] font-mono ${same ? 'text-zinc-500' : 'text-indigo-400'}`}>{format(b)}</span>
+      )}
+      {!same && (
+        <span className={`text-[10px] ml-auto ${diff < 0 ? 'text-amber-400' : 'text-blue-400'}`}>
+          {diff < 0 ? '' : '+'}{diff.toFixed(4)} ({diffPct.toFixed(1)}%)
+        </span>
+      )}
+      {same && (
+        <span className="text-[10px] text-zinc-600 ml-auto">no diff</span>
+      )}
+    </div>
+  );
+}
+
+// ─── Comparison overlay ────────────────────────────────────────────────────
+
+interface ComparePanelProps {
+  configA: MarketConfig;
+  configB: MarketConfig;
+  conditions: { buyRatio: number; players: number; traders: number; volume: number; zScore: number };
+}
+
+function ComparePanel({ configA, configB, conditions }: ComparePanelProps) {
+  const spreadA = useMemo(() => calculateSpread(conditions.buyRatio, conditions.players, conditions.zScore, conditions.volume, conditions.traders, configA), [conditions, configA]);
+  const spreadB = useMemo(() => calculateSpread(conditions.buyRatio, conditions.players, conditions.zScore, conditions.volume, conditions.traders, configB), [conditions, configB]);
+
+  const regimeA = computeRegime(conditions.buyRatio, configA.baseSpread, configA.maxPriceChangePercent, conditions.players, conditions.traders, conditions.volume, conditions.zScore);
+  const regimeB = computeRegime(conditions.buyRatio, configB.baseSpread, configB.maxPriceChangePercent, conditions.players, conditions.traders, conditions.volume, conditions.zScore);
+  const regimeDiff = computeRegimeDiff(regimeA, regimeB);
+
+  const exampleBase = 250;
+  const buyA = exampleBase * (1 + spreadA.bpd);
+  const sellA = exampleBase * (1 - spreadA.spd);
+  const buyB = exampleBase * (1 + spreadB.bpd);
+  const sellB = exampleBase * (1 - spreadB.spd);
+
+  const spreadPctA = ((spreadA.bpd + spreadA.spd) * 100) / 2;
+  const spreadPctB = ((spreadB.bpd + spreadB.spd) * 100) / 2;
+
+  return (
+    <div className="rounded-xl border border-zinc-700 bg-zinc-950/80 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-900/60">
+        <Diff className="w-4 h-4 text-zinc-400" />
+        <h3 className="text-sm font-semibold text-zinc-200">Config Comparison</h3>
+        <span className="text-[10px] text-zinc-500 ml-auto">URL params updated — share the URL to share both configs</span>
+      </div>
+
+      <div className="grid grid-cols-2 divide-x divide-zinc-800">
+        {/* Config A column */}
+        <div className="p-4 space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-5 w-5 rounded bg-emerald-600 flex items-center justify-center">
+              <span className="text-[10px] font-bold text-white">A</span>
+            </div>
+            <span className="text-xs font-semibold text-emerald-400">Config A</span>
+          </div>
+          <SpreadBar bpd={spreadA.bpd} spd={spreadA.spd} />
+          <div className="flex items-center justify-between p-2 rounded bg-zinc-900/60">
+            <div>
+              <p className="text-[10px] text-emerald-400/70">Buy</p>
+              <p className="text-sm font-mono font-bold text-emerald-400">${buyA.toFixed(2)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-zinc-500">spread</p>
+              <p className="text-xs font-mono text-zinc-400">${(buyA - sellA).toFixed(2)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-amber-400/70">Sell</p>
+              <p className="text-sm font-mono font-bold text-amber-400">${sellA.toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${REGIME_INFO[regimeA].bg} ${REGIME_INFO[regimeA].color}`}>
+              {REGIME_INFO[regimeA].Icon && React.createElement(REGIME_INFO[regimeA].Icon, { className: 'w-2.5 h-2.5' })}
+              {REGIME_INFO[regimeA].label}
+            </span>
+            <span className="text-[10px] text-zinc-500">+/-{spreadPctA.toFixed(2)}%</span>
+          </div>
+        </div>
+
+        {/* Config B column */}
+        <div className="p-4 space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-5 w-5 rounded bg-indigo-600 flex items-center justify-center">
+              <span className="text-[10px] font-bold text-white">B</span>
+            </div>
+            <span className="text-xs font-semibold text-indigo-400">Config B</span>
+          </div>
+          <SpreadBar bpd={spreadB.bpd} spd={spreadB.spd} />
+          <div className="flex items-center justify-between p-2 rounded bg-zinc-900/60">
+            <div>
+              <p className="text-[10px] text-emerald-400/70">Buy</p>
+              <p className="text-sm font-mono font-bold text-emerald-400">${buyB.toFixed(2)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-zinc-500">spread</p>
+              <p className="text-xs font-mono text-zinc-400">${(buyB - sellB).toFixed(2)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-amber-400/70">Sell</p>
+              <p className="text-sm font-mono font-bold text-amber-400">${sellB.toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${REGIME_INFO[regimeB].bg} ${REGIME_INFO[regimeB].color}`}>
+              {REGIME_INFO[regimeB].Icon && React.createElement(REGIME_INFO[regimeB].Icon, { className: 'w-2.5 h-2.5' })}
+              {REGIME_INFO[regimeB].label}
+            </span>
+            <span className="text-[10px] text-zinc-500">+/-{spreadPctB.toFixed(2)}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Divergence summary */}
+      <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-900/40 space-y-2">
+        <h4 className="text-[11px] font-semibold text-zinc-300">Parameter Diff</h4>
+        <ParamDiff label="Base Spread" a={configA.baseSpread} b={configB.baseSpread} format={(v) => `${(v * 100).toFixed(0)}%`} />
+        <ParamDiff label="Volume Impact" a={configA.volumeImpact} b={configB.volumeImpact} format={(v) => v.toFixed(2)} />
+        <ParamDiff label="Player Impact" a={configA.playerImpact} b={configB.playerImpact} format={(v) => v.toFixed(2)} />
+        <ParamDiff label="Max Price Change" a={configA.maxPriceChangePercent} b={configB.maxPriceChangePercent} format={(v) => `${v.toFixed(1)}%`} />
+
+        <div className={`flex items-start gap-2 p-2 rounded-lg mt-2 ${regimeDiff.same ? 'bg-emerald-950/20 border border-emerald-900/30' : 'bg-amber-950/20 border border-amber-900/30'}`}>
+          <Info className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${regimeDiff.same ? 'text-emerald-400' : 'text-amber-400'}`} />
+          <p className="text-[11px] leading-relaxed text-zinc-300">
+            <span className={`font-semibold ${regimeDiff.same ? 'text-emerald-400' : 'text-amber-400'}`}>{regimeDiff.label}:</span>{' '}
+            {regimeDiff.desc}
+          </p>
+        </div>
+
+        {/* Spread delta summary */}
+        {!regimeDiff.same && (
+          <div className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-900/60 mt-1">
+            <span className="text-[11px] text-zinc-400 shrink-0">Spread delta:</span>
+            <span className={`text-sm font-mono font-bold ${spreadPctB < spreadPctA ? 'text-emerald-400' : spreadPctB > spreadPctA ? 'text-amber-400' : 'text-zinc-400'}`}>
+              {spreadPctB < spreadPctA ? '↓' : spreadPctB > spreadPctA ? '↑' : '≈'} {Math.abs(spreadPctB - spreadPctA).toFixed(2)}%
+            </span>
+            <span className="text-[11px] text-zinc-500">
+              {spreadPctB < spreadPctA
+                ? `Config B has tighter spreads (better for players)`
+                : spreadPctB > spreadPctA
+                ? `Config A has tighter spreads (better for players)`
+                : `Both configs produce identical spreads`}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Inner page (uses useSearchParams — wrapped in Suspense) ───────────────
+
+function ConfigPlaygroundInner() {
+  const searchParams = useSearchParams();
+
   const [preset, setPreset] = useState<string>('vanilla');
   const [baseSpread, setBaseSpread] = useState(0.20);
   const [volumeImpact, setVolumeImpact] = useState(0.80);
@@ -211,6 +475,77 @@ export default function ConfigPlaygroundPage() {
   const [zScore, setZScore] = useState(0);
   const [buyRatio, setBuyRatio] = useState(0.70);
   const [yamlCopied, setYamlCopied] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+
+  // Config B — initialized from URL or preset
+  const [configBBase, setConfigBBase] = useState(0.15);
+  const [configBVolume, setConfigBVolume] = useState(0.80);
+  const [configBPlayer, setConfigBPlayer] = useState(0.60);
+  const [configBMaxPC, setConfigBMaxPC] = useState(1.5);
+
+  const configB: MarketConfig = useMemo(() => ({
+    ...DEFAULT_CONFIG,
+    baseSpread: configBBase,
+    volumeImpact: configBVolume,
+    playerImpact: configBPlayer,
+    maxPriceChangePercent: configBMaxPC,
+  }), [configBBase, configBVolume, configBPlayer, configBMaxPC]);
+
+  const conditions = useMemo(() => ({
+    buyRatio, players, traders, volume, zScore,
+  }), [buyRatio, players, traders, volume, zScore]);
+
+  // Read URL params on mount
+  useEffect(() => {
+    const a = searchParams.get('a');
+    const b = searchParams.get('b');
+    const mode = searchParams.get('mode');
+    if (mode === 'compare') setCompareMode(true);
+    if (a) {
+      const parsed = base64ToConfig(a);
+      if (parsed) {
+        setBaseSpread(parsed.config.baseSpread);
+        setVolumeImpact(parsed.config.volumeImpact);
+        setPlayerImpact(parsed.config.playerImpact);
+        setMaxPriceChange(parsed.config.maxPriceChangePercent);
+        setPlayers(parsed.conditions.players);
+        setTraders(parsed.conditions.traders);
+        setVolume(parsed.conditions.volume);
+        setZScore(parsed.conditions.zScore);
+        setBuyRatio(parsed.conditions.buyRatio);
+      }
+    }
+    if (b) {
+      const parsed = base64ToConfig(b);
+      if (parsed) {
+        setConfigBBase(parsed.config.baseSpread);
+        setConfigBVolume(parsed.config.volumeImpact);
+        setConfigBPlayer(parsed.config.playerImpact);
+        setConfigBMaxPC(parsed.config.maxPriceChangePercent);
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Write URL when configs change
+  useEffect(() => {
+    const configA = {
+      ...DEFAULT_CONFIG,
+      baseSpread,
+      volumeImpact,
+      playerImpact,
+      maxPriceChangePercent: maxPriceChange,
+    };
+    const url = new URL(window.location.href);
+    url.searchParams.set('a', configToBase64(configA, conditions));
+    if (compareMode) {
+      url.searchParams.set('b', configToBase64(configB, conditions));
+      url.searchParams.set('mode', 'compare');
+    } else {
+      url.searchParams.delete('b');
+      url.searchParams.delete('mode');
+    }
+    window.history.replaceState({}, '', url.toString());
+  }, [baseSpread, volumeImpact, playerImpact, maxPriceChange, players, traders, volume, zScore, buyRatio, configB, compareMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fullYaml = useMemo(() => {
     return `# Auto-Tune — spread config (generated by Config Playground)
@@ -241,6 +576,22 @@ spread:
     setTimeout(() => setYamlCopied(false), 2000);
   }
 
+  async function copyCompareUrl() {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setYamlCopied(true);
+    setTimeout(() => setYamlCopied(false), 2000);
+  }
+
   const applyPreset = useCallback((key: string) => {
     const p = PRESETS[key];
     if (!p) return;
@@ -251,6 +602,15 @@ spread:
     setTraders(p.traders);
     setVolume(p.volume);
     setZScore(p.zScore);
+  }, []);
+
+  const applyPresetB = useCallback((key: string) => {
+    const p = PRESETS[key];
+    if (!p) return;
+    setConfigBBase(p.config.baseSpread ?? 0.20);
+    setConfigBVolume(0.80);
+    setConfigBPlayer(0.60);
+    setConfigBMaxPC(p.config.maxPriceChangePercent ?? 1.5);
   }, []);
 
   const config: MarketConfig = useMemo(() => ({
@@ -328,7 +688,29 @@ spread:
           </div>
         </div>
 
-        {/* Presets */}
+        {/* Compare Mode Toggle */}
+        <div className="flex items-center justify-between p-4 rounded-xl border border-zinc-800 bg-zinc-900/40">
+          <div className="flex items-center gap-3">
+            <SplitSquareHorizontal className="w-4 h-4 text-zinc-400" />
+            <div>
+              <h2 className="text-sm font-semibold text-zinc-200">Compare Two Configs</h2>
+              <p className="text-xs text-zinc-500">View two configs side-by-side with a diff summary. URL updates automatically for sharing.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setCompareMode(!compareMode)}
+            className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+              compareMode
+                ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-600/40'
+                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
+            }`}
+          >
+            <SplitSquareHorizontal className="w-3.5 h-3.5" />
+            {compareMode ? 'Comparing' : 'Compare Mode'}
+          </button>
+        </div>
+
+        {/* Presets — shown in both modes */}
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
             <RotateCcw className="h-3.5 w-3.5 text-emerald-500" />
@@ -336,77 +718,98 @@ spread:
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {Object.entries(PRESETS).map(([key, p]) => (
-              <button
-                key={key}
-                onClick={() => applyPreset(key)}
-                className={`p-2.5 rounded-lg border text-left transition-all ${
-                  preset === key
-                    ? 'border-emerald-600/60 bg-emerald-950/30'
-                    : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700'
-                }`}
-              >
-                <p className="text-xs font-semibold text-zinc-200 leading-tight">{p.label}</p>
-                {p.note && <p className="text-[10px] text-emerald-500/70 mt-0.5">{p.note}</p>}
-                <p className="text-[10px] text-zinc-500 mt-0.5">{p.desc}</p>
-              </button>
+              <div key={key} className="space-y-1">
+                <button
+                  onClick={() => applyPreset(key)}
+                  className={`w-full p-2.5 rounded-lg border text-left transition-all ${
+                    preset === key
+                      ? 'border-emerald-600/60 bg-emerald-950/30'
+                      : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700'
+                  }`}
+                >
+                  <p className="text-xs font-semibold text-zinc-200 leading-tight">{p.label}</p>
+                  {p.note && <p className="text-[10px] text-emerald-500/70 mt-0.5">{p.note}</p>}
+                  <p className="text-[10px] text-zinc-500 mt-0.5">{p.desc}</p>
+                </button>
+                {compareMode && (
+                  <button
+                    onClick={() => applyPresetB(key)}
+                    className="w-full p-1.5 rounded border border-indigo-900/40 bg-indigo-950/20 hover:bg-indigo-900/30 text-[10px] text-indigo-400 transition-all"
+                  >
+                    Apply to B
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         </div>
 
+        {/* Comparison panel — shown when compare mode is on */}
+        {compareMode && (
+          <ComparePanel
+            configA={config}
+            configB={configB}
+            conditions={conditions}
+          />
+        )}
+
+        {/* Main content grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left: Parameters */}
           <div className="space-y-6">
-            <div className="p-5 rounded-xl border border-zinc-800 bg-zinc-950/60 space-y-5">
-              <h3 className="text-sm font-semibold text-zinc-200">Engine Parameters</h3>
-
-              <SliderRow
-                label="Base Spread"
-                description="Starting spread before market conditions (10%–40% recommended)"
-                value={baseSpread}
-                min={0.05}
-                max={0.50}
-                step={0.01}
-                format={(v) => `${(v * 100).toFixed(0)}%`}
-                onChange={setBaseSpread}
-              />
-
-              <SliderRow
-                label="Volume Impact"
-                description="How strongly buy/sell imbalance shifts the spread (0–1)"
-                value={volumeImpact}
-                min={0.0}
-                max={1.0}
-                step={0.05}
-                format={(v) => v.toFixed(2)}
-                onChange={setVolumeImpact}
-              />
-
-              <SliderRow
-                label="Player Impact"
-                description="How much player count compresses spreads (0–1)"
-                value={playerImpact}
-                min={0.0}
-                max={1.0}
-                step={0.05}
-                format={(v) => v.toFixed(2)}
-                onChange={setPlayerImpact}
-              />
-
-              <SliderRow
-                label="Max Price Change"
-                description="Max price shift per 5-minute tick (0.5%–3% recommended)"
-                value={maxPriceChange}
-                min={0.5}
-                max={5.0}
-                step={0.1}
-                format={(v) => `${v.toFixed(1)}%`}
-                onChange={setMaxPriceChange}
-              />
+            <div className="p-5 rounded-xl border border-emerald-900/40 bg-emerald-950/20">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-5 w-5 rounded bg-emerald-600 flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-white">A</span>
+                </div>
+                <h3 className="text-sm font-semibold text-emerald-300">Engine Parameters</h3>
+              </div>
+              <div className="space-y-5">
+                <SliderRow
+                  label="Base Spread"
+                  description="Starting spread before market conditions (10%–40% recommended)"
+                  value={baseSpread}
+                  min={0.05}
+                  max={0.50}
+                  step={0.01}
+                  format={(v) => `${(v * 100).toFixed(0)}%`}
+                  onChange={setBaseSpread}
+                />
+                <SliderRow
+                  label="Volume Impact"
+                  description="How strongly buy/sell imbalance shifts the spread (0–1)"
+                  value={volumeImpact}
+                  min={0.0}
+                  max={1.0}
+                  step={0.05}
+                  format={(v) => v.toFixed(2)}
+                  onChange={setVolumeImpact}
+                />
+                <SliderRow
+                  label="Player Impact"
+                  description="How much player count compresses spreads (0–1)"
+                  value={playerImpact}
+                  min={0.0}
+                  max={1.0}
+                  step={0.05}
+                  format={(v) => v.toFixed(2)}
+                  onChange={setPlayerImpact}
+                />
+                <SliderRow
+                  label="Max Price Change"
+                  description="Max price shift per 5-minute tick (0.5%–3% recommended)"
+                  value={maxPriceChange}
+                  min={0.5}
+                  max={5.0}
+                  step={0.1}
+                  format={(v) => `${v.toFixed(1)}%`}
+                  onChange={setMaxPriceChange}
+                />
+              </div>
             </div>
 
             <div className="p-5 rounded-xl border border-zinc-800 bg-zinc-950/60 space-y-5">
               <h3 className="text-sm font-semibold text-zinc-200">Server Conditions</h3>
-
               <SliderRow
                 label="Online Players"
                 description="Current players on your server"
@@ -417,7 +820,6 @@ spread:
                 format={(v) => `${v} players`}
                 onChange={setPlayers}
               />
-
               <SliderRow
                 label="Active Traders"
                 description="Distinct players who traded recently"
@@ -428,7 +830,6 @@ spread:
                 format={(v) => `${v} traders`}
                 onChange={setTraders}
               />
-
               <SliderRow
                 label="Trade Volume"
                 description="Recent trading activity (z-score input)"
@@ -439,7 +840,6 @@ spread:
                 format={(v) => `${v} units`}
                 onChange={setVolume}
               />
-
               <SliderRow
                 label="Activity Z-Score"
                 description="-3 = very quiet, 0 = normal, +3 = very busy"
@@ -465,7 +865,7 @@ spread:
                     {regimeInfo.label}
                   </span>
                   <div className={`text-sm font-mono font-bold ${spreadColor(bpd, spd)}`}>
-                    ±{((bpd + spd) * 50).toFixed(2)}%
+                    +/-{((bpd + spd) * 50).toFixed(2)}%
                   </div>
                 </div>
               </div>
@@ -601,17 +1001,32 @@ spread:
         <div className="p-5 rounded-xl border border-zinc-800 bg-zinc-950/40">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-zinc-200">Config Export</h3>
-            <button
-              onClick={copyYaml}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                yamlCopied
-                  ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/40'
-                  : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
-              }`}
-            >
-              {yamlCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-              {yamlCopied ? 'Copied!' : 'Copy Full YAML'}
-            </button>
+            <div className="flex items-center gap-2">
+              {compareMode && (
+                <button
+                  onClick={copyCompareUrl}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    yamlCopied
+                      ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-600/40'
+                      : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
+                  }`}
+                >
+                  {yamlCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  {yamlCopied ? 'URL Copied!' : 'Copy Share URL'}
+                </button>
+              )}
+              <button
+                onClick={copyYaml}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  yamlCopied
+                    ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/40'
+                    : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
+                }`}
+              >
+                {yamlCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                {yamlCopied ? 'Copied!' : 'Copy Full YAML'}
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
@@ -633,5 +1048,13 @@ spread:
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ConfigPlaygroundPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Sliders className="w-6 h-6 text-zinc-600 animate-pulse" /></div>}>
+      <ConfigPlaygroundInner />
+    </Suspense>
   );
 }

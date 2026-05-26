@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Loader2, AlertCircle, Activity, ShieldOff, Zap } from 'lucide-react';
+import { Loader2, AlertCircle, Activity, ShieldOff, Zap } from 'lucide-react';
 
 interface AntiDumpData {
   enabled: boolean;

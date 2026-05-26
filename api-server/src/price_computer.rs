@@ -398,7 +398,8 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
         .collect();
 
     for sub in &submissions {
-        let rate = compute_exchange_rate_standalone(&sub.item_names, &sub.ratio_matrix, &true_price_map);
+        let rate =
+            compute_exchange_rate_standalone(&sub.item_names, &sub.ratio_matrix, &true_price_map);
         let _ = sqlx::query(
             r#"
             INSERT INTO server_exchange_rate_history (server_id, rate, player_count)

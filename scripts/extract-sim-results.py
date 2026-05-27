@@ -9,11 +9,9 @@ from pathlib import Path
 import math
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
-# scripts/ is at: <workspace>/autotune/scripts/
-# workspace root is 2 levels up from scripts/: scripts -> autotune -> workspace
-WORKSPACE = SCRIPT_DIR.parent.parent
-SIM_OUTPUT = WORKSPACE / "sim-output"
-OUTPUT_FILE = WORKSPACE / "autotune" / "web-optimizer" / "public" / "simulation-results.json"
+REPO_ROOT = SCRIPT_DIR.parent
+SIM_OUTPUT = REPO_ROOT / "sim-output"
+OUTPUT_FILE = REPO_ROOT / "public-site" / "public" / "simulation-results.json"
 OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 

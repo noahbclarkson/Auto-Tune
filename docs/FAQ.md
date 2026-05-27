@@ -207,7 +207,7 @@ The bundled dashboard connects to `http://localhost:8080` by default for API dat
 
 ### How do I get an API key?
 
-Contact the Auto-Tune maintainers. Server keys are issued manually to prevent Sybil attacks. Once you have a key, register at `/servers` on the web-optimizer site.
+Contact the Auto-Tune maintainers. Server keys are issued manually to prevent Sybil attacks. Once you have a key, register at `/servers` on the public site.
 
 ---
 

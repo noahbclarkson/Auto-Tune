@@ -14,7 +14,7 @@ The system spans three environments:
 |-------|-----------|---------|
 | **Java Plugin** | Paper 1.21.4, Guice, JDBI | In-game economy, commands, GUIs |
 | **Rust API Server** | Actix-web, PostgreSQL | Cross-server price solving, true prices |
-| **TypeScript Frontends** | Next.js (2 apps) | Admin dashboard + public optimizer site |
+| **TypeScript Frontends** | Next.js (2 apps) | Admin dashboard + public site |
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -39,7 +39,7 @@ The system spans three environments:
                       │ :3000 (standalone Next.js)
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  web-optimizer/ (public site)                               │
+│  public-site/ (public site)                                 │
 │                                                             │
 │  True prices  ·  Exchange rates  ·  Simulator              │
 │  Server explorer  ·  How-it-works                          │
@@ -128,9 +128,10 @@ Single migration `V1__Initial_Schema.sql`. Key tables:
 
 ### PriceReporter
 
-Submits ratio matrix to the Rust API server every `report-interval` ticks (default 60000 = 5 min).
-
-**Current risk:** If the API server is down, submissions are silently dropped. No retry queue or offline buffering. **This is a known gap** — fix before production.
+Submits ratio matrices and heartbeats to the Rust API server on the configured report interval.
+Submissions go through a bounded retry queue so short API outages do not immediately drop all
+pending reports. The queue is intentionally small, so sustained API downtime still requires
+operator attention.
 
 ### Auction House
 
@@ -218,7 +219,7 @@ Pages:
 
 WebSocket (`ws://`) for live price updates — polls every 30s fallback.
 
-### `web-optimizer/` — Public Auto-Tune Page (standalone)
+### `public-site/` — Public Auto-Tune Page (standalone)
 
 Deployed separately. Shows **cross-server true prices** from the Rust API server.
 
@@ -236,7 +237,7 @@ The simulator (`/simulator`) is particularly useful — it runs the identical sp
 
 ## market-engine.ts
 
-TypeScript port of the core market engine math. Lives in `web-optimizer/src/lib/market-engine.ts`. Serves as the canonical reference for the spread pipeline.
+TypeScript port of the core market engine math. Lives in `public-site/src/lib/market-engine.ts`. Serves as the canonical reference for the spread pipeline.
 
 **Must stay in sync** with:
 1. Java: `src/main/java/.../manager/MarketEngine.java`
@@ -292,7 +293,7 @@ See `docs/CONFIG_GUIDE.md` for full reference.
 
 | Risk | Severity | Status |
 |------|----------|--------|
-| PriceReporter silent drop on API down | High | **Known gap** — no retry queue |
+| PriceReporter backlog during sustained API downtime | Medium | Bounded retry queue implemented; long outages still need operator attention |
 | Underselling (prices 30–65% below base) | Medium | Structural — fix via player mix, not params |
 | No Java unit tests | Medium | Validated via Rust simulation instead |
 | Manual engine sync (no automated validation) | Medium | TS/Java/Rust must be kept in sync by convention |
@@ -313,5 +314,5 @@ See `docs/CONFIG_GUIDE.md` for full reference.
 | Web server | Javalin | Lightweight, embeddable |
 | API server | Actix-web | Fast, async Rust |
 | Price solver | nalgebra (LU decomposition) | Proven linear algebra |
-| Frontend | Next.js (static export for web/, standalone for optimizer) | SSR + static, easy deployment |
+| Frontend | Next.js (static export for web/, standalone for public site) | SSR + static, easy deployment |
 | Simulation | Egui + custom Rust engine | Reproducible, deterministic |

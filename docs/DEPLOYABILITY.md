@@ -65,7 +65,7 @@ _Review before any deployment attempt. All items must be ✅ before going live._
 
 ## ✅ Frontend Wiring
 
-- [ ] `NEXT_PUBLIC_API_URL` env var wired in `web-optimizer/src/lib/api-client.ts`
+- [ ] `NEXT_PUBLIC_API_URL` env var wired in `public-site/src/lib/api-client.ts`
 - [ ] `EmbeddableWidget` component calls `${apiUrl}/api/admin/health` — **endpoint not yet in API server** ⚠️
 - [ ] `/true-prices` page fetches from `${API_BASE_URL}/api/prices/true`
 - [ ] `/servers` page fetches from `${API_BASE_URL}/api/servers`

@@ -55,7 +55,7 @@ paths:
       responses:
         '202':
           description: Prices submitted
-  /api/true-prices:
+  /api/prices/true:
     get:
       summary: Get consensus true prices
       responses:
@@ -65,7 +65,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TruePrices'
-  /api/exchange-rates:
+  /api/servers/exchange-rates:
     get:
       summary: Get cross-server exchange rates
       responses:

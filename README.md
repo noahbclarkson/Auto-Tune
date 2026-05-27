@@ -199,17 +199,17 @@ Not only does this assist administrators in managing a server's economy, but it 
    cargo build --release    # from the repo root
    ```
 
-### :globe_with_meridians: Web Dashboard & Optimizer
+### :globe_with_meridians: Web Dashboard & Public Site
 
 The plugin bundles a **Next.js dashboard** (`web/`) served by the built-in Javalin web server at `http://your-server:8989`. It shows live prices, trends, GDP, loans, and more with WebSocket updates.
 
-For server admins, the **Auto-Tune Page** (`web-optimizer/`) is a public-facing site with:
-- **True Prices** — cross-server price discovery via least-squares optimization
-- **Exchange Rates** — per-server deviation from the global baseline
-- **Interactive Simulator** — experiment with any market parameter combination
-- **Server Explorer** — inspect registered servers and their submission status
+For server admins, the **public site** (`public-site/`) is a standalone frontend with:
+- **True Prices** - cross-server price discovery via least-squares optimization
+- **Exchange Rates** - per-server deviation from the global baseline
+- **Interactive Simulator** - experiment with market parameters before changing config
+- **Server Registry** - inspect registered servers and their submission status
 
-Deploy the optimizer to Vercel with one command — see `web-optimizer/README.md`.
+Deploy the public site separately; see `public-site/README.md`.
 
 ### :sparkles: Contributing to the project
 

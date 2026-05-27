@@ -1,8 +1,8 @@
-# SPEC: Server Setup Wizard — web-optimizer/
+# SPEC: Server Setup Wizard — public-site/
 
 **Status:** Draft | **Priority:** TIER 2 (high conversion impact)  
 **Type:** Interactive 5-step wizard → YAML config export  
-**Location:** `web-optimizer/src/app/setup/page.tsx` + `components/setup/`  
+**Location:** `public-site/src/app/setup/page.tsx` + `components/setup/`  
 
 ---
 
@@ -142,7 +142,7 @@ interface WizardState {
 
 ## Routing
 
-Add to `web-optimizer/src/app/layout.tsx` header nav:
+Add to `public-site/src/app/layout.tsx` header nav:
 ```tsx
 <Link href="/setup" className="text-sm font-medium hover:text-emerald-400 transition-colors">
   <WandIcon className="inline w-4 h-4 mr-1" />

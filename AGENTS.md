@@ -14,8 +14,8 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 # Build only the web frontend (Next.js static export)
 cd web && npm run build
 
-# Build the standalone web-optimizer (public Auto-Tune Page)
-cd web-optimizer && npm run build
+# Build the standalone public-site (public Auto-Tune Page)
+cd public-site && npm run build
 
 # Run the Rust market simulation GUI
 cd scripts/market-simulation && cargo run --release
@@ -28,7 +28,7 @@ The `build` task depends on `shadowJar`, which relocates all dependencies under 
 
 There are unit tests in `src/test/java/` using JUnit 5 + Mockito 4. MarketEngine has comprehensive tests (36 tests). See `MarketEngineTest.java`.
 
-Validation is also done via the Rust market simulation and manual testing on a Paper server. All three market engine implementations (Java `MarketEngine.java`, Rust `scripts/market-simulation/src/engine.rs`, TypeScript `web-optimizer/src/lib/market-engine.ts`) must stay in sync — same default values, same formulas.
+Validation is also done via the Rust market simulation and manual testing on a Paper server. All three market engine implementations (Java `MarketEngine.java`, Rust `scripts/market-simulation/src/engine.rs`, TypeScript `public-site/src/lib/market-engine.ts`) must stay in sync — same default values, same formulas.
 
 ## Architecture
 
@@ -97,7 +97,7 @@ Brand colors: `--primary` is emerald (HUSL 160°), not blue. The light/dark them
 
 **Live price updates:** The `useWebSocket` hook connects to `/ws/market` on the Javalin server and receives `price_update` messages with item prices. It is wired into the app context (`livePrices` Map + `isWsConnected`). The home page Top Movers section consumes `livePrices` — when a WebSocket price arrives, it updates the displayed buy/sell prices in real-time (between 30s polls) and flashes the updated row green. The header's `LiveIndicator` shows the WebSocket connection status.
 
-### Web-Optimizer Frontend (`web-optimizer/`)
+### Public Site Frontend (`public-site/`)
 
 Standalone Next.js 14 app (not bundled in the plugin). Used by server admins worldwide to explore true prices, compare servers, and simulate spread scenarios. Routes:
 - `/` — Landing page (hero, algorithm preview, dynamic economy section, feature cards, how-it-works CTA)
@@ -142,14 +142,14 @@ Player trades → Java Plugin (EconomyManager)
                          ↓
               Price Solver (log-space least-squares)
                          ↓
-              True Prices → web-optimizer/ (public landing + simulator)
+              True Prices → public-site/ (public landing + simulator)
 ```
 
 ## Key Integration Points
 
 - **Plugin → API Server**: `PriceReporter` HTTP POST pushes item prices to the Rust API server every 5 min. Submissions go through a bounded retry queue (5-entry cap, 3 attempts, 1-min drain task) so transient API downtime doesn't silently drop submissions.
 - **API Server → True Prices**: Rust `market_server` computes log-space least-squares true prices
-- **API Server → web-optimizer**: `web-optimizer/` fetches via `lib/api-client.ts` (fetch with error/resilience)
+- **API Server → public-site**: `public-site/` fetches via `lib/api-client.ts` (fetch with error/resilience)
 - **Plugin → web/**: Bundled static Next.js dashboard served by Javalin on port 8989
 - **Auction house**: Implemented in Java plugin (rewrite-2). No auction functionality remains in Rust API server.
 - **Tax system**: `TreasuryService` collects buy/sell/auction/loan-interest taxes into the server treasury. `/treasury` command for balance, deposit, withdraw. Dynamic tax rates configurable per transaction type.
@@ -159,4 +159,4 @@ Player trades → Java Plugin (EconomyManager)
 
 - **Plugin Engineer** — Java Paper plugin, market engine, economy logic
 - **Simulation Lab** — Rust market simulation (egui) and parameter exploration
-- **Web & Ecosystem** — `web/` dashboard polish, `web-optimizer/` public frontend, documentation, ecosystem integration
+- **Web & Ecosystem** — `web/` dashboard polish, `public-site/` public frontend, documentation, ecosystem integration

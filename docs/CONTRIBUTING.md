@@ -32,7 +32,7 @@ autotune/
 │   ├── listener/                 # Bukkit event listeners
 │   └── web/                      # Javalin REST + WebSocket server
 ├── web/                          # Bundled Next.js dashboard (plugin-local)
-├── web-optimizer/               # Standalone public Next.js site
+├── public-site/               # Standalone public Next.js site
 ├── api-server/                  # Rust/Actix API server (price solver)
 ├── scripts/market-simulation/   # Rust market simulation (egui GUI)
 ├── docs/                        # Architecture, API, config, changelog docs
@@ -47,7 +47,7 @@ autotune/
 |-----------|----------|-----------|-------|
 | Minecraft plugin | Java 21 | Paper 1.21.4, Guice, JDBI | Shadow JAR bundles everything |
 | Bundled dashboard | TypeScript | Next.js 14 | Static export, served by Javalin |
-| Public optimizer site | TypeScript | Next.js 14 | Static export, hosted separately |
+| Public site | TypeScript | Next.js 14 | Static export, hosted separately |
 | API server | Rust | Actix-web 4 | Cross-server price solver |
 | Market simulation | Rust | egui | Parameter exploration and stress testing |
 
@@ -57,7 +57,7 @@ Auto-Tune has **three market engine implementations** that must stay in sync:
 
 1. **Java** — `manager/MarketEngine.java` — production, in the plugin
 2. **Rust** — `scripts/market-simulation/src/engine.rs` — simulation lab
-3. **TypeScript** — `web-optimizer/src/lib/market-engine.ts` — public simulator
+3. **TypeScript** — `public-site/src/lib/market-engine.ts` — public simulator
 
 When you change pricing logic in any one:
 - Verify the other two produce the same outputs for the same inputs
@@ -93,7 +93,7 @@ Default values that must stay in sync across all three:
 ### TypeScript / Next.js
 - Server Components by default; `'use client'` only when needed
 - `market-engine.ts` is the canonical TypeScript spec — keep it well-documented
-- Static export (`output: 'export'` in next.config.js) — no server-side features in `web-optimizer`
+- Static export (`output: 'export'` in next.config.js) — no server-side features in `public-site`
 
 ## Branch Policy
 
@@ -118,7 +118,7 @@ test: add correlation test for sector co-movement
 
 - [ ] `./gradlew build` succeeds (Java plugin)
 - [ ] `cargo clippy --all-targets --all-features -- -D warnings` passes (Rust)
-- [ ] Both web apps build: `cd web && npm run build && cd ../web-optimizer && npm run build`
+- [ ] Both web apps build: `cd web && npm run build && cd ../public-site && npm run build`
 - [ ] If you changed market engine math: run regression test (`cargo run --release -- --regression`)
 - [ ] If you changed database schema: test with existing + fresh database
 - [ ] Update `docs/CHANGELOG.md` with your change

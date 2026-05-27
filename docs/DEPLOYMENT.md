@@ -55,7 +55,7 @@ First run: the API server will automatically run all 5 migrations via `sqlx`.
 ## Step 3 — Connect the Frontend
 
 ```bash
-# In web-optimizer/.env.local
+# In public-site/.env.local
 NEXT_PUBLIC_API_URL=http://localhost:8080
 ```
 
@@ -64,7 +64,7 @@ Or for production:
 NEXT_PUBLIC_API_URL=https://api.yourdomain.com
 ```
 
-The `web-optimizer` Next.js app will now call the real API on `/api/prices/true`, `/api/servers`, etc.
+The `public-site` Next.js app will now call the real API on `/api/prices/true`, `/api/servers`, etc.
 
 ---
 

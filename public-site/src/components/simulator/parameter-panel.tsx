@@ -77,7 +77,47 @@ interface PresetScenario {
   config: MarketConfig;
 }
 
-const PRESETS: PresetScenario[] = [
+// Archetype presets (match /install page profiles)
+const ARCHETYPE_PRESETS: PresetScenario[] = [
+  {
+    name: 'Survival SMP',
+    emoji: '🏕️',
+    description: 'Balanced economy · 2 MM + 2 GB · Recommended',
+    basePrice: 300,
+    buyRatio: 0.72,
+    onlinePlayers: 12,
+    zScore: 0.1,
+    weightedVolume: 200,
+    distinctTraders: 9,
+    config: { ...DEFAULT_CONFIG, baseSpread: 0.10, maxPriceChangePercent: 1.5 },
+  },
+  {
+    name: 'Skyblock',
+    emoji: '☁️',
+    description: 'Sell-heavy island economy · Wide spreads compensates',
+    basePrice: 200,
+    buyRatio: 0.35,
+    onlinePlayers: 8,
+    zScore: -0.2,
+    weightedVolume: 80,
+    distinctTraders: 5,
+    config: { ...DEFAULT_CONFIG, baseSpread: 0.15, maxPriceChangePercent: 1.5, volumeImpact: 0.9 },
+  },
+  {
+    name: 'High-Volume',
+    emoji: '⚡',
+    description: 'Busy server · Tight spreads · High liquidity',
+    basePrice: 500,
+    buyRatio: 0.75,
+    onlinePlayers: 25,
+    zScore: 0.5,
+    weightedVolume: 600,
+    distinctTraders: 18,
+    config: { ...DEFAULT_CONFIG, baseSpread: 0.05, maxPriceChangePercent: 1.0, playerImpact: 0.75 },
+  },
+];
+
+const MARKET_PRESETS: PresetScenario[] = [
   {
     name: 'New Server',
     emoji: '🌱',
@@ -189,11 +229,31 @@ export function ParameterPanel({
       </div>
 
       <div className="p-4 space-y-5">
-        {/* Presets */}
+        {/* Archetype Presets (top row) */}
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Quick Presets</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Server Archetypes</p>
+          <div className="grid grid-cols-3 gap-1.5">
+            {ARCHETYPE_PRESETS.map((preset) => (
+              <button
+                key={preset.name}
+                onClick={() => applyPreset(preset)}
+                title={preset.description}
+                className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-emerald-950/20 hover:bg-emerald-900/30 border border-emerald-800/30 hover:border-emerald-600/50 transition-all text-left group"
+              >
+                <span className="text-sm shrink-0">{preset.emoji}</span>
+                <span className="text-xs font-medium text-emerald-400 leading-tight truncate">
+                  {preset.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Market Condition Presets */}
+        <div>
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Market Conditions</p>
           <div className="grid grid-cols-2 gap-1.5">
-            {PRESETS.map((preset) => (
+            {MARKET_PRESETS.map((preset) => (
               <button
                 key={preset.name}
                 onClick={() => applyPreset(preset)}

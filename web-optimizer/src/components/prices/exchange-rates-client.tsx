@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { RefreshCw, ExternalLink } from 'lucide-react';
-import { fetchExchangeRates } from '@/lib/api-client';
+import { RefreshCw, ExternalLink, TrendingUp } from 'lucide-react';
+import { fetchExchangeRates, fetchExchangeRateHistory } from '@/lib/api-client';
 import type { ExchangeRate } from '@/lib/api-client';
+import { ExchangeRateHistoryChart } from '@/components/prices/exchange-rate-history-chart';
 
 export const metadata = {
   title: 'Exchange Rates | Auto-Tune',
@@ -29,7 +30,7 @@ function formatRate(rate: number): string {
   return `${rate.toFixed(2)}×`;
 }
 
-function RateRow({ rate }: { rate: ExchangeRate }) {
+function RateRow({ rate, onViewHistory }: { rate: ExchangeRate; onViewHistory: (id: string, name: string) => void }) {
   const status = getServerStatus(rate.last_seen);
   const deviation = ((rate.rate - 1) * 100).toFixed(1);
   const deviationSign = rate.rate >= 1 ? '+' : '';
@@ -54,9 +55,18 @@ function RateRow({ rate }: { rate: ExchangeRate }) {
       <td className="py-3 px-4 text-gray-300 hidden sm:table-cell">{rate.player_count.toLocaleString()}</td>
       <td className="py-3 px-4 text-gray-400 text-sm hidden md:table-cell">{new Date(rate.last_seen).toLocaleString()}</td>
       <td className="py-3 px-4">
-        <span className={`text-xs px-2.5 py-1 rounded-full border ${status.className}`}>
-          {status.label}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs px-2.5 py-1 rounded-full border ${status.className}`}>
+            {status.label}
+          </span>
+          <button
+            onClick={() => onViewHistory(rate.server_id, rate.name)}
+            className="text-gray-500 hover:text-emerald-400 transition-colors p-1 rounded hover:bg-gray-800/50"
+            title="View rate history"
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </td>
     </tr>
   );
@@ -95,6 +105,9 @@ export function ExchangeRatesClient() {
   const [base, setBase] = useState<string>('true_prices');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedServer, setSelectedServer] = useState<{ id: string; name: string } | null>(null);
+  const [history, setHistory] = useState<{ rate: number; server_count: number; timestamp: string }[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -107,6 +120,22 @@ export function ExchangeRatesClient() {
       setRates(result.data.rates ?? []);
       setBase(result.data.base ?? 'true_prices');
     }
+  }
+
+  async function viewHistory(serverId: string, serverName: string) {
+    setSelectedServer({ id: serverId, name: serverName });
+    setHistoryLoading(true);
+    setHistory([]);
+    const result = await fetchExchangeRateHistory(serverId);
+    setHistoryLoading(false);
+    if (result.error === null && result.data !== null) {
+      setHistory(result.data.history ?? []);
+    }
+  }
+
+  function closeHistory() {
+    setSelectedServer(null);
+    setHistory([]);
   }
 
   useEffect(() => {
@@ -187,6 +216,20 @@ export function ExchangeRatesClient() {
           <ApiErrorFallback onRetry={load} />
         ) : hasData ? (
           <>
+            {selectedServer && (
+              historyLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="w-5 h-5 text-gray-600 animate-spin" />
+                </div>
+              ) : (
+                <ExchangeRateHistoryChart
+                  history={history}
+                  serverName={selectedServer.name}
+                  onClose={closeHistory}
+                />
+              )
+            )}
+
             {/* Bar chart */}
             <div className="mb-6 bg-gray-900/50 border border-gray-800/50 rounded-xl overflow-hidden">
               <div className="p-4 border-b border-gray-800/50">
@@ -240,11 +283,12 @@ export function ExchangeRatesClient() {
                       <th className="py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide hidden sm:table-cell">Players</th>
                       <th className="py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide hidden md:table-cell">Last Seen</th>
                       <th className="py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
+                      <th className="py-2.5 px-4 text-xs font-medium text-gray-500 uppercase tracking-wide" />
                     </tr>
                   </thead>
                   <tbody>
                     {rates.map((rate) => (
-                      <RateRow key={rate.server_id} rate={rate} />
+                      <RateRow key={rate.server_id} rate={rate} onViewHistory={viewHistory} />
                     ))}
                   </tbody>
                 </table>

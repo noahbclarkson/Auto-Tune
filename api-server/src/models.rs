@@ -130,6 +130,19 @@ pub struct ExchangeRatesResponse {
     pub rates: Vec<ExchangeRateEntry>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct ExchangeRateHistoryPoint {
+    pub rate: f64,
+    pub player_count: i32,
+    pub snapshot_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ExchangeRateHistoryResponse {
+    pub server_id: Uuid,
+    pub history: Vec<ExchangeRateHistoryPoint>,
+}
+
 // ---------------------------------------------------------------------------
 // Generic error response
 // ---------------------------------------------------------------------------

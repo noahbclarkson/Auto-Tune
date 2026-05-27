@@ -12,6 +12,7 @@ use anyhow::{Context, Result};
 use price_solver::{compute_prices_with_quality, AggregationMethod, PriceSolverConfig};
 use sqlx::{PgPool, Row};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 // ---------------------------------------------------------------------------
 // Outlier filtering
@@ -210,6 +211,7 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
 
     // Parse submissions
     struct Submission {
+        server_id: Uuid,
         item_names: Vec<String>,
         ratio_matrix: Vec<Vec<f64>>,
         player_count: i32,
@@ -217,6 +219,7 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
 
     let mut submissions = Vec::new();
     for row in &rows {
+        let server_id: Uuid = row.try_get("server_id").context("reading server_id")?;
         let item_names: Vec<String> = row.try_get("item_names").context("reading item_names")?;
         let matrix_json: serde_json::Value =
             row.try_get("ratio_matrix_json").context("reading matrix")?;
@@ -228,6 +231,7 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
             serde_json::from_value(matrix_json).context("parsing ratio_matrix_json")?;
 
         submissions.push(Submission {
+            server_id,
             item_names,
             ratio_matrix,
             player_count,
@@ -385,6 +389,31 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
         .with_context(|| format!("inserting price history for {item_name}"))?;
     }
 
+    // Compute and write per-server exchange rate history snapshots.
+    // Uses the just-computed true_prices and each server's latest submission ratio matrix.
+    let true_price_map: std::collections::HashMap<String, f64> = all_items
+        .iter()
+        .enumerate()
+        .map(|(i, name)| (name.clone(), result.prices[i]))
+        .collect();
+
+    for sub in &submissions {
+        let rate =
+            compute_exchange_rate_standalone(&sub.item_names, &sub.ratio_matrix, &true_price_map);
+        let _ = sqlx::query(
+            r#"
+            INSERT INTO server_exchange_rate_history (server_id, rate, player_count)
+            VALUES ($1, $2, $3)
+            "#,
+        )
+        .bind(sub.server_id)
+        .bind(rate)
+        .bind(sub.player_count)
+        .execute(pool)
+        .await
+        .context("inserting server exchange rate history");
+    }
+
     tracing::info!(
         items = all_items.len(),
         servers = num_servers,
@@ -393,6 +422,49 @@ pub async fn recompute_true_prices(pool: &PgPool) -> Result<()> {
     );
 
     Ok(())
+}
+
+/// Standalone exchange rate computation for a single server's submission vs true prices.
+fn compute_exchange_rate_standalone(
+    item_names: &[String],
+    ratio_matrix: &[Vec<f64>],
+    true_prices: &std::collections::HashMap<String, f64>,
+) -> f64 {
+    // Find anchor: first item that has a known true price
+    let anchor = item_names
+        .iter()
+        .enumerate()
+        .find_map(|(i, name)| true_prices.get(name).map(|&p| (i, p)));
+
+    let (anchor_idx, anchor_true_price) = match anchor {
+        Some(a) => a,
+        None => return 1.0,
+    };
+
+    let mut log_ratios = Vec::new();
+    for (i, name_i) in item_names.iter().enumerate() {
+        if i == anchor_idx {
+            continue;
+        }
+        if let Some(&tp_i) = true_prices.get(name_i) {
+            let server_ratio = ratio_matrix
+                .get(i)
+                .and_then(|row| row.get(anchor_idx))
+                .copied()
+                .unwrap_or(1.0);
+            let server_implied = anchor_true_price * server_ratio;
+            if server_implied > 0.0 && tp_i > 0.0 {
+                log_ratios.push((server_implied / tp_i).ln());
+            }
+        }
+    }
+
+    if log_ratios.is_empty() {
+        return 1.0;
+    }
+
+    let mean_log = log_ratios.iter().sum::<f64>() / log_ratios.len() as f64;
+    mean_log.exp()
 }
 
 // ---------------------------------------------------------------------------

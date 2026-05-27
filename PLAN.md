@@ -1086,3 +1086,42 @@ Repo clean. No bugs. No pushes. Live-data gap (API deploy) remains #1 ecosystem 
 - Sim Lab regression test passed perfectly against the 24310f2c baseline. Rust engine behavior mirrors Java perfectly. No new simulation bugs found.
 - The ⚠️ warning remains for the anti-dump configs (Java port from Rust).
 - Validated lower whale cap (100 units/tick) + spread shock combination. Achieved 73.2% D/G reduction compared to uncapped whale stress, while maintaining economy stability. Porting this to Java is the next major plugin task.
+
+---
+
+## Cron (2026-05-26 00:49 UTC) — Simulation Lab: Volatility Baseline Run Complete
+
+**rewrite-2 `9aa337d`** | Build: PMD 0 ✅ | Rust clippy+fmt clean ✅
+
+### Baseline Characterization (5 seeds each)
+Ran guild_stability, low_player, stressed, spread_stability, high_activity across 5 seeds × default configs.
+
+**guild_stability (4Cas+3Far+2Tra+2GB):** avg D/G 4.11x, 4/5 seeds hit TIER3, but avg vol only 0.0036 (STABLE threshold). D/G instability is invisible to the vol metric.
+
+**low_player (2Cas+1Far):** every seed cycles TIER3 repeatedly, GDP collapses to near-zero. Avg vol 0.0178–0.0299 — within STABLE threshold despite circuit chaos. Root cause is loan circuit pathology, not price vol.
+
+**stressed (15 players + Exploiters + 3 stress events):** all 5 seeds collapse to near-zero GDP with catastrophic debt (6–33M TIER3 hits by day 7-9).
+
+**spread_stability, high_activity:** pass STABLE threshold individually — not problematic at default config.
+
+### Key Insight: Trend Dampening Is Wrong Lever
+`trend_dampening` (engine.rs:489-500) only affects price momentum overshoot. It has zero effect on loan circuit cycling. The vol param sweep should target:
+1. `tier3_hysteresis_band` — reduce TIER3 re-entry spam (most impactful for low_player chronic cycling)
+2. `min_interest_multiplier` — push deleveraging harder during counter-cyclical mode
+3. `guildbuyer_threshold` + MM presence (MM presence drops avg_vol 0.19→0.006)
+
+### Next Priority (Simulation)
+1. **Hysteresis sweep** — extend `--tier3-40-hysteresis-test` for multi-seed + longer duration (90d); target reduce TIER3 re-entry spam in thin/high-vol markets
+2. **GuildBuyer threshold with MM** — sweep 5%-15% GB thresholds with MM present (prevents thin-market over-borrowing)
+3. **CLI fix** — add `--trend-dampening VALUE` parsing to `--headless` path for ad-hoc exploration
+
+### Feature Ideas (Web & Ecosystem) — updated ordering
+1. **Exchange rate history endpoint** — Rust API server: wire `GET /servers/{serverId}/exchange-rate-history` — unblocks new UI chart deployed 2026-05-25
+2. **Player P&L leaderboard** — needs new backend aggregation in bundled `web/`
+3. **Config comparison tool** — extends `/config-playground` with two-config side-by-side diff
+4. **Admin config history** (plugin) — versioned config snapshots + rollback via `/at admin config history`
+
+### Blocked
+- API deploy (Arc's Fly.io token) — #1 unlock for live `/true-prices`, `/servers`, exchange-rate history
+- Real testimonials (human outreach) — cannot publish real names/quotes without explicit consent
+

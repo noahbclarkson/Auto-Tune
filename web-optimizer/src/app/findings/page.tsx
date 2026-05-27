@@ -188,18 +188,19 @@ const ARCHETYPE_FINDINGS: Finding[] = [
     verdictClass: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
     answer: [
       'InsiderTraders buy when price falls below the rolling mean and sell when it rises above — a mean-reversion strategy. '
-        + 'Their effect depends entirely on whether your economy is healthy or stressed.',
-      'In healthy economies, ITs add +30% GDP but worsen D/G by +2.4×. The added buy pressure '
-        + 'causes GuildBuyers to trigger more frequently, amplifying debt. Only add ITs if D/G is '
-        + 'below 5× and you are monitoring it weekly.',
-      'In stressed economies, ITs are counter-cyclical: they absorb sell pressure from Farmers '
-        + 'and Hoarders during price dips, improving D/G by −1.3×. But the GDP cost is −12%. '
+        + 'Their effect depends on whether floor is configured. Without floor, ITs add +30% GDP but worsen D/G by +2.4×. '
+        + 'With floor (≥50%), ITs HURT GDP by −5.3% because floor dampens the price signal ITs exploit.',
+      'In healthy economies without floor, ITs add buy pressure but cause GuildBuyers to trigger more frequently, '
+        + 'amplifying debt. Only add ITs if D/G is below 5×, floor is disabled, and you monitor D/G weekly.',
+      'With floor configured (≥50%), DO NOT add ITs. The floor dampens price dislocations — the exact market condition '
+        + 'ITs exploit for mean reversion. Simulations show −5.3% GDP with floor active.',
+      'In stressed economies, ITs are mildly counter-cyclical (−0.3× D/G) but the GDP cost is −12%. '
         + 'Do NOT add ITs to stressed economies unless D/G debt is your primary concern.',
     ],
     metrics: [
-      { label: 'IT in healthy GDP', value: '+30.1%', note: 'but D/G +2.4×' },
-      { label: 'IT in stressed D/G', value: '−1.3×', note: 'counter-cyclical benefit' },
-      { label: 'IT in stressed GDP', value: '−12.2%', note: 'significant cost' },
+      { label: 'IT without floor', value: '+30.1% GDP', note: 'single-seed, no floor — legacy result' },
+      { label: 'IT with floor', value: '−5.3% GDP', note: '5-seed avg: floor dampens IT price signal' },
+      { label: 'IT D/G (with floor)', value: '~Neutral', note: '5-seed: 5.22x → 4.92x, −0.30x' },
     ],
     relatedLinks: [
       { href: '/docs', label: 'Archetype config docs' },

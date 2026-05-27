@@ -13,7 +13,7 @@ mod routes;
 use auth::ApiKeyAuth;
 use rate_limit::{RateLimitConfig, RateLimiter};
 use routes::{
-    exchange::get_exchange_rates,
+    exchange::{get_exchange_rate_history, get_exchange_rates},
     prices::{get_price_history, get_true_prices, submit_prices},
     servers::{heartbeat, list_servers, register_server},
 };
@@ -109,6 +109,10 @@ async fn main() -> Result<()> {
             .route(
                 "/api/servers/exchange-rates",
                 web::get().to(get_exchange_rates),
+            )
+            .route(
+                "/api/servers/{server_id}/exchange-rate-history",
+                web::get().to(get_exchange_rate_history),
             )
             // Authenticated endpoints
             .service(

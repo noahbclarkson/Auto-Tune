@@ -58,6 +58,18 @@ export interface ExchangeRatesResponse {
   rates: ExchangeRate[];
 }
 
+export interface ExchangeRateHistoryPoint {
+  rate: number;
+  server_count: number;
+  timestamp: string;
+}
+
+export interface ExchangeRateHistoryResponse {
+  server_id: string;
+  server_name: string;
+  history: ExchangeRateHistoryPoint[];
+}
+
 export interface SubmitServerPricesRequest {
   serverId: string;
   apiKey: string;
@@ -119,6 +131,10 @@ export async function fetchServers(): Promise<ApiResult<ManagedServer[]>> {
 
 export async function fetchExchangeRates(): Promise<ApiResult<ExchangeRatesResponse>> {
   return fetchJson<ExchangeRatesResponse>("/servers/exchange-rates");
+}
+
+export async function fetchExchangeRateHistory(serverId: string): Promise<ApiResult<ExchangeRateHistoryResponse>> {
+  return fetchJson<ExchangeRateHistoryResponse>(`/servers/${serverId}/exchange-rate-history`);
 }
 
 export async function registerServer(

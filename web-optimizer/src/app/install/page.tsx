@@ -451,10 +451,10 @@ export default function InstallPage() {
               </div>
               <div className="mt-auto pt-3 border-t border-gray-800">
                 <Link
-                  href="/config-preview"
+                  href={`/config-playground?preset=${profile.id}`}
                   className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 transition-colors"
                 >
-                  See full config preview
+                  Configure this archetype
                   <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>

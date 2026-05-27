@@ -95,6 +95,26 @@ function computeRiskWarnings(baseSpread: number, maxPriceChange: number, players
 }
 
 const PRESETS: Record<string, { label: string; desc: string; config: Partial<MarketConfig>; players: number; traders: number; volume: number; zScore: number; note?: string }> = {
+  // Installer archetype presets (match /install page cards)
+  survival_smp: {
+    label: 'Survival SMP', note: '2 MM + 2 GB · 12 players',
+    desc: 'Balanced economy, tested across server sizes',
+    config: { baseSpread: 0.10, maxPriceChangePercent: 1.5 },
+    players: 12, traders: 9, volume: 200, zScore: 0.1,
+  },
+  skyblock: {
+    label: 'Skyblock', note: 'Sell-heavy island economy',
+    desc: '2 MM · 1 GB · 8 players, wide spreads',
+    config: { baseSpread: 0.10, maxPriceChangePercent: 1.5 },
+    players: 8, traders: 5, volume: 80, zScore: -0.2,
+  },
+  high_activity: {
+    label: 'High-Activity', note: '4 MM + 3 GB · 18 players',
+    desc: 'Tight spreads, high volume economy',
+    config: { baseSpread: 0.045, maxPriceChangePercent: 1.0 },
+    players: 18, traders: 14, volume: 400, zScore: 0.3,
+  },
+  // Original server-size presets
   small: {
     label: 'Small Server', note: 'Casual economy, few players',
     desc: '5 players, casual trading',
@@ -500,7 +520,9 @@ function ConfigPlaygroundInner() {
     const a = searchParams.get('a');
     const b = searchParams.get('b');
     const mode = searchParams.get('mode');
+    const p = searchParams.get('preset');
     if (mode === 'compare') setCompareMode(true);
+    // Initialize from URL-encoded config
     if (a) {
       const parsed = base64ToConfig(a);
       if (parsed) {
@@ -513,16 +535,22 @@ function ConfigPlaygroundInner() {
         setVolume(parsed.conditions.volume);
         setZScore(parsed.conditions.zScore);
         setBuyRatio(parsed.conditions.buyRatio);
+        setPreset(''); // URL-encoded config takes priority over preset
+        return;
       }
     }
-    if (b) {
-      const parsed = base64ToConfig(b);
-      if (parsed) {
-        setConfigBBase(parsed.config.baseSpread);
-        setConfigBVolume(parsed.config.volumeImpact);
-        setConfigBPlayer(parsed.config.playerImpact);
-        setConfigBMaxPC(parsed.config.maxPriceChangePercent);
-      }
+    // Initialize from preset param (install page wiring)
+    if (p && PRESETS[p]) {
+      const pr = PRESETS[p];
+      setPreset(p);
+      setBaseSpread(pr.config.baseSpread ?? 0.20);
+      setVolumeImpact(pr.config.volumeImpact ?? 0.80);
+      setPlayerImpact(pr.config.playerImpact ?? 0.60);
+      setMaxPriceChange(pr.config.maxPriceChangePercent ?? 1.5);
+      setPlayers(pr.players);
+      setTraders(pr.traders);
+      setVolume(pr.volume);
+      setZScore(pr.zScore);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

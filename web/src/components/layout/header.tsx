@@ -53,6 +53,7 @@ const NAV_LINKS = [
   { href: '/leaderboard/', label: 'Leaderboard' },
   { href: '/compare/', label: 'Compare' },
   { href: '/badges/', label: 'Badges' },
+  { href: '/changelog/', label: 'Changelog' },
   { href: '/admin/', label: 'Admin' },
 ];
 

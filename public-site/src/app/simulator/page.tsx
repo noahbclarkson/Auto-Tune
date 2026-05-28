@@ -25,8 +25,64 @@ export default function SimulatorPage() {
     return calculatePrices(basePrice, buyRatio, onlinePlayers, zScore, weightedVolume, distinctTraders, config);
   }, [basePrice, buyRatio, onlinePlayers, zScore, weightedVolume, distinctTraders, config]);
 
+  const applyPreset = (preset: { basePrice: number; buyRatio: number; onlinePlayers: number; zScore: number; weightedVolume: number; distinctTraders: number; config: MarketConfig }) => {
+    setConfig(preset.config);
+    setBasePrice(preset.basePrice);
+    setBuyRatio(preset.buyRatio);
+    setOnlinePlayers(preset.onlinePlayers);
+    setZScore(preset.zScore);
+    setWeightedVolume(preset.weightedVolume);
+    setDistinctTraders(preset.distinctTraders);
+    document.getElementById('simulator-charts')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const ARCHETYPE_PRESETS = [
+    {
+      name: 'Survival SMP',
+      emoji: '🏕️',
+      description: 'Balanced economy driven by MarketMakers and GuildBuyers. Ideal for vanilla-style servers.',
+      basePrice: 300, buyRatio: 0.72, onlinePlayers: 12, zScore: 0.1, weightedVolume: 200, distinctTraders: 9,
+      config: { ...DEFAULT_CONFIG, baseSpread: 0.10, maxPriceChangePercent: 1.5 },
+    },
+    {
+      name: 'Skyblock',
+      emoji: '☁️',
+      description: 'Sell-heavy island economies. Wide spreads compensate for limited buyers.',
+      basePrice: 200, buyRatio: 0.35, onlinePlayers: 8, zScore: -0.2, weightedVolume: 80, distinctTraders: 5,
+      config: { ...DEFAULT_CONFIG, baseSpread: 0.15, maxPriceChangePercent: 1.5, volumeImpact: 0.9 },
+    },
+    {
+      name: 'High-Volume',
+      emoji: '⚡',
+      description: 'Busy servers with tight spreads and high liquidity. Many concurrent traders.',
+      basePrice: 500, buyRatio: 0.75, onlinePlayers: 25, zScore: 0.5, weightedVolume: 600, distinctTraders: 18,
+      config: { ...DEFAULT_CONFIG, baseSpread: 0.05, maxPriceChangePercent: 1.0, playerImpact: 0.75 },
+    },
+  ] as const;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Hero CTA — above the parameter panel */}
+      <div className="mb-8 p-5 rounded-xl border border-emerald-900/40 bg-gradient-to-br from-emerald-950/60 to-gray-900/80">
+        <p className="text-xs text-emerald-500 uppercase tracking-wider mb-2 font-medium">Start with a scenario</p>
+        <p className="text-sm text-gray-400 mb-4">Choose your server type. Prices and charts update instantly.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {ARCHETYPE_PRESETS.map((preset) => (
+            <button
+              key={preset.name}
+              onClick={() => applyPreset(preset)}
+              className="flex items-start gap-3 p-4 rounded-lg bg-gray-900/70 hover:bg-gray-800/70 border border-gray-700/60 hover:border-emerald-600/60 transition-all text-left group cursor-pointer"
+            >
+              <span className="text-2xl mt-0.5 shrink-0">{preset.emoji}</span>
+              <div>
+                <p className="text-sm font-semibold text-gray-200 group-hover:text-emerald-400 transition-colors mb-0.5">{preset.name}</p>
+                <p className="text-xs text-gray-500 leading-relaxed">{preset.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white mb-1">Price Simulator</h1>
@@ -60,7 +116,7 @@ export default function SimulatorPage() {
         </div>
 
         {/* Right column */}
-        <div className="lg:col-span-2 space-y-4">
+        <div id="simulator-charts" className="lg:col-span-2 space-y-4">
           <ConfigImpactPreview />
 
           <StabilityForecast

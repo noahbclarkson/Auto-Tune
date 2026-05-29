@@ -24,8 +24,8 @@ export function PnlLeaderboardTable({ entries, loading }: PnlLeaderboardTablePro
   const [filter, setFilter] = useState<PnlFilter>('all');
 
   const filtered = useMemo(() => {
-    if (filter === 'buyers') return entries.filter(e => e.totalPnl < 0);
-    if (filter === 'sellers') return entries.filter(e => e.totalPnl > 0);
+    if (filter === 'buyers') return entries.filter(e => e.realizedPnl < 0);
+    if (filter === 'sellers') return entries.filter(e => e.realizedPnl > 0);
     return entries;
   }, [entries, filter]);
 

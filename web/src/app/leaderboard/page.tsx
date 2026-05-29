@@ -4,13 +4,15 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { Header } from '@/components/layout/header';
 import { LeaderboardTable } from '@/components/leaderboard/leaderboard-table';
+import { PnlLeaderboardTable } from '@/components/leaderboard/pnl-leaderboard-table';
 
 import { api } from '@/lib/api';
 import { formatLargeCurrency } from '@/lib/format';
-import type { LeaderboardEntryDto, Stats } from '@/lib/api';
-import { TrendingUp, TrendingDown, Users, BarChart2, Award, ArrowUpDown } from 'lucide-react';
+import type { LeaderboardEntryDto, LeaderboardPnlEntry, Stats } from '@/lib/api';
+import { TrendingUp, TrendingDown, Users, BarChart2, Award, ArrowUpDown, DollarSign } from 'lucide-react';
 
 type Period = 'all' | 'day' | 'week' | 'month';
+type Tab = 'volume' | 'pnl';
 
 const PERIODS: { key: Period; label: string }[] = [
   { key: 'all', label: 'All Time' },
@@ -63,6 +65,7 @@ function StatCard({
 export default function LeaderboardPage() {
   const { apiBase } = useAppContext();
   const [entries, setEntries] = useState<LeaderboardEntryDto[]>([]);
+  const [pnlEntries, setPnlEntries] = useState<LeaderboardPnlEntry[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>(() => {
@@ -71,6 +74,7 @@ export default function LeaderboardPage() {
     }
     return 'all';
   });
+  const [tab, setTab] = useState<Tab>('volume');
 
   const fetchData = useCallback(async () => {
     if (!apiBase) return;
@@ -78,16 +82,22 @@ export default function LeaderboardPage() {
     try {
       const [statsData, leaderboardData] = await Promise.all([
         api.stats(apiBase),
-        api.leaderboard(apiBase, 100, period),
+        tab === 'pnl'
+          ? api.pnlLeaderboard(apiBase, period, 100)
+          : api.leaderboard(apiBase, 100, period),
       ]);
       setStats(statsData);
-      setEntries(leaderboardData);
+      if (tab === 'pnl') {
+        setPnlEntries(leaderboardData as LeaderboardPnlEntry[]);
+      } else {
+        setEntries(leaderboardData as LeaderboardEntryDto[]);
+      }
     } catch {
-      // silently fail — LeaderboardTable renders empty state
+      // silently fail — tables render empty state
     } finally {
       setLoading(false);
     }
-  }, [apiBase, period]);
+  }, [apiBase, period, tab]);
 
   useEffect(() => {
     fetchData();
@@ -100,6 +110,8 @@ export default function LeaderboardPage() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('autotune_leaderboard_period', newPeriod);
     }
+    // P&L requires a time-bounded period
+    if (newPeriod === 'all') setTab('volume');
   }
 
   const periodInfo = useMemo<PeriodInfo>(() => {
@@ -120,7 +132,7 @@ export default function LeaderboardPage() {
     <div className="min-h-screen bg-background">
       <Header totalItems={stats?.totalItems ?? 0} onlinePlayers={stats?.onlinePlayers ?? 0} />
       <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold text-foreground">Leaderboard</h2>
             {!loading && entries.length > 0 && (
@@ -129,27 +141,57 @@ export default function LeaderboardPage() {
               </span>
             )}
           </div>
-          {!loading && entries.length > 0 && (
-            <div className="flex gap-1 bg-muted rounded-lg p-1">
-              {PERIODS.map(p => (
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Tab switcher */}
+            {period !== 'all' && (
+              <div className="flex gap-1 bg-muted rounded-lg p-1">
                 <button
-                  key={p.key}
-                  onClick={() => handlePeriodChange(p.key)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    period === p.key
+                  onClick={() => setTab('volume')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                    tab === 'volume'
                       ? 'bg-emerald-600 text-white'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-emerald-950/50'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {p.label}
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  Volume
                 </button>
-              ))}
-            </div>
-          )}
+                <button
+                  onClick={() => setTab('pnl')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                    tab === 'pnl'
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <DollarSign className="w-3.5 h-3.5" />
+                  P&amp;L
+                </button>
+              </div>
+            )}
+            {/* Period selector */}
+            {!loading && entries.length > 0 && (
+              <div className="flex gap-1 bg-muted rounded-lg p-1">
+                {PERIODS.map(p => (
+                  <button
+                    key={p.key}
+                    onClick={() => handlePeriodChange(p.key)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      period === p.key
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-emerald-950/50'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Stats summary — only show when data is loaded */}
-        {!loading && entries.length > 0 && (
+        {/* Stats summary — only shown in volume tab */}
+        {!loading && entries.length > 0 && tab === 'volume' && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <StatCard
               icon={BarChart2}
@@ -201,7 +243,11 @@ export default function LeaderboardPage() {
           </div>
         )}
 
-        <LeaderboardTable entries={entries} />
+        {tab === 'volume' ? (
+          <LeaderboardTable entries={entries} />
+        ) : (
+          <PnlLeaderboardTable entries={pnlEntries} loading={loading} />
+        )}
       </main>
     </div>
   );

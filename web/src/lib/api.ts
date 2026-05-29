@@ -185,6 +185,15 @@ export interface LeaderboardEntryDto {
   transactionCount: number;
 }
 
+/** Player P&L ranked by realized profit/loss via average-cost FIFO accounting. */
+export interface LeaderboardPnlEntry {
+  rank: number;
+  username: string;
+  realizedPnl: number;
+  totalPnl: number;
+  transactionCount: number;
+}
+
 export interface VolumeMultiplierDto {
   multiplier: number;
   timestamp: number;
@@ -472,6 +481,10 @@ export const api = {
   leaderboard: (base: string, limit = 20, period = 'all') =>
     fetchJson<LeaderboardEntryDto[]>(
       `${base}/api/leaderboard?limit=${limit}&period=${period}`
+    ),
+  pnlLeaderboard: (base: string, period: string, limit = 20) =>
+    fetchJson<LeaderboardPnlEntry[]>(
+      `${base}/api/leaderboard/pnl?period=${period}&limit=${limit}`
     ),
   portfolio: {
     get: (base: string, playerName: string) =>

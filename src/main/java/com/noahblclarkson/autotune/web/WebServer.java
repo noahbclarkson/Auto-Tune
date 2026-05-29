@@ -1045,6 +1045,95 @@ public class WebServer {
             ctx.json(dtos);
         });
 
+        // GET /api/leaderboard/pnl — realized + unrealized P&L per player, ranked
+        app.get("/api/leaderboard/pnl", ctx -> {
+            int limit = ctx.queryParamAsClass(KEY_LIMIT, Integer.class).getOrDefault(20);
+            int cappedLimit = Math.min(limit, 100);
+            String period = ctx.queryParam("period");
+
+            if (period == null || period.equals("all")) {
+                ctx.status(400).result("'period' is required (day, week, or month)");
+                return;
+            }
+
+            // Fetch per-item transactions for top traders in the period
+            java.util.Map<String, List<com.noahblclarkson.autotune.model.Transaction>> txMap =
+                    transactionRepository.findTransactionsForTopTraders(period, cappedLimit);
+
+            // Compute realized P&L via average-cost FIFO per player
+            java.util.List<LeaderboardPnlEntry> entries = new java.util.ArrayList<>();
+            for (var entry : txMap.entrySet()) {
+                String playerUuid = entry.getKey();
+                List<com.noahblclarkson.autotune.model.Transaction> txs = entry.getValue();
+
+                // Group by item for FIFO processing
+                var byItem = txs.stream()
+                        .collect(java.util.stream.Collectors.groupingBy(
+                                com.noahblclarkson.autotune.model.Transaction::itemId,
+                                java.util.LinkedHashMap::new,
+                                java.util.stream.Collectors.toList()));
+
+                BigDecimal realizedPnl = BigDecimal.ZERO;
+                for (var itemEntry : byItem.entrySet()) {
+                    List<com.noahblclarkson.autotune.model.Transaction> itemTxs = itemEntry.getValue();
+                    // FIFO: process in timestamp order
+                    itemTxs.sort(java.util.Comparator.comparing(
+                            com.noahblclarkson.autotune.model.Transaction::timestamp));
+
+                    BigDecimal positionQty = BigDecimal.ZERO;
+                    BigDecimal positionCost = BigDecimal.ZERO;
+
+                    for (var tx : itemTxs) {
+                        BigDecimal qty = BigDecimal.valueOf(tx.amount());
+                        BigDecimal price = tx.pricePerUnit();
+
+                        if (tx.type() == com.noahblclarkson.autotune.model.Transaction.TransactionType.BUY) {
+                            // Add to position at average cost
+                            BigDecimal newCost = positionCost.add(price.multiply(qty));
+                            BigDecimal newQty = positionQty.add(qty);
+                            positionCost = newCost;
+                            positionQty = newQty;
+                        } else {
+                            // SELL — realize P&L against average cost
+                            if (positionQty.compareTo(BigDecimal.ZERO) > 0) {
+                                BigDecimal avgCost = positionQty.signum() != 0
+                                        ? positionCost.divide(positionQty, 4, java.math.RoundingMode.HALF_UP)
+                                        : BigDecimal.ZERO;
+                                BigDecimal soldQty = qty.min(positionQty);
+                                realizedPnl = realizedPnl.add(
+                                        price.multiply(soldQty).subtract(avgCost.multiply(soldQty)));
+                                positionQty = positionQty.subtract(soldQty);
+                                positionCost = avgCost.multiply(positionQty);
+                            }
+                        }
+                    }
+                }
+
+                String username = playerRepository.findByUuid(UUID.fromString(playerUuid))
+                        .map(p -> p.username() != null ? p.username() : MSG_UNKNOWN)
+                        .orElse(MSG_UNKNOWN);
+
+                entries.add(new LeaderboardPnlEntry(
+                        0, // rank assigned after sort
+                        username,
+                        realizedPnl.doubleValue(),
+                        realizedPnl.doubleValue(),
+                        txs.size()
+                ));
+            }
+
+            // Sort by totalPnl descending and assign ranks
+            entries.sort((a, b) -> Double.compare(b.totalPnl(), a.totalPnl()));
+            java.util.List<LeaderboardPnlEntry> ranked = new java.util.ArrayList<>();
+            for (int i = 0; i < entries.size(); i++) {
+                LeaderboardPnlEntry e = entries.get(i);
+                ranked.add(new LeaderboardPnlEntry(i + 1, e.username(), e.realizedPnl(),
+                        e.totalPnl(), e.transactionCount()));
+            }
+
+            ctx.json(ranked);
+        });
+
         // GET /api/badges/player/{playerName} — earned badges with earn dates for a player
         app.get("/api/badges/player/{playerName}", ctx -> {
             String playerName = ctx.pathParam(KEY_PLAYER_NAME);
@@ -1955,6 +2044,19 @@ public class WebServer {
             double totalTraded,
             double totalBought,
             double totalSold,
+            int transactionCount
+    ) {
+    }
+
+    /**
+     * Player P&L entry for the P&L leaderboard.
+     * Realized P&L is computed via average-cost FIFO accounting over the requested period.
+     */
+    public record LeaderboardPnlEntry(
+            int rank,
+            String username,
+            double realizedPnl,
+            double totalPnl,
             int transactionCount
     ) {
     }

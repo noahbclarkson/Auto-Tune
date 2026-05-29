@@ -546,4 +546,67 @@ public class TransactionRepository {
     public record ItemVolume(int itemId, long amount, BigDecimal value) {}
 
     public record PlayerImpact(String playerUuid, BigDecimal totalValue) {}
+
+    /**
+     * Returns all transactions for the top traders in a given period, grouped by player.
+     * Used for computing realized P&L via average-cost FIFO accounting.
+     *
+     * @param period "day" (24h), "week" (7d), "month" (30d)
+     * @param limit  max number of players to consider
+     * @return map of playerUuid → list of transactions (sorted by timestamp ASC per player)
+     */
+    public java.util.Map<String, List<Transaction>> findTransactionsForTopTraders(String period, int limit) {
+        String since = switch (period) {
+            case "day" -> "datetime('now', '-1 day')";
+            case "week" -> "datetime('now', '-7 days')";
+            case "month" -> "datetime('now', '-30 days')";
+            default -> "datetime('now', '-100 years')";
+        };
+
+        // Get top trader UUIDs first — use regular strings to avoid text-block/single-quote conflict
+        String uuidSql = "SELECT DISTINCT player_uuid FROM at_transactions WHERE timestamp >= "
+                + since
+                + " ORDER BY (SELECT SUM(total_price) FROM at_transactions t2 WHERE t2.player_uuid = at_transactions.player_uuid AND t2.timestamp >= "
+                + since + ") DESC LIMIT :limit";
+
+        List<String> topUuids = jdbi.withHandle(handle ->
+                handle.createQuery(uuidSql)
+                        .bind("limit", limit)
+                        .mapTo(String.class)
+                        .list());
+
+        if (topUuids.isEmpty()) {
+            return java.util.Map.of();
+        }
+
+        // Bind UUIDs as a list for IN clause
+        java.util.List<java.util.UUID> uuidList = topUuids.stream()
+                .map(UUID::fromString)
+                .toList();
+
+        String txSql = "SELECT id, player_uuid, item_id, transaction_type, amount, "
+                + "price_per_unit, total_price, timestamp FROM at_transactions "
+                + "WHERE player_uuid IN (<uuids>) AND timestamp >= " + since
+                + " ORDER BY player_uuid, timestamp ASC";
+
+        return jdbi.withHandle(handle ->
+                handle.createQuery(txSql)
+                        .bindList("uuids", uuidList)
+                        .map((rs, ctx) -> Transaction.builder()
+                                .id(rs.getLong("id"))
+                                .playerUuid(UUID.fromString(rs.getString("player_uuid")))
+                                .itemId(rs.getInt("item_id"))
+                                .type(TransactionType.valueOf(rs.getString("transaction_type")))
+                                .amount(rs.getInt("amount"))
+                                .pricePerUnit(rs.getBigDecimal("price_per_unit"))
+                                .totalPrice(rs.getBigDecimal("total_price"))
+                                .timestamp(rs.getTimestamp("timestamp").toInstant())
+                                .build())
+                        .list())
+                .stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        t -> t.playerUuid().toString(),
+                        java.util.LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()));
+    }
 }

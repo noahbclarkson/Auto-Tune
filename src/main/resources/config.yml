@@ -163,7 +163,10 @@ loans:
   min-credit-score: 200
 
   # Default loan duration in days (used when player doesn't specify)
-  default-duration-days: 7
+  # SIMULATION FINDING (2026-05-29): 7 days causes systematic MarketMaker defaults.
+  # MarketMakers cannot earn enough spread profit in 7 days to service 5%/day compound interest.
+  # Increase to 14 days — simulation shows 0 defaults at 14d vs 6/7 at 7d.
+  default-duration-days: 14
 
   # Minimum and maximum loan term in days
   # Players choose their term with /loan take <amount> [days]

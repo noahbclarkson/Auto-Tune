@@ -232,7 +232,7 @@ public class ConfigManager {
                 section.getBoolean("credit-score-modifier", true),
                 section.getDouble("max-loan-multiplier", 2.0),
                 section.getInt("min-credit-score", 200),
-                section.getInt("default-duration-days", 7),
+                section.getInt("default-duration-days", 14),
                 section.getInt("min-term-days", 3),
                 section.getInt("max-term-days", 30),
                 section.getDouble("term-premium-per-day", 0.002),

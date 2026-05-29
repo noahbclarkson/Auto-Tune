@@ -6147,6 +6147,677 @@ struct GbDefaultRecord {
     cooldown_expires_day: u64,
 }
 
+/// Interest Rate Sweep: tests whether lowering base_interest_rate from 5% to 3%/2%
+/// fixes the structural loan default problem in MM+GB economies.
+/// Uses the same archetype mix as guildbuyer_failure_test.
+fn run_interest_rate_sweep() {
+    use crate::player::set_global_seeded_rng;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║     INTEREST RATE SWEEP: 5% vs 3% vs 2%                         ║");
+    println!("║  Question: Does lowering base_interest_rate fix MM loan defaults? ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+
+    let rates: Vec<(f64, &str)> = vec![
+        (0.05, "5.0% (control)"),
+        (0.03, "3.0% (treatment)"),
+        (0.02, "2.0% (treatment)"),
+    ];
+
+    #[derive(Debug)]
+    struct InterestSweepResult {
+        rate: f64,
+        label: String,
+        final_gdp: f64,
+        final_dg: f64,
+        total_loans: usize,
+        defaulted_loans: usize,
+        active_loans: usize,
+        final_total_debt: f64,
+    }
+
+    let mut results: Vec<InterestSweepResult> = Vec::new();
+
+    for (rate, label) in &rates {
+        println!(
+            "\n══ {} ═══════════════════════════════════════════════",
+            label
+        );
+
+        let mut scenario = Scenario::guildbuyer_failure_test();
+        scenario.config.loans.base_interest_rate = *rate;
+        scenario.name = format!("Interest Rate {}", label);
+
+        set_global_seeded_rng(seed);
+        let mut sim = Simulation::new_seeded(scenario.config.clone(), seed);
+        sim.events = scenario.events.clone();
+        add_players_to_sim(&mut sim, &scenario.players);
+        sim.paused = false;
+
+        let start = Instant::now();
+        while sim.current_tick < scenario.duration_ticks {
+            sim.tick();
+            if sim.current_tick.is_multiple_of(288) {
+                let day = sim.current_tick / 288;
+                let gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+                let active: f64 = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                    .map(|l| l.current_balance)
+                    .sum();
+                let def: f64 = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                    .map(|l| l.current_balance)
+                    .sum();
+                let total_debt = active + def;
+                let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+                let active_count = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == crate::loan::LoanStatus::Active)
+                    .count();
+                let def_count = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+                    .count();
+                println!(
+                    "  Day {:>2}: GDP={:>9.0} | debt={:>9.0} | D/G={:.3}x | active={:>2} | def={:>2}",
+                    day, gdp, total_debt, dg, active_count, def_count
+                );
+            }
+        }
+
+        let final_gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+        let final_active: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Active)
+            .map(|l| l.current_balance)
+            .sum();
+        let final_def: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+            .map(|l| l.current_balance)
+            .sum();
+        let final_total = final_active + final_def;
+        let final_dg = if final_gdp > 0.0 {
+            final_total / final_gdp
+        } else {
+            0.0
+        };
+        let total_loans = sim.loans.len();
+        let defaulted_loans = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Defaulted)
+            .count();
+        let active_loans = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == crate::loan::LoanStatus::Active)
+            .count();
+
+        println!(
+            "  {} complete: {:.1}s | GDP={:.0} | D/G={:.3}x | loans={} (def={}/active={})",
+            label,
+            start.elapsed().as_secs_f64(),
+            final_gdp,
+            final_dg,
+            total_loans,
+            defaulted_loans,
+            active_loans
+        );
+
+        results.push(InterestSweepResult {
+            rate: *rate,
+            label: label.to_string(),
+            final_gdp,
+            final_dg,
+            total_loans,
+            defaulted_loans,
+            active_loans,
+            final_total_debt: final_total,
+        });
+    }
+
+    // ── Summary Table ───────────────────────────────────────────────────
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║     INTEREST RATE SWEEP SUMMARY                                 ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:<18} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}",
+        "Rate", "GDP", "D/G", "TotalLoans", "Defaults", "Active", "TotalDebt"
+    );
+    println!("  {}", "-".repeat(84));
+    let baseline_dg = results.first().map(|r| r.final_dg).unwrap_or(1.0);
+    for r in &results {
+        let dg_vs_base = if baseline_dg > 0.0 {
+            r.final_dg / baseline_dg
+        } else {
+            0.0
+        };
+        println!(
+            "  {:<18} {:>10.0} {:>10.3}x {:>10} {:>10} {:>10} {:>10.0}",
+            r.label,
+            r.final_gdp,
+            r.final_dg,
+            r.total_loans,
+            r.defaulted_loans,
+            r.active_loans,
+            r.final_total_debt
+        );
+        if r.rate != 0.05 {
+            println!(
+                "  {:>18} D/G vs 5%: {:+.1}%",
+                "",
+                (dg_vs_base - 1.0) * 100.0
+            );
+        }
+    }
+
+    // ── Recommendation ───────────────────────────────────────────────────
+    let control = results.iter().find(|r| r.rate == 0.05);
+    let best = results
+        .iter()
+        .filter(|r| r.defaulted_loans == 0 && r.rate != 0.05)
+        .min_by(|a, b| {
+            a.final_dg
+                .partial_cmp(&b.final_dg)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+    println!("\n  INTERPRETATION:");
+    if let (Some(c), Some(b)) = (control, best) {
+        if c.defaulted_loans > 0 && b.defaulted_loans == 0 {
+            println!(
+                "  ✓ {} eliminates structural defaults (was {}/{} at 5%)",
+                b.label, c.defaulted_loans, c.total_loans
+            );
+            println!(
+                "  D/G change: {:.3}x → {:.3}x ({:+.1}%)",
+                c.final_dg,
+                b.final_dg,
+                (b.final_dg / c.final_dg - 1.0) * 100.0
+            );
+        }
+    } else if let Some(c) = control
+        && c.defaulted_loans > 0
+    {
+        println!("  ✗ All tested rates still produce defaults.");
+        println!(
+            "  5% baseline: {}/{} loans defaulted.",
+            c.defaulted_loans, c.total_loans
+        );
+    }
+    println!();
+}
+
+/// Loan Size Sweep: tests whether lowering max_loan_multiplier fixes defaults.
+/// 2.0x → loan = 100% of total_traded (amount_raw = max * 0.5, max = traded * 2.0)
+/// 1.0x → loan = 50% of total_traded
+/// 0.5x → loan = 25% of total_traded
+fn run_loan_size_sweep() {
+    use crate::loan::LoanStatus;
+    use crate::player::set_global_seeded_rng;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║     LOAN SIZE SWEEP: max_loan_multiplier 2.0 vs 1.0 vs 0.5     ║");
+    println!("║  Question: Does smaller loan size fix MM loan defaults?          ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+
+    // (multiplier, label)
+    let multipliers: Vec<(f64, &str)> = vec![
+        (2.0, "2.0x (control, 100% total_traded)"),
+        (1.0, "1.0x (50% total_traded)"),
+        (0.5, "0.5x (25% total_traded)"),
+    ];
+
+    #[derive(Debug)]
+    struct LoanSizeResult {
+        multiplier: f64,
+        label: String,
+        final_gdp: f64,
+        final_dg: f64,
+        total_loans: usize,
+        defaulted_loans: usize,
+        active_loans: usize,
+        repaid_loans: usize,
+    }
+
+    let mut results: Vec<LoanSizeResult> = Vec::new();
+
+    for (mult, label) in &multipliers {
+        println!(
+            "\n══ {} ═══════════════════════════════════════════════",
+            label
+        );
+
+        let mut scenario = Scenario::guildbuyer_failure_test();
+        scenario.config.loans.max_loan_multiplier = *mult;
+        scenario.name = format!("Loan Size {}", label);
+
+        set_global_seeded_rng(seed);
+        let mut sim = Simulation::new_seeded(scenario.config.clone(), seed);
+        sim.events = scenario.events.clone();
+        add_players_to_sim(&mut sim, &scenario.players);
+        sim.paused = false;
+
+        let start = Instant::now();
+        while sim.current_tick < scenario.duration_ticks {
+            sim.tick();
+            if sim.current_tick.is_multiple_of(288) {
+                let day = sim.current_tick / 288;
+                let gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+                let total_debt: f64 = sim
+                    .loans
+                    .iter()
+                    .filter(|l| matches!(l.status, LoanStatus::Active | LoanStatus::Defaulted))
+                    .map(|l| l.current_balance)
+                    .sum();
+                let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+                let active_count = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == LoanStatus::Active)
+                    .count();
+                let def_count = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == LoanStatus::Defaulted)
+                    .count();
+                let paid_count = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == LoanStatus::Paid)
+                    .count();
+                println!(
+                    "  Day {:>2}: GDP={:>9.0} | debt={:>9.0} | D/G={:.3}x | active={:>2} | def={:>2} | paid={:>2}",
+                    day, gdp, total_debt, dg, active_count, def_count, paid_count
+                );
+            }
+        }
+
+        let final_gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+        let final_active: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == LoanStatus::Active)
+            .map(|l| l.current_balance)
+            .sum();
+        let final_def: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == LoanStatus::Defaulted)
+            .map(|l| l.current_balance)
+            .sum();
+        let final_total = final_active + final_def;
+        let final_dg = if final_gdp > 0.0 {
+            final_total / final_gdp
+        } else {
+            0.0
+        };
+        let total_loans = sim.loans.len();
+        let defaulted_loans = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == LoanStatus::Defaulted)
+            .count();
+        let active_loans = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == LoanStatus::Active)
+            .count();
+        let repaid_loans = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == LoanStatus::Paid)
+            .count();
+
+        println!(
+            "  {} complete: {:.1}s | GDP={:.0} | D/G={:.3}x | loans={} (def={}/active={}/paid={})",
+            label,
+            start.elapsed().as_secs_f64(),
+            final_gdp,
+            final_dg,
+            total_loans,
+            defaulted_loans,
+            active_loans,
+            repaid_loans
+        );
+
+        results.push(LoanSizeResult {
+            multiplier: *mult,
+            label: label.to_string(),
+            final_gdp,
+            final_dg,
+            total_loans,
+            defaulted_loans,
+            active_loans,
+            repaid_loans,
+        });
+    }
+
+    // ── Summary Table
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║     LOAN SIZE SWEEP SUMMARY                                       ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:<40} {:>10} {:>8} {:>8} {:>8} {:>8} {:>8}",
+        "Multiplier", "GDP", "D/G", "Total", "Def", "Active", "Paid"
+    );
+    println!("  {}", "-".repeat(80));
+    let baseline_dg = results.first().map(|r| r.final_dg).unwrap_or(1.0);
+    for r in &results {
+        let dg_vs_base = if baseline_dg > 0.0 {
+            r.final_dg / baseline_dg
+        } else {
+            0.0
+        };
+        println!(
+            "  {:<40} {:>10.0} {:>8.3}x {:>8} {:>8} {:>8} {:>8}",
+            r.label,
+            r.final_gdp,
+            r.final_dg,
+            r.total_loans,
+            r.defaulted_loans,
+            r.active_loans,
+            r.repaid_loans
+        );
+        if r.multiplier != 2.0 {
+            println!(
+                "  {:>40} D/G vs 2.0x: {:+.1}%",
+                "",
+                (dg_vs_base - 1.0) * 100.0
+            );
+        }
+    }
+
+    // ── Recommendation
+    let control = results.iter().find(|r| r.multiplier == 2.0);
+    let no_default = results
+        .iter()
+        .filter(|r| r.defaulted_loans == 0 && r.multiplier != 2.0)
+        .min_by(|a, b| {
+            a.final_dg
+                .partial_cmp(&b.final_dg)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+    println!("\n  INTERPRETATION:");
+    if let (Some(c), Some(b)) = (control, no_default) {
+        if c.defaulted_loans > 0 && b.defaulted_loans == 0 {
+            println!(
+                "  ✓ {} eliminates structural defaults (was {}/{} at 2.0x)",
+                b.label, c.defaulted_loans, c.total_loans
+            );
+            println!(
+                "  D/G change: {:.3}x → {:.3}x ({:+.1}%)",
+                c.final_dg,
+                b.final_dg,
+                (b.final_dg / c.final_dg - 1.0) * 100.0
+            );
+        }
+    } else if let Some(c) = control
+        && c.defaulted_loans > 0
+    {
+        println!("  ✗ All tested multipliers still produce defaults.");
+        println!(
+            "  2.0x baseline: {}/{} loans defaulted.",
+            c.defaulted_loans, c.total_loans
+        );
+    }
+    println!();
+}
+
+/// Loan Term Sweep: tests whether extending loan duration fixes defaults.
+/// 7-day term (default) vs 14-day vs 21-day vs 30-day.
+/// Core insight: defaults happen at day 8 regardless of size/rate because
+/// the 7-day term forces MM to repay before earning enough spread profit.
+fn run_loan_term_sweep() {
+    use crate::loan::LoanStatus;
+    use crate::player::set_global_seeded_rng;
+    let seed = 42u64;
+
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║     LOAN TERM SWEEP: 7 days vs 14 days vs 21 days                ║");
+    println!("║  Core insight: defaults happen at day 8 because 7-day term forces ║");
+    println!("║  repayment before MM can earn enough spread profit to repay.      ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+
+    let durations: Vec<(i32, &str)> = vec![
+        (7, "7 days (control)"),
+        (14, "14 days"),
+        (21, "21 days"),
+        (30, "30 days"),
+    ];
+
+    #[derive(Debug)]
+    struct LoanTermResult {
+        duration_days: i32,
+        label: String,
+        final_gdp: f64,
+        final_dg: f64,
+        total_loans: usize,
+        defaulted_loans: usize,
+        active_loans: usize,
+        repaid_loans: usize,
+        final_def_debt: f64,
+    }
+
+    let mut results: Vec<LoanTermResult> = Vec::new();
+
+    for (days, label) in &durations {
+        println!(
+            "\n══ {} ═══════════════════════════════════════════════",
+            label
+        );
+
+        let mut scenario = Scenario::guildbuyer_failure_test();
+        scenario.config.loans.default_duration_days = *days;
+        scenario.name = format!("Loan Term {}", label);
+        scenario.duration_ticks = 288 * 14; // 14-day run, but loan term varies
+
+        set_global_seeded_rng(seed);
+        let mut sim = Simulation::new_seeded(scenario.config.clone(), seed);
+        sim.events = scenario.events.clone();
+        add_players_to_sim(&mut sim, &scenario.players);
+        sim.paused = false;
+
+        let start = Instant::now();
+        while sim.current_tick < scenario.duration_ticks {
+            sim.tick();
+            if sim.current_tick.is_multiple_of(288) {
+                let day = sim.current_tick / 288;
+                let gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+                let active_debt: f64 = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == LoanStatus::Active)
+                    .map(|l| l.current_balance)
+                    .sum();
+                let def_debt: f64 = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == LoanStatus::Defaulted)
+                    .map(|l| l.current_balance)
+                    .sum();
+                let total_debt = active_debt + def_debt;
+                let dg = if gdp > 0.0 { total_debt / gdp } else { 0.0 };
+                let active_count = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == LoanStatus::Active)
+                    .count();
+                let def_count = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == LoanStatus::Defaulted)
+                    .count();
+                let paid_count = sim
+                    .loans
+                    .iter()
+                    .filter(|l| l.status == LoanStatus::Paid)
+                    .count();
+                println!(
+                    "  Day {:>2}: GDP={:>9.0} | debt={:>9.0} | D/G={:.3}x | active={:>2} | def={:>2} | paid={:>2}",
+                    day, gdp, total_debt, dg, active_count, def_count, paid_count
+                );
+            }
+        }
+
+        let final_gdp = sim.economy_snapshots.last().map(|s| s.gdp).unwrap_or(0.0);
+        let final_active: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == LoanStatus::Active)
+            .map(|l| l.current_balance)
+            .sum();
+        let final_def: f64 = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == LoanStatus::Defaulted)
+            .map(|l| l.current_balance)
+            .sum();
+        let final_total = final_active + final_def;
+        let final_dg = if final_gdp > 0.0 {
+            final_total / final_gdp
+        } else {
+            0.0
+        };
+        let total_loans = sim.loans.len();
+        let defaulted_loans = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == LoanStatus::Defaulted)
+            .count();
+        let active_loans = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == LoanStatus::Active)
+            .count();
+        let repaid_loans = sim
+            .loans
+            .iter()
+            .filter(|l| l.status == LoanStatus::Paid)
+            .count();
+
+        println!(
+            "  {} complete: {:.1}s | GDP={:.0} | D/G={:.3}x | loans={} (def={}/active={}/paid={})",
+            label,
+            start.elapsed().as_secs_f64(),
+            final_gdp,
+            final_dg,
+            total_loans,
+            defaulted_loans,
+            active_loans,
+            repaid_loans
+        );
+
+        results.push(LoanTermResult {
+            duration_days: *days,
+            label: label.to_string(),
+            final_gdp,
+            final_dg,
+            total_loans,
+            defaulted_loans,
+            active_loans,
+            repaid_loans,
+            final_def_debt: final_def,
+        });
+    }
+
+    // Summary Table
+    println!("\n╔══════════════════════════════════════════════════════════════════════╗");
+    println!("║     LOAN TERM SWEEP SUMMARY                                       ║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+    println!(
+        "  {:<25} {:>10} {:>8} {:>8} {:>8} {:>8} {:>8} {:>10}",
+        "Duration", "GDP", "D/G", "Total", "Def", "Active", "Paid", "DefDebt"
+    );
+    println!("  {}", "-".repeat(80));
+    let baseline_dg = results.first().map(|r| r.final_dg).unwrap_or(1.0);
+    for r in &results {
+        let dg_vs_base = if baseline_dg > 0.0 {
+            r.final_dg / baseline_dg
+        } else {
+            0.0
+        };
+        println!(
+            "  {:<25} {:>10.0} {:>8.3}x {:>8} {:>8} {:>8} {:>8} {:>10.0}",
+            r.label,
+            r.final_gdp,
+            r.final_dg,
+            r.total_loans,
+            r.defaulted_loans,
+            r.active_loans,
+            r.repaid_loans,
+            r.final_def_debt
+        );
+        if r.duration_days != 7 {
+            println!(
+                "  {:>25} D/G vs 7d: {:+.1}%",
+                "",
+                (dg_vs_base - 1.0) * 100.0
+            );
+        }
+    }
+
+    // Recommendation
+    let control = results.iter().find(|r| r.duration_days == 7);
+    let best = results
+        .iter()
+        .filter(|r| r.defaulted_loans == 0 && r.duration_days != 7)
+        .min_by(|a, b| {
+            a.final_dg
+                .partial_cmp(&b.final_dg)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+    println!("\n  INTERPRETATION:");
+    if let (Some(c), Some(b)) = (control, best) {
+        if c.defaulted_loans > 0 && b.defaulted_loans == 0 {
+            println!(
+                "  ✓ {} eliminates structural defaults (was {}/{} at 7d)",
+                b.label, c.defaulted_loans, c.total_loans
+            );
+            println!(
+                "  D/G change: {:.3}x → {:.3}x ({:+.1}%)",
+                c.final_dg,
+                b.final_dg,
+                (b.final_dg / c.final_dg - 1.0) * 100.0
+            );
+        }
+    } else if let Some(c) = control
+        && c.defaulted_loans > 0
+    {
+        let min_def = results.iter().map(|r| r.defaulted_loans).min().unwrap_or(0);
+        if min_def < c.defaulted_loans {
+            let better = results
+                .iter()
+                .find(|r| r.defaulted_loans == min_def)
+                .unwrap();
+            println!(
+                "  ✗ All durations still produce defaults. Best: {} ({}/{} def)",
+                better.label, better.defaulted_loans, better.total_loans
+            );
+        } else {
+            println!("  ✗ All durations produce same # defaults.");
+        }
+        println!(
+            "  7-day baseline: {}/{} loans defaulted.",
+            c.defaulted_loans, c.total_loans
+        );
+    }
+    println!();
+}
+
 fn run_guildbuyer_failure_test() {
     use crate::player::set_global_seeded_rng;
     let seed = 42u64;
@@ -10912,6 +11583,7 @@ fn run_exploiter_cap_sensitivity_test() {
     println!("  === KEY FINDINGS ===");
 
     // GDP comparison: find best and worst
+    #[allow(clippy::manual_option_zip)]
     if let Some((best_entry, baseline_entry)) = table
         .iter()
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
@@ -11821,6 +12493,9 @@ fn main() -> eframe::Result<()> {
         println!(
             "  --guildbuyer-failure-test  GB default cascade: cooldown prevs re-borrow bypass"
         );
+        println!("  --interest-rate-sweep      5% vs 3% vs 2% interest: structural default fix?");
+        println!("  --loan-size-sweep        max_loan_multiplier 2.0x vs 1.0x vs 0.5x");
+        println!("  --loan-term-sweep        loan duration 7d vs 14d vs 21d vs 30d");
         println!("  --counter-cyclical-test  Counter-cyclical taper vs tiered circuit breaker");
         println!("  --mm-competition-test   1MM+2GB vs 2MM+2GB: does extra MM improve stability?");
         println!("  --mm-quit-test         MM quits at day 7: can economy survive without MM?");
@@ -12149,6 +12824,24 @@ fn main() -> eframe::Result<()> {
     // ─── GuildBuyer Failure Cascade Test ───────────────────────────────
     if args.len() > 1 && args[1] == "--guildbuyer-failure-test" {
         run_guildbuyer_failure_test();
+        return Ok(());
+    }
+
+    // ─── Interest Rate Sweep ──────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--interest-rate-sweep" {
+        run_interest_rate_sweep();
+        return Ok(());
+    }
+
+    // ─── Loan Size Sweep ───────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--loan-size-sweep" {
+        run_loan_size_sweep();
+        return Ok(());
+    }
+
+    // ─── Loan Term Sweep ───────────────────────────────────────────────
+    if args.len() > 1 && args[1] == "--loan-term-sweep" {
+        run_loan_term_sweep();
         return Ok(());
     }
 

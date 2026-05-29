@@ -9,8 +9,6 @@ import {
   GitCommit,
   Zap,
   Users,
-  Gavel,
-  Bell,
   ShieldCheck,
   Globe,
   BarChart2,

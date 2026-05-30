@@ -253,7 +253,7 @@ public class DatabaseManager {
         }
     }
 
-    private int getSchemaVersion() {
+    public int getSchemaVersion() {
         return jdbi.withHandle(handle ->
                 handle.createQuery("SELECT COALESCE(MAX(version), 0) FROM at_schema_version")
                         .mapTo(Integer.class)

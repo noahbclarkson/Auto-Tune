@@ -257,6 +257,10 @@ export interface MarketImpactItemDto {
 
 export interface AdminHealthDto {
   frozen: boolean;
+  serverName: string;
+  healthScore: number;
+  schemaVersion: number;
+  webServerUp: boolean;
   gdp: number;
   totalDebt: number;
   activeLoans: number;

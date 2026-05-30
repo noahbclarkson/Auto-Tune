@@ -10,6 +10,7 @@ import com.noahblclarkson.autotune.config.AutoTuneConfig.WebConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.BadgeRepository;
 import com.noahblclarkson.autotune.database.CircuitEventRepository;
+import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.EconomySnapshotRepository;
 import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.database.LoanRepository;
@@ -114,6 +115,7 @@ public class WebServer {
 
     private final AutoTune plugin;
     private final ConfigManager configManager;
+    private final DatabaseManager databaseManager;
     private final ItemRepository itemRepository;
     private final MarketEngine marketEngine;
     private final EconomySnapshotRepository snapshotRepository;
@@ -146,6 +148,7 @@ public class WebServer {
     public WebServer(
             AutoTune plugin,
             ConfigManager configManager,
+            DatabaseManager databaseManager,
             ItemRepository itemRepository,
             MarketEngine marketEngine,
             EconomySnapshotRepository snapshotRepository,
@@ -170,6 +173,7 @@ public class WebServer {
     ) {
         this.plugin = plugin;
         this.configManager = configManager;
+        this.databaseManager = databaseManager;
         this.itemRepository = itemRepository;
         this.marketEngine = marketEngine;
         this.snapshotRepository = snapshotRepository;
@@ -1331,6 +1335,8 @@ public class WebServer {
             response.put("frozen", frozen);
             response.put("serverName", plugin.getServer().getName());
             response.put("healthScore", healthScore);
+            response.put("schemaVersion", databaseManager.getSchemaVersion());
+            response.put("webServerUp", true);
             response.put("gdp", gdp.doubleValue());
             response.put("totalDebt", totalDebt.doubleValue());
             response.put("activeLoans", activeLoans);

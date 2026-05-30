@@ -48,6 +48,8 @@ export function FirstRunVerificationCard() {
   const [itemsState, setItemsState] = useState<CheckState>('loading');
   const [tradeState, setTradeState] = useState<CheckState>('loading');
   const [circuitState, setCircuitState] = useState<CheckState>('loading');
+  const [dbState, setDbState] = useState<CheckState>('loading');
+  const [webState, setWebState] = useState<CheckState>('loading');
 
   const fetchAll = useCallback(async () => {
     try {
@@ -89,16 +91,36 @@ export function FirstRunVerificationCard() {
         } else {
           setCircuitState('pass');
         }
+
+        // DB migrations — schema v9 is current; warn if < 8 (V8 was auction fill status)
+        if (healthData.schemaVersion >= 9) {
+          setDbState('pass');
+        } else if (healthData.schemaVersion >= 1) {
+          setDbState('warn');
+        } else {
+          setDbState('fail');
+        }
+
+        // Web server reachability
+        if (healthData.webServerUp) {
+          setWebState('pass');
+        } else {
+          setWebState('fail');
+        }
       } else {
         setItemsState('loading');
         setTradeState('loading');
         setCircuitState('loading');
+        setDbState('loading');
+        setWebState('loading');
       }
     } catch {
       setStatsState('fail');
       setItemsState('fail');
       setTradeState('fail');
       setCircuitState('fail');
+      setDbState('fail');
+      setWebState('fail');
     }
   }, [apiBase]);
 
@@ -146,6 +168,24 @@ export function FirstRunVerificationCard() {
           ? `Buy/Sell ${health.buyPct.toFixed(0)}%/${health.sellPct.toFixed(0)}% — enough two-sided activity for price discovery`
           : `Buy/Sell ${health.buyPct.toFixed(0)}%/${health.sellPct.toFixed(0)}% — watch for one-sided activity`
         : 'Checking…',
+    },
+    {
+      label: 'DB migrations',
+      state: dbState,
+      detail: health
+        ? health.schemaVersion >= 9
+          ? `Schema v${health.schemaVersion} — all migrations applied`
+          : health.schemaVersion >= 1
+          ? `Schema v${health.schemaVersion} — some migrations may be pending (upgrade recommended)`
+          : 'Schema not initialized — run the plugin to set up the database'
+        : 'Checking…',
+    },
+    {
+      label: 'Dashboard reachable',
+      state: webState,
+      detail: health
+        ? 'Dashboard web server is responding'
+        : 'Dashboard not responding — check server port configuration',
     },
   ];
 
@@ -245,6 +285,30 @@ export function FirstRunVerificationCard() {
                   <div className="text-red-200/70">
                     Economy is in protection mode. See Circuit Breaker Tiers section below for recovery steps.
                     Tip: Lower sell pressure, add player buy volume to calm markets.
+                  </div>
+                </div>
+              )}
+              {dbState === 'fail' && (
+                <div className="px-3 py-2 rounded bg-red-500/10 border border-red-500/20">
+                  <div className="text-red-300 font-medium mb-1">Database not initialized</div>
+                  <div className="text-red-200/70">
+                    Run /at reload or restart the server to initialize the database schema.
+                  </div>
+                </div>
+              )}
+              {dbState === 'warn' && (
+                <div className="px-3 py-2 rounded bg-amber-500/10 border border-amber-500/20">
+                  <div className="text-amber-300 font-medium mb-1">Outdated database schema</div>
+                  <div className="text-amber-200/70">
+                    Upgrade to the latest plugin version to apply pending migrations.
+                  </div>
+                </div>
+              )}
+              {webState === 'fail' && (
+                <div className="px-3 py-2 rounded bg-red-500/10 border border-red-500/20">
+                  <div className="text-red-300 font-medium mb-1">Dashboard not reachable</div>
+                  <div className="text-red-200/70">
+                    Verify the web port in config.yml is open and the server is not blocking it.
                   </div>
                 </div>
               )}

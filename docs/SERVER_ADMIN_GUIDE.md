@@ -505,7 +505,7 @@ Auto-Tune's economy health depends heavily on your **player archetype mix** — 
 | **Farmer** | Heavy seller | Natural supply; can cause underselling |
 | **GuildBuyer** | Proactive buyer at dips | Buy pressure; counteracts farmer oversupply |
 | **MarketMaker** | Two-sided liquidity | Tightens spreads dramatically; stabilizes prices |
-| **InsiderTrader** | Mean-reversion | Healthy: +30.1% GDP, D/G +2.41x (watch D/G). Stressed: −12.2% GDP, D/G −1.32x (counter-cyclical benefit — only add to HEALTHY economies) |
+| **InsiderTrader** | Mean-reversion | ⚠️ Use with caution — see findings page. With floor: −5.3% GDP, neutral D/G. Without floor: legacy single-seed +30.1% GDP (+2.4× D/G) — artifact, not reproduced with floor. Only add if floor disabled, D/G <5×, and you monitor weekly. Never combine with VolumeTrader. |
 | **Newbie** | Net consumer, high buy rate | **Healthy: +41.5% GDP, D/G +34.7% (watch borrowing), volatility −68%. Stressed: +33.3% GDP, D/G −42.1%, volatility −35%. ALWAYS dramatically reduces volatility — best archetype for high-volatility servers. High D/G in healthy economies (they borrow to fund buying).** |
 | **VolumeTrader** | Spread compressor | Always harmful — −9% to −13% GDP; never recommended |
 
@@ -522,7 +522,15 @@ Simulation testing across 5 seeds confirms: **2 MarketMakers + 2 GuildBuyers** p
 - **Small server (5–10 players):** 1 MarketMaker + 1 GuildBuyer. More MMs than players causes over-trading.
 - **Medium server (10–20 players):** 2 MarketMaker + 2 GuildBuyer. This is the validated recommended config.
 - **Large server (20–50 players):** 2 MarketMaker + 2 GuildBuyer. Do NOT add VolumeTraders — they are always harmful in any economy condition (-9% to -13% GDP).
-- **Avoid:** InsiderTrader + VolumeTrader combination — catastrophic (-25.6% GDP, IT's gains reversed by VT). GuildSellers (confirmed dead-end). AFKFarmers (catastrophic: -49.5% GDP, +66% volatility).
+- **Avoid:** InsiderTrader + VolumeTrader combination — catastrophic. GuildSellers (confirmed dead-end). AFKFarmers (catastrophic: -49.5% GDP, +66% volatility).
+
+### Server Lifecycle Recommendation
+
+**⚠️ Cap server lifecycle at 60 days for stability.**
+
+Simulation testing across 5 seeds confirms a regime change above 60 days: at 14d and 30d, economy health is stable (D/G below TIER2 threshold, low volatility). At 60d+, debt-to-GDP ratios become unstable and diverge — some seeds recover, others degenerate to 2-3× the healthy baseline. The floor's displayed-price masking makes this harder to detect in production.
+
+Recommendation: For long-running servers (>60 days), keep the floor below 30% or disabled, monitor D/G weekly, and reset the economy periodically if D/G approaches TIER2 thresholds (10×).
 
 ### The Floor Percent
 

@@ -1,3 +1,43 @@
+## Cron (2026-05-30 01:04 UTC) — Simulation Lab: Loan Sweep Confirms 14d Default ✅
+
+**rewrite-2 `d7b410c`** | `./gradlew build` ✅ PMD 0 | Rust fmt/clippy ✅ | 14/14 tests ✅ | Regression PASS | Pushed: none
+
+### Loan Term Sweep — Confirms 14d Java Default
+| Arm | Def | D/G | Key |
+|-----|-----|-----|-----|
+| 7d (control) | **6/7 defaults** | 3.062x | MM can't repay in time |
+| **14d** | **0/7 defaults** | 3.268x | Correct Java default ✅ |
+| 21d | 0/7 | 3.268x | Same as 14d |
+| 30d | 0/7 | 3.268x | Same as 14d |
+
+14d eliminates structural defaults. D/G rises +6.7% but all is healthy active debt — right trade-off.
+
+### Loan Size Sweep — No Silver Bullet
+- 2.0x → 1.0x → 0.5x: defaults stay at 6/7 regardless of cap
+- MM over-borrows relative to spread profit regardless of max-loan multiplier
+- Root cause: guildbuyer_failure_test scenario tests MM loan behavior, not a config tuning problem
+
+### Regression: PASS
+- GuildStability+MM+7%GB: PASS (vs baseline 24310f2c)
+- GuildStability+2MM+7%GB+Floor: PASS
+- Zero displacement across all checkpoints
+
+### Next Simulation Priorities
+1. **Whale anti-dump combined test** — cap(500) + spread shock + cooldown; Java configs exist but sim harness needs wiring
+2. **TIER3 hysteresis 90d sweep** — `tier3=30/40 × hyst=50/60/70% × 3 seeds × 90d`; highest-value outstanding param test
+3. **GuildBuyer threshold sweep** — 5%-15% with MM present; validate 7% recommendation
+
+### Feature Ideas (future cycles — per Noah's redirect)
+1. `requireFirstSell` default fix (issue #103) — `hashToItemCache` startup initialization gap
+2. Anti-dump sell-wall spread shock — Java anti-dump configs exist; combined sim test pending
+3. Exchange rate history chart — new API endpoint + bundled web LineChart component
+
+### Blocked
+- API deploy (Arc's Fly.io token)
+- Real testimonials (human outreach)
+
+---
+
 ## Cron (2026-05-24 12:42 UTC) — Web & Ecosystem: Circuit Event Modal Done ✅
 
 **rewrite-2 `61943a4`** | `./gradlew build` ✅ PMD 0 | `web/`: 12 routes ✅ | `web-optimizer/`: 29 routes ✅ | Pushed: `61943a4`

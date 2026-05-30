@@ -1,4 +1,24 @@
 
+## Simulation Insight (2026-05-30) — Loan Term: 14d Confirmed, Size Cap Is Not a Silver Bullet
+
+**Loan term sweep (guildbuyer_failure_test, 14d):**
+- 7d: 6/7 defaults at day 8 — MM can't earn enough spread profit to repay before term expires
+- 14d: 0/7 defaults — Java default `945cf3f` confirmed correct
+- 21d/30d: identical to 14d — diminishing returns beyond 14d
+- D/G rises +6.7% (3.062x → 3.268x) but all additional debt is healthy/active — correct trade-off
+
+**Loan size sweep:**
+- max_loan_multiplier 2.0x → 1.0x → 0.5x: defaults stay 6/7 across all arms
+- 0.5x cap produces 8 loans (more loans at smaller size = same default outcome)
+- The MM loan default pathology is NOT solvable by adjusting max loan size alone
+- Root cause: MM in guildbuyer_failure_test takes oversized opening loans relative to spread earning capacity
+
+**Circuit breaker hysteresis:** seed 98765 didn't fire TIER3 (D/G stayed below 10.0x). Hysteresis is correct default but the test seed wasn't active enough to demonstrate effect.
+
+**Actionable:** No Java config changes needed. 14d default is validated. Next sim priority: whale anti-dump combined test + TIER3 hysteresis 90d sweep.
+
+---
+
 ## Simulation Insight (2026-05-26) — Trend Dampening Cannot Fix Loan Circuit Instability
 
 **Key distinction:** `trend_dampening` (engine.rs:489-500) caps price momentum overshoot when a price streak is continuing (streak dampened to `1/(1+streak*damp)`, floored at 0.25). This is a PRICE-level mechanism. It has zero effect on loan/debt circuit cycling.

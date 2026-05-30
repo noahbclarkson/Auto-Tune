@@ -206,6 +206,57 @@ export function FirstRunVerificationCard() {
             </div>
           </div>
         )}
+
+        {/* Economy Health Tips - expandable */}
+        {!allPass && (
+          <details className="mt-3 cursor-pointer group">
+            <summary className="text-xs text-muted-foreground hover:text-foreground transition-colors select-none">
+               Need help? Click for quick tips
+            </summary>
+            <div className="mt-2 space-y-2 text-xs">
+              {statsState === 'fail' && (
+                <div className="px-3 py-2 rounded bg-blue-500/10 border border-blue-500/20">
+                  <div className="text-blue-300 font-medium mb-1">Plugin not responding</div>
+                  <div className="text-blue-200/70">
+                    Check: (1) Plugin loaded without errors, (2) Port 8989 not blocked,
+                    (3) Server console shows Auto-Tune web server started
+                  </div>
+                </div>
+              )}
+              {itemsState === 'warn' && (
+                <div className="px-3 py-2 rounded bg-amber-500/10 border border-amber-500/20">
+                  <div className="text-amber-300 font-medium mb-1">No items with prices</div>
+                  <div className="text-amber-200/70">
+                    Add base prices: Edit shops.yml with items, or run /at admin item baseprice in-game
+                  </div>
+                </div>
+              )}
+              {tradeState === 'warn' && (
+                <div className="px-3 py-2 rounded bg-amber-500/10 border border-amber-500/20">
+                  <div className="text-amber-300 font-medium mb-1">No economy activity</div>
+                  <div className="text-amber-200/70">
+                    Players need to trade: Use /shop to buy and /sell to sell. First trade initializes prices.
+                  </div>
+                </div>
+              )}
+              {circuitState === 'fail' && (
+                <div className="px-3 py-2 rounded bg-red-500/10 border border-red-500/20">
+                  <div className="text-red-300 font-medium mb-1">Circuit breaker active</div>
+                  <div className="text-red-200/70">
+                    Economy is in protection mode. See Circuit Breaker Tiers section below for recovery steps.
+                    Tip: Lower sell pressure, add player buy volume to calm markets.
+                  </div>
+                </div>
+              )}
+              <div className="px-3 py-2 rounded bg-gray-500/10 border border-gray-500/20">
+                <div className="text-gray-300 font-medium mb-1">More help</div>
+                <div className="text-gray-200/70">
+                  Full docs at autotune.dev/docs. Admin commands: /at admin in-game
+                </div>
+              </div>
+            </div>
+          </details>
+        )}
       </CardContent>
     </Card>
   );

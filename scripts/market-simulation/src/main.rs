@@ -553,8 +553,10 @@ impl Scenario {
         scenario
     }
 
-    /// Production config: 2MM + 2GB + 2IT + 60% Diamond floor.
-    /// Based on guild_stability_2mm_fixed_guild plus 2 InsiderTraders and floor.
+    /// GuildStability + 2MM + 2GB + 2IT + 60% Diamond floor.
+    /// NOTE: ITs are no longer recommended — see --it-removal-test findings.
+    /// This scenario is kept as the control arm for the IT removal comparison test.
+    /// For the current recommended config, use recommended_config().
     pub fn guild_stability_2mm_fixed_guild_plus_it_and_floor() -> Self {
         let mut scenario = Self::guild_stability_2mm_fixed_guild();
         scenario.name = "GuildStability+2MM+7%GB+IT+Floor".to_string();

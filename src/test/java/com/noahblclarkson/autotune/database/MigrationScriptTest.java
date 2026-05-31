@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings("PMD")
@@ -46,6 +47,7 @@ class MigrationScriptTest {
         String url = "jdbc:sqlite:" + tempDir.resolve("migration-test.db");
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
+            stmt.execute("PRAGMA foreign_keys = ON");
             for (String resource : MIGRATIONS) {
                 for (String statement : DatabaseManager.splitSqlStatements(readResource(resource))) {
                     assertDoesNotThrow(() -> stmt.execute(statement),
@@ -61,6 +63,31 @@ class MigrationScriptTest {
             // Regression: V9's inline comment containing ';' truncated the CREATE TABLE.
             assertTrue(tableExists(conn, "at_auction_pending_returns"),
                     "V9 pending-returns table should exist");
+
+            assertEquals(1, pragmaForeignKeys(conn), "SQLite foreign-key enforcement should be enabled in tests");
+            assertThrows(SQLException.class, () -> stmt.executeUpdate("""
+                    INSERT INTO at_market_history (item_id, price, buy_volume, sell_volume)
+                    VALUES (999999, 10.00, 0, 0)
+                    """), "SQLite should reject orphaned rows when foreign keys are enabled");
+        }
+    }
+
+    @Test
+    @DisplayName("MySQL migration translation removes SQLite-only syntax")
+    void mysqlMigrationTranslationRemovesSqliteOnlySyntax() {
+        for (String resource : MIGRATIONS) {
+            for (String statement : DatabaseManager.splitSqlStatements(readResource(resource))) {
+                String translated = DatabaseManager.translateForMysql(statement);
+                String upper = translated.toUpperCase(java.util.Locale.ROOT);
+                assertFalse(upper.contains("AUTOINCREMENT"),
+                        () -> "AUTOINCREMENT should be translated in " + resource + ":\n" + translated);
+                assertFalse(upper.contains("INSERT OR IGNORE"),
+                        () -> "INSERT OR IGNORE should be translated in " + resource + ":\n" + translated);
+                assertFalse(upper.contains("DATETIME('NOW')"),
+                        () -> "SQLite datetime('now') should be translated in " + resource + ":\n" + translated);
+                assertFalse(upper.startsWith("CREATE INDEX") && upper.contains(" WHERE "),
+                        () -> "partial index WHERE clauses should be removed in " + resource + ":\n" + translated);
+            }
         }
     }
 
@@ -124,6 +151,13 @@ class MigrationScriptTest {
                 }
             }
             return false;
+        }
+    }
+
+    private int pragmaForeignKeys(Connection conn) throws SQLException {
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA foreign_keys")) {
+            return rs.next() ? rs.getInt(1) : 0;
         }
     }
 }

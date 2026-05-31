@@ -52,33 +52,38 @@ public class PendingNotificationRepository {
 
     /**
      * Fetch all pending notifications for a player, ordered oldest-first.
-     * Returns plain-text messages only.
+     * Rows are deleted only after the listener confirms delivery, so a player
+     * disconnecting during the join delay does not lose queued messages.
      */
     public List<PendingNotification> fetchAndClear(UUID playerUuid) {
         try {
             Jdbi jdbi = databaseManager.getJdbi();
-            return jdbi.withHandle(handle -> {
-                List<PendingNotification> rows = handle.createQuery(
-                                "SELECT id, message, category, created_at FROM at_pending_notifications " +
-                                        "WHERE player_uuid = ? ORDER BY created_at ASC")
-                        .bind(0, playerUuid.toString())
-                        .map((rs, ctx) -> new PendingNotification(
-                                rs.getInt("id"),
-                                rs.getString("message"),
-                                rs.getString("category")
-                        ))
-                        .list();
-
-                if (!rows.isEmpty()) {
-                    handle.execute("DELETE FROM at_pending_notifications WHERE player_uuid = ?",
-                            playerUuid.toString());
-                }
-                return rows;
-            });
+            return jdbi.withHandle(handle ->
+                    handle.createQuery(
+                                 "SELECT id, message, category, created_at FROM at_pending_notifications " +
+                                         "WHERE player_uuid = ? ORDER BY created_at ASC")
+                            .bind(0, playerUuid.toString())
+                            .map((rs, ctx) -> new PendingNotification(
+                                    rs.getInt("id"),
+                                    rs.getString("message"),
+                                    rs.getString("category")
+                            ))
+                            .list());
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Failed to fetch pending notifications for " + playerUuid, e);
             return List.of();
         }
+    }
+
+    public void delete(int id) {
+        databaseManager.runAsync(() -> {
+            Jdbi jdbi = databaseManager.getJdbi();
+            jdbi.useHandle(handle ->
+                    handle.execute("DELETE FROM at_pending_notifications WHERE id = ?", id));
+        }).exceptionally(ex -> {
+            LOGGER.log(Level.WARNING, "Failed to delete delivered pending notification " + id, ex);
+            return null;
+        });
     }
 
     /** Simple DTO for a pending notification row. */

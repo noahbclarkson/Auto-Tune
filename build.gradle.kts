@@ -15,6 +15,10 @@ plugins {
 group = property("group") as String
 version = property("version") as String
 
+val skipWebBuild = providers.gradleProperty("skipWeb")
+    .map { it.toBoolean() }
+    .orElse(false)
+
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
@@ -101,6 +105,9 @@ tasks {
         val isWindows = System.getProperty("os.name").lowercase().contains("windows")
         val npm = if (isWindows) "npm.cmd" else "npm"
         val lockFile = file("web/package-lock.json")
+        onlyIf { !skipWebBuild.get() }
+        inputs.files(file("web/package.json"), lockFile)
+        outputs.dir(file("web/node_modules"))
 
         commandLine(
             npm,
@@ -114,6 +121,17 @@ tasks {
         dependsOn(installWebDeps)
         workingDir = file("web")
         val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+        onlyIf { !skipWebBuild.get() }
+        inputs.files(
+            file("web/package.json"),
+            file("web/package-lock.json"),
+            file("web/next.config.js"),
+            file("web/postcss.config.js"),
+            file("web/tailwind.config.js"),
+            file("web/tsconfig.json")
+        )
+        inputs.dir(file("web/src"))
+        outputs.dir(file("web/out"))
         commandLine(if (isWindows) "npm.cmd" else "npm", "run", "export")
     }
 
@@ -127,6 +145,14 @@ tasks {
         relocate("org.eclipse.jetty", "com.noahblclarkson.autotune.lib.jetty")
         relocate("com.github.stefvanschie.inventoryframework", "com.noahblclarkson.autotune.lib.inventoryframework")
         relocate("com.google.inject", "com.noahblclarkson.autotune.lib.guice")
+        relocate("com.google.gson", "com.noahblclarkson.autotune.lib.gson")
+        relocate("org.sqlite", "com.noahblclarkson.autotune.lib.sqlite") {
+            skipStringConstants = false
+        }
+        relocate("org.mariadb.jdbc", "com.noahblclarkson.autotune.lib.mariadb") {
+            skipStringConstants = false
+        }
+        mergeServiceFiles()
 
         // Exclude Guice from minimization — its Multi-Release JAR structure
         // conflicts with Paper's classloader on 1.21.4 (zip file closed errors).
@@ -140,9 +166,11 @@ tasks {
     }
 
     processResources {
-        dependsOn(buildWeb)
-        from(file("web/out")) {
-            into("web")
+        if (!skipWebBuild.get()) {
+            dependsOn(buildWeb)
+            from(file("web/out")) {
+                into("web")
+            }
         }
 
         val props = mapOf(

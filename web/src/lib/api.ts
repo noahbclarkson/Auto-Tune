@@ -1,12 +1,30 @@
 export function getApiBase() {
   if (typeof window === 'undefined') return '';
-  const port = window.location.port;
-  if (port === '8989') return '';
-  return `${window.location.protocol}//${window.location.hostname}:8989`;
+  const runtimeBase = window.__AUTO_TUNE_API_BASE__?.trim();
+  if (runtimeBase) return runtimeBase.replace(/\/$/, '');
+  const envBase = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (envBase) return envBase.replace(/\/$/, '');
+  return '';
+}
+
+declare global {
+  interface Window {
+    __AUTO_TUNE_API_BASE__?: string;
+    __AUTO_TUNE_API_TOKEN__?: string;
+  }
+}
+
+function apiHeaders(extra?: HeadersInit): HeadersInit {
+  const headers: Record<string, string> = {};
+  if (typeof window !== 'undefined') {
+    const token = window.__AUTO_TUNE_API_TOKEN__ || localStorage.getItem('autotune:api-token');
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+  return { ...headers, ...(extra ?? {}) };
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: apiHeaders() });
   if (!res.ok) throw new Error(`API returned ${res.status}`);
   return res.json();
 }
@@ -14,7 +32,7 @@ async function fetchJson<T>(url: string): Promise<T> {
 async function postJson<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: apiHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -25,7 +43,7 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
 }
 
 async function patchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { method: 'PATCH' });
+  const res = await fetch(url, { method: 'PATCH', headers: apiHeaders() });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
     throw new Error(err.error ?? `API returned ${res.status}`);
@@ -34,7 +52,7 @@ async function patchJson<T>(url: string): Promise<T> {
 }
 
 async function deleteJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { method: 'DELETE' });
+  const res = await fetch(url, { method: 'DELETE', headers: apiHeaders() });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
     throw new Error(err.error ?? `API returned ${res.status}`);
@@ -582,7 +600,7 @@ export const api = {
       ),
     unwatch: (base: string, orderId: string, playerName: string) => {
       const url = `${base}/api/auction/orders/${encodeURIComponent(orderId)}/watch?playerName=${encodeURIComponent(playerName)}`;
-      return fetch(url, { method: 'DELETE' }).then((r) => {
+      return fetch(url, { method: 'DELETE', headers: apiHeaders() }).then((r) => {
         if (!r.ok) throw new Error(`API returned ${r.status}`);
         return undefined as void;
       });

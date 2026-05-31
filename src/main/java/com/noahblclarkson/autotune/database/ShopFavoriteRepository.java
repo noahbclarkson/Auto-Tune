@@ -10,9 +10,11 @@ import java.util.UUID;
 public class ShopFavoriteRepository {
 
     private final Jdbi jdbi;
+    private final boolean sqlite;
 
     public ShopFavoriteRepository(DatabaseManager databaseManager) {
         this.jdbi = databaseManager.getJdbi();
+        this.sqlite = databaseManager.isSqlite();
     }
 
     public Set<Integer> getFavoriteItemIds(UUID playerUuid) {
@@ -40,11 +42,17 @@ public class ShopFavoriteRepository {
     }
 
     public void addFavorite(UUID playerUuid, int itemId) {
-        jdbi.useHandle(handle ->
-                handle.createUpdate("""
+        String sql = sqlite
+                ? """
                                 INSERT OR IGNORE INTO at_shop_favorites (player_uuid, item_id)
                                 VALUES (:playerUuid, :itemId)
-                                """)
+                                """
+                : """
+                                INSERT IGNORE INTO at_shop_favorites (player_uuid, item_id)
+                                VALUES (:playerUuid, :itemId)
+                                """;
+        jdbi.useHandle(handle ->
+                handle.createUpdate(sql)
                         .bind("playerUuid", playerUuid.toString())
                         .bind("itemId", itemId)
                         .execute());

@@ -24,6 +24,20 @@ export interface TruePricesResponse {
   last_updated: string;
 }
 
+interface ApiTruePrice {
+  item: string;
+  price: number;
+  confidence: number;
+  servers: number;
+  anchored: boolean;
+  last_updated: string | null;
+}
+
+interface ApiTruePricesResponse {
+  prices: ApiTruePrice[];
+  last_updated: string | null;
+}
+
 export interface PriceHistoryPoint {
   price: number;
   server_count: number;
@@ -68,6 +82,18 @@ export interface ExchangeRateHistoryResponse {
   server_id: string;
   server_name: string;
   history: ExchangeRateHistoryPoint[];
+}
+
+interface ApiExchangeRateHistoryPoint {
+  rate: number;
+  player_count: number;
+  snapshot_at: string;
+}
+
+interface ApiExchangeRateHistoryResponse {
+  server_id: string;
+  server_name?: string;
+  history: ApiExchangeRateHistoryPoint[];
 }
 
 export interface SubmitServerPricesRequest {
@@ -117,7 +143,22 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<ApiResult
 }
 
 export async function fetchTruePrices(): Promise<ApiResult<TruePricesResponse>> {
-  return fetchJson<TruePricesResponse>("/prices/true");
+  const result = await fetchJson<ApiTruePricesResponse>("/prices/true");
+  if (!result.data) return { data: null, error: result.error };
+  return {
+    data: {
+      prices: result.data.prices.map((price) => ({
+        item: price.item,
+        price: price.price,
+        confidence: price.confidence,
+        servers: price.servers,
+        anchored: price.anchored,
+        lastUpdated: price.last_updated,
+      })),
+      last_updated: result.data.last_updated ?? "",
+    },
+    error: null,
+  };
 }
 
 export async function fetchPriceHistory(item: string): Promise<ApiResult<PriceHistoryResponse>> {
@@ -134,7 +175,20 @@ export async function fetchExchangeRates(): Promise<ApiResult<ExchangeRatesRespo
 }
 
 export async function fetchExchangeRateHistory(serverId: string): Promise<ApiResult<ExchangeRateHistoryResponse>> {
-  return fetchJson<ExchangeRateHistoryResponse>(`/servers/${serverId}/exchange-rate-history`);
+  const result = await fetchJson<ApiExchangeRateHistoryResponse>(`/servers/${serverId}/exchange-rate-history`);
+  if (!result.data) return { data: null, error: result.error };
+  return {
+    data: {
+      server_id: result.data.server_id,
+      server_name: result.data.server_name ?? result.data.server_id,
+      history: result.data.history.map((point) => ({
+        rate: point.rate,
+        server_count: point.player_count,
+        timestamp: point.snapshot_at,
+      })),
+    },
+    error: null,
+  };
 }
 
 export async function registerServer(

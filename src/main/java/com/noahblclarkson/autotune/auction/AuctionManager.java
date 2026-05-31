@@ -7,6 +7,7 @@ import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
 import com.noahblclarkson.autotune.database.AuctionPendingReturnRepository;
 import com.noahblclarkson.autotune.database.AuctionRepository;
+import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.PendingNotificationRepository;
 import com.noahblclarkson.autotune.database.PlayerRepository;
 import com.noahblclarkson.autotune.database.WatchedAuctionRepository;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -52,6 +54,7 @@ public class AuctionManager {
     private final AutoTune plugin;
     private final Economy economy;
     private final ConfigManager configManager;
+    private final DatabaseManager databaseManager;
     private final AuctionRepository auctionRepo;
     private final PlayerRepository playerRepo;
     private final AuctionMatchingEngine matchingEngine;
@@ -59,7 +62,7 @@ public class AuctionManager {
     private final WatchedAuctionRepository watchedAuctionRepo;
     private final PendingNotificationRepository pendingNotificationRepo;
     private final AuctionPendingReturnRepository pendingReturnRepo;
-    private final ConcurrentHashMap<UUID, Object> playerLocks = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Object> bookLocks = new ConcurrentHashMap<>();
     private final int defaultDurationHours;
 
     @Inject
@@ -67,6 +70,7 @@ public class AuctionManager {
             AutoTune plugin,
             Economy economy,
             ConfigManager configManager,
+            DatabaseManager databaseManager,
             AuctionRepository auctionRepo,
             PlayerRepository playerRepo,
             TreasuryService treasuryService,
@@ -78,6 +82,7 @@ public class AuctionManager {
         this.plugin = plugin;
         this.economy = economy;
         this.configManager = configManager;
+        this.databaseManager = databaseManager;
         this.auctionRepo = auctionRepo;
         this.playerRepo = playerRepo;
         this.matchingEngine = new AuctionMatchingEngine();
@@ -95,10 +100,13 @@ public class AuctionManager {
      */
     public CompletableFuture<AuctionResult> placeSellOrderAsync(
             @NotNull Player player,
-            @NotNull Material material,
+            @NotNull ItemStack listedItem,
             int quantity,
             @NotNull BigDecimal pricePerUnit
     ) {
+        Material material = listedItem.getType();
+        ItemStack orderItem = listedItem.clone();
+        orderItem.setAmount(quantity);
         // Snapshot online player UUIDs on the calling thread (main thread) so
         // the async block can safely filter buy orders without cross-thread
         // Bukkit API calls.
@@ -118,12 +126,13 @@ public class AuctionManager {
             }
 
             UUID playerId = player.getUniqueId();
-            Object lock = playerLocks.computeIfAbsent(playerId, k -> new Object());
+            Object lock = bookLocks.computeIfAbsent(material.name(), k -> new Object());
             synchronized (lock) {
                 // Create the order
                 AuctionOrder order = AuctionOrder.builder()
                         .playerUuid(playerId)
                         .material(material.name())
+                        .itemData(ItemSerializer.serializeItemStack(orderItem))
                         .price(pricePerUnit)
                         .originalQuantity(quantity)
                         .remainingQuantity(quantity)
@@ -133,8 +142,13 @@ public class AuctionManager {
                         .expiresAt(Instant.now().plus(defaultDurationHours, ChronoUnit.HOURS))
                         .build();
 
+                // Persist the taker order before matching so every fill references
+                // real order IDs under both SQLite foreign keys and MariaDB.
+                auctionRepo.insert(order);
+
+                try {
                 // Load existing orders for matching.
-                // Filter out BUY orders from offline players — items cannot be
+                // Filter out BUY orders from offline players - items cannot be
                 // delivered to offline inventories, so those orders must wait
                 // until their owner is online to participate in matching.
                 List<AuctionOrder> existingOrders = auctionRepo.findActiveByMaterial(material.name())
@@ -158,9 +172,9 @@ public class AuctionManager {
                 }
 
                 if (remainingUnfilled > 0) {
-                    // Some quantity wasn't matched — persist the open order
+                    // Some quantity wasn't matched - persist the open order
                     AuctionOrder openOrder = order.withRemainingQuantity(remainingUnfilled);
-                    auctionRepo.insert(openOrder);
+                    auctionRepo.update(openOrder);
                 }
 
                 // Record trade in player stats
@@ -178,8 +192,19 @@ public class AuctionManager {
                         result.matchedOrder(),
                         fills
                 );
+                } catch (RuntimeException e) {
+                    AuctionOrder latest = auctionRepo.findById(order.id()).orElse(order);
+                    if (latest.remainingQuantity() > 0) {
+                        returnOrderItems(player, latest, AuctionPendingReturn.Reason.EXPIRED_ORDER);
+                    }
+                    auctionRepo.update(latest.withStatusCancelled());
+                    plugin.getLogger().log(Level.WARNING,
+                            "Sell order failed after persistence; cancelled remainder for " + playerId, e);
+                    throw new ItemsAlreadyHandledException(
+                            "Sell order failed after persistence; remaining items were returned", e);
+                }
             }
-        });
+        }, databaseManager.getExecutor());
     }
 
     /**
@@ -213,9 +238,9 @@ public class AuctionManager {
             BigDecimal totalCost = pricePerUnit.multiply(BigDecimal.valueOf(quantity));
 
             UUID playerId = player.getUniqueId();
-            Object lock = playerLocks.computeIfAbsent(playerId, k -> new Object());
+            Object lock = bookLocks.computeIfAbsent(material.name(), k -> new Object());
             synchronized (lock) {
-                // ── Escrow withdrawal on main thread ───────────────────────────
+                // -- Escrow withdrawal on main thread -
                 // Vault Economy must run on Bukkit main thread. Use CountDownLatch
                 // to wait for completion before proceeding.
                 CountDownLatch escrowLatch = new CountDownLatch(1);
@@ -253,6 +278,7 @@ public class AuctionManager {
                     return AuctionResult.error("Insufficient funds. Need " + configManager.formatCurrency(totalCost));
                 }
 
+                AtomicReference<AuctionOrder> placedOrder = new AtomicReference<>();
                 try {
                     AuctionOrder order = AuctionOrder.builder()
                             .playerUuid(playerId)
@@ -265,9 +291,14 @@ public class AuctionManager {
                             .createdAt(Instant.now())
                             .expiresAt(Instant.now().plus(defaultDurationHours, ChronoUnit.HOURS))
                             .build();
+                    placedOrder.set(order);
+
+                    // Persist the taker buy order before matching so fills never
+                    // reference transient order IDs.
+                    auctionRepo.insert(order);
 
                     // Load existing orders for matching.
-                    // Filter out SELL orders from offline players — items cannot be
+                    // Filter out SELL orders from offline players - items cannot be
                     // retrieved from offline inventories, and they cannot be delisted
                     // mid-transaction once a match begins, so exclude them from matching
                     // until the seller is back online.
@@ -289,7 +320,7 @@ public class AuctionManager {
 
                     if (remainingUnfilled > 0) {
                         AuctionOrder openOrder = order.withRemainingQuantity(remainingUnfilled);
-                        auctionRepo.insert(openOrder);
+                        auctionRepo.update(openOrder);
                         // The full cost was withdrawn upfront; the remaining escrowed funds
                         // stay in escrow until this buy order is filled or cancelled.
                         // Cancellation (cancelOrderAsync) handles the refund.
@@ -306,13 +337,21 @@ public class AuctionManager {
 
                     return AuctionResult.success(filledMsg, result.matchedOrder(), fills);
                 } catch (Exception e) {
-                    // Matching or DB operation failed — refund the escrowed money on main thread.
+                    AuctionOrder placed = placedOrder.get();
+                    AuctionOrder latest = placed == null ? null : auctionRepo.findById(placed.id()).orElse(placed);
+                    BigDecimal refundAmount = latest == null
+                            ? totalCost
+                            : latest.price().multiply(BigDecimal.valueOf(latest.remainingQuantity()));
+                    if (latest != null && latest.isActive()) {
+                        auctionRepo.update(latest.withStatusCancelled());
+                    }
+                    // Matching or DB operation failed; refund only escrow that has not already filled.
                     // Use OfflinePlayer so the refund succeeds even if player disconnects
                     // before this task runs on the main thread.
                     CountDownLatch refundLatch = new CountDownLatch(1);
                     Bukkit.getScheduler().runTask(plugin, task -> {
                         economy.depositPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
-                                totalCost.doubleValue());
+                                refundAmount.doubleValue());
                         refundLatch.countDown();
                     });
                     try {
@@ -322,11 +361,11 @@ public class AuctionManager {
                     }
                     plugin.getLogger().log(Level.SEVERE,
                             "Buy order failed after escrow withdrawal for " + playerId
-                                    + ", refunded " + totalCost + ": " + e.getMessage(), e);
+                                    + ", refunded " + refundAmount + ": " + e.getMessage(), e);
                     return AuctionResult.error("Order failed (funds refunded): " + e.getMessage());
                 }
             }
-        });
+        }, databaseManager.getExecutor());
     }
 
     /**
@@ -335,7 +374,11 @@ public class AuctionManager {
     public CompletableFuture<AuctionResult> cancelOrderAsync(@NotNull Player player, @NotNull UUID orderId) {
         return CompletableFuture.supplyAsync(() -> {
             UUID playerId = player.getUniqueId();
-            Object lock = playerLocks.computeIfAbsent(playerId, k -> new Object());
+            Optional<AuctionOrder> firstRead = auctionRepo.findById(orderId);
+            if (firstRead.isEmpty()) {
+                return AuctionResult.error("Order not found");
+            }
+            Object lock = bookLocks.computeIfAbsent(firstRead.get().material(), k -> new Object());
             synchronized (lock) {
                 Optional<AuctionOrder> optOrder = auctionRepo.findById(orderId);
                 if (optOrder.isEmpty()) {
@@ -350,7 +393,7 @@ public class AuctionManager {
                     return AuctionResult.error("Order is not active");
                 }
 
-                // Refund escrowed funds for buy orders — must run on main thread (Vault Economy).
+                // Refund escrowed funds for buy orders - must run on main thread (Vault Economy).
                 // Use OfflinePlayer so the refund succeeds even if player disconnects
                 // before this task runs on the main thread.
                 if (order.side() == OrderSide.BUY) {
@@ -369,6 +412,8 @@ public class AuctionManager {
                         Thread.currentThread().interrupt();
                         return AuctionResult.error("Order cancellation interrupted");
                     }
+                } else {
+                    returnOrderItems(player, order, AuctionPendingReturn.Reason.EXPIRED_ORDER);
                 }
 
                 AuctionOrder cancelled = order.withStatusCancelled();
@@ -384,7 +429,7 @@ public class AuctionManager {
                         List.of()
                 );
             }
-        });
+        }, databaseManager.getExecutor());
     }
 
     public List<AuctionOrder> getActiveOrdersForMaterial(String material) {
@@ -423,12 +468,12 @@ public class AuctionManager {
      * Process an auction fill: credit seller (after auction tax), deliver items to buyer,
      * then record to DB.
      *
-     * Economy ops run FIRST on the Bukkit main thread — we wait for them to complete
+     * Economy ops run FIRST on the Bukkit main thread - we wait for them to complete
      * via CountDownLatch before writing to DB. If they fail, we throw and the caller
      * refunds the buyer's escrowed money without any DB record.
      *
      * The CountDownLatch approach is safe here because:
-     *   - The async thread (ForkJoinPool) blocks on latch.await() — it does NOT hold
+     *   - The async thread blocks on latch.await() - it does NOT hold
      *     any lock that the main thread needs, so there is no deadlock risk.
      *   - The main thread runs economy ops (depositPlayer, addItem) which are fast and
      *     do NOT need the ForkJoinPool, so the blocking completes promptly.
@@ -437,11 +482,15 @@ public class AuctionManager {
      *                         The caller is responsible for catching and refunding.
      */
     private void processFill(AuctionFill fill) {
-        // Fetch both orders first — needed for economy ops and notifications.
+        // Fetch both orders first - needed for economy ops and notifications.
         Optional<AuctionOrder> sellOpt = auctionRepo.findById(fill.sellOrderId());
         Optional<AuctionOrder> buyOpt = auctionRepo.findById(fill.buyOrderId());
+        if (sellOpt.isEmpty() || buyOpt.isEmpty()) {
+            throw new IllegalStateException("Auction fill references missing order(s): buy="
+                    + fill.buyOrderId() + ", sell=" + fill.sellOrderId());
+        }
 
-        // ── DB write FIRST (source of truth) ─────────────────────────────────
+        // -- DB write FIRST (source of truth) -
         // Record fill as PENDING before running any economy operations.
         // This prevents phantom transactions: if economy ops fail, we can
         // compensate rather than having money created from nothing.
@@ -452,19 +501,35 @@ public class AuctionManager {
         // Array reference is effectively final; contents are mutated by lambdas.
         Exception[] economyError = new Exception[1];
 
-        // ── Seller credit on main thread ──────────────────────────────────────
+        // -- Seller credit on main thread -
         final CountDownLatch sellerLatch = new CountDownLatch(1);
         if (sellOpt.isPresent()) {
             AuctionOrder sell = sellOpt.get();
             BigDecimal grossProceeds = fill.price().multiply(BigDecimal.valueOf(fill.quantity()));
-            BigDecimal taxAmount = treasuryService.collectAuctionTax(grossProceeds);
+            BigDecimal taxAmount = treasuryService.calculateAuctionTax(grossProceeds);
             BigDecimal netProceeds = grossProceeds.subtract(taxAmount);
 
             Bukkit.getScheduler().runTask(plugin, task -> {
                 try {
                     // Use OfflinePlayer for deposit so sellers are credited even when offline.
                     org.bukkit.OfflinePlayer offlineSeller = Bukkit.getOfflinePlayer(sell.playerUuid());
-                    economy.depositPlayer(offlineSeller, netProceeds.doubleValue());
+                    EconomyResponse depositResponse = economy.depositPlayer(offlineSeller, netProceeds.doubleValue());
+                    if (!depositResponse.transactionSuccess()) {
+                        throw new IllegalStateException("Seller credit failed: " + depositResponse.errorMessage);
+                    }
+                    if (buyOpt.isPresent() && buyOpt.get().price().compareTo(fill.price()) > 0) {
+                        BigDecimal improvementRefund = buyOpt.get().price()
+                                .subtract(fill.price())
+                                .multiply(BigDecimal.valueOf(fill.quantity()));
+                        EconomyResponse refundResponse = economy.depositPlayer(
+                                Bukkit.getOfflinePlayer(buyOpt.get().playerUuid()),
+                                improvementRefund.doubleValue());
+                        if (!refundResponse.transactionSuccess()) {
+                            throw new IllegalStateException("Buyer price improvement refund failed: "
+                                    + refundResponse.errorMessage);
+                        }
+                    }
+                    treasuryService.collectTaxAmount(taxAmount);
 
                     // Notify seller if online; queue for offline delivery otherwise.
                     String itemName = sell.material().toLowerCase(java.util.Locale.ROOT)
@@ -505,28 +570,29 @@ public class AuctionManager {
                     + ": " + economyError[0].getMessage(), economyError[0]);
         }
 
-        // ── Buyer item delivery on main thread ────────────────────────────────
+        // -- Buyer item delivery on main thread -
         final CountDownLatch buyerLatch = new CountDownLatch(1);
         economyError[0] = null;
         if (buyOpt.isPresent()) {
             AuctionOrder buy = buyOpt.get();
-            String materialName = buy.material();
+            AuctionOrder sell = sellOpt.orElseThrow(() -> new IllegalStateException(
+                    "Missing sell order " + fill.sellOrderId()));
+            String materialName = sell.material();
             int qty = fill.quantity();
 
             Bukkit.getScheduler().runTask(plugin, task -> {
                 try {
                     Player buyer = Bukkit.getPlayer(buy.playerUuid());
                     if (buyer == null) {
-                        // Buyer offline — cannot deliver to offline inventory.
+                        // Buyer offline - cannot deliver to offline inventory.
                         // This should not happen because the matching engine filters
                         // buy orders from offline players, but guard against races.
                         economyError[0] = new RuntimeException(
                                 "Buyer " + buy.playerUuid() + " went offline before item delivery");
                         return;
                     }
-                    Material mat = Material.valueOf(materialName);
-                    ItemStack items = new ItemStack(mat, qty);
-                    // addItem returns overflow — save undelivered items so player can reclaim.
+                    ItemStack items = createOrderItemStack(sell, qty);
+                    // addItem returns overflow - save undelivered items so player can reclaim.
                     Map<Integer, ItemStack> overflow = buyer.getInventory().addItem(items);
                     if (!overflow.isEmpty()) {
                         saveOverflowReturns(buyer.getUniqueId(), fill.id(), materialName, overflow);
@@ -548,7 +614,7 @@ public class AuctionManager {
             throw new RuntimeException("Interrupted while waiting for buyer item delivery", e);
         }
         if (economyError[0] != null) {
-            // Mark FAILED. Buyer item delivery failed — seller has already been credited.
+            // Mark FAILED. Buyer item delivery failed - seller has already been credited.
             // The caller should use FAILED fill status to decide compensation:
             // the seller was paid (correct), but the buyer's items were not delivered.
             // Admin intervention required to reconcile the seller credit vs missing delivery.
@@ -562,7 +628,7 @@ public class AuctionManager {
                     + ": " + economyError[0].getMessage(), economyError[0]);
         }
 
-        // ── Economy ops succeeded — mark fill COMPLETED ───────────────────────
+        // -- Economy ops succeeded - mark fill COMPLETED -
         auctionRepo.updateFillStatus(fill.id(), AuctionFill.FillStatus.COMPLETED);
 
         // Update remaining quantities on both orders and send notifications
@@ -602,7 +668,7 @@ public class AuctionManager {
         itemName = itemName.substring(0, 1).toUpperCase(java.util.Locale.ROOT)
                 + itemName.substring(1);
         String msg = String.format(
-                "⚡ Your watched %s order for %d× %s fully filled (final fill: %d× at %s/unit)",
+                "Your watched %s order for %dx %s fully filled (final fill: %dx at %s/unit)",
                 order.side().name().toLowerCase(),
                 order.originalQuantity(),
                 itemName,
@@ -620,7 +686,7 @@ public class AuctionManager {
                         pendingNotificationRepo.insert(watcherUuid, msg, "AUCTION_FILL");
                     }
                 } catch (IllegalArgumentException ignored) {
-                    // Invalid UUID string — skip
+                    // Invalid UUID string - skip
                 }
             }
         });
@@ -636,7 +702,7 @@ public class AuctionManager {
         itemName = itemName.substring(0, 1).toUpperCase(java.util.Locale.ROOT)
                 + itemName.substring(1);
         String msg = String.format(
-                "⚡ Your %s order for %d× %s has been fully filled",
+                "Your %s order for %dx %s has been fully filled",
                 order.side().name().toLowerCase(),
                 order.originalQuantity(),
                 itemName);
@@ -657,7 +723,7 @@ public class AuctionManager {
         itemName = itemName.substring(0, 1).toUpperCase(java.util.Locale.ROOT)
                 + itemName.substring(1);
         String msg = String.format(
-                "📦 Partial fill on your %s order: %d× %s filled at %s/unit (%d remaining)",
+                "Partial fill on your %s order: %dx %s filled at %s/unit (%d remaining)",
                 order.side().name().toLowerCase(),
                 fill.quantity(),
                 itemName,
@@ -679,158 +745,177 @@ public class AuctionManager {
     }
 
     /**
-     * Record an auction fill from the GUI path (direct fill without matching engine).
-     * Handles DB insert, quantity updates, seller Vault credit, and buyer item delivery.
-     * Returns a CompletableFuture so callers can await DB completion before applying
-     * their own economy/inventory effects (enables atomicity in the GUI layer).
-     *
-     * DB write FIRST: the fill is recorded as PENDING before any economy ops run.
-     * This prevents phantom transactions — if economy ops fail, the fill is marked
-     * FAILED and the caller (AuctionGui) issues compensating refund. If economy ops
-     * succeed, the fill is marked COMPLETED. The DB record is the source of truth.
-     *
-     * @param buyOrderId  The buy order ID (may be a player UUID in GUI direct-fill path)
-     * @param sellOrderId The sell order ID (may be a player UUID in GUI direct-fill path)
-     * @param quantity    Number of items in the fill
-     * @param execPrice   Execution price per unit
-     * @param material    Material name for the item being traded (used when order lookup fails)
+     * Fill an existing buy order by selling items from the player inventory.
+     * The method creates a real short-lived sell order so the fill table never
+     * stores player UUIDs in order-id columns.
+     */
+    public CompletableFuture<AuctionResult> fillBuyOrderAsync(
+            @NotNull Player seller,
+            @NotNull UUID buyOrderId,
+            int requestedQuantity
+    ) {
+        return CompletableFuture.supplyAsync(() -> {
+            AuctionOrder initialBuyOrder = auctionRepo.findById(buyOrderId)
+                    .orElse(null);
+            if (initialBuyOrder == null || !initialBuyOrder.isActive()
+                    || initialBuyOrder.side() != OrderSide.BUY) {
+                return AuctionResult.error("Buy order is no longer available");
+            }
+            Object lock = bookLocks.computeIfAbsent(initialBuyOrder.material(), k -> new Object());
+            synchronized (lock) {
+            AuctionOrder buyOrder = auctionRepo.findById(buyOrderId)
+                    .orElse(null);
+            if (buyOrder == null || !buyOrder.isActive() || buyOrder.side() != OrderSide.BUY) {
+                return AuctionResult.error("Buy order is no longer available");
+            }
+            if (buyOrder.playerUuid().equals(seller.getUniqueId())) {
+                return AuctionResult.error("You cannot fill your own order");
+            }
+
+            int fillQty = Math.min(Math.max(1, requestedQuantity), buyOrder.remainingQuantity());
+            Material material = Material.valueOf(buyOrder.material());
+            if (!takeItemsFromPlayer(seller, material, fillQty)) {
+                return AuctionResult.error("You do not have enough " + formatMaterialName(buyOrder.material()));
+            }
+
+            AuctionOrder sellOrder = AuctionOrder.builder()
+                    .playerUuid(seller.getUniqueId())
+                    .material(buyOrder.material())
+                    .price(buyOrder.price())
+                    .originalQuantity(fillQty)
+                    .remainingQuantity(fillQty)
+                    .side(OrderSide.SELL)
+                    .status(OrderStatus.OPEN)
+                    .createdAt(Instant.now())
+                    .expiresAt(Instant.now().plus(5, ChronoUnit.MINUTES))
+                    .build();
+            try {
+                auctionRepo.insert(sellOrder);
+                AuctionFill fill = AuctionFill.builder()
+                        .buyOrderId(buyOrder.id())
+                        .sellOrderId(sellOrder.id())
+                        .quantity(fillQty)
+                        .price(buyOrder.price())
+                        .filledAt(Instant.now())
+                        .build();
+                processFill(fill);
+                return AuctionResult.success("Sold " + fillQty + "x "
+                        + formatMaterialName(buyOrder.material()) + " for "
+                        + configManager.formatCurrency(buyOrder.price().multiply(BigDecimal.valueOf(fillQty))),
+                        sellOrder.withRemainingQuantity(0),
+                        List.of(fill));
+            } catch (RuntimeException e) {
+                auctionRepo.update(sellOrder.withStatusCancelled());
+                giveItemsToPlayer(seller, new ItemStack(material, fillQty), null,
+                        AuctionPendingReturn.Reason.INVENTORY_FULL);
+                throw e;
+            }
+            }
+        }, databaseManager.getExecutor());
+    }
+
+    /**
+     * Fill an existing sell order by buying its remaining items immediately.
+     * The method creates a real short-lived buy order so normal fill settlement
+     * and history code can be reused.
+     */
+    public CompletableFuture<AuctionResult> fillSellOrderAsync(
+            @NotNull Player buyer,
+            @NotNull UUID sellOrderId,
+            int requestedQuantity
+    ) {
+        return CompletableFuture.supplyAsync(() -> {
+            AuctionOrder initialSellOrder = auctionRepo.findById(sellOrderId)
+                    .orElse(null);
+            if (initialSellOrder == null || !initialSellOrder.isActive()
+                    || initialSellOrder.side() != OrderSide.SELL) {
+                return AuctionResult.error("Sell order is no longer available");
+            }
+            Object lock = bookLocks.computeIfAbsent(initialSellOrder.material(), k -> new Object());
+            synchronized (lock) {
+            AuctionOrder sellOrder = auctionRepo.findById(sellOrderId)
+                    .orElse(null);
+            if (sellOrder == null || !sellOrder.isActive() || sellOrder.side() != OrderSide.SELL) {
+                return AuctionResult.error("Sell order is no longer available");
+            }
+            if (sellOrder.playerUuid().equals(buyer.getUniqueId())) {
+                return AuctionResult.error("You cannot fill your own order");
+            }
+
+            int fillQty = Math.min(Math.max(1, requestedQuantity), sellOrder.remainingQuantity());
+            BigDecimal totalCost = sellOrder.price().multiply(BigDecimal.valueOf(fillQty));
+            if (!withdrawPlayer(buyer.getUniqueId(), totalCost)) {
+                return AuctionResult.error("Insufficient funds. Need " + configManager.formatCurrency(totalCost));
+            }
+
+            AuctionOrder buyOrder = AuctionOrder.builder()
+                    .playerUuid(buyer.getUniqueId())
+                    .material(sellOrder.material())
+                    .price(sellOrder.price())
+                    .originalQuantity(fillQty)
+                    .remainingQuantity(fillQty)
+                    .side(OrderSide.BUY)
+                    .status(OrderStatus.OPEN)
+                    .createdAt(Instant.now())
+                    .expiresAt(Instant.now().plus(5, ChronoUnit.MINUTES))
+                    .build();
+            try {
+                auctionRepo.insert(buyOrder);
+                AuctionFill fill = AuctionFill.builder()
+                        .buyOrderId(buyOrder.id())
+                        .sellOrderId(sellOrder.id())
+                        .quantity(fillQty)
+                        .price(sellOrder.price())
+                        .filledAt(Instant.now())
+                        .build();
+                processFill(fill);
+                return AuctionResult.success("Bought " + fillQty + "x "
+                        + formatMaterialName(sellOrder.material()) + " for "
+                        + configManager.formatCurrency(totalCost),
+                        buyOrder.withRemainingQuantity(0),
+                        List.of(fill));
+            } catch (RuntimeException e) {
+                auctionRepo.update(buyOrder.withStatusCancelled());
+                depositPlayer(buyer.getUniqueId(), totalCost, "auction purchase refund");
+                throw e;
+            }
+            }
+        }, databaseManager.getExecutor());
+    }
+
+    /**
+     * Compatibility wrapper for direct fill recording. Both IDs must be real
+     * auction order IDs; GUI/player-UUID fill paths now use fillBuyOrderAsync or
+     * fillSellOrderAsync so settlement remains manager-owned and FK-safe.
      */
     public CompletableFuture<Void> recordFillAsync(@NotNull UUID buyOrderId, @NotNull UUID sellOrderId,
                                 int quantity, @NotNull BigDecimal execPrice,
                                 @NotNull String material) {
-        UUID fillId = UUID.randomUUID();
-        Instant now = Instant.now();
-
-        // Look up orders synchronously on the ForkJoinPool thread — no main-thread
-        // dependency here, just DB reads which are safe to parallelize.
-        Optional<AuctionOrder> buyOpt = auctionRepo.findById(buyOrderId);
-        Optional<AuctionOrder> sellOpt = auctionRepo.findById(sellOrderId);
-
-        BigDecimal grossProceeds = execPrice.multiply(BigDecimal.valueOf(quantity));
-        BigDecimal taxAmount = treasuryService.collectAuctionTax(grossProceeds);
-        BigDecimal netProceeds = grossProceeds.subtract(taxAmount);
-        UUID sellerUuid = sellOpt.map(AuctionOrder::playerUuid).orElse(sellOrderId);
-        UUID buyerUuid = buyOpt.map(AuctionOrder::playerUuid).orElse(buyOrderId);
-
-        // ── DB write FIRST — then economy ops ────────────────────────────────────
-        // Record fill as PENDING in DB before running any economy operations.
-        // If economy ops (seller credit, buyer item delivery) fail, we can mark the
-        // fill FAILED and the caller issues compensating refund. This is better
-        // than crediting the seller and then failing to record the fill — which
-        // would create phantom money.
-        AuctionFill fill = AuctionFill.builder()
-                .id(fillId)
-                .buyOrderId(buyOrderId)
-                .sellOrderId(sellOrderId)
-                .quantity(quantity)
-                .price(execPrice)
-                .filledAt(now)
-                .status(AuctionFill.FillStatus.PENDING)
-                .build();
-
-        // DB write FIRST: record as PENDING before economy ops.
-        // This is the source-of-truth record. If economy ops fail, we mark FAILED
-        // and the caller issues compensating refund — preventing phantom money.
-        auctionRepo.insertFill(fill);
-
-        CountDownLatch economyLatch = new CountDownLatch(1);
-        AtomicReference<Exception> economyError = new AtomicReference<>();
-
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            try {
-                // Credit seller (after auction tax deduction).
-                // Use OfflinePlayer so sellers are credited even when not online.
-                org.bukkit.OfflinePlayer seller = Bukkit.getOfflinePlayer(sellerUuid);
-                economy.depositPlayer(seller, netProceeds.doubleValue());
-
-                // Give buyer their items. Any overflow is persisted for /auction reclaim.
-                Player buyer = Bukkit.getPlayer(buyerUuid);
-                if (buyer != null) {
-                    Material mat = Material.valueOf(material);
-                    ItemStack items = new ItemStack(mat, quantity);
-                    Map<Integer, ItemStack> overflow = buyer.getInventory().addItem(items);
-                    if (!overflow.isEmpty()) {
-                        saveOverflowReturns(buyerUuid, fillId, material, overflow);
-                    }
-                } else {
-                    // Buyer went offline between GUI click and fill. Save the items
-                    // instead of just logging — otherwise the fill is paid but undelivered.
-                    plugin.getLogger().warning(
-                            "[Auto-Tune] Buyer " + buyerUuid + " offline during fill "
-                                    + fillId + " — " + quantity + "× " + material
-                                    + " not delivered. Saved for /auction reclaim.");
-                    AuctionPendingReturn offlineReturn = AuctionPendingReturn.builder()
-                            .playerUuid(buyerUuid)
-                            .fillId(fillId)
-                            .material(material)
-                            .quantity(quantity)
-                            .reason(AuctionPendingReturn.Reason.OFFLINE_BUYER)
-                            .build();
-                    pendingReturnRepo.insert(offlineReturn);
-                    pendingNotificationRepo.insert(buyerUuid,
-                            "\u26a0 You were offline when your buy order was filled: "
-                                    + quantity + "\u00d7 " + material
-                                    + ". Use /auction reclaim to retrieve your items.",
-                            "AUCTION_FILL");
-                }
-            } catch (Exception e) {
-                economyError.set(e);
-            } finally {
-                economyLatch.countDown();
+        return CompletableFuture.runAsync(() -> {
+            AuctionOrder buy = auctionRepo.findById(buyOrderId)
+                    .orElseThrow(() -> new IllegalArgumentException("Buy order not found: " + buyOrderId));
+            AuctionOrder sell = auctionRepo.findById(sellOrderId)
+                    .orElseThrow(() -> new IllegalArgumentException("Sell order not found: " + sellOrderId));
+            if (buy.side() != OrderSide.BUY || sell.side() != OrderSide.SELL) {
+                throw new IllegalArgumentException("Fill order sides are invalid");
             }
-        });
-
-        try {
-            if (!economyLatch.await(10, TimeUnit.SECONDS)) {
-                throw new RuntimeException("Timed out waiting for auction economy ops for fill " + fillId);
+            if (!buy.material().equalsIgnoreCase(sell.material())
+                    || !buy.material().equalsIgnoreCase(material)) {
+                throw new IllegalArgumentException("Fill material does not match both orders");
             }
-            if (economyError.get() != null) {
-                throw new RuntimeException("Auction economy op failed for fill " + fillId, economyError.get());
+            if (quantity <= 0 || quantity > buy.remainingQuantity() || quantity > sell.remainingQuantity()) {
+                throw new IllegalArgumentException("Invalid fill quantity: " + quantity);
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while processing auction fill " + fillId, e);
-        }
-
-        // DB write already done as PENDING before economy ops (see above).
-        // Economy ops succeeded. Now mark fill COMPLETED.
-        auctionRepo.updateFillStatus(fillId, AuctionFill.FillStatus.COMPLETED);
-
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                buyOpt.ifPresent(buy -> {
-                    int newRemaining = Math.max(0, buy.remainingQuantity() - quantity);
-                    auctionRepo.update(buy.withRemainingQuantity(newRemaining));
-                    if (newRemaining == 0) {
-                        notifyWatchersOfFill(buy, fill);
-                        notifyOwnerOfFullFill(buy);
-                    } else {
-                        notifyOwnerOfPartialFill(buy, fill, newRemaining);
-                    }
-                });
-
-                sellOpt.ifPresent(sell -> {
-                    int newRemaining = Math.max(0, sell.remainingQuantity() - quantity);
-                    auctionRepo.update(sell.withRemainingQuantity(newRemaining));
-                    if (newRemaining == 0) {
-                        notifyWatchersOfFill(sell, fill);
-                        notifyOwnerOfFullFill(sell);
-                    } else {
-                        notifyOwnerOfPartialFill(sell, fill, newRemaining);
-                    }
-                });
-
-                return null;
-            } catch (Exception e) {
-                // Money + items already delivered; DB write failed — log for admin review.
-                plugin.getLogger().log(Level.SEVERE,
-                        "[Auto-Tune] DB write failed after auction fill " + fillId
-                                + " — money/items delivered but not recorded. Manual review needed.", e);
-                return null;  // Don't propagate: player already has their stuff
-            }
-        });
+            AuctionFill fill = AuctionFill.builder()
+                    .buyOrderId(buyOrderId)
+                    .sellOrderId(sellOrderId)
+                    .quantity(quantity)
+                    .price(execPrice)
+                    .filledAt(Instant.now())
+                    .build();
+            processFill(fill);
+        }, databaseManager.getExecutor());
     }
-
     /**
      * Update order's remaining quantity. Called from GUI path where matching
      * engine is not involved (GUI directly fills an existing order).
@@ -868,7 +953,7 @@ public class AuctionManager {
         int count = 0;
         for (AuctionOrder order : expired) {
             try {
-                expireOrder(order);
+                expireOrderSafe(order);
                 count++;
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
@@ -884,14 +969,14 @@ public class AuctionManager {
      *
      * Called when a player runs /auction reclaim.
      *
-     * @return the number of items returned (not orders — may be multiple items per order)
+     * @return the number of items returned (not orders - may be multiple items per order)
      */
     public int reclaimExpiredOrders(Player player) {
         List<AuctionOrder> expired = auctionRepo.findExpiredSellOrdersByPlayer(player.getUniqueId());
         int itemsReturned = 0;
         for (AuctionOrder order : expired) {
             try {
-                int reclaimed = reclaimSingleOrder(player, order);
+                int reclaimed = reclaimSingleOrderSafe(player, order);
                 itemsReturned += reclaimed;
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
@@ -901,7 +986,7 @@ public class AuctionManager {
 
         for (AuctionPendingReturn pending : pendingReturnRepo.findUnreturnedForPlayer(player.getUniqueId())) {
             try {
-                int reclaimed = reclaimPendingReturn(player, pending);
+                int reclaimed = reclaimPendingReturnSafe(player, pending);
                 itemsReturned += reclaimed;
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING,
@@ -909,6 +994,69 @@ public class AuctionManager {
             }
         }
         return itemsReturned;
+    }
+
+    private int reclaimSingleOrderSafe(Player player, AuctionOrder order) {
+        try {
+            int returned = callOnMain(() -> {
+                ItemStack stack = createOrderItemStack(order, order.remainingQuantity());
+                Map<Integer, ItemStack> overflow = player.getInventory().addItem(stack);
+                int overflowCount = overflow.values().stream().mapToInt(ItemStack::getAmount).sum();
+                int returnedCount = Math.max(0, order.remainingQuantity() - overflowCount);
+                if (!overflow.isEmpty()) {
+                    saveOverflowReturns(player.getUniqueId(), null, order.material(), overflow);
+                }
+                player.sendMessage(net.kyori.adventure.text.Component.text(
+                        "Reclaimed " + returnedCount + "x " + formatMaterialName(order.material())
+                                + " from expired sell order.",
+                        net.kyori.adventure.text.format.NamedTextColor.GREEN));
+                return returnedCount;
+            }, "reclaim expired auction order");
+            auctionRepo.update(order.withStatusReclaimed());
+            return returned;
+        } catch (RuntimeException e) {
+            plugin.getLogger().log(Level.WARNING, "Error reclaiming order " + order.id(), e);
+            return 0;
+        }
+    }
+
+    private int reclaimPendingReturnSafe(Player player, AuctionPendingReturn pending) {
+        try {
+            return callOnMain(() -> {
+                ItemStack stack = pending.itemData() != null
+                        ? ItemSerializer.deserializeItemStack(pending.itemData())
+                        : new ItemStack(Material.valueOf(pending.material()), pending.quantity());
+                stack.setAmount(pending.quantity());
+
+                Map<Integer, ItemStack> overflow = player.getInventory().addItem(stack);
+                int overflowCount = overflow.values().stream().mapToInt(ItemStack::getAmount).sum();
+                int returned = Math.max(0, pending.quantity() - overflowCount);
+
+                if (overflow.isEmpty()) {
+                    pendingReturnRepo.markReturned(pending.id());
+                } else {
+                    ItemStack remaining = overflow.values().iterator().next().clone();
+                    remaining.setAmount(overflowCount);
+                    pendingReturnRepo.updateUnreturnedPayload(
+                            pending.id(), overflowCount, ItemSerializer.serializeItemStack(remaining));
+                }
+
+                if (returned > 0) {
+                    player.sendMessage(net.kyori.adventure.text.Component.text(
+                            "Reclaimed " + returned + "x " + formatMaterialName(pending.material())
+                                    + " from pending auction delivery.",
+                            net.kyori.adventure.text.format.NamedTextColor.GREEN));
+                } else {
+                    player.sendMessage(net.kyori.adventure.text.Component.text(
+                            "No inventory space for pending auction delivery. Free space and run /auction reclaim again.",
+                            net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+                }
+                return returned;
+            }, "reclaim pending auction return");
+        } catch (RuntimeException e) {
+            plugin.getLogger().log(Level.WARNING, "Error reclaiming pending return " + pending.id(), e);
+            return 0;
+        }
     }
 
     /**
@@ -933,11 +1081,11 @@ public class AuctionManager {
                 }
 
                 player.sendMessage(net.kyori.adventure.text.Component.text(
-                        "✓ Reclaimed " + returned + "× " + formatMaterialName(order.material())
+                        "Reclaimed " + returned + "x " + formatMaterialName(order.material())
                                 + " from expired sell order.",
                         net.kyori.adventure.text.format.NamedTextColor.GREEN));
 
-                // Update DB on main thread too — we already have the latch pattern here
+                // Update DB on main thread too - this legacy path already uses the latch pattern.
                 auctionRepo.update(order.withStatusReclaimed());
             } catch (Exception e) {
                 error.set(e);
@@ -995,12 +1143,12 @@ public class AuctionManager {
 
                 if (returned > 0) {
                     player.sendMessage(net.kyori.adventure.text.Component.text(
-                            "✓ Reclaimed " + returned + "× " + formatMaterialName(pending.material())
+                            "Reclaimed " + returned + "x " + formatMaterialName(pending.material())
                                     + " from pending auction delivery.",
                             net.kyori.adventure.text.format.NamedTextColor.GREEN));
                 } else {
                     player.sendMessage(net.kyori.adventure.text.Component.text(
-                            "⚠ No inventory space for pending auction delivery. Free space and run /auction reclaim again.",
+                            "No inventory space for pending auction delivery. Free space and run /auction reclaim again.",
                             net.kyori.adventure.text.format.NamedTextColor.YELLOW));
                 }
             } catch (Exception e) {
@@ -1027,6 +1175,63 @@ public class AuctionManager {
         return itemsRef.get();
     }
 
+    private void expireOrderSafe(AuctionOrder order) {
+        try {
+            AuctionOrder updatedOrder = callOnMain(() -> {
+                if (order.side() == OrderSide.BUY) {
+                    BigDecimal refund = order.price()
+                            .multiply(BigDecimal.valueOf(order.remainingQuantity()));
+                    EconomyResponse response = economy.depositPlayer(
+                            Bukkit.getOfflinePlayer(order.playerUuid()),
+                            refund.doubleValue());
+                    if (!response.transactionSuccess()) {
+                        throw new IllegalStateException("Auction escrow refund failed: " + response.errorMessage);
+                    }
+
+                    String refundMsg = "Your buy order for " + order.remainingQuantity()
+                            + "x " + formatMaterialName(order.material())
+                            + " expired. " + configManager.formatCurrency(refund)
+                            + " was refunded to your balance.";
+                    Player player = Bukkit.getPlayer(order.playerUuid());
+                    if (player != null) {
+                        player.sendMessage(net.kyori.adventure.text.Component.text(
+                                refundMsg,
+                                net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+                    } else {
+                        pendingNotificationRepo.insert(order.playerUuid(), refundMsg, "AUCTION_EXPIRY");
+                    }
+                    return order.withStatusExpired();
+                }
+
+                Player player = Bukkit.getPlayer(order.playerUuid());
+                if (player == null) {
+                    pendingNotificationRepo.insert(order.playerUuid(),
+                            "Your sell order for " + order.remainingQuantity()
+                                    + "x " + formatMaterialName(order.material())
+                                    + " expired while you were offline. Use /auction reclaim when you return.",
+                            "AUCTION_EXPIRY");
+                    return order.withStatusExpired();
+                }
+
+                ItemStack items = createOrderItemStack(order, order.remainingQuantity());
+                Map<Integer, ItemStack> overflow = player.getInventory().addItem(items);
+                if (!overflow.isEmpty()) {
+                    saveOverflowReturns(order.playerUuid(), null, order.material(), overflow);
+                }
+                player.sendMessage(net.kyori.adventure.text.Component.text(
+                        "Your sell order for " + order.remainingQuantity() + "x "
+                                + formatMaterialName(order.material())
+                                + " expired. Items were returned to your inventory.",
+                        net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+                return order.withStatusReclaimed();
+            }, "expire auction order");
+            auctionRepo.update(updatedOrder);
+        } catch (RuntimeException e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "Error expiring order " + order.id() + ": " + e.getMessage(), e);
+        }
+    }
+
     /**
      * Expire a single order: update status, refund/return as appropriate.
      */
@@ -1046,8 +1251,8 @@ public class AuctionManager {
                     org.bukkit.OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(order.playerUuid());
                     economy.depositPlayer(offlinePlayer, refund.doubleValue());
 
-                    String refundMsg = "⚠ Your buy order for " + order.remainingQuantity()
-                            + "× " + formatMaterialName(order.material())
+                    String refundMsg = "Your buy order for " + order.remainingQuantity()
+                            + "x " + formatMaterialName(order.material())
                             + " expired. " + configManager.formatCurrency(refund)
                             + " refunded to your balance.";
                     Player player = Bukkit.getPlayer(order.playerUuid());
@@ -1070,12 +1275,12 @@ public class AuctionManager {
                         }
                         updatedOrder.set(order.withStatusReclaimed());
                         player.sendMessage(net.kyori.adventure.text.Component.text(
-                                "⚠️ Your sell order for " + order.remainingQuantity() + "× "
+                                "Your sell order for " + order.remainingQuantity() + "x "
                                         + formatMaterialName(order.material())
                                         + " expired. Items returned to your inventory.",
                                 net.kyori.adventure.text.format.NamedTextColor.YELLOW));
                     }
-                    // Player is offline — items remain in the DB as EXPIRED.
+                    // Player is offline - items remain in the DB as EXPIRED.
                     // They will be auto-reclaimed on next login (PlayerListener).
                     // Send a pending notification so the player knows.
                     pendingNotificationRepo.insert(order.playerUuid(),
@@ -1114,6 +1319,120 @@ public class AuctionManager {
      * addItem API reports undelivered stacks in its return map; ignoring that
      * map silently destroys items when an inventory is full.
      */
+    private void returnOrderItems(Player player, AuctionOrder order, AuctionPendingReturn.Reason reason) {
+        if (order.remainingQuantity() <= 0) {
+            return;
+        }
+        ItemStack stack = createOrderItemStack(order, order.remainingQuantity());
+        giveItemsToPlayer(player, stack, null, reason);
+    }
+
+    private void giveItemsToPlayer(Player player, ItemStack stack, UUID fillId, AuctionPendingReturn.Reason reason) {
+        callOnMain(() -> {
+            Map<Integer, ItemStack> overflow = player.getInventory().addItem(stack);
+            if (!overflow.isEmpty()) {
+                saveOverflowReturns(player.getUniqueId(), fillId, stack.getType().name(), overflow);
+            }
+            return null;
+        }, "return auction items");
+    }
+
+    private boolean takeItemsFromPlayer(Player player, Material material, int amount) {
+        return callOnMain(() -> {
+            int available = 0;
+            for (ItemStack stack : player.getInventory().getContents()) {
+                if (stack != null && stack.getType() == material) {
+                    available += stack.getAmount();
+                }
+            }
+            if (available < amount) {
+                return false;
+            }
+
+            int remaining = amount;
+            ItemStack[] contents = player.getInventory().getContents();
+            for (int i = 0; i < contents.length && remaining > 0; i++) {
+                ItemStack stack = contents[i];
+                if (stack == null || stack.getType() != material) {
+                    continue;
+                }
+                int taken = Math.min(stack.getAmount(), remaining);
+                stack.setAmount(stack.getAmount() - taken);
+                remaining -= taken;
+                if (stack.getAmount() <= 0) {
+                    player.getInventory().clear(i);
+                }
+            }
+            return true;
+        }, "take auction items");
+    }
+
+    private boolean withdrawPlayer(UUID playerUuid, BigDecimal amount) {
+        return callOnMain(() -> economy.withdrawPlayer(
+                Bukkit.getOfflinePlayer(playerUuid),
+                amount.doubleValue()).transactionSuccess(), "withdraw auction funds");
+    }
+
+    private void depositPlayer(UUID playerUuid, BigDecimal amount, String operation) {
+        callOnMain(() -> {
+            EconomyResponse response = economy.depositPlayer(
+                    Bukkit.getOfflinePlayer(playerUuid),
+                    amount.doubleValue());
+            if (!response.transactionSuccess()) {
+                throw new IllegalStateException(operation + " failed: " + response.errorMessage);
+            }
+            return null;
+        }, operation);
+    }
+
+    private ItemStack createOrderItemStack(AuctionOrder order, int quantity) {
+        ItemStack stack = ItemSerializer.tryDeserializeItemStack(order.itemData());
+        if (stack == null) {
+            stack = new ItemStack(Material.valueOf(order.material()));
+        } else {
+            stack = stack.clone();
+        }
+        stack.setAmount(quantity);
+        return stack;
+    }
+
+    private <T> T callOnMain(Callable<T> callable, String operation) {
+        if (Bukkit.isPrimaryThread()) {
+            try {
+                return callable.call();
+            } catch (Exception e) {
+                throw new RuntimeException(operation + " failed", e);
+            }
+        }
+
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<T> result = new AtomicReference<>();
+        AtomicReference<Exception> error = new AtomicReference<>();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            try {
+                result.set(callable.call());
+            } catch (Exception e) {
+                error.set(e);
+            } finally {
+                latch.countDown();
+            }
+        });
+
+        try {
+            if (!latch.await(10, TimeUnit.SECONDS)) {
+                throw new RuntimeException(operation + " timed out");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(operation + " interrupted", e);
+        }
+
+        if (error.get() != null) {
+            throw new RuntimeException(operation + " failed", error.get());
+        }
+        return result.get();
+    }
+
     private void saveOverflowReturns(UUID playerUuid, UUID fillId, String materialName, Map<Integer, ItemStack> overflow) {
         int total = 0;
         for (ItemStack item : overflow.values()) {
@@ -1130,7 +1449,7 @@ public class AuctionManager {
             pendingReturnRepo.insert(pending);
         }
 
-        String message = "⚠ " + total + "× " + formatMaterialName(materialName)
+        String message = total + "x " + formatMaterialName(materialName)
                 + " could not fit in your inventory and was saved. Use /auction reclaim to retrieve it.";
         Player player = Bukkit.getPlayer(playerUuid);
         if (player != null) {
@@ -1164,6 +1483,14 @@ public class AuctionManager {
 
         public static AuctionResult error(String message) {
             return new AuctionResult(false, message, null, List.of());
+        }
+    }
+
+    public static class ItemsAlreadyHandledException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public ItemsAlreadyHandledException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 }

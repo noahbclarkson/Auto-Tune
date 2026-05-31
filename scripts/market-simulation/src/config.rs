@@ -634,7 +634,7 @@ impl Default for LoanConfig {
             credit_score_modifier: true,
             max_loan_multiplier: 2.0,
             min_credit_score: 200,
-            default_duration_days: 7,
+            default_duration_days: 14,
             compound_interval_hours: 24,
             default_penalty: 50,
             debt_gdp_tier1_ratio: 3.0,

@@ -14,8 +14,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @SuppressWarnings("PMD")
 public class ItemRepository {
@@ -135,6 +138,40 @@ public class ItemRepository {
                         .bind("id", itemId)
                         .bind("price", newPrice)
                         .bind("updatedAt", Timestamp.from(Instant.now()))
+                        .execute());
+    }
+
+    public void updateShopDefinition(int itemId, BigDecimal price, String section, boolean enabled) {
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                                UPDATE at_items
+                                SET price = :price,
+                                    section = :section,
+                                    enabled = :enabled,
+                                    updated_at = :updatedAt
+                                WHERE id = :id
+                                """)
+                        .bind("id", itemId)
+                        .bind("price", price)
+                        .bind("section", section)
+                        .bind("enabled", enabled)
+                        .bind("updatedAt", Timestamp.from(Instant.now()))
+                        .execute());
+    }
+
+    public void disableItemsNotInHashes(Set<String> itemHashes) {
+        if (itemHashes.isEmpty()) {
+            return;
+        }
+        jdbi.useHandle(handle ->
+                handle.createUpdate("""
+                                UPDATE at_items
+                                SET enabled = FALSE,
+                                    updated_at = :updatedAt
+                                WHERE item_hash NOT IN (<hashes>)
+                                """)
+                        .bind("updatedAt", Timestamp.from(Instant.now()))
+                        .bindList("hashes", itemHashes)
                         .execute());
     }
 
@@ -303,6 +340,55 @@ public class ItemRepository {
                                 .timestamp(rs.getTimestamp("timestamp").toInstant())
                                 .build())
                         .list());
+    }
+
+    public Map<Integer, PriceWindow> getPriceWindowsSince(Instant since) {
+        return jdbi.withHandle(handle -> {
+            Map<Integer, PriceWindowBuilder> windows = new HashMap<>();
+            handle.createQuery("""
+                            SELECT item_id, price
+                            FROM at_market_history
+                            WHERE timestamp >= :since
+                            ORDER BY item_id, timestamp DESC
+                            """)
+                    .bind("since", Timestamp.from(since))
+                    .map((rs, ctx) -> Map.entry(
+                            rs.getInt("item_id"),
+                            rs.getBigDecimal("price")
+                    ))
+                    .forEach(entry -> windows
+                            .computeIfAbsent(entry.getKey(), ignored -> new PriceWindowBuilder())
+                            .accept(entry.getValue()));
+
+            Map<Integer, PriceWindow> result = new HashMap<>();
+            windows.forEach((itemId, builder) -> {
+                if (builder.hasWindow()) {
+                    result.put(itemId, new PriceWindow(builder.newest, builder.oldest));
+                }
+            });
+            return result;
+        });
+    }
+
+    public record PriceWindow(BigDecimal newest, BigDecimal oldest) {
+    }
+
+    private static final class PriceWindowBuilder {
+        private BigDecimal newest;
+        private BigDecimal oldest;
+        private int count;
+
+        private void accept(BigDecimal price) {
+            if (count == 0) {
+                newest = price;
+            }
+            oldest = price;
+            count++;
+        }
+
+        private boolean hasWindow() {
+            return count >= 2 && newest != null && oldest != null;
+        }
     }
 
     public Optional<PriceHistory> getClosestPriceBefore(int itemId, Instant since) {

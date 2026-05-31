@@ -205,28 +205,30 @@ public class LoanManager {
                 return CompletableFuture.completedFuture(result);
             }
 
-            CompletableFuture<LoanResult> future = new CompletableFuture<>();
-            databaseManager.runOnMain(() -> {
-                // Use OfflinePlayer so the deposit works even if the player goes offline
-                // before this scheduled task runs on the main thread.
-                if (!economy.depositPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
-                        result.loan().principal().doubleValue()).transactionSuccess()) {
-                    future.complete(LoanResult.error("Economy transaction failed"));
-                    return;
-                }
-                databaseManager.runAsync(() -> loanRepository.insert(result.loan()))
-                        .thenRun(() -> {
-                            // Award LOAN_TAKER badge for first loan taken
+            return databaseManager.runAsync(() -> loanRepository.insert(result.loan()))
+                    .thenCompose(ignored -> {
+                        CompletableFuture<LoanResult> future = new CompletableFuture<>();
+                        databaseManager.runOnMain(() -> {
+                            if (!economy.depositPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
+                                    result.loan().principal().doubleValue()).transactionSuccess()) {
+                                databaseManager.runAsync(() -> loanRepository.update(
+                                                result.loan().toBuilder()
+                                                        .currentBalance(BigDecimal.ZERO)
+                                                        .status(Loan.LoanStatus.PAID)
+                                                        .build()))
+                                        .whenComplete((v, ex) -> future.complete(
+                                                LoanResult.error("Economy transaction failed")));
+                                return;
+                            }
                             badgeService.onFirstLoan(player.getUniqueId());
                             future.complete(result);
-                        })
-                        .exceptionally(ex -> {
-                            plugin.getLogger().log(Level.WARNING, "Failed to insert loan", ex);
-                            future.complete(LoanResult.error("Database error"));
-                            return null;
                         });
-            });
-            return future;
+                        return future;
+                    })
+                    .exceptionally(ex -> {
+                        plugin.getLogger().log(Level.WARNING, "Failed to insert loan", ex);
+                        return LoanResult.error("Database error");
+                    });
         });
     }
 

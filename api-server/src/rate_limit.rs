@@ -128,14 +128,21 @@ pub enum RateLimitResult {
 
 /// Extract client IP from an Actix `HttpRequest`.
 pub fn client_ip(req: &actix_web::HttpRequest) -> Option<String> {
-    // Check X-Forwarded-For first (behind reverse proxy)
-    req.headers()
-        .get("x-forwarded-for")
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.split(',').next().unwrap_or(s).trim().to_owned())
-        .or_else(|| {
-            req.connection_info()
-                .realip_remote_addr()
-                .map(|s| s.to_owned())
-        })
+    let trust_proxy_headers = std::env::var("TRUST_PROXY_HEADERS")
+        .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes"))
+        .unwrap_or(false);
+
+    if trust_proxy_headers {
+        if let Some(forwarded) = req
+            .headers()
+            .get("x-forwarded-for")
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.split(',').next().unwrap_or(s).trim().to_owned())
+            .filter(|s| !s.is_empty())
+        {
+            return Some(forwarded);
+        }
+    }
+
+    req.peer_addr().map(|addr| addr.ip().to_string())
 }

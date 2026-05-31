@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 public class AuctionGui {
 
     // Slot positions within the buy pane (4-wide, rows 1-4 inside pane = rows 1-4 of gui)
-    // 4 items per row × 4 rows = 16 max, but we show 12 to leave room for nav
+    // 4 items per row x 4 rows = 16 max, but we show 12 to leave room for nav
     private static final int[] BUY_SLOTS = {
             // Row 1 (gui row 1, pane row 0): cols 0-2
             9,  10, 11,
@@ -73,7 +73,7 @@ public class AuctionGui {
             .ofPattern("MMM d HH:mm")
             .withZone(ZoneId.systemDefault());
 
-    // ── Constructors ───────────────────────────────────────────────────────────
+    // Constructors
 
     public AuctionGui(String playerName, AuctionManager auctionManager,
                       ConfigManager configManager, Economy economy) {
@@ -92,20 +92,20 @@ public class AuctionGui {
     public void open(Player player) {
         gui = new ChestGui(6,
                 material != null
-                        ? "§6Auction: §f" + formatMaterial(material)
-                        : "§6Auction House");
+                        ? "Â§6Auction: Â§f" + formatMaterial(material)
+                        : "Â§6Auction House");
         gui.setOnGlobalClick(e -> e.setCancelled(true));
 
         buildLayout(player);
         gui.show(player);
     }
 
-    // ── Layout builder ────────────────────────────────────────────────────────
+    // Layout builder
 
     private void buildLayout(Player player) {
 
         StaticPane border = new StaticPane(0, 0, 9, 6);
-        fillBorder(border);
+        fillBorder(border, 6);
         gui.addPane(border);
 
         // Fetch orders
@@ -123,16 +123,16 @@ public class AuctionGui {
                         .toList()
                 : List.of();
 
-        // ── Header bar ─────────────────────────────────────────────────────────
+        // Header bar
         StaticPane header = new StaticPane(0, 0, 9, 1);
         String titleText = material != null
-                ? "§6§l" + formatMaterial(material) + " §r§7- Order Book"
-                : "§6§lAuction House §r§7- Player-to-player trading";
+                ? "Â§6Â§l" + formatMaterial(material) + " Â§rÂ§7- Order Book"
+                : "Â§6Â§lAuction House Â§rÂ§7- Player-to-player trading";
         header.addItem(new GuiItem(makeItem(Material.PAPER, Component.text(titleText),
                 List.of(Component.text("Click items below to trade", GRAY))), e -> {}), 4, 0);
         gui.addPane(header);
 
-        // ── Sell orders column (left) ─────────────────────────────────────────
+        // Sell orders column (left)
         StaticPane sellPane = new StaticPane(0, 1, 9, 4);
         sellPane.addItem(new GuiItem(makeItem(Material.BARRIER,
                 Component.text("SELL ORDERS", RED, TextDecoration.BOLD),
@@ -161,7 +161,7 @@ public class AuctionGui {
 
         gui.addPane(sellPane);
 
-        // ── Buy orders column (right) ──────────────────────────────────────────
+        // Buy orders column (right)
         StaticPane buyPane = new StaticPane(5, 1, 3, 4);
         buyPane.addItem(new GuiItem(makeItem(Material.EMERALD,
                 Component.text("BUY ORDERS", GREEN, TextDecoration.BOLD),
@@ -170,9 +170,9 @@ public class AuctionGui {
 
         int buySlot = 0;
         for (AuctionOrder order : buyOrders) {
-            if (buySlot >= BUY_SLOTS.length) break;
-            int row = BUY_SLOTS[buySlot] / 9;
-            int col = BUY_SLOTS[buySlot] % 9;
+            int row = (buySlot / 3) + 1;
+            int col = buySlot % 3;
+            if (row >= 4) break;
             buyPane.addItem(new GuiItem(makeOrderItem(order, player),
                     e -> handleFillClick((Player) e.getWhoClicked(), order)), col, row);
             buySlot++;
@@ -186,7 +186,7 @@ public class AuctionGui {
 
         gui.addPane(buyPane);
 
-        // ── Bottom nav ────────────────────────────────────────────────────────
+        // Bottom nav
         StaticPane nav = new StaticPane(0, 5, 9, 1);
 
         ItemStack myOrders = makeItem(Material.PLAYER_HEAD,
@@ -226,7 +226,7 @@ public class AuctionGui {
         gui.addPane(nav);
     }
 
-    // ── Order item display ───────────────────────────────────────────────────
+    // Order item display
 
     private ItemStack makeOrderItem(AuctionOrder order, Player viewer) {
         Material mat = parseMaterial(order.material());
@@ -258,15 +258,16 @@ public class AuctionGui {
         if (isOwn) {
             lore.add(Component.text("[Click to CANCEL this order]", RED, TextDecoration.BOLD));
         } else {
-            lore.add(Component.text("[Click to " + sideLabel.toLowerCase(Locale.ROOT) + "]", GREEN, TextDecoration.BOLD));
+            String action = order.side() == OrderSide.BUY ? "sell to this order" : "buy from this order";
+            lore.add(Component.text("[Click to " + action + "]", GREEN, TextDecoration.BOLD));
         }
 
         Component displayName;
         if (order.side() == OrderSide.BUY) {
-            displayName = Component.text("WTS " + formatMaterial(order.material()), GREEN)
+            displayName = Component.text("BUY ORDER " + formatMaterial(order.material()), GREEN)
                     .append(Component.text(" x" + order.remainingQuantity(), WHITE));
         } else {
-            displayName = Component.text("WTB " + formatMaterial(order.material()), RED)
+            displayName = Component.text("SELL ORDER " + formatMaterial(order.material()), RED)
                     .append(Component.text(" x" + order.remainingQuantity(), WHITE));
         }
 
@@ -279,7 +280,7 @@ public class AuctionGui {
         return item;
     }
 
-    // ── Click handlers ───────────────────────────────────────────────────────
+    // Click handlers
 
     private void handleFillClick(Player player, AuctionOrder order) {
         if (order.playerUuid().equals(player.getUniqueId())) {
@@ -297,17 +298,14 @@ public class AuctionGui {
         } else {
             // Fill the order
             if (order.side() == OrderSide.SELL) {
-                fillBuyOrder(player, order);
-            } else {
                 fillSellOrder(player, order);
+            } else {
+                fillBuyOrder(player, order);
             }
         }
     }
 
     private void fillBuyOrder(Player player, AuctionOrder order) {
-        // Player sells items to the buy order holder.
-        // Items + money movement are deferred until after DB write succeeds
-        // so we can restore on failure — prevents item loss if the async write fails.
         Material needed = parseMaterial(order.material());
         if (needed == null) {
             player.sendMessage(Component.text("Unknown material in order", NamedTextColor.RED));
@@ -322,49 +320,23 @@ public class AuctionGui {
         }
 
         int fillQty = Math.min(have, order.remainingQuantity());
-        BigDecimal totalCost = order.price().multiply(BigDecimal.valueOf(fillQty));
-
-        // Snapshot inventory so we can restore on failure
-        ItemStack[] preRemoval = player.getInventory().getStorageContents().clone();
-
         player.sendMessage(Component.text("Processing sale of " + fillQty + "x "
                 + formatMaterial(order.material()) + "...", NamedTextColor.YELLOW));
 
-        // fillBuyOrder: player is selling to an existing BUY order in the book.
-        // buyOrderId = the existing buy order (order.id())
-        // sellOrderId = the player's UUID (they have no separate sell order in the DB)
-        auctionManager.recordFillAsync(order.id(), player.getUniqueId(), fillQty, order.price(), order.material())
+        auctionManager.fillBuyOrderAsync(player, order.id(), fillQty)
                 .orTimeout(10, TimeUnit.SECONDS)
-                .thenAccept(v -> {
-                    // DB write succeeded: now apply the real effects
-                    Bukkit.getScheduler().runTask(AutoTune.getInstance(), () -> {
-                        removeItems(player, needed, fillQty);
-                        // Use OfflinePlayer so the deposit works even if player disconnects
-                        // before this task runs on the main thread.
-                        economy.depositPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
-                                totalCost.doubleValue());
-                        player.sendMessage(Component.text("Sold " + fillQty + "x "
-                                + formatMaterial(order.material()) + " for "
-                                + configManager.formatCurrency(totalCost) + "!", NamedTextColor.GREEN));
-                        open(player);
-                    });
-                })
-                .exceptionally(ex -> {
-                    // DB write failed — restore inventory to pre-transaction state
-                    Bukkit.getScheduler().runTask(AutoTune.getInstance(), () -> {
-                        player.getInventory().setStorageContents(preRemoval);
-                        player.sendMessage(Component.text("Sale failed: could not record transaction. "
-                                + "Your items have been returned.", NamedTextColor.RED));
-                        open(player);
-                    });
-                    return null;
-                });
+                .whenComplete((result, ex) -> Bukkit.getScheduler().runTask(AutoTune.getInstance(), () -> {
+                    if (ex != null) {
+                        player.sendMessage(Component.text("Sale failed: " + ex.getMessage(), NamedTextColor.RED));
+                    } else if (result.success()) {
+                        player.sendMessage(Component.text(result.message(), NamedTextColor.GREEN));
+                    } else {
+                        player.sendMessage(Component.text(result.message(), NamedTextColor.RED));
+                    }
+                    open(player);
+                }));
     }
-
     private void fillSellOrder(Player player, AuctionOrder order) {
-        // Player buys from the sell order.
-        // Money is withdrawn BEFORE the async DB call; if DB write fails the refund
-        // is issued. Items are given only after DB write succeeds.
         Material mat = parseMaterial(order.material());
         if (mat == null) {
             player.sendMessage(Component.text("Unknown material in order", NamedTextColor.RED));
@@ -373,68 +345,38 @@ public class AuctionGui {
 
         int fillQty = order.remainingQuantity();
         BigDecimal totalCost = order.price().multiply(BigDecimal.valueOf(fillQty));
-
         if (!economy.has(player, totalCost.doubleValue())) {
             player.sendMessage(Component.text("Insufficient funds. Need "
                     + configManager.formatCurrency(totalCost), NamedTextColor.RED));
             return;
         }
 
-        // Snapshot balance for refund if needed
-        double balanceBefore = economy.getBalance(player);
-
-        // Withdraw first — if this fails we abort without touching DB.
-        // Use OfflinePlayer so the withdrawal works even if player disconnects
-        // before the scheduler runs the main-thread task.
-        if (!economy.withdrawPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
-                totalCost.doubleValue()).transactionSuccess()) {
-            player.sendMessage(Component.text("Failed to withdraw funds.", NamedTextColor.RED));
-            return;
-        }
-
         player.sendMessage(Component.text("Processing purchase of " + fillQty + "x "
                 + formatMaterial(order.material()) + "...", NamedTextColor.YELLOW));
 
-        // fillSellOrder: player is buying from an existing SELL order in the book.
-        // buyOrderId = the player's UUID (they have no formal buy order in the DB)
-        // sellOrderId = the existing sell order (order.id())
-        auctionManager.recordFillAsync(player.getUniqueId(), order.id(), fillQty, order.price(), mat.name())
+        auctionManager.fillSellOrderAsync(player, order.id(), fillQty)
                 .orTimeout(10, TimeUnit.SECONDS)
-                .thenAccept(v -> {
-                    // DB write succeeded: give buyer the items.
-                    Bukkit.getScheduler().runTask(AutoTune.getInstance(), () -> {
-                        giveItems(player, mat, fillQty);
-                        player.sendMessage(Component.text("Bought " + fillQty + "x "
-                                + formatMaterial(order.material()) + " for "
-                                + configManager.formatCurrency(totalCost) + "!", NamedTextColor.GREEN));
-                        open(player);
-                    });
-                })
-                .exceptionally(ex -> {
-                    // DB write failed — refund the player's money.
-                    // Use OfflinePlayer so the refund succeeds even if player disconnects
-                    // before this task runs on the main thread.
-                    Bukkit.getScheduler().runTask(AutoTune.getInstance(), () -> {
-                        economy.depositPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()),
-                                totalCost.doubleValue());
-                        player.sendMessage(Component.text("Purchase failed: could not record transaction. "
-                                + "Your funds have been refunded.", NamedTextColor.RED));
-                        open(player);
-                    });
-                    return null;
-                });
+                .whenComplete((result, ex) -> Bukkit.getScheduler().runTask(AutoTune.getInstance(), () -> {
+                    if (ex != null) {
+                        player.sendMessage(Component.text("Purchase failed: " + ex.getMessage(), NamedTextColor.RED));
+                    } else if (result.success()) {
+                        player.sendMessage(Component.text(result.message(), NamedTextColor.GREEN));
+                    } else {
+                        player.sendMessage(Component.text(result.message(), NamedTextColor.RED));
+                    }
+                    open(player);
+                }));
     }
-
-    // ── My Orders GUI ─────────────────────────────────────────────────────────
+    // My Orders GUI
 
     private void openMyOrders(Player player) {
         List<AuctionOrder> orders = auctionManager.getPlayerOrders(player.getUniqueId());
 
-        ChestGui myGui = new ChestGui(3, "§6Your Auction Orders");
+        ChestGui myGui = new ChestGui(3, "Â§6Your Auction Orders");
         myGui.setOnGlobalClick(e -> e.setCancelled(true));
 
         StaticPane pane = new StaticPane(0, 0, 9, 3);
-        fillBorder(pane);
+        fillBorder(pane, 3);
 
         if (orders.isEmpty()) {
             pane.addItem(new GuiItem(makeItem(Material.BARRIER,
@@ -444,7 +386,7 @@ public class AuctionGui {
         } else {
             int slot = 0;
             for (AuctionOrder order : orders) {
-                if (slot >= BUY_SLOTS.length) break; // slots 1-7 for orders
+                if (slot >= 7) break; // slots 1-7 for orders
                 pane.addItem(new GuiItem(makeOrderItem(order, player),
                         e -> handleFillClick(player, order)), slot + 1, 1);
                 slot++;
@@ -455,18 +397,18 @@ public class AuctionGui {
         myGui.show(player);
     }
 
-    // ── Helpers ─────────────────────────────────────────────────────────────
+    // Helpers
 
-    private void fillBorder(StaticPane pane) {
+    private void fillBorder(StaticPane pane, int height) {
         Material border = Material.BLACK_STAINED_GLASS_PANE;
         ItemStack borderItem = new ItemStack(border);
         GuiItem borderGuiItem = new GuiItem(borderItem, e -> e.setCancelled(true));
 
         for (int x = 0; x < 9; x++) {
             pane.addItem(borderGuiItem, x, 0);
-            pane.addItem(new GuiItem(borderItem, ev -> ev.setCancelled(true)), x, 5);
+            pane.addItem(new GuiItem(borderItem, ev -> ev.setCancelled(true)), x, height - 1);
         }
-        for (int y = 1; y < 5; y++) {
+        for (int y = 1; y < height - 1; y++) {
             pane.addItem(new GuiItem(borderItem, ev -> ev.setCancelled(true)), 0, y);
             pane.addItem(new GuiItem(borderItem, ev -> ev.setCancelled(true)), 8, y);
         }

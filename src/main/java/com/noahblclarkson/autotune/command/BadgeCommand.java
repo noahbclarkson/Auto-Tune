@@ -27,6 +27,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.incendo.cloud.annotations.Argument;
 import org.incendo.cloud.annotations.Command;
 import org.incendo.cloud.annotations.Default;
+import org.incendo.cloud.annotations.Permission;
 import org.incendo.cloud.annotations.suggestion.Suggestions;
 import org.incendo.cloud.context.CommandContext;
 
@@ -47,6 +48,7 @@ public class BadgeCommand implements Listener {
 
     private static final String GUI_TITLE = "§6§l🏆 Player Badges";
     private static final int GUI_SIZE = 54; // 6 rows
+    private static final String PERMISSION = "autotune.badges";
 
     private final BadgeService badgeService;
     private final PlayerRepository playerRepo;
@@ -69,11 +71,20 @@ public class BadgeCommand implements Listener {
     }
 
     @Command("badges")
+    @Permission(PERMISSION)
+    public void badges(Player sender) {
+        openGui(sender.getUniqueId(), sender);
+    }
+
+    @Command("badges help")
+    @Permission(PERMISSION)
     public void badgesHelp(Player sender) {
         sender.sendMessage(Component.empty());
         sender.sendMessage(makeTitle("Player Badges"));
         sender.sendMessage(Component.text("/badges", NamedTextColor.YELLOW)
                 .append(Component.text(" — open your badge collection", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/badges open [player]", NamedTextColor.YELLOW)
+                .append(Component.text(" - open a badge collection", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/badges list", NamedTextColor.YELLOW)
                 .append(Component.text(" — text list of badges", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/badges stats", NamedTextColor.YELLOW)
@@ -82,6 +93,7 @@ public class BadgeCommand implements Listener {
     }
 
     @Command("badges list")
+    @Permission(PERMISSION)
     public void badgesList(Player sender) {
         List<BadgeService.BadgeWithStatus> badges = badgeService.getBadgesWithStatus(sender.getUniqueId());
         int earned = (int) badges.stream().filter(BadgeService.BadgeWithStatus::earned).count();
@@ -123,6 +135,7 @@ public class BadgeCommand implements Listener {
     }
 
     @Command("badges stats")
+    @Permission(PERMISSION)
     public void badgesStats(Player sender) {
         var badgeRepo = new com.noahblclarkson.autotune.database.BadgeRepository(db);
         List<BadgeType> allTypes = Arrays.asList(BadgeType.values());
@@ -154,11 +167,6 @@ public class BadgeCommand implements Listener {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("badges open")
-    public void openBadgesGui(Player sender) {
-        openGui(sender.getUniqueId(), sender);
-    }
-
     @Suggestions("badges-target-suggestion")
     public List<String> badgesTargetSuggestion(CommandContext<?> ctx, String input) {
         return Bukkit.getOnlinePlayers().stream()
@@ -168,7 +176,9 @@ public class BadgeCommand implements Listener {
     }
 
     @Command("badges open [player]")
-    public void openBadgesGuiOther(Player sender, @Argument("player") @Default("") String playerName) {
+    @Permission(PERMISSION)
+    public void openBadgesGuiOther(Player sender,
+                                   @Argument(value = "player", suggestions = "badges-target-suggestion") @Default("") String playerName) {
         UUID targetUuid;
         if (playerName.isBlank()) {
             targetUuid = sender.getUniqueId();

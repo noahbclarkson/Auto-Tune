@@ -332,15 +332,25 @@ public class PlayerStreakService {
     }
 
     private void saveStreak(UUID playerUuid, int currentStreak, int bestStreak, LocalDate lastTradeDate) {
-        databaseManager.getJdbi().useHandle(handle ->
-                handle.createUpdate("""
+        String sql = databaseManager.isSqlite()
+                ? """
                         INSERT INTO at_player_streaks (player_uuid, current_streak, best_streak, last_trade_date)
                         VALUES (:uuid, :current, :best, :lastDate)
                         ON CONFLICT(player_uuid) DO UPDATE SET
                             current_streak = :current,
                             best_streak = :best,
                             last_trade_date = :lastDate
-                        """)
+                        """
+                : """
+                        INSERT INTO at_player_streaks (player_uuid, current_streak, best_streak, last_trade_date)
+                        VALUES (:uuid, :current, :best, :lastDate)
+                        ON DUPLICATE KEY UPDATE
+                            current_streak = VALUES(current_streak),
+                            best_streak = VALUES(best_streak),
+                            last_trade_date = VALUES(last_trade_date)
+                        """;
+        databaseManager.getJdbi().useHandle(handle ->
+                handle.createUpdate(sql)
                         .bind("uuid", playerUuid.toString())
                         .bind("current", currentStreak)
                         .bind("best", bestStreak)

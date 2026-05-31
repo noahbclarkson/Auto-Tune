@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS at_market_history (
 
 CREATE INDEX IF NOT EXISTS idx_history_item ON at_market_history(item_id);
 CREATE INDEX IF NOT EXISTS idx_history_timestamp ON at_market_history(timestamp);
+CREATE INDEX IF NOT EXISTS idx_history_item_timestamp ON at_market_history(item_id, timestamp);
 
 -- Players table: Stores player economy data
 CREATE TABLE IF NOT EXISTS at_players (
@@ -131,6 +132,8 @@ CREATE INDEX IF NOT EXISTS idx_transactions_player ON at_transactions(player_uui
 CREATE INDEX IF NOT EXISTS idx_transactions_item ON at_transactions(item_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_timestamp ON at_transactions(timestamp);
 CREATE INDEX IF NOT EXISTS idx_transactions_type ON at_transactions(transaction_type);
+CREATE INDEX IF NOT EXISTS idx_transactions_item_timestamp ON at_transactions(item_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_transactions_player_timestamp ON at_transactions(player_uuid, timestamp);
 
 -- Sections: Item categories for shop organization
 CREATE TABLE IF NOT EXISTS at_sections (
@@ -248,6 +251,7 @@ CREATE INDEX IF NOT EXISTS idx_auction_orders_player ON at_auction_orders(player
 CREATE INDEX IF NOT EXISTS idx_auction_orders_material ON at_auction_orders(material);
 CREATE INDEX IF NOT EXISTS idx_auction_orders_side ON at_auction_orders(side);
 CREATE INDEX IF NOT EXISTS idx_auction_orders_status ON at_auction_orders(status);
+CREATE INDEX IF NOT EXISTS idx_auction_orders_book ON at_auction_orders(material, status, expires_at, side, price, created_at);
 
 -- Auction fills: Completed matches between buy and sell orders.
 CREATE TABLE IF NOT EXISTS at_auction_fills (
@@ -263,6 +267,7 @@ CREATE TABLE IF NOT EXISTS at_auction_fills (
 
 CREATE INDEX IF NOT EXISTS idx_auction_fills_buy ON at_auction_fills(buy_order_id);
 CREATE INDEX IF NOT EXISTS idx_auction_fills_sell ON at_auction_fills(sell_order_id);
+CREATE INDEX IF NOT EXISTS idx_auction_fills_filled_at ON at_auction_fills(filled_at);
 
 -- Price alerts: Players set price thresholds and get notified when the market price crosses them.
 -- alert_type: ABOVE = notify when price rises above target, BELOW = notify when price falls below target
@@ -283,7 +288,7 @@ CREATE TABLE IF NOT EXISTS at_price_alerts (
 
 CREATE INDEX IF NOT EXISTS idx_alerts_player ON at_price_alerts(player_uuid);
 CREATE INDEX IF NOT EXISTS idx_alerts_item ON at_price_alerts(item_id);
-CREATE INDEX IF NOT EXISTS idx_alerts_active ON at_price_alerts(enabled) WHERE enabled = TRUE;
+CREATE INDEX IF NOT EXISTS idx_alerts_active ON at_price_alerts(enabled, triggered_at);
 
 -- Player achievement badges: Tracks badges earned by players.
 -- Badges are one-time achievements earned through market activity.

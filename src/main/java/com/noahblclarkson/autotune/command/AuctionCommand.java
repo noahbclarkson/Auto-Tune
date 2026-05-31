@@ -40,7 +40,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("PMD")
@@ -82,6 +81,7 @@ public class AuctionCommand {
     }
 
     @Command("auction")
+    @Permission("autotune.auction")
     public void auctionHelp(CommandSender sender) {
         sender.sendMessage(Component.empty());
         sender.sendMessage(Component.text("Auction House", NamedTextColor.GOLD, TextDecoration.BOLD)
@@ -112,11 +112,13 @@ public class AuctionCommand {
     }
 
     @Command("auction open")
+    @Permission("autotune.auction")
     public void auctionOpen(Player player) {
         new AuctionGui(player.getName(), auctionManager, configManager, economy).open(player);
     }
 
     @Command("auction browse <material>")
+    @Permission("autotune.auction")
     public void auctionBrowse(Player player,
                               @Argument(value = "material", suggestions = "auction-materials") String material) {
         Material mat = parseMaterial(material);
@@ -128,6 +130,7 @@ public class AuctionCommand {
     }
 
     @Command("auction sell <price> <quantity>")
+    @Permission("autotune.auction")
     public void auctionSell(Player player,
                             @Argument("price") BigDecimal price,
                             @Argument("quantity") int quantity) {
@@ -163,9 +166,8 @@ public class AuctionCommand {
         player.sendMessage(Component.text("Placing sell order for " + quantity + "× " + formatMaterial(held.getType().name())
                 + " at " + configManager.formatCurrency(price) + " each..."));
 
-        auctionManager.placeSellOrderAsync(player, held.getType(), quantity, price)
-                .orTimeout(10, TimeUnit.SECONDS)
-                .thenAccept(result -> {
+        auctionManager.placeSellOrderAsync(player, held, quantity, price)
+                .thenAccept(result -> runOnMain(() -> {
                     if (result.success()) {
                         player.sendMessage(Component.text("✓ " + result.message(), NamedTextColor.GREEN));
 
@@ -182,14 +184,28 @@ public class AuctionCommand {
                     } else {
                         // DB write failed — restore items to player's hand.
                         // Must run on main thread (Inventory.addItem is not thread-safe).
-                        plugin.getServer().getGlobalRegionScheduler().run(plugin, task ->
-                                player.getInventory().addItem(toRestore));
+                        player.getInventory().addItem(toRestore);
                         player.sendMessage(Component.text("✗ " + result.message(), NamedTextColor.RED));
                     }
+                }))
+                .exceptionally(ex -> {
+                    runOnMain(() -> {
+                        if (!itemsAlreadyHandled(ex)) {
+                            player.getInventory().addItem(toRestore);
+                            player.sendMessage(Component.text("Sell order failed. Your items were returned.",
+                                    NamedTextColor.RED));
+                        } else {
+                            player.sendMessage(Component.text(
+                                    "Sell order failed. Any remaining items were returned or saved for reclaim.",
+                                    NamedTextColor.RED));
+                        }
+                    });
+                    return null;
                 });
     }
 
     @Command("auction buy <material> <price> <quantity>")
+    @Permission("autotune.auction")
     public void auctionBuy(Player player,
                            @Argument(value = "material", suggestions = "auction-materials") String material,
                            @Argument("price") BigDecimal price,
@@ -224,8 +240,7 @@ public class AuctionCommand {
                 + configManager.formatCurrency(totalCost) + ")..."));
 
         auctionManager.placeBuyOrderAsync(player, mat, quantity, price)
-                .orTimeout(10, TimeUnit.SECONDS)
-                .thenAccept(result -> {
+                .thenAccept(result -> runOnMain(() -> {
                     if (result.success()) {
                         player.sendMessage(Component.text("✓ " + result.message(), NamedTextColor.GREEN));
                         if (!result.fills().isEmpty()) {
@@ -241,10 +256,17 @@ public class AuctionCommand {
                         // Refund if it was a pre-auth failure
                         player.sendMessage(Component.text("✗ " + result.message(), NamedTextColor.RED));
                     }
+                }))
+                .exceptionally(ex -> {
+                    runOnMain(() -> player.sendMessage(Component.text(
+                            "Buy order failed or timed out. No order was opened.",
+                            NamedTextColor.RED)));
+                    return null;
                 });
     }
 
     @Command("auction my")
+    @Permission("autotune.auction")
     public void auctionMy(Player player) {
         List<AuctionOrder> orders = auctionManager.getPlayerOrders(player.getUniqueId());
 
@@ -276,6 +298,7 @@ public class AuctionCommand {
     }
 
     @Command("auction info <orderId>")
+    @Permission("autotune.auction")
     public void auctionInfo(CommandSender sender, @Argument("orderId") String orderIdStr) {
         UUID orderId;
         try {
@@ -365,6 +388,7 @@ public class AuctionCommand {
     }
 
     @Command("auction cancel <orderId>")
+    @Permission("autotune.auction")
     public void auctionCancel(Player player, @Argument("orderId") String orderIdStr) {
         UUID orderId;
         try {
@@ -375,17 +399,23 @@ public class AuctionCommand {
         }
 
         auctionManager.cancelOrderAsync(player, orderId)
-                .orTimeout(10, TimeUnit.SECONDS)
-                .thenAccept(result -> {
+                .thenAccept(result -> runOnMain(() -> {
                     if (result.success()) {
                         player.sendMessage(Component.text("✓ " + result.message(), NamedTextColor.GREEN));
                     } else {
                         player.sendMessage(Component.text("✗ " + result.message(), NamedTextColor.RED));
                     }
+                }))
+                .exceptionally(ex -> {
+                    runOnMain(() -> player.sendMessage(Component.text(
+                            "Cancel failed or timed out. Check /auction my before trying again.",
+                            NamedTextColor.RED)));
+                    return null;
                 });
     }
 
     @Command("auction watch <orderId>")
+    @Permission("autotune.auction")
     public void auctionWatch(Player player, @Argument("orderId") String orderIdStr) {
         UUID orderId;
         try {
@@ -418,6 +448,7 @@ public class AuctionCommand {
     }
 
     @Command("auction unwatch <orderId>")
+    @Permission("autotune.auction")
     public void auctionUnwatch(Player player, @Argument("orderId") String orderIdStr) {
         UUID orderId;
         try {
@@ -432,6 +463,7 @@ public class AuctionCommand {
     }
 
     @Command("auction reclaim")
+    @Permission("autotune.auction")
     public void auctionReclaim(Player player) {
         List<AuctionOrder> expired = auctionManager.getExpiredSellOrdersForPlayer(player.getUniqueId());
         int pendingCount = auctionManager.getPendingReturnCount(player.getUniqueId());
@@ -459,6 +491,7 @@ public class AuctionCommand {
     }
 
     @Command("auction history <limit>")
+    @Permission("autotune.auction")
     public void auctionHistory(CommandSender sender,
                                 @Argument("limit") int limit) {
         int clamped = Math.min(50, Math.max(1, limit));
@@ -681,5 +714,20 @@ public class AuctionCommand {
         return material.replace("_", " ").toLowerCase(Locale.ROOT)
                 .substring(0, 1).toUpperCase(Locale.ROOT)
                 + material.replace("_", " ").toLowerCase(Locale.ROOT).substring(1);
+    }
+
+    private void runOnMain(Runnable action) {
+        plugin.getServer().getGlobalRegionScheduler().run(plugin, task -> action.run());
+    }
+
+    private boolean itemsAlreadyHandled(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof AuctionManager.ItemsAlreadyHandledException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

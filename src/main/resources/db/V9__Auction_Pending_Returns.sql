@@ -18,5 +18,4 @@ CREATE TABLE IF NOT EXISTS at_auction_pending_returns (
 );
 
 CREATE INDEX IF NOT EXISTS idx_pending_returns_player
-    ON at_auction_pending_returns(player_uuid)
-    WHERE returned_at IS NULL;
+    ON at_auction_pending_returns(player_uuid, returned_at);

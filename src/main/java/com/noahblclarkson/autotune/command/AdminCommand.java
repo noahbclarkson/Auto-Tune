@@ -139,14 +139,14 @@ public class AdminCommand {
         this.auctionRepository = auctionRepository;
     }
 
-    @Command("autotune admin advice")
+    @Command("at|autotune admin advice")
     @Permission("autotune.admin")
     public void adminAdvice(CommandSender sender) {
         EconomyAdvisor.AdviceResult result = advisor.analyze();
         sender.sendMessage(advisor.toComponent(result));
     }
 
-    @Command("autotune admin")
+    @Command("at|autotune admin")
     @Permission("autotune.admin")
     public void adminHelp(CommandSender sender) {
         sender.sendMessage(Component.empty());
@@ -165,6 +165,8 @@ public class AdminCommand {
                 .append(Component.text(" — Economy trajectory over N days (default: 7)", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin history [limit]", NamedTextColor.YELLOW)
                 .append(Component.text(" — Snapshot history table (default: 10, max: 100)", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin top", NamedTextColor.YELLOW)
+                .append(Component.text(" - Economy leaderboards", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin stats", NamedTextColor.YELLOW)
                 .append(Component.text(" — Detailed market statistics", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin market freeze", NamedTextColor.YELLOW)
@@ -191,6 +193,8 @@ public class AdminCommand {
                 .append(Component.text(" — Freeze price updates for one item", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin item unfreeze <item>", NamedTextColor.YELLOW)
                 .append(Component.text(" — Unfreeze price updates for one item", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/at admin item tier <item> <tier>", NamedTextColor.YELLOW)
+                .append(Component.text(" - Set item tier metadata", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin reload", NamedTextColor.YELLOW)
                 .append(Component.text(" — Reload config and caches", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/at admin config preview <filename>", NamedTextColor.YELLOW)
@@ -222,7 +226,7 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin info")
+    @Command("at|autotune admin info")
     @Permission("autotune.admin")
     public void adminInfo(CommandSender sender) {
         boolean frozen = marketEngine.isFrozen();
@@ -265,7 +269,7 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin auditlog [limit]")
+    @Command("at|autotune admin auditlog [limit]")
     @Permission("autotune.admin")
     public void adminAuditLog(CommandSender sender, @Argument("limit") @Default("20") int limit) {
         int effectiveLimit = Math.min(Math.max(1, limit), 200);
@@ -293,7 +297,7 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin audit")
+    @Command("at|autotune admin audit")
     @Permission("autotune.admin")
     public void adminAudit(CommandSender sender) {
         sender.sendMessage(Component.empty());
@@ -348,7 +352,7 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin auction")
+    @Command("at|autotune admin auction")
     @Permission("autotune.admin")
     public void adminAuction(CommandSender sender) {
         sender.sendMessage(Component.empty());
@@ -774,7 +778,7 @@ public class AdminCommand {
         return issues;
     }
 
-    @Command("autotune admin health")
+    @Command("at|autotune admin health")
     @Permission("autotune.admin")
     public void adminHealth(CommandSender sender) {
         Instant oneDayAgo = Instant.now().minus(Duration.ofDays(1));
@@ -1079,7 +1083,7 @@ public class AdminCommand {
     }
 
     // ─── Economy trend analysis ─────────────────────────────────────────────────
-    @Command("autotune admin trend [days]")
+    @Command("at|autotune admin trend [days]")
     @Permission("autotune.admin")
     public void adminTrend(CommandSender sender, @Argument("days") @Default("7") int days) {
         if (days < 1 || days > 90) {
@@ -1224,7 +1228,7 @@ public class AdminCommand {
     }
 
 
-    @Command("autotune admin history [limit]")
+    @Command("at|autotune admin history [limit]")
     @Permission("autotune.admin")
     public void adminHistory(CommandSender sender,
                             @Argument(value = "limit") @Default("10") int limit) {
@@ -1330,7 +1334,7 @@ public class AdminCommand {
     }
 
 
-    @Command("autotune admin stats")
+    @Command("at|autotune admin stats")
     @Permission("autotune.admin")
     public void adminStats(CommandSender sender) {
         List<ShopItem> allItems = shopManager.getAllItems();
@@ -1369,7 +1373,7 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin reload")
+    @Command("at|autotune admin reload")
     @Permission("autotune.admin")
     public void adminReload(CommandSender sender) {
         try {
@@ -1384,7 +1388,7 @@ public class AdminCommand {
         }
     }
 
-    @Command("autotune admin validate")
+    @Command("at|autotune admin validate")
     @Permission("autotune.admin")
     public void adminValidate(CommandSender sender) {
         AutoTuneConfig config = configManager.getConfig();
@@ -1552,7 +1556,7 @@ public class AdminCommand {
                         score == max ? NamedTextColor.GREEN : (score >= max * 0.7 ? NamedTextColor.YELLOW : NamedTextColor.RED))));
     }
 
-    @Command("autotune admin config preview <filename>")
+    @Command("at|autotune admin config preview <filename>")
     @Permission("autotune.admin")
     public void adminConfigPreview(CommandSender sender, @Argument("filename") String filename) {
         Path configPath = plugin.getDataFolder().toPath().resolve(filename).normalize();
@@ -1685,7 +1689,7 @@ public class AdminCommand {
         return url;
     }
 
-    @Command("autotune admin transaction-min")
+    @Command("at|autotune admin transaction-min")
     @Permission("autotune.admin")
     public void transactionMin(CommandSender sender) {
         AutoTuneConfig.EconomyConfig ec = configManager.getConfig().economy();
@@ -1716,7 +1720,7 @@ public class AdminCommand {
                 .toList();
     }
 
-    @Command("autotune admin transactions [player]")
+    @Command("at|autotune admin transactions [player]")
     @Permission("autotune.admin")
     public void adminTransactions(CommandSender sender, @Argument(value = "player", suggestions = "admin-player-names") @Default("") String playerNameStr) {
         if (!(sender instanceof Player player)) {
@@ -1750,7 +1754,7 @@ public class AdminCommand {
 
     // ─── Market freeze subcommand ──────────────────────────────────────────────
 
-    @Command("autotune admin market")
+    @Command("at|autotune admin market")
     @Permission("autotune.admin")
     public void marketHelp(CommandSender sender) {
         boolean frozen = marketEngine.isFrozen();
@@ -1766,7 +1770,7 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin market freeze")
+    @Command("at|autotune admin market freeze")
     @Permission("autotune.admin")
     public void marketFreeze(CommandSender sender) {
         boolean nowFrozen = !marketEngine.isFrozen();
@@ -1796,7 +1800,7 @@ public class AdminCommand {
                 .toList();
     }
 
-    @Command("autotune admin price set <material> <price> [hours]")
+    @Command("at|autotune admin price set <material> <price> [hours]")
     @Permission("autotune.admin")
     public void priceSet(
             CommandSender sender,
@@ -1843,7 +1847,7 @@ public class AdminCommand {
                 + ": " + configManager.formatCurrency(price) + expiryStr, NamedTextColor.GREEN));
     }
 
-    @Command("autotune admin price remove <material>")
+    @Command("at|autotune admin price remove <material>")
     @Permission("autotune.admin")
     public void priceRemove(CommandSender sender, @Argument("material") String materialName) {
         org.bukkit.Material mat = matchMaterial(materialName);
@@ -1873,7 +1877,7 @@ public class AdminCommand {
         sender.sendMessage(Component.text("Override removed for " + mat.name() + ".", NamedTextColor.GREEN));
     }
 
-    @Command("autotune admin price list")
+    @Command("at|autotune admin price list")
     @Permission("autotune.admin")
     public void priceList(CommandSender sender) {
         Map<Integer, PriceOverride> all = overrideRepo.getAllOverrides();
@@ -1909,14 +1913,14 @@ public class AdminCommand {
     private static final String CSV_HEADER =
             "material,display_name,section,price,price_floor,price_ceiling,spread_override,max_change_override,price_frozen";
 
-    @Command("autotune admin prices export")
+    @Command("at|autotune admin prices export")
     @Permission("autotune.admin")
     public void pricesExport(CommandSender sender) {
         String filename = "autotune-prices-" + LocalDate.now() + ".csv";
         exportPrices(sender, filename);
     }
 
-    @Command("autotune admin prices export <filename>")
+    @Command("at|autotune admin prices export <filename>")
     @Permission("autotune.admin")
     public void pricesExportFile(CommandSender sender, @Argument("filename") String filename) {
         exportPrices(sender, filename);
@@ -1959,7 +1963,7 @@ public class AdminCommand {
         }
     }
 
-    @Command("autotune admin prices import <filename>")
+    @Command("at|autotune admin prices import <filename>")
     @Permission("autotune.admin")
     public void pricesImport(CommandSender sender, @Argument("filename") String filename) {
         Path path = Paths.get(filename);
@@ -2118,7 +2122,7 @@ public class AdminCommand {
 
     // ─── Prices reset ──────────────────────────────────────────────────────────
 
-    @Command("autotune admin prices reset <material>")
+    @Command("at|autotune admin prices reset <material>")
     @Permission("autotune.admin")
     public void pricesReset(
             CommandSender sender,
@@ -2166,7 +2170,7 @@ public class AdminCommand {
      * Resets ALL item prices to their shops.yml base prices and clears all market history.
      * Use when the economy is severely mispriced and per-item resets are impractical.
      */
-    @Command("autotune admin prices reset all")
+    @Command("at|autotune admin prices reset all")
     @Permission("autotune.admin")
     public void pricesResetAll(CommandSender sender) {
         List<ShopItem> allItems = shopManager.getAllItems();
@@ -2210,7 +2214,7 @@ public class AdminCommand {
 
     // ─── Per-item config override subcommands ──────────────────────────────────
 
-    @Command("autotune admin item spread <material> <value>")
+    @Command("at|autotune admin item spread <material> <value>")
     @Permission("autotune.admin")
     public void itemSpread(
             CommandSender sender,
@@ -2241,7 +2245,7 @@ public class AdminCommand {
                 + " set to " + String.format("%.2f%%", value * 100), NamedTextColor.GREEN));
     }
 
-    @Command("autotune admin item maxchange <material> <value>")
+    @Command("at|autotune admin item maxchange <material> <value>")
     @Permission("autotune.admin")
     public void itemMaxChange(
             CommandSender sender,
@@ -2272,7 +2276,7 @@ public class AdminCommand {
                 + " set to " + String.format("%.2f%%", value), NamedTextColor.GREEN));
     }
 
-    @Command("autotune admin item floor <material> <value>")
+    @Command("at|autotune admin item floor <material> <value>")
     @Permission("autotune.admin")
     public void itemFloor(
             CommandSender sender,
@@ -2321,7 +2325,7 @@ public class AdminCommand {
                 + " — buy/sell prices will not go below this.", NamedTextColor.GREEN));
     }
 
-    @Command("autotune admin item ceiling <material> <value>")
+    @Command("at|autotune admin item ceiling <material> <value>")
     @Permission("autotune.admin")
     public void itemCeiling(
             CommandSender sender,
@@ -2370,7 +2374,7 @@ public class AdminCommand {
                 + " — buy/sell prices will not exceed this.", NamedTextColor.GREEN));
     }
 
-    @Command("autotune admin item info <material>")
+    @Command("at|autotune admin item info <material>")
     @Permission("autotune.admin")
     public void itemInfo(
             CommandSender sender,
@@ -2472,7 +2476,7 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin item reset <material>")
+    @Command("at|autotune admin item reset <material>")
     @Permission("autotune.admin")
     public void itemReset(
             CommandSender sender,
@@ -2501,7 +2505,7 @@ public class AdminCommand {
                 + item.getDisplayNameOrMaterial() + ". Using global config values.", NamedTextColor.GREEN));
     }
 
-    @Command("autotune admin item freeze <material>")
+    @Command("at|autotune admin item freeze <material>")
     @Permission("autotune.admin")
     public void itemFreeze(
             CommandSender sender,
@@ -2540,7 +2544,7 @@ public class AdminCommand {
         }
     }
 
-    @Command("autotune admin item unfreeze <material>")
+    @Command("at|autotune admin item unfreeze <material>")
     @Permission("autotune.admin")
     public void itemUnfreeze(
             CommandSender sender,
@@ -2575,8 +2579,8 @@ public class AdminCommand {
         return options.stream().filter(name -> name.contains(lower)).toList();
     }
 
-    @Command("autotune admin item tier <material> <tier>")
-    @Permission("tier.admin")
+    @Command("at|autotune admin item tier <material> <tier>")
+    @Permission("autotune.admin")
     public void itemTier(
             CommandSender sender,
             @Argument(value = "material", suggestions = "price-override-material") String materialName,
@@ -2630,7 +2634,7 @@ public class AdminCommand {
                         + ". Reload to apply.", NamedTextColor.GRAY)));
     }
 
-    @Command("autotune admin exchange")
+    @Command("at|autotune admin exchange")
     @Permission("autotune.admin")
     public void adminExchange(CommandSender sender) {
         if (!exchangeRateService.isEnabled()) {
@@ -2693,7 +2697,7 @@ public class AdminCommand {
         sender.sendMessage(Component.text("Rate > 1.0 = more expensive than global average; < 1.0 = cheaper.", NamedTextColor.DARK_GRAY));
     }
 
-    @Command("autotune admin reseed-prices")
+    @Command("at|autotune admin reseed-prices")
     @Permission("autotune.admin")
     public void adminReseedPrices(CommandSender sender) {
         if (!configManager.getConfig().economy().seedFromSharedPrices()) {
@@ -2713,7 +2717,7 @@ public class AdminCommand {
 
     // ─── Market Event Commands ────────────────────────────────────────────────
 
-    @Command("autotune admin event list")
+    @Command("at|autotune admin event list")
     @Permission("autotune.admin")
     public void adminEventList(CommandSender sender) {
         List<MarketEvent> allEvents = marketEventService.listEvents();
@@ -2763,7 +2767,7 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin event create <name> <type> <materials> <multiplier> <durationHours>")
+    @Command("at|autotune admin event create <name> <type> <materials> <multiplier> <durationHours>")
     @Permission("autotune.admin")
     public void adminEventCreate(
             CommandSender sender,
@@ -2853,7 +2857,7 @@ public class AdminCommand {
         sender.sendMessage(Component.empty());
     }
 
-    @Command("autotune admin event cancel <eventId>")
+    @Command("at|autotune admin event cancel <eventId>")
     @Permission("autotune.admin")
     public void adminEventCancel(CommandSender sender, @Argument("eventId") String eventIdStr) {
         UUID eventId;
@@ -2874,14 +2878,14 @@ public class AdminCommand {
         }
     }
 
-    @Command("autotune admin digest")
+    @Command("at|autotune admin digest")
     @Permission("autotune.admin")
     public void adminDigest(CommandSender sender) {
         sender.sendMessage(Component.text("Sending market digest to Discord...", NamedTextColor.YELLOW));
         marketDigestService.sendDigestNow();
     }
 
-    @Command("autotune admin digest config")
+    @Command("at|autotune admin digest config")
     @Permission("autotune.admin")
     public void adminDigestConfig(CommandSender sender) {
         AutoTuneConfig.MarketDigestConfig cfg = configManager.getConfig().marketDigest();

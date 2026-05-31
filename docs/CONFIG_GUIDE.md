@@ -53,7 +53,7 @@ storage:
     max-lifetime: 1800000
 ```
 
-> **MariaDB is recommended** over MySQL for compatibility with Auto-Tune's JDBI SQL dialect. MySQL 8+ works but some queries use MariaDB-specific `ON CONFLICT` syntax. If using MySQL, test thoroughly before production.
+> **MariaDB is recommended** for production, but MySQL 8+ is supported. Runtime upserts use dialect-specific SQL for SQLite and MySQL/MariaDB.
 
 ---
 
@@ -90,6 +90,7 @@ The scaling formula uses a `tanh` curve: `tanh(onlineCount * atanh(0.99) / fullE
 |-----|---------|-------------|
 | `loans.base-interest-rate` | `0.05` | Annual-ish interest rate (5% per compound) |
 | `loans.compound-interval-hours` | `24` | Hours between interest compounds |
+| `loans.default-duration-days` | `14` | Default term when a player does not specify loan days |
 | `loans.max-loan-multiplier` | `2.0` | Max loan size as multiple of player's total traded value |
 | `loans.debt-gdp-tier3-ratio` | `30.0` | TIER3 circuit fires when D/G exceeds this value |
 | `loans.credit-score.enabled` | `true` | Use credit score to adjust interest rates |
@@ -100,12 +101,12 @@ The scaling formula uses a `tanh` curve: `tanh(onlineCount * atanh(0.99) / fullE
 | `loans.counter-cyclical` | `true` | Reduce interest rate as Debt/GDP rises (0% at D/G ≥ circuit-breaker-ratio) |
 | `loans.post-default-cooldown-hours` | `168` | Lock borrowers from new loans after default (7 days) |
 | `loans.single-loan-gdp-cap` | `1.0` | Maximum loan size as multiple of 24h GDP (cap at ~1.0; values ≤ 0.10 backfire) |
-| `loans.tier3-hysteresis-band` | `0.1` | TIER3 stays locked until D/G drops below tier3 × (1 − band). Default 0.1 = 10% band. Recommended 0.5 for deep hysteresis |
+| `loans.tier3-hysteresis-band` | `0.5` | TIER3 stays locked until D/G drops below tier3 x (1 - band). Default 0.5 = 50% band |
 | `loans.min-interest-multiplier` | `0.0` | Floor for counter-cyclical interest multiplier. 0.0 = pure counter-cyclical (0% at D/G=tier3) |
 | `loans.guildbuyer-total-debt-cap` | `3.0` | Maximum total debt any single GuildBuyer can hold, as multiple of economy GDP |
 | `loans.block-mm-gb-loans-during-tier3` | `false` | Block MarketMaker and GuildBuyer loan requests while TIER3 circuit is engaged |
 
-**tier3-hysteresis-band** (default `0.1`): When TIER3 fires (D/G ≥ tier3 ratio), the circuit stays locked until D/G drops to `tier3 × (1 − band)`. At default 0.1 (10% band), it unlocks at 90% of tier3. At 0.5 (50% band), it stays locked until D/G falls below `tier3 × 0.5` — a much deeper hysteresis. A 50% band prevents the circuit from re-triggering immediately after TIER3 exit. Recommended setting: `0.5`.
+**tier3-hysteresis-band** (default `0.5`): When TIER3 fires (D/G >= tier3 ratio), the circuit stays locked until D/G drops to `tier3 x (1 - band)`. At the default 0.5 (50% band), it unlocks at 50% of tier3. A 50% band prevents the circuit from re-triggering immediately after TIER3 exit.
 
 **min-interest-multiplier** (default `0.0`): Counter-cyclical interest uses `max(multiplier, this)` instead of `max(0, multiplier)`. At default 0.0, interest can reach 0% at D/G=tier3. Set to `0.10` for a 10% minimum interest rate even at crisis levels.
 
@@ -164,7 +165,7 @@ An item with Sharpness II + Efficiency IV sells at `basePrice × 1.75 × 2.20` =
 |-----|---------|-------------|
 | `web.enabled` | `true` | Enable the built-in web dashboard |
 | `web.port` | `8989` | HTTP port for the dashboard |
-| `web.bind` | `0.0.0.0` | Interface to bind to |
+| `web.bind` | `127.0.0.1` | Interface to bind to |
 | `web.password` | (none) | Optional password protection |
 
 ---
@@ -344,15 +345,15 @@ These parameters fine-tune the loan circuit breaker behavior for long-running se
 
 ### `tier3-hysteresis-band`
 
-**Default: `0.1`** | **Recommended: `0.5`**
+**Default: `0.5`**
 
 When TIER3 fires (D/G ≥ `debt-gdp-tier3-ratio`), the circuit stays locked at 0% interest until D/G drops below `tier3 × (1 − tier3-hysteresis-band)`.
 
 | Band setting | tier3=30 unlocks at | Effect |
 |---|---|---|
-| `0.1` (default) | D/G < 27.0× | 10% band — circuit re-triggers quickly |
+| `0.1` | D/G < 27.0x | 10% band - circuit re-triggers quickly |
 | `0.3` | D/G < 21.0× | 30% band — moderate hysteresis |
-| `0.5` (recommended) | D/G < 15.0× | 50% band — deep hysteresis, circuit stays locked longer |
+| `0.5` (default) | D/G < 15.0x | 50% band - deep hysteresis, circuit stays locked longer |
 
 **Why it matters:** The 60d doom loop (D/G 8→20→16) is caused in part by the circuit unlocking too early. At 0.1 band, the circuit unlocks at D/G=27 and immediately re-triggers TIER3 within days as debt continues accumulating. A 50% band keeps the circuit locked until D/G < 15× — giving the economy time to actually deleverage.
 

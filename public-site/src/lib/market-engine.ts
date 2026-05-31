@@ -21,6 +21,14 @@ export interface MarketConfig {
   fullEffectPlayers: number;
   /** Max price change per market tick (%). */
   maxPriceChangePercent: number;
+  /** Multiplier applied to downward price moves caused by sell pressure. */
+  sellPressureMultiplier: number;
+  /** Dampening applied when price moves continue in the same direction. */
+  trendDampening: number;
+  /** Minimum tick change (%) that counts toward a trend streak. */
+  trendStreakThresholdPercent: number;
+  /** Lower bound for trend dampening. */
+  trendDampeningFloor: number;
   /** Liquidity coefficient controlling how fast spreads tighten with volume. */
   liquidityCoeff: number;
   /** Distinct-trader count at which the full liquidity coefficient applies. */
@@ -36,6 +44,10 @@ export const DEFAULT_CONFIG: MarketConfig = {
   playerImpact: 0.6,
   fullEffectPlayers: 10,
   maxPriceChangePercent: 1.5,
+  sellPressureMultiplier: 1.0,
+  trendDampening: 0.10,
+  trendStreakThresholdPercent: 0.1,
+  trendDampeningFloor: 0.25,
   liquidityCoeff: 0.01,
   liquidityFullEffectTraders: 10,
   tradeWindowDays: 7,
@@ -205,6 +217,57 @@ export function recencyWeight(
   return Math.max(0.0, 1.0 - ageDays / windowDays);
 }
 
+export type TrendDirection = 'UP' | 'DOWN' | 'STABLE';
+
+interface TrendState {
+  direction: TrendDirection;
+  streak: number;
+}
+
+function calculatePriceChangePercent(
+  buyProbability: number,
+  onlinePlayers: number,
+  config: MarketConfig,
+  trend: TrendState,
+): number {
+  const tradeRatio = (buyProbability - 0.5) * 2.0;
+  const ps = playerScaling(onlinePlayers, config.fullEffectPlayers);
+  let changePct = tradeRatio * ps * (config.maxPriceChangePercent / 100.0);
+
+  if (changePct < 0) {
+    changePct *= config.sellPressureMultiplier;
+  }
+
+  if (trend.streak > 0 && config.trendDampening > 0) {
+    const continuingStreak =
+      (changePct > 0 && trend.direction === 'UP') ||
+      (changePct < 0 && trend.direction === 'DOWN');
+    if (continuingStreak) {
+      const rawDampening = 1.0 / (1.0 + trend.streak * config.trendDampening);
+      changePct *= Math.max(rawDampening, config.trendDampeningFloor);
+    }
+  }
+
+  return changePct;
+}
+
+function updateTrendState(oldPrice: number, newPrice: number, trend: TrendState, config: MarketConfig): TrendState {
+  if (oldPrice <= 0) return { direction: 'STABLE', streak: 0 };
+
+  const pctChange = (newPrice - oldPrice) / oldPrice;
+  const threshold = config.trendStreakThresholdPercent / 100.0;
+  const nextDirection: TrendDirection =
+    pctChange > threshold ? 'UP' : pctChange < -threshold ? 'DOWN' : 'STABLE';
+
+  if (nextDirection === 'STABLE') {
+    return { direction: 'STABLE', streak: 0 };
+  }
+  if (nextDirection === trend.direction) {
+    return { direction: nextDirection, streak: trend.streak + 1 };
+  }
+  return { direction: nextDirection, streak: 1 };
+}
+
 /**
  * Simulate price evolution over multiple ticks given constant buy probability.
  * 
@@ -226,18 +289,14 @@ export function simulatePrice(
   config: MarketConfig = DEFAULT_CONFIG
 ): number[] {
   const prices: number[] = [initialPrice];
-  const ps = playerScaling(onlinePlayers, config.fullEffectPlayers);
+  let trend: TrendState = { direction: 'STABLE', streak: 0 };
   
   for (let i = 0; i < nTicks; i++) {
-    // Trade ratio: -1 (all sells) to +1 (all buys)
-    const tradeRatio = (buyProbability - 0.5) * 2.0;
-    
-    // Price change as percentage
-    const changePct = tradeRatio * ps * (config.maxPriceChangePercent / 100.0);
-    
-    // Apply change
-    const newPrice = prices[prices.length - 1] * (1 + changePct);
-    prices.push(Math.max(0.01, newPrice)); // Floor at 0.01
+    const oldPrice = prices[prices.length - 1];
+    const changePct = calculatePriceChangePercent(buyProbability, onlinePlayers, config, trend);
+    const newPrice = Math.max(0.01, oldPrice * (1 + changePct)); // Floor at 0.01
+    prices.push(newPrice);
+    trend = updateTrendState(oldPrice, newPrice, trend, config);
   }
   
   return prices;
@@ -483,22 +542,20 @@ export function simulatePriceWithEvents(
   material = 'DIAMOND',
 ): number[] {
   const prices: number[] = [initialPrice];
-  const ps = playerScaling(onlinePlayers, config.fullEffectPlayers);
+  let trend: TrendState = { direction: 'STABLE', streak: 0 };
 
   for (let i = 0; i < nTicks; i++) {
-    // Trade ratio: -1 (all sells) to +1 (all buys)
-    const tradeRatio = (buyProbability - 0.5) * 2.0;
-
-    // Natural price change as percentage
-    let changePct = tradeRatio * ps * (config.maxPriceChangePercent / 100.0);
+    const oldPrice = prices[prices.length - 1];
+    let changePct = calculatePriceChangePercent(buyProbability, onlinePlayers, config, trend);
 
     // Apply market events (amplify/dampen the natural change)
     if (activeEvents.length > 0) {
       changePct = applyEventMultipliers(activeEvents, material, changePct);
     }
 
-    const newPrice = prices[prices.length - 1] * (1 + changePct);
-    prices.push(Math.max(0.01, newPrice)); // Floor at $0.01
+    const newPrice = Math.max(0.01, oldPrice * (1 + changePct)); // Floor at $0.01
+    prices.push(newPrice);
+    trend = updateTrendState(oldPrice, newPrice, trend, config);
   }
 
   return prices;

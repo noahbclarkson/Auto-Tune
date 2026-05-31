@@ -23,12 +23,11 @@ public class SellGui {
         String title = configManager.getConfig().gui().titles().sell();
         Inventory inventory = Bukkit.createInventory(null, 54, Component.text(title));
 
+        player.openInventory(inventory);
         SellGuiListener listener = SellGuiListener.getInstance();
         if (listener != null) {
             listener.trackInventory(player.getUniqueId(), inventory);
         }
-
-        player.openInventory(inventory);
         player.sendMessage(configManager.getMessage("sell.opened"));
     }
 }

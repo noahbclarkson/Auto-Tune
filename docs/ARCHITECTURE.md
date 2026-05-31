@@ -139,7 +139,7 @@ Fully in the Java plugin (migrated from Rust API on 2026-03-25). Not a cross-ser
 
 - **Matching:** `AuctionMatchingEngine` — price-time priority, maker-price execution
 - **Orders:** `AuctionManager.placeBuyOrderAsync` / `placeSellOrderAsync` — async DB write
-- **Fills:** `AuctionManager.processFill` (command path) and `recordFillAsync` (GUI path) — both credit the seller's Vault balance and give items to the buyer on Bukkit main thread via scheduler
+- **Fills:** `AuctionManager.processFill` owns settlement for command and GUI paths. GUI fills go through `fillBuyOrderAsync` / `fillSellOrderAsync`, which create real short-lived counter orders so fill rows always reference order IDs.
 - **GUI:** `AuctionGui` — 6-row chest, sell/buy columns, click-to-fill, cancel own orders
 
 ---

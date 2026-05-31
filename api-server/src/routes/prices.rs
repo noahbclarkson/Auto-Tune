@@ -4,6 +4,11 @@
 //! GET  /api/prices/true         — get current true prices
 //! GET  /api/prices/history/:item — price history for an item
 
+use std::{
+    sync::atomic::{AtomicBool, Ordering},
+    time::Duration,
+};
+
 use actix_web::{web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row};
@@ -18,6 +23,10 @@ use crate::{
     price_computer::recompute_true_prices,
     rate_limit::{client_ip, RateLimitResult, RateLimiter},
 };
+
+static RECOMPUTE_RUNNING: AtomicBool = AtomicBool::new(false);
+static RECOMPUTE_REQUESTED: AtomicBool = AtomicBool::new(false);
+const RECOMPUTE_DEBOUNCE: Duration = Duration::from_secs(2);
 
 /// POST /api/servers/:id/prices
 pub async fn submit_prices(
@@ -103,12 +112,7 @@ pub async fn submit_prices(
         .execute(pool.get_ref())
         .await;
 
-    let pool_clone = pool.get_ref().clone();
-    tokio::spawn(async move {
-        if let Err(e) = recompute_true_prices(&pool_clone).await {
-            tracing::warn!("price recomputation failed: {e}");
-        }
-    });
+    schedule_true_price_recompute(pool.get_ref().clone());
 
     tracing::info!(
         server_id = %path_server_id,
@@ -121,6 +125,41 @@ pub async fn submit_prices(
         success: true,
         items_processed: n,
     })
+}
+
+fn schedule_true_price_recompute(pool: PgPool) {
+    RECOMPUTE_REQUESTED.store(true, Ordering::Release);
+    if RECOMPUTE_RUNNING
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .is_err()
+    {
+        return;
+    }
+
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(RECOMPUTE_DEBOUNCE).await;
+            RECOMPUTE_REQUESTED.store(false, Ordering::Release);
+
+            if let Err(e) = recompute_true_prices(&pool).await {
+                tracing::warn!("price recomputation failed: {e}");
+            }
+
+            if RECOMPUTE_REQUESTED.load(Ordering::Acquire) {
+                continue;
+            }
+
+            RECOMPUTE_RUNNING.store(false, Ordering::Release);
+            if RECOMPUTE_REQUESTED.load(Ordering::Acquire)
+                && RECOMPUTE_RUNNING
+                    .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                    .is_ok()
+            {
+                continue;
+            }
+            break;
+        }
+    });
 }
 
 /// GET /api/prices/true

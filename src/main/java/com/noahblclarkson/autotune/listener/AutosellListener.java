@@ -3,7 +3,7 @@ package com.noahblclarkson.autotune.listener;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.config.ConfigManager;
-import com.noahblclarkson.autotune.economy.EconomyManager;
+import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.manager.AutosellManager;
 import com.noahblclarkson.autotune.manager.ShopManager;
 import com.noahblclarkson.autotune.model.ShopItem;
@@ -18,8 +18,11 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 @Singleton
 @SuppressWarnings("PMD")
@@ -28,12 +31,19 @@ public class AutosellListener implements Listener {
     private final AutosellManager autosellManager;
     private final ShopManager shopManager;
     private final ConfigManager configManager;
+    private final DatabaseManager databaseManager;
 
     @Inject
-    public AutosellListener(AutosellManager autosellManager, ShopManager shopManager, ConfigManager configManager) {
+    public AutosellListener(
+            AutosellManager autosellManager,
+            ShopManager shopManager,
+            ConfigManager configManager,
+            DatabaseManager databaseManager
+    ) {
         this.autosellManager = autosellManager;
         this.shopManager = shopManager;
         this.configManager = configManager;
+        this.databaseManager = databaseManager;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -67,15 +77,20 @@ public class AutosellListener implements Listener {
             return;
         }
 
+        ItemStack saleStack = stack.clone();
         event.setCancelled(true);
-        EconomyManager.TransactionResult result = autosellManager.sellPickup(player, shopItem, stack, stack.getAmount());
-        if (result != null && result.success()) {
-            event.getItem().remove();
-            autosellManager.sendAutosellActionBar(player, shopItem, result.amount(), result.totalPrice());
-            playPickupSound(player);
-        } else {
-            event.setCancelled(false);
-        }
+        event.getItem().remove();
+
+        autosellManager.sellPickupAsync(player, shopItem, saleStack, saleStack.getAmount())
+                .whenComplete((result, error) -> databaseManager.runOnMain(() -> {
+                    if (error != null || result == null || !result.success()) {
+                        returnItem(player, saleStack);
+                        return;
+                    }
+
+                    autosellManager.sendAutosellActionBar(player, shopItem, result.amount(), result.totalPrice());
+                    playPickupSound(player);
+                }));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -97,8 +112,7 @@ public class AutosellListener implements Listener {
             return;
         }
 
-        int totalSold = 0;
-        BigDecimal totalEarned = BigDecimal.ZERO;
+        List<AutosellStack> pendingSales = new ArrayList<>();
 
         ItemStack[] storageContents = player.getInventory().getStorageContents();
         for (int slot = 0; slot < storageContents.length; slot++) {
@@ -121,24 +135,15 @@ public class AutosellListener implements Listener {
             if (!passesMinimumPrice(player, shopItem)) {
                 continue;
             }
-
-            int amount = stack.getAmount();
-            EconomyManager.TransactionResult result = autosellManager.sellPickup(player, shopItem, stack, amount);
-
-            if (result != null && result.success()) {
-                // Null the slot in our snapshot — sellPickup removed items from the *actual*
-                // inventory. Without this, the next loop iteration sees the same slot
-                // still populated in our cloned snapshot and attempts to re-sell it
-                // (getting "insufficient items" which is silently ignored).
-                storageContents[slot] = null;
-                totalSold += result.amount();
-                totalEarned = totalEarned.add(result.totalPrice());
-            }
+            ItemStack saleStack = stack.clone();
+            player.getInventory().setItem(slot, null);
+            storageContents[slot] = null;
+            pendingSales.add(new AutosellStack(shopItem, saleStack));
         }
 
-        if (totalSold > 0) {
-            autosellManager.sendAutosellActionBar(player, totalSold, totalEarned);
-            playInventorySellSound(player);
+        if (!pendingSales.isEmpty()) {
+            processAutosellSales(player, pendingSales).whenComplete((summary, error) ->
+                    databaseManager.runOnMain(() -> finishInventoryAutosell(player, pendingSales, summary, error)));
         }
     }
 
@@ -155,6 +160,62 @@ public class AutosellListener implements Listener {
         return sellPrice.doubleValue() >= effectiveMinPrice;
     }
 
+    private CompletableFuture<AutosellBatchResult> processAutosellSales(
+            Player player,
+            List<AutosellStack> pendingSales
+    ) {
+        AutosellBatchResult summary = new AutosellBatchResult();
+        CompletableFuture<AutosellBatchResult> chain = CompletableFuture.completedFuture(summary);
+
+        for (AutosellStack sale : pendingSales) {
+            chain = chain.thenCompose(current -> autosellManager
+                    .sellPickupAsync(player, sale.item(), sale.stack(), sale.stack().getAmount())
+                    .handle((result, error) -> {
+                        if (error != null || result == null || !result.success()) {
+                            current.failedStacks.add(sale.stack());
+                            return current;
+                        }
+
+                        current.totalSold += result.amount();
+                        current.totalEarned = current.totalEarned.add(result.totalPrice());
+                        return current;
+                    }));
+        }
+
+        return chain;
+    }
+
+    private void finishInventoryAutosell(
+            Player player,
+            List<AutosellStack> pendingSales,
+            AutosellBatchResult summary,
+            Throwable error
+    ) {
+        AutosellBatchResult finalSummary = summary;
+        if (error != null || finalSummary == null) {
+            finalSummary = new AutosellBatchResult();
+            for (AutosellStack sale : pendingSales) {
+                finalSummary.failedStacks.add(sale.stack());
+            }
+        }
+
+        for (ItemStack stack : finalSummary.failedStacks) {
+            returnItem(player, stack);
+        }
+
+        if (finalSummary.totalSold > 0) {
+            autosellManager.sendAutosellActionBar(player, finalSummary.totalSold, finalSummary.totalEarned);
+            playInventorySellSound(player);
+        }
+    }
+
+    private void returnItem(Player player, ItemStack stack) {
+        var overflow = player.getInventory().addItem(stack);
+        for (ItemStack dropped : overflow.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), dropped);
+        }
+    }
+
     private void playPickupSound(Player player) {
         String soundName = configManager.getConfig().autosell().soundOnPickup();
         if (soundName == null || soundName.isBlank() || soundName.equalsIgnoreCase("NONE")) {
@@ -166,6 +227,15 @@ public class AutosellListener implements Listener {
         } catch (IllegalArgumentException ignored) {
             // Invalid sound name — silently skip
         }
+    }
+
+    private record AutosellStack(ShopItem item, ItemStack stack) {
+    }
+
+    private static final class AutosellBatchResult {
+        private int totalSold;
+        private BigDecimal totalEarned = BigDecimal.ZERO;
+        private final List<ItemStack> failedStacks = new ArrayList<>();
     }
 
     private void playInventorySellSound(Player player) {

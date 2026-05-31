@@ -243,9 +243,41 @@ function configToBase64(config: MarketConfig, conditions: { buyRatio: number; pl
 function base64ToConfig(encoded: string): { config: MarketConfig; conditions: { buyRatio: number; players: number; traders: number; volume: number; zScore: number } } | null {
   try {
     const payload = JSON.parse(atob(encoded));
-    const { baseSpread, volumeImpact, playerImpact, fullEffectPlayers, maxPriceChangePercent, liquidityCoeff, liquidityFullEffectTraders, tradeWindowDays, buyRatio, players, traders, volume, zScore } = payload;
+    const {
+      baseSpread,
+      volumeImpact,
+      playerImpact,
+      fullEffectPlayers,
+      maxPriceChangePercent,
+      sellPressureMultiplier,
+      trendDampening,
+      trendStreakThresholdPercent,
+      trendDampeningFloor,
+      liquidityCoeff,
+      liquidityFullEffectTraders,
+      tradeWindowDays,
+      buyRatio,
+      players,
+      traders,
+      volume,
+      zScore,
+    } = payload;
     return {
-      config: { baseSpread, volumeImpact, playerImpact, fullEffectPlayers, maxPriceChangePercent, liquidityCoeff, liquidityFullEffectTraders, tradeWindowDays },
+      config: {
+        ...DEFAULT_CONFIG,
+        baseSpread: baseSpread ?? DEFAULT_CONFIG.baseSpread,
+        volumeImpact: volumeImpact ?? DEFAULT_CONFIG.volumeImpact,
+        playerImpact: playerImpact ?? DEFAULT_CONFIG.playerImpact,
+        fullEffectPlayers: fullEffectPlayers ?? DEFAULT_CONFIG.fullEffectPlayers,
+        maxPriceChangePercent: maxPriceChangePercent ?? DEFAULT_CONFIG.maxPriceChangePercent,
+        sellPressureMultiplier: sellPressureMultiplier ?? DEFAULT_CONFIG.sellPressureMultiplier,
+        trendDampening: trendDampening ?? DEFAULT_CONFIG.trendDampening,
+        trendStreakThresholdPercent: trendStreakThresholdPercent ?? DEFAULT_CONFIG.trendStreakThresholdPercent,
+        trendDampeningFloor: trendDampeningFloor ?? DEFAULT_CONFIG.trendDampeningFloor,
+        liquidityCoeff: liquidityCoeff ?? DEFAULT_CONFIG.liquidityCoeff,
+        liquidityFullEffectTraders: liquidityFullEffectTraders ?? DEFAULT_CONFIG.liquidityFullEffectTraders,
+        tradeWindowDays: tradeWindowDays ?? DEFAULT_CONFIG.tradeWindowDays,
+      },
       conditions: { buyRatio: buyRatio ?? 0.7, players: players ?? 10, traders: traders ?? 8, volume: volume ?? 100, zScore: zScore ?? 0 },
     };
   } catch {

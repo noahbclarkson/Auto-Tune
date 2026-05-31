@@ -46,7 +46,7 @@ autotune/
 | Component | Language | Framework | Notes |
 |-----------|----------|-----------|-------|
 | Minecraft plugin | Java 21 | Paper 1.21.4, Guice, JDBI | Shadow JAR bundles everything |
-| Bundled dashboard | TypeScript | Next.js 14 | Static export, served by Javalin |
+| Bundled dashboard | TypeScript | Next.js 15 / React 19 | Static export, served by Javalin |
 | Public site | TypeScript | Next.js 14 | Static export, hosted separately |
 | API server | Rust | Actix-web 4 | Cross-server price solver |
 | Market simulation | Rust | egui | Parameter exploration and stress testing |

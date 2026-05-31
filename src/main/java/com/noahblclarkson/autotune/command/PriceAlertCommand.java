@@ -17,6 +17,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.incendo.cloud.annotations.Argument;
 import org.incendo.cloud.annotations.Command;
+import org.incendo.cloud.annotations.Permission;
 import org.incendo.cloud.annotations.suggestion.Suggestions;
 import org.incendo.cloud.context.CommandContext;
 
@@ -35,6 +36,7 @@ public class PriceAlertCommand {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter
             .ofPattern("MMM d, HH:mm")
             .withZone(ZoneId.systemDefault());
+    private static final String PERMISSION = "autotune.alert";
 
     private final PriceAlertManager alertManager;
     private final ShopManager shopManager;
@@ -58,10 +60,11 @@ public class PriceAlertCommand {
     }
 
     @Command("alert")
+    @Permission(PERMISSION)
     public void alertHelp(Player sender) {
         sender.sendMessage(Component.empty());
         sender.sendMessage(makeTitle("Price Alerts"));
-        sender.sendMessage(Component.text("/alert add <item> <price> [above|below]", NamedTextColor.YELLOW)
+        sender.sendMessage(Component.text("/alert add <item> <price> <above|below>", NamedTextColor.YELLOW)
                 .append(Component.text(" - create an alert", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/alert list", NamedTextColor.YELLOW)
                 .append(Component.text(" - view your alerts", NamedTextColor.GRAY)));
@@ -94,15 +97,21 @@ public class PriceAlertCommand {
     }
 
     @Command("alert add <material> <price> <type>")
+    @Permission(PERMISSION)
     public void alertAdd(
             Player sender,
-            @Argument("material") String materialName,
+            @Argument(value = "material", suggestions = "alert-item-suggestion") String materialName,
             @Argument("price") BigDecimal price,
             @Argument(value = "type", suggestions = "alert-type-suggestion") String typeStr
     ) {
         Material mat = matchMaterial(materialName);
         if (mat == null) {
             sender.sendMessage(Component.text("Unknown material: " + materialName, NamedTextColor.RED));
+            return;
+        }
+
+        if (price.compareTo(BigDecimal.ZERO) <= 0) {
+            sender.sendMessage(Component.text("Price must be greater than 0.", NamedTextColor.RED));
             return;
         }
 
@@ -131,11 +140,12 @@ public class PriceAlertCommand {
 
         String direction = alertType == AlertType.ABOVE ? "above" : "below";
         sender.sendMessage(Component.text("Alert created for " + shopItem.getDisplayNameOrMaterial()
-                + ": notify when price rises " + direction + " "
+                + ": notify when price moves " + direction + " "
                 + configManager.formatCurrency(price), NamedTextColor.GREEN));
     }
 
     @Command("alert list")
+    @Permission(PERMISSION)
     public void alertList(Player sender) {
         List<PriceAlert> alerts = alertManager.getPlayerAlerts(sender.getUniqueId());
 
@@ -143,7 +153,7 @@ public class PriceAlertCommand {
         sender.sendMessage(makeTitle("Your Price Alerts"));
 
         if (alerts.isEmpty()) {
-            sender.sendMessage(Component.text("  No alerts set. Use /alert add <item> <price> [above|below]",
+            sender.sendMessage(Component.text("  No alerts set. Use /alert add <item> <price> <above|below>",
                     NamedTextColor.GRAY));
             sender.sendMessage(Component.empty());
             return;
@@ -190,6 +200,7 @@ public class PriceAlertCommand {
     }
 
     @Command("alert remove <identifier>")
+    @Permission(PERMISSION)
     public void alertRemove(Player sender, @Argument("identifier") String identifier) {
         UUID playerUuid = sender.getUniqueId();
         List<PriceAlert> alerts = alertManager.getPlayerAlerts(playerUuid);
@@ -213,6 +224,7 @@ public class PriceAlertCommand {
     }
 
     @Command("alert rearm <identifier>")
+    @Permission(PERMISSION)
     public void alertRearm(Player sender, @Argument("identifier") String identifier) {
         UUID playerUuid = sender.getUniqueId();
         List<PriceAlert> alerts = alertManager.getPlayerAlerts(playerUuid);
@@ -236,6 +248,7 @@ public class PriceAlertCommand {
     }
 
     @Command("alert toggle <identifier>")
+    @Permission(PERMISSION)
     public void alertToggle(Player sender, @Argument("identifier") String identifier) {
         UUID playerUuid = sender.getUniqueId();
         List<PriceAlert> alerts = alertManager.getPlayerAlerts(playerUuid);

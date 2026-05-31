@@ -20,9 +20,11 @@ import java.util.UUID;
 public class BadgeRepository {
 
     private final Jdbi jdbi;
+    private final boolean sqlite;
 
     public BadgeRepository(DatabaseManager databaseManager) {
         this.jdbi = databaseManager.getJdbi();
+        this.sqlite = databaseManager.isSqlite();
     }
 
     private static PlayerBadge mapBadge(ResultSet rs) throws SQLException {
@@ -37,11 +39,17 @@ public class BadgeRepository {
      * Insert a badge for a player. Idempotent — does nothing if already exists.
      */
     public void insert(PlayerBadge badge) {
-        jdbi.useHandle(handle ->
-                handle.createUpdate("""
+        String sql = sqlite
+                ? """
                         INSERT OR IGNORE INTO at_player_badges (player_uuid, badge_type, earned_at)
                         VALUES (:playerUuid, :badgeType, :earnedAt)
-                        """)
+                        """
+                : """
+                        INSERT IGNORE INTO at_player_badges (player_uuid, badge_type, earned_at)
+                        VALUES (:playerUuid, :badgeType, :earnedAt)
+                        """;
+        jdbi.useHandle(handle ->
+                handle.createUpdate(sql)
                         .bind("playerUuid", badge.playerUuid().toString())
                         .bind("badgeType", badge.badgeType().name())
                         .bind("earnedAt", Timestamp.from(badge.earnedAt()))

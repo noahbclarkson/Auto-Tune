@@ -245,10 +245,13 @@ public class TreasuryService {
         try {
             BigDecimal balance = treasuryBalance.get();
             var jdbi = plugin.getDatabaseManager().getJdbi();
+            String sql = plugin.getDatabaseManager().isSqlite()
+                    ? "INSERT INTO at_treasury (id, balance, last_updated) VALUES (1, :balance, CURRENT_TIMESTAMP) "
+                            + "ON CONFLICT(id) DO UPDATE SET balance = :balance, last_updated = CURRENT_TIMESTAMP"
+                    : "INSERT INTO at_treasury (id, balance, last_updated) VALUES (1, :balance, CURRENT_TIMESTAMP) "
+                            + "ON DUPLICATE KEY UPDATE balance = VALUES(balance), last_updated = CURRENT_TIMESTAMP";
             jdbi.useHandle(handle ->
-                    handle.createUpdate(
-                            "INSERT INTO at_treasury (id, balance, last_updated) VALUES (1, :balance, CURRENT_TIMESTAMP) "
-                                    + "ON CONFLICT(id) DO UPDATE SET balance = :balance, last_updated = CURRENT_TIMESTAMP")
+                    handle.createUpdate(sql)
                             .bind("balance", balance)
                             .execute()
             );

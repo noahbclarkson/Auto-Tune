@@ -143,8 +143,13 @@ public class ConfigManager {
         return new WebConfig(
                 section.getBoolean("enabled", true),
                 section.getInt("port", 8989),
-                section.getString("host", "0.0.0.0"),
-                section.getBoolean("websocket-enabled", true)
+                section.getString("host", "127.0.0.1"),
+                section.getBoolean("websocket-enabled", true),
+                section.getBoolean("auth.enabled", section.getBoolean("auth-enabled", false)),
+                section.getString("auth.token", section.getString("auth-token", "")),
+                section.getStringList("cors-allowed-origins").isEmpty()
+                        ? WebConfig.defaults().corsAllowedOrigins()
+                        : section.getStringList("cors-allowed-origins")
         );
     }
 
@@ -205,7 +210,7 @@ public class ConfigManager {
                 section.getDouble("sell-pressure-multiplier", 1.0),
                 section.getDouble("sector-correlation", 0.05),
                 section.getDouble("player-rate-limit-multiplier", 3.0),
-                section.getDouble("trend-dampening", 0.05),
+                section.getDouble("trend-dampening", 0.10),
                 section.getDouble("trend-streak-threshold-percent", 0.1),
                 section.getDouble("trend-dampening-floor", 0.25),
                 section.getBoolean("adaptive-window", true),
@@ -357,7 +362,7 @@ public class ConfigManager {
             saveConfigIfPresent(section);
         }
         return new PriceReporterConfig(
-                section.getBoolean("enabled", true),
+                section.getBoolean("enabled", false),
                 section.getString("api-url", "https://prices.auto-tune.io"),
                 section.getString("api-key", "your-server-api-key"),
                 serverId,
@@ -368,7 +373,7 @@ public class ConfigManager {
     private void saveConfigIfPresent(ConfigurationSection section) {
         File configFile = new File(plugin.getDataFolder(), "config.yml");
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(configFile);
-        yaml.set("priceReporter.server-id", section.getString("server-id"));
+        yaml.set("price-reporter.server-id", section.getString("server-id"));
         try {
             yaml.save(configFile);
         } catch (IOException e) {
@@ -623,8 +628,13 @@ public class ConfigManager {
     }
 
     private MarketEventConfig parseMarketEventConfig(ConfigurationSection section) {
-        if (section == null || !section.getBoolean("enabled", true)) {
+        if (section == null) {
             return MarketEventConfig.defaults();
+        }
+
+        boolean enabled = section.getBoolean("enabled", true);
+        if (!enabled) {
+            return new MarketEventConfig(false, List.of(), 5, BossBarConfig.DEFAULT);
         }
 
         List<AutoTuneConfig.MarketEventConfigEntry> entries = new ArrayList<>();
@@ -651,7 +661,7 @@ public class ConfigManager {
                 : AutoTuneConfig.BossBarConfig.DEFAULT;
 
         return new MarketEventConfig(
-                section.getBoolean("enabled", true),
+                enabled,
                 entries,
                 Math.max(1, section.getInt("check-interval-minutes", 5)),
                 bossBarConfig
@@ -678,11 +688,15 @@ public class ConfigManager {
     }
 
     private EconomicNewsConfig parseEconomicNewsConfig(ConfigurationSection section) {
-        if (section == null || !section.getBoolean("enabled", true)) {
+        if (section == null) {
             return EconomicNewsConfig.defaults();
         }
+        boolean enabled = section.getBoolean("enabled", true);
+        if (!enabled) {
+            return new EconomicNewsConfig(false, 5, 5.0, 3.0, 60, 3, 30);
+        }
         return new EconomicNewsConfig(
-                section.getBoolean("enabled", true),
+                enabled,
                 Math.max(1, section.getInt("interval-minutes", 5)),
                 Math.max(0.1, section.getDouble("price-change-threshold-percent", 5.0)),
                 Math.max(1.0, section.getDouble("volume-spike-multiplier", 3.0)),
@@ -693,15 +707,19 @@ public class ConfigManager {
     }
 
     private PriceMilestoneConfig parsePriceMilestoneConfig(ConfigurationSection section) {
-        if (section == null || !section.getBoolean("enabled", true)) {
+        if (section == null) {
             return PriceMilestoneConfig.defaults();
         }
+        boolean enabled = section.getBoolean("enabled", true);
         List<Integer> thresholds = section.getIntegerList("thresholds");
         if (thresholds == null || thresholds.isEmpty()) {
             thresholds = List.of(50, 100, 200, 300, 500, 1000, 2000);
         }
+        if (!enabled) {
+            return new PriceMilestoneConfig(false, 1, thresholds.stream().sorted().toList(), 60);
+        }
         return new PriceMilestoneConfig(
-                section.getBoolean("enabled", true),
+                enabled,
                 Math.max(1, section.getInt("interval-minutes", 1)),
                 thresholds.stream().sorted().toList(),
                 Math.max(5, section.getInt("cooldown-minutes", 60))
@@ -726,8 +744,14 @@ public class ConfigManager {
     }
 
     private OnboardingConfig parseOnboardingConfig(ConfigurationSection section) {
-        if (section == null || !section.getBoolean("enabled", true)) {
+        if (section == null) {
             return OnboardingConfig.defaults();
+        }
+
+        boolean enabled = section.getBoolean("enabled", true);
+        if (!enabled) {
+            OnboardingConfig defaults = OnboardingConfig.defaults();
+            return new OnboardingConfig(false, defaults.checkIntervalHours(), defaults.milestones());
         }
 
         int checkIntervalHours = Math.max(1, section.getInt("check-interval-hours", 6));
@@ -740,16 +764,16 @@ public class ConfigManager {
             for (AutoTuneConfig.OnboardingMilestoneConfig defMilestone : defaults) {
                 String category = defMilestone.category();
                 ConfigurationSection ms = milestonesSection.getConfigurationSection(category);
-                boolean enabled = ms != null ? ms.getBoolean("enabled", defMilestone.enabled()) : defMilestone.enabled();
+                boolean milestoneEnabled = ms != null ? ms.getBoolean("enabled", defMilestone.enabled()) : defMilestone.enabled();
                 int dayOffset  = ms != null ? ms.getInt("day-offset", defMilestone.dayOffset()) : defMilestone.dayOffset();
                 String message  = ms != null ? ms.getString("message", defMilestone.message()) : defMilestone.message();
-                milestones.add(new AutoTuneConfig.OnboardingMilestoneConfig(category, dayOffset, enabled, message));
+                milestones.add(new AutoTuneConfig.OnboardingMilestoneConfig(category, dayOffset, milestoneEnabled, message));
             }
         } else {
             milestones = defaults;
         }
 
-        return new OnboardingConfig(true, checkIntervalHours, milestones);
+        return new OnboardingConfig(enabled, checkIntervalHours, milestones);
     }
 
     private AutoTuneConfig.WhaleAntiDumpConfig parseWhaleAntiDumpConfig(ConfigurationSection section) {

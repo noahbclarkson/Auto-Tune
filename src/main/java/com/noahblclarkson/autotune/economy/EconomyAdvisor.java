@@ -188,7 +188,7 @@ public class EconomyAdvisor {
         // Debt-based recommendations
         switch (debtLevel) {
             case NONE -> recommendations.add(
-                "Loans are available but unused. Consider highlighting /loans to active players to stimulate the economy.");
+                "Loans are available but unused. Consider highlighting /loan to active players to stimulate the economy.");
             case LOW -> { /* healthy, no action needed */ }
             case ELEVATED -> {
                 recommendations.add(

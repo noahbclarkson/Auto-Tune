@@ -63,7 +63,7 @@ The dashboard is on by default. If it doesn't load:
 web:
   enabled: true
   port: 8989       # change if 8989 is taken
-  host: "0.0.0.0"  # use "127.0.0.1" to restrict to localhost
+  host: "127.0.0.1"  # use "0.0.0.0" only behind auth and a trusted firewall
 ```
 
 Restart, then visit `http://your-server-ip:8989`.

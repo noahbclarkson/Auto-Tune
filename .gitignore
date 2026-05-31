@@ -50,6 +50,12 @@ Thumbs.db
 # Runtime
 run/
 *.db
+*.pid
+*.tsbuildinfo
+.mock-api.log
+.api-server.log
+.web.log
+.public-site-dev.*.log
 
 # Environment variables
 .env
@@ -66,5 +72,8 @@ run/
 .claude
 # Rust
 target/
+
+# Generated visualizations
+scripts/market_curves.png
 
 memory/

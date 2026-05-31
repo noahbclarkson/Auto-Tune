@@ -51,6 +51,7 @@ public class AutosellGui {
     private ViewMode viewMode = ViewMode.SECTIONS;
     private List<ShopItem> currentItems = List.of();
     private String currentTitle;
+    private int currentPage;
 
     public AutosellGui(AutoTune plugin, Player player) {
         this.plugin = plugin;
@@ -71,6 +72,7 @@ public class AutosellGui {
         viewMode = ViewMode.SECTIONS;
         currentItems = List.of();
         currentTitle = configManager.getConfig().gui().titles().autosell();
+        currentPage = 0;
 
         gui = new ChestGui(6, currentTitle);
         gui.setOnGlobalClick(event -> event.setCancelled(true));
@@ -97,7 +99,7 @@ public class AutosellGui {
             sectionsPane.addItem(new GuiItem(icon, event -> openSection(section.id())), x, y);
 
             x++;
-            if (x > SECTION_COLS) {
+            if (x >= SECTION_COLS) {
                 x = 0;
                 y++;
             }
@@ -116,6 +118,7 @@ public class AutosellGui {
         viewMode = ViewMode.ITEMS;
         currentItems = items;
         currentTitle = sectionTitle(sectionId) + " - Autosell";
+        currentPage = 0;
 
         renderItemsView();
     }
@@ -126,6 +129,12 @@ public class AutosellGui {
 
         itemsPane = new PaginatedPane(0, 0, 9, 5);
         populateItems(currentItems);
+        if (itemsPane.getPages() > 0) {
+            currentPage = Math.min(currentPage, itemsPane.getPages() - 1);
+            itemsPane.setPage(currentPage);
+        } else {
+            currentPage = 0;
+        }
         gui.addPane(itemsPane);
 
         StaticPane navigationPane = createItemsNavigationPane();
@@ -211,6 +220,7 @@ public class AutosellGui {
         return new GuiItem(display, event -> {
             // Shift+left-click = toggle enabled/disabled
             if (event.isShiftClick() && event.isLeftClick()) {
+                rememberCurrentPage();
                 autosellManager.toggleItem(player, shopItem.id());
                 renderItemsView();
                 return;
@@ -258,7 +268,7 @@ public class AutosellGui {
                 "Sell Inventory", configManager.resolveColor(colors.sectionName()),
                 event -> {
                     player.closeInventory();
-                    autosellManager.sellInventory(player);
+                    autosellManager.sellInventoryAsync(player);
                 }), 8, 0);
 
         return pane;
@@ -277,7 +287,8 @@ public class AutosellGui {
                 "Previous Page", accentColor,
                 event -> {
                     if (itemsPane.getPage() > 0) {
-                        itemsPane.setPage(itemsPane.getPage() - 1);
+                        currentPage = itemsPane.getPage() - 1;
+                        itemsPane.setPage(currentPage);
                         gui.update();
                     }
                 }), 0, 0);
@@ -291,6 +302,7 @@ public class AutosellGui {
                 configManager.resolveMaterial(materials.enableAll(), Material.LIME_DYE),
                 "Enable All", configManager.resolveColor(colors.positive()),
                 event -> {
+                    rememberCurrentPage();
                     autosellManager.enableAllItems(player);
                     renderItemsView();
                 }), 2, 0);
@@ -301,6 +313,7 @@ public class AutosellGui {
                 configManager.resolveMaterial(materials.disableAll(), Material.RED_DYE),
                 "Disable All", configManager.resolveColor(colors.negative()),
                 event -> {
+                    rememberCurrentPage();
                     autosellManager.disableAllItems(player);
                     renderItemsView();
                 }), 6, 0);
@@ -310,7 +323,7 @@ public class AutosellGui {
                 "Sell Inventory", configManager.resolveColor(colors.sectionName()),
                 event -> {
                     player.closeInventory();
-                    autosellManager.sellInventory(player);
+                    autosellManager.sellInventoryAsync(player);
                 }), 7, 0);
 
         pane.addItem(createNavigationItem(
@@ -318,7 +331,8 @@ public class AutosellGui {
                 "Next Page", accentColor,
                 event -> {
                     if (itemsPane.getPage() < itemsPane.getPages() - 1) {
-                        itemsPane.setPage(itemsPane.getPage() + 1);
+                        currentPage = itemsPane.getPage() + 1;
+                        itemsPane.setPage(currentPage);
                         gui.update();
                     }
                 }), 8, 0);
@@ -375,7 +389,14 @@ public class AutosellGui {
         if (viewMode == ViewMode.SECTIONS) {
             openSections();
         } else {
+            rememberCurrentPage();
             renderItemsView();
+        }
+    }
+
+    private void rememberCurrentPage() {
+        if (itemsPane != null) {
+            currentPage = itemsPane.getPage();
         }
     }
 

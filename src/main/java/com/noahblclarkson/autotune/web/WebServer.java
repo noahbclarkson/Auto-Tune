@@ -47,6 +47,7 @@ import com.noahblclarkson.autotune.service.PlayerStreakService;
 import com.noahblclarkson.autotune.service.PortfolioService;
 import com.noahblclarkson.autotune.service.EconomyWhatMovedService;
 import io.javalin.Javalin;
+import io.javalin.http.Context;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.json.JsonMapper;
 import io.javalin.websocket.WsContext;
@@ -111,6 +112,8 @@ public class WebServer {
     private static final String KEY_TYPE = "type";
     private static final String KEY_PRICE = "price";
     private static final String KEY_MATERIAL = "material";
+    private static final String AUTH_HEADER = "Authorization";
+    private static final String TOKEN_HEADER = "X-Auto-Tune-Token";
     // Repeated message strings
 
     private final AutoTune plugin;
@@ -239,9 +242,27 @@ public class WebServer {
         });
 
         app.before(ctx -> {
-            ctx.header("Access-Control-Allow-Origin", "*");
-            ctx.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
-            ctx.header("Access-Control-Allow-Headers", "Content-Type");
+            applyCorsHeaders(ctx, config);
+            if ("OPTIONS".equalsIgnoreCase(ctx.method().name())) {
+                ctx.status(204);
+                ctx.skipRemainingHandlers();
+                return;
+            }
+
+            if (requiresAuth(ctx.path(), ctx.method().name(), config)) {
+                if (!hasUsableAuthToken(config)) {
+                    ctx.status(403).json(Map.of(
+                            KEY_ERROR,
+                            "Dashboard API auth token is required when web auth is enabled or host is non-loopback."
+                    ));
+                    ctx.skipRemainingHandlers();
+                    return;
+                }
+                if (!isAuthorized(ctx.header(AUTH_HEADER), ctx.header(TOKEN_HEADER), config.authToken())) {
+                    ctx.status(401).json(Map.of(KEY_ERROR, "Unauthorized"));
+                    ctx.skipRemainingHandlers();
+                }
+            }
         });
 
         registerRoutes();
@@ -260,6 +281,79 @@ public class WebServer {
             app.stop();
             plugin.getLogger().info("Web server stopped.");
         }
+    }
+
+    private void applyCorsHeaders(Context ctx, WebConfig config) {
+        String origin = ctx.header("Origin");
+        if (origin == null || origin.isBlank()) {
+            return;
+        }
+
+        List<String> allowedOrigins = config.corsAllowedOrigins();
+        boolean allowed = allowedOrigins.contains("*") || allowedOrigins.contains(origin);
+        if (!allowed) {
+            return;
+        }
+
+        ctx.header("Vary", "Origin");
+        ctx.header("Access-Control-Allow-Origin", allowedOrigins.contains("*") ? "*" : origin);
+        ctx.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
+        ctx.header("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, X-Auto-Tune-Token");
+        ctx.header("Access-Control-Max-Age", "3600");
+    }
+
+    private boolean requiresAuth(String path, String method, WebConfig config) {
+        if (!config.authEnabled() && isLoopbackHost(config.host())) {
+            return false;
+        }
+        return isSensitiveApiPath(path, method);
+    }
+
+    private boolean isSensitiveApiPath(String path, String method) {
+        if (path == null || !path.startsWith("/api/")) {
+            return false;
+        }
+        if (path.startsWith("/api/admin/")) {
+            return true;
+        }
+        if (path.startsWith("/api/alerts")) {
+            return true;
+        }
+        if (path.startsWith("/api/shop/favorites/")) {
+            return true;
+        }
+        if (path.startsWith("/api/auction/orders/") && path.endsWith("/watch")) {
+            return true;
+        }
+        return !"GET".equalsIgnoreCase(method)
+                && (path.startsWith("/api/portfolio/") || path.startsWith("/api/auction/"));
+    }
+
+    private boolean hasUsableAuthToken(WebConfig config) {
+        String token = config.authToken();
+        return token != null
+                && !token.isBlank()
+                && !"change-me".equalsIgnoreCase(token)
+                && !"your-dashboard-token".equalsIgnoreCase(token);
+    }
+
+    private boolean isAuthorized(String authorizationHeader, String tokenHeader, String expectedToken) {
+        String bearerPrefix = "Bearer ";
+        if (authorizationHeader != null && authorizationHeader.startsWith(bearerPrefix)) {
+            return expectedToken.equals(authorizationHeader.substring(bearerPrefix.length()).trim());
+        }
+        return tokenHeader != null && expectedToken.equals(tokenHeader.trim());
+    }
+
+    private boolean isLoopbackHost(String host) {
+        if (host == null || host.isBlank()) {
+            return false;
+        }
+        String normalized = host.trim().toLowerCase(Locale.ROOT);
+        return "localhost".equals(normalized)
+                || "127.0.0.1".equals(normalized)
+                || "::1".equals(normalized)
+                || "[::1]".equals(normalized);
     }
 
     private void registerRoutes() {
@@ -777,14 +871,24 @@ public class WebServer {
                     s.put("buyOrders", ((Number) s.get("buyOrders")).intValue() + 1);
                     BigDecimal currentBest = (BigDecimal) s.get("bestBid");
                     if (currentBest == null || order.price().compareTo(currentBest) > 0) {
-                        s.put("bestBid", order.price().doubleValue());
+                        s.put("bestBid", order.price());
                     }
                 } else {
                     s.put("sellOrders", ((Number) s.get("sellOrders")).intValue() + 1);
                     BigDecimal currentBest = (BigDecimal) s.get("bestAsk");
                     if (currentBest == null || order.price().compareTo(currentBest) < 0) {
-                        s.put("bestAsk", order.price().doubleValue());
+                        s.put("bestAsk", order.price());
                     }
+                }
+            }
+            for (Map<String, Object> s : summary.values()) {
+                Object bid = s.get("bestBid");
+                Object ask = s.get("bestAsk");
+                if (bid instanceof BigDecimal bestBid) {
+                    s.put("bestBid", bestBid.doubleValue());
+                }
+                if (ask instanceof BigDecimal bestAsk) {
+                    s.put("bestAsk", bestAsk.doubleValue());
                 }
             }
             ctx.json(new ArrayList<>(summary.values()));
@@ -1271,12 +1375,12 @@ public class WebServer {
             // Top volatile items
             List<Map<String, Object>> volatilities = new ArrayList<>();
             List<Map<String, Object>> undersells = new ArrayList<>();
+            Map<Integer, ItemRepository.PriceWindow> priceWindows = itemRepository.getPriceWindowsSince(oneDayAgo);
             for (ShopItem item : allItems) {
-                List<PriceHistory> history = itemRepository
-                        .getPriceHistorySince(item.id(), oneDayAgo, 10);
-                if (history.size() < 2) continue;
-                BigDecimal newest = history.get(0).price();
-                BigDecimal oldest = history.get(history.size() - 1).price();
+                ItemRepository.PriceWindow priceWindow = priceWindows.get(item.id());
+                if (priceWindow == null) continue;
+                BigDecimal newest = priceWindow.newest();
+                BigDecimal oldest = priceWindow.oldest();
                 if (oldest.compareTo(BigDecimal.ZERO) <= 0) continue;
                 double pctChange = newest.subtract(oldest)
                         .divide(oldest, 4, RoundingMode.HALF_UP)
@@ -1904,14 +2008,25 @@ public class WebServer {
             return;
         }
 
+        Map<String, Object> priceDtos = new LinkedHashMap<>();
+        for (Map.Entry<Integer, BigDecimal> entry : prices.entrySet()) {
+            MarketEngine.SpreadResult spread = marketEngine.getSpread(entry.getKey());
+            BigDecimal basePrice = entry.getValue();
+            BigDecimal buyPrice = basePrice.multiply(BigDecimal.ONE.add(spread.bpd()));
+            BigDecimal sellPrice = basePrice.multiply(BigDecimal.ONE.subtract(spread.spd()));
+            priceDtos.put(String.valueOf(entry.getKey()), Map.of(
+                    KEY_PRICE, basePrice.doubleValue(),
+                    "buyPrice", buyPrice.doubleValue(),
+                    "sellPrice", sellPrice.doubleValue(),
+                    "bpd", spread.bpd().doubleValue(),
+                    "spd", spread.spd().doubleValue()
+            ));
+        }
+
         Map<String, Object> message = Map.of(
                 KEY_TYPE, "price_update",
                 KEY_TIMESTAMP, System.currentTimeMillis(),
-                "prices", prices.entrySet().stream()
-                        .collect(Collectors.toMap(
-                                e -> String.valueOf(e.getKey()),
-                                e -> e.getValue().doubleValue()
-                        ))
+                "prices", priceDtos
         );
 
         final String json = gson.toJson(message);

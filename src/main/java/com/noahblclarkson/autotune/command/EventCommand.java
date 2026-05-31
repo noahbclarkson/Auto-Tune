@@ -42,7 +42,7 @@ public class EventCommand {
 
     // ─── /at event ─────────────────────────────────────────────────────────────
 
-    @org.incendo.cloud.annotations.Command("at event")
+    @org.incendo.cloud.annotations.Command("at|autotune event")
     @org.incendo.cloud.annotations.Permission("autotune.admin")
     public void eventHelp(CommandSender sender) {
         sender.sendMessage(Component.empty());
@@ -69,7 +69,7 @@ public class EventCommand {
 
     // ─── /at event list ────────────────────────────────────────────────────────
 
-    @org.incendo.cloud.annotations.Command("at event list")
+    @org.incendo.cloud.annotations.Command("at|autotune event list")
     @org.incendo.cloud.annotations.Permission("autotune.admin")
     public void eventList(CommandSender sender) {
         List<MarketEvent> events = eventService.listEvents();
@@ -88,7 +88,7 @@ public class EventCommand {
 
     // ─── /at event active ──────────────────────────────────────────────────────
 
-    @org.incendo.cloud.annotations.Command("at event active")
+    @org.incendo.cloud.annotations.Command("at|autotune event active")
     @org.incendo.cloud.annotations.Permission("autotune.admin")
     public void eventActive(CommandSender sender) {
         List<MarketEvent> active = eventService.getActiveEvents();
@@ -128,7 +128,7 @@ public class EventCommand {
 
     // ─── /at event trigger ─────────────────────────────────────────────────────
 
-    @org.incendo.cloud.annotations.Command("at event trigger <type> <materials> <multiplier> <minutes>")
+    @org.incendo.cloud.annotations.Command("at|autotune event trigger <type> <materials> <multiplier> <minutes>")
     @org.incendo.cloud.annotations.Permission("autotune.admin")
     public void eventTrigger(
             CommandSender sender,
@@ -195,7 +195,7 @@ public class EventCommand {
 
     // ─── /at event cancel <id> ────────────────────────────────────────────────
 
-    @org.incendo.cloud.annotations.Command("at event cancel <id>")
+    @org.incendo.cloud.annotations.Command("at|autotune event cancel <id>")
     @org.incendo.cloud.annotations.Permission("autotune.admin")
     public void eventCancel(CommandSender sender, @org.incendo.cloud.annotations.Argument("id") String idStr) {
         UUID id;
@@ -217,7 +217,7 @@ public class EventCommand {
 
     // ─── /at event info <id> ──────────────────────────────────────────────────
 
-    @org.incendo.cloud.annotations.Command("at event info <id>")
+    @org.incendo.cloud.annotations.Command("at|autotune event info <id>")
     @org.incendo.cloud.annotations.Permission("autotune.admin")
     public void eventInfo(CommandSender sender, @org.incendo.cloud.annotations.Argument("id") String idStr) {
         UUID id;
@@ -261,7 +261,7 @@ public class EventCommand {
 
     // ─── /at event templates ──────────────────────────────────────────────────
 
-    @org.incendo.cloud.annotations.Command("at event templates")
+    @org.incendo.cloud.annotations.Command("at|autotune event templates")
     @org.incendo.cloud.annotations.Permission("autotune.admin")
     public void eventTemplates(CommandSender sender) {
         List<com.noahblclarkson.autotune.config.AutoTuneConfig.MarketEventConfigEntry> templates = eventService.getTemplates();
@@ -293,7 +293,7 @@ public class EventCommand {
 
     // ─── /at event invoke <template-name> ──────────────────────────────────────
 
-    @org.incendo.cloud.annotations.Command("at event invoke <name>")
+    @org.incendo.cloud.annotations.Command("at|autotune event invoke <name>")
     @org.incendo.cloud.annotations.Permission("autotune.admin")
     public void eventInvoke(CommandSender sender, @org.incendo.cloud.annotations.Argument("name") String name) {
         Optional<MarketEvent> result = eventService.invokeTemplate(name.trim());
@@ -309,7 +309,7 @@ public class EventCommand {
 
     // ─── /at event schedule ───────────────────────────────────────────────────
 
-    @org.incendo.cloud.annotations.Command("at event schedule <type> <materials> <multiplier> <duration> <start-minutes>")
+    @org.incendo.cloud.annotations.Command("at|autotune event schedule <type> <materials> <multiplier> <duration> <start-minutes>")
     @org.incendo.cloud.annotations.Permission("autotune.admin")
     public void eventSchedule(
             CommandSender sender,

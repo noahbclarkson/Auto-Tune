@@ -37,14 +37,16 @@ export default function Home() {
       let changed = false;
       const next = prev.map((item) => {
         const livePrice = livePrices.get(item.id);
-        if (livePrice !== undefined && livePrice !== item.price) {
+        if (livePrice !== undefined && livePrice.price !== item.price) {
           changed = true;
-          // Compute updated buyPrice/sellPrice using current spread
-          const mid = livePrice;
-          const halfSpread = (item.bpd + item.spd) / 2;
-          const newBuyPrice = halfSpread > 0 ? mid / (1 - item.spd) : mid;
-          const newSellPrice = halfSpread > 0 ? mid * (1 - item.spd) : mid;
-          return { ...item, price: livePrice, buyPrice: newBuyPrice, sellPrice: newSellPrice };
+          return {
+            ...item,
+            price: livePrice.price,
+            buyPrice: livePrice.buyPrice,
+            sellPrice: livePrice.sellPrice,
+            bpd: livePrice.bpd ?? item.bpd,
+            spd: livePrice.spd ?? item.spd,
+          };
         }
         return item;
       });

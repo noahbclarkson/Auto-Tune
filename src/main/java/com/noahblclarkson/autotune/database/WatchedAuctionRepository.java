@@ -21,10 +21,12 @@ public class WatchedAuctionRepository {
     private static final Logger LOGGER = Logger.getLogger(WatchedAuctionRepository.class.getName());
 
     private final Jdbi jdbi;
+    private final boolean sqlite;
 
     @Inject
     public WatchedAuctionRepository(DatabaseManager databaseManager) {
         this.jdbi = databaseManager.getJdbi();
+        this.sqlite = databaseManager.isSqlite();
     }
 
     /**
@@ -36,12 +38,17 @@ public class WatchedAuctionRepository {
      */
     public void watch(UUID playerUuid, UUID orderId, String category) {
         try {
-            jdbi.withHandle(handle ->
-                    handle.execute("""
+            String sql = sqlite
+                    ? """
                             INSERT OR IGNORE INTO at_watched_auctions
                             (player_uuid, order_id, category) VALUES (?, ?, ?)
-                            """,
-                            playerUuid.toString(), orderId.toString(), category)
+                            """
+                    : """
+                            INSERT IGNORE INTO at_watched_auctions
+                            (player_uuid, order_id, category) VALUES (?, ?, ?)
+                            """;
+            jdbi.withHandle(handle ->
+                    handle.execute(sql, playerUuid.toString(), orderId.toString(), category)
             );
         } catch (Exception e) {
             LOGGER.log(Level.WARNING,

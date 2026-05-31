@@ -10,6 +10,11 @@ depend:
   - Vault
 
 commands:
+  at:
+    description: Auto-Tune admin and event commands
+    aliases:
+      - autotune
+    permission: autotune.admin
   shop:
     description: Open the shop GUI
     permission: autotune.shop
@@ -25,12 +30,24 @@ commands:
   transactions:
     description: View your transaction history
     permission: autotune.transactions
+  auction:
+    description: Auction house commands
+    permission: autotune.auction
+  alert:
+    description: Manage price alerts
+    permission: autotune.alert
+  treasury:
+    description: Server treasury commands
+    permission: autotune.admin
+  badges:
+    description: View player badges
+    permission: autotune.badges
+  news:
+    description: Open recent economic news
+    permission: autotune.news
   guild:
     description: Guild economy commands
     permission: autotune.guild
-  event:
-    description: Market event management
-    permission: autotune.admin.event
   onboarding:
     description: View onboarding progress
     permission: autotune.onboarding
@@ -40,6 +57,18 @@ commands:
   compare:
     description: Compare trading stats between players
     permission: autotune.compare
+  price:
+    description: Look up current item prices
+    permission: autotune.price
+  quickstart:
+    description: View the Auto-Tune quickstart guide
+    permission: autotune.quickstart
+  streak:
+    description: View trading streaks
+    permission: autotune.streak
+  profile:
+    description: View trading profiles
+    permission: autotune.profile
 
 permissions:
   autotune.shop:
@@ -57,6 +86,18 @@ permissions:
   autotune.transactions:
     description: View own transaction history
     default: true
+  autotune.auction:
+    description: Access auction house commands
+    default: true
+  autotune.alert:
+    description: Manage own price alerts
+    default: true
+  autotune.badges:
+    description: View player badges
+    default: true
+  autotune.news:
+    description: View economic news
+    default: true
   autotune.guild:
     description: View guild economy stats
     default: true
@@ -69,9 +110,28 @@ permissions:
   autotune.compare:
     description: Compare trading stats with other players
     default: true
+  autotune.price:
+    description: Look up item prices
+    default: true
+  autotune.quickstart:
+    description: View the quickstart guide
+    default: true
+  autotune.streak:
+    description: View trading streaks
+    default: true
+  autotune.profile:
+    description: View trading profiles
+    default: true
   autotune.admin:
     description: Administrative commands
     default: op
+    children:
+      autotune.admin.reload: true
+      autotune.admin.debug: true
+      autotune.admin.transactions: true
+      autotune.admin.buyable: true
+      autotune.admin.additem: true
+      autotune.admin.removeitem: true
   autotune.admin.reload:
     description: Reload configuration
     default: op

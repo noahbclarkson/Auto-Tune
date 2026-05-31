@@ -11,6 +11,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -18,7 +19,9 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.incendo.cloud.annotations.Command;
+import org.incendo.cloud.annotations.Permission;
 import org.incendo.cloud.context.CommandContext;
 
 import java.time.ZoneId;
@@ -43,15 +46,18 @@ public class NewsCommand implements org.bukkit.event.Listener {
 
     private final EconomicNewsService newsService;
     private final AutoTune plugin;
+    private final NamespacedKey clickCommandKey;
 
     @Inject
     public NewsCommand(EconomicNewsService newsService, AutoTune plugin) {
         this.newsService = newsService;
         this.plugin = plugin;
+        this.clickCommandKey = new NamespacedKey(plugin, "news_click_command");
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     @Command("news")
+    @Permission("autotune.news")
     public void onNews(CommandContext<CommandSender> ctx) {
         CommandSender sender = ctx.sender();
         if (!(sender instanceof Player player)) {
@@ -104,8 +110,8 @@ public class NewsCommand implements org.bukkit.event.Listener {
                 .append(coloredMsg);
         meta.displayName(name);
 
-        Component clickHint = Component.text("Click to run: ", NamedTextColor.DARK_GRAY)
-                .append(Component.text(item.clickCommand(), NamedTextColor.AQUA));
+        String command = stripLeadingSlash(item.clickCommand());
+        meta.getPersistentDataContainer().set(clickCommandKey, PersistentDataType.STRING, command);
 
         meta.lore(List.of(
                 net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
@@ -152,18 +158,19 @@ public class NewsCommand implements org.bukkit.event.Listener {
             return;
         }
 
-        List<String> lore = meta.getLore();
-        if (lore != null && !lore.isEmpty()) {
-            // First lore line: "Click to run: /command"
-            String clickLine = lore.get(0);
-            if (clickLine.startsWith("Click to run: ")) {
-                String command = clickLine.substring("Click to run: ".length()).trim();
-                if (!command.isEmpty()) {
-                    Bukkit.getServer().dispatchCommand(player, command);
-                }
-            }
+        String command = meta.getPersistentDataContainer().get(clickCommandKey, PersistentDataType.STRING);
+        if (command != null && !command.isBlank()) {
+            Bukkit.getServer().dispatchCommand(player, stripLeadingSlash(command));
         }
 
         player.closeInventory();
+    }
+
+    private static String stripLeadingSlash(String command) {
+        String normalized = command == null ? "" : command.trim();
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1).trim();
+        }
+        return normalized;
     }
 }

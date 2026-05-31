@@ -17,8 +17,11 @@ import org.incendo.cloud.annotations.Argument;
 import org.incendo.cloud.annotations.Command;
 import org.incendo.cloud.annotations.Default;
 import org.incendo.cloud.annotations.Permission;
+import org.incendo.cloud.annotations.suggestion.Suggestions;
+import org.incendo.cloud.context.CommandContext;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -59,7 +62,7 @@ public class AutosellCommand {
             sender.sendMessage(configManager.getMessage(MSG_PLAYER_ONLY));
             return;
         }
-        autosellManager.sellInventory(player);
+        autosellManager.sellInventoryAsync(player);
     }
 
     @Command("autosell minprice")
@@ -72,7 +75,7 @@ public class AutosellCommand {
                 .append(Component.text(" — Set minimum sell price for an item", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/autosell minprice <material>", NamedTextColor.YELLOW)
                 .append(Component.text(" — View current minimum for an item", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/autosell minprice <material> remove", NamedTextColor.YELLOW)
+        sender.sendMessage(Component.text("/autosell minprice remove <material>", NamedTextColor.YELLOW)
                 .append(Component.text(" — Reset to global default", NamedTextColor.GRAY)));
         sender.sendMessage(Component.empty());
         sender.sendMessage(Component.text("Global minimum price: ", NamedTextColor.GRAY)
@@ -86,7 +89,7 @@ public class AutosellCommand {
     @Command("autosell minprice <material> [price]")
     @Permission(PERM_AUTOSELL)
     public void minpriceCommand(CommandSender sender,
-                               @Argument("material") String materialName,
+                               @Argument(value = "material", suggestions = "autosell-materials") String materialName,
                                @Argument("price") @Default("") String priceStr) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(configManager.getMessage(MSG_PLAYER_ONLY));
@@ -136,9 +139,10 @@ public class AutosellCommand {
     }
 
     @Command("autosell minprice remove <material>")
+    @Command("autosell minprice <material> remove")
     @Permission(PERM_AUTOSELL)
     public void minpriceRemove(CommandSender sender,
-                               @Argument("material") String materialName) {
+                               @Argument(value = "material", suggestions = "autosell-materials") String materialName) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(configManager.getMessage(MSG_PLAYER_ONLY));
             return;
@@ -157,6 +161,17 @@ public class AutosellCommand {
         }
 
         autosellManager.removeMinPrice(player, shopItem.get().id());
+    }
+
+    @Suggestions("autosell-materials")
+    public List<String> suggestMaterials(CommandContext<?> ctx, String input) {
+        String lower = input.toLowerCase(Locale.ROOT);
+        return shopManager.getAllItems().stream()
+                .filter(ShopItem::enabled)
+                .map(it -> it.material().name().toLowerCase(Locale.ROOT))
+                .filter(name -> name.contains(lower))
+                .limit(20)
+                .toList();
     }
 
     private org.bukkit.Material matchMaterial(String name) {

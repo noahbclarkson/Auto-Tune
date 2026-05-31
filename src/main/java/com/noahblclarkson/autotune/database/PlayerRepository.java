@@ -2,6 +2,7 @@ package com.noahblclarkson.autotune.database;
 
 import com.noahblclarkson.autotune.model.PlayerData;
 import com.noahblclarkson.autotune.model.PlayerData.PlayerType;
+import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
 import org.jetbrains.annotations.NotNull;
 
@@ -215,23 +216,26 @@ public class PlayerRepository {
     }
 
     public void addTransaction(UUID uuid, BigDecimal amount, boolean isBuy) {
+        jdbi.useHandle(handle -> addTransaction(handle, uuid, amount, isBuy));
+    }
+
+    public void addTransaction(Handle handle, UUID uuid, BigDecimal amount, boolean isBuy) {
         String buyColumn = isBuy ? "total_bought = total_bought + :amount," : "";
         String sellColumn = !isBuy ? "total_sold = total_sold + :amount," : "";
 
-        jdbi.useHandle(handle ->
-                handle.createUpdate(String.format("""
-                                UPDATE at_players SET
-                                    total_traded = total_traded + :amount,
-                                    %s
+        handle.createUpdate(String.format("""
+                                 UPDATE at_players SET
+                                     total_traded = total_traded + :amount,
+                                     %s
                                     %s
                                     transaction_count = transaction_count + 1,
                                     last_seen = :lastSeen
-                                WHERE uuid = :uuid
-                                """, buyColumn, sellColumn))
-                        .bind("uuid", uuid.toString())
-                        .bind("amount", amount.abs())
-                        .bind("lastSeen", Timestamp.from(Instant.now()))
-                        .execute());
+                                 WHERE uuid = :uuid
+                                 """, buyColumn, sellColumn))
+                .bind("uuid", uuid.toString())
+                .bind("amount", amount.abs())
+                .bind("lastSeen", Timestamp.from(Instant.now()))
+                .execute();
     }
 
     public List<PlayerData> findTopTraders(int limit) {

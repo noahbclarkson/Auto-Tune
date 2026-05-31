@@ -24,7 +24,7 @@ cd scripts/market-simulation && cargo run --release
 python scripts/market_curves.py
 ```
 
-The `build` task depends on `shadowJar`, which relocates all dependencies under `com.noahblclarkson.autotune.lib.*`. The `buildWeb` task runs `npm run export` in `web/` and copies the static output into `src/main/resources/web/` before `processResources`.
+The `build` task depends on `shadowJar`, which relocates bundled dependencies under `com.noahblclarkson.autotune.lib.*`. By default `processResources` depends on `buildWeb`, which runs `npm run export` in `web/` and packages `web/out` into the JAR. Use `./gradlew build -PskipWeb=true` for backend-only checks that skip npm/Next.js.
 
 There are unit tests in `src/test/java/` using JUnit 5 + Mockito 4. MarketEngine has comprehensive tests (36 tests). See `MarketEngineTest.java`.
 
@@ -59,7 +59,7 @@ onDisable: WebServer stop -> TaskScheduler stop -> DatabaseManager shutdown
 
 ### Database
 
-SQLite (default) or MariaDB. Schema versioned manually via `at_schema_version` table (not Flyway). Migrations in `src/main/resources/db/` now include the consolidated V1 plus incremental rewrite-2 repair/feature migrations through V7. Schema includes: `at_items`, `at_market_history`, `at_players`, `at_autosell_items` (per-item autosell + min price), `at_loans`, `at_item_ratios`, `at_transactions`, `at_sections`, `at_economy_snapshots`, `at_price_alerts`, auction tables, watched auctions, admin audit log, and `at_circuit_events` for circuit-breaker/admin-recovery timeline transitions. All async DB ops go through `DatabaseManager.supplyAsync()`/`runAsync()` with main-thread callbacks via `runOnMain()`. SQLite uses a single-thread executor; MySQL uses pool-sized executor.
+SQLite (default) or MariaDB. Schema versioned manually via `at_schema_version` table (not Flyway). Migrations in `src/main/resources/db/` now include the consolidated V1 plus incremental rewrite-2 repair/feature migrations through V9. Schema includes: `at_items`, `at_market_history`, `at_players`, `at_autosell_items` (per-item autosell + min price), `at_loans`, `at_item_ratios`, `at_transactions`, `at_sections`, `at_economy_snapshots`, `at_price_alerts`, auction tables, watched auctions, admin audit log, auction pending returns, and `at_circuit_events` for circuit-breaker/admin-recovery timeline transitions. All async DB ops go through `DatabaseManager.supplyAsync()`/`runAsync()` with main-thread callbacks via `runOnMain()`. SQLite uses a single-thread executor with foreign keys enabled per pooled connection; MySQL uses pool-sized executor.
 
 ### Market Engine (`MarketEngine.java`)
 
@@ -91,7 +91,7 @@ Components:
 
 ### Web Frontend (`web/`)
 
-Next.js 14 + TypeScript + Tailwind + Recharts. Built as static export. Dashboard components in `web/src/components/dashboard/` (price-chart, economy-panel, item-table, stats-cards, transaction-feed). Item detail components in `web/src/components/items/` (item-detail-header with material/metadata, item-stats-row with spread-bar visualization, item-transactions-table, price-chart with OHLC candlesticks). The Gradle `buildWeb` task compiles and copies output before JAR packaging.
+Next.js 15 + React 19 + TypeScript + Tailwind + Recharts. Built as static export. Dashboard components in `web/src/components/dashboard/` (price-chart, economy-panel, item-table, stats-cards, transaction-feed). Item detail components in `web/src/components/items/` (item-detail-header with material/metadata, item-stats-row with spread-bar visualization, item-transactions-table, price-chart with OHLC candlesticks). The Gradle `buildWeb` task compiles `web/out` for JAR packaging.
 
 Brand colors: `--primary` is emerald (HUSL 160°), not blue. The light/dark theme toggle persists via localStorage.
 

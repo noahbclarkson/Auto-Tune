@@ -33,19 +33,19 @@ Sell any item in your inventory at the current market sell price. Items sell ins
 
 ---
 
-### `/compare` — Check if an item is cheap or expensive
+### `/price` - Check an item before trading
 
-Compare any two items to see their current prices vs. 7-day averages. Use this to find **underpriced items** (buy opportunity) or **overpriced items** (sell opportunity).
+Look up an item's current buy price, sell price, spread, and trend before you trade.
 
 ```
-/compare DIAMOND IRON_INGOT
+/price DIAMOND
 ```
 
-> **Tip:** If Diamond is 20% above its 7-day average while Iron is 10% below, Iron is the better buy right now.
+> **Tip:** Use `/shop history <material>` when you want a deeper look at how the price has been moving.
 
 ---
 
-### `/loans` — Borrow money to make big purchases
+### `/loan` - Borrow money to make big purchases
 
 If you don't have enough coins for a large purchase, take a loan. Loans let you buy now and pay back later.
 
@@ -90,7 +90,7 @@ Prices move when there's sustained buying or selling pressure over time:
 
 ### Price Trends
 
-The trend indicator (↑↓→) shows the direction of the last price change, not a prediction. An item could be rising and then crash if sellers overwhelm buyers. Use `/compare` to see the 7-day average and judge for yourself.
+The trend indicator (↑↓→) shows the direction of the last price change, not a prediction. An item could be rising and then crash if sellers overwhelm buyers. Use `/price <material>` and `/shop history <material>` to judge for yourself.
 
 ---
 
@@ -102,7 +102,7 @@ The classic. Mine diamonds, farm crops, chop wood — then sell at `/sell`. Watc
 
 ### Strategy 2: Buy Low, Sell High
 
-Use `/compare` to find items trading below their 7-day average. Buy them, wait for prices to normalize, then sell. Requires patience and market awareness.
+Use `/shop history <material>` to find items trading below their recent range. Buy them, wait for prices to normalize, then sell. Requires patience and market awareness.
 
 ### Strategy 3: Arbitrage Between Items
 
@@ -130,7 +130,7 @@ If you see an investment opportunity — an item you know will rise — a short-
 
 **Taking loans you can't repay.** Interest compounds. A $10,000 loan at 7% annual interest grows fast. Only borrow what you can realistically repay.
 
-**Ignoring the trend arrow.** If an item has been falling for days, there's usually a reason. Check `/compare` before buying.
+**Ignoring the trend arrow.** If an item has been falling for days, there's usually a reason. Check `/price` and `/shop history` before buying.
 
 **Selling everything at once.** Large sell orders can move the market against you. Split large sells across multiple transactions if you have thousands of items.
 
@@ -138,8 +138,8 @@ If you see an investment opportunity — an item you know will rise — a short-
 
 ## Need Help?
 
-- Ask an admin: `/at help` lists all commands
-- Check `/at events` to see active market events
+- Use `/quickstart` for the short command guide
+- Check `/at event active` to see active market events
 - Use `/transactions` to review your trading history
 - For economy details: `/at admin health` (admins only)
 
@@ -184,12 +184,12 @@ Watch any order with `/auction watch <id>` to receive a notification when it fil
 |---------|-----------|
 | `/shop` | Browse items and buy at market price |
 | `/sell` | Sell items instantly at market price |
-| `/compare <a> <b>` | Check if an item is cheap or expensive vs its 7-day average |
+| `/price <material>` | Check an item's current buy/sell prices |
 | `/auction browse` | View the live player order book |
 | `/auction sell <price> <qty>` | Post a sell order at your price |
 | `/auction buy <material> <price> <qty>` | Place a buy order at your bid price |
 | `/auction watch <id>` | Get alerted when an order fills |
-| `/loans` | Borrow coins for large purchases |
+| `/loan` | Borrow coins for large purchases |
 | `/transactions` | Review your trading history |
 | `/badges` | View your achievement badges |
-| `/at help` | Full command list |
+| `/quickstart` | Quick command guide |

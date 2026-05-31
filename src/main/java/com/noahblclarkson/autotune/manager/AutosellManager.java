@@ -13,11 +13,14 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -81,6 +84,7 @@ public class AutosellManager {
 
     public void unloadPlayer(@NotNull UUID uuid) {
         playerEnabledItems.remove(uuid);
+        playerMinPrices.remove(uuid);
     }
 
     /**
@@ -175,7 +179,77 @@ public class AutosellManager {
             @NotNull ItemStack itemStack,
             int amount
     ) {
-        return economyManager.processSellImmediate(player, item, amount, itemStack);
+        return economyManager.processDetachedSellImmediate(player, item, amount, itemStack);
+    }
+
+    public CompletableFuture<EconomyManager.TransactionResult> sellPickupAsync(
+            @NotNull Player player,
+            @NotNull ShopItem item,
+            @NotNull ItemStack itemStack,
+            int amount
+    ) {
+        return economyManager.processDetachedSellAsync(player, item, amount, itemStack);
+    }
+
+    public CompletableFuture<Integer> sellInventoryAsync(@NotNull Player player) {
+        if (!org.bukkit.Bukkit.isPrimaryThread()) {
+            CompletableFuture<Integer> result = new CompletableFuture<>();
+            databaseManager.runOnMain(() -> sellInventoryAsync(player)
+                    .whenComplete((sold, error) -> {
+                        if (error != null) {
+                            result.completeExceptionally(error);
+                        } else {
+                            result.complete(sold);
+                        }
+                    }));
+            return result;
+        }
+
+        UUID uuid = player.getUniqueId();
+        Set<Integer> enabledItems = playerEnabledItems.get(uuid);
+        if (enabledItems == null || enabledItems.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+
+        List<InventorySale> pendingSales = new ArrayList<>();
+        ItemStack[] contents = player.getInventory().getStorageContents();
+        for (int slot = 0; slot < contents.length; slot++) {
+            ItemStack stack = contents[slot];
+            if (stack == null || stack.getType().isAir()) {
+                continue;
+            }
+
+            Optional<ShopItem> shopItemOpt = shopManager.matchSellItem(stack);
+            if (shopItemOpt.isEmpty()) {
+                continue;
+            }
+
+            ShopItem shopItem = shopItemOpt.get();
+            if (!enabledItems.contains(shopItem.id())) {
+                continue;
+            }
+
+            double effectiveMinPrice = getEffectiveMinPrice(uuid, shopItem.id());
+            if (effectiveMinPrice > 0.0) {
+                BigDecimal sellPrice = shopManager.getSellPrice(shopItem);
+                if (sellPrice.doubleValue() < effectiveMinPrice) {
+                    continue;
+                }
+            }
+
+            ItemStack saleStack = stack.clone();
+            player.getInventory().setItem(slot, null);
+            pendingSales.add(new InventorySale(shopItem, saleStack));
+        }
+
+        if (pendingSales.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+
+        return processInventorySales(player, pendingSales)
+                .whenComplete((summary, error) -> databaseManager.runOnMain(() ->
+                        finishInventorySales(player, pendingSales, summary, error)))
+                .thenApply(summary -> summary == null ? 0 : summary.totalSold);
     }
 
     public int sellInventory(@NotNull Player player) {
@@ -260,6 +334,76 @@ public class AutosellManager {
         }
 
         return totalSold;
+    }
+
+    private CompletableFuture<InventorySaleSummary> processInventorySales(
+            Player player,
+            List<InventorySale> pendingSales
+    ) {
+        InventorySaleSummary summary = new InventorySaleSummary();
+        CompletableFuture<InventorySaleSummary> chain = CompletableFuture.completedFuture(summary);
+
+        for (InventorySale sale : pendingSales) {
+            chain = chain.thenCompose(current -> sellPickupAsync(
+                    player,
+                    sale.item(),
+                    sale.stack(),
+                    sale.stack().getAmount()
+            ).handle((result, error) -> {
+                if (error != null || result == null || !result.success()) {
+                    current.failedStacks.add(sale.stack());
+                    return current;
+                }
+
+                current.totalSold += result.amount();
+                current.totalEarned = current.totalEarned.add(result.totalPrice());
+                return current;
+            }));
+        }
+
+        return chain;
+    }
+
+    private void finishInventorySales(
+            Player player,
+            List<InventorySale> pendingSales,
+            InventorySaleSummary summary,
+            Throwable error
+    ) {
+        InventorySaleSummary finalSummary = summary;
+        if (error != null || finalSummary == null) {
+            finalSummary = new InventorySaleSummary();
+            for (InventorySale sale : pendingSales) {
+                finalSummary.failedStacks.add(sale.stack());
+            }
+        }
+
+        for (ItemStack stack : finalSummary.failedStacks) {
+            returnItem(player, stack);
+        }
+
+        if (finalSummary.totalSold > 0) {
+            player.sendMessage(configManager.getMessage("autosell.inventory-sold", Map.of(
+                    "amount", String.valueOf(finalSummary.totalSold),
+                    "price", configManager.formatCurrency(finalSummary.totalEarned)
+            )));
+        }
+    }
+
+    private void returnItem(Player player, ItemStack stack) {
+        Map<Integer, ItemStack> overflow = player.getInventory().addItem(stack);
+        for (ItemStack dropped : overflow.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), dropped);
+        }
+    }
+
+    private record InventorySale(ShopItem item, ItemStack stack) {
+    }
+
+    private static final class InventorySaleSummary {
+        private int totalSold;
+        private BigDecimal totalEarned = BigDecimal.ZERO;
+        private final List<ItemStack> failedStacks = new ArrayList<>();
     }
 
     public void sendAutosellActionBar(@NotNull Player player, @NotNull ShopItem item, int amount,

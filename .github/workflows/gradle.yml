@@ -18,6 +18,12 @@ jobs:
         java-version: '21'
         check-latest: true
         cache: 'gradle'
+    - name: Set up Node 22
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+        cache-dependency-path: web/package-lock.json
     - name: Gradle Build Action
       uses: gradle/gradle-build-action@v2.11.1
       with:

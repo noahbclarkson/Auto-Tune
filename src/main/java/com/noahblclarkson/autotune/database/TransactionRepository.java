@@ -2,6 +2,7 @@ package com.noahblclarkson.autotune.database;
 
 import com.noahblclarkson.autotune.model.Transaction;
 import com.noahblclarkson.autotune.model.Transaction.TransactionType;
+import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
 import org.jetbrains.annotations.NotNull;
 
@@ -21,20 +22,23 @@ public class TransactionRepository {
     }
 
     public void insert(@NotNull Transaction transaction) {
-        jdbi.useHandle(handle ->
-                handle.createUpdate("""
-                                INSERT INTO at_transactions (player_uuid, item_id, transaction_type,
-                                                             amount, price_per_unit, total_price, timestamp)
-                                VALUES (:playerUuid, :itemId, :type, :amount, :pricePerUnit, :totalPrice, :timestamp)
-                                """)
-                        .bind("playerUuid", transaction.playerUuid().toString())
-                        .bind("itemId", transaction.itemId())
-                        .bind("type", transaction.type().name())
-                        .bind("amount", transaction.amount())
-                        .bind("pricePerUnit", transaction.pricePerUnit())
-                        .bind("totalPrice", transaction.totalPrice())
-                        .bind("timestamp", Timestamp.from(transaction.timestamp()))
-                        .execute());
+        jdbi.useHandle(handle -> insert(handle, transaction));
+    }
+
+    public void insert(@NotNull Handle handle, @NotNull Transaction transaction) {
+        handle.createUpdate("""
+                                 INSERT INTO at_transactions (player_uuid, item_id, transaction_type,
+                                                              amount, price_per_unit, total_price, timestamp)
+                                 VALUES (:playerUuid, :itemId, :type, :amount, :pricePerUnit, :totalPrice, :timestamp)
+                                 """)
+                .bind("playerUuid", transaction.playerUuid().toString())
+                .bind("itemId", transaction.itemId())
+                .bind("type", transaction.type().name())
+                .bind("amount", transaction.amount())
+                .bind("pricePerUnit", transaction.pricePerUnit())
+                .bind("totalPrice", transaction.totalPrice())
+                .bind("timestamp", Timestamp.from(transaction.timestamp()))
+                .execute();
     }
 
     public List<Transaction> findByPlayer(UUID playerUuid, int limit) {

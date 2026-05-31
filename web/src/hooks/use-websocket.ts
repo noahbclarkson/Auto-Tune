@@ -2,14 +2,22 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 
+export interface LivePriceUpdate {
+  price: number;
+  buyPrice: number;
+  sellPrice: number;
+  bpd?: number;
+  spd?: number;
+}
+
 interface PriceUpdateMessage {
   type: 'price_update';
   timestamp: number;
-  prices: Record<string, number>;
+  prices: Record<string, LivePriceUpdate | number>;
 }
 
 export function useWebSocket(apiBase: string) {
-  const [livePrices, setLivePrices] = useState<Map<number, number>>(new Map());
+  const [livePrices, setLivePrices] = useState<Map<number, LivePriceUpdate>>(new Map());
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const retriesRef = useRef(0);
@@ -18,11 +26,14 @@ export function useWebSocket(apiBase: string) {
   const connect = useCallback(() => {
     if (typeof window === 'undefined') return;
 
-    const wsBase = apiBase || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
-    const wsUrl = `${wsBase.replace(/^http/, 'ws')}/ws/market`;
+    const apiUrl = new URL(apiBase || '/', window.location.href);
+    apiUrl.protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+    apiUrl.pathname = '/ws/market';
+    apiUrl.search = '';
+    apiUrl.hash = '';
 
     try {
-      const ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(apiUrl.toString());
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -37,7 +48,12 @@ export function useWebSocket(apiBase: string) {
             setLivePrices((prev) => {
               const next = new Map(prev);
               for (const [key, value] of Object.entries(data.prices)) {
-                next.set(Number(key), value);
+                next.set(
+                  Number(key),
+                  typeof value === 'number'
+                    ? { price: value, buyPrice: value, sellPrice: value }
+                    : value,
+                );
               }
               return next;
             });

@@ -342,7 +342,7 @@ See `/findings` page → "Is the 2MM+2GB+floor config stable at 60+ days?" for f
 - **README.md logo** — Fixed image URL to point to `noahbclarkson/Auto-Tune` on the `rewrite-2` branch (was `master`).
 - **`web-optimizer` API default port** — `api-client.ts` `DEFAULT_API_URL` was `http://localhost:3001` (no service running there). Changed to `http://localhost:8080` (matches the Rust API server bind address). Would cause silent fetch failures for local deployments without `NEXT_PUBLIC_API_URL` set.
 - **Auction house removed from Rust API server** — `matching.rs` (1260+ lines), `routes/orders.rs` deleted. Auction routes now return 410 Gone. The auction house is fully implemented as in-game `/auction` command in the Java plugin.
-- **Auction `fillSellOrder` escrow bug** — Buyer's money was escrowed but seller's Vault balance never credited. `processFill()` and `recordFillAsync()` now credit seller's Vault and deliver items to buyer on Bukkit main thread.
+- **Auction `fillSellOrder` escrow bug** — Buyer's money was escrowed but seller's Vault balance never credited. `processFill()` now owns settlement, and GUI direct fills route through manager-owned fill methods instead of duplicating payout or delivery in the UI.
 - **`V2__add_price_floor_ceiling` + `V3__remove_price_ceiling_floor` migrations** — Consolidated into single `V1__Initial_Schema.sql` (rewrite-2 is not live; no need for incremental add-then-remove migrations)
 
 ### Changed

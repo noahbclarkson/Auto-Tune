@@ -156,6 +156,7 @@ public class PlayerListener implements Listener {
                         Component.text("[Auto-Tune] ", NamedTextColor.DARK_AQUA)
                                 .append(Component.text(notif.message(), NamedTextColor.YELLOW))
                 );
+                pendingNotificationRepository.delete(notif.id());
             }, delay);
         }
     }

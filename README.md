@@ -1,6 +1,6 @@
 # Auto-Tune
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/noahbclarkson/Auto-Tune/Java%20CI%20with%20Maven)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/noahbclarkson/Auto-Tune/gradle.yml?branch=rewrite-2)
 ![GitHub issues](https://img.shields.io/github/issues/noahbclarkson/Auto-Tune)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/noahbclarkson/Auto-Tune)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/noahbclarkson/Auto-Tune)
@@ -62,7 +62,7 @@ Auto-Tune uses a supply-and-demand pricing model with asymmetric spreads, player
    ```
    priceChange = currentPrice * tradeRatio * playerScaling * (maxPriceChangePercent / 100)
    ```
-   Default cap: **3% per tick**. There are no hard min/max price bounds — prices are purely market-driven.
+   Default cap: **1.5% per tick**. There are no hard min/max price bounds — prices are purely market-driven.
 
 ### BPD / SPD Spread System
 
@@ -105,8 +105,8 @@ The spread calculation applies four adjustments in sequence:
 
 5. **Global volume multiplier** — a z-score analysis across 10 equal time buckets within the trade window:
    - `|z| <= 1`: multiplier = 1.0 (normal activity)
-   - `z > 1` (high activity): multiplier drops toward 0.5 (tighter spreads)
-   - `z < -1` (low activity): multiplier rises toward 2.0 (wider spreads)
+   - `z > 1` (high activity): multiplier drops toward 0.8 (tighter spreads)
+   - `z < -1` (low activity): multiplier rises toward 1.3 (wider spreads)
 
 ### Price Trends
 
@@ -191,9 +191,11 @@ Not only does this assist administrators in managing a server's economy, but it 
 2. Install a Java 21 JDK (e.g. [Eclipse Temurin](https://adoptium.net/) or your system package manager).
 3. Build:
    ```bash
-   ./gradlew build   # Java plugin (outputs to build/libs/)
+   ./gradlew build   # full plugin JAR with bundled web dashboard
+   ./gradlew build -PskipWeb=true   # backend-only build, skips npm/Next.js
    ```
-   The plugin JAR bundles the web dashboard automatically (Next.js static export → shadow JAR).
+   The full plugin JAR bundles the web dashboard automatically (Next.js static export -> shadow JAR).
+   Full builds require Node.js 22+ for the dashboard export.
 4. For Rust components (API server, price solver, market simulation):
    ```bash
    cargo build --release    # from the repo root

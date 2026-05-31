@@ -2,13 +2,13 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { getApiBase } from '@/lib/api';
-import { useWebSocket } from '@/hooks/use-websocket';
+import { useWebSocket, type LivePriceUpdate } from '@/hooks/use-websocket';
 
 interface AppContextValue {
   apiBase: string;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
-  livePrices: Map<number, number>;
+  livePrices: Map<number, LivePriceUpdate>;
   isWsConnected: boolean;
   playerName: string;
   setPlayerName: (name: string) => void;

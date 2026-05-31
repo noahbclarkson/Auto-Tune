@@ -6,6 +6,7 @@ import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.database.DatabaseManager;
 import com.noahblclarkson.autotune.database.ItemRepository;
 import com.noahblclarkson.autotune.model.ShopItem;
 import com.noahblclarkson.autotune.util.ItemSerializer;
@@ -22,9 +23,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
@@ -39,6 +39,7 @@ public class PriceReporter {
 
     private final AutoTune plugin;
     private final ConfigManager configManager;
+    private final DatabaseManager databaseManager;
     private final Gson gson = new Gson();
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -54,15 +55,19 @@ public class PriceReporter {
 
     @Inject
     public PriceReporter(AutoTune plugin, ConfigManager configManager,
-                          ShopManager shopManager, ItemRepository itemRepository) {
+                         DatabaseManager databaseManager,
+                         ShopManager shopManager,
+                         ItemRepository itemRepository) {
         this.plugin = plugin;
         this.configManager = configManager;
+        this.databaseManager = databaseManager;
         this.shopManager = shopManager;
         this.itemRepository = itemRepository;
     }
 
     public boolean isEnabled() {
-        return configManager.getConfig().priceReporter().enabled();
+        AutoTuneConfig.PriceReporterConfig cfg = configManager.getConfig().priceReporter();
+        return cfg.enabled() && hasValidReporterConfig(cfg);
     }
 
     public long getIntervalMinutes() {
@@ -75,7 +80,9 @@ public class PriceReporter {
         }
 
         accumulators.compute(item.id(), (id, prev) -> {
-            PriceAccumulator next = prev != null ? prev : new PriceAccumulator(item.getDisplayNameOrMaterial());
+            PriceAccumulator next = prev != null
+                    ? prev
+                    : new PriceAccumulator(canonicalItemId(item), item.getDisplayNameOrMaterial());
             next.observe(transaction);
             return next;
         });
@@ -97,13 +104,14 @@ public class PriceReporter {
             return;
         }
 
-        Map<Integer, PriceAccumulator> snapshot = buildSnapshot();
+        List<PriceObservation> snapshot = drainSnapshot();
         if (snapshot == null) {
             return;
         }
 
         SubmitPayload payload = buildPayload(snapshot, cfg);
         if (payload == null) {
+            restoreSnapshot(snapshot);
             return;
         }
 
@@ -191,48 +199,46 @@ public class PriceReporter {
 
     // -------------------------------------------------------------------------
 
-    private Map<Integer, PriceAccumulator> buildSnapshot() {
+    private List<PriceObservation> drainSnapshot() {
         if (accumulators.isEmpty()) {
             return null;
         }
 
-        Map<Integer, PriceAccumulator> snapshot = new LinkedHashMap<>(accumulators);
-        List<Integer> itemIds = new ArrayList<>(snapshot.keySet());
-        List<String> itemNames = new ArrayList<>();
-        List<BigDecimal> basePrices = new ArrayList<>();
+        List<PriceObservation> snapshot = new ArrayList<>();
+        List<Integer> itemIds = new ArrayList<>(accumulators.keySet());
 
         for (Integer itemId : itemIds) {
-            PriceAccumulator stats = snapshot.get(itemId);
-            if (stats == null) {
-                continue;
-            }
-            BigDecimal representative = stats.representativePrice();
-            if (representative.compareTo(BigDecimal.ZERO) <= 0) {
-                continue;
-            }
-            itemNames.add(stats.itemName);
-            basePrices.add(representative);
+            accumulators.computeIfPresent(itemId, (id, stats) -> {
+                PriceObservation observation = stats.toObservation(id);
+                if (observation.representativePrice().compareTo(BigDecimal.ZERO) <= 0) {
+                    return stats;
+                }
+                snapshot.add(observation);
+                return null;
+            });
         }
 
-        if (itemNames.size() < 2) {
+        if (snapshot.size() < 2) {
+            restoreSnapshot(snapshot);
             return null;
         }
 
         return snapshot;
     }
 
-    private SubmitPayload buildPayload(Map<Integer, PriceAccumulator> snapshot,
+    private SubmitPayload buildPayload(List<PriceObservation> snapshot,
                                        AutoTuneConfig.PriceReporterConfig cfg) {
         List<String> itemNames = new ArrayList<>();
+        List<String> displayNames = new ArrayList<>();
         List<BigDecimal> basePrices = new ArrayList<>();
 
-        for (Map.Entry<Integer, PriceAccumulator> entry : snapshot.entrySet()) {
-            PriceAccumulator stats = entry.getValue();
+        for (PriceObservation stats : snapshot) {
             BigDecimal representative = stats.representativePrice();
             if (representative.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
-            itemNames.add(stats.itemName);
+            itemNames.add(stats.itemName());
+            displayNames.add(stats.displayName());
             basePrices.add(representative);
         }
 
@@ -255,11 +261,11 @@ public class PriceReporter {
         }
 
         int onlinePlayers = plugin.getServer().getOnlinePlayers().size();
-        return new SubmitPayload(itemNames, ratioMatrix, onlinePlayers);
+        return new SubmitPayload(itemNames, displayNames, ratioMatrix, onlinePlayers);
     }
 
     private void sendPayload(SubmitPayload payload,
-                             Map<Integer, PriceAccumulator> snapshot,
+                             List<PriceObservation> snapshot,
                              AutoTuneConfig.PriceReporterConfig cfg) {
 
         String baseUrl = cfg.apiUrl().replaceAll("/$", "");
@@ -275,7 +281,6 @@ public class PriceReporter {
         httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenAccept(response -> {
                     if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                        accumulators.keySet().removeAll(snapshot.keySet());
                         plugin.getLogger().fine("Submitted " + payload.item_names().size()
                                 + " item prices to api-server.");
                     } else {
@@ -343,6 +348,45 @@ public class PriceReporter {
                 + " items for retry (attempt " + (retryCount + 1) + "/" + MAX_RETRIES + ").");
     }
 
+    private void restoreSnapshot(List<PriceObservation> snapshot) {
+        for (PriceObservation observation : snapshot) {
+            accumulators.merge(
+                    observation.itemId(),
+                    PriceAccumulator.fromObservation(observation),
+                    PriceAccumulator::merge
+            );
+        }
+    }
+
+    private boolean hasValidReporterConfig(AutoTuneConfig.PriceReporterConfig cfg) {
+        return !isPlaceholder(cfg.apiKey(), "your-server-api-key")
+                && !isPlaceholder(cfg.serverId(), "your-server-uuid")
+                && !isPlaceholder(cfg.apiUrl(), "");
+    }
+
+    private boolean isPlaceholder(String value, String placeholder) {
+        return value == null
+                || value.isBlank()
+                || value.equalsIgnoreCase(placeholder)
+                || value.equalsIgnoreCase("change-me");
+    }
+
+    private String canonicalItemId(ShopItem item) {
+        return item.material().name().toLowerCase(Locale.ROOT);
+    }
+
+    private Material materialFromApiItem(String itemName) {
+        if (itemName == null || itemName.isBlank()) {
+            return null;
+        }
+        String normalized = itemName.trim().toLowerCase(Locale.ROOT);
+        if (normalized.startsWith("minecraft:")) {
+            normalized = normalized.substring("minecraft:".length());
+        }
+        normalized = normalized.replace('-', '_').replace(' ', '_').toUpperCase(Locale.ROOT);
+        return Material.matchMaterial(normalized);
+    }
+
     // -------------------------------------------------------------------------
 
     /**
@@ -359,9 +403,9 @@ public class PriceReporter {
             return;
         }
         AutoTuneConfig.PriceReporterConfig cfg = configManager.getConfig().priceReporter();
-        if (cfg.apiKey().isBlank() || cfg.serverId().isBlank()) {
+        if (!hasValidReporterConfig(cfg)) {
             plugin.getLogger().warning("seed-from-shared-prices is enabled but price-reporter "
-                    + "api-key/server-id are missing.");
+                    + "api-key/server-id are missing or still placeholders.");
             return;
         }
 
@@ -382,36 +426,7 @@ public class PriceReporter {
                                 + response.statusCode());
                         return;
                     }
-                    try {
-                        TruePricesResponse apiResponse = gson.fromJson(
-                                response.body(), TruePricesResponse.class);
-                        int updated = 0;
-                        for (TruePriceEntry entry : apiResponse.prices()) {
-                            if (entry.price() <= 0) continue;
-                            // Map API item name (e.g. "DIAMOND") to a ShopItem
-                            String itemName = entry.item().toUpperCase(java.util.Locale.ROOT);
-                            Material material = Material.matchMaterial(itemName);
-                            if (material == null) {
-                                plugin.getLogger().fine("Unknown material from API: " + itemName);
-                                continue;
-                            }
-                            String hash = ItemSerializer.getMaterialHash(material);
-                            var optItem = itemRepository.findByHash(hash);
-                            if (optItem.isEmpty()) {
-                                plugin.getLogger().fine("Item not in shop: " + itemName);
-                                continue;
-                            }
-                            int itemId = optItem.get().id();
-                            BigDecimal newPrice = BigDecimal.valueOf(entry.price());
-                            itemRepository.updatePrice(itemId, newPrice);
-                            updated++;
-                            plugin.getLogger().fine("Seeded " + itemName + " = " + newPrice
-                                    + " (conf=" + String.format("%.2f", entry.confidence()) + ")");
-                        }
-                        plugin.getLogger().info("Seeded " + updated + " item prices from shared true-price API.");
-                    } catch (Exception e) {
-                        plugin.getLogger().warning("Failed to parse shared prices response: " + e.getMessage());
-                    }
+                    databaseManager.runAsync(() -> applySeedPrices(response.body()));
                 })
                 .exceptionally(error -> {
                     plugin.getLogger().warning("Failed to fetch shared prices: " + error.getMessage());
@@ -419,17 +434,69 @@ public class PriceReporter {
                 });
     }
 
+    private void applySeedPrices(String responseBody) {
+        try {
+            TruePricesResponse apiResponse = gson.fromJson(responseBody, TruePricesResponse.class);
+            if (apiResponse == null || apiResponse.prices() == null) {
+                return;
+            }
+            int updated = 0;
+            for (TruePriceEntry entry : apiResponse.prices()) {
+                if (entry.price() <= 0) continue;
+                Material material = materialFromApiItem(entry.item());
+                if (material == null) {
+                    plugin.getLogger().fine("Unknown material from API: " + entry.item());
+                    continue;
+                }
+                String hash = ItemSerializer.getMaterialHash(material);
+                var optItem = itemRepository.findByHash(hash);
+                if (optItem.isEmpty()) {
+                    plugin.getLogger().fine("Item not in shop: " + entry.item());
+                    continue;
+                }
+                int itemId = optItem.get().id();
+                BigDecimal newPrice = BigDecimal.valueOf(entry.price());
+                itemRepository.updatePrice(itemId, newPrice);
+                updated++;
+                plugin.getLogger().fine("Seeded " + entry.item() + " = " + newPrice
+                        + " (conf=" + String.format("%.2f", entry.confidence()) + ")");
+            }
+            plugin.getLogger().info("Seeded " + updated + " item prices from shared true-price API.");
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to parse shared prices response: " + e.getMessage());
+        }
+    }
+
     // -------------------------------------------------------------------------
 
     private static final class PriceAccumulator {
         private final String itemName;
+        private final String displayName;
         private BigDecimal buyTotal = BigDecimal.ZERO;
         private BigDecimal buyAmount = BigDecimal.ZERO;
         private BigDecimal sellTotal = BigDecimal.ZERO;
         private BigDecimal sellAmount = BigDecimal.ZERO;
 
-        private PriceAccumulator(String itemName) {
+        private PriceAccumulator(String itemName, String displayName) {
             this.itemName = itemName;
+            this.displayName = displayName;
+        }
+
+        private static PriceAccumulator fromObservation(PriceObservation observation) {
+            PriceAccumulator accumulator = new PriceAccumulator(observation.itemName(), observation.displayName());
+            accumulator.buyTotal = observation.buyTotal();
+            accumulator.buyAmount = observation.buyAmount();
+            accumulator.sellTotal = observation.sellTotal();
+            accumulator.sellAmount = observation.sellAmount();
+            return accumulator;
+        }
+
+        private PriceAccumulator merge(PriceAccumulator other) {
+            buyTotal = buyTotal.add(other.buyTotal);
+            buyAmount = buyAmount.add(other.buyAmount);
+            sellTotal = sellTotal.add(other.sellTotal);
+            sellAmount = sellAmount.add(other.sellAmount);
+            return this;
         }
 
         private void observe(Transaction tx) {
@@ -457,6 +524,31 @@ public class PriceReporter {
             }
             return buyAvg.compareTo(BigDecimal.ZERO) > 0 ? buyAvg : sellAvg;
         }
+
+        private PriceObservation toObservation(int itemId) {
+            return new PriceObservation(
+                    itemId,
+                    itemName,
+                    displayName,
+                    buyTotal,
+                    buyAmount,
+                    sellTotal,
+                    sellAmount,
+                    representativePrice()
+            );
+        }
+    }
+
+    private record PriceObservation(
+            int itemId,
+            String itemName,
+            String displayName,
+            BigDecimal buyTotal,
+            BigDecimal buyAmount,
+            BigDecimal sellTotal,
+            BigDecimal sellAmount,
+            BigDecimal representativePrice
+    ) {
     }
 
     /** A failed submission waiting for retry. */
@@ -468,6 +560,7 @@ public class PriceReporter {
 
     private record SubmitPayload(
             List<String> item_names,
+            List<String> display_names,
             List<List<Double>> ratio_matrix,
             int player_count
     ) {

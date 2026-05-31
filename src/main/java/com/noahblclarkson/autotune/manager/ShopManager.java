@@ -16,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -61,13 +62,14 @@ public class ShopManager {
         }
     }
 
-    private void loadDefaultItems() {
+    private Set<String> loadDefaultItems() {
         Logger logger = java.util.logging.Logger.getLogger("Auto-Tune");
+        Set<String> configuredHashes = new HashSet<>();
         YamlConfiguration shopsConfig = configManager.loadShopsConfig();
         List<?> itemList = shopsConfig.getList("items");
         if (itemList == null) {
             logger.warning("No default items found in shops.yml");
-            return;
+            return configuredHashes;
         }
 
         int loaded = 0;
@@ -104,11 +106,14 @@ public class ShopManager {
                 continue;
             }
 
+            String hash = ItemSerializer.getMaterialHash(material);
+            configuredHashes.add(hash);
             addItem(material, BigDecimal.valueOf(price), sectionName);
             loaded++;
         }
 
         logger.info("Loaded " + loaded + " default shop items from shops.yml");
+        return configuredHashes;
     }
 
     /**
@@ -126,8 +131,10 @@ public class ShopManager {
         hashToItemCache.clear();
         idToItemCache.clear();
         buyableCache.clear();
-        loadDefaultItems();
+        Set<String> configuredHashes = loadDefaultItems();
+        itemRepository.disableItemsNotInHashes(configuredHashes);
         loadCache();
+        marketEngine.reload();
     }
 
     public void refreshCache() {
@@ -220,7 +227,17 @@ public class ShopManager {
 
         Optional<ShopItem> existing = itemRepository.findByHash(hash);
         if (existing.isPresent()) {
-            return existing.get();
+            ShopItem current = existing.get();
+            ShopItem updated = current.toBuilder()
+                    .price(price)
+                    .section(section)
+                    .enabled(true)
+                    .build();
+            itemRepository.updateShopDefinition(current.id(), price, section, true);
+            itemRepository.recordPriceHistory(current.id(), price, 0, 0, BigDecimal.ZERO, BigDecimal.ZERO);
+            hashToItemCache.put(hash, updated);
+            idToItemCache.put(updated.id(), updated);
+            return updated;
         }
 
         ShopItem newItem = ShopItem.builder()

@@ -18,7 +18,7 @@ public class AdminRecoveryCommand {
         this.loanManager = loanManager;
     }
 
-    @Command("at admin recovery start")
+    @Command("at|autotune admin recovery start")
     @Permission("autotune.admin")
     public void startRecovery(CommandSender sender) {
         if (loanManager.isManualRecoveryMode()) {
@@ -30,7 +30,7 @@ public class AdminRecoveryCommand {
         sender.sendMessage(ChatColor.GREEN + "Recovery mode activated. New loans are paused and interest is frozen at 0% until you run /at admin recovery stop.");
     }
 
-    @Command("at admin recovery stop")
+    @Command("at|autotune admin recovery stop")
     @Permission("autotune.admin")
     public void stopRecovery(CommandSender sender) {
         if (!loanManager.isManualRecoveryMode()) {

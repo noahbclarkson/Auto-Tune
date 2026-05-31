@@ -395,6 +395,10 @@ public class ShopCommand {
     @Command("shop admin setprice <material> <price>")
     @Permission("autotune.admin")
     public void setPrice(CommandSender sender, @Argument(value = "material", suggestions = "shop-materials") Material material, @Argument("price") double price) {
+        if (!isValidAdminPrice(sender, price)) {
+            return;
+        }
+
         Optional<ShopItem> item = shopManager.getItemByMaterial(material);
         if (item.isEmpty()) {
             databaseManager.runAsync(() ->
@@ -492,6 +496,10 @@ public class ShopCommand {
     @Command("shop admin additem <price> <section>")
     @Permission("autotune.admin.additem")
     public void addItem(CommandSender sender, @Argument("price") double price, @Argument(value = "section", suggestions = "shop-sections") String section) {
+        if (!isValidAdminPrice(sender, price)) {
+            return;
+        }
+
         if (!(sender instanceof Player player)) {
             sender.sendMessage(configManager.getMessage("general.player-only"));
             return;
@@ -511,6 +519,14 @@ public class ShopCommand {
                             "price", configManager.formatCurrency(price)
                     ))));
         });
+    }
+
+    private boolean isValidAdminPrice(CommandSender sender, double price) {
+        if (!Double.isFinite(price) || price <= 0) {
+            sender.sendMessage(Component.text("Price must be a finite number greater than 0.", NamedTextColor.RED));
+            return false;
+        }
+        return true;
     }
 
     @Command("shop admin transactions")

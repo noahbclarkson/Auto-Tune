@@ -1,6 +1,7 @@
 package com.noahblclarkson.autotune.manager;
 
 import com.google.gson.Gson;
+import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.noahblclarkson.autotune.AutoTune;
@@ -206,6 +207,7 @@ public class ExchangeRateService {
      * Gson deserializes it directly from the string representation.
      */
     private record ExchangeRateEntry(
+            @SerializedName("server_id")
             String serverId,
             String name,
             Double rate,

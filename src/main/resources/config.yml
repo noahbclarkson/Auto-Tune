@@ -27,10 +27,21 @@ web:
   enabled: true
   # Port for the web server
   port: 8989
-  # Bind address (0.0.0.0 for all interfaces)
-  host: "0.0.0.0"
+  # Bind address. 127.0.0.1 is safe for same-host use and reverse proxies.
+  # If you expose this as 0.0.0.0, set web.auth.enabled=true and web.auth.token.
+  host: "127.0.0.1"
   # Enable WebSocket for real-time updates
   websocket-enabled: true
+  # Cross-origin dev/proxy origins allowed to call the dashboard API.
+  # Same-origin bundled dashboard requests do not need a CORS entry.
+  cors-allowed-origins:
+    - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
+  auth:
+    # Requires Authorization: Bearer <token> or X-Auto-Tune-Token for admin
+    # and player mutation endpoints. Automatically required when host is not loopback.
+    enabled: false
+    token: ""
 
 economy:
   # Currency symbol for display
@@ -136,6 +147,22 @@ economy:
     # With fewer distinct traders, spread compression from volume is reduced proportionally
     # Prevents single-player manipulation: 1 player gets 1/N of the liquidity benefit
     liquidity-full-effect-traders: 10
+
+    # Optional rarity-tier multipliers. These scale the base spread and maximum
+    # price-change cap by item tier; per-item overrides still take precedence.
+    tier-multipliers:
+      spread:
+        common: 1.0
+        uncommon: 1.15
+        rare: 1.30
+        epic: 1.50
+        legendary: 1.70
+      max-price-change:
+        common: 1.0
+        uncommon: 1.1
+        rare: 1.2
+        epic: 1.3
+        legendary: 1.5
 
   # Player count scaling for price changes
   player-scaling:
@@ -312,6 +339,7 @@ gui:
     sell: "Sell Items"
     autosell: "Autosell"
     trends: "Market Trends"
+    market-history: "Price History"
     transaction-history: "Your Transactions"
     admin-transaction-history: "All Transactions"
 
@@ -381,6 +409,51 @@ sections:
     icon: "RED_DYE"
     priority: 60
 
+# ============================================
+# Enchantment Pricing
+# Multipliers are applied by enchantment level. Missing enchantments fall back
+# to built-in defaults, so you can remove entries you do not customize.
+# ============================================
+enchantment:
+  enabled: true
+  multipliers:
+    SHARPNESS: [1.25, 1.60, 2.00, 2.50, 3.00]
+    EFFICIENCY: [1.30, 1.70, 2.20, 3.00, 4.00]
+    UNBREAKING: [1.10, 1.25, 1.50]
+    PROTECTION: [1.20, 1.50, 1.90, 2.40]
+    POWER: [1.30, 1.70, 2.20, 2.80, 3.50]
+    FLAME: [1.15, 1.40]
+    INFINITY: [2.00]
+    FORTUNE: [1.50, 2.00, 3.00]
+    LOOTING: [1.30, 1.80, 2.50]
+    LURE: [1.20, 1.50, 2.00]
+    LUCK_OF_THE_SEA: [1.20, 1.50, 2.00]
+    RESPIRATION: [1.10, 1.25, 1.50]
+    AQUA_AFFINITY: [1.10, 1.25, 1.50]
+    THORNS: [1.20, 1.50, 2.00]
+    FIRE_PROTECTION: [1.20, 1.50, 1.90, 2.40]
+    BLAST_PROTECTION: [1.20, 1.50, 1.90, 2.40]
+    PROJECTILE_PROTECTION: [1.20, 1.50, 1.90, 2.40]
+    FEATHER_FALLING: [1.15, 1.35, 1.60, 1.90]
+    DEPTH_STRIDER: [1.15, 1.40, 1.70]
+    FROST_WALKER: [1.20, 1.50]
+    RIPTIDE: [1.20, 1.60, 2.20]
+    LOYALTY: [1.10, 1.30, 1.60]
+    IMPALING: [1.20, 1.50, 1.90, 2.40]
+    CHANNELING: [1.10]
+    MULTISHOT: [1.50]
+    QUICK_CHARGE: [1.15, 1.35, 1.60]
+    PIERCING: [1.15, 1.40, 1.70]
+    MENDING: [1.50]
+    SOUL_SPEED: [1.20, 1.50, 2.00]
+    SWIFT_SNEAK: [1.30, 1.70, 2.20]
+    SWEEPING_EDGE: [1.20, 1.50, 2.00]
+    KNOCKBACK: [1.10, 1.25, 1.50]
+    FIRE_ASPECT: [1.20, 1.50]
+    PUNCH: [1.20, 1.50]
+    BANE_OF_ARTHROPODS: [1.15, 1.35, 1.60, 1.90]
+    SMITE: [1.15, 1.35, 1.60, 1.90]
+
 debug:
   # Enable debug logging
   enabled: false
@@ -390,11 +463,20 @@ debug:
 
 
 price-reporter:
-  enabled: true
+  enabled: false
   api-url: "https://prices.auto-tune.io"
   api-key: "your-server-api-key"
   server-id: "your-server-uuid"
   report-interval-minutes: 5
+
+# ============================================
+# Exchange Rates
+# Fetches this server's price multiplier vs the shared true-price baseline.
+# Requires price-reporter to be configured for a registered server.
+# ============================================
+exchange-rate:
+  enabled: true
+  fetch-interval-minutes: 15
 
 # ============================================
 # Autosell
@@ -461,6 +543,20 @@ cleanup:
   market-events:
     enabled: true
     retention-days: 7
+
+# ============================================
+# Tax / Treasury
+# Optional transaction taxes accumulated in the server treasury.
+# ============================================
+tax:
+  # Set to true to collect treasury taxes.
+  enabled: false
+
+  # Percentages are decimals: 0.01 = 1%.
+  buy-tax-percent: 0.0
+  sell-tax-percent: 0.0
+  auction-tax-percent: 0.0
+  loan-interest-tax-percent: 0.0
 
 # ============================================
 # Economy Scoreboard
@@ -636,6 +732,22 @@ admin-webhook:
   low-volume-threshold: 2
 
 # ============================================================
+# Market Digest
+# Optional scheduled economy summary posted to a webhook.
+# interval: daily or weekly. day-of-week uses 0=Sunday through 6=Saturday.
+# ============================================================
+market-digest:
+  enabled: false
+  interval: "daily"
+  day-of-week: 0
+  hour-of-day: 9
+  include-top-movers: true
+  include-health-stats: true
+  include-active-events: true
+  include-loan-stats: true
+  webhook-url: ""
+
+# ============================================================
 # Price Milestones — broadcasts when items cross round-number prices
 # ============================================================
 # When enabled, players see action bar notifications when an item's
@@ -666,6 +778,36 @@ price-milestone:
   # Minimum minutes between announcements for the same item+threshold.
   # Prevents spam if an item oscillates around a threshold.
   cooldown-minutes: 60
+
+# ============================================================
+# Player Onboarding
+# One-time milestone messages for players during their first month.
+# Use "%d" for the player day count and "%s" for plural suffixes.
+# ============================================================
+onboarding:
+  enabled: true
+  check-interval-hours: 6
+  milestones:
+    WELCOME:
+      enabled: true
+      day-offset: 0
+      message: "<green>Welcome to the economy!</green> You've been here %d day%s. Use <aqua>/shop</aqua> to browse items, <aqua>/sell</aqua> to make money, and <aqua>/loan</aqua> if you need capital to grow."
+    LOANS_TIP:
+      enabled: true
+      day-offset: 3
+      message: "<gold>Day %d tip:</gold> Need funds to expand? Try <aqua>/loan guide</aqua> to learn how loans work."
+    COMPARE_TIP:
+      enabled: true
+      day-offset: 7
+      message: "<aqua>Day %d insight:</aqua> Some items are priced differently across the network. Try <aqua>/compare [item]</aqua> to see if you're getting a fair deal."
+    DIVERSIFY_TIP:
+      enabled: true
+      day-offset: 14
+      message: "<green>Day %d tip:</green> Don't put all your eggs in one basket. Browse <aqua>/shop</aqua> and look for items with low correlation to diversify your portfolio."
+    LOYALTY:
+      enabled: true
+      day-offset: 30
+      message: "<gradient:#00d4ff:#00ff88>You're amazing!</gradient> Day %d on the server. Your activity keeps the economy alive. Thank you for being here!"
 
 # Whale Anti-Dump — protects against sell-wall destabilization
 # ============================================================
@@ -698,5 +840,5 @@ whale-anti-dump:
 
   # Cooldown in ticks after selling Epic/Legendary items.
   # Prevents rapid repeated high-value dumps.
-  # null = no cooldown
-  high-value-sell-cooldown-ticks: null
+  # Set to null for no cooldown.
+  high-value-sell-cooldown-ticks: 12

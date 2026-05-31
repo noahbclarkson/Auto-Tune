@@ -29,6 +29,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.logging.Level;
 
 /**
  * Two-level in-game price history viewer.
@@ -240,6 +241,25 @@ public class MarketHistoryGui {
 
     public void openDetailView(ShopItem item, Timeframe timeframe) {
         selectedTimeframe = timeframe;
+        showDetailLoading(item);
+
+        plugin.getDatabaseManager().supplyAsync(() -> itemRepository.getPriceHistorySince(
+                item.id(), timeframe.windowStart(), timeframe.fetchLimit()))
+                .thenAccept(history -> plugin.getDatabaseManager().runOnMain(() ->
+                        renderDetailView(item, timeframe, history == null ? List.of() : history)))
+                .exceptionally(ex -> {
+                    plugin.getLogger().log(Level.WARNING, "Failed to load price history", ex);
+                    plugin.getDatabaseManager().runOnMain(() -> {
+                        player.sendMessage(Component.text("Failed to load price history.",
+                                net.kyori.adventure.text.format.NamedTextColor.RED));
+                        renderDetailView(item, timeframe, List.of());
+                    });
+                    return null;
+                });
+    }
+
+    private void renderDetailView(ShopItem item, Timeframe timeframe, List<PriceHistory> history) {
+        selectedTimeframe = timeframe;
 
         gui = new ChestGui(6, item.getDisplayNameOrMaterial() + " History");
         gui.setOnGlobalClick(event -> event.setCancelled(true));
@@ -299,9 +319,6 @@ public class MarketHistoryGui {
         // ── Chart area (rows 2-3, cols 0-8) ─────────────────────────────────
         StaticPane chartArea = new StaticPane(0, 2, 9, 2);
 
-        List<PriceHistory> history = itemRepository.getPriceHistorySince(
-                item.id(), timeframe.windowStart(), timeframe.fetchLimit());
-
         if (history.isEmpty()) {
             ItemStack noData = new ItemStack(Material.BARRIER);
             ItemMeta ndMeta = noData.getItemMeta();
@@ -328,6 +345,23 @@ public class MarketHistoryGui {
         // ── Navigation row (row 5) ──────────────────────────────────────────
         gui.addPane(buildDetailNav(item, timeframe));
 
+        gui.show(player);
+    }
+
+    private void showDetailLoading(ShopItem item) {
+        gui = new ChestGui(6, item.getDisplayNameOrMaterial() + " History");
+        gui.setOnGlobalClick(event -> event.setCancelled(true));
+
+        StaticPane pane = new StaticPane(0, 0, 9, 6);
+        ItemStack loading = new ItemStack(Material.CLOCK);
+        ItemMeta meta = loading.getItemMeta();
+        meta.displayName(Component.text("Loading price history...",
+                configManager.resolveColor(configManager.getConfig().gui().colors().muted()))
+                .decoration(TextDecoration.ITALIC, false));
+        loading.setItemMeta(meta);
+        pane.addItem(new GuiItem(loading, e -> {}), 4, 2);
+
+        gui.addPane(pane);
         gui.show(player);
     }
 
@@ -445,14 +479,6 @@ public class MarketHistoryGui {
                 pane.addItem(new GuiItem(topBlock, e -> {}), col, 1);
             }
         }
-
-        // Legend at the bottom of the chart area (row 2)
-        pane.addItem(new GuiItem(makeLegendItem(Material.GREEN_STAINED_GLASS_PANE,
-                "Rising", colors), e -> {}), 0, 2);
-        pane.addItem(new GuiItem(makeLegendItem(Material.RED_STAINED_GLASS_PANE,
-                "Falling", colors), e -> {}), 1, 2);
-        pane.addItem(new GuiItem(makeLegendItem(Material.YELLOW_STAINED_GLASS_PANE,
-                "Stable", colors), e -> {}), 2, 2);
     }
 
     private ItemStack makeChartBlock(Material mat, PriceHistory ph,
@@ -563,6 +589,13 @@ public class MarketHistoryGui {
             spreadItem.setItemMeta(sm);
             pane.addItem(new GuiItem(spreadItem, e -> {}), 4, 0);
         }
+
+        pane.addItem(new GuiItem(makeLegendItem(Material.GREEN_STAINED_GLASS_PANE,
+                "Rising", colors), e -> {}), 6, 0);
+        pane.addItem(new GuiItem(makeLegendItem(Material.RED_STAINED_GLASS_PANE,
+                "Falling", colors), e -> {}), 7, 0);
+        pane.addItem(new GuiItem(makeLegendItem(Material.YELLOW_STAINED_GLASS_PANE,
+                "Stable", colors), e -> {}), 8, 0);
 
         return pane;
     }

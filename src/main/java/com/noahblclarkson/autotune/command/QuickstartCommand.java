@@ -30,38 +30,38 @@ public class QuickstartCommand {
     public void onQuickstart(CommandContext<CommandSender> ctx) {
         CommandSender sender = ctx.sender();
 
-        sender.sendMessage(Component.text("═══════════════════════════════════════").color(DIM));
-        sender.sendMessage(Component.text("⚒  Auto-Tune Quickstart Guide").color(HIGHLIGHT));
-        sender.sendMessage(Component.text("═══════════════════════════════════════").color(DIM));
+        sender.sendMessage(Component.text("=======================================").color(DIM));
+        sender.sendMessage(Component.text("Auto-Tune Quickstart Guide").color(HIGHLIGHT));
+        sender.sendMessage(Component.text("=======================================").color(DIM));
 
         sender.sendMessage(blank());
-        sender.sendMessage(heading("/shop — Buy Items"));
+        sender.sendMessage(heading("/shop - Buy Items"));
         sender.sendMessage(body("Browse all items. Each shows buy price, sell price, and a trend arrow."));
-        sender.sendMessage(body("Prices update every 5 minutes. Green \u2191 = rising. Red \u2193 = falling."));
+        sender.sendMessage(body("Prices update every 5 minutes. Green up = rising. Red down = falling."));
 
         sender.sendMessage(blank());
-        sender.sendMessage(heading("/sell — Sell Items"));
+        sender.sendMessage(heading("/sell - Sell Items"));
         sender.sendMessage(body("Sell anything in your inventory at the current market price. Instant."));
 
         sender.sendMessage(blank());
-        sender.sendMessage(heading("/compare — Find Deals"));
-        sender.sendMessage(body("Check if an item is cheap or expensive vs. its 7-day average."));
+        sender.sendMessage(heading("/price - Check Item Prices"));
+        sender.sendMessage(body("Look up an item's buy price, sell price, spread, and trend."));
         sender.sendMessage(body("Example: "));
-        sender.sendMessage(builder().content("  /compare DIAMOND IRON_INGOT").color(ACCENT).build());
+        sender.sendMessage(builder().content("  /price DIAMOND").color(ACCENT).build());
 
         sender.sendMessage(blank());
-        sender.sendMessage(heading("/loans — Borrow to Buy Big"));
+        sender.sendMessage(heading("/loan - Borrow to Buy Big"));
         sender.sendMessage(body("Take a loan for large purchases. Pay it back over time."));
         sender.sendMessage(body("Interest pauses if the economy gets unstable (circuit breaker)."));
 
         sender.sendMessage(blank());
-        sender.sendMessage(heading("/transactions — Track Your Trades"));
+        sender.sendMessage(heading("/transactions - Track Your Trades"));
         sender.sendMessage(body("See your full trading history with timestamps and prices."));
 
         sender.sendMessage(blank());
-        sender.sendMessage(Component.text("═══════════════════════════════════════").color(DIM));
-        sender.sendMessage(tip("Prices move based on supply & demand. Buy when cheap, sell when high!"));
-        sender.sendMessage(Component.text("═══════════════════════════════════════").color(DIM));
+        sender.sendMessage(Component.text("=======================================").color(DIM));
+        sender.sendMessage(tip("Prices move based on supply and demand. Buy when cheap, sell when high!"));
+        sender.sendMessage(Component.text("=======================================").color(DIM));
     }
 
     private static Component blank() {
@@ -81,6 +81,6 @@ public class QuickstartCommand {
     }
 
     private static TextComponent tip(String text) {
-        return builder().content("\uD83D\uDCA1 " + text).color(ACCENT).build();
+        return builder().content("Tip: " + text).color(ACCENT).build();
     }
 }

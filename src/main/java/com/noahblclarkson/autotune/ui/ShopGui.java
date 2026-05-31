@@ -49,6 +49,13 @@ public class ShopGui {
     // Quantity selector: 8 columns (qty buttons: 1, 2, 4, 8, 16, 32, 64, custom)
     private static final int QTY_COLS_MAX = 8;
 
+    private enum ItemViewMode {
+        NONE,
+        SECTION,
+        SEARCH,
+        FAVORITES
+    }
+
     private final AutoTune plugin;
     private final Player player;
     private final ShopManager shopManager;
@@ -64,6 +71,8 @@ public class ShopGui {
     private List<ShopItem> currentItems = List.of();
     private String currentTitle;
     private int currentPage;
+    private ItemViewMode itemViewMode = ItemViewMode.NONE;
+    private String currentSectionId;
 
     public ShopGui(AutoTune plugin, Player player) {
         this(plugin, player, new ShopFavoriteRepository(plugin.getDatabaseManager()));
@@ -93,6 +102,9 @@ public class ShopGui {
 
         currentItems = List.of();
         currentTitle = guiConfig.titles().shop();
+        currentPage = 0;
+        itemViewMode = ItemViewMode.NONE;
+        currentSectionId = null;
 
         gui = new ChestGui(6, currentTitle);
         gui.setOnGlobalClick(event -> event.setCancelled(true));
@@ -209,6 +221,8 @@ public class ShopGui {
         currentItems = items;
         currentTitle = sectionTitle(sectionId);
         currentPage = 0;
+        itemViewMode = ItemViewMode.SECTION;
+        currentSectionId = sectionId;
 
         renderItemsView(true);
     }
@@ -217,25 +231,25 @@ public class ShopGui {
         currentItems = results;
         currentTitle = "Search: " + query;
         currentPage = 0;
+        itemViewMode = ItemViewMode.SEARCH;
+        currentSectionId = null;
         renderItemsView(true);
     }
 
     private void openFavorites() {
-        Set<Integer> favoriteIds = shopFavoriteRepository.getFavoriteItemIds(player.getUniqueId());
-        if (favoriteIds.isEmpty()) {
+        List<ShopItem> favorites = loadFavoriteItems();
+        if (favorites.isEmpty()) {
             player.sendMessage(Component.text("You have no favorited items. Right-click any item in the shop to star it!")
                     .color(net.kyori.adventure.text.format.NamedTextColor.YELLOW));
             openSections();
             return;
         }
 
-        List<ShopItem> favorites = shopManager.getAllItems().stream()
-                .filter(item -> favoriteIds.contains(item.id()))
-                .toList();
-
         currentItems = favorites;
         currentTitle = "\u2605 Your Favorites";
         currentPage = 0;
+        itemViewMode = ItemViewMode.FAVORITES;
+        currentSectionId = null;
         renderItemsView(true);
     }
 
@@ -250,12 +264,7 @@ public class ShopGui {
             player.sendMessage(Component.text("Added " + shopItem.getDisplayNameOrMaterial() + " to favorites \u2605")
                     .color(NamedTextColor.GREEN));
         }
-        // Re-render current view to update star indicators
-        if (currentItems.equals(shopManager.getAllItems()) || currentItems.isEmpty()) {
-            openSections();
-        } else {
-            renderItemsView(true);
-        }
+        refreshCurrentItemView();
     }
 
     private void renderItemsView(boolean showBack) {
@@ -285,6 +294,43 @@ public class ShopGui {
             guiItems.add(createShopItemGui(item));
         }
         itemsPane.populateWithGuiItems(guiItems);
+    }
+
+    private void refreshCurrentItemView() {
+        if (itemsPane != null) {
+            currentPage = itemsPane.getPage();
+        }
+
+        if (itemViewMode == ItemViewMode.FAVORITES) {
+            currentItems = loadFavoriteItems();
+            currentTitle = "\u2605 Your Favorites";
+            if (currentItems.isEmpty()) {
+                player.sendMessage(Component.text("You have no favorited items.")
+                        .color(NamedTextColor.YELLOW));
+                openSections();
+                return;
+            }
+        } else if (itemViewMode == ItemViewMode.SECTION && currentSectionId != null) {
+            currentItems = "all".equalsIgnoreCase(currentSectionId)
+                    ? shopManager.getAllItems()
+                    : shopManager.getItemsBySection(currentSectionId);
+            currentTitle = sectionTitle(currentSectionId);
+        } else if (itemViewMode == ItemViewMode.NONE) {
+            openSections();
+            return;
+        }
+
+        renderItemsView(true);
+    }
+
+    private List<ShopItem> loadFavoriteItems() {
+        Set<Integer> favoriteIds = shopFavoriteRepository.getFavoriteItemIds(player.getUniqueId());
+        if (favoriteIds.isEmpty()) {
+            return List.of();
+        }
+        return shopManager.getAllItems().stream()
+                .filter(item -> favoriteIds.contains(item.id()))
+                .toList();
     }
 
     private GuiItem createShopItemGui(ShopItem shopItem) {
@@ -389,6 +435,14 @@ public class ShopGui {
     }
 
     public void openBuySellGui(ShopItem shopItem) {
+        if (itemViewMode == ItemViewMode.NONE && currentItems.isEmpty()) {
+            itemViewMode = ItemViewMode.SECTION;
+            currentSectionId = shopItem.section();
+            currentTitle = sectionTitle(currentSectionId);
+            currentItems = shopManager.getItemsBySection(currentSectionId);
+            currentPage = 0;
+        }
+
         GuiConfig guiConfig = configManager.getConfig().gui();
         ColorsConfig colors = guiConfig.colors();
         MaterialsConfig materials = guiConfig.materials();

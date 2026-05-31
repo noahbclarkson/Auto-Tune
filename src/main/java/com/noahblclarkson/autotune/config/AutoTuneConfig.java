@@ -64,10 +64,21 @@ public record AutoTuneConfig(
             boolean enabled,
             int port,
             @NotNull String host,
-            boolean websocketEnabled
+            boolean websocketEnabled,
+            boolean authEnabled,
+            @NotNull String authToken,
+            @NotNull List<String> corsAllowedOrigins
     ) {
         public static WebConfig defaults() {
-            return new WebConfig(true, 8989, "0.0.0.0", true);
+            return new WebConfig(
+                    true,
+                    8989,
+                    "127.0.0.1",
+                    true,
+                    false,
+                    "",
+                    List.of("http://localhost:3000", "http://127.0.0.1:3000")
+            );
         }
     }
 
@@ -267,7 +278,7 @@ public record AutoTuneConfig(
         public static LoanConfig defaults() {
             return new LoanConfig(
                     true, 0.05, true, 2.0, 200,
-                    7, 3, 30, 0.002, 24, 1, 24, 1.5, 0.5, 50,
+                    14, 3, 30, 0.002, 24, 1, 24, 1.5, 0.5, 50,
                     3.0, 5.0, 30.0, 0.5, 0.25,  // debt-gdp-tier1=3.0, tier2=5.0, tier3=30.0
                     0.5,   // tier3HysteresisBand: 50% band — unlock at D/G < 15 with tier3=30 (Rust parity)
                     0.0,   // minInterestMultiplier: pure counter-cyclical (0% at D/G=tier3)
@@ -387,7 +398,7 @@ public record AutoTuneConfig(
             long reportIntervalMinutes
     ) {
         public static PriceReporterConfig defaults() {
-            return new PriceReporterConfig(true, "https://prices.auto-tune.io", "your-server-api-key", "your-server-uuid", 5);
+            return new PriceReporterConfig(false, "https://prices.auto-tune.io", "your-server-api-key", "your-server-uuid", 5);
         }
     }
 

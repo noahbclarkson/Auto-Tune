@@ -61,6 +61,7 @@ public class DatabaseManager {
             hikariConfig.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
             hikariConfig.setDriverClassName("org.sqlite.JDBC");
             hikariConfig.setMaximumPoolSize(1);
+            hikariConfig.setConnectionInitSql("PRAGMA foreign_keys = ON");
         } else {
             String jdbcUrl = String.format(
                     "jdbc:mariadb://%s:%d/%s?useSSL=false&allowPublicKeyRetrieval=true",
@@ -186,10 +187,17 @@ public class DatabaseManager {
         }
     }
 
-    private static String translateForMysql(String statement) {
-        return statement
+    static String translateForMysql(String statement) {
+        String translated = statement
                 .replace("AUTOINCREMENT", "AUTO_INCREMENT")
-                .replace("INSERT OR IGNORE", "INSERT IGNORE");
+                .replace("INSERT OR IGNORE", "INSERT IGNORE")
+                .replace("DEFAULT (datetime('now'))", "DEFAULT CURRENT_TIMESTAMP");
+
+        String upper = translated.toUpperCase(java.util.Locale.ROOT);
+        if (upper.startsWith("CREATE INDEX") && upper.contains(" WHERE ")) {
+            translated = translated.replaceAll("(?is)\\s+WHERE\\s+.+$", "");
+        }
+        return translated;
     }
 
     /**
@@ -311,22 +319,14 @@ public class DatabaseManager {
      * Execute a database operation asynchronously.
      */
     public <T> CompletableFuture<T> supplyAsync(Supplier<T> supplier) {
-        return CompletableFuture.supplyAsync(supplier, asyncExecutor)
-                .exceptionally(ex -> {
-                    plugin.getLogger().log(Level.SEVERE, "Async database operation failed", ex);
-                    return null;
-                });
+        return CompletableFuture.supplyAsync(supplier, asyncExecutor);
     }
 
     /**
      * Execute a database operation asynchronously (no return value).
      */
     public CompletableFuture<Void> runAsync(Runnable runnable) {
-        return CompletableFuture.runAsync(runnable, asyncExecutor)
-                .exceptionally(ex -> {
-                    plugin.getLogger().log(Level.SEVERE, "Async database operation failed", ex);
-                    return null;
-                });
+        return CompletableFuture.runAsync(runnable, asyncExecutor);
     }
 
     /**

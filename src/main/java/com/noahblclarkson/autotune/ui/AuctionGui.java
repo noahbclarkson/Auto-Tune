@@ -54,6 +54,11 @@ public class AuctionGui {
     private static final int   SELL_LABEL_SLOT = 0;
     private static final int   BUY_LABEL_SLOT  = 7;
 
+    // My Orders page: max 7 slots for order display
+    private static final int MY_ORDERS_MAX_SLOTS = 7;
+
+    private static final int   MAX_BUY_ROWS = 4;  // 4 rows (row 1-4), stop at row 5
+
     private static final TextColor GREEN  = TextColor.fromHexString("#55ff55");
     private static final TextColor RED    = TextColor.fromHexString("#ff5555");
     private static final TextColor YELLOW = TextColor.fromHexString("#ffff55");
@@ -172,7 +177,7 @@ public class AuctionGui {
         for (AuctionOrder order : buyOrders) {
             int row = (buySlot / 3) + 1;
             int col = buySlot % 3;
-            if (row >= 4) break;
+            if (row >= MAX_BUY_ROWS) break;
             buyPane.addItem(new GuiItem(makeOrderItem(order, player),
                     e -> handleFillClick((Player) e.getWhoClicked(), order)), col, row);
             buySlot++;
@@ -386,7 +391,7 @@ public class AuctionGui {
         } else {
             int slot = 0;
             for (AuctionOrder order : orders) {
-                if (slot >= 7) break; // slots 1-7 for orders
+                if (slot >= MY_ORDERS_MAX_SLOTS) break; // slots 1-7 for orders
                 pane.addItem(new GuiItem(makeOrderItem(order, player),
                         e -> handleFillClick(player, order)), slot + 1, 1);
                 slot++;

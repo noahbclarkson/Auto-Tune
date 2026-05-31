@@ -41,6 +41,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 
+@SuppressWarnings("PMD.NullAssignment")
 public class ShopGui {
 
     // Section browser: 7 columns, up to 3 rows in the GUI grid

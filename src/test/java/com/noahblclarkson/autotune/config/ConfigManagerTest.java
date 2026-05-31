@@ -60,6 +60,7 @@ class ConfigManagerTest {
                 "legacy camelCase priceReporter.server-id path should not be written");
     }
 
+    @SuppressWarnings("PMD.UseProperClassLoader")
     @Test
     @DisplayName("Shipped config.yml parses and validates")
     void shippedConfigParsesAndValidates() {

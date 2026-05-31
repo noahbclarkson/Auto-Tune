@@ -217,22 +217,24 @@ public class AnvilMinPriceGui implements Listener {
         player.closeInventory();
     }
 
+    @SuppressWarnings({"PMD.NullAssignment", "PMD.CompareObjectsWithEquals"})
     private void cleanup() {
         if (anvilInventory != null) {
             anvilInventory.clear();
+            anvilInventory = null;
         }
         OPEN_GUIS.remove(player.getUniqueId(), this);
         PLAYER_RENAME_TEXT.remove(player.getUniqueId());
-        anvilInventory = null;
         // Unregister only this listener instance, not all plugin listeners.
         // Calling getHandlerList().unregister(plugin) would destroy InventoryFramework's GuiListener.
         HandlerList.unregisterAll(this);
     }
 
+    @SuppressWarnings({"PMD.NullAssignment", "PMD.CompareObjectsWithEquals"})
     private boolean isThisGui(Inventory inventory, org.bukkit.entity.HumanEntity viewer) {
         return viewer.equals(player)
                 && inventory != null
-                && inventory.equals(anvilInventory)
+                && inventory == anvilInventory
                 && OPEN_GUIS.get(player.getUniqueId()) == this;
     }
 

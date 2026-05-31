@@ -519,17 +519,17 @@ Treatment: `2MM + 2GB + 3Cas + 1Far + 2Tra + 2Newbie + 60% Diamond floor`
 - Commit: `e59142e docs: correct security launch hardening summary`.
 
 ### Ecosystem Observations
-- The product ecosystem is coherent: Java plugin remains the authority, bundled `web/` explains a live server economy, Rust sim validates tuning, API server aggregates opt-in cross-server ratios, and `web-optimizer/` markets/docs the network.
+- The product ecosystem is coherent: Java plugin remains the authority, bundled `web/` explains a live server economy, Rust sim validates tuning, API server aggregates opt-in cross-server ratios, and `public-site/` markets/docs the network.
 - The biggest remaining ecosystem risks are **trust and onboarding**, not feature volume.
 - Cross-server exchange rates should stay plugin-local. The API should publish true-price data plus confidence signals; individual servers should decide how much to trust/apply that data.
 - API trust docs are accurate after the SECURITY.md fix, but public-facing confidence UX is still thin until API deployment is live.
 - Bundled admin UX is strong after the admin/report fixes, but first-time admins still need a verification flow that answers: Vault hooked? DB migrated? web server reachable? first price event recorded? price reporter heartbeat accepted?
 
 ### Prioritized Future Ideas — Web / Docs
-1. **Public Trust & Confidence page (`web-optimizer/`)** — surface SECURITY.md concepts as admin-readable UX: server count, freshness, outlier suppression, low-confidence states, and what “true price” does/does not mean.
+1. **Public Trust & Confidence page (`public-site/`)** — surface SECURITY.md concepts as admin-readable UX: server count, freshness, outlier suppression, low-confidence states, and what “true price” does/does not mean.
 2. **True-price confidence labels** — show “low sample”, “stale”, “outlier-filtered”, and “strong consensus” states on true-prices/exchange-rates/server pages before public launch.
-3. **Admin first-run checklist (`web/`)** — guided card on `/admin`: config loaded, Vault provider detected, DB migrations current, market tick active, latest transaction seen, auction repo healthy, API heartbeat status.
-4. **FAQ route (`web-optimizer/faq`)** — promote `docs/FAQ.md` into a public route for admins comparing alternatives.
+3. **Admin first-run checklist (`web/`)** — guided card on `/admin`: config loaded, Vault provider detected, DB migrations current, market tick active, latest transaction seen, auction repo healthy, API heartbeat status. *(⚡ SHIPPED — `6b6398f`, 2026-05-30 — 6 checks: plugin active, items tracked, prices updating, trade mix healthy, DB migrations, dashboard reachable)*
+4. **FAQ route (`public-site/faq`)** — promote `docs/FAQ.md` into a public route for admins comparing alternatives. *(⚡ SHIPPED — `public-site/faq`, 2026-05-22 era)*
 5. **Server showcase once API deploys** — highlight healthy opt-in servers with confidence badges, not raw leaderboard rankings that incentivize manipulation.
 
 ### Prioritized Future Ideas — Plugin Engineer
@@ -732,10 +732,10 @@ GB sells excess supply; Newbie buys what GB sells. Together they create two-side
 
 ### Ecosystem Observations
 - **web/ `/admin`:** Complete. Missing: first-run verification checklist for new admins (ConfigHealthCard validates ranges but no "is my economy live?" guided checklist).
-- **web-optimizer/ landing:** "Active Servers: Network growing" — honest placeholder, no live count yet (blocked on API deploy).
+- **public-site/ landing:** "Active Servers: Network growing" — honest placeholder, no live count yet (blocked on API deploy).
 - **API docs (`/api-docs`):** Accurate for all implemented features ✅
 - **Discord bot:** Documented in install guide and docs index ✅
-- **FAQ:** Only `docs/FAQ.md`, no web-optimizer `/faq` page — noted but not a bug
+- **FAQ:** `public-site/faq` page exists ✅
 
 ### State
 Repo clean. All surfaces consistent. No bugs. No pushes needed.
@@ -792,16 +792,16 @@ Repo clean. All surfaces consistent. No bugs. No pushes needed.
 - `/at admin config diff <file>` — live config change preview before applying
 - Economy event broadcasts (circuit fire, D/G threshold crossings)
 
-**Public web (web-optimizer):**
+**Public web (public-site/):**
 - Trust/security governance page for API (server key rotation, outlier filtering, freshness)
 - Server showcase page (after real testimonials collected)
 - Discord bot docs page
 - Interactive config comparison tool (pick two configs → side-by-side sim results)
-- FAQ page (currently only `docs/FAQ.md`, no public web-optimizer page)
+- FAQ page ✅ (SHIPPED 2026-05-22 as `public-site/faq`)
 
 **Bundled web (web/):**
-- First-run setup verification checklist card on `/admin`
-- Player impact leaderboard
+- First-run setup verification checklist card on `/admin` ✅ (SHIPPED `6b6398f`)
+- Player P&L leaderboard ✅ (SHIPPED `b4b34eb`)
 - Auction fill browser notifications (Notification API for `/auction/order` pages)
 
 ---

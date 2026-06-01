@@ -96,10 +96,10 @@ function OrderBook() {
           <span className="w-3 h-3 rounded-full bg-red-500/70" />
           <span className="w-3 h-3 rounded-full bg-amber-500/70" />
           <span className="w-3 h-3 rounded-full bg-green-500/70" />
-          <span className="ml-3 text-xs text-gray-400 font-mono">/auction — Live Order Book</span>
-          <span className="ml-auto flex items-center gap-1.5 text-[10px] text-emerald-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Live
+          <span className="ml-3 text-xs text-gray-400 font-mono">/auction — Order Book Demo</span>
+          <span className="ml-auto flex items-center gap-1.5 text-[10px] text-amber-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+            Demo
           </span>
         </div>
         <div className="p-3 space-y-1">
@@ -139,7 +139,7 @@ function RecentFills() {
   return (
     <div className="rounded-xl border border-gray-700 overflow-hidden bg-gray-900">
       <div className="px-4 py-3 bg-gray-800 border-b border-gray-700">
-        <p className="text-xs text-gray-400 font-medium">Recent Fills — Live</p>
+        <p className="text-xs text-gray-400 font-medium">Recent Fills — Demo</p>
       </div>
       <div className="p-3 space-y-1">
         {MOCK_FILLS.map((f, i) => (
@@ -201,7 +201,7 @@ export default function AuctionPage() {
       {/* Order Book Demo */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-gray-800/40">
         <div className="text-center mb-10">
-          <p className="text-xs text-rose-400 uppercase tracking-widest font-medium mb-2">Live Demo</p>
+          <p className="text-xs text-amber-400 uppercase tracking-widest font-medium mb-2">Order Book Demo</p>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">The order book, in action</h2>
           <p className="text-gray-400 max-w-xl mx-auto text-sm leading-relaxed">
             Players place limit orders. When a buy order meets a sell order, the trade executes instantly. No admin mediation, no waiting.

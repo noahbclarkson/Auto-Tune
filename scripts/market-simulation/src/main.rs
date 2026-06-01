@@ -12557,6 +12557,9 @@ fn main() -> eframe::Result<()> {
         );
         println!("  --exit-cap-sweep         Exit cap grid: 1%/3%/5% × 5d/10d/20d × 90d × 3 seeds");
         println!("  --it-removal-test         2MM+2GB+floor: WITH vs WITHOUT InsiderTraders");
+        println!(
+            "  --recommended-multi-duration-test  REC(2Newbie) vs OLD(3Far) at 14d+30d × 3 seeds"
+        );
         println!("  --healthy-baseline-5seed  2MM+2GB+floor × 5 seeds: statistical baseline");
         println!("  --gb-newbie-healthy-test   2MM+2GB+1Far+2Newbie vs 2MM+2GB+3Far × 5 seeds");
         println!("  --recommended-longrun-test recommended config vs baseline × 30/60d × 5 seeds");
@@ -13106,6 +13109,11 @@ fn main() -> eframe::Result<()> {
     // ─── IT Removal Test ───────────────────────────────────────────────
     if args.len() > 1 && args[1] == "--it-removal-test" {
         run_it_removal_healthy_test();
+        return Ok(());
+    }
+
+    if args.len() > 1 && args[1] == "--recommended-multi-duration-test" {
+        run_recommended_multi_duration_test();
         return Ok(());
     }
 
@@ -21440,6 +21448,293 @@ fn run_floor_90d_compare() {
             } else {
                 "Floor INCREASES D/G at 90d — masking effect. Floor makes displayed prices look stable but worsens debt dynamics."
             }
+        );
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+//  RECOMMENDED CONFIG MULTI-DURATION TEST
+//  Compares: 2MM+2GB+1Far+2Newbie+Floor (recommended) vs 2MM+2GB+3Far+Floor (old)
+//  Questions:
+//    1. Does recommended config (Newbies) outperform old (3Far) at 14d?
+//    2. Does recommended config remain stable at 30d where old config degenerates?
+//    3. Which archetype replacement (Farmer→Newbie) drives the difference?
+// ═══════════════════════════════════════════════════════════════════════
+
+fn run_recommended_multi_duration_test() {
+    use crate::analyzer::{load_all_prices, load_summary};
+
+    let seeds = vec![42u64, 12345u64, 98765u64];
+    let days_options = vec![14u64, 30u64];
+
+    println!("\n╔══════════════════════════════════════════════════════════════════╗");
+    println!("║  RECOMMENDED CONFIG MULTI-DURATION TEST                      ║");
+    println!("║  2MM+2GB+1Far+2Newbie+Floor (recommended) vs 2MM+2GB+3Far+Floor (old)║");
+    println!("╚══════════════════════════════════════════════════════════════════╝\n");
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct Result {
+        seed: u64,
+        days: u64,
+        config: &'static str,
+        gdp: f64,
+        dg: f64,
+        vol: f64,
+        bpd: f64,
+        spd: f64,
+        buy_ratio: f64,
+        diamond_internal: f64,
+        diamond_displayed: f64,
+    }
+
+    impl Result {
+        fn from_db(
+            db_path: &std::path::Path,
+            seed: u64,
+            days: u64,
+            config: &'static str,
+        ) -> Option<Self> {
+            let s = load_summary(db_path).ok()?;
+            let prices = load_all_prices(db_path).unwrap_or_default();
+            let diamond = prices.iter().find(|(n, _, _)| n == "Diamond");
+            let (di, dd) = diamond.map(|(_, i, d)| (*i, *d)).unwrap_or((0.0, 0.0));
+            Some(Self {
+                seed,
+                days,
+                config,
+                gdp: s.gdp,
+                dg: s.debt / s.gdp.max(1.0),
+                vol: s.avg_volatility,
+                bpd: s.avg_bpd,
+                spd: s.avg_spd,
+                buy_ratio: s.buy_ratio,
+                diamond_internal: di,
+                diamond_displayed: dd,
+            })
+        }
+    }
+
+    let mut results: Vec<Result> = Vec::new();
+
+    println!(
+        "  {:>5} {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>10}",
+        "Days", "Seed", "GDP", "D/G", "Vol(CV)", "BPD%", "SPD%", "Buy%"
+    );
+    println!(
+        "  {:>5} {:>6} {:>12} {:>10} {:>8} {:>8} {:>8} {:>10}",
+        "─────",
+        "──────",
+        "────────────",
+        "──────────",
+        "────────",
+        "────────",
+        "────────",
+        "────────"
+    );
+
+    for &days in &days_options {
+        for &seed in &seeds {
+            // ── OLD CONFIG: 3Far (no Newbie) ────────────────────────────
+            let mut old_scenario = Scenario::guild_stability_2mm_fixed_guild_plus_floor();
+            old_scenario.name = format!("Old_{}d_seed{}", days, seed);
+            old_scenario.duration_ticks = 288 * days;
+            let old_dir = PathBuf::from(format!("/tmp/autotune-recdur-old-{}d-{}", days, seed));
+            let _ = std::fs::remove_dir_all(&old_dir);
+            std::fs::create_dir_all(&old_dir).ok();
+            run_seeded_headless(&old_scenario, seed, &old_dir).ok();
+
+            // ── RECOMMENDED CONFIG: 1Far+2Newbie ─────────────────────────
+            let mut rec_scenario = Scenario::recommended_config();
+            rec_scenario.name = format!("Rec_{}d_seed{}", days, seed);
+            rec_scenario.duration_ticks = 288 * days;
+            let rec_dir = PathBuf::from(format!("/tmp/autotune-recdur-rec-{}d-{}", days, seed));
+            let _ = std::fs::remove_dir_all(&rec_dir);
+            std::fs::create_dir_all(&rec_dir).ok();
+            run_seeded_headless(&rec_scenario, seed, &rec_dir).ok();
+
+            // ── Load results ──────────────────────────────────────────────
+            if let Some(r) = Result::from_db(&old_dir.join("simulation.db"), seed, days, "old") {
+                println!(
+                    "  {:>5} {:>6} {:>12.0} {:>9.3}x {:>7.4} {:>7.3}% {:>7.3}% {:>9.1}%  [OLD 3Far]",
+                    days,
+                    seed,
+                    r.gdp,
+                    r.dg,
+                    r.vol,
+                    r.bpd * 100.0,
+                    r.spd * 100.0,
+                    r.buy_ratio * 100.0
+                );
+                results.push(r);
+            }
+            if let Some(r) = Result::from_db(&rec_dir.join("simulation.db"), seed, days, "rec") {
+                println!(
+                    "  {:>5} {:>6} {:>12.0} {:>9.3}x {:>7.4} {:>7.3}% {:>7.3}% {:>9.1}%  [REC 2Newbie]",
+                    days,
+                    seed,
+                    r.gdp,
+                    r.dg,
+                    r.vol,
+                    r.bpd * 100.0,
+                    r.spd * 100.0,
+                    r.buy_ratio * 100.0
+                );
+                results.push(r);
+            }
+
+            let _ = std::fs::remove_dir_all(&old_dir);
+            let _ = std::fs::remove_dir_all(&rec_dir);
+        }
+
+        // ── Per-config averages at this duration ───────────────────────
+        let old_avg = results
+            .iter()
+            .filter(|r| r.days == days && r.config == "old")
+            .collect::<Vec<_>>();
+        let rec_avg = results
+            .iter()
+            .filter(|r| r.days == days && r.config == "rec")
+            .collect::<Vec<_>>();
+        if !old_avg.is_empty() && !rec_avg.is_empty() {
+            let o = |field: fn(&Result) -> f64| -> f64 {
+                let vals: f64 = old_avg.iter().map(|r| field(r)).sum();
+                vals / old_avg.len() as f64
+            };
+            let r = |field: fn(&Result) -> f64| -> f64 {
+                let vals: f64 = rec_avg.iter().map(|res| field(res)).sum();
+                vals / rec_avg.len() as f64
+            };
+            println!(
+                "  {:>5} {:>6} {:>12.0} {:>9.3}x {:>7.4} {:>7.3}% {:>7.3}% {:>9.1}%  [OLD  avg]",
+                days,
+                "avg",
+                o(|x| x.gdp),
+                o(|x| x.dg),
+                o(|x| x.vol),
+                o(|x| x.bpd) * 100.0,
+                o(|x| x.spd) * 100.0,
+                o(|x| x.buy_ratio) * 100.0
+            );
+            println!(
+                "  {:>5} {:>6} {:>12.0} {:>9.3}x {:>7.4} {:>7.3}% {:>7.3}% {:>9.1}%  [REC  avg]",
+                days,
+                "avg",
+                r(|x| x.gdp),
+                r(|x| x.dg),
+                r(|x| x.vol),
+                r(|x| x.bpd) * 100.0,
+                r(|x| x.spd) * 100.0,
+                r(|x| x.buy_ratio) * 100.0
+            );
+            let dg_delta = r(|x| x.dg) - o(|x| x.dg);
+            let gdp_delta_pct = (r(|x| x.gdp) - o(|x| x.gdp)) / o(|x| x.gdp).max(1.0) * 100.0;
+            let vol_delta = r(|x| x.vol) - o(|x| x.vol);
+            println!(
+                "  {:>5} {:>6} {:>11.1}% {:>+9.3}x {:>+7.4} {:>7.3}% {:>7.3}% {:>9.1}%  [delta]",
+                days,
+                "",
+                gdp_delta_pct,
+                dg_delta,
+                vol_delta,
+                (r(|x| x.bpd) - o(|x| x.bpd)) * 100.0,
+                (r(|x| x.spd) - o(|x| x.spd)) * 100.0,
+                (r(|x| x.buy_ratio) - o(|x| x.buy_ratio)) * 100.0
+            );
+            println!();
+        }
+    }
+
+    // ── Analysis ───────────────────────────────────────────────────────
+    println!("  ── FINDINGS ──");
+
+    // 14d comparison
+    let old14: Vec<_> = results
+        .iter()
+        .filter(|r| r.days == 14 && r.config == "old")
+        .collect();
+    let rec14: Vec<_> = results
+        .iter()
+        .filter(|r| r.days == 14 && r.config == "rec")
+        .collect();
+    let old30: Vec<_> = results
+        .iter()
+        .filter(|r| r.days == 30 && r.config == "old")
+        .collect();
+    let rec30: Vec<_> = results
+        .iter()
+        .filter(|r| r.days == 30 && r.config == "rec")
+        .collect();
+
+    if !old14.is_empty() && !rec14.is_empty() {
+        let avg14_old_dg = old14.iter().map(|r| r.dg).sum::<f64>() / old14.len() as f64;
+        let avg14_rec_dg = rec14.iter().map(|r| r.dg).sum::<f64>() / rec14.len() as f64;
+        let avg14_old_vol = old14.iter().map(|r| r.vol).sum::<f64>() / old14.len() as f64;
+        let avg14_rec_vol = rec14.iter().map(|r| r.vol).sum::<f64>() / rec14.len() as f64;
+        let avg14_old_gdp = old14.iter().map(|r| r.gdp).sum::<f64>() / old14.len() as f64;
+        let avg14_rec_gdp = rec14.iter().map(|r| r.gdp).sum::<f64>() / rec14.len() as f64;
+        println!(
+            "  At 14d: REC vs OLD — GDP {:+.1}%, D/G {:+.3}x, Vol {:+.4}",
+            (avg14_rec_gdp - avg14_old_gdp) / avg14_old_gdp.max(1.0) * 100.0,
+            avg14_rec_dg - avg14_old_dg,
+            avg14_rec_vol - avg14_old_vol
+        );
+    }
+
+    if !old30.is_empty() && !rec30.is_empty() {
+        let avg30_old_dg = old30.iter().map(|r| r.dg).sum::<f64>() / old30.len() as f64;
+        let avg30_rec_dg = rec30.iter().map(|r| r.dg).sum::<f64>() / rec30.len() as f64;
+        let avg30_old_vol = old30.iter().map(|r| r.vol).sum::<f64>() / old30.len() as f64;
+        let avg30_rec_vol = rec30.iter().map(|r| r.vol).sum::<f64>() / rec30.len() as f64;
+        let avg30_old_gdp = old30.iter().map(|r| r.gdp).sum::<f64>() / old30.len() as f64;
+        let avg30_rec_gdp = rec30.iter().map(|r| r.gdp).sum::<f64>() / rec30.len() as f64;
+        let rec30_stable = rec30.iter().filter(|r| r.vol < 0.05).count();
+        let old30_stable = old30.iter().filter(|r| r.vol < 0.05).count();
+        println!(
+            "  At 30d: REC vs OLD — GDP {:+.1}%, D/G {:+.3}x, Vol {:+.4}",
+            (avg30_rec_gdp - avg30_old_gdp) / avg30_old_gdp.max(1.0) * 100.0,
+            avg30_rec_dg - avg30_old_dg,
+            avg30_rec_vol - avg30_old_vol
+        );
+        println!(
+            "         REC stable seeds @ 30d: {}/{} | OLD stable seeds @ 30d: {}/{}",
+            rec30_stable,
+            rec30.len(),
+            old30_stable,
+            old30.len()
+        );
+    }
+
+    // Regime trajectory: OLD degenerates 14→30d
+    if !old14.is_empty() && !old30.is_empty() {
+        let avg14_old_dg = old14.iter().map(|r| r.dg).sum::<f64>() / old14.len() as f64;
+        let avg30_old_dg = old30.iter().map(|r| r.dg).sum::<f64>() / old30.len() as f64;
+        let avg14_old_vol = old14.iter().map(|r| r.vol).sum::<f64>() / old14.len() as f64;
+        let avg30_old_vol = old30.iter().map(|r| r.vol).sum::<f64>() / old30.len() as f64;
+        println!(
+            "  OLD 14→30d: D/G {:.3}x→{:.3}x ({:+.1}%), Vol {:.4}→{:.4} ({:+.4})",
+            avg14_old_dg,
+            avg30_old_dg,
+            (avg30_old_dg - avg14_old_dg) / avg14_old_dg * 100.0,
+            avg14_old_vol,
+            avg30_old_vol,
+            avg30_old_vol - avg14_old_vol
+        );
+    }
+    if !rec14.is_empty() && !rec30.is_empty() {
+        let avg14_rec_dg = rec14.iter().map(|r| r.dg).sum::<f64>() / rec14.len() as f64;
+        let avg30_rec_dg = rec30.iter().map(|r| r.dg).sum::<f64>() / rec30.len() as f64;
+        let avg14_rec_vol = rec14.iter().map(|r| r.vol).sum::<f64>() / rec14.len() as f64;
+        let avg30_rec_vol = rec30.iter().map(|r| r.vol).sum::<f64>() / rec30.len() as f64;
+        println!(
+            "  REC 14→30d: D/G {:.3}x→{:.3}x ({:+.1}%), Vol {:.4}→{:.4} ({:+.4})",
+            avg14_rec_dg,
+            avg30_rec_dg,
+            (avg30_rec_dg - avg14_rec_dg) / avg14_rec_dg * 100.0,
+            avg14_rec_vol,
+            avg30_rec_vol,
+            avg30_rec_vol - avg14_rec_vol
         );
     }
 }

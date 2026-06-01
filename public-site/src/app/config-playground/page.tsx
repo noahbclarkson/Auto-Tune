@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import {
   Sliders, RotateCcw, Info, Copy, Check, AlertTriangle, TrendingUp, TrendingDown, Minus, Zap,
-  SplitSquareHorizontal, ArrowRight, Diff
+  SplitSquareHorizontal, ArrowRight, Diff, Download
 } from 'lucide-react';
 
 type Regime = 'BALANCED' | 'BUYER_HEAVY' | 'SELLER_HEAVY' | 'VOLATILE' | 'THIN_LIQUIDITY';
@@ -644,6 +644,18 @@ spread:
     setTimeout(() => setYamlCopied(false), 2000);
   }
 
+  function downloadYaml() {
+    const blob = new Blob([fullYaml], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'autotune-config.yml';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   async function copyCompareUrl() {
     const url = window.location.href;
     try {
@@ -1084,6 +1096,13 @@ spread:
                 </button>
               )}
               <button
+                onClick={downloadYaml}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 hover:bg-emerald-600/30 transition-all"
+              >
+                <Download className="w-3 h-3" />
+                Download config.yml
+              </button>
+              <button
                 onClick={copyYaml}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   yamlCopied
@@ -1092,7 +1111,7 @@ spread:
                 }`}
               >
                 {yamlCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                {yamlCopied ? 'Copied!' : 'Copy Full YAML'}
+                {yamlCopied ? 'Copied!' : 'Copy YAML'}
               </button>
             </div>
           </div>

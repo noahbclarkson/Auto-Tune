@@ -1,3 +1,50 @@
+## Cron (2026-06-01 01:54 UTC) — Web & Ecosystem: Auction Demo Fix + Feature Ideation ✅
+
+**rewrite-2 `ebf5624`** | `./gradlew build` ✅ PMD 0 | `public-site/` 30 routes ✅ | `web/` 13 routes ✅ | Rust fmt/clippy ✅ | Pushed: `ebf5624`
+
+### Shipped: Auction Page Misleading Labels Fixed ✅
+`public-site/src/app/auction/page.tsx` — Order book and recent fills sections used mock data but displayed "Live" badges with pulsing green indicators, implying real-time auction data. Changed to amber "Demo" badges to honestly reflect the data source.
+
+### Ecosystem Audit — All Clean
+- Java build: PMD 0, BUILD SUCCESSFUL ✅
+- `public-site/` build: 30 routes ✅ (including `/trust`, `/faq`, `/docs`)
+- `web/` build: 13 routes (admin, auction, badges, changelog, compare, economy, items, leaderboard, loans, portfolio) ✅
+- Rust (api-server, price-solver, market-simulation): fmt ✅ clippy ✅
+- Zero TODOs/FIXMEs in web source ✅
+- No stale `web-optimizer` references in source code ✅ (only in historical PLAN.md entries)
+- Social proof: generic "Server Admin" labels, representative outcome disclaimers ✅
+- Servers page: proper offline/unconfigured fallback with amber warning ✅
+- True-prices page: simulated data with documented derivation ✅
+- 13 PlaceholderAPI placeholders implemented but NOT documented on public site (gap)
+
+### Feature Ideation — Prioritized by Impact
+
+**HIGH — Player Engagement (differentiators no competitor has):**
+1. **Price alerts** — `/at alert diamond > 400` → in-game notification when condition met. Players set buy/sell triggers like stock trading apps. Unique to Auto-Tune.
+2. **Player Market Impact Score** — "You moved Diamond by 2.3% this week." Already on roadmap. Makes players feel their trades matter. Show on portfolio page.
+3. **PlaceholderAPI reference on public site** — 13 placeholders exist but aren't documented for admins using scoreboards/TAB/holograms. Quick content win.
+
+**MEDIUM — Admin Experience:**
+4. **Config diff tool** — compare your config against recommended defaults. Highlight divergences with impact explanations. Builds on existing `/config-playground` foundation.
+5. **Economy snapshot export/import** — point-in-time snapshot of all prices for sharing or restore after wipe. Admin QoL.
+6. **Post-install discovery funnel** — spec exists (`SPEC-POST-INSTALL-DISCOVERY-FUNNEL.md`). First-visit tips on `/shop` and `/portfolio`.
+
+**LOW — Ecosystem Polish:**
+7. **Cross-server price arbitrage visibility** — show which items are underpriced vs network average. Creates cross-server awareness without enabling exploits (prices stay local). Requires API deploy.
+8. **OpenAPI/Swagger for API server** — already on roadmap. Standard for any public API.
+9. **Automated engine sync tests** — Java ↔ Rust ↔ TS parity. Already on roadmap.
+
+### State
+Repo at `ebf5624`. All builds passing. Pushed.
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+### Next
+1. PlaceholderAPI reference section on `/docs` page or dedicated `/placeholders` page
+2. Post-install discovery funnel (spec exists)
+3. Config diff tool (extend `/config-playground`)
+
+---
+
 ## Cron (2026-05-30 01:04 UTC) — Simulation Lab: Loan Sweep Confirms 14d Default ✅
 
 **rewrite-2 `d7b410c`** | `./gradlew build` ✅ PMD 0 | Rust fmt/clippy ✅ | 14/14 tests ✅ | Regression PASS | Pushed: none

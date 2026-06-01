@@ -114,6 +114,12 @@ const PRESETS: Record<string, { label: string; desc: string; config: Partial<Mar
     config: { baseSpread: 0.045, maxPriceChangePercent: 1.0 },
     players: 18, traders: 14, volume: 400, zScore: 0.3,
   },
+  casual_heavy: {
+    label: 'Casual-Heavy', note: '6 Casuals + 1 Farmer',
+    desc: 'Sim-proven: +114% GDP, −22% D/G vs default mix. Best for casual player bases.',
+    config: { baseSpread: 0.12, maxPriceChangePercent: 1.5, volumeImpact: 0.85 },
+    players: 10, traders: 7, volume: 120, zScore: 0.05,
+  },
   // Original server-size presets
   small: {
     label: 'Small Server', note: 'Casual economy, few players',
@@ -572,9 +578,11 @@ function ConfigPlaygroundInner() {
       }
     }
     // Initialize from preset param (install page wiring)
-    if (p && PRESETS[p]) {
-      const pr = PRESETS[p];
-      setPreset(p);
+    // Normalize hyphen-separated IDs to underscore keys (e.g. survival-smp → survival_smp)
+    const pKey = p ? p.replace(/-/g, '_') : null;
+    if (pKey && PRESETS[pKey]) {
+      const pr = PRESETS[pKey];
+      setPreset(pKey);
       setBaseSpread(pr.config.baseSpread ?? 0.20);
       setVolumeImpact(pr.config.volumeImpact ?? 0.80);
       setPlayerImpact(pr.config.playerImpact ?? 0.60);

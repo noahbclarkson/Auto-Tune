@@ -381,7 +381,7 @@ export default function InstallPage() {
           profile configures player mix, spread range, and circuit thresholds together — so you don&apos;t
           have to tune each knob separately.
         </p>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
               id: 'survival-smp',
@@ -424,6 +424,20 @@ export default function InstallPage() {
               ],
               badge: null,
               badgeColor: '',
+            },
+            {
+              id: 'casual-heavy',
+              label: 'Casual-Heavy',
+              icon: Users,
+              description: 'Most players are casual buyers, not farmers. Simulation-proven to outperform balanced mix on both GDP and Debt/GDP.',
+              details: [
+                'Player mix: 6 Casuals · 1 Farmer · 2 MM · 2 GB · 1 Trader',
+                'Spread range: 3–12%',
+                'Diamond floor: 60%',
+                '+114% GDP, −22% Debt/GDP vs default',
+              ],
+              badge: 'Sim-Proven',
+              badgeColor: 'bg-violet-500/15 text-violet-400 border-violet-500/30',
             },
           ].map((profile) => (
             <div

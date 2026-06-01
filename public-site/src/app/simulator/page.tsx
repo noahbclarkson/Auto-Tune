@@ -58,6 +58,13 @@ export default function SimulatorPage() {
       basePrice: 500, buyRatio: 0.75, onlinePlayers: 25, zScore: 0.5, weightedVolume: 600, distinctTraders: 18,
       config: { ...DEFAULT_CONFIG, baseSpread: 0.05, maxPriceChangePercent: 1.0, playerImpact: 0.75 },
     },
+    {
+      name: 'Casual-Heavy',
+      emoji: '🎮',
+      description: 'Servers where most players are casual buyers, not farmers. Sim-proven: +114% GDP, −22% Debt/GDP vs default mix.',
+      basePrice: 300, buyRatio: 0.80, onlinePlayers: 10, zScore: 0.05, weightedVolume: 120, distinctTraders: 7,
+      config: { ...DEFAULT_CONFIG, baseSpread: 0.12, maxPriceChangePercent: 1.5, volumeImpact: 0.85 },
+    },
   ] as const;
 
   return (
@@ -66,7 +73,7 @@ export default function SimulatorPage() {
       <div className="mb-8 p-5 rounded-xl border border-emerald-900/40 bg-gradient-to-br from-emerald-950/60 to-gray-900/80">
         <p className="text-xs text-emerald-500 uppercase tracking-wider mb-2 font-medium">Start with a scenario</p>
         <p className="text-sm text-gray-400 mb-4">Choose your server type. Prices and charts update instantly.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {ARCHETYPE_PRESETS.map((preset) => (
             <button
               key={preset.name}

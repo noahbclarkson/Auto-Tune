@@ -535,6 +535,110 @@ const NEW_FINDINGS: Finding[] = [
 
 /* ─── ECONOMY BEHAVIOR ─────────────────────────────────────── */
 
+const SIMULATION_2026_FINDINGS: Finding[] = [
+  {
+    q: 'Is the casual-heavy archetype a better default for casual servers?',
+    verdict: '✅ Production Default',
+    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    answer: [
+      'Yes — a 5-seed simulation test (14 days) comparing 6 Casuals / 1 Farmer vs the default '
+        + '3 Casuals / 3 Farmers showed the casual-heavy mix outperforms on both GDP (+114.4%) '
+        + 'and Debt/GDP (−21.9%). This is the strongest archetype improvement found since the '
+        + 'Newbie+GB discovery.',
+      'Why it works: casual players are natural buyers. They log in, need tools and building '
+        + 'materials, and buy. Farmers are natural sellers — they grind resources. A server '
+        + 'dominated by casuals has healthier two-sided trade than one with balanced or '
+        + 'farmer-heavy composition.',
+      'Recommendation: servers where most players are casual builders (not grinders) should '
+        + 'use the Casual-Heavy preset. Available in the simulator, config playground, '
+        + 'and install page archetype picker.',
+    ],
+    metrics: [
+      { label: 'GDP delta', value: '+114.4%', note: 'vs 3Cas/3Far control' },
+      { label: 'D/G delta', value: '−21.9%', note: 'improved debt management' },
+      { label: 'Archetype mix', value: '6Cas/1Far', note: '+ 2MM, 2GB, 1Tra' },
+      { label: 'Test duration', value: '14 days', note: '5 seeds' },
+    ],
+    relatedLinks: [
+      { href: '/simulator', label: 'Try Casual-Heavy preset' },
+      { href: '/config-playground?preset=casual_heavy', label: 'Configure this archetype' },
+    ],
+  },
+  {
+    q: 'Does the Diamond floor add volatility?',
+    verdict: '⚠️ Use with Caution',
+    verdictClass: 'text-yellow-400 bg-yellow-950/60 border-yellow-800/50',
+    answer: [
+      'Yes — a 5-seed floor impact test (14 days) showed that a 60% Diamond floor adds '
+        + '+0.0303 volatility (CV) compared to no floor. The floor binds in all 5 seeds — '
+        + 'Diamond\'s displayed price is always $300 regardless of internal price.',
+      'The floor provides a modest GDP boost (+4.7%) and D/G improvement (−5.1%), but '
+        + 'the volatility cost is real. Internal prices can collapse below the floor, '
+        + 'creating the Floor Paradox: players see $300 Diamond but the engine values it '
+        + 'at $180–285 internally.',
+      'Recommendation: try a 40% floor instead of 60% to reduce binding frequency '
+        + 'and the volatility cost. The 40% floor should maintain most of the GDP benefit '
+        + 'while reducing the paradox gap.',
+    ],
+    metrics: [
+      { label: 'GDP delta', value: '+4.7%', note: 'vs no floor' },
+      { label: 'D/G delta', value: '−5.1%', note: 'mild improvement' },
+      { label: 'Volatility cost', value: '+0.0303 CV', note: 'caution: adds instability' },
+      { label: 'Floor binds', value: '5/5 seeds', note: 'Diamond always at displayed $300' },
+    ],
+    relatedLinks: [
+      { href: '/how-it-works', label: 'Floor Paradox explained' },
+    ],
+  },
+  {
+    q: 'Do circuit breaker parameters matter?',
+    verdict: '✅ Production Default',
+    verdictClass: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+    answer: [
+      'No — a 4×4 parameter sweep (tier3_ratio 8→15, min_interest 0%→20%, 5 seeds, '
+        + '14 days, 80 total combinations) showed that circuit breaker parameters have '
+        + 'negligible effect on D/G. Changing tier3_ratio from 8 to 15 moved D/G by only '
+        + '4.20x→4.44x. Changing min_interest from 0% to 20% had ZERO effect on D/G.',
+      'More importantly: all 80 combinations produced zero TIER3 events. The circuit '
+        + 'breaker rarely fires in normal operation — it is a safety net for extreme '
+        + 'scenarios, not a tuning knob.',
+      'Recommendation: keep the default tier3_ratio=30. Admins should not waste time '
+        + 'tuning circuit breaker parameters. Focus on archetype mix and spread settings instead.',
+    ],
+    metrics: [
+      { label: 'tier3_ratio range', value: '8→15', note: 'D/G: 4.20x→4.44x — negligible' },
+      { label: 'min_interest range', value: '0%→20%', note: 'ZERO effect on D/G' },
+      { label: 'TIER3 events', value: '0/80', note: 'zero across all combinations' },
+      { label: 'Default tier3_ratio', value: '30', note: 'appropriate, no tuning needed' },
+    ],
+  },
+  {
+    q: 'How long can a server economy run before instability?',
+    verdict: '⚠️ Use with Caution',
+    verdictClass: 'text-yellow-400 bg-yellow-950/60 border-yellow-800/50',
+    answer: [
+      'The recommended config is stable through 30 days. At 60 days, a regime change occurs: '
+        + 'the Newbie+GB advantage erodes, D/G becomes tied with the old config, volatility '
+        + 'increases, and TIER3 events become more frequent.',
+      '30-day results: REC wins 4/5 seeds, D/G 9.1x vs 22.4x, TIER3 0 vs 1. '
+        + '60-day results: REC wins 3/5 seeds, D/G 17.5x vs 17.4x (tied), TIER3 5 vs 2. '
+        + 'Seed 11111 fires 5 TIER3 events at 60 days — leverage risk increases substantially.',
+      'Recommendation: 14 days is the sweet spot for most servers. Servers running longer '
+        + 'than 60 days should expect increasing instability and consider periodic economy '
+        + 'resets or graduated tier3 exit mechanisms.',
+    ],
+    metrics: [
+      { label: '14d D/G', value: '3.08x', note: 'recommended config — stable' },
+      { label: '30d D/G', value: '9.1x vs 22.4x', note: 'REC wins 4/5 seeds' },
+      { label: '60d D/G', value: '17.5x vs 17.4x', note: 'tied — regime change' },
+      { label: 'Sweet spot', value: '14 days', note: 'warn admins beyond 60d' },
+    ],
+    relatedLinks: [
+      { href: '/docs', label: 'Server lifecycle guide' },
+    ],
+  },
+];
+
 const BEHAVIOR_FINDINGS: Finding[] = [
   {
     q: 'Why is my economy volatile even with the recommended config?',
@@ -718,6 +822,7 @@ const CATEGORIES: Category[] = [
   { id: 'behavior', label: 'Economy Behavior', icon: BarChart2, findings: BEHAVIOR_FINDINGS },
   { id: 'exploit', label: 'Exploit Resistance', icon: Shield, findings: EXPLOIT_RESISTANCE_FINDINGS },
   { id: 'new', label: '2026 Simulation Updates', icon: FlaskConical, findings: NEW_FINDINGS },
+  { id: 'sim-june', label: 'June 2026 — Archetype & Stability', icon: TrendingUp, findings: SIMULATION_2026_FINDINGS },
 ];
 
 function StatBadge({ label, value }: { label: string; value: string }) {
@@ -793,10 +898,9 @@ export default function FindingsPage() {
             </div>
           </a>
 
-          <CategorySection category={CATEGORIES[0]} />
-          <CategorySection category={CATEGORIES[1]} />
-          <CategorySection category={CATEGORIES[2]} />
-          <CategorySection category={CATEGORIES[3]} />
+          {CATEGORIES.map((cat) => (
+            <CategorySection key={cat.id} category={cat} />
+          ))}
         </div>
 
         {/* CTA */}

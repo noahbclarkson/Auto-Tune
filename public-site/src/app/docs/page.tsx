@@ -144,6 +144,14 @@ const CARDS: DocCard[] = [
     badge: 'Trust',
   },
   {
+    title: 'PlaceholderAPI Reference',
+    description:
+      'All %autotune_*% placeholders for use in scoreboards, TAB, Holograms, and other PlaceholderAPI-dependent plugins. Global and per-item placeholders documented.',
+    audience: 'developer',
+    readingTime: '5 min',
+    href: '/placeholders',
+  },
+  {
     title: 'Contributing Guide',
     description:
       'How to build Auto-Tune locally: Java 21, Gradle, Rust toolchain, web builds, test commands, code standards, and PR checklist.',

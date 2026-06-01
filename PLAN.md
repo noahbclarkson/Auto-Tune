@@ -1,3 +1,62 @@
+## Cron (2026-06-01 13:27 UTC) — Web & Ecosystem: Casual-Heavy Preset + Findings + Ecosystem Audit ✅
+
+**rewrite-2 `9ce41b2`** | `public-site/` 30 routes ✅ | `web/` 13 routes ✅ | Pushed
+
+### Shipped: Casual-Heavy Archetype Preset ✅
+- **Simulator** — 4th archetype card (🎮 Casual-Heavy) added to hero CTA. Grid updated to 4-col.
+- **Config Playground** — `casual_heavy` preset key added. Wired from install page via `?preset=casual-heavy`.
+- **Install Page** — 4th profile card with "Sim-Proven" badge (violet). Player mix: 6 Casuals · 1 Farmer · 2 MM · 2 GB · 1 Trader.
+- **Bug fix** — config-playground preset wiring was broken for ALL hyphenated preset IDs (e.g. `survival-smp` → key `survival_smp`). Fixed by normalizing hyphens to underscores in URL parameter lookup.
+
+### Shipped: June 2026 Simulation Findings ✅
+Four new findings added to `/findings` page under "June 2026 — Archetype & Stability" category:
+1. **Casual-heavy archetype** — +114% GDP, −22% D/G vs default. Sim-proven production default for casual servers.
+2. **Diamond floor volatility** — 60% floor adds +0.0303 CV. Recommend trying 40% floor.
+3. **Circuit breaker insensitivity** — 80-config sweep shows tier3_ratio and min_interest have negligible effect. Default 30 is fine.
+4. **60-day regime change** — REC advantage erodes at 60d. Sweet spot is 14d; warn admins beyond 60d.
+
+Also fixed findings page to render all categories dynamically instead of hardcoded `CATEGORIES[0..3]` (was silently dropping any categories added after the first 4).
+
+### Ecosystem Coherence Audit
+
+**What's strong:**
+- Onboarding flow is complete: `/` → `/install` (4 archetypes) → `/config-playground?preset=X` → `/simulator` → `/docs`
+- 2,535 LOC of dashboard components in `web/` — genuinely useful for live server monitoring
+- Admin dashboard has 7 specialized cards (anti-dump, auction, audit, config health, recovery advisor, first-run verification, shareable report)
+- Real-time WebSocket price updates with live flash animations on home page
+- Health badge generator at `/health-badge` — embeddable HTML for server list pages
+- Security docs (SECURITY.md) and `/trust` page are thorough
+- FAQ covers 10 categories, 641 LOC
+- How-it-works explains the math with interactive calculators
+
+**Gaps identified:**
+- Install page presets wire to config-playground but the config-playground doesn't generate downloadable YAML — admin has to manually transfer values (PLAN item #17)
+- No live health badge endpoint — `/health-badge` generates static HTML, not a real-time badge from `/api/admin/health`
+- `web/` dashboard doesn't use `POST /api/admin/config/validate` — only public-site config-playground benefits
+- Cross-server features (`/true-prices`, `/servers`, `/exchange-rates`) depend on API deploy (blocked on Fly.io token)
+
+### Feature Ideas — New Proposals
+
+**HIGH — Differentiators:**
+1. **Downloadable YAML from config-playground** — "Export as config.yml" button. Admin picks preset, tunes params, downloads ready-to-use config. Closes the install→config gap completely.
+2. **Economy snapshot/restore command** — `/at admin snapshot save <name>` and `/at admin snapshot restore <name>`. Point-in-time backup of all prices, spreads, and engine state. Critical safety net before risky config changes.
+3. **Seasonal market events** — configurable timed events ("Double Diamond Weekend", "Iron Rush") that temporarily modify demand multipliers. Drives player engagement without manual admin intervention. Hook into existing MarketEvents system.
+
+**MEDIUM — Ecosystem Polish:**
+4. **Live health badge endpoint** — `GET /api/admin/health/badge.svg` returns an SVG badge with live economy status. Servers can embed it directly without JavaScript.
+5. **Config validation in bundled web/** — wire `POST /api/admin/config/validate` to a config editor in the admin dashboard. Admin can paste/edit YAML and get instant feedback without restarting.
+6. **Item rarity auto-classification** — auto-classify items into tiers (Common/Uncommon/Rare/Epic/Legendary) based on trade volume, price, and spread. Show tier badges on item pages. Makes the economy feel more game-like.
+
+**LOW — Long-term:**
+7. **Cross-server economy health leaderboard** — if servers opt in, rank economies by health score (GDP, D/G, volatility). Gamification for admins — "your economy is top 10%".
+8. **Player economy newsletter** — automated weekly in-game book or chat: top movers, circuit events, biggest traders. Drives awareness without admin effort.
+
+### State
+Repo at `9ce41b2`. All builds passing. Pushed.
+**Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
+
+---
+
 ## Cron (2026-06-01 01:54 UTC) — Web & Ecosystem: Auction Demo Fix + Feature Ideation ✅
 
 **rewrite-2 `ebf5624`** | `./gradlew build` ✅ PMD 0 | `public-site/` 30 routes ✅ | `web/` 13 routes ✅ | Rust fmt/clippy ✅ | Pushed: `ebf5624`

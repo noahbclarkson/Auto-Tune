@@ -8,6 +8,7 @@ import com.noahblclarkson.autotune.AutoTune;
 import com.noahblclarkson.autotune.config.AutoTuneConfig;
 import com.noahblclarkson.autotune.config.AutoTuneConfig.WebConfig;
 import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.config.ConfigValidator;
 import com.noahblclarkson.autotune.database.BadgeRepository;
 import com.noahblclarkson.autotune.database.CircuitEventRepository;
 import com.noahblclarkson.autotune.database.DatabaseManager;
@@ -52,6 +53,7 @@ import io.javalin.http.staticfiles.Location;
 import io.javalin.json.JsonMapper;
 import io.javalin.websocket.WsContext;
 import org.bukkit.Server;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Type;
@@ -1852,6 +1854,61 @@ public class WebServer {
                             a -> ctx.json(toAlertDto(a)),
                             () -> ctx.status(404).json(Map.of(KEY_ERROR, "Alert not found after rearm"))
                     );
+        });
+
+        // POST /api/admin/config/validate — parse and validate arbitrary YAML config
+        app.post("/api/admin/config/validate", ctx -> {
+            String yamlText = ctx.body();
+            if (yamlText == null || yamlText.isBlank()) {
+                ctx.status(400).json(Map.of(KEY_ERROR, "Request body must be non-empty YAML config text"));
+                return;
+            }
+            YamlConfiguration yamlCfg;
+            try {
+                yamlCfg = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(yamlText));
+            } catch (Exception e) {
+                ctx.status(400).json(Map.of(
+                        KEY_ERROR, "Invalid YAML syntax",
+                        "detail", e.getMessage()));
+                return;
+            }
+            AutoTuneConfig parsed;
+            try {
+                // Use configManager's parseConfig but without saving — parse only
+                // We need the market-frozen default; treat as unfrozen for dry-run
+                boolean marketFrozen = yamlCfg.getBoolean("market-frozen", false);
+                parsed = configManager.parseConfig(yamlCfg);
+            } catch (Exception e) {
+                ctx.status(400).json(Map.of(
+                        KEY_ERROR, "Failed to parse config",
+                        "detail", e.getMessage()));
+                return;
+            }
+            List<String> violations = ConfigValidator.validate(parsed);
+            if (violations.isEmpty()) {
+                ctx.json(Map.of(
+                        "valid", true,
+                        "violations", List.of(),
+                        "message", "Config is valid"));
+            } else {
+                // Categorize: hard errors vs soft warnings
+                List<String> errors = new ArrayList<>();
+                List<String> warnings = new ArrayList<>();
+                for (String v : violations) {
+                    if (v.contains("below") || v.contains("very large") || v.contains("Low")
+                            || v.contains("Consider") || v.contains("Recommended")) {
+                        warnings.add(v);
+                    } else {
+                        errors.add(v);
+                    }
+                }
+                ctx.json(Map.of(
+                        "valid", errors.isEmpty(),
+                        "errors", errors,
+                        "warnings", warnings,
+                        "totalIssues", violations.size()));
+            }
         });
 
 

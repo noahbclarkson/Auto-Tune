@@ -15,14 +15,14 @@
 - Social proof: generic "Server Admin" labels, representative outcome disclaimers ✅
 - Servers page: proper offline/unconfigured fallback with amber warning ✅
 - True-prices page: simulated data with documented derivation ✅
-- 13 PlaceholderAPI placeholders implemented but NOT documented on public site (gap)
+- 13 PlaceholderAPI placeholders implemented and documented at `/placeholders` ✅
 
 ### Feature Ideation — Prioritized by Impact
 
 **HIGH — Player Engagement (differentiators no competitor has):**
 1. **Price alerts** — `/at alert diamond > 400` → in-game notification when condition met. Players set buy/sell triggers like stock trading apps. Unique to Auto-Tune.
 2. **Player Market Impact Score** — "You moved Diamond by 2.3% this week." Already on roadmap. Makes players feel their trades matter. Show on portfolio page.
-3. **PlaceholderAPI reference on public site** — 13 placeholders exist but aren't documented for admins using scoreboards/TAB/holograms. Quick content win.
+3. **PlaceholderAPI reference on public site** (⚡ SHIPPED — `f59b234`, 2026-06-01) — documented at `/placeholders` with global + per-item tables, material keys, and usage examples. Added to docs hub under Developer section.
 
 **MEDIUM — Admin Experience:**
 4. **Config diff tool** — compare your config against recommended defaults. Highlight divergences with impact explanations. Builds on existing `/config-playground` foundation.
@@ -39,9 +39,13 @@ Repo at `ebf5624`. All builds passing. Pushed.
 **Blocked:** API deploy (Arc's Fly.io token) | Real testimonials (human outreach)
 
 ### Next
-1. PlaceholderAPI reference section on `/docs` page or dedicated `/placeholders` page
-2. Post-install discovery funnel (spec exists)
-3. Config diff tool (extend `/config-playground`)
+1. **Config validation endpoint** (⚡ SHIPPED — `ed29d9a`, 2026-06-01) — `POST /api/admin/config/validate` parses YAML body, runs `ConfigValidator.validate()`, returns `{valid, errors, warnings}`.
+2. Config comparison tool — two configs side-by-side, extends `/config-playground`
+3. Exchange rate history chart — new API endpoint + bundled web LineChart component
+
+**Shipped (this session):**
+- PlaceholderAPI reference page (`/placeholders`) — `f59b234`
+- Config validation endpoint (`POST /api/admin/config/validate`) — `ed29d9a`
 
 ---
 

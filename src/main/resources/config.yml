@@ -1,60 +1,844 @@
-# The default rate that prices are updated (in minutes). Every price update the max-buys and sells are also reset.
-# Increase this for low player counts, decrease for high player counts.
-time-period: 60
+# ============================================
+# Auto-Tune Configuration
+# A dynamic economy plugin with real-time market simulation
+# ============================================
 
-# The default maximum change in a given time-period for an item.
-# Increase this for high player counts, decrease for low player counts.
-volatility: 0.25
+storage:
+  # Database type: SQLITE or MYSQL
+  type: SQLITE
 
-# The default percentage difference in the sell price from the buy price.
-# Increase this for low player counts, decrease for high player counts.
-sell-price-difference: 25
+  # MySQL/MariaDB settings (ignored if using SQLite)
+  host: localhost
+  port: 3306
+  database: autotune
+  username: root
+  password: ""
 
-# Use the durability function to allow for damaged items to be sold.
-# If this is set to true, the item's price will be scaled to its durability.
-# If this is set to false, damaged items will not be sold.
-durability-function: true
+  # Connection pool settings
+  pool:
+    maximum-size: 10
+    minimum-idle: 2
+    connection-timeout: 30000
+    idle-timeout: 600000
+    max-lifetime: 1800000
 
-# The minimum number of players required to be online to run price updates.
-# If your servers prices are all over the place this is a good option to increase.
-# It helps to limit price exploits for sensitive items.
-# If your servers prices aren't changing check there are enough players online.
-minimum-players: 2
+web:
+  # Enable the web dashboard
+  enabled: true
+  # Port for the web server
+  port: 8989
+  # Bind address. 127.0.0.1 is safe for same-host use and reverse proxies.
+  # If you expose this as 0.0.0.0, set web.auth.enabled=true and web.auth.token.
+  host: "127.0.0.1"
+  # Enable WebSocket for real-time updates
+  websocket-enabled: true
+  # Cross-origin dev/proxy origins allowed to call the dashboard API.
+  # Same-origin bundled dashboard requests do not need a CORS entry.
+  cors-allowed-origins:
+    - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
+  auth:
+    # Requires Authorization: Bearer <token> or X-Auto-Tune-Token for admin
+    # and player mutation endpoints. Automatically required when host is not loopback.
+    enabled: false
+    token: ""
 
-# If you wish to have sell & buy limits enable this.
-enable-sell-limits: true
+economy:
+  # Currency symbol for display
+  currency-symbol: "$"
 
-# If you wish to have collection on your server (requiring items to be collected
-# by each player or server wide before they can be purchased), enable this.
-enable-collection: false
+  # How often to recalculate prices (in ticks, 20 ticks = 1 second)
+  update-interval: 6000
 
-# If you wish to have loans on your server, enable this.
-enable-loans: false
+  # Maximum price change per update cycle (as decimal, 1.5 = 1.5%)
+  # This is the maximum change when trade ratio is 100% in one direction
+  max-price-change-percent: 1.5
 
-# The interest applied on loans each minute.
-# (Only applies if loans are enabled)
-# If inflation is too high you can increase this.
-# If inflation is too low you can decrease this.
-interest: 0.05
+  # Time window for considering trades in price calculation (in days)
+  # Trades are time-weighted linearly: recent trades have more impact
+  trade-window-days: 7
 
-# The rate that the tutorial messages are sent in seconds.
-# If they are getting annoying you can increase this value.
-tutorial-update: 300
+  # Require an item to have been sold at least once before it can be bought
+  # When true, items with no sell history show "Not yet available" in the shop
+  # Individual items can override this via /shop admin setbuyable
+  require-first-sell: true
 
-# If you wish to use the web-server, enable this.
-web-server: true
+  # Slippage coefficient: larger orders get slightly worse prices
+  # Uses sqrt scaling: price adjusts by slippageCoeff * sqrt(amount) per unit
+  slippage-coeff: 0.01
 
-# The port of the web-server.
-port: 8989
+  # Sell pressure multiplier: reduces downward price pressure when players sell
+  # Values < 1.0 soften sell-driven drops; 1.0 is symmetric (buy/sell equally affect price)
+  # Evidence (2026-04-13, 5-seed): sp=0.8 → GDP +5% but D/G +39.9% WORSE than sp=1.0
+  # Recommended: 1.0 for production (D/G stability > marginal GDP). Do NOT set below 0.5.
+  sell-pressure-multiplier: 1.0
+  # Higher values = stronger cross-item price coupling within a section
+  sector-correlation: 0.05
 
-# The background for GUI's.
-background: "BLACK_STAINED_GLASS_PANE"
+  # Per-player rate limit multiplier for trade metric calculations
+  # Caps individual player contribution at mean * this value to prevent manipulation
+  player-rate-limit-multiplier: 3.0
 
-# The log level, can be one of the following:
-# SEVERE, WARNING, INFO, CONFIG, FINE, FINER, FINEST, ALL.
-# The default log level is INFO.
-# This will log all messages with the level or above.
-log-level: "INFO"
+  # Trend dampening: reduces price changes when items are on a streak
+  # dampening = 1 / (1 + streak * this value), applied to price change
+  # Only applied when the price is continuing in the streak direction (counter-moves are undampened)
+  # Evidence (2026-04-07, 5-seed): 0.10 → GDP +5%, D/G -25% vs 0.05
+  # Recommended: 0.10 for production.
+  trend-dampening: 0.10
 
-# The locale to use for formatting.
-locale: "en_US"
+  # Minimum percentage change per tick to count as a directional move for streak tracking
+  # Changes smaller than this are classified as STABLE and decay the streak by 1
+  trend-streak-threshold-percent: 0.1
+
+  # Floor for dampening factor: dampening never reduces price changes below this fraction
+  # At 0.25, even a 100-tick streak still allows 25% of the max price change
+  trend-dampening-floor: 0.25
+
+  # Adaptive window: automatically adjusts trade window based on transaction density
+  # When true, trade-window-days becomes the base window, scaled up/down by activity
+  adaptive-window: true
+
+  # Minimum and maximum window bounds for adaptive window (in days)
+  min-window-days: 2
+  max-window-days: 7
+
+  # Maximum section group size for sector correlation
+  # Sections with more items than this are skipped to prevent server-wide cascading
+  max-sector-correlation-group-size: 20
+
+  # Minimum transaction size enforcement — prevents dust spam that clutters the economy
+  # Quantity minimums: rejected if player tries to buy/sell fewer than this many items
+  min-buy-quantity: 1
+  min-sell-quantity: 1
+  # Value minimums: rejected if the total transaction value is below this (0 = disabled)
+  # Useful to prevent 1-item dust trades from polluting price history
+  min-buy-value: 0.0
+  min-sell-value: 0.0
+
+  # Seed initial prices from the shared true-price API on first run.
+  # When enabled, on startup (if the economy has no transaction history),
+  # the server fetches true prices from the API server and uses them as
+  # starting prices instead of the configured base prices in shops.yml.
+  # Requires price-reporter.api-url to be set to a valid Auto-Tune API server.
+  seed-from-shared-prices: false
+
+  # Spread configuration (difference between buy and sell prices)
+  # The spread is split into BPD (buy price difference) and SPD (sell price difference)
+  # which are adjusted independently based on trade volume imbalance
+  spread:
+    # Base spread percentage (0.20 = 20% total spread, split 50/50 between BPD and SPD)
+    # At 0.20: buy is 10% above base, sell is 10% below base before other reductions
+    base-spread: 0.20
+
+    # How much trade volume imbalance shifts spread to the imbalanced side
+    # Higher values = bigger spread increase on the side with more trades
+    volume-impact: 0.8
+
+    # How much player count reduces spread (higher = more reduction with players)
+    # At 0.6, spread drops to ~40% of base at full player count
+    player-impact: 0.6
+
+    # Per-item liquidity coefficient: actively traded items get tighter spreads
+    # Higher values = faster spread reduction for high-volume items
+    # Scaled by player diversity (see liquidity-full-effect-traders)
+    liquidity-coeff: 0.01
+
+    # Number of distinct traders needed for full liquidity benefit
+    # With fewer distinct traders, spread compression from volume is reduced proportionally
+    # Prevents single-player manipulation: 1 player gets 1/N of the liquidity benefit
+    liquidity-full-effect-traders: 10
+
+    # Optional rarity-tier multipliers. These scale the base spread and maximum
+    # price-change cap by item tier; per-item overrides still take precedence.
+    tier-multipliers:
+      spread:
+        common: 1.0
+        uncommon: 1.15
+        rare: 1.30
+        epic: 1.50
+        legendary: 1.70
+      max-price-change:
+        common: 1.0
+        uncommon: 1.1
+        rare: 1.2
+        epic: 1.3
+        legendary: 1.5
+
+  # Player count scaling for price changes
+  player-scaling:
+    # Player count at which price scaling reaches ~99% effect
+    # The tanh coefficient is derived automatically: atanh(0.99) / full-effect-players
+    # At 10, even a solo player has ~26% market impact (visible feedback)
+    full-effect-players: 10
+
+loans:
+  # Enable the loan system
+  enabled: true
+
+  # Base interest rate (decimal, 0.05 = 5%)
+  # Adjusted by credit score, term length, and server inflation
+  base-interest-rate: 0.05
+
+  # Interest rate modifier based on credit score
+  # Final rate = base-rate * (1 + (500 - credit_score) / 1000)
+  credit-score-modifier: true
+
+  # Maximum loan amount multiplier (based on player's total traded value)
+  max-loan-multiplier: 2.0
+
+  # Minimum credit score required for loans
+  min-credit-score: 200
+
+  # Default loan duration in days (used when player doesn't specify)
+  # SIMULATION FINDING (2026-05-29): 7 days causes systematic MarketMaker defaults.
+  # MarketMakers cannot earn enough spread profit in 7 days to service 5%/day compound interest.
+  # Increase to 14 days — simulation shows 0 defaults at 14d vs 6/7 at 7d.
+  default-duration-days: 14
+
+  # Minimum and maximum loan term in days
+  # Players choose their term with /loan take <amount> [days]
+  # Longer terms incur a term premium on the interest rate
+  min-term-days: 3
+  max-term-days: 30
+
+  # Extra interest rate added per day beyond min-term-days
+  # Example: 0.002 means a 30-day loan gets +5.4% added to the rate vs a 3-day loan
+  term-premium-per-day: 0.002
+
+  # Interest compounding interval in hours
+  compound-interval-hours: 24
+
+  # How often to check for overdue loans (in hours)
+  overdue-check-interval-hours: 1
+
+  # Send a warning this many hours before a loan is due
+  warning-before-due-hours: 24
+
+  # Early repayment credit bonus multiplier
+  # Bonus = base_bonus * (days_remaining / total_days) * this multiplier
+  # Higher values reward early repayment more
+  # Default: 1.5.
+  early-repayment-bonus-multiplier: 1.5
+
+  # How much server inflation affects loan interest rates
+  # Final rate *= (1 + avg_price_change% * this value)
+  # 0.0 = inflation has no effect, 1.0 = full inflation passthrough
+  # Default: 0.5.
+  inflation-rate-impact: 0.5
+
+  # Credit score penalty for defaulting
+  # Default: 50.
+  default-penalty: 50
+
+  # Tiered debt/GDP circuit breaker — graduated interest caps prevent debt
+  # snowball before it reaches catastrophic levels.
+  # Tier 1 (>3x): interest capped at 50% of normal
+  # Tier 2 (>5x): interest capped at 25% of normal
+  # Tier 3 (>30x): interest fully paused (last-resort circuit breaker)
+  #
+  # ⚠️ Evidence (2026-04-15): tier3_ratio=15 caused TIER3 oscillations at 60d
+  # (D/G hit 20x, circuit fired constantly). tier3_ratio=30.0 is correct —
+  # TIER3 only fires in genuine catastrophe (>30x), not in normal oscillation.
+  # Never set below 20 — simulations show tier3 < 20 causes doom loop.
+  debt-gdp-tier1-ratio: 3.0
+  debt-gdp-tier2-ratio: 5.0
+  debt-gdp-tier3-ratio: 30.0
+  tier1-interest-cap: 0.5
+  tier2-interest-cap: 0.25
+
+  # Maximum total debt across ALL active loans as a multiple of economy GDP.
+  # When total economy-wide debt exceeds this cap, new loans are rejected
+  # until existing loans are repaid. Prevents runaway debt accumulation
+  # (e.g., from GuildBuyer cascading during TIER3 lock).
+  # Set to 0 to disable. Default: 2.0 (2× GDP cap).
+  total-debt-gdp-cap: 2.0
+
+  # --- Advanced Loan Parameters ---
+  # Added 2026-04-25: Java/Rust parity for simulation-verified loan behavior.
+
+  # Hysteresis band for TIER3 circuit breaker unlock.
+  # When D/G crosses tier3_ratio (e.g., 30), circuit LOCKS at 0% interest.
+  # It stays locked until D/G drops below tier3_ratio × (1 - hysteresis_band).
+  # Default 0.5 = 50% band → unlock at D/G < 15x (with tier3_ratio=30).
+  tier3-hysteresis-band: 0.5
+
+  # Minimum interest multiplier. Counter-cyclical taper never goes below this.
+  # Setting to 0.05 means interest stays at minimum 5% even at max D/G.
+  # Default 0.0 = pure counter-cyclical (0% at D/G=tier3).
+  # Non-zero values maintain some interest pressure to slow debt accumulation.
+  min-interest-multiplier: 0.0
+
+  # Per-GuildBuyer debt cap as multiple of economy GDP.
+  # Prevents a single active GB from accumulating outsized debt during TIER3 lock.
+  # E.g., 3.0 × $4M GDP = $12M cap per GB. Reject new loans if GB's active
+  # loans would exceed this amount. Set to 0 to disable. Default: 3.0.
+  # Default: 3.0.
+  guildbuyer-total-debt-cap: 3.0
+
+  # Block MarketMaker and GuildBuyer players from taking NEW loans while TIER3
+  # circuit is locked. Prevents archetype players from accumulating interest-free
+  # debt during catastrophic debt spiral. Existing loans remain unchanged.
+  # Default: false (allows all players to take loans during TIER3).
+  block-mm-gb-loans-during-tier3: false
+
+  # Number of hours a player must wait after repaying a defaulted loan
+  # before they can take a new loan. Prevents rapid re-borrowing after default.
+  # Default: 168 (7 days).
+  post-default-cooldown-hours: 168
+
+  # Maximum value of a single new loan as a multiple of economy GDP.
+  # Prevents oversized loans relative to economy size. Set to 0 to disable.
+  # Default: 1.0 (1× GDP per loan).
+  single-loan-gdp-cap: 1.0
+
+  # Maximum interest rate during the graduated TIER3 exit delay window.
+  # After TIER3 circuit unlocks (D/G drops below hysteresis threshold), the
+  # interest multiplier is capped at this value for tier3-exit-delay-ticks.
+  # Prevents the multiplier jump cascade (0% → 53% at D/G=14) that re-triggers TIER3.
+  # Set to 1.0 to disable. Default: 0.10 (10% cap).
+  tier3-exit-multiplier-cap: 0.10
+  # Number of ticks for the graduated TIER3 exit delay window.
+  # Default: 1152 (4 days at 288 ticks/day).
+  tier3-exit-delay-ticks: 1152
+
+  # Counter-cyclical interest: higher D/G ratio → lower interest rate.
+  # Reduces interest pressure when debt is high, increases it when debt is low.
+  # Default: true (enabled).
+  counter-cyclical: true
+
+gui:
+  # Items per page in shop (max 45 = 5 rows x 9 columns)
+  items-per-page: 45
+
+  # Enable search functionality
+  search-enabled: true
+
+  # Search timeout in ticks (20 ticks = 1 second, 600 = 30 seconds)
+  search-timeout: 600
+
+  # Show economy stats (GDP, inflation, debt) on the shop home screen
+  show-economy-stats: true
+
+  # Show 24h price change percentage on item tooltips
+  show-24h-change: true
+
+  # Buy/sell quantity buttons shown in the buy/sell screen
+  # Values must be between 1 and 64
+  buy-quantities:
+    - 1
+    - 2
+    - 4
+    - 8
+    - 16
+    - 32
+    - 64
+
+  # GUI titles (plain text)
+  titles:
+    shop: "Auto-Tune Shop"
+    sell: "Sell Items"
+    autosell: "Autosell"
+    trends: "Market Trends"
+    market-history: "Price History"
+    transaction-history: "Your Transactions"
+    admin-transaction-history: "All Transactions"
+
+  # Color scheme using MiniMessage format
+  # Supports named colors (<green>), hex (<#55ff55>), and more
+  # See https://docs.advntr.dev/minimessage/format.html
+  colors:
+    buy-price: "<green>"
+    sell-price: "<gold>"
+    spread: "<aqua>"
+    section-name: "<gold>"
+    item-name: "<white>"
+    trend-up: "<green>"
+    trend-down: "<red>"
+    trend-stable: "<gray>"
+    positive: "<green>"
+    negative: "<red>"
+    accent: "<aqua>"
+    muted: "<dark_gray>"
+
+  # Materials for GUI buttons and borders
+  # Use Minecraft material names (e.g., DIAMOND, ARROW, BLACK_STAINED_GLASS_PANE)
+  materials:
+    border: "BLACK_STAINED_GLASS_PANE"
+    buy-button: "LIME_STAINED_GLASS_PANE"
+    sell-button: "ORANGE_STAINED_GLASS_PANE"
+    not-available: "BARRIER"
+    previous-page: "ARROW"
+    next-page: "ARROW"
+    back: "DARK_OAK_DOOR"
+    page-indicator: "PAPER"
+    search: "NAME_TAG"
+    trends: "SPYGLASS"
+    close: "BARRIER"
+    economy-stats: "GOLD_BLOCK"
+    enable-all: "LIME_DYE"
+    disable-all: "RED_DYE"
+    sell-inventory: "HOPPER"
+
+sections:
+  all:
+    display-name: "All Items"
+    icon: "CHEST"
+    priority: 0
+  ores:
+    display-name: "Ores & Minerals"
+    icon: "DIAMOND_ORE"
+    priority: 10
+  building:
+    display-name: "Building Blocks"
+    icon: "BRICKS"
+    priority: 20
+  food:
+    display-name: "Food & Farming"
+    icon: "GOLDEN_APPLE"
+    priority: 30
+  drops:
+    display-name: "Mob Drops"
+    icon: "ROTTEN_FLESH"
+    priority: 40
+  redstone:
+    display-name: "Redstone & Mechanics"
+    icon: "REDSTONE"
+    priority: 50
+  dyes:
+    display-name: "Dyes & Colors"
+    icon: "RED_DYE"
+    priority: 60
+
+# ============================================
+# Enchantment Pricing
+# Multipliers are applied by enchantment level. Missing enchantments fall back
+# to built-in defaults, so you can remove entries you do not customize.
+# ============================================
+enchantment:
+  enabled: true
+  multipliers:
+    SHARPNESS: [1.25, 1.60, 2.00, 2.50, 3.00]
+    EFFICIENCY: [1.30, 1.70, 2.20, 3.00, 4.00]
+    UNBREAKING: [1.10, 1.25, 1.50]
+    PROTECTION: [1.20, 1.50, 1.90, 2.40]
+    POWER: [1.30, 1.70, 2.20, 2.80, 3.50]
+    FLAME: [1.15, 1.40]
+    INFINITY: [2.00]
+    FORTUNE: [1.50, 2.00, 3.00]
+    LOOTING: [1.30, 1.80, 2.50]
+    LURE: [1.20, 1.50, 2.00]
+    LUCK_OF_THE_SEA: [1.20, 1.50, 2.00]
+    RESPIRATION: [1.10, 1.25, 1.50]
+    AQUA_AFFINITY: [1.10, 1.25, 1.50]
+    THORNS: [1.20, 1.50, 2.00]
+    FIRE_PROTECTION: [1.20, 1.50, 1.90, 2.40]
+    BLAST_PROTECTION: [1.20, 1.50, 1.90, 2.40]
+    PROJECTILE_PROTECTION: [1.20, 1.50, 1.90, 2.40]
+    FEATHER_FALLING: [1.15, 1.35, 1.60, 1.90]
+    DEPTH_STRIDER: [1.15, 1.40, 1.70]
+    FROST_WALKER: [1.20, 1.50]
+    RIPTIDE: [1.20, 1.60, 2.20]
+    LOYALTY: [1.10, 1.30, 1.60]
+    IMPALING: [1.20, 1.50, 1.90, 2.40]
+    CHANNELING: [1.10]
+    MULTISHOT: [1.50]
+    QUICK_CHARGE: [1.15, 1.35, 1.60]
+    PIERCING: [1.15, 1.40, 1.70]
+    MENDING: [1.50]
+    SOUL_SPEED: [1.20, 1.50, 2.00]
+    SWIFT_SNEAK: [1.30, 1.70, 2.20]
+    SWEEPING_EDGE: [1.20, 1.50, 2.00]
+    KNOCKBACK: [1.10, 1.25, 1.50]
+    FIRE_ASPECT: [1.20, 1.50]
+    PUNCH: [1.20, 1.50]
+    BANE_OF_ARTHROPODS: [1.15, 1.35, 1.60, 1.90]
+    SMITE: [1.15, 1.35, 1.60, 1.90]
+
+debug:
+  # Enable debug logging
+  enabled: false
+
+  # Log price calculations
+  log-prices: false
+
+
+price-reporter:
+  enabled: false
+  api-url: "https://prices.auto-tune.io"
+  api-key: "your-server-api-key"
+  server-id: "your-server-uuid"
+  report-interval-minutes: 5
+
+# ============================================
+# Exchange Rates
+# Fetches this server's price multiplier vs the shared true-price baseline.
+# Requires price-reporter to be configured for a registered server.
+# ============================================
+exchange-rate:
+  enabled: true
+  fetch-interval-minutes: 15
+
+# ============================================
+# Autosell
+# Automatic selling when players pick up items or close their inventory.
+# ============================================
+autosell:
+  # Minimum sell price threshold — items below this price are NOT autosold.
+  # Set to 0 to sell everything. Prevents cheap items (cobblestone, etc.)
+  # from spamming action bar messages and sounds.
+  minimum-price: 0.01
+
+  # Minecraft sound played when an item is autosold on pickup.
+  # Use "NONE" to disable. Recommended: ENTITY_ITEM_PICKUP, ENTITY_EXPERIENCE_ORB_PICKUP
+  sound-on-pickup: "ENTITY_ITEM_PICKUP"
+
+  # Minecraft sound played after selling inventory via the autosell GUI
+  # button or inventory-close trigger.
+  # Use "NONE" to disable. Recommended: UI_LOOT_YOUR_FILLED_CONTAINER,
+  # BLOCK_NOTE_BLOCK_PLING
+  sound-on-inventory-sell: "UI_LOOT_YOUR_FILLED_CONTAINER"
+
+# ============================================
+# Database Cleanup
+# Prevents unbounded growth of transaction history and snapshots.
+# Disable any section by setting enabled: false, or set retention-days: 0
+# to skip cleanup entirely.
+# ============================================
+cleanup:
+  # How often to run cleanup (in hours). Set to 0 to disable.
+  cleanup-interval-hours: 24
+
+  # Trade transactions — kept slightly longer than the trade window
+  # so the market engine can still reference them for price calculations.
+  transactions:
+    enabled: true
+    retention-days: 14
+
+  # Price/volume history for charts — shorter retention is fine
+  # since the web dashboard only shows recent sparklines.
+  market-history:
+    enabled: true
+    retention-days: 7
+
+  # Economy-wide snapshots used by the dashboard — keep enough for
+  # trend charts; excess is pruned by count to ensure chart continuity.
+  economy-snapshots:
+    enabled: true
+    retention-days: 30
+
+  # Auction orders: only terminal orders are pruned (FILLED, EXPIRED, CANCELLED, RECLAIMED).
+  # Active OPEN / PARTIALLY_FILLED orders are never deleted.
+  auction-orders:
+    enabled: true
+    retention-days: 30
+
+  # Auction fill history: kept longer because fills are smaller records
+  # and useful for historical price analysis.
+  auction-fills:
+    enabled: true
+    retention-days: 60
+
+  # Market events: only ENDED or CANCELLED events are pruned.
+  # ACTIVE and SCHEDULED events are never deleted.
+  market-events:
+    enabled: true
+    retention-days: 7
+
+# ============================================
+# Tax / Treasury
+# Optional transaction taxes accumulated in the server treasury.
+# ============================================
+tax:
+  # Set to true to collect treasury taxes.
+  enabled: false
+
+  # Percentages are decimals: 0.01 = 1%.
+  buy-tax-percent: 0.0
+  sell-tax-percent: 0.0
+  auction-tax-percent: 0.0
+  loan-interest-tax-percent: 0.0
+
+# ============================================
+# Economy Scoreboard
+# Per-player sidebar scoreboard showing live economy stats.
+# Enable by setting enabled: true.
+# Players see: GDP, Debt, Loans, Activity, Inflation — updated every interval.
+# ============================================
+scoreboard:
+  # Set to true to show the economy scoreboard to all players on join.
+  enabled: false
+
+  # Scoreboard sidebar title (max 32 characters — Minecraft limit).
+  title: "Auto-Tune Economy"
+
+  # How often to refresh scoreboard stats, in seconds (min 10).
+  update-interval-seconds: 30
+
+# ============================================
+# Auction House
+# Configures the in-game order-book auction system.
+# Buy and sell orders are matched by price-time priority.
+# ============================================
+auction:
+  # How long auction orders remain active before expiring (in hours).
+  # Expired buy orders: escrowed funds are refunded to the player.
+  # Expired sell orders: items are NOT returned automatically — player
+  # must cancel manually, or items remain in the order and never clear.
+  # A reasonable default balances active trading against stale orders.
+  default-duration-hours: 72
+
+  # How often to check for expired orders and process refunds (in minutes).
+  # Set to 0 to disable automatic expiration processing.
+  expiration-check-interval-minutes: 15
+
+# ─── Market Events ────────────────────────────────────────────────────────────
+# Dynamic server-wide events that modify price behavior for matching items.
+# Events affect price VELOCITY (how fast prices change), not absolute prices.
+# Natural market forces still apply — exploits are not possible.
+#
+# Supported event types:
+#   DEMAND_SURGE  — amplify upward price movements (buy prices boosted)
+#   SUPPLY_GLUT   — amplify downward price movements (sell prices boosted)
+#   INFLATION_BOOST — always add upward drift regardless of direction
+#   DEFLATION_DROP  — always add downward drift regardless of direction
+#   GOLD_RUSH     — symmetric multiplier on price changes
+#   CUSTOM        — custom multiplier (specify value)
+#
+# Material patterns support wildcards:
+#   "DIAMOND"          — exact match
+#   "GOLD_*"           — matches GOLD_INGOT, GOLD_BLOCK, GOLD_NUGGET, etc.
+#   "*_INGOT"          — matches any INGOT material
+#   "*RA*"             — matches any material containing "RA" (e.g., GRASS_BLOCK)
+#
+# Default events are loaded at startup. Admins can trigger/cancel events
+# at runtime via /at event commands — these are not persisted in config.
+
+market-events:
+  enabled: true
+
+  # How often to check for event lifecycle (activate scheduled / end expired).
+  # In minutes. The market tick interval (economy.update-interval) governs
+  # how often prices are recalculated with event multipliers applied.
+  check-interval-minutes: 5
+
+  # Pre-defined event templates. These can be triggered by admins at runtime.
+  # Uncomment and modify as desired.
+  events:
+    # - name: "Diamond Rush"
+    #   type: DEMAND_SURGE
+    #   materials:
+    #     - DIAMOND
+    #     - EMERALD
+    #   multiplier: 2.0
+    #   duration-minutes: 60
+    #   start-message: "<gold> Diamond Rush! </gold> Diamond and Emerald buy prices are surging!"
+    #   end-message: "<gray> Diamond Rush has ended. Prices returning to normal.</gray>"
+    #
+    # - name: "Iron Oversupply"
+    #   type: SUPPLY_GLUT
+    #   materials:
+    #     - IRON_INGOT
+    #     - IRON_BLOCK
+    #     - IRON_NUGGET
+    #   multiplier: 1.5
+    #   duration-minutes: 120
+    #   start-message: "<gold> Iron Oversupply! </gold> Sell your iron at boosted prices for 2 hours!"
+    #   end-message: "<gray> Iron Oversupply event ended.</gray>"
+
+# ─── Economic News Feed ───────────────────────────────────────────────────────
+# In-game market narration — broadcasts significant market events to all players
+# via action bar. Makes the economy feel alive without spamming chat.
+#
+# What triggers news:
+#   - Price surges/crashes above the threshold within the history window
+#   - Volume spikes above the multiplier × normal volume
+#   - Circuit breaker tier activation (tiers 1/2/3 or recovery)
+#
+# Design: never spams. Per-item cooldown + max N items per cycle ensures
+# variety. Small enough to not annoy, interesting enough to matter.
+news:
+  # Set to false to disable the news feed entirely.
+  enabled: true
+
+  # How often to scan for news and broadcast (in minutes).
+  interval-minutes: 5
+
+  # Minimum % price change within history-window to trigger a news item.
+  # Set lower for more sensitive (more news), higher for only big moves.
+  price-change-threshold-percent: 5.0
+
+  # Volume must exceed this × the average entry volume to trigger a spike alert.
+  volume-spike-multiplier: 3.0
+
+  # How far back to look for price changes and volume spikes (in minutes).
+  # Set to 60 for hourly context, 30 for a faster-changing feed.
+  history-window-minutes: 60
+
+  # Maximum number of distinct items to announce per cycle.
+  # If more items qualify, a random subset is chosen each cycle so all
+  # items eventually get coverage.
+  max-items-per-cycle: 3
+
+  # Don't re-announce the same item within this window (in minutes).
+  # Prevents a single volatile item from dominating the feed.
+  item-cooldown-minutes: 30
+
+# ============================================================
+# Admin Webhook — optional Discord or generic HTTP notifications
+# ============================================================
+# When enabled, Auto-Tune posts an embed to your Discord webhook
+# (or any HTTP endpoint accepting POST application/json) when
+# the economy enters a dangerous state:
+#   - Circuit breaker tier-2 or tier-3 activation
+#   - Aggregate economy volatility spikes into UNSTABLE zone
+#   - Debt/GDP ratio exceeds a configurable threshold
+#
+# All HTTP calls run asynchronously — no main-thread blocking.
+admin-webhook:
+  # Set to true to enable webhook notifications.
+  enabled: false
+
+  # Your Discord webhook URL (Server Settings → Integrations → Webhooks).
+  # Also accepts any HTTP endpoint that takes POST application/json.
+  webhook-url: ""
+
+  # Display name for webhook messages (Discord: overrides webhook name).
+  username: "Auto-Tune Economy"
+
+  # Optional avatar URL for the webhook message.
+  # avatar-url: "https://example.com/autotune-icon.png"
+
+  # Fire on circuit breaker tier-2 (interest reduced to 25%). Default: false.
+  notify-tier2: false
+
+  # Fire on circuit breaker tier-3 (all interest paused). Default: true.
+  notify-tier3: true
+
+  # Fire when aggregate price volatility spikes into UNSTABLE zone (>= 0.15).
+  notify-volatility: true
+
+  # Fire when Debt/GDP ratio exceeds notify-high-debt-threshold.
+  notify-high-debt: true
+
+  # Debt/GDP ratio that triggers the high-debt alert. Default: 8.0x
+  notify-high-debt-threshold: 8.0
+
+  # Fire when any item's 24h trade volume drops below low-volume-threshold.
+  # Useful for detecting stagnant items that may need admin attention.
+  notify-low-volume: false
+
+  # Minimum trades in the last 24 hours before the low-volume alert fires.
+  # Default: 2 — only items with 0-1 total trades trigger the alert.
+  low-volume-threshold: 2
+
+# ============================================================
+# Market Digest
+# Optional scheduled economy summary posted to a webhook.
+# interval: daily or weekly. day-of-week uses 0=Sunday through 6=Saturday.
+# ============================================================
+market-digest:
+  enabled: false
+  interval: "daily"
+  day-of-week: 0
+  hour-of-day: 9
+  include-top-movers: true
+  include-health-stats: true
+  include-active-events: true
+  include-loan-stats: true
+  webhook-url: ""
+
+# ============================================================
+# Price Milestones — broadcasts when items cross round-number prices
+# ============================================================
+# When enabled, players see action bar notifications when an item's
+# mid-price crosses a round-number threshold (e.g. Diamond breaks through
+# $300, or falls below $200). Announces both upward and downward crossings.
+#
+# Cooldown is per item + threshold combination — the same threshold on the
+# same item can't be re-announced within the cooldown window.
+price-milestone:
+  # Set to false to disable milestone announcements.
+  enabled: false
+
+  # How often to scan for milestone crossings (in minutes). Default: 1.
+  # Keep this short since announcements are milestone-triggered (not periodic).
+  interval-minutes: 1
+
+  # Round-number price thresholds to watch. Sorted automatically.
+  # Diamond at $100, $200, $300, $500, $1000, $2000 are common.
+  thresholds:
+    - 50
+    - 100
+    - 200
+    - 300
+    - 500
+    - 1000
+    - 2000
+
+  # Minimum minutes between announcements for the same item+threshold.
+  # Prevents spam if an item oscillates around a threshold.
+  cooldown-minutes: 60
+
+# ============================================================
+# Player Onboarding
+# One-time milestone messages for players during their first month.
+# Use "%d" for the player day count and "%s" for plural suffixes.
+# ============================================================
+onboarding:
+  enabled: true
+  check-interval-hours: 6
+  milestones:
+    WELCOME:
+      enabled: true
+      day-offset: 0
+      message: "<green>Welcome to the economy!</green> You've been here %d day%s. Use <aqua>/shop</aqua> to browse items, <aqua>/sell</aqua> to make money, and <aqua>/loan</aqua> if you need capital to grow."
+    LOANS_TIP:
+      enabled: true
+      day-offset: 3
+      message: "<gold>Day %d tip:</gold> Need funds to expand? Try <aqua>/loan guide</aqua> to learn how loans work."
+    COMPARE_TIP:
+      enabled: true
+      day-offset: 7
+      message: "<aqua>Day %d insight:</aqua> Some items are priced differently across the network. Try <aqua>/compare [item]</aqua> to see if you're getting a fair deal."
+    DIVERSIFY_TIP:
+      enabled: true
+      day-offset: 14
+      message: "<green>Day %d tip:</green> Don't put all your eggs in one basket. Browse <aqua>/shop</aqua> and look for items with low correlation to diversify your portfolio."
+    LOYALTY:
+      enabled: true
+      day-offset: 30
+      message: "<gradient:#00d4ff:#00ff88>You're amazing!</gradient> Day %d on the server. Your activity keeps the economy alive. Thank you for being here!"
+
+# Whale Anti-Dump — protects against sell-wall destabilization
+# ============================================================
+# Whale players accumulate large inventories then dump them at once,
+# creating sell walls that cascade into leverage and debt problems.
+# This section detects abnormal sell volume and applies temporary spread
+# widening to dampen price impact before it destabilizes the economy.
+whale-anti-dump:
+  # Enable whale anti-dump protections
+  enabled: true
+
+  # Maximum units a player can sell of any single item per tick.
+  # Setting this (e.g. 100-500) forces whales to spread large dumps
+  # across multiple ticks instead of dumping everything at once.
+  # null = no cap (uncapped dumps allowed)
+  max-sell-per-item-per-tick: null
+
+  # Sell volume threshold in basis points (0.10 = 10%).
+  # When an item's tick sell value exceeds this fraction of its
+  # base value × 1000, a spread shock is triggered.
+  spread-shock-trigger-bps: 0.10
+
+  # Multiplier applied to base spread during shock (default 2.5×).
+  # At 2.5, a 20% base spread becomes 50% while the shock is active.
+  spread-shock-multiplier: 2.5
+
+  # How many ticks a spread shock lasts (default 288 = 1 day at 20t/s).
+  # Shock decays at 5% per tick, so it fades smoothly.
+  spread-shock-duration-ticks: 288
+
+  # Cooldown in ticks after selling Epic/Legendary items.
+  # Prevents rapid repeated high-value dumps.
+  # Set to null for no cooldown.
+  high-value-sell-cooldown-ticks: 12

@@ -1,0 +1,4 @@
+*.json
+*.html
+# Allow Rust simulation regression baselines (tracked in git)
+!market-simulation/regression-baselines/*.json

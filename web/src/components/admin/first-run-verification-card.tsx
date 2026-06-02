@@ -1,0 +1,327 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { useAppContext } from '@/context/app-context';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { api, type AdminHealthDto, type Stats } from '@/lib/api';
+import {
+  CheckCircle,
+  XCircle,
+  Loader2,
+  AlertTriangle,
+} from 'lucide-react';
+
+type CheckState = 'pending' | 'loading' | 'pass' | 'fail' | 'warn';
+
+interface Check {
+  label: string;
+  state: CheckState;
+  detail: string;
+}
+
+function CheckRow({ check }: { check: Check }) {
+  const stateConfig = {
+    pending: { icon: <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />, label: 'text-muted-foreground', detail: 'text-muted-foreground' },
+    loading: { icon: <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />, label: 'text-muted-foreground', detail: 'text-muted-foreground' },
+    pass:    { icon: <CheckCircle className="w-4 h-4 text-emerald-400" />,         label: 'text-emerald-400',      detail: 'text-muted-foreground' },
+    fail:    { icon: <XCircle className="w-4 h-4 text-red-400" />,                  label: 'text-red-400',          detail: 'text-red-400' },
+    warn:    { icon: <AlertTriangle className="w-4 h-4 text-amber-400" />,          label: 'text-amber-400',        detail: 'text-muted-foreground' },
+  }[check.state];
+
+  return (
+    <div className="flex items-center gap-3 py-2 border-b border-border/40 last:border-0">
+      <div className="flex-shrink-0">{stateConfig.icon}</div>
+      <div className="flex-1 min-w-0">
+        <div className={`text-sm font-medium ${stateConfig.label}`}>{check.label}</div>
+        <div className={`text-xs ${stateConfig.detail}`}>{check.detail}</div>
+      </div>
+    </div>
+  );
+}
+
+export function FirstRunVerificationCard() {
+  const { apiBase } = useAppContext();
+
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [health, setHealth] = useState<AdminHealthDto | null>(null);
+  const [statsState, setStatsState] = useState<CheckState>('loading');
+  const [itemsState, setItemsState] = useState<CheckState>('loading');
+  const [tradeState, setTradeState] = useState<CheckState>('loading');
+  const [circuitState, setCircuitState] = useState<CheckState>('loading');
+  const [dbState, setDbState] = useState<CheckState>('loading');
+  const [webState, setWebState] = useState<CheckState>('loading');
+
+  const fetchAll = useCallback(async () => {
+    try {
+      const [statsData, healthData] = await Promise.all([
+        api.stats(apiBase).catch(() => null),
+        api.admin.health(apiBase).catch(() => null),
+      ]);
+
+      setStats(statsData);
+      setHealth(healthData);
+      setStatsState(statsData ? 'pass' : 'fail');
+
+      if (healthData) {
+        // Items tracked
+        if (statsData && statsData.totalItems > 0) {
+          setItemsState('pass');
+        } else if (statsData && statsData.totalItems === 0) {
+          setItemsState('warn');
+        } else {
+          setItemsState(healthData.gdp > 0 ? 'pass' : 'warn');
+        }
+
+        // Trading active
+        if (healthData.gdp > 0) {
+          setTradeState('pass');
+        } else {
+          setTradeState('warn');
+        }
+
+        // Trade/circuit health
+        if (healthData.circuitBreakerTier === 'TIER2' || healthData.circuitBreakerTier === 'TIER3') {
+          setCircuitState('fail');
+        } else if (
+          healthData.circuitBreakerTier === 'TIER1' ||
+          healthData.buyPct < 20 ||
+          healthData.buyPct > 80
+        ) {
+          setCircuitState('warn');
+        } else {
+          setCircuitState('pass');
+        }
+
+        // DB migrations — schema v9 is current; warn if < 8 (V8 was auction fill status)
+        if (healthData.schemaVersion >= 9) {
+          setDbState('pass');
+        } else if (healthData.schemaVersion >= 1) {
+          setDbState('warn');
+        } else {
+          setDbState('fail');
+        }
+
+        // Web server reachability
+        if (healthData.webServerUp) {
+          setWebState('pass');
+        } else {
+          setWebState('fail');
+        }
+      } else {
+        setItemsState('loading');
+        setTradeState('loading');
+        setCircuitState('loading');
+        setDbState('loading');
+        setWebState('loading');
+      }
+    } catch {
+      setStatsState('fail');
+      setItemsState('fail');
+      setTradeState('fail');
+      setCircuitState('fail');
+      setDbState('fail');
+      setWebState('fail');
+    }
+  }, [apiBase]);
+
+  useEffect(() => {
+    fetchAll();
+    const interval = setInterval(fetchAll, 20000);
+    return () => clearInterval(interval);
+  }, [fetchAll]);
+
+  const checks: Check[] = [
+    {
+      label: 'Plugin active',
+      state: statsState,
+      detail: stats
+        ? `"${stats.serverName}" online — ${stats.onlinePlayers} player${stats.onlinePlayers !== 1 ? 's' : ''} connected`
+        : 'Could not reach plugin API',
+    },
+    {
+      label: 'Items tracked',
+      state: itemsState,
+      detail: stats
+        ? stats.totalItems > 0
+          ? `${stats.totalItems.toLocaleString()} items with prices`
+          : 'No items with prices yet — add base prices in config or /at admin item baseprice'
+        : health && health.gdp > 0
+        ? 'Items tracked via economy activity'
+        : 'Waiting for items to be configured',
+    },
+    {
+      label: 'Prices updating',
+      state: tradeState,
+      detail: health
+        ? health.gdp > 0
+          ? `GDP $${health.gdp.toLocaleString()} recorded — market tick is running`
+          : 'No economy activity yet — prices will update after first trades'
+        : 'Waiting for health data…',
+    },
+    {
+      label: 'Trade mix healthy',
+      state: circuitState,
+      detail: health
+        ? health.circuitBreakerTier !== 'NORMAL'
+          ? `Circuit ${health.circuitBreakerTier} active — see Circuit Breaker Tiers section below`
+          : health.buyPct >= 20 && health.buyPct <= 80
+          ? `Buy/Sell ${health.buyPct.toFixed(0)}%/${health.sellPct.toFixed(0)}% — enough two-sided activity for price discovery`
+          : `Buy/Sell ${health.buyPct.toFixed(0)}%/${health.sellPct.toFixed(0)}% — watch for one-sided activity`
+        : 'Checking…',
+    },
+    {
+      label: 'DB migrations',
+      state: dbState,
+      detail: health
+        ? health.schemaVersion >= 9
+          ? `Schema v${health.schemaVersion} — all migrations applied`
+          : health.schemaVersion >= 1
+          ? `Schema v${health.schemaVersion} — some migrations may be pending (upgrade recommended)`
+          : 'Schema not initialized — run the plugin to set up the database'
+        : 'Checking…',
+    },
+    {
+      label: 'Dashboard reachable',
+      state: webState,
+      detail: health
+        ? 'Dashboard web server is responding'
+        : 'Dashboard not responding — check server port configuration',
+    },
+  ];
+
+  const allPass = checks.every((c) => c.state === 'pass');
+  const anyFail = checks.some((c) => c.state === 'fail');
+  const anyWarn = checks.some((c) => c.state === 'warn');
+
+  return (
+    <Card className={`border-border ${allPass ? 'border-emerald-900/40' : anyFail ? 'border-red-900/40' : 'border-amber-900/40'}`}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          {allPass ? (
+            <CheckCircle className="w-4 h-4 text-emerald-400" />
+          ) : anyFail ? (
+            <XCircle className="w-4 h-4 text-red-400" />
+          ) : (
+            <AlertTriangle className="w-4 h-4 text-amber-400" />
+          )}
+          {allPass ? 'Economy Verified' : anyFail ? 'Economy Setup Issues' : 'Economy Starting Up'}
+        </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">
+          {allPass
+            ? 'Your economy is live and healthy. Prices update every 5 minutes based on player trades.'
+            : anyFail
+            ? 'One or more checks failed. Review the details below and fix issues before your economy goes live.'
+            : 'Checks in progress — these will resolve once players start trading.'}
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-1">
+        {checks.map((check) => (
+          <CheckRow key={check.label} check={check} />
+        ))}
+
+        {anyWarn && !anyFail && (
+          <div className="mt-3 px-3 py-2.5 rounded-md bg-amber-500/10 border border-amber-500/20">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-amber-300 leading-relaxed">
+                <strong>No trades yet?</strong> Auto-Tune needs player activity to set prices.
+                Make sure <code className="bg-amber-950/50 px-1 py-0.5 rounded text-amber-200">buy: true</code> and{' '}
+                <code className="bg-amber-950/50 px-1 py-0.5 rounded text-amber-200">sell: true</code> are set on your
+                key items in <code className="bg-amber-950/50 px-1 py-0.5 rounded text-amber-200">shops.yml</code>.
+                Players can trade with <code className="bg-amber-950/50 px-1 py-0.5 rounded text-amber-200">/shop</code> and{' '}
+                <code className="bg-amber-950/50 px-1 py-0.5 rounded text-amber-200">/sell</code>.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {allPass && (
+          <div className="mt-3 px-3 py-2.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+            <div className="flex items-start gap-2">
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-emerald-300 leading-relaxed">
+                <strong>Your economy is live.</strong> Prices update every 5 minutes.
+                The bundled dashboard at port 8989 shows live prices, charts, and loan status in real time.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Economy Health Tips - expandable */}
+        {!allPass && (
+          <details className="mt-3 cursor-pointer group">
+            <summary className="text-xs text-muted-foreground hover:text-foreground transition-colors select-none">
+               Need help? Click for quick tips
+            </summary>
+            <div className="mt-2 space-y-2 text-xs">
+              {statsState === 'fail' && (
+                <div className="px-3 py-2 rounded bg-blue-500/10 border border-blue-500/20">
+                  <div className="text-blue-300 font-medium mb-1">Plugin not responding</div>
+                  <div className="text-blue-200/70">
+                    Check: (1) Plugin loaded without errors, (2) Port 8989 not blocked,
+                    (3) Server console shows Auto-Tune web server started
+                  </div>
+                </div>
+              )}
+              {itemsState === 'warn' && (
+                <div className="px-3 py-2 rounded bg-amber-500/10 border border-amber-500/20">
+                  <div className="text-amber-300 font-medium mb-1">No items with prices</div>
+                  <div className="text-amber-200/70">
+                    Add base prices: Edit shops.yml with items, or run /at admin item baseprice in-game
+                  </div>
+                </div>
+              )}
+              {tradeState === 'warn' && (
+                <div className="px-3 py-2 rounded bg-amber-500/10 border border-amber-500/20">
+                  <div className="text-amber-300 font-medium mb-1">No economy activity</div>
+                  <div className="text-amber-200/70">
+                    Players need to trade: Use /shop to buy and /sell to sell. First trade initializes prices.
+                  </div>
+                </div>
+              )}
+              {circuitState === 'fail' && (
+                <div className="px-3 py-2 rounded bg-red-500/10 border border-red-500/20">
+                  <div className="text-red-300 font-medium mb-1">Circuit breaker active</div>
+                  <div className="text-red-200/70">
+                    Economy is in protection mode. See Circuit Breaker Tiers section below for recovery steps.
+                    Tip: Lower sell pressure, add player buy volume to calm markets.
+                  </div>
+                </div>
+              )}
+              {dbState === 'fail' && (
+                <div className="px-3 py-2 rounded bg-red-500/10 border border-red-500/20">
+                  <div className="text-red-300 font-medium mb-1">Database not initialized</div>
+                  <div className="text-red-200/70">
+                    Run /at reload or restart the server to initialize the database schema.
+                  </div>
+                </div>
+              )}
+              {dbState === 'warn' && (
+                <div className="px-3 py-2 rounded bg-amber-500/10 border border-amber-500/20">
+                  <div className="text-amber-300 font-medium mb-1">Outdated database schema</div>
+                  <div className="text-amber-200/70">
+                    Upgrade to the latest plugin version to apply pending migrations.
+                  </div>
+                </div>
+              )}
+              {webState === 'fail' && (
+                <div className="px-3 py-2 rounded bg-red-500/10 border border-red-500/20">
+                  <div className="text-red-300 font-medium mb-1">Dashboard not reachable</div>
+                  <div className="text-red-200/70">
+                    Verify the web port in config.yml is open and the server is not blocking it.
+                  </div>
+                </div>
+              )}
+              <div className="px-3 py-2 rounded bg-gray-500/10 border border-gray-500/20">
+                <div className="text-gray-300 font-medium mb-1">More help</div>
+                <div className="text-gray-200/70">
+                  Full docs at autotune.dev/docs. Admin commands: /at admin in-game
+                </div>
+              </div>
+            </div>
+          </details>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

@@ -1,0 +1,35 @@
+name: Public Site CI
+
+on:
+  push:
+    paths:
+      - 'public-site/**'
+    branches: [ master, rewrite-2, feature/*, fix/* ]
+  pull_request:
+    paths:
+      - 'public-site/**'
+    branches: [ master, rewrite-2 ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./public-site
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './public-site/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build

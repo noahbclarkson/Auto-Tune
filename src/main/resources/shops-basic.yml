@@ -1,0 +1,60 @@
+# ============================================
+# Auto-Tune Shop Items - BASIC
+# ============================================
+# Minimal economy preset for small servers (<10 players).
+# Only core ores and minerals are tradeable.
+# This keeps inter-player trading intact for most items
+# while providing a dynamic market for the fundamentals.
+#
+# To use: rename this file to shops.yml and restart.
+# Prices are starting values only - the market engine
+# adjusts them dynamically based on player trading.
+# ============================================
+
+items:
+  # === Ores & Minerals ===
+  - material: NETHERITE_INGOT
+    price: 823.5
+    section: ores
+  - material: DIAMOND
+    price: 245.9
+    section: ores
+  - material: NETHERITE_SCRAP
+    price: 123.8
+    section: ores
+  - material: EMERALD
+    price: 79.2
+    section: ores
+  - material: GOLD_INGOT
+    price: 45.2
+    section: ores
+  - material: RAW_GOLD
+    price: 45.2
+    section: ores
+  - material: IRON_INGOT
+    price: 9.83
+    section: ores
+  - material: RAW_IRON
+    price: 9.83
+    section: ores
+  - material: AMETHYST_SHARD
+    price: 6.29
+    section: ores
+  - material: COAL
+    price: 2.94
+    section: ores
+  - material: LAPIS_LAZULI
+    price: 2.94
+    section: ores
+  - material: COPPER_INGOT
+    price: 1.67
+    section: ores
+  - material: REDSTONE
+    price: 1.67
+    section: ores
+  - material: QUARTZ
+    price: 1.67
+    section: ores
+  - material: RAW_COPPER
+    price: 1.67
+    section: ores

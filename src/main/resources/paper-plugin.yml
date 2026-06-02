@@ -1,0 +1,20 @@
+name: ${name}
+version: ${version}
+main: com.noahblclarkson.autotune.AutoTune
+description: Dynamic economy plugin with real-time market simulation
+api-version: "1.21"
+author: noahblclarkson
+website: https://github.com/noahblclarkson/Auto-Tune
+
+load: STARTUP
+
+dependencies:
+  server:
+    Vault:
+      load: BEFORE
+      required: true
+      join-classpath: true
+    PlaceholderAPI:
+      load: BEFORE
+      required: false
+      join-classpath: true

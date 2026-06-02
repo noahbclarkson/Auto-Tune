@@ -1,0 +1,1049 @@
+package com.noahblclarkson.autotune.economy;
+
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import com.noahblclarkson.autotune.config.AutoTuneConfig;
+import com.noahblclarkson.autotune.config.ConfigManager;
+import com.noahblclarkson.autotune.manager.PluginAdapter;
+import com.noahblclarkson.autotune.database.DatabaseManager;
+import com.noahblclarkson.autotune.database.PlayerRepository;
+import com.noahblclarkson.autotune.database.TransactionRepository;
+import com.noahblclarkson.autotune.manager.MarketEngine;
+import com.noahblclarkson.autotune.manager.ShopManager;
+import com.noahblclarkson.autotune.manager.PriceReporter;
+import com.noahblclarkson.autotune.manager.TreasuryService;
+import com.noahblclarkson.autotune.model.CartItem;
+import com.noahblclarkson.autotune.model.ItemTier;
+import com.noahblclarkson.autotune.model.PlayerData;
+import com.noahblclarkson.autotune.model.ShopItem;
+import com.noahblclarkson.autotune.model.Transaction;
+import com.noahblclarkson.autotune.model.Transaction.TransactionType;
+import com.noahblclarkson.autotune.service.BadgeService;
+import com.noahblclarkson.autotune.service.PlayerStreakService;
+import com.noahblclarkson.autotune.util.EnchantmentPricing;
+import com.noahblclarkson.autotune.util.ItemSerializer;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.Bukkit;
+import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.economy.EconomyResponse;
+import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
+
+@Singleton
+@SuppressWarnings("PMD")
+public class EconomyManager {
+
+    private final PluginAdapter plugin;
+    private final Economy economy;
+    private final DatabaseManager databaseManager;
+    private final ShopManager shopManager;
+    private final MarketEngine marketEngine;
+    private final PlayerRepository playerRepository;
+    private final TransactionRepository transactionRepository;
+    private final PriceReporter priceReporter;
+    private final ConfigManager configManager;
+    private final TreasuryService treasuryService;
+    private final BadgeService badgeService;
+    private final PlayerStreakService playerStreakService;
+
+    @Inject
+    public EconomyManager(
+            PluginAdapter plugin,
+            Economy economy,
+            DatabaseManager databaseManager,
+            ShopManager shopManager,
+            MarketEngine marketEngine,
+            PlayerRepository playerRepository,
+            TransactionRepository transactionRepository,
+            PriceReporter priceReporter,
+            ConfigManager configManager,
+            TreasuryService treasuryService,
+            BadgeService badgeService,
+            PlayerStreakService playerStreakService
+    ) {
+        this.plugin = plugin;
+        this.economy = economy;
+        this.databaseManager = databaseManager;
+        this.shopManager = shopManager;
+        this.marketEngine = marketEngine;
+        this.playerRepository = playerRepository;
+        this.transactionRepository = transactionRepository;
+        this.priceReporter = priceReporter;
+        this.configManager = configManager;
+        this.treasuryService = treasuryService;
+        this.badgeService = badgeService;
+        this.playerStreakService = playerStreakService;
+    }
+
+    public double getBalance(@NotNull Player player) {
+        return economy.getBalance(player);
+    }
+
+    public double getBalance(@NotNull org.bukkit.OfflinePlayer player) {
+        return economy.getBalance(player);
+    }
+
+    public boolean hasBalance(@NotNull Player player, double amount) {
+        return economy.has(player, amount);
+    }
+
+    public boolean withdraw(@NotNull Player player, double amount) {
+        return callOnMain(() -> {
+            EconomyResponse response = economy.withdrawPlayer(
+                    Bukkit.getOfflinePlayer(player.getUniqueId()), amount);
+            return response.transactionSuccess();
+        }, "withdraw player funds");
+    }
+
+    public boolean deposit(@NotNull Player player, double amount) {
+        return callOnMain(() -> {
+            EconomyResponse response = economy.depositPlayer(
+                    Bukkit.getOfflinePlayer(player.getUniqueId()), amount);
+            return response.transactionSuccess();
+        }, "deposit player funds");
+    }
+
+    public CompletableFuture<TransactionResult> processBuyAsync(@NotNull Player player, @NotNull ShopItem item, int amount) {
+        java.util.UUID playerId = player.getUniqueId();
+
+        if (!shopManager.isBuyable(item)) {
+            return CompletableFuture.completedFuture(TransactionResult.error("This item is not yet available for purchase."));
+        }
+
+        AutoTuneConfig.EconomyConfig ec = configManager.getConfig().economy();
+        int minQty = ec.minBuyQuantity();
+        double minVal = ec.minBuyValue();
+        if (amount < minQty) {
+            return CompletableFuture.completedFuture(
+                    TransactionResult.belowMinimum(TransactionType.BUY, minQty, minVal, amount));
+        }
+
+        BigDecimal pricePerUnit = marketEngine.getBuyPrice(item, amount);
+        BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
+        if (minVal > 0 && totalPrice.doubleValue() < minVal) {
+            return CompletableFuture.completedFuture(
+                    TransactionResult.belowMinimum(TransactionType.BUY, minQty, minVal, amount));
+        }
+
+        // Calculate buy tax before checking balance — player pays item cost + tax.
+        // Only collect it after the Vault withdrawal succeeds.
+        BigDecimal taxAmount = treasuryService.calculateBuyTax(totalPrice);
+        BigDecimal totalWithTax = totalPrice.add(taxAmount);
+
+        if (!hasBalance(player, totalWithTax.doubleValue())) {
+            return CompletableFuture.completedFuture(TransactionResult.insufficientFunds(totalWithTax));
+        }
+
+        int emptySlots = countEmptySlots(player);
+        int slotsNeeded = (int) Math.ceil(amount / (double) new ItemStack(item.material()).getMaxStackSize());
+        if (emptySlots < slotsNeeded) {
+            return CompletableFuture.completedFuture(TransactionResult.insufficientSpace());
+        }
+
+        // Process atomically: DB write first, then money withdrawal, then inventory.
+        // This ensures the transaction record is the first thing that succeeds.
+        // If DB write fails, nothing changes (no money taken, no items given).
+        // Tax is calculated before withdrawal — it comes out of player's balance,
+        // but treasury state is only updated once withdrawal succeeds.
+        final BigDecimal finalTaxAmount = taxAmount;
+        return databaseManager.supplyAsync(() -> {
+            // 1. Persist transaction record
+            Transaction transaction = Transaction.builder()
+                    .playerUuid(playerId)
+                    .itemId(item.id())
+                    .type(TransactionType.BUY)
+                    .amount(amount)
+                    .pricePerUnit(pricePerUnit)
+                    .totalPrice(totalPrice)
+                    .build();
+
+            transactionRepository.insert(transaction);
+            playerStreakService.onTransaction(transaction.playerUuid());
+            priceReporter.recordTransaction(item, transaction);
+            playerRepository.addTransaction(playerId, totalPrice, true);
+            marketEngine.recordBuy(item.id(), amount);
+
+            // 2. Withdraw total (item cost + tax) — must succeed before giving items
+            if (!withdraw(player, totalWithTax.doubleValue())) {
+                plugin.getLogger().warning("[Auto-Tune] Failed to withdraw " + totalWithTax
+                        + " from " + player.getName() + " after buy transaction was recorded. "
+                        + "Player should not have received items.");
+                return TransactionResult.economyError();
+            }
+            treasuryService.collectTaxAmount(finalTaxAmount);
+
+            // 3. Give items — last step.
+            giveItems(player, item, amount);
+
+            // Award badges
+            badgeService.onBuy(playerId);
+
+            return TransactionResult.success(TransactionType.BUY, amount, totalPrice);
+        });
+    }
+
+    public CompletableFuture<TransactionResult> processSellAsync(@NotNull Player player, @NotNull ShopItem item, int amount) {
+        java.util.UUID playerId = player.getUniqueId();
+
+        AutoTuneConfig.EconomyConfig ec = configManager.getConfig().economy();
+        int minQty = ec.minSellQuantity();
+        double minVal = ec.minSellValue();
+        if (amount < minQty) {
+            return CompletableFuture.completedFuture(
+                    TransactionResult.belowMinimum(TransactionType.SELL, minQty, minVal, amount));
+        }
+
+        // Pre-validate: check items exist without modifying inventory
+        int playerHas = countItems(player, item);
+        if (playerHas < amount) {
+            return CompletableFuture.completedFuture(TransactionResult.insufficientItems(playerHas, amount));
+        }
+
+        BigDecimal pricePerUnit = marketEngine.getSellPrice(item, amount);
+        BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
+        if (minVal > 0 && totalPrice.doubleValue() < minVal) {
+            return CompletableFuture.completedFuture(
+                    TransactionResult.belowMinimum(TransactionType.SELL, minQty, minVal, amount));
+        }
+
+        // Calculate sell tax from proceeds before calculating net to player.
+        // Only collect it after the sell completes successfully.
+        BigDecimal taxAmount = treasuryService.calculateSellTax(totalPrice);
+        BigDecimal netProceeds = totalPrice.subtract(taxAmount);
+
+        // Whale anti-dump: enforce per-item sell cap and cooldown before accepting the sell.
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump = configManager.getConfig().whaleAntiDump();
+        if (antiDump.enabled()) {
+            // Check cooldown for Epic/Legendary items
+            Integer cooldown = antiDump.highValueSellCooldownTicks();
+            if (cooldown != null && item.effectiveTier() != ItemTier.COMMON
+                    && item.effectiveTier() != ItemTier.UNCOMMON && item.effectiveTier() != ItemTier.RARE) {
+                int remaining = marketEngine.getSellCooldownRemaining(item.id());
+                if (remaining > 0) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.error("High-value item sell cooldown active: " + remaining + " ticks remaining"));
+                }
+            }
+            // Check per-item sell cap
+            Integer cap = antiDump.maxSellPerItemPerTick();
+            if (cap != null) {
+                int tickSell = marketEngine.getTickSellVolume(item.id());
+                if (tickSell + amount > cap) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.error("Sell cap exceeded: max " + cap + " per tick for " + item.material().name()
+                                    + ". Try again shortly."));
+                }
+            }
+        }
+
+        // Process atomically: DB write first (source of truth), then inventory modification.
+        // This prevents item loss if the DB write fails — inventory is only touched after
+        // the transaction is safely persisted. On DB failure nothing changes.
+        // Inventory and Vault side effects are marshalled to the main thread by helper methods.
+        return databaseManager.supplyAsync(() -> {
+            // 1. Persist transaction record first
+            Transaction transaction = Transaction.builder()
+                    .playerUuid(playerId)
+                    .itemId(item.id())
+                    .type(TransactionType.SELL)
+                    .amount(amount)
+                    .pricePerUnit(pricePerUnit)
+                    .totalPrice(netProceeds)  // record net to player (tax goes to treasury)
+                    .build();
+
+            transactionRepository.insert(transaction);
+            playerStreakService.onTransaction(transaction.playerUuid());
+            priceReporter.recordTransaction(item, transaction);
+            playerRepository.addTransaction(playerId, netProceeds, false);
+            marketEngine.recordSell(item.id(), amount);
+            shopManager.invalidateBuyableCache(item.id());
+
+            // 2. Deposit net proceeds to player — must succeed for inventory to be modified
+            if (!deposit(player, netProceeds.doubleValue())) {
+                plugin.getLogger().warning("[Auto-Tune] Failed to deposit " + netProceeds
+                        + " to " + player.getName() + " after sell transaction was recorded. "
+                        + "Player should contact an admin.");
+                return TransactionResult.economyError();
+            }
+
+            // 3. Remove items from inventory — last because it's the only step that
+            //    can fail without affecting economy consistency (player has the money)
+            if (!removeItems(player, item, amount)) {
+                plugin.getLogger().warning("[Auto-Tune] Failed to remove sell items from "
+                        + player.getName() + "'s inventory after payment. Restoring funds.");
+                withdraw(player, netProceeds.doubleValue());
+                return TransactionResult.error("Failed to remove items from inventory");
+            }
+            treasuryService.collectTaxAmount(taxAmount);
+
+            // Award badges for sell activity
+            badgeService.onSell(playerId, netProceeds);
+
+            return TransactionResult.success(TransactionType.SELL, amount, netProceeds);
+        });
+    }
+
+    public TransactionResult processSellImmediate(@NotNull Player player, @NotNull ShopItem item, int amount) {
+        return processSellImmediate(player, item, amount, null);
+    }
+
+    /**
+     * Sells items from the player's inventory synchronously with DB-first transaction ordering.
+     * 
+     * Safety (DB-first): DB write first, then money, then inventory. This mirrors
+     * processCartAsync and processBuyAsync for consistent error handling:
+     * - DB write fails → nothing changes (player sees error, no items lost)
+     * - Money fails after DB → transaction recorded but no money → admin review
+     * - Inventory fails after DB+money → refund money (compensating transaction)
+     */
+    public TransactionResult processSellImmediate(
+            @NotNull Player player,
+            @NotNull ShopItem item,
+            int amount,
+            @Nullable ItemStack itemStack
+    ) {
+        java.util.UUID playerId = player.getUniqueId();
+        BigDecimal basePricePerUnit = marketEngine.getSellPrice(item, amount);
+
+        // Apply enchantment multiplier if the item has enchantments
+        BigDecimal pricePerUnit;
+        if (itemStack != null) {
+            double enchantMult = EnchantmentPricing.getMultiplier(itemStack,
+                    configManager.getConfig().enchantment());
+            if (enchantMult > 1.0) {
+                pricePerUnit = EnchantmentPricing.applyMultiplier(basePricePerUnit, enchantMult);
+            } else {
+                pricePerUnit = basePricePerUnit;
+            }
+        } else {
+            pricePerUnit = basePricePerUnit;
+        }
+
+        BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
+
+        // Calculate sell tax from proceeds before calculating net to player.
+        // Only collect it after item removal and Vault deposit succeed.
+        BigDecimal taxAmount = treasuryService.calculateSellTax(totalPrice);
+        BigDecimal netProceeds = totalPrice.subtract(taxAmount);
+
+        // Whale anti-dump: enforce per-item sell cap and cooldown before recording.
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump = configManager.getConfig().whaleAntiDump();
+        if (antiDump.enabled()) {
+            // Check cooldown for Epic/Legendary items
+            Integer cooldown = antiDump.highValueSellCooldownTicks();
+            if (cooldown != null && item.effectiveTier() != ItemTier.COMMON
+                    && item.effectiveTier() != ItemTier.UNCOMMON && item.effectiveTier() != ItemTier.RARE) {
+                int remaining = marketEngine.getSellCooldownRemaining(item.id());
+                if (remaining > 0) {
+                    return TransactionResult.error("High-value item sell cooldown active: " + remaining + " ticks remaining");
+                }
+            }
+            // Check per-item sell cap
+            Integer cap = antiDump.maxSellPerItemPerTick();
+            if (cap != null) {
+                int tickSell = marketEngine.getTickSellVolume(item.id());
+                if (tickSell + amount > cap) {
+                    return TransactionResult.error("Sell cap exceeded: max " + cap + " per tick for " + item.material().name()
+                            + ". Ticks remaining: " + marketEngine.getShockRemainingTicks());
+                }
+            }
+        }
+
+        // DB-FIRST: DB → money → inventory (mirrors processCartAsync)
+        // 1. DB write first. If fails, nothing changes.
+        // 2. Deposit money. If fails, transaction exists but no money.
+        // 3. Remove inventory last. If fails, refund money (compensating).
+
+        // Verify player has enough items (check only, don't remove yet).
+        if (countItems(player, item) < amount) {
+            return TransactionResult.insufficientItems(countItems(player, item), amount);
+        }
+
+        // Step 1: DB write FIRST. Blocks until complete.
+        final BigDecimal finalPricePerUnit = pricePerUnit;
+        final BigDecimal finalNetProceeds = netProceeds;
+        try {
+            databaseManager.supplyAsync(() -> {
+                Transaction tx = Transaction.builder()
+                        .playerUuid(playerId)
+                        .itemId(item.id())
+                        .type(TransactionType.SELL)
+                        .amount(amount)
+                        .pricePerUnit(finalPricePerUnit)
+                        .totalPrice(finalNetProceeds).build();
+                transactionRepository.insert(tx);
+                playerStreakService.onTransaction(tx.playerUuid());
+                priceReporter.recordTransaction(item, tx);
+                playerRepository.addTransaction(playerId, finalNetProceeds, false);
+                marketEngine.recordSell(item.id(), amount);
+                shopManager.invalidateBuyableCache(item.id());
+                badgeService.onSell(playerId, finalNetProceeds);
+                return null;
+            }).join();
+        } catch (Exception e) {
+            // DB failed → nothing changed. Return error.
+            plugin.getLogger().log(Level.WARNING,
+                    "[Auto-Tune] DB write failed for sell by " + player.getName()
+                            + " (item=" + item.id() + ", amount=" + amount
+                            + "). No changes made.", e);
+            return TransactionResult.error("Database error. Please try again.");
+        }
+
+        // Step 2: Deposit money AFTER DB success.
+        if (!deposit(player, netProceeds.doubleValue())) {
+            // Money failed but DB succeeded. Transaction recorded but no money.
+            plugin.getLogger().warning("[Auto-Tune] DB OK but Vault deposit failed for "
+                    + player.getName() + ". Transaction exists but player unpaid.");
+            return TransactionResult.error("Transfer error. Transaction recorded. Contact admin.");
+        }
+        treasuryService.collectTaxAmount(taxAmount);
+
+        // Step 3: Remove inventory LAST. If fails → refund money.
+        if (!removeItems(player, item, amount)) {
+            // Compensating transaction: refund money.
+            plugin.getLogger().warning("[Auto-Tune] Item removal failed after payment for "
+                    + player.getName() + ". Refunding money.");
+            withdraw(player, netProceeds.doubleValue());
+            return TransactionResult.error("Failed to remove items. Refunded.");
+        }
+
+
+        // Set cooldown for Epic/Legendary items
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump2 = configManager.getConfig().whaleAntiDump();
+        if (antiDump2.enabled()) {
+            Integer cooldown = antiDump2.highValueSellCooldownTicks();
+            if (cooldown != null && item.effectiveTier() != ItemTier.COMMON
+                    && item.effectiveTier() != ItemTier.UNCOMMON && item.effectiveTier() != ItemTier.RARE) {
+                marketEngine.setSellCooldown(item.id(), cooldown);
+            }
+        }
+
+        return TransactionResult.success(TransactionType.SELL, amount, netProceeds);
+    }
+
+    /**
+     * Sells a stack that has already been removed from the player's inventory.
+     *
+     * <p>The /sell GUI stores items in its own temporary inventory. By the time
+     * the inventory closes, those items are no longer in the player's storage
+     * slots, so {@link #processSellImmediate(Player, ShopItem, int, ItemStack)}
+     * would incorrectly fail its player-inventory removal step. This method is
+     * for that detached-stack flow: the caller owns returning the item on
+     * failure, while successful sales leave the stack consumed by the GUI.
+     */
+    public TransactionResult processDetachedSellImmediate(
+            @NotNull Player player,
+            @NotNull ShopItem item,
+            int amount,
+            @Nullable ItemStack itemStack
+    ) {
+        return processDetachedSellInternal(player, item, amount, itemStack);
+    }
+
+    public CompletableFuture<TransactionResult> processDetachedSellAsync(
+            @NotNull Player player,
+            @NotNull ShopItem item,
+            int amount,
+            @Nullable ItemStack itemStack
+    ) {
+        return CompletableFuture.supplyAsync(() -> processDetachedSellInternal(player, item, amount, itemStack));
+    }
+
+    private TransactionResult processDetachedSellInternal(
+            @NotNull Player player,
+            @NotNull ShopItem item,
+            int amount,
+            @Nullable ItemStack itemStack
+    ) {
+        java.util.UUID playerId = player.getUniqueId();
+        BigDecimal basePricePerUnit = marketEngine.getSellPrice(item, amount);
+
+        // Apply enchantment multiplier if the item has enchantments
+        BigDecimal pricePerUnit;
+        if (itemStack != null) {
+            double enchantMult = EnchantmentPricing.getMultiplier(itemStack,
+                    configManager.getConfig().enchantment());
+            if (enchantMult > 1.0) {
+                pricePerUnit = EnchantmentPricing.applyMultiplier(basePricePerUnit, enchantMult);
+            } else {
+                pricePerUnit = basePricePerUnit;
+            }
+        } else {
+            pricePerUnit = basePricePerUnit;
+        }
+
+        BigDecimal totalPrice = pricePerUnit.multiply(BigDecimal.valueOf(amount));
+
+        // Calculate sell tax from proceeds before calculating net to player.
+        // Only collect it after Vault deposit succeeds.
+        BigDecimal taxAmount = treasuryService.calculateSellTax(totalPrice);
+        BigDecimal netProceeds = totalPrice.subtract(taxAmount);
+
+        // Whale anti-dump: enforce per-item sell cap and cooldown before accepting the sell.
+        // This check runs BEFORE any money operations so a rejected sell doesn't touch funds.
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump = configManager.getConfig().whaleAntiDump();
+        if (antiDump.enabled()) {
+            // Check cooldown for Epic/Legendary items
+            Integer cooldown = antiDump.highValueSellCooldownTicks();
+            if (cooldown != null && item.effectiveTier() != ItemTier.COMMON
+                    && item.effectiveTier() != ItemTier.UNCOMMON && item.effectiveTier() != ItemTier.RARE) {
+                int remaining = marketEngine.getSellCooldownRemaining(item.id());
+                if (remaining > 0) {
+                    return TransactionResult.error("High-value item sell cooldown active: " + remaining + " ticks remaining");
+                }
+            }
+            // Check per-item sell cap
+            Integer cap = antiDump.maxSellPerItemPerTick();
+            if (cap != null) {
+                int tickSell = marketEngine.getTickSellVolume(item.id());
+                if (tickSell + amount > cap) {
+                    return TransactionResult.error("Sell cap exceeded: max " + cap + " per tick for " + item.material().name()
+                            + ". Try again shortly.");
+                }
+            }
+        }
+
+        // DB-FIRST: DB → money (mirrors processSellAsync and processCartAsync)
+        // 1. DB write first. If fails, nothing changes.
+        // 2. Deposit money. If fails, transaction exists but no money.
+        final BigDecimal finalPricePerUnit = pricePerUnit;
+        final BigDecimal finalNetProceeds = netProceeds;
+        try {
+            databaseManager.supplyAsync(() -> {
+                Transaction transaction = Transaction.builder()
+                        .playerUuid(playerId)
+                        .itemId(item.id())
+                        .type(TransactionType.SELL)
+                        .amount(amount)
+                        .pricePerUnit(finalPricePerUnit)
+                        .totalPrice(finalNetProceeds)
+                        .build();
+
+
+                transactionRepository.insert(transaction);
+                playerStreakService.onTransaction(transaction.playerUuid());
+                priceReporter.recordTransaction(item, transaction);
+                playerRepository.addTransaction(playerId, finalNetProceeds, false);
+                marketEngine.recordSell(item.id(), amount);
+                shopManager.invalidateBuyableCache(item.id());
+
+                // Award badges for sell activity
+                badgeService.onSell(playerId, finalNetProceeds);
+
+
+                return null;
+            }).join();
+        } catch (Exception e) {
+            // DB failed → nothing changed. Return error.
+            plugin.getLogger().log(Level.WARNING,
+                    "[Auto-Tune] DB write failed for detached sell by " + player.getName()
+                            + " (item=" + item.id() + ", amount=" + amount
+                            + "). No changes made.", e);
+            return TransactionResult.error("Database error. Please try again.");
+        }
+
+        // Step 2: Deposit money AFTER DB success.
+        if (!deposit(player, netProceeds.doubleValue())) {
+            plugin.getLogger().warning("[Auto-Tune] DB OK but Vault deposit failed for "
+                    + player.getName() + ". Transaction exists but player unpaid.");
+            return TransactionResult.error("Transfer error. Transaction recorded. Contact admin.");
+        }
+        treasuryService.collectTaxAmount(taxAmount);
+
+
+        // Set cooldown for Epic/Legendary items
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump2 = configManager.getConfig().whaleAntiDump();
+        if (antiDump2.enabled()) {
+            Integer cooldown = antiDump2.highValueSellCooldownTicks();
+            if (cooldown != null && item.effectiveTier() != ItemTier.COMMON
+                    && item.effectiveTier() != ItemTier.UNCOMMON && item.effectiveTier() != ItemTier.RARE) {
+                marketEngine.setSellCooldown(item.id(), cooldown);
+            }
+        }
+
+        return TransactionResult.success(TransactionType.SELL, amount, netProceeds);
+    }
+
+    public CompletableFuture<TransactionResult> processCartAsync(@NotNull Player player, @NotNull List<CartItem> cart) {
+        java.util.UUID playerId = player.getUniqueId();
+        BigDecimal totalBuyCost = BigDecimal.ZERO;
+        BigDecimal totalSellProfit = BigDecimal.ZERO;
+        int slotsNeeded = 0;
+        AutoTuneConfig.EconomyConfig ec = configManager.getConfig().economy();
+        int minBuyQty = ec.minBuyQuantity();
+        int minSellQty = ec.minSellQuantity();
+        double minBuyVal = ec.minBuyValue();
+        double minSellVal = ec.minSellValue();
+
+        for (CartItem cartItem : cart) {
+            if (cartItem.isBuying()) {
+                if (!shopManager.isBuyable(cartItem.shopItem())) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.error(cartItem.shopItem().getDisplayNameOrMaterial() + " is not yet available for purchase."));
+                }
+                int qty = cartItem.quantity();
+                if (qty < minBuyQty) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.belowMinimum(TransactionType.BUY, minBuyQty, minBuyVal, qty));
+                }
+                BigDecimal buyPrice = marketEngine.getBuyPrice(cartItem.shopItem(), cartItem.quantity())
+                        .multiply(BigDecimal.valueOf(cartItem.quantity()));
+                if (minBuyVal > 0 && buyPrice.doubleValue() < minBuyVal) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.belowMinimum(TransactionType.BUY, minBuyQty, minBuyVal, qty));
+                }
+                totalBuyCost = totalBuyCost.add(buyPrice);
+                slotsNeeded += (int) Math.ceil(cartItem.quantity() /
+                        (double) new ItemStack(cartItem.shopItem().material()).getMaxStackSize());
+            } else {
+                int qty = cartItem.quantity();
+                if (qty < minSellQty) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.belowMinimum(TransactionType.SELL, minSellQty, minSellVal, qty));
+                }
+                BigDecimal sellPrice = marketEngine.getSellPrice(cartItem.shopItem(), cartItem.quantity())
+                        .multiply(BigDecimal.valueOf(cartItem.quantity()));
+                if (minSellVal > 0 && sellPrice.doubleValue() < minSellVal) {
+                    return CompletableFuture.completedFuture(
+                            TransactionResult.belowMinimum(TransactionType.SELL, minSellQty, minSellVal, qty));
+                }
+                totalSellProfit = totalSellProfit.add(sellPrice);
+            }
+        }
+
+        // Pre-calculate tax totals for pricing/balance checks. Treasury state is
+        // updated only after the cart successfully completes.
+        BigDecimal totalBuyTax = treasuryService.calculateBuyTax(totalBuyCost);
+        BigDecimal totalSellTax = treasuryService.calculateSellTax(totalSellProfit);
+
+        // Net cost = (buyCost + buyTax) - (sellProfit - sellTax)
+        BigDecimal netCost = (totalBuyCost.add(totalBuyTax)).subtract(totalSellProfit.subtract(totalSellTax));
+
+        if (netCost.compareTo(BigDecimal.ZERO) > 0 && !hasBalance(player, netCost.doubleValue())) {
+            return CompletableFuture.completedFuture(TransactionResult.insufficientFunds(netCost));
+        }
+
+        if (slotsNeeded > countEmptySlots(player)) {
+            return CompletableFuture.completedFuture(TransactionResult.insufficientSpace());
+        }
+
+        for (CartItem cartItem : cart) {
+            if (!cartItem.isBuying()) {
+                int playerHas = countItems(player, cartItem.shopItem());
+                if (playerHas < cartItem.quantity()) {
+                    return CompletableFuture.completedFuture(TransactionResult.insufficientItems(playerHas, cartItem.quantity()));
+                }
+            }
+        }
+
+        // Anti-dump pre-checks for SELL items in the cart.
+        // Runs synchronously before the async DB-first block so rejected sells
+        // never touch money or DB. Buy items are not subject to sell caps/cooldowns.
+        AutoTuneConfig.WhaleAntiDumpConfig antiDump = configManager.getConfig().whaleAntiDump();
+        if (antiDump.enabled()) {
+            for (CartItem cartItem : cart) {
+                if (cartItem.isBuying()) {
+                    continue;
+                }
+                ShopItem item = cartItem.shopItem();
+                Integer cooldown = antiDump.highValueSellCooldownTicks();
+                if (cooldown != null && item.effectiveTier() != ItemTier.COMMON
+                        && item.effectiveTier() != ItemTier.UNCOMMON && item.effectiveTier() != ItemTier.RARE) {
+                    int remaining = marketEngine.getSellCooldownRemaining(item.id());
+                    if (remaining > 0) {
+                        return CompletableFuture.completedFuture(
+                                TransactionResult.error("High-value item sell cooldown active for " + item.material().name()
+                                        + ": " + remaining + " ticks remaining"));
+                    }
+                }
+                Integer cap = antiDump.maxSellPerItemPerTick();
+                if (cap != null) {
+                    int tickSell = marketEngine.getTickSellVolume(item.id());
+                    if (tickSell + cartItem.quantity() > cap) {
+                        return CompletableFuture.completedFuture(
+                                TransactionResult.error("Sell cap exceeded for " + item.material().name()
+                                        + ": max " + cap + " per tick. Try again shortly."));
+                    }
+                }
+            }
+        }
+
+
+        // All pre-validation passed. Now process atomically:
+        //   1. DB write first (source of truth for all transactions)
+        //   2. Money movement (withdraw or deposit net difference)
+        //   3. Sell-item removals (only after DB write succeeds)
+        //   4. Buy-item additions (only after DB write + money succeeds)
+        //
+        // This ordering ensures the economy ledger is always consistent:
+        // - DB failure → nothing changes (inventory intact, no money moved)
+        // - Money failure → DB record is reverted (DB transaction rolled back), no inventory changes
+        // - Inventory failure after DB+Money → items may be out of sync but economy record is clean
+        final BigDecimal finalNetCost = netCost;
+        final BigDecimal finalTotalSellProfit = totalSellProfit;
+        final BigDecimal finalTotalSellTax = totalSellTax;
+        return databaseManager.supplyAsync(() -> {
+            List<CartExecution> executions = persistCartLedger(
+                    playerId, cart, finalNetCost, finalTotalSellProfit, finalTotalSellTax);
+
+            // Phase 2: Net money movement — must succeed before inventory is touched
+            if (finalNetCost.compareTo(BigDecimal.ZERO) > 0) {
+                if (!withdraw(player, finalNetCost.doubleValue())) {
+                    plugin.getLogger().warning("[Auto-Tune] Failed to withdraw cart net cost "
+                            + finalNetCost + " from " + player.getName() + ". Cart ledger was recorded.");
+                    return TransactionResult.economyError();
+                }
+            } else if (finalNetCost.compareTo(BigDecimal.ZERO) < 0) {
+                if (!deposit(player, finalNetCost.abs().doubleValue())) {
+                    plugin.getLogger().warning("[Auto-Tune] Failed to deposit cart earnings "
+                            + finalNetCost.abs() + " to " + player.getName() + ". Cart ledger was recorded.");
+                    return TransactionResult.economyError();
+                }
+            }
+
+            // Phase 3: Remove sell items — only after money settled.
+            // If removal fails for any item, skip Phase 4 (don't give buy items) and refund
+            // the buy cost. The player ends up with their original sell items back plus
+            // the net money difference — acceptable outcome vs. giving them free items.
+            boolean anySellRemovalFailed = false;
+            for (CartItem cartItem : cart) {
+                if (!cartItem.isBuying()) {
+                    if (!removeItems(player, cartItem.shopItem(), cartItem.quantity())) {
+                        anySellRemovalFailed = true;
+                        plugin.getLogger().warning("[Auto-Tune] Failed to remove sell cart item "
+                                + cartItem.shopItem().getDisplayNameOrMaterial() + " from "
+                                + player.getName() + " after payment. Admin review needed.");
+                    }
+                }
+            }
+
+            // Phase 4: Give buy items — only if ALL sell items were successfully removed.
+            if (!anySellRemovalFailed) {
+                for (CartItem cartItem : cart) {
+                    if (cartItem.isBuying()) {
+                        giveItems(player, cartItem.shopItem(), cartItem.quantity());
+                    }
+                }
+            } else {
+                // Sell items couldn't be fully removed — refund whatever money was
+                // moved in Phase 2 to leave the player in a consistent state.
+                // This doesn't recover items already removed, but it stops the
+                // player from gaining money from a partially-failed cart.
+                if (finalNetCost.compareTo(BigDecimal.ZERO) > 0) {
+                    // netCost > 0: player was charged for buys — refund it
+                    deposit(player, finalNetCost.doubleValue());
+                } else if (finalNetCost.compareTo(BigDecimal.ZERO) < 0) {
+                    // netCost < 0: player received sell earnings — reclaim them
+                    // (some sell items were already removed and can't be restored)
+                    withdraw(player, finalNetCost.abs().doubleValue());
+                }
+                // netCost == 0: nothing to refund
+                return TransactionResult.error("Failed to remove cart sell items");
+            }
+
+            for (CartExecution execution : executions) {
+                Transaction transaction = execution.transaction();
+                playerStreakService.onTransaction(transaction.playerUuid());
+                priceReporter.recordTransaction(execution.cartItem().shopItem(), transaction);
+                if (execution.cartItem().isBuying()) {
+                    marketEngine.recordBuy(execution.cartItem().shopItem().id(), execution.cartItem().quantity());
+                } else {
+                    marketEngine.recordSell(execution.cartItem().shopItem().id(), execution.cartItem().quantity());
+                }
+            }
+
+            treasuryService.collectTaxAmount(totalBuyTax);
+            treasuryService.collectTaxAmount(totalSellTax);
+
+            // Award badges for cart transactions
+            if (finalNetCost.compareTo(BigDecimal.ZERO) > 0) {
+                badgeService.onBuy(playerId);
+            } else if (finalNetCost.compareTo(BigDecimal.ZERO) < 0) {
+                badgeService.onSell(playerId, finalNetCost.abs());
+            }
+
+            // Set cooldowns for Epic/Legendary sell items
+            AutoTuneConfig.WhaleAntiDumpConfig antiDumpConf = configManager.getConfig().whaleAntiDump();
+            if (antiDumpConf.enabled()) {
+                Integer cooldownTicks = antiDumpConf.highValueSellCooldownTicks();
+                if (cooldownTicks != null) {
+                    for (CartItem cartItem : cart) {
+                        if (!cartItem.isBuying()) {
+                            ShopItem cartShopItem = cartItem.shopItem();
+                            if (cartShopItem.effectiveTier() != ItemTier.COMMON
+                                    && cartShopItem.effectiveTier() != ItemTier.UNCOMMON 
+                                    && cartShopItem.effectiveTier() != ItemTier.RARE) {
+                                marketEngine.setSellCooldown(cartShopItem.id(), cooldownTicks);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return TransactionResult.success(
+                    finalNetCost.compareTo(BigDecimal.ZERO) > 0 ? TransactionType.BUY : TransactionType.SELL,
+                    cart.size(),
+                    finalNetCost.abs()
+            );
+        });
+    }
+
+    private List<CartExecution> persistCartLedger(
+            java.util.UUID playerId,
+            List<CartItem> cart,
+            BigDecimal netCost,
+            BigDecimal totalSellProfit,
+            BigDecimal totalSellTax
+    ) {
+        List<CartExecution> executions = new ArrayList<>(cart.size());
+        BigDecimal sellTaxRemaining = totalSellTax;
+        BigDecimal sellGrossRemaining = totalSellProfit;
+
+        for (CartItem cartItem : cart) {
+            BigDecimal actualPricePerUnit = cartItem.isBuying()
+                    ? marketEngine.getBuyPrice(cartItem.shopItem(), cartItem.quantity())
+                    : marketEngine.getSellPrice(cartItem.shopItem(), cartItem.quantity());
+            BigDecimal actualTotalPrice = actualPricePerUnit.multiply(BigDecimal.valueOf(cartItem.quantity()));
+            BigDecimal recordedTotal = actualTotalPrice;
+
+            if (!cartItem.isBuying() && totalSellProfit.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal itemTax = actualTotalPrice.compareTo(sellGrossRemaining) >= 0
+                        ? sellTaxRemaining
+                        : actualTotalPrice.multiply(totalSellTax)
+                                .divide(totalSellProfit, 2, RoundingMode.HALF_UP)
+                                .min(sellTaxRemaining);
+                recordedTotal = actualTotalPrice.subtract(itemTax);
+                sellTaxRemaining = sellTaxRemaining.subtract(itemTax);
+                sellGrossRemaining = sellGrossRemaining.subtract(actualTotalPrice);
+            }
+
+            Transaction transaction = Transaction.builder()
+                    .playerUuid(playerId)
+                    .itemId(cartItem.shopItem().id())
+                    .type(cartItem.isBuying() ? TransactionType.BUY : TransactionType.SELL)
+                    .amount(cartItem.quantity())
+                    .pricePerUnit(actualPricePerUnit)
+                    .totalPrice(recordedTotal)
+                    .build();
+            executions.add(new CartExecution(cartItem, transaction));
+        }
+
+        databaseManager.getJdbi().useTransaction(handle -> {
+            for (CartExecution execution : executions) {
+                transactionRepository.insert(handle, execution.transaction());
+            }
+            playerRepository.addTransaction(
+                    handle,
+                    playerId,
+                    netCost.abs(),
+                    netCost.compareTo(BigDecimal.ZERO) > 0);
+        });
+        return executions;
+    }
+
+    private record CartExecution(CartItem cartItem, Transaction transaction) {
+    }
+
+    public CompletableFuture<PlayerData> getPlayerDataAsync(@NotNull Player player) {
+        java.util.UUID playerId = player.getUniqueId();
+        String playerName = player.getName();
+        return databaseManager.supplyAsync(() ->
+                playerRepository.getOrCreate(playerId, playerName));
+    }
+
+    public PlayerData getPlayerData(@NotNull Player player) {
+        return playerRepository.getOrCreate(player.getUniqueId(), player.getName());
+    }
+
+    private int countEmptySlots(@NotNull Player player) {
+        return callOnMain(() -> {
+            int count = 0;
+            for (var item : player.getInventory().getStorageContents()) {
+                if (item == null || item.getType().isAir()) {
+                    count++;
+                }
+            }
+            return count;
+        }, "count inventory slots");
+    }
+
+    public int countItems(@NotNull Player player, @NotNull ShopItem shopItem) {
+        return callOnMain(() -> {
+            int count = 0;
+            for (var item : player.getInventory().getStorageContents()) {
+                if (item != null && ItemSerializer.matchesItem(item, shopItem.itemHash())) {
+                    count += item.getAmount();
+                }
+            }
+            return count;
+        }, "count inventory items");
+    }
+
+    private void giveItems(@NotNull Player player, @NotNull ShopItem shopItem, int amount) {
+        callOnMain(() -> {
+            giveItemsOnMain(player, shopItem, amount);
+            return null;
+        }, "give shop items");
+    }
+
+    private void giveItemsOnMain(@NotNull Player player, @NotNull ShopItem shopItem, int amount) {
+        int remaining = amount;
+        int maxStack = new ItemStack(shopItem.material()).getMaxStackSize();
+
+        while (remaining > 0) {
+            int stackSize = Math.min(remaining, maxStack);
+            ItemStack item;
+            if (shopItem.itemData() != null) {
+                ItemStack template = ItemSerializer.tryDeserializeItemStack(shopItem.itemData());
+                if (template != null) {
+                    item = template.clone();
+                    item.setAmount(stackSize);
+                } else {
+                    item = new ItemStack(shopItem.material(), stackSize);
+                }
+            } else {
+                item = new ItemStack(shopItem.material(), stackSize);
+            }
+
+            Map<Integer, ItemStack> overflow = player.getInventory().addItem(item);
+
+            if (!overflow.isEmpty()) {
+                for (var dropped : overflow.values()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), dropped);
+                }
+            }
+
+            remaining -= stackSize;
+        }
+    }
+
+    private boolean removeItems(@NotNull Player player, @NotNull ShopItem shopItem, int amount) {
+        return callOnMain(() -> removeItemsOnMain(player, shopItem, amount), "remove shop items");
+    }
+
+    private boolean removeItemsOnMain(@NotNull Player player, @NotNull ShopItem shopItem, int amount) {
+        int remaining = amount;
+        // Iterate the ACTUAL inventory contents (not a snapshot) and modify in-place.
+        // getStorageContents() returns a direct reference to the slot array in Paper,
+        // so modifications here affect the player's actual inventory immediately.
+        ItemStack[] contents = player.getInventory().getStorageContents();
+
+        for (int i = 0; i < contents.length && remaining > 0; i++) {
+            ItemStack item = contents[i];
+            if (item != null && ItemSerializer.matchesItem(item, shopItem.itemHash())) {
+                int toRemove = Math.min(remaining, item.getAmount());
+                if (toRemove >= item.getAmount()) {
+                    contents[i] = null;  // slot fully consumed — modify in-place
+                } else {
+                    item.setAmount(item.getAmount() - toRemove);  // partial — modify in-place
+                }
+                remaining -= toRemove;
+            }
+        }
+        // No setStorageContents call: modifications above were made directly to the
+        // live inventory slot array. Calling setStorageContents would overwrite any
+        // items the player received between our first read and this write — the same
+        // stale-snapshot bug fixed in sellInventory().
+        return remaining == 0;
+    }
+
+    private <T> T callOnMain(Callable<T> callable, String operation) {
+        if (Bukkit.isPrimaryThread()) {
+            try {
+                return callable.call();
+            } catch (Exception e) {
+                throw new RuntimeException(operation + " failed", e);
+            }
+        }
+
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<T> result = new AtomicReference<>();
+        AtomicReference<Exception> error = new AtomicReference<>();
+        Bukkit.getScheduler().runTask(com.noahblclarkson.autotune.AutoTune.getInstance(), () -> {
+            try {
+                result.set(callable.call());
+            } catch (Exception e) {
+                error.set(e);
+            } finally {
+                latch.countDown();
+            }
+        });
+
+        try {
+            if (!latch.await(10, TimeUnit.SECONDS)) {
+                throw new RuntimeException(operation + " timed out");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(operation + " interrupted", e);
+        }
+
+        if (error.get() != null) {
+            throw new RuntimeException(operation + " failed", error.get());
+        }
+        return result.get();
+    }
+
+    public record TransactionResult(
+            boolean success,
+            String errorMessage,
+            TransactionType type,
+            int amount,
+            BigDecimal totalPrice
+    ) {
+        public static TransactionResult success(TransactionType type, int amount, BigDecimal total) {
+            return new TransactionResult(true, null, type, amount, total);
+        }
+
+        public static TransactionResult insufficientFunds(BigDecimal required) {
+            return new TransactionResult(false, "Insufficient funds. Required: " + required, null, 0, required);
+        }
+
+        public static TransactionResult insufficientItems(int had, int required) {
+            return new TransactionResult(false, "Insufficient items. You have " + had + ", need " + required, null, had, BigDecimal.ZERO);
+        }
+
+        public static TransactionResult insufficientSpace() {
+            return new TransactionResult(false, "Not enough inventory space", null, 0, BigDecimal.ZERO);
+        }
+
+        public static TransactionResult economyError() {
+            return new TransactionResult(false, "Economy transaction failed", null, 0, BigDecimal.ZERO);
+        }
+
+        public static TransactionResult error(String message) {
+            return new TransactionResult(false, message, null, 0, BigDecimal.ZERO);
+        }
+
+        /**
+         * Creates a failure result when a transaction doesn't meet the minimum size requirement.
+         * @param type BUY or SELL
+         * @param minimumQty minimum quantity required
+         * @param minimumValue minimum total value required (displayed if > 0)
+         * @param attemptedQty quantity the player tried to transact
+         */
+        public static TransactionResult belowMinimum(TransactionType type, int minimumQty, double minimumValue, int attemptedQty) {
+            String msg;
+            if (minimumValue > 0 && attemptedQty * 0.01 < minimumValue) {
+                // Value threshold is the binding constraint
+                msg = String.format("Transaction too small. Minimum value: $%.2f", minimumValue);
+            } else {
+                msg = String.format("Transaction too small. Minimum quantity: %d", minimumQty);
+            }
+            return new TransactionResult(false, msg, type, attemptedQty, BigDecimal.ZERO);
+        }
+    }
+}

@@ -1,14 +1,16 @@
 # Auto-Tune
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/Unprotesting/Auto-Tune/Java%20CI%20with%20Maven)
-![GitHub issues](https://img.shields.io/github/issues/Unprotesting/Auto-Tune)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/Unprotesting/Auto-Tune)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/Unprotesting/Auto-Tune)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/2f6d82bd12af4ce490959be74d1b6149)](https://app.codacy.com/gh/Unprotesting/Auto-Tune?utm_source=github.com&utm_medium=referral&utm_content=Unprotesting/Auto-Tune&utm_campaign=Badge_Grade_Settings)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/noahbclarkson/Auto-Tune/gradle.yml?branch=rewrite-2)
+![GitHub issues](https://img.shields.io/github/issues/noahbclarkson/Auto-Tune)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/noahbclarkson/Auto-Tune)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/noahbclarkson/Auto-Tune)
 [![Discord](https://img.shields.io/discord/748222485975269508.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/bNVVPe5)
 
->A Powerful Minecraft Automatic-Economy Plugin for ```1.20.4``` with many features!
-<img src="https://github.com/Unprotesting/Auto-Tune/blob/master/.github/AtLogo.png?raw=true" width="100"/>
+> **Active development is on the `rewrite-2` branch.** The `main` branch contains the stable release.
+> The rewrite-2 branch is a near-complete rebuild of Auto-Tune with a redesigned market engine,
+> Guice DI, Javalin web server, bundled Next.js dashboard, enchantment pricing, loan circuit breakers,
+> and a cross-server price solver. Not all features are complete — see PLAN.md for status.
+<img src="https://github.com/noahbclarkson/Auto-Tune/blob/rewrite-2/.github/AtLogo.png?raw=true" width="100"/>
 
 ## :star: Overview
 
@@ -32,6 +34,125 @@
 - :ballot_box_with_check: ```Tutorial to help new players```
 - :ballot_box_with_check: ```And much, much more...```
 
+## :chart_with_upwards_trend: Market Algorithm
+
+Auto-Tune uses a supply-and-demand pricing model with asymmetric spreads, player scaling, and volume-based adjustments. Every configurable interval (default: 5 minutes / 6000 ticks), the **Market Engine** recalculates all item prices and spreads.
+
+### Price Updates
+
+1. **Trade window**: All transactions within a configurable window (default: 7 days) are collected. Each transaction is **recency-weighted** — recent trades count more and older trades fade linearly to zero:
+   ```
+   weight = max(0, 1.0 - age_ms / window_ms)
+   weightedAmount = transaction_amount * weight
+   ```
+
+2. **Trade ratio**: Net buying vs selling pressure is computed:
+   ```
+   tradeRatio = (weightedBuys - weightedSells) / (weightedBuys + weightedSells)
+   ```
+   Range: `[-1.0, +1.0]`. Positive = buying pressure, negative = selling pressure.
+
+3. **Player scaling**: Price changes are damped by the online player count using a `tanh` curve:
+   ```
+   playerScaling = tanh(onlineCount * atanh(0.99) / fullEffectPlayers)
+   ```
+   At the configured `fullEffectPlayers` (default: 10), scaling reaches ~99%. At 0 players, no price changes occur.
+
+4. **Price change**: The final price change per tick is capped:
+   ```
+   priceChange = currentPrice * tradeRatio * playerScaling * (maxPriceChangePercent / 100)
+   ```
+   Default cap: **1.5% per tick**. There are no hard min/max price bounds — prices are purely market-driven.
+
+### BPD / SPD Spread System
+
+Buy and sell prices diverge from the base price through independent **Buy Price Deviation (BPD)** and **Sell Price Deviation (SPD)** values:
+
+```
+buyPrice  = basePrice * (1 + BPD)
+sellPrice = basePrice * (1 - SPD)
+```
+
+The spread calculation applies four adjustments in sequence:
+
+1. **Base spread** (default: 0.20 → split 0.10 / 0.10):
+   ```
+   bpd = baseSpread / 2
+   spd = baseSpread / 2
+   ```
+
+2. **Volume imbalance** — shifts spread toward the dominant trade direction:
+   ```
+   imbalance = (buyRatio - 0.5) * 2.0
+   bpd += max(0,  imbalance) * halfSpread * volumeImpact
+   spd += max(0, -imbalance) * halfSpread * volumeImpact
+   ```
+   Heavy buying → BPD widens (buying gets more expensive). Heavy selling → SPD widens (selling becomes less profitable).
+
+3. **Liquidity reduction** — frequently traded items get tighter spreads:
+   ```
+   liquidityReduction = 1.0 / (1.0 + totalWeightedVolume * liquidityCoeff)
+   bpd *= liquidityReduction
+   spd *= liquidityReduction
+   ```
+
+4. **Player count reduction** — more players → tighter spreads:
+   ```
+   playerReduction = 1.0 - playerImpact * playerScaling
+   bpd *= playerReduction
+   spd *= playerReduction
+   ```
+
+5. **Global volume multiplier** — a z-score analysis across 10 equal time buckets within the trade window:
+   - `|z| <= 1`: multiplier = 1.0 (normal activity)
+   - `z > 1` (high activity): multiplier drops toward 0.8 (tighter spreads)
+   - `z < -1` (low activity): multiplier rises toward 1.3 (wider spreads)
+
+### Price Trends
+
+Based on the last 10 price history entries:
+- **UP**: price increased > 0.5%
+- **DOWN**: price decreased > 0.5%
+- **STABLE**: change within ±0.5%
+
+### Economy Metrics
+
+Captured every 5 minutes as snapshots:
+
+| Metric | Calculation |
+|--------|-------------|
+| **GDP** | Sum of all transaction totals in the last 24 hours |
+| **Inflation** | Average price change across all items (> 1% = "High Inflation", < -1% = "Deflation") |
+| **Total Debt** | Sum of all active loan balances |
+| **Debt Per Capita** | Total debt / online player count |
+| **Transaction Volume** | Total trade volume in the last 24 hours |
+
+### Loan System
+
+- Interest rate: `baseRate * (1 + (500 - creditScore) / 1000)` when credit score modifier is enabled
+- Compounds every 24 hours (configurable)
+- Max loan amount: player's total traded value × `maxLoanMultiplier` (default: 2.0)
+- Defaulting deducts credit score points (default: 50)
+
+### Default Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `update-interval` | 6000 ticks (5 min) | Price recalculation frequency |
+| `max-price-change-percent` | 1.5% | Max base price change per tick |
+| `trade-window-days` | 7 | Time window for trade analysis |
+| `base-spread` | 0.20 (20%) | Total spread split between BPD/SPD |
+| `spread.volume-impact` | 0.8 | Imbalance effect on spread |
+| `spread.player-impact` | 0.6 | Player count effect on spread |
+| `spread.liquidity-coeff` | 0.01 | High-volume spread reduction |
+| `spread.liquidity-full-effect-traders` | 10 | Traders needed for full liquidity effect |
+| `player-scaling.full-effect-players` | 10 | Player count for ~99% spread scaling |
+| `loans.base-interest-rate` | 0.05 (5%) | Loan interest per compound |
+| `loans.compound-interval-hours` | 24 | Hours between interest compounds |
+| `loans.debt-gdp-circuit-breaker-ratio` | 10.0 | Pauses interest when debt exceeds GDP × this |
+
+> The `scripts/market_curves.py` script generates visualizations of all these curves and relationships.
+
 ## :question: Why use Auto-Tune
 
 Auto-Tune identifies and fixes a significant problem in Minecraft servers that has remained underdeveloped and ignored for too long. This issue is the poor implementation of an economy and markets into Minecraft.
@@ -44,13 +165,13 @@ Not only does this assist administrators in managing a server's economy, but it 
 
 ### Auto-Tune Default Shop Setup
 
-<img src="https://github.com/Unprotesting/Auto-Tune/blob/master/.github/Auto-Tune-Shop.gif?raw=true" width="500"/>
+<img src="https://github.com/noahbclarkson/Auto-Tune/blob/rewrite-2/.github/Auto-Tune-Shop.gif?raw=true" width="500"/>
 
 ## :computer: Usage
 
 ### :clipboard: Server setup
 
-1. Download the latest version of Auto-Tune from the [releases](https://github.com/Unprotesting/Auto-Tune/releases) tab on Github. Development versions can be found under the [actions](https://github.com/Unprotesting/Auto-Tune/actions) tab on Github (where each commit produces a build artifact which is the latest version of the plugin).
+1. Download the latest version of Auto-Tune from the [releases](https://github.com/noahbclarkson/Auto-Tune/releases) tab on Github. Development versions can be found under the [actions](https://github.com/noahbclarkson/Auto-Tune/actions) tab on Github (where each commit produces a build artifact which is the latest version of the plugin).
 2. Please use [Paper](https://papermc.io/) or a fork of Paper as your server software.
 3. Make sure the required dependencies are installed ([Vault](https://www.spigotmc.org/resources/vault.34315/) and an economy plugin such as [Essentials](https://essentialsx.net))
 4. Put the ```.jar``` files in the ```/plugins``` folder of your server.
@@ -60,10 +181,37 @@ Not only does this assist administrators in managing a server's economy, but it 
 
 ### :hammer: Building from source
 
-1. Clone the project to a local directory using ```git clone https://github.com/Unprotesting/Auto-Tune.git```.
-2. Run ```cd Auto-Tune``` to enter the Auto-Tune folder.
-3. Run ```./gradlew build``` to build the project using Gradle.
-4. Navigate to the ```/builds/libs/``` directory and ```Auto-Tune-0.x.x``` will be there if the build was successful.
+> **Note:** This project targets **Java 21**. The build requires a full JDK (not JRE).
+
+1. Clone the project (use `rewrite-2` branch for latest development):
+   ```bash
+   git clone -b rewrite-2 https://github.com/noahbclarkson/Auto-Tune.git
+   cd Auto-Tune
+   ```
+2. Install a Java 21 JDK (e.g. [Eclipse Temurin](https://adoptium.net/) or your system package manager).
+3. Build:
+   ```bash
+   ./gradlew build   # full plugin JAR with bundled web dashboard
+   ./gradlew build -PskipWeb=true   # backend-only build, skips npm/Next.js
+   ```
+   The full plugin JAR bundles the web dashboard automatically (Next.js static export -> shadow JAR).
+   Full builds require Node.js 22+ for the dashboard export.
+4. For Rust components (API server, price solver, market simulation):
+   ```bash
+   cargo build --release    # from the repo root
+   ```
+
+### :globe_with_meridians: Web Dashboard & Public Site
+
+The plugin bundles a **Next.js dashboard** (`web/`) served by the built-in Javalin web server at `http://your-server:8989`. It shows live prices, trends, GDP, loans, and more with WebSocket updates.
+
+For server admins, the **public site** (`public-site/`) is a standalone frontend with:
+- **True Prices** - cross-server price discovery via least-squares optimization
+- **Exchange Rates** - per-server deviation from the global baseline
+- **Interactive Simulator** - experiment with market parameters before changing config
+- **Server Registry** - inspect registered servers and their submission status
+
+Deploy the public site separately; see `public-site/README.md`.
 
 ### :sparkles: Contributing to the project
 
@@ -73,6 +221,4 @@ Feel free to create a fork of the repository and open a pull request to contribu
 
 > [![Discord](https://img.shields.io/discord/748222485975269508.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/bNVVPe5)
 >
-> :email: *<unprotesting.email@gmail.com>*
->
-> :calling: **Unprotesting#3616**
+> Report bugs via [GitHub Issues](https://github.com/noahbclarkson/Auto-Tune/issues).

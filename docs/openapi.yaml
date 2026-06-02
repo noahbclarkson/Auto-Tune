@@ -1,0 +1,350 @@
+openapi: 3.1.0
+info:
+  title: Auto-Tune Price API
+  description: Cross-server price discovery API for Auto-Tune servers and the public site.
+  version: 1.0.0
+servers:
+  - url: https://prices.auto-tune.io
+    description: Production
+  - url: http://localhost:8080
+    description: Local development
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: API is healthy
+  /api/servers/register:
+    post:
+      summary: Register a new server
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterServerRequest'
+      responses:
+        '200':
+          description: Server registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterServerResponse'
+  /api/servers:
+    get:
+      summary: List registered servers
+      responses:
+        '200':
+          description: Registered servers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Server'
+  /api/servers/{server_id}/heartbeat:
+    post:
+      summary: Update server heartbeat
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ServerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HeartbeatRequest'
+      responses:
+        '200':
+          description: Heartbeat accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeartbeatResponse'
+  /api/servers/{server_id}/prices:
+    post:
+      summary: Submit canonical item ratio matrix
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ServerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitPricesRequest'
+      responses:
+        '200':
+          description: Prices accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitPricesResponse'
+        '422':
+          description: Invalid ratio matrix
+  /api/prices/true:
+    get:
+      summary: Get consensus true prices
+      responses:
+        '200':
+          description: True prices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TruePricesResponse'
+  /api/prices/history/{item}:
+    get:
+      summary: Get true-price history for one canonical item
+      parameters:
+        - name: item
+          in: path
+          required: true
+          schema:
+            type: string
+          example: dirt
+      responses:
+        '200':
+          description: Price history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceHistoryResponse'
+  /api/servers/exchange-rates:
+    get:
+      summary: Get latest server exchange rates
+      responses:
+        '200':
+          description: Exchange rates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeRatesResponse'
+  /api/servers/{server_id}/exchange-rate-history:
+    get:
+      summary: Get exchange-rate history for one server
+      parameters:
+        - $ref: '#/components/parameters/ServerId'
+      responses:
+        '200':
+          description: Exchange-rate history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeRateHistoryResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    ServerId:
+      name: server_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    RegisterServerRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+    RegisterServerResponse:
+      type: object
+      required: [server_id, api_key]
+      properties:
+        server_id:
+          type: string
+          format: uuid
+        api_key:
+          type: string
+    HeartbeatRequest:
+      type: object
+      properties:
+        player_count:
+          type: integer
+        plugin_version:
+          type: string
+    HeartbeatResponse:
+      type: object
+      required: [ok, server_id, last_seen]
+      properties:
+        ok:
+          type: boolean
+        server_id:
+          type: string
+          format: uuid
+        last_seen:
+          type: string
+          format: date-time
+    SubmitPricesRequest:
+      type: object
+      required: [item_names, ratio_matrix, player_count]
+      properties:
+        item_names:
+          type: array
+          description: Canonical item IDs, for example lower-case Bukkit material names.
+          items:
+            type: string
+          example: [dirt, stone, iron_ingot]
+        display_names:
+          type: array
+          description: Optional human-facing names ignored by the solver.
+          items:
+            type: string
+        ratio_matrix:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+          example:
+            - [1, 0.5]
+            - [2, 1]
+        player_count:
+          type: integer
+    SubmitPricesResponse:
+      type: object
+      required: [success, items_processed]
+      properties:
+        success:
+          type: boolean
+        items_processed:
+          type: integer
+    TruePriceEntry:
+      type: object
+      required: [item, price, confidence, servers, anchored]
+      properties:
+        item:
+          type: string
+        price:
+          type: number
+        confidence:
+          type: number
+        servers:
+          type: integer
+        anchored:
+          type: boolean
+        last_updated:
+          type: string
+          format: date-time
+          nullable: true
+    TruePricesResponse:
+      type: object
+      required: [prices]
+      properties:
+        prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/TruePriceEntry'
+        last_updated:
+          type: string
+          format: date-time
+          nullable: true
+    PriceHistoryPoint:
+      type: object
+      required: [price, server_count, timestamp]
+      properties:
+        price:
+          type: number
+        server_count:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+    PriceHistoryResponse:
+      type: object
+      required: [item, history]
+      properties:
+        item:
+          type: string
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceHistoryPoint'
+    Server:
+      type: object
+      required: [id, name, player_count, created_at, last_seen]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        player_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        last_seen:
+          type: string
+          format: date-time
+        last_submission_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_submission_item_count:
+          type: integer
+          nullable: true
+        plugin_version:
+          type: string
+          nullable: true
+    ExchangeRateEntry:
+      type: object
+      required: [server_id, name, rate, player_count, last_seen]
+      properties:
+        server_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        rate:
+          type: number
+        player_count:
+          type: integer
+        last_seen:
+          type: string
+          format: date-time
+    ExchangeRatesResponse:
+      type: object
+      required: [base, rates]
+      properties:
+        base:
+          type: string
+        rates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExchangeRateEntry'
+    ExchangeRateHistoryPoint:
+      type: object
+      required: [rate, player_count, snapshot_at]
+      properties:
+        rate:
+          type: number
+        player_count:
+          type: integer
+        snapshot_at:
+          type: string
+          format: date-time
+    ExchangeRateHistoryResponse:
+      type: object
+      required: [server_id, history]
+      properties:
+        server_id:
+          type: string
+          format: uuid
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExchangeRateHistoryPoint'
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

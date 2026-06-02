@@ -1,0 +1,226 @@
+//! Server registration and listing endpoints.
+//!
+//! POST /api/servers/register  — register a new server, receive API key
+//! GET  /api/servers           — list all registered servers
+
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse, Responder};
+use chrono::{DateTime, Utc};
+use sqlx::{PgPool, Row};
+use uuid::Uuid;
+
+use crate::{
+    auth::{generate_api_key, hash_api_key, AuthenticatedServer},
+    models::{
+        ErrorResponse, HeartbeatRequest, HeartbeatResponse, RegisterServerRequest,
+        RegisterServerResponse, Server,
+    },
+    rate_limit::{client_ip, RateLimitResult, RateLimiter},
+};
+
+/// POST /api/servers/register
+pub async fn register_server(
+    pool: web::Data<PgPool>,
+    body: web::Json<RegisterServerRequest>,
+    req: HttpRequest,
+    limiter: web::Data<RateLimiter>,
+) -> impl Responder {
+    let ip = client_ip(&req).unwrap_or_else(|| "unknown".to_owned());
+    if let RateLimitResult::Limited { retry_after_secs } = limiter.check(&ip).await {
+        return HttpResponse::TooManyRequests()
+            .insert_header(("retry-after", retry_after_secs.to_string()))
+            .json(ErrorResponse::new(format!(
+                "rate limit exceeded, retry after {} seconds",
+                retry_after_secs
+            )));
+    }
+    let name = body.name.trim().to_owned();
+
+    if name.is_empty() || name.len() > 128 {
+        return HttpResponse::BadRequest().json(ErrorResponse::new("name must be 1–128 chars"));
+    }
+
+    let raw_key = generate_api_key();
+    let key_hash = hash_api_key(&raw_key);
+
+    let result =
+        sqlx::query("INSERT INTO servers (name, api_key_hash) VALUES ($1, $2) RETURNING id")
+            .bind(&name)
+            .bind(&key_hash)
+            .fetch_one(pool.get_ref())
+            .await;
+
+    match result {
+        Ok(row) => {
+            let id: Uuid = sqlx::Row::try_get(&row, "id").unwrap_or_else(|_| Uuid::new_v4());
+            tracing::info!(server_id = %id, name, "server registered");
+            HttpResponse::Created().json(RegisterServerResponse {
+                server_id: id,
+                api_key: raw_key,
+            })
+        }
+        Err(e) if is_unique_violation(&e) => HttpResponse::Conflict()
+            .json(ErrorResponse::new("a server with that name already exists")),
+        Err(e) => {
+            tracing::error!("DB error registering server: {e}");
+            HttpResponse::InternalServerError().json(ErrorResponse::new("internal server error"))
+        }
+    }
+}
+
+/// GET /api/servers
+pub async fn list_servers(pool: web::Data<PgPool>) -> impl Responder {
+    let result = sqlx::query(
+        r#"
+        SELECT
+            s.id,
+            s.name,
+            s.player_count,
+            s.created_at,
+            s.last_seen,
+            s.plugin_version,
+            ps.submitted_at AS last_submission_at,
+            COALESCE(array_length(ps.item_names, 1), 0) AS last_submission_item_count
+        FROM servers s
+        LEFT JOIN LATERAL (
+            SELECT submitted_at, item_names
+            FROM price_submissions
+            WHERE server_id = s.id
+            ORDER BY submitted_at DESC
+            LIMIT 1
+        ) ps ON TRUE
+        ORDER BY s.last_seen DESC
+        "#,
+    )
+    .fetch_all(pool.get_ref())
+    .await;
+
+    match result {
+        Ok(rows) => {
+            use sqlx::Row;
+            let mut servers: Vec<Server> = Vec::new();
+            for r in rows {
+                let id = match r.try_get::<Uuid, _>("id") {
+                    Ok(v) => v,
+                    Err(e) => {
+                        tracing::error!("skipping corrupt row in list_servers (id): {e}");
+                        continue;
+                    }
+                };
+
+                servers.push(Server {
+                    id,
+                    name: r.try_get::<String, _>("name").unwrap_or_default(),
+                    player_count: r.try_get::<i32, _>("player_count").unwrap_or(0),
+                    created_at: r
+                        .try_get::<DateTime<Utc>, _>("created_at")
+                        .unwrap_or_else(|_| Utc::now()),
+                    last_seen: r
+                        .try_get::<DateTime<Utc>, _>("last_seen")
+                        .unwrap_or_else(|_| Utc::now()),
+                    last_submission_at: r
+                        .try_get::<Option<DateTime<Utc>>, _>("last_submission_at")
+                        .ok()
+                        .flatten(),
+                    last_submission_item_count: r
+                        .try_get::<Option<i32>, _>("last_submission_item_count")
+                        .ok()
+                        .flatten(),
+                    plugin_version: r
+                        .try_get::<Option<String>, _>("plugin_version")
+                        .ok()
+                        .flatten(),
+                });
+            }
+            HttpResponse::Ok().json(servers)
+        }
+        Err(e) => {
+            tracing::error!("DB error listing servers: {e}");
+            HttpResponse::InternalServerError().json(ErrorResponse::new("internal server error"))
+        }
+    }
+}
+
+fn is_unique_violation(e: &sqlx::Error) -> bool {
+    if let sqlx::Error::Database(db_err) = e {
+        return db_err.code().map(|c| c == "23505").unwrap_or(false);
+    }
+    false
+}
+
+/// POST /api/servers/:id/heartbeat
+///
+/// Servers call this periodically to signal they are still alive. Updates the
+/// last_seen timestamp and optionally refreshes the player count.
+///
+/// The auth middleware validates the API key and injects AuthenticatedServer.
+/// We additionally verify the path ID matches the authenticated server ID.
+pub async fn heartbeat(
+    pool: web::Data<PgPool>,
+    path: web::Path<Uuid>,
+    req: HttpRequest,
+    body: web::Json<HeartbeatRequest>,
+) -> impl Responder {
+    let auth = match req.extensions().get::<AuthenticatedServer>().cloned() {
+        Some(a) => a,
+        None => {
+            return HttpResponse::Unauthorized()
+                .json(ErrorResponse::new("authentication required"));
+        }
+    };
+
+    let path_server_id = path.into_inner();
+    if auth.server_id != path_server_id {
+        return HttpResponse::Forbidden().json(ErrorResponse::new(
+            "API key does not match the server ID in the path",
+        ));
+    }
+
+    let player_count = body.player_count;
+    let plugin_version = &body.plugin_version;
+
+    // Build the UPDATE query conditionally — only update player_count if provided
+    let result = if let (Some(pc), Some(pv)) = (player_count, plugin_version) {
+        sqlx::query(
+            "UPDATE servers SET last_seen = NOW(), player_count = $1, plugin_version = $2 WHERE id = $3 RETURNING last_seen",
+        )
+        .bind(pc)
+        .bind(pv)
+        .bind(path_server_id)
+        .fetch_one(pool.get_ref())
+        .await
+    } else if let Some(pc) = player_count {
+        sqlx::query("UPDATE servers SET last_seen = NOW(), player_count = $1 WHERE id = $2 RETURNING last_seen")
+            .bind(pc)
+            .bind(path_server_id)
+            .fetch_one(pool.get_ref())
+            .await
+    } else if let Some(pv) = plugin_version {
+        sqlx::query("UPDATE servers SET last_seen = NOW(), plugin_version = $1 WHERE id = $2 RETURNING last_seen")
+            .bind(pv)
+            .bind(path_server_id)
+            .fetch_one(pool.get_ref())
+            .await
+    } else {
+        sqlx::query("UPDATE servers SET last_seen = NOW() WHERE id = $1 RETURNING last_seen")
+            .bind(path_server_id)
+            .fetch_one(pool.get_ref())
+            .await
+    };
+
+    match result {
+        Ok(row) => {
+            let last_seen: DateTime<Utc> = row.try_get("last_seen").unwrap_or_else(|_| Utc::now());
+            tracing::debug!(server_id = %path_server_id, "heartbeat received");
+            HttpResponse::Ok().json(HeartbeatResponse {
+                ok: true,
+                server_id: path_server_id,
+                last_seen,
+            })
+        }
+        Err(e) => {
+            tracing::error!(server_id = %path_server_id, "heartbeat failed: {e}");
+            HttpResponse::InternalServerError()
+                .json(ErrorResponse::new("failed to update heartbeat"))
+        }
+    }
+}

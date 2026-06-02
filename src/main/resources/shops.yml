@@ -1,714 +1,419 @@
-sections:
-  ores:
-    # The display name for the section.
-    display: <b><gold>Natural Resources</gold></b>
-    # The item to use for this section.
-    image: iron_ore
-    # The x and y coordinates for the section.
-    x: 1
-    y: 1
-    # back-enabled: false -> Whether the back to sections button is enabled for this section
-    # The back-enabled option is useful for those who prefer to implement auto-tune through citizens or signs.
-  blocks:
-    display: <b><gold>Blocks</gold></b>
-    image: stone
-    x: 3
-    y: 1
-  food:
-    display: <b><gold>Food</gold></b>
-    image: bread
-    x: 5
-    y: 1
-  farming:
-    display: <b><gold>Farming</gold></b>
-    image: wheat
-    x: 7
-    y: 1
-  tools:
-    display: <b><gold>Tools</gold></b>
-    image: iron_pickaxe
-    x: 2
-    y: 3
-  enchantments:
-    display: <b><gold>Enchantments</gold></b>
-    image: enchanted_book
-    x: 4
-    y: 3
-  other:
-    display: <b><gold>Misc</gold></b>
-    image: music_disc_cat
-    x: 6
-    y: 3
+# ============================================
+# Auto-Tune Default Shop Items
+# ============================================
+# Balanced economy preset for medium servers (10-50 players).
+# Covers all major item categories with a curated selection.
+# Good for most servers - provides enough variety for
+# meaningful price discovery and some arbitrage opportunities.
+#
+# These items are loaded on first run when the database is empty.
+# Prices are starting values only - the market engine
+# adjusts them dynamically based on player trading.
+# ============================================
 
-# Format for shops:
-# diamond: -> The item id
-# price: 400 -> The price of the item
-# sell-price-difference: 25 -> Define a custom sell price difference.
-# max-buy: 12 -> The maximum buys for this item per time period.
-# max-sell: 24 -> The maximum sells for this item per time period.
-# collect-first: player -> Whether the item needs to be collected by the player or server before it can be bought. (Default: none)
-# update-rate: 3 -> Define a custom update rate, 3 is 3x the default time period.
-# locked: true -> Whether the item price is locked.
+items:
+  # === Ores & Minerals ===
+  - material: NETHERITE_INGOT
+    price: 823.5
+    section: ores
+  - material: DIAMOND
+    price: 245.9
+    section: ores
+  - material: ANCIENT_DEBRIS
+    price: 132.9
+    section: ores
+  - material: NETHERITE_SCRAP
+    price: 123.8
+    section: ores
+  - material: EMERALD
+    price: 79.2
+    section: ores
+  - material: GOLD_INGOT
+    price: 45.2
+    section: ores
+  - material: RAW_GOLD
+    price: 45.2
+    section: ores
+  - material: IRON_INGOT
+    price: 9.83
+    section: ores
+  - material: RAW_IRON
+    price: 9.83
+    section: ores
+  - material: AMETHYST_SHARD
+    price: 6.29
+    section: ores
+  - material: GOLD_NUGGET
+    price: 4.25
+    section: ores
+  - material: COAL
+    price: 2.94
+    section: ores
+  - material: LAPIS_LAZULI
+    price: 2.94
+    section: ores
+  - material: COPPER_INGOT
+    price: 1.67
+    section: ores
+  - material: REDSTONE
+    price: 1.67
+    section: ores
+  - material: QUARTZ
+    price: 1.67
+    section: ores
+  - material: RAW_COPPER
+    price: 1.67
+    section: ores
+  - material: IRON_NUGGET
+    price: 0.90
+    section: ores
 
-shops:
-  ores:
-    coal:
-      price: 15
-      max-buy: 80
-      max-sell: 115
-    iron_ingot:
-      price: 17
-      max-buy: 75
-      max-sell: 115
-    copper_ingot:
-      price: 12
-      max-buy: 100
-      max-sell: 200
-    gold_ingot:
-      price: 25
-      max-buy: 64
-      max-sell: 100
-    diamond:
-      price: 400
-      sell-price-difference: 25
-      max-buy: 12
-      max-sell: 24
-      update-rate: 3
-    amethyst_shard:
-      price: 22
-      max-buy: 32
-      max-sell: 50
-    lapis_lazuli:
-      price: 12
-      max-buy: 128
-      max-sell: 256
-    emerald:
-      price: 150
-      max-buy: 16
-      max-sell: 32
-      update-rate: 2
-    quartz:
-      price: 10
-      max-buy: 64
-      max-sell: 150
-    redstone:
-      price: 7.5
-      max-buy: 90
-      max-sell: 175
-    netherite_ingot:
-      price: 5000
-      sell-price-difference: 35
-      max-buy: 1
-      max-sell: 1
-      update-rate: 5
-    glowstone_dust:
-      price: 3.5
-      max-buy: 128
-      max-sell: 200
-  blocks:
-    dirt:
-      price: 0.55
-      sell-price-difference: 12.5
-      max-buy: 512
-      max-sell: 1024
-      volatility: 0.5
-    grass_block:
-      price: 5
-      max-buy: 32
-      max-sell: 64
-    cobblestone:
-      price: 0.95
-      sell-price-difference: 15
-      max-buy: 250
-      max-sell: 750
-      volatility: 0.3
-    stone:
-      price: 2
-      max-buy: 128
-      max-sell: 256
-    gravel:
-      price: 3
-      max-buy: 128
-      max-sell: 256
-    sand:
-      price: 1.15
-      sell-price-difference: 15
-      max-buy: 300
-      max-sell: 600
-      volatility: 0.35
-    glass:
-      price: 2.25
-      max-buy: 128
-      max-sell: 256
-    sandstone:
-      price: 4
-      max-buy: 100
-      max-sell: 225
-    obsidian:
-      price: 15
-      max-buy: 20
-      max-sell: 45
-    end_stone:
-      price: 3.25
-      max-buy: 75
-      max-sell: 150
-    netherrack:
-      price: 0.5
-      sell-price-difference: 10
-      max-buy: 256
-      max-sell: 1024
-      volatility: 0.55
-    white_wool:
-      price: 6
-      max-buy: 64
-      max-sell: 100
-    oak_log:
-      price: 8
-      max-buy: 100
-      max-sell: 200
-      volatility: 0.35
-    oak_planks:
-      price: 1.85
-      max-buy: 256
-      max-sell: 512
-      volatility: 0.35
-    birch_log:
-      price: 9
-      max-buy: 90
-      max-sell: 200
-    birch_planks:
-      price: 2
-      max-buy: 256
-      max-sell: 512
-    spruce_log:
-      price: 9
-      max-buy: 90
-      max-sell: 200
-    spruce_planks:
-      price: 2
-      max-buy: 256
-      max-sell: 512
-    jungle_log:
-      price: 10
-      max-buy: 75
-      max-sell: 150
-    jungle_planks:
-      price: 2.15
-      max-buy: 200
-      max-sell: 400
-    acacia_log:
-      price: 9
-      max-buy: 90
-      max-sell: 200
-    acacia_planks:
-      price: 2
-      max-buy: 256
-      max-sell: 512
-    dark_oak_log:
-      price: 7.5
-      max-buy: 128
-      max-sell: 256
-    dark_oak_planks:
-      price: 1.75
-      max-buy: 256
-      max-sell: 512
-    andesite:
-      price: 1.5
-      max-buy: 128
-      max-sell: 256
-    diorite:
-      price: 1.5
-      max-buy: 128
-      max-sell: 256
-    granite:
-      price: 1.5
-      max-buy: 128
-      max-sell: 256
-    soul_sand:
-      price: 2.7
-      max-buy: 128
-      max-sell: 256
-    terracotta:
-      price: 3
-      max-buy: 128
-      max-sell: 256
-    white_terracotta:
-      price: 3.4
-      max-buy: 100
-      max-sell: 200
-    prismarine:
-      price: 4
-      max-buy: 64
-      max-sell: 128
-    prismarine_bricks:
-      price: 4.5
-      max-buy: 500
-      max-sell: 110
-    dark_prismarine:
-      price: 5.5
-      max-buy: 45
-      max-sell: 100
-    sea_lantern:
-      price: 19
-      max-buy: 10
-      max-sell: 25
-    magma_block:
-      price: 2.25
-      max-buy: 128
-      max-sell: 256
-  food:
-    carrot:
-      price: 3.75
-      max-buy: 80
-      max-sell: 256
-    melon_slice:
-      price: 1.6
-      max-buy: 100
-      max-sell: 250
-    potato:
-      price: 2.25
-      max-buy: 90
-      max-sell: 150
-    apple:
-      price: 4
-      max-buy: 64
-      max-sell: 100
-    cooked_beef:
-      price: 5.75
-      max-buy: 32
-      max-sell: 100
-    cooked_porkchop:
-      price: 5.7
-      max-buy: 32
-      max-sell: 100
-    cooked_chicken:
-      price: 5.5
-      max-buy: 35
-      max-sell: 110
-    cooked_rabbit:
-      price: 6
-      max-buy: 32
-      max-sell: 90
-    cooked_mutton:
-      price: 5.55
-      max-buy: 32
-      max-sell: 100
-    cooked_cod:
-      price: 6.5
-      max-buy: 25
-      max-sell: 75
-    cooked_salmon:
-      price: 6.75
-      max-buy: 24
-      max-sell: 64
-  farming:
-    cactus:
-      price: 3
-      max-buy: 64
-      max-sell: 200
-    vine:
-      price: 1.9
-      max-buy: 64
-      max-sell: 256
-    wheat:
-      price: 2
-      max-buy: 128
-      max-sell: 256
-    sugar_cane:
-      price: 1.3
-      max-buy: 175
-      max-sell: 350
-    pumpkin:
-      price: 7.5
-      max-buy: 64
-      max-sell: 128
-    wheat_seeds:
-      price: 0.85
-      max-buy: 128
-      max-sell: 200
-    nether_wart:
-      price: 4.5
-      max-buy: 64
-      max-sell: 200
-    oak_sapling:
-      price: 2.75
-      max-buy: 32
-      max-sell: 64
-  tools:
-    wooden_pickaxe:
-      price: 5
-      sell-price-difference: 35
-      max-buy: 4
-      max-sell: 8
-    wooden_axe:
-      price: 7.5
-      sell-price-difference: 35
-      max-buy: 4
-      max-sell: 8
-    wooden_sword:
-      price: 6
-      sell-price-difference: 35
-      max-buy: 4
-      max-sell: 8
-    wooden_shovel:
-      price: 4
-      sell-price-difference: 35
-      max-buy: 4
-      max-sell: 8
-    wooden_hoe:
-      price: 4.5
-      sell-price-difference: 35
-      max-buy: 4
-      max-sell: 8
-    stone_pickaxe:
-      price: 11
-      sell-price-difference: 35
-      max-buy: 4
-      max-sell: 8
-    stone_axe:
-      price: 10.5
-      sell-price-difference: 35
-      max-buy: 4
-      max-sell: 8
-    stone_sword:
-      price: 8.5
-      sell-price-difference: 35
-      max-buy: 4
-      max-sell: 8
-    stone_shovel:
-      price: 5.5
-      sell-price-difference: 35
-      max-buy: 4
-      max-sell: 8
-    stone_hoe:
-      price: 7.5
-      sell-price-difference: 35
-      max-buy: 4
-      max-sell: 8
-    golden_pickaxe:
-      price: 15.0
-      sell-price-difference: 35
-      max-buy: 3
-      max-sell: 8
-    golden_axe:
-      price: 14.5
-      sell-price-difference: 35
-      max-buy: 3
-      max-sell: 8
-    golden_sword:
-      price: 13.0
-      sell-price-difference: 35
-      max-buy: 3
-      max-sell: 8
-    golden_shovel:
-      price: 9.0
-      sell-price-difference: 35
-      max-buy: 3
-      max-sell: 8
-    golden_hoe:
-      price: 10
-      sell-price-difference: 35
-      max-buy: 3
-      max-sell: 8
-    fishing_rod:
-      price: 20
-      sell-price-difference: 35
-      max-buy: 3
-      max-sell: 5
-    bow:
-      price: 25
-      sell-price-difference: 30
-      max-buy: 3
-      max-sell: 5
-  enchantments:
-    protection:
-      price: 350
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 5
-      update-rate: 3
-    fire_protection:
-      price: 400
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 5
-      update-rate: 3
-    feather_falling:
-      price: 500
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 5
-      update-rate: 3
-    blast_protection:
-      price: 400
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 5
-      update-rate: 3
-    projectile_protection:
-      price: 400
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 5
-      update-rate: 3
-    respiration:
-      price: 500
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 4
-      update-rate: 3
-    aqua_affinity:
-      price: 500
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 4
-      update-rate: 3
-    thorns:
-      price: 800
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 3
-      update-rate: 5
-    sharpness:
-      price: 450
-      sell-price-difference: 40
-      max-buy: 3
-      max-sell: 5
-      update-rate: 3
-    smite:
-      price: 500
-      sell-price-difference: 40
-      max-buy: 3
-      max-sell: 5
-      update-rate: 3
-    bane_of_arthropods:
-      price: 500
-      sell-price-difference: 40
-      max-buy: 3
-      max-sell: 5
-      update-rate: 3
-    looting:
-      price: 750
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 4
-      update-rate: 4
-    unbreaking:
-      price: 600
-      sell-price-difference: 40
-      max-buy: 3
-      max-sell: 5
-      update-rate: 3
-    efficiency:
-      price: 450
-      sell-price-difference: 40
-      max-buy: 4
-      max-sell: 6
-      update-rate: 3
-    silk_touch:
-      price: 1000
-      sell-price-difference: 40
-      max-buy: 1
-      max-sell: 2
-      update-rate: 5
-    fortune:
-      price: 950
-      sell-price-difference: 40
-      max-buy: 1
-      max-sell: 3
-      update-rate: 4
-    power:
-      price: 650
-      sell-price-difference: 40
-      max-buy: 3
-      max-sell: 5
-      update-rate: 3
-    punch:
-      price: 700
-      sell-price-difference: 40
-      max-buy: 3
-      max-sell: 4
-      update-rate: 3
-    flame:
-      price: 750
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 4
-      update-rate: 3
-    infinity:
-      price: 1250
-      sell-price-difference: 40
-      max-buy: 1
-      max-sell: 2
-      update-rate: 5
-    luck_of_the_sea:
-      price: 400
-      sell-price-difference: 40
-      max-buy: 3
-      max-sell: 6
-      update-rate: 3
-    mending:
-      price: 2000
-      sell-price-difference: 40
-      max-buy: 1
-      max-sell: 1
-      update-rate: 6
-    depth_strider:
-      price: 600
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 4
-      update-rate: 3
-    frost_walker:
-      price: 750
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 4
-      update-rate: 4
-    soul_speed:
-      price: 725
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 4
-      update-rate: 4
-    fire_aspect:
-      price: 650
-      sell-price-difference: 40
-      max-buy: 3
-      max-sell: 5
-      update-rate: 3
-    impaling:
-      price: 775
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 5
-      update-rate: 4
-    knockback:
-      price: 650
-      sell-price-difference: 40
-      max-buy: 3
-      max-sell: 6
-      update-rate: 3
-    sweeping:
-      price: 800
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 4
-      update-rate: 5
-    channeling:
-      price: 800
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 4
-      update-rate: 5
-    loyalty:
-      price: 750
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 4
-      update-rate: 5
-    riptide:
-      price: 800
-      sell-price-difference: 40
-      max-buy: 2
-      max-sell: 4
-      update-rate: 5
-    multishot:
-      price: 650
-      sell-price-difference: 40
-      max-buy: 3
-      max-sell: 6
-      update-rate: 4
-    piercing:
-      price: 600
-      sell-price-difference: 40
-      max-buy: 3
-      max-sell: 6
-      update-rate: 3
-    quick_charge:
-      price: 650
-      sell-price-difference: 40
-      max-buy: 3
-      max-sell: 6
-      update-rate: 3
-    lure:
-      price: 500
-      sell-price-difference: 40
-      max-buy: 4
-      max-sell: 8
-      update-rate: 3
-  other:
-    flint:
-      price: 4
-      max-buy: 64
-      max-sell: 128
-    gunpowder:
-      price: 17.5
-      max-buy: 64
-      max-sell: 100
-    leather:
-      price: 15.5
-      max-buy: 64
-      max-sell: 100
-    ink_sac:
-      price: 2.5
-      max-buy: 32
-      max-sell: 45
-    feather:
-      price: 3.75
-      max-buy: 32
-      max-sell: 64
-    bone:
-      price: 6.5
-      max-buy: 64
-      max-sell: 128
-    string:
-      price: 4.5
-      max-buy: 64
-      max-sell: 128
-    rotten_flesh:
-      price: 0.35
-      sell-price-difference: 10
-      max-buy: 200
-      max-sell: 450
-      volatility: 0.45
-    spider_eye:
-      price: 7.5
-      max-buy: 64
-      max-sell: 128
-    slime_ball:
-      price: 55
-      sell-price-difference: 25
-      max-buy: 32
-      max-sell: 64
-    ender_pearl:
-      price: 65
-      sell-price-difference: 25
-      max-buy: 8
-      max-sell: 32
-    nether_star:
-      price: 10000
-      sell-price-difference: 40
-      max-buy: 1
-      max-sell: 1
-      volatility: 0.2
-      update-rate: 10
-    blaze_rod:
-      price: 95
-      sell-price-difference: 27.5
-      max-buy: 6
-      max-sell: 16
-      update-rate: 2
-    arrow:
-      price: 1.45
-      max-buy: 100
-      max-sell: 200
-    stick:
-      price: 0.75
-      max-buy: 64
-      max_sell: 128
-    book:
-      price: 22.5
-      sell-price-difference: 25
-      max-buy: 20
-      max-sell: 32
+  # === Building Blocks ===
+  - material: OBSIDIAN
+    price: 17.2
+    section: building
+  - material: CLAY
+    price: 7.69
+    section: building
+  - material: CALCITE
+    price: 3.59
+    section: building
+  - material: BRICK
+    price: 2.30
+    section: building
+  - material: SANDSTONE
+    price: 2.30
+    section: building
+  - material: TERRACOTTA
+    price: 2.30
+    section: building
+  - material: CLAY_BALL
+    price: 1.67
+    section: building
+  - material: MOSSY_COBBLESTONE
+    price: 1.67
+    section: building
+  - material: STONE
+    price: 1.07
+    section: building
+  - material: DEEPSLATE
+    price: 1.07
+    section: building
+  - material: GRAVEL
+    price: 1.07
+    section: building
+  - material: GLASS
+    price: 1.07
+    section: building
+  - material: TUFF
+    price: 1.07
+    section: building
+  - material: COBBLESTONE
+    price: 0.50
+    section: building
+  - material: GRANITE
+    price: 0.50
+    section: building
+  - material: DIORITE
+    price: 0.50
+    section: building
+  - material: ANDESITE
+    price: 0.50
+    section: building
+  - material: SAND
+    price: 0.50
+    section: building
+  - material: RED_SAND
+    price: 0.50
+    section: building
+
+  # === Wood & Logs ===
+  - material: MANGROVE_LOG
+    price: 6.29
+    section: wood
+  - material: OAK_LOG
+    price: 4.92
+    section: wood
+  - material: SPRUCE_LOG
+    price: 4.92
+    section: wood
+  - material: BIRCH_LOG
+    price: 4.92
+    section: wood
+  - material: DARK_OAK_LOG
+    price: 4.92
+    section: wood
+  - material: JUNGLE_LOG
+    price: 4.92
+    section: wood
+  - material: ACACIA_LOG
+    price: 4.92
+    section: wood
+  - material: CHERRY_LOG
+    price: 4.92
+    section: wood
+
+  # === Food & Cooking ===
+  - material: GOLDEN_APPLE
+    price: 200.0
+    section: food
+  - material: GOLDEN_CARROT
+    price: 41.9
+    section: food
+  - material: GLISTERING_MELON_SLICE
+    price: 41.9
+    section: food
+  - material: APPLE
+    price: 6.29
+    section: food
+  - material: COOKED_BEEF
+    price: 4.92
+    section: food
+  - material: COOKED_PORKCHOP
+    price: 4.92
+    section: food
+  - material: BREAD
+    price: 3.59
+    section: food
+  - material: COOKED_CHICKEN
+    price: 3.59
+    section: food
+  - material: PUMPKIN
+    price: 3.59
+    section: food
+  - material: COOKED_SALMON
+    price: 2.94
+    section: food
+  - material: COOKED_COD
+    price: 2.30
+    section: food
+  - material: SWEET_BERRIES
+    price: 1.67
+    section: food
+  - material: HONEY_BOTTLE
+    price: 1.67
+    section: food
+  - material: WHEAT
+    price: 1.07
+    section: food
+  - material: CARROT
+    price: 1.07
+    section: food
+  - material: POTATO
+    price: 1.07
+    section: food
+  - material: MELON_SLICE
+    price: 1.07
+    section: food
+  - material: COCOA_BEANS
+    price: 1.07
+    section: food
+  - material: EGG
+    price: 1.07
+    section: food
+  - material: DRIED_KELP
+    price: 1.07
+    section: food
+  - material: BEETROOT
+    price: 0.50
+    section: food
+  - material: SUGAR_CANE
+    price: 0.50
+    section: food
+  - material: SUGAR
+    price: 0.50
+    section: food
+
+  # === Mob Drops ===
+  - material: WITHER_SKELETON_SKULL
+    price: 568.8
+    section: drops
+  - material: GHAST_TEAR
+    price: 62.0
+    section: drops
+  - material: BLAZE_ROD
+    price: 21.1
+    section: drops
+  - material: PHANTOM_MEMBRANE
+    price: 13.5
+    section: drops
+  - material: ENDER_PEARL
+    price: 10.6
+    section: drops
+  - material: GUNPOWDER
+    price: 6.29
+    section: drops
+  - material: SLIME_BALL
+    price: 6.29
+    section: drops
+  - material: LEATHER
+    price: 4.92
+    section: drops
+  - material: SPIDER_EYE
+    price: 2.94
+    section: drops
+  - material: BONE
+    price: 2.94
+    section: drops
+  - material: FEATHER
+    price: 2.94
+    section: drops
+  - material: INK_SAC
+    price: 2.94
+    section: drops
+  - material: STRING
+    price: 1.07
+    section: drops
+  - material: ROTTEN_FLESH
+    price: 0.50
+    section: drops
+
+  # === Farming & Plants ===
+  - material: MELON_SEEDS
+    price: 1.07
+    section: farming
+  - material: BONE_MEAL
+    price: 0.90
+    section: farming
+  - material: PUMPKIN_SEEDS
+    price: 0.78
+    section: farming
+  - material: WHEAT_SEEDS
+    price: 0.50
+    section: farming
+  - material: CACTUS
+    price: 0.50
+    section: farming
+  - material: BAMBOO
+    price: 0.50
+    section: farming
+
+  # === Redstone ===
+  - material: HOPPER
+    price: 93.3
+    section: redstone
+  - material: STICKY_PISTON
+    price: 27.3
+    section: redstone
+  - material: PISTON
+    price: 19.5
+    section: redstone
+  - material: COMPARATOR
+    price: 14.2
+    section: redstone
+  - material: DISPENSER
+    price: 12.8
+    section: redstone
+  - material: REPEATER
+    price: 11.3
+    section: redstone
+  - material: OBSERVER
+    price: 9.83
+    section: redstone
+  - material: DROPPER
+    price: 6.29
+    section: redstone
+
+  # === Nether ===
+  - material: CRYING_OBSIDIAN
+    price: 21.1
+    section: nether
+  - material: GLOWSTONE
+    price: 4.92
+    section: nether
+  - material: NETHER_WART
+    price: 1.07
+    section: nether
+  - material: GLOWSTONE_DUST
+    price: 1.07
+    section: nether
+  - material: BLACKSTONE
+    price: 1.07
+    section: nether
+  - material: SOUL_SAND
+    price: 0.50
+    section: nether
+  - material: BASALT
+    price: 0.50
+    section: nether
+
+  # === Ocean ===
+  - material: HEART_OF_THE_SEA
+    price: 465.4
+    section: ocean
+  - material: SPONGE
+    price: 265.3
+    section: ocean
+  - material: NAUTILUS_SHELL
+    price: 62.0
+    section: ocean
+  - material: PRISMARINE_CRYSTALS
+    price: 28.9
+    section: ocean
+  - material: PRISMARINE_SHARD
+    price: 21.1
+    section: ocean
+
+  # === End ===
+  - material: SHULKER_BOX
+    price: 465.4
+    section: end
+  - material: SHULKER_SHELL
+    price: 217.1
+    section: end
+  - material: ENDER_CHEST
+    price: 199.0
+    section: end
+  - material: CHORUS_FRUIT
+    price: 2.94
+    section: end
+  - material: END_STONE
+    price: 1.07
+    section: end
+
+  # === Utility ===
+  - material: EXPERIENCE_BOTTLE
+    price: 79.2
+    section: utility
+  - material: TNT
+    price: 40.2
+    section: utility
+  - material: NAME_TAG
+    price: 37.0
+    section: utility
+  - material: BOOKSHELF
+    price: 32.9
+    section: utility
+  - material: BUCKET
+    price: 32.9
+    section: utility
+  - material: SADDLE
+    price: 28.1
+    section: utility
+  - material: CHEST
+    price: 10.6
+    section: utility
+  - material: LANTERN
+    price: 9.83
+    section: utility
+  - material: BOOK
+    price: 6.99
+    section: utility
+  - material: LEAD
+    price: 5.61
+    section: utility
+  - material: FURNACE
+    price: 4.92
+    section: utility
+  - material: CHARCOAL
+    price: 3.59
+    section: utility
+  - material: IRON_BARS
+    price: 3.59
+    section: utility
+  - material: TORCH
+    price: 0.78
+    section: utility
+  - material: PAPER
+    price: 0.50
+    section: utility

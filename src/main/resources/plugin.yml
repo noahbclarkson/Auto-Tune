@@ -1,54 +1,152 @@
-main: unprotesting.com.github.AutoTune
-name: Auto-Tune
-description: "The Auto-Tune plugin is an economy plugin that automatically regulates prices based on supply and demand."
-author: "Unprotesting"
-version: "0.14.3"
+name: ${name}
+version: ${version}
+main: com.noahblclarkson.autotune.AutoTune
+description: Dynamic economy plugin with real-time market simulation
+api-version: "1.21"
+author: noahblclarkson
+website: https://github.com/noahblclarkson/Auto-Tune
+
 depend:
-  - "Vault"
-libraries:
-  - "org.eclipse.jetty:jetty-server:11.0.19"
-  - "org.eclipse.jetty:jetty-servlet:11.0.19"
-api-version: 1.13
-api: "1.13"
-website: "https://github.com/Unprotesting/Auto-Tune"
-prefix: "Auto-Tune"
+  - Vault
+
 commands:
+  at:
+    description: Auto-Tune admin and event commands
+    aliases:
+      - autotune
+    permission: autotune.admin
   shop:
-    description: "Opens the shop."
-    usage: "/shop <section-name>"
-    permission: "autotune.shop"
-    permission-message: "You don't have permission to use this command."
+    description: Open the shop GUI
+    permission: autotune.shop
   sell:
-    description: "Opens the sell menu."
-    usage: "/sell"
-    permission: "autotune.sell"
-    permission-message: "You don't have permission to use this command."
+    description: Open the sell GUI
+    permission: autotune.sell
   autosell:
-    description: "Opens the autosell menu."
-    usage: "/autosell"
-    permission: "autotune.autosell"
-    permission-message: "You don't have permission to use this command."
+    description: Toggle autosell for item pickups
+    permission: autotune.autosell
   loan:
-    description: "Allows players to loan money."
-    usage: "/loan <amount>/pay"
-    permission: "autotune.loan"
-    permission-message: "You don't have permission to use this command."
+    description: Loan system commands
+    permission: autotune.loan
+  transactions:
+    description: View your transaction history
+    permission: autotune.transactions
+  auction:
+    description: Auction house commands
+    permission: autotune.auction
+  alert:
+    description: Manage price alerts
+    permission: autotune.alert
+  treasury:
+    description: Server treasury commands
+    permission: autotune.admin
+  badges:
+    description: View player badges
+    permission: autotune.badges
+  news:
+    description: Open recent economic news
+    permission: autotune.news
+  guild:
+    description: Guild economy commands
+    permission: autotune.guild
+  onboarding:
+    description: View onboarding progress
+    permission: autotune.onboarding
+  market-report:
+    description: View your weekly market report
+    permission: autotune.market-report
+  compare:
+    description: Compare trading stats between players
+    permission: autotune.compare
+  price:
+    description: Look up current item prices
+    permission: autotune.price
+  quickstart:
+    description: View the Auto-Tune quickstart guide
+    permission: autotune.quickstart
+  streak:
+    description: View trading streaks
+    permission: autotune.streak
+  profile:
+    description: View trading profiles
+    permission: autotune.profile
+
 permissions:
-  autotune.help:
-    description: "Allows the user to use help."
-    default: true
   autotune.shop:
-    description: "Allows the user to use the shop."
+    description: Access the AutoTune shop
     default: true
-  autotune.admin:
-    description: "Allows reloading of the shops & configuration files"
-    default: false
   autotune.sell:
-    description: "Allows the user to use the sell menu."
+    description: Sell items through AutoTune
     default: true
   autotune.autosell:
-    description: "Allows the user to use the autosell menu."
+    description: Toggle autosell for item pickups
     default: true
   autotune.loan:
-    description: "Allows the user to use the loan command."
+    description: Access the loan system
     default: true
+  autotune.transactions:
+    description: View own transaction history
+    default: true
+  autotune.auction:
+    description: Access auction house commands
+    default: true
+  autotune.alert:
+    description: Manage own price alerts
+    default: true
+  autotune.badges:
+    description: View player badges
+    default: true
+  autotune.news:
+    description: View economic news
+    default: true
+  autotune.guild:
+    description: View guild economy stats
+    default: true
+  autotune.onboarding:
+    description: View own onboarding progress
+    default: true
+  autotune.market-report:
+    description: View your weekly market report
+    default: true
+  autotune.compare:
+    description: Compare trading stats with other players
+    default: true
+  autotune.price:
+    description: Look up item prices
+    default: true
+  autotune.quickstart:
+    description: View the quickstart guide
+    default: true
+  autotune.streak:
+    description: View trading streaks
+    default: true
+  autotune.profile:
+    description: View trading profiles
+    default: true
+  autotune.admin:
+    description: Administrative commands
+    default: op
+    children:
+      autotune.admin.reload: true
+      autotune.admin.debug: true
+      autotune.admin.transactions: true
+      autotune.admin.buyable: true
+      autotune.admin.additem: true
+      autotune.admin.removeitem: true
+  autotune.admin.reload:
+    description: Reload configuration
+    default: op
+  autotune.admin.debug:
+    description: Access debug commands
+    default: op
+  autotune.admin.transactions:
+    description: View all player transactions
+    default: op
+  autotune.admin.buyable:
+    description: Set item buyable state
+    default: op
+  autotune.admin.additem:
+    description: Add custom items to shop
+    default: op
+  autotune.admin.removeitem:
+    description: Remove items from the shop
+    default: op

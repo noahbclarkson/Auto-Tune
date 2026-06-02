@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "price-solver",
+    "api-server",
+]
+exclude = [
+    "scripts/market-simulation",
+]
+resolver = "2"

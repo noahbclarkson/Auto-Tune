@@ -1,0 +1,459 @@
+{
+  "scenario_name": "GuildStability+2MM+7%GB+Floor",
+  "engine_git_rev": "71b1dc45",
+  "config_hash": "1887b3069d5fd0825a945cb8e52a2608",
+  "checkoints": [
+    {
+      "tick": 806,
+      "item_signatures": [
+        {
+          "name": "Cobblestone",
+          "base_price": 1.0,
+          "price": 0.81,
+          "bpd": 0.006161660531231958,
+          "spd": 0.006647642593306981,
+          "trend_direction": "Stable",
+          "avg_volatility": 1.3706457094137715e-15
+        },
+        {
+          "name": "Rotten Flesh",
+          "base_price": 2.0,
+          "price": 1.7,
+          "bpd": 0.01620793989283936,
+          "spd": 0.01852933059634741,
+          "trend_direction": "Down",
+          "avg_volatility": 0.009911412998896606
+        },
+        {
+          "name": "Redstone",
+          "base_price": 20.0,
+          "price": 14.36,
+          "bpd": 0.013314618642177341,
+          "spd": 0.015037652989168692,
+          "trend_direction": "Down",
+          "avg_volatility": 0.04410597673268284
+        },
+        {
+          "name": "Iron Ingot",
+          "base_price": 50.0,
+          "price": 33.75,
+          "bpd": 0.016638646859401352,
+          "spd": 0.018381917637867992,
+          "trend_direction": "Down",
+          "avg_volatility": 0.0437743467236485
+        },
+        {
+          "name": "Blaze Rod",
+          "base_price": 75.0,
+          "price": 50.26,
+          "bpd": 0.025705308854979913,
+          "spd": 0.027920636906649608,
+          "trend_direction": "Down",
+          "avg_volatility": 0.04696727257365904
+        },
+        {
+          "name": "Diamond",
+          "base_price": 500.0,
+          "price": 296.41,
+          "bpd": 0.010691580785801534,
+          "spd": 0.010944087997494469,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.018823200132676365
+        },
+        {
+          "name": "Golden Apple",
+          "base_price": 500.0,
+          "price": 293.1,
+          "bpd": 0.013831112459733251,
+          "spd": 0.013901585709882812,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.022281617698989016
+        },
+        {
+          "name": "Netherite Ingot",
+          "base_price": 2500.0,
+          "price": 1647.25,
+          "bpd": 0.016181023364776368,
+          "spd": 0.017068545943218216,
+          "trend_direction": "Down",
+          "avg_volatility": 0.031166556484821896
+        }
+      ],
+      "gdp": 743906.772566481,
+      "total_debt": 460753.62069328653,
+      "debt_gdp_ratio": 0.6193701115311598,
+      "online_players": 7,
+      "total_players": 12,
+      "active_loans": 4,
+      "defaulted_loans": 0,
+      "total_transactions": 5475,
+      "buy_ratio": 0.690958904109589,
+      "avg_volatility": 0.02712879791817195,
+      "global_vol_mult": 0.9711181322841254
+    },
+    {
+      "tick": 1612,
+      "item_signatures": [
+        {
+          "name": "Cobblestone",
+          "base_price": 1.0,
+          "price": 0.77,
+          "bpd": 0.009541321670579792,
+          "spd": 0.010890872217197641,
+          "trend_direction": "Stable",
+          "avg_volatility": 7.209240419643869e-16
+        },
+        {
+          "name": "Rotten Flesh",
+          "base_price": 2.0,
+          "price": 1.44,
+          "bpd": 0.008965631038541406,
+          "spd": 0.010236374514619772,
+          "trend_direction": "Stable",
+          "avg_volatility": 9.25185853854298e-16
+        },
+        {
+          "name": "Redstone",
+          "base_price": 20.0,
+          "price": 9.91,
+          "bpd": 0.0045505089335553355,
+          "spd": 0.004672998325767678,
+          "trend_direction": "Down",
+          "avg_volatility": 0.015239475241037257
+        },
+        {
+          "name": "Iron Ingot",
+          "base_price": 50.0,
+          "price": 22.95,
+          "bpd": 0.004963078292843824,
+          "spd": 0.005041523072401539,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.00576014900617337
+        },
+        {
+          "name": "Blaze Rod",
+          "base_price": 75.0,
+          "price": 27.12,
+          "bpd": 0.011992768376453612,
+          "spd": 0.012127693290217262,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.015138347760024347
+        },
+        {
+          "name": "Diamond",
+          "base_price": 500.0,
+          "price": 173.62,
+          "bpd": 0.007443552140941306,
+          "spd": 0.0076575771204684786,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.024533900567996453
+        },
+        {
+          "name": "Golden Apple",
+          "base_price": 500.0,
+          "price": 213.63,
+          "bpd": 0.009869070470425,
+          "spd": 0.009873341305456675,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.005850122088213361
+        },
+        {
+          "name": "Netherite Ingot",
+          "base_price": 2500.0,
+          "price": 1157.18,
+          "bpd": 0.011515475625298553,
+          "spd": 0.011570015861793188,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.006903997007432516
+        }
+      ],
+      "gdp": 744336.3024906409,
+      "total_debt": 512494.57171206485,
+      "debt_gdp_ratio": 0.6885255629709245,
+      "online_players": 6,
+      "total_players": 12,
+      "active_loans": 5,
+      "defaulted_loans": 0,
+      "total_transactions": 13671,
+      "buy_ratio": 0.8035257113598128,
+      "avg_volatility": 0.00917824895885987,
+      "global_vol_mult": 0.8
+    },
+    {
+      "tick": 2419,
+      "item_signatures": [
+        {
+          "name": "Cobblestone",
+          "base_price": 1.0,
+          "price": 0.77,
+          "bpd": 0.010796036316483956,
+          "spd": 0.011986301070108852,
+          "trend_direction": "Stable",
+          "avg_volatility": 7.209240419643869e-16
+        },
+        {
+          "name": "Rotten Flesh",
+          "base_price": 2.0,
+          "price": 1.24,
+          "bpd": 0.010128290190243309,
+          "spd": 0.011212675855148497,
+          "trend_direction": "Stable",
+          "avg_volatility": 1.7906822977825137e-15
+        },
+        {
+          "name": "Redstone",
+          "base_price": 20.0,
+          "price": 8.97,
+          "bpd": 0.00832599449245244,
+          "spd": 0.008558308612933522,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.00351066961972818
+        },
+        {
+          "name": "Iron Ingot",
+          "base_price": 50.0,
+          "price": 18.23,
+          "bpd": 0.011621380954248462,
+          "spd": 0.011711905290329639,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.007909763476428189
+        },
+        {
+          "name": "Blaze Rod",
+          "base_price": 75.0,
+          "price": 21.74,
+          "bpd": 0.019361962004860924,
+          "spd": 0.01939491220521781,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.006360736830379626
+        },
+        {
+          "name": "Diamond",
+          "base_price": 500.0,
+          "price": 97.07,
+          "bpd": 0.008621404680804075,
+          "spd": 0.00891037526787126,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.02447112888418863
+        },
+        {
+          "name": "Golden Apple",
+          "base_price": 500.0,
+          "price": 177.03,
+          "bpd": 0.01580319164457271,
+          "spd": 0.01595042746323129,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.010060329813042711
+        },
+        {
+          "name": "Netherite Ingot",
+          "base_price": 2500.0,
+          "price": 948.03,
+          "bpd": 0.017981031564348472,
+          "spd": 0.0180425602942862,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.00916002335596545
+        }
+      ],
+      "gdp": 625078.6170286653,
+      "total_debt": 553192.6538819149,
+      "debt_gdp_ratio": 0.884996924885284,
+      "online_players": 7,
+      "total_players": 12,
+      "active_loans": 5,
+      "defaulted_loans": 0,
+      "total_transactions": 21918,
+      "buy_ratio": 0.8334245825349028,
+      "avg_volatility": 0.007684081497466911,
+      "global_vol_mult": 1.0
+    },
+    {
+      "tick": 3225,
+      "item_signatures": [
+        {
+          "name": "Cobblestone",
+          "base_price": 1.0,
+          "price": 0.77,
+          "bpd": 0.01612989541424522,
+          "spd": 0.018528611387428062,
+          "trend_direction": "Stable",
+          "avg_volatility": 7.209240419643869e-16
+        },
+        {
+          "name": "Rotten Flesh",
+          "base_price": 2.0,
+          "price": 1.24,
+          "bpd": 0.02070490178240301,
+          "spd": 0.023850064914819818,
+          "trend_direction": "Stable",
+          "avg_volatility": 1.7906822977825137e-15
+        },
+        {
+          "name": "Redstone",
+          "base_price": 20.0,
+          "price": 8.52,
+          "bpd": 0.012007874786551128,
+          "spd": 0.01230214636036291,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.005041819543317621
+        },
+        {
+          "name": "Iron Ingot",
+          "base_price": 50.0,
+          "price": 15.99,
+          "bpd": 0.017970352352889532,
+          "spd": 0.01814804147342973,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.009530166380008295
+        },
+        {
+          "name": "Blaze Rod",
+          "base_price": 75.0,
+          "price": 18.36,
+          "bpd": 0.02821479498653253,
+          "spd": 0.02824085659324632,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.003919891782642491
+        },
+        {
+          "name": "Diamond",
+          "base_price": 500.0,
+          "price": 52.81,
+          "bpd": 0.011178475155499155,
+          "spd": 0.01158449130655942,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.023817588257530123
+        },
+        {
+          "name": "Golden Apple",
+          "base_price": 500.0,
+          "price": 151.89,
+          "bpd": 0.023107522800482415,
+          "spd": 0.023039745860649476,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.006532608309235959
+        },
+        {
+          "name": "Netherite Ingot",
+          "base_price": 2500.0,
+          "price": 792.95,
+          "bpd": 0.02118127734940522,
+          "spd": 0.02151343769261057,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.006183184782312033
+        }
+      ],
+      "gdp": 575970.8487164377,
+      "total_debt": 1258298.358921398,
+      "debt_gdp_ratio": 2.1846563271831214,
+      "online_players": 9,
+      "total_players": 12,
+      "active_loans": 6,
+      "defaulted_loans": 0,
+      "total_transactions": 30200,
+      "buy_ratio": 0.849569536423841,
+      "avg_volatility": 0.006878157381881129,
+      "global_vol_mult": 1.0
+    },
+    {
+      "tick": 4032,
+      "item_signatures": [
+        {
+          "name": "Cobblestone",
+          "base_price": 1.0,
+          "price": 0.77,
+          "bpd": 0.009804375150048453,
+          "spd": 0.011346370386841243,
+          "trend_direction": "Stable",
+          "avg_volatility": 7.209240419643869e-16
+        },
+        {
+          "name": "Rotten Flesh",
+          "base_price": 2.0,
+          "price": 1.24,
+          "bpd": 0.011346639216695889,
+          "spd": 0.012607773466004914,
+          "trend_direction": "Stable",
+          "avg_volatility": 1.7906822977825137e-15
+        },
+        {
+          "name": "Redstone",
+          "base_price": 20.0,
+          "price": 7.61,
+          "bpd": 0.00969692344096036,
+          "spd": 0.009948556599434211,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.000728627900042657
+        },
+        {
+          "name": "Iron Ingot",
+          "base_price": 50.0,
+          "price": 13.62,
+          "bpd": 0.012015433611077302,
+          "spd": 0.011991016790611798,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.005455975841203931
+        },
+        {
+          "name": "Blaze Rod",
+          "base_price": 75.0,
+          "price": 16.2,
+          "bpd": 0.02753714716471662,
+          "spd": 0.027599143082814057,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.009891973114681008
+        },
+        {
+          "name": "Diamond",
+          "base_price": 500.0,
+          "price": 27.99,
+          "bpd": 0.0077568067746495006,
+          "spd": 0.008178830278754507,
+          "trend_direction": "Down",
+          "avg_volatility": 0.029260418680794088
+        },
+        {
+          "name": "Golden Apple",
+          "base_price": 500.0,
+          "price": 139.5,
+          "bpd": 0.013245756509545556,
+          "spd": 0.013502561294121898,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.0027266213352919373
+        },
+        {
+          "name": "Netherite Ingot",
+          "base_price": 2500.0,
+          "price": 691.58,
+          "bpd": 0.01428113524042174,
+          "spd": 0.01423823743733103,
+          "trend_direction": "Stable",
+          "avg_volatility": 0.004344761292461212
+        }
+      ],
+      "gdp": 516028.7934315436,
+      "total_debt": 1394017.274714577,
+      "debt_gdp_ratio": 2.701433122451349,
+      "online_players": 6,
+      "total_players": 12,
+      "active_loans": 6,
+      "defaulted_loans": 0,
+      "total_transactions": 38652,
+      "buy_ratio": 0.8573941840008279,
+      "avg_volatility": 0.006551047270559668,
+      "global_vol_mult": 0.897121360427025
+    }
+  ],
+  "final_summary": {
+    "avg_price_displacement_pct": -64.1186,
+    "avg_volatility": 0.006551047270559668,
+    "avg_final_bpd": 0.013210527138514429,
+    "avg_final_spd": 0.01367656116698921,
+    "final_gdp": 516028.7934315436,
+    "final_debt": 1394017.274714577,
+    "debt_gdp_ratio": 2.701433122451349,
+    "total_transactions": 38652,
+    "buy_ratio": 0.8573941840008279,
+    "stable": true
+  }
+}

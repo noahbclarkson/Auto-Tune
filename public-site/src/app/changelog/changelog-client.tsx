@@ -31,6 +31,60 @@ const SECTIONS = [
 
 const CHANGELOG = [
   {
+    date: '2026-06-01',
+    label: 'June 2026 — Mid-Month Patch',
+    entries: [
+      {
+        tag: 'WEB & UX',
+        tagColor: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
+        title: 'Config playground — downloadable config.yml',
+        detail: 'Setup wizard and config playground now include "Download config.yml" button. Admins can pick an archetype preset, tune parameters, and download a production-ready config file — ready to drop into the server.',
+        section: 3,
+        commit: '83f1896',
+      },
+      {
+        tag: 'SIM',
+        tagColor: 'text-cyan-400 bg-cyan-950/60 border-cyan-800/50',
+        title: 'Casual-heavy archetype — simulation-proven superior for casual servers',
+        detail: '6Cas+1Far+2MM+2GB+1Tra archetype outperforms default 3Cas+3Far on BOTH GDP (+114%) and D/G (-22%) in 5-seed/14-day sims. Added as an explicit preset on install page and simulator hero CTA.',
+        section: 0,
+        commit: '9ce41b2',
+      },
+      {
+        tag: 'WEB & UX',
+        tagColor: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
+        title: 'PlaceholderAPI reference page — full placeholder documentation',
+        detail: '/placeholders page documents all Auto-Tune placeholders: per-item (%autotune_price_diamond%, buy/sell/spread/bpd/spd/trend) and global (%autotune_gdp%, debt, inflation, volume, items, frozen). Includes material key reference and usage examples.',
+        section: 3,
+        commit: 'f59b234',
+      },
+      {
+        tag: 'ADMIN TOOL',
+        tagColor: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
+        title: 'Config validation API — POST /api/admin/config/validate',
+        detail: 'New endpoint accepts YAML config body, runs ConfigValidator.validate(), returns {valid, errors, warnings}. Admins can validate configs before deploying. FirstRunVerificationCard expanded with DB migration check and web server reachability.',
+        section: 3,
+        commit: 'ed29d9a',
+      },
+      {
+        tag: 'ENGINE',
+        tagColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50',
+        title: 'Spread shock trigger — use current price, not mid price',
+        detail: 'Whale anti-dump spread shock trigger (debtGdpRatio * (1 − shockBand) comparison) now uses current price instead of mid price. Fixes edge case where floor-bound prices caused premature shock activation.',
+        section: 0,
+        commit: '2f2770f',
+      },
+      {
+        tag: 'ENGINE',
+        tagColor: 'text-amber-400 bg-amber-950/60 border-amber-800/50',
+        title: '60d lifecycle cap — regime change confirmed at 60+ days',
+        detail: 'Newbie+GB advantage erodes at 60d; D/G tied, volatility higher, TIER3 events more frequent. Recommend 14d as sweet spot; warn admins about configs beyond 60d. 14d loan term → 0 defaults (was 6/7 at 7d).',
+        section: 0,
+        commit: 'e4ed985',
+      },
+    ],
+  },
+  {
     date: '2026-05-21',
     label: 'May 21',
     entries: [

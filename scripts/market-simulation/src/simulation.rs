@@ -376,7 +376,7 @@ impl Simulation {
                     // sell volume exceeds threshold: trigger spread shock
                     let item_base = item.base_price;
                     let sell_value = item.tick_sell_volume as f64 * item_base;
-                    if sell_value > threshold * item_base * 1000.0 {
+                    if sell_value > threshold * item.price * 1000.0 {
                         // trigger spread shock
                         if self.engine.shock_remaining_ticks == 0 {
                             self.engine.spread_shock = self.config.whale_spread_shock_multiplier;

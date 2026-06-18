@@ -55,7 +55,7 @@ pub struct HeartbeatResponse {
 // Price submissions
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SubmitPricesRequest {
     pub item_names: Vec<String>,
     pub ratio_matrix: Vec<Vec<f64>>,
